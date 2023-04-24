@@ -305,7 +305,7 @@ class ExpressionCompiler(AstVisitor):
             if acc is None:
                 acc = res
             else:
-                acc = self.graph.add_node("and", args=[acc, res]).out_port(0), BoolType()
+                acc = self.graph.add_node("and", args=[acc, res], outputs=1).out_port(0), BoolType()
         return acc
 
     def visit_BoolOp(self, node: ast.BoolOp) -> tuple[OutPort, GuppyType]:
@@ -318,7 +318,7 @@ class ExpressionCompiler(AstVisitor):
         operands = [self.visit(operand) for operand in node.values]
         acc = operands[0]
         for operand in operands[1:]:
-            acc = self.graph.add_node(func, args=[acc, operand]).out_port(0), BoolType()
+            acc = self.graph.add_node(func, args=[acc, operand], outputs=1).out_port(0), BoolType()
         return acc
 
     def visit_Call(self, node: ast.Call) -> tuple[OutPort, GuppyType]:
@@ -845,36 +845,50 @@ def format_source_location(source_lines: list[str], loc: Union[ast.AST, ast.oper
 
 
 class GuppyModule(object):
+    name: str
     graph: Hugr
     module_node: Node
     compiler: FunctionCompiler
+    annotated_funcs: dict[str, tuple[Callable, ast.FunctionDef, list[str], int]]  # function, AST, source lines, line offset
     fun_decls: list[GuppyFunction]
 
     def __init__(self, name: str):
+        self.name = name
         self.graph = Hugr(name)
-        self.module_node = self.graph.add_node("module", 0, 0, None)
+        self.module_node = self.graph.add_node("module", 0, 0, None, meta_data={"name": name})
         self.compiler = FunctionCompiler(self.graph)
+        self.annotated_funcs = {}
         self.fun_decls = []
 
     def __call__(self, f):
         source_lines, line_offset = inspect.getsourcelines(f)
         line_offset -= 1
         source = "".join(source_lines)  # Lines already have trailing \n's
+
         func_ast = ast.parse(source).body[0]
         if not isinstance(func_ast, ast.FunctionDef):
-            raise GuppyError("Only functions can be compiled")
-        func_ty = self.compiler.validate_signature(func_ast)
+            raise GuppyError("Only functions can be placed in modules", func_ast)
+        if func_ast.name in self.annotated_funcs:
+            raise GuppyError(f"Module `{self.name}` already contains a function named `{func_ast.name}` "
+                             f"(declared at {SourceLoc.from_ast(self.annotated_funcs[func_ast.name][0], line_offset)})",
+                             func_ast)
+        self.annotated_funcs[func_ast.name] = f, func_ast, source_lines, line_offset
+        return None
 
-        def_node = self.graph.add_node("def", 0, 1, self.module_node, meta_data={"name": func_ast.name})
-        global_variables = {f.name: Variable(f.name, f.def_node.out_port(0), f.ty,
-                                             {SourceLoc.from_ast(f.ast, line_offset)}, [])
-                            for f in self.fun_decls}
-        global_variables[func_ast.name] = Variable(func_ast.name, def_node.out_port(0), func_ty,
-                                                   {SourceLoc.from_ast(func_ast, line_offset)}, [])
+    def compile(self) -> Hugr:
         try:
-            func = self.compiler.compile(self, func_ast, def_node, global_variables, line_offset)
-            self.fun_decls.append(func)
-            return func
+            global_variables = {}
+            defs = {}
+            for name, (f, func_ast, source_lines, line_offset) in self.annotated_funcs.items():
+                func_ty = self.compiler.validate_signature(func_ast)
+                def_node = self.graph.add_node("def", 0, 1, self.module_node, meta_data={"name": func_ast.name})
+                defs[name] = def_node
+                loc = SourceLoc.from_ast(func_ast, line_offset)
+                global_variables[name] = Variable(name, def_node.out_port(0), func_ty, {loc}, [])
+            for name, (f, func_ast, source_lines, line_offset) in self.annotated_funcs.items():
+                func = self.compiler.compile(self, func_ast, defs[name], global_variables, line_offset)
+                self.fun_decls.append(func)
+            return self.graph
         except GuppyError as err:
             if err.location:
                 loc = err.location
@@ -900,11 +914,11 @@ def guppy(f) -> Hugr:
         if err.location:
             loc = err.location
             line = line_offset + loc.lineno - 1
-            print(f'Guppy compilation failed.erdos r Error in file "{inspect.getsourcefile(f)}", '
+            print(f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}", '
                   f"line {line}, in {inspect.getmodule(f).__name__}\n", file=sys.stderr)
             print(format_source_location(source_lines, loc, line_offset), file=sys.stderr)
         else:
             print(f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}"\n', file=sys.stderr)
         print(f"{err.__class__.__name__}: {err.msg}", file=sys.stderr)
-        sys.exit(1)
+        # sys.exit(1)
     return graph
