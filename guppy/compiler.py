@@ -8,7 +8,7 @@ from typing import Callable, Union
 from visitor import AstVisitor
 from dataclasses import dataclass, field
 
-from hugr import *
+from guppy.hugr.hugr import *
 from guppy_types import *
 
 

@@ -3,7 +3,7 @@ from typing import Optional, Iterator, Tuple, Any
 from enum import IntEnum
 from dataclasses import dataclass
 
-from guppy_types import GuppyType
+from guppy.guppy_types import GuppyType
 
 
 @dataclass(frozen=True)

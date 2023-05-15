@@ -3,7 +3,7 @@
 import graphviz as gv
 from typing import Iterable
 
-from hugr import EKind, InPort, OutPort, Node, Hugr
+from guppy.hugr.hugr import EKind, InPort, OutPort, Node, Hugr
 
 # old palettte: https://colorhunt.co/palette/343a407952b3ffc107e1e8eb
 # _COLOURS = {
