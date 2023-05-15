@@ -312,8 +312,7 @@ class OpDef(BaseModel):
     description: str  # Human readable description of the operation.
     inputs: list[tuple[Optional[str], SimpleType]]
     outputs: list[tuple[Optional[str], SimpleType]]
-    # TODO: This is not serialised if empty
-    misc: dict[str, Any]  # Miscellaneous data associated with the operation.
+    misc: dict[str, Any] = {}  # Miscellaneous data associated with the operation.
     def_: Optional[str] = Field(alias="def")  # (YAML?)-encoded definition of the operation.
     resource_reqs: ResourceSet  # Resources required to execute this operation.
 
