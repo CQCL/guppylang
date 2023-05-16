@@ -26,11 +26,11 @@ def test_serialize_tagged_union():
     assert c2.dict() == {"union": {"BB": {"z": "foo"}}}
 
 
-def test_deserialize_tagged_union():
-    c1 = {"union": {"A": {"x": 42, "y": True}}}
-    c2 = {"union": {"BB": {"z": "foo"}}}
-    assert C(**c1) == C(union=A(x=42, y=True))
-    assert C(**c2) == C(union=B(z="foo"))
+def test_roundtrip_tagged_union():
+    c1 = C(union=A(x=42, y=True))
+    c2 = C(union=B(z="foo"))
+    assert C(**c1.dict()) == c1
+    assert C(**c2.dict()) == c2
 
 
 def test_not_in_union():
@@ -81,8 +81,13 @@ def test_serialize_list():
     assert G(z=F()).dict() == {"z": "F"}
 
 
-def test_deserialize_list():
-    assert D(*[42, 13.37]) == D(x=42, y=13.37)
-    assert E(*["bar"]) == E(x="bar")
-    assert G(**{"z": {"E": "foo"}}) == G(z=E(x="foo"))
-    assert G(**{"z": "F"}) == G(z=F())
+def test_roundtrip_list():
+    x1 = D(x=42, y=13.37)
+    x2 = E(x="bar")
+    x3 = G(z=E(x="foo"))
+    x4 = G(z=F())
+
+    assert D(*x1.dict()) == x1
+    assert E(x2.dict()) == x2
+    assert G(**x3.dict()) == x3
+    assert G(**x4.dict()) == x4
