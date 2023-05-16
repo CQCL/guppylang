@@ -97,8 +97,8 @@ class String(BaseModel, list=True):
 
 class Graph(BaseModel, list=True):
     """ A graph encoded as a value. It contains a concrete signature and a set of required resources. """
-    resources: "ResourceSet" = Field(position=0)
-    signature: "Signature" = Field(position=1)
+    resources: "ResourceSet"
+    signature: "Signature"
 
 
 ResourceSet = set[str]

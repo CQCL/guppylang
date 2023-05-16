@@ -340,8 +340,8 @@ class Tuple(BaseModel, list=True):
 
 class Opaque(BaseModel, list=True):
     """ An opaque constant value. """
-    ty: SimpleType = Field(position=0)
-    val: "CustomConst" = Field(position=1)
+    ty: SimpleType
+    val: "CustomConst"
 
 
 CustomConst = Any  # TODO
