@@ -38,13 +38,12 @@ is not available yet. See:
 
 Support serialisation of models via lists instead of dicts. In that case, 
 the fields can be identified via the position in the list instead of the 
-name. This requires the user to annotate the model field with position 
-indices. If the model only has a single field, no list is required and 
-the entry is just serialised on its own:
+name. If the model only has a single field, the entry is just serialised 
+on its own without wrapping it into a list:
 
     class Foo(BaseModel, list=True):
-        x: int = Field(position=0)
-        y: str = Field(position=1)
+        x: int
+        y: str
         
     class Bar(BaseModel, list=True):
         z: float
@@ -85,8 +84,9 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
     # a discriminated union.
     discriminator_: Literal[""] = Field("", repr=False, exclude=True)
 
-    # Store ordering of fields in case this is a list model
-    _field_order: Optional[list[str]] = None
+    # Whether this model is serialised as a list instead of a dict. This
+    # can be set by passing `list=True` when defining a subclass
+    _is_list_model: bool = False
 
     # Serialisation name of this class. Per default, this will be the class
     # name, but can be changed by passing `serialize_as=...` when defining a
@@ -107,7 +107,7 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
                     if name in members:
                         member = members[name]
                         # Call the member constructor using *args if it's a list model
-                        if issubclass(member, BaseModel) and member._field_order is not None:
+                        if issubclass(member, BaseModel) and member._is_list_model:
                             if not isinstance(v, list):
                                 v = [v]
                             values[field_name] = member(*v)
@@ -122,6 +122,7 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
 
     def __init_subclass__(cls, list=False, serialize_as=None, **kwargs):
         super().__init_subclass__(**kwargs)
+        cls._is_list_model = list
 
         # Initialise the discriminator field with the correct class name
         cls._name = serialize_as or cls.__name__
@@ -138,33 +139,18 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
                     raise ValueError("`tagged_union` can only be set for fields of `Union[...]` type")
                 field.discriminator_key = "discriminator_"
 
-        # Read out field ordering if it is a list model
+        # For list models, we patch the __init__ function to accept positional
+        # arguments. By doing this here we can trick the Pydantic IDE support
+        # to still give hints for the original constructor
         if list:
-            if len(fields) == 1:
-                f, = fields.keys()
-                cls._field_order = [f]
-                return
-
-            cls._field_order = [None for _ in range(len(fields))]
-            for field_name, field in fields.items():
-                if "position" not in field.field_info.extra:
-                    raise ValueError(f"Add field positions for ListModel using `... = Field(position=xxx)`")
-                pos = field.field_info.extra["position"]
-                if not 0 <= pos <= len(fields) - 1:
-                    raise ValueError(f"Invalid position: {pos}")
-                if cls._field_order[pos] is not None:
-                    raise ValueError(f"Position not unique: {pos}")
-                cls._field_order[pos] = field_name
-
-            # Patch __init__ function to accept positional arguments. By doing this
-            # here we can trick the Pydantic IDE support to still give hints for the
-            # original constructor
             old_init = cls.__init__
 
             def patched_init(self, *args, **kwargs_):
                 if len(args) == len(fields):
+                    field_order = [f for f in self.__fields__ if f != "discriminator_"]
+                    print(field_order)
                     for (i, arg) in enumerate(args):
-                        kwargs_[self._field_order[i]] = arg
+                        kwargs_[field_order[i]] = arg
                 old_init(self, **kwargs_)
 
             cls.__init__ = patched_init
@@ -179,7 +165,7 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
                 x = d[field_name]
                 d[field_name] = name if len(x) == 0 else {name: x}
         # Turn into list if we're a list model
-        if self._field_order is not None:
-            ordered = [d[f] for f in self._field_order]
+        if self._is_list_model:
+            ordered = [d[f] for f in self.__fields__ if f != "discriminator_"]
             return ordered[0] if len(ordered) == 1 else ordered
         return d

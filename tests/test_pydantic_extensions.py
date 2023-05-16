@@ -47,8 +47,8 @@ def test_not_a_union():
 
 
 class D(BaseModel, list=True):
-    x: int = Field(position=0)
-    y: float = Field(position=1)
+    x: int
+    y: float
 
 
 class E(BaseModel, list=True):
@@ -75,30 +75,6 @@ def test_deserialize_list():
     assert E(*["bar"]) == E(x="bar")
     assert G(**{"z": {"E": "foo"}}) == G(z=E(x="foo"))
     assert G(**{"z": "F"}) == G(z=F())
-
-
-def test_no_position():
-    with pytest.raises(Exception) as exc_info:
-        class Foo(BaseModel, list=True):
-            x: int
-            y: float
-    assert exc_info.value.args[0] == "Add field positions for ListModel using `... = Field(position=xxx)`"
-
-
-def test_negative_position():
-    with pytest.raises(Exception) as exc_info:
-        class Foo(BaseModel, list=True):
-            x: int = Field(position=-1)
-            y: float = Field(position=0)
-    assert exc_info.value.args[0] == "Invalid position: -1"
-
-
-def test_duplicate_position():
-    with pytest.raises(Exception) as exc_info:
-        class Foo(BaseModel, list=True):
-            x: int = Field(position=0)
-            y: float = Field(position=0)
-    assert exc_info.value.args[0] == "Position not unique: 0"
 
 
 def test_position_skipped():
