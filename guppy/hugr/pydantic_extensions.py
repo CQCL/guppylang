@@ -115,9 +115,14 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
                             values[field_name] = member(**v)
                     else:
                         raise ValueError(f"`{name}` is not a valid union member")
-                # If it's just a string, this could be a model without fields
-                elif isinstance(value, str) and value in members:
-                    values[field_name] = members[value]()
+                # If it's just a string, this must be a model without fields
+                elif isinstance(value, str):
+                    if value in members:
+                        values[field_name] = members[value]()
+                    else:
+                        raise ValueError(f"`{value}` is not a valid union member")
+                # If value is anything else, we just fall through and let Pydantic
+                # validation handle it
         return values
 
     def __init_subclass__(cls, list=False, serialize_as=None, **kwargs):
@@ -137,6 +142,8 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
             if is_tagged_union(field):
                 if get_origin(field.type_) is not Union:
                     raise ValueError("`tagged_union` can only be set for fields of `Union[...]` type")
+                if any(not issubclass(m, BaseModel) for m in union_members(field.type_)):
+                    raise ValueError("`tagged_union` members must all be subclasses of `BaseModel`")
                 field.discriminator_key = "discriminator_"
 
         # For list models, we patch the __init__ function to accept positional

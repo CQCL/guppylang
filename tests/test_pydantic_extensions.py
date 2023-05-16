@@ -39,11 +39,23 @@ def test_not_in_union():
     assert exc_info.value.args[0][0].exc.args[0] == "`D` is not a valid union member"
 
 
+def test_not_in_union_empty():
+    with pytest.raises(ValidationError, match="`D` is not a valid union member"):
+        c = {"union": "D"}
+        C(**c)
+
+
 def test_not_a_union():
     with pytest.raises(Exception) as exc_info:
         class Foo(BaseModel):
             x: int = Field(tagged_union=True)
     assert exc_info.value.args[0] == "`tagged_union` can only be set for fields of `Union[...]` type"
+
+
+def test_invalid_member():
+    with pytest.raises(Exception, match="`tagged_union` members must all be subclasses of `BaseModel`"):
+        class Foo(BaseModel):
+            x: Union[A, str] = Field(tagged_union=True)
 
 
 class D(BaseModel, list=True):
