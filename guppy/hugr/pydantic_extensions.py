@@ -155,7 +155,6 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
             def patched_init(self, *args, **kwargs_):
                 if len(args) == len(fields):
                     field_order = [f for f in self.__fields__ if f != "discriminator_"]
-                    print(field_order)
                     for (i, arg) in enumerate(args):
                         kwargs_[field_order[i]] = arg
                 old_init(self, **kwargs_)
