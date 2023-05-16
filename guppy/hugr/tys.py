@@ -10,7 +10,7 @@ from .pydantic_extensions import BaseModel
 
 class CustomType(BaseModel):
     """ An opaque type element. Contains an unique identifier and a reference to its definition. """
-    id: str  # Unique identifier of the opaque type.f
+    id: str  # Unique identifier of the opaque type.
     params: "TypeRow"
 
 
