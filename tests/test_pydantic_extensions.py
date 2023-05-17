@@ -64,7 +64,7 @@ def test_roundtrip_tagged_union():
 
 
 def test_not_in_union():
-    with pytest.raises(ValidationError, match="`D` is not a valid union member") as exc_info:
+    with pytest.raises(ValidationError, match="`D` is not a valid union member"):
         c = {"union": {"D": {"x": 42, "y": True}}}
         C(**c)
 
