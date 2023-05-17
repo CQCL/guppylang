@@ -2,8 +2,7 @@
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, Extra, root_validator
-from pydantic.fields import ModelField
-from typing import get_origin, get_args, Literal, Optional, Union, Any
+from typing import get_origin, get_args, Literal, Union, Any
 
 """
 This is all very hacky, but we need the following two extra Pydantic features
@@ -12,24 +11,23 @@ to be compatible with the way Serde serialises Rust Enums:
 1. EXTERNALLY TAGGED UNIONS
 
 Allow unions to be discriminated during (de)serialisation using an outer
-tag. Note that we only support discriminated unions where each union member 
-is itself a BaseModel. For example:
+tag. Each BaseModel in the union must be tagged. For example:
 
-    class Cat(BaseModel):
+    class Cat(BaseModel, tagged=True):
         cat_property: str
     
-    class Dog(BaseModel):
+    class Dog(BaseModel, tagged=True):
         dog_property: str
     
     class Foo(BaseModel):
-        pet: Union[Cat, Dog] = Field(tagged_union=True)
+        pet: Union[Cat, Dog]
     
     Foo(pet=Cat(cat_property="cute")).dict()  # -> {"pet": {"Cat": {"cat_property": "cute" }}}
     Foo(pet=Dog(dog_property="loud")).dict()  # -> {"pet": {"Dog": {"dog_property": "loud" }}}
 
 We need this because Rust enums are serialised via such an outer tag by Serde.
-There has been some discussion around this feature for Pydantic 2.0, but it
-is not available yet. See: 
+There has been some discussion around a similar feature for Pydantic 2.0, but 
+it is not available yet. See: 
     https://github.com/pydantic/pydantic-core/issues/102
     https://github.com/pydantic/pydantic/issues/5244
 
@@ -62,116 +60,146 @@ is the only case we need for our use case at the moment.
 """
 
 
-def is_tagged_union(field: ModelField) -> bool:
-    # When defining a Pydantic field using `foo: ty = Field(..., tagged_union=True)`,
-    # the unknown argument `tagged_union` is placed into the `field_info.extra`
-    # of the field.
-    return "tagged_union" in field.field_info.extra and field.field_info.extra["tagged_union"] is True
+def is_tagged_union(ty: type) -> bool:
+    """
+    Checks if a given type is a tagged union, i.e. a union  where all
+    members are tagged models.
+    """
+    return get_origin(ty) is Union and all(issubclass(m, BaseModel) and m._tagged for m in get_args(ty))
 
 
-def union_members(ty: type) -> tuple[Any, ...]:
-    if get_origin(ty) != Union:
-        raise ValueError("Not a union type")
-    return get_args(ty)
+def contains_tagged_union(ty: type) -> bool:
+    """
+    Checks if a type is a tagged union or a list-, set-, or tuple-type
+    containing tagged unions somewhere in its arguments.
+    """
+    if is_tagged_union(ty):
+        return True
+    elif get_origin(ty) in [list, set]:
+        return contains_tagged_union(get_args(ty)[0])
+    elif get_origin(ty) is tuple:
+        return any(contains_tagged_union(t) for t in get_args(ty))
+    return False
 
 
 class BaseModel(PydanticBaseModel, extra=Extra.forbid):
     """ Custom Pydantic BaseModel with support for externally tagged unions and list serialisation. """
-
-    # We emulate externally tagged unions using Pydantic's discriminated
-    # union feature. To make things easy, we just give every model a dummy
-    # discriminator field that is only used if the model occurs inside
-    # a discriminated union.
-    discriminator_: Literal[""] = Field("", repr=False, exclude=True)
+    # We give every model a tag field that is set to the class name (this
+    # can be customised by passing `tag=...` when defining a subclass).
+    # Note that this is *not* a private field, so pydantic can use it to
+    # disambiguate isomorphic models in a union.
+    tag_: Literal[""] = Field("", repr=False, exclude=True)
 
     # Whether this model is serialised as a list instead of a dict. This
-    # can be set by passing `list=True` when defining a subclass
+    # can be set by passing `list=True` when defining a subclass.
     _is_list_model: bool = False
 
-    # Serialisation name of this class. Per default, this will be the class
-    # name, but can be changed by passing `serialize_as=...` when defining a
-    # subclass
-    _name: str
+    # Whether to add the model tag externally when serialising the model.
+    # This can be set by passing `tagged=True` when defining a subclass.
+    _tagged: bool = False
+
+    def __init_subclass__(cls, list=False, tagged=False, tag=None, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls._is_list_model = list
+        cls._tagged = tagged
+
+        # Initialise the tag field with the correct class name
+        cls.__fields__["tag_"].type_ = Literal[tag or cls.__name__]
+        cls.__fields__["tag_"].default = tag or cls.__name__
+
+        for field in cls.__fields__.values():
+            check_type_valid(field.outer_type_)
+
+        # We patch the __init__ function here instead of overriding, so
+        # we can trick the Pydantic IDE support to still give hints for
+        # the original constructor
+        old_init = cls.__init__
+        cls.__init__ = lambda self, *args, **kwargs_: cls.__new_init__(self, old_init, *args, **kwargs_)
+
+    def __new_init__(self, old_init, *args, **kwargs):
+        # Accept positional arguments for list models
+        fields = self.__fields__.copy()
+        fields.pop("tag_")  # Ignore `tag_` field
+        if self._is_list_model and len(kwargs) == 0 and len(args) == len(fields):
+            field_order = list(fields)
+            for (i, arg) in enumerate(args):
+                kwargs[field_order[i]] = arg
+            args = []
+        old_init(self, *args, **kwargs)
 
     @root_validator(pre=True)
-    def preprocess_tagged_union(cls, values):
+    def parse_tagged_union(cls, values):
         # We need to handle dict-parsing of externally tagged unions ourselves using
         # this custom root validator
         for field_name, value in values.items():
+            if field_name not in cls.__fields__:
+                continue
             field = cls.__fields__[field_name]
-            if is_tagged_union(field):
-                members = {m._name: m for m in union_members(field.type_)}
-                # Look for singleton dict with class name as key
-                if isinstance(value, dict) and len(value) == 1:
-                    (name, v), = value.items()
-                    if name in members:
-                        member = members[name]
-                        # Call the member constructor using *args if it's a list model
-                        if issubclass(member, BaseModel) and member._is_list_model:
-                            if not isinstance(v, list):
-                                v = [v]
-                            values[field_name] = member(*v)
-                        else:
-                            values[field_name] = member(**v)
-                    else:
-                        raise ValueError(f"`{name}` is not a valid union member")
-                # If it's just a string, this must be a model without fields
-                elif isinstance(value, str):
-                    if value in members:
-                        values[field_name] = members[value]()
-                    else:
-                        raise ValueError(f"`{value}` is not a valid union member")
-                # If value is anything else, we just fall through and let Pydantic
-                # validation handle it
+            if contains_tagged_union(field.outer_type_):
+                values[field_name] = parse_tagged_union(field.outer_type_, values[field_name])
         return values
-
-    def __init_subclass__(cls, list=False, serialize_as=None, **kwargs):
-        super().__init_subclass__(**kwargs)
-        cls._is_list_model = list
-
-        # Initialise the discriminator field with the correct class name
-        cls._name = serialize_as or cls.__name__
-        cls.__fields__["discriminator_"].type_ = Literal[cls._name]
-        cls.__fields__["discriminator_"].default = cls._name
-
-        # If any field is marked as a tagged union, turn it into a Pydantic
-        # discriminated union
-        fields = cls.__fields__.copy()
-        fields.pop("discriminator_", None)  # Ignore `discriminator_` field
-        for field in fields.values():
-            if is_tagged_union(field):
-                if get_origin(field.type_) is not Union:
-                    raise ValueError("`tagged_union` can only be set for fields of `Union[...]` type")
-                if any(not issubclass(m, BaseModel) for m in union_members(field.type_)):
-                    raise ValueError("`tagged_union` members must all be subclasses of `BaseModel`")
-                field.discriminator_key = "discriminator_"
-
-        # For list models, we patch the __init__ function to accept positional
-        # arguments. By doing this here we can trick the Pydantic IDE support
-        # to still give hints for the original constructor
-        if list:
-            old_init = cls.__init__
-
-            def patched_init(self, *args, **kwargs_):
-                if len(args) == len(fields):
-                    field_order = [f for f in self.__fields__ if f != "discriminator_"]
-                    for (i, arg) in enumerate(args):
-                        kwargs_[field_order[i]] = arg
-                old_init(self, **kwargs_)
-
-            cls.__init__ = patched_init
 
     def dict(self, *args, **kwargs):
         # We override the dict() method to alter the serialisation behaviour
         d = super().dict(*args, **kwargs)
-        # Add outer tag to tagged union fields
-        for field_name, field in self.__fields__.items():
-            if is_tagged_union(field):
-                name = self.__getattribute__(field_name).__class__._name
-                x = d[field_name]
-                d[field_name] = name if len(x) == 0 else {name: x}
-        # Turn into list if we're a list model
         if self._is_list_model:
-            ordered = [d[f] for f in self.__fields__ if f != "discriminator_"]
-            return ordered[0] if len(ordered) == 1 else ordered
+            vs = [d[f] for f in self.__fields__ if f != "tag_"]
+            d = vs[0] if len(vs) == 1 else vs
+        if self._tagged:
+            d = self.tag_ if d == [] else {self.tag_: d}
         return d
+
+
+def check_type_valid(ty: type) -> None:
+    """
+    Raises an exception if the type is invalid. At the moment this only
+    checks if all members of a tagged union are tagged.
+    """
+    o = get_origin(ty)
+    if o is Union:
+        if all(issubclass(m, BaseModel) and m._tagged for m in get_args(ty)):
+            return
+        if any(issubclass(m, BaseModel) and m._tagged for m in get_args(ty)):
+            raise ValueError("If one Union member is tagged, all have to be")
+    elif o in [list, set]:
+        check_type_valid(get_args(ty)[0])
+    elif get_origin(ty) is tuple:
+        for t in get_args(ty):
+            check_type_valid(t)
+
+
+def parse_tagged_union(ty: type, value: Any) -> Any:
+    """
+    Parses a dict-encoded tagged union value. If the encoding is invalid,
+    `value` is returned unchanged.
+    """
+    if is_tagged_union(ty):
+        members = {m.__fields__["tag_"].default: m for m in get_args(ty)}
+        # Look for singleton dict with class name as key
+        if isinstance(value, dict) and len(value) == 1:
+            (name, v), = value.items()
+            if name in members:
+                member = members[name]
+                # Call the member constructor using *args if it's a list model
+                if issubclass(member, BaseModel) and member._is_list_model:
+                    if not isinstance(v, list):
+                        v = [v]
+                    return member(*v)
+                else:
+                    return member(**v)
+            else:
+                raise ValueError(f"`{name}` is not a valid union member")
+        # If it's just a string, this must be a model without fields
+        elif isinstance(value, str):
+            if value in members:
+                return members[value]()
+            else:
+                raise ValueError(f"`{value}` is not a valid union member")
+        # If value is anything else, we just fall through and let Pydantic
+        # validation handle it
+    elif contains_tagged_union(ty):
+        if (isinstance(value, list) and get_origin(ty) is list) or (isinstance(value, set) and get_origin(ty) is set):
+            return type(value)(parse_tagged_union(get_args(ty)[0], val) for val in value)
+        elif isinstance(value, tuple) and get_origin(ty) is tuple:
+            return tuple(parse_tagged_union(t, val) for t, val in zip(get_args(ty), value))
+    return value
