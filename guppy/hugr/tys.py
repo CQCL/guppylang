@@ -1,3 +1,5 @@
+import inspect
+import sys
 from typing import Annotated, Union, Optional
 from pydantic import Field
 
@@ -18,84 +20,108 @@ class CustomType(BaseModel):
 # --------------- SimpleType ------------------
 # ---------------------------------------------
 
-class Classic(BaseModel, list=True):
+class Classic(BaseModel, list=True, tagged=True):
     """ A type containing classical data. Elements of this type can be copied. """
     ty: "ClassicType"
 
 
-class Linear(BaseModel, list=True):
+class Linear(BaseModel, list=True, tagged=True):
     """ A type containing linear data. Elements of this type must be used exactly once. """
     ty: "LinearType"
 
 
-SimpleType = Annotated[Union[Classic, Linear], Field(tagged_union=True)]
+SimpleType = Union[Classic, Linear]
 
 
 # --------------------------------------------
 # --------------- Container ------------------
 # --------------------------------------------
 
-class List(BaseModel, list=True):
+class ListClassic(BaseModel, list=True, tagged=True, tag="List"):
     """ Variable sized list of types """
-    ty: Union["ClassicType", "LinearType"]
+    ty: "ClassicType"
 
 
-class Map(BaseModel, list=True):
+class ListLinear(BaseModel, list=True, tagged=True, tag="List"):
+    """ Variable sized list of types """
+    ty: "LinearType"
+
+
+class MapClassic(BaseModel, list=True, tagged=True, tag="Map"):
     """ Hash map from hashable key type to value type """
     key: "ClassicType"
-    value: Union["ClassicType", "LinearType"]
+    value: "ClassicType"
 
 
-class Tuple(BaseModel, list=True):
+class MapLinear(BaseModel, list=True, tagged=True, tag="Map"):
+    """ Hash map from hashable key type to value type """
+    key: "ClassicType"
+    value: "LinearType"
+
+
+class Tuple(BaseModel, list=True, tagged=True):
     """ Product type, known-size tuple over elements of type row """
     tys: "TypeRow"
 
 
-class Sum(BaseModel, list=True):
+class Sum(BaseModel, list=True, tagged=True):
     """ Sum type, variants are tagged by their position in the type row """
     tys: "TypeRow"
 
 
-class Array(BaseModel, list=True):
+class ArrayClassic(BaseModel, list=True, tagged=True, tag="Array"):
     """ Known size array of """
-    ty: Union["ClassicType", "LinearType"]
+    ty: "ClassicType"
     size: int
 
 
-class NewType(BaseModel, list=True):
+class ArrayLinear(BaseModel, list=True, tagged=True, tag="Array"):
+    """ Known size array of """
+    ty: "LinearType"
+    size: int
+
+
+class NewClassicType(BaseModel, list=True, tagged=True, tag="NewType"):
     """ Named type defined by, but distinct from, ty. """
     name: str
-    ty: Union["ClassicType", "LinearType"]
+    ty: "ClassicType"
 
 
-Container = Annotated[Union[List, Map, Tuple, Sum, Array, NewType], Field(tagged_union=True)]
+class NewLinearType(BaseModel, list=True, tagged=True, tag="NewType"):
+    """ Named type defined by, but distinct from, ty. """
+    name: str
+    ty: "LinearType"
+
+
+ContainerC = Union[ListClassic, MapClassic, Tuple, Sum, ArrayClassic, NewClassicType]
+ContainerL = Union[ListLinear, MapLinear, Tuple, Sum, ArrayLinear, NewLinearType]
 
 
 # ----------------------------------------------
 # --------------- ClassicType ------------------
 # ----------------------------------------------
 
-class Variable(BaseModel, list=True):
+class Variable(BaseModel, list=True, tagged=True):
     """ A type variable identified by a name. """
     name: str
 
 
-class Int(BaseModel, list=True):
+class Int(BaseModel, list=True, tagged=True):
     """ An arbitrary size integer. """
     size: int
 
 
-class F64(BaseModel, list=True):
+class F64(BaseModel, list=True, tagged=True):
     """ A 64-bit floating point number. """
     pass
 
 
-class String(BaseModel, list=True):
+class String(BaseModel, list=True, tagged=True):
     """ An arbitrary length string. """
     pass
 
 
-class Graph(BaseModel, list=True):
+class Graph(BaseModel, list=True, tagged=True):
     """ A graph encoded as a value. It contains a concrete signature and a set of required resources. """
     resources: "ResourceSet"
     signature: "Signature"
@@ -104,39 +130,39 @@ class Graph(BaseModel, list=True):
 ResourceSet = set[str]
 
 
-class ContainerClassic(BaseModel, list=True, serialize_as="Container"):
+class ContainerClassic(BaseModel, list=True, tagged=True, tag="Container"):
     """ A nested definition containing other classic types. """
-    ty: "Container"
+    ty: ContainerC
 
 
-class OpaqueClassic(BaseModel, list=True, serialize_as="Opaque"):
+class OpaqueClassic(BaseModel, list=True, tagged=True, tag="Opaque"):
     """ An opaque operation that can be downcasted by the extensions that define it. """
     ty: CustomType
 
 
-ClassicType = Annotated[Union[Variable, Int, F64, String, Graph, ContainerClassic, OpaqueClassic], Field(tagged_union=True)]
+ClassicType = Union[Variable, Int, F64, String, Graph, ContainerClassic, OpaqueClassic]
 
 
 # ----------------------------------------------
 # --------------- LinearType -------------------
 # ----------------------------------------------
 
-class Qubit(BaseModel, list=True):
+class Qubit(BaseModel, list=True, tagged=True):
     """ A qubit. """
     pass
 
 
-class OpaqueLinear(BaseModel, list=True, serialize_as="Opaque"):
+class OpaqueLinear(BaseModel, list=True, tagged=True, tag="Opaque"):
     """ A linear opaque operation that can be downcasted by the extensions that define it. """
     ty: CustomType
 
 
-class ContainerLinear(BaseModel, list=True, serialize_as="Container"):
+class ContainerLinear(BaseModel, list=True, tagged=True, tag="Container"):
     """ A nested definition containing other linear types. """
-    ty: Container
+    ty: ContainerL
 
 
-LinearType = Annotated[Union[Qubit, OpaqueLinear, ContainerLinear], Field(tagged_union=True)]
+LinearType = Union[Qubit, OpaqueLinear, ContainerLinear]
 
 
 # -------------------------------------------
@@ -160,4 +186,14 @@ class Signature(BaseModel):
     """
     input: TypeRow  # Value inputs of the function.
     output: TypeRow  # Value outputs of the function.
-    const_input: Optional[ClassicType]  # Possible constE input (for call / load-constant).
+    const_input: TypeRow  # Possible constE input (for call / load-constant).
+
+
+# Now that all classes are defined, we need to update the ForwardRefs
+# in all type annotations. We use some inspect magic to find all classes
+# defined in this file.
+classes = inspect.getmembers(sys.modules[__name__],
+                             lambda member: inspect.isclass(member) and member.__module__ == __name__)
+for _, c in classes:
+    if issubclass(c, BaseModel):
+        c.update_forward_refs()
