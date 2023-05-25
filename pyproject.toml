@@ -17,5 +17,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     # "pip-tools", # provides pip-compile
-    "pytest"
+    "build",
+    "pytest",
 ]

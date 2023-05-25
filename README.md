@@ -41,5 +41,5 @@ pytest -v
 ## Packaging
 
 ```sh
-python -m build --sdist --wheel -n
+python -m build -n
 ```
