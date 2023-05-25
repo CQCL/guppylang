@@ -179,29 +179,29 @@ class Hugr:
             parent.output_child = node
         return node
 
-    def add_beta_node(self, parent: Node) -> DataflowContainingNode:
+    def add_block_node(self, parent: Node) -> DataflowContainingNode:
         return self.add_node(ops.BasicBlock(op=ops.Block()), [], [], parent, node_class=DataflowContainingNode)
 
     def add_exit_node(self, output_types: list[GuppyType], parent: Node) -> Node:
         outputs = tys.TypeRow(types=[ty.to_hugr() for ty in output_types])
         return self.add_node(ops.BasicBlock(op=ops.Exit(cfg_outputs=outputs)), [], [], parent)
 
-    def add_delta_node(self, parent: Node) -> Node:
+    def add_dfg_node(self, parent: Node) -> Node:
         return self.add_node(ops.Dataflow(op=ops.DFG()), [], [], parent, node_class=DataflowContainingNode)
 
     def add_case_node(self, parent: Node) -> Node:
         return self.add_node(ops.Case(op=ops.CaseOp()), [], [], parent, node_class=DataflowContainingNode)
 
-    def add_kappa_node(self, parent: Node, args: Optional[list[OutPort]] = None) -> Node:
+    def add_cfg_node(self, parent: Node, args: Optional[list[OutPort]] = None) -> Node:
         return self.add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.CFG())), [], [], parent, args)
 
-    def add_gamma_node(self, cond_arg: OutPort, args: list[OutPort], outputs: Optional[TypeList] = None,
-                       parent: Optional[Node] = None) -> Node:
+    def add_conditional_node(self, cond_arg: OutPort, args: list[OutPort], outputs: Optional[TypeList] = None,
+                             parent: Optional[Node] = None) -> Node:
         args = [cond_arg] + args
         return self.add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.Conditional())), None, outputs, parent, args)
 
-    def add_theta_node(self, args: list[OutPort], outputs: Optional[TypeList] = None,
-                       parent: Optional[Node] = None) -> Node:
+    def add_tail_loop_node(self, args: list[OutPort], outputs: Optional[TypeList] = None,
+                           parent: Optional[Node] = None) -> DataflowContainingNode:
         return self.add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.TailLoop())), None, outputs, parent, args,
                              node_class=DataflowContainingNode)
 

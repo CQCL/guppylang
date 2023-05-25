@@ -408,19 +408,19 @@ class StatementCompiler(AstVisitor):
         extra_outputs = extra_outputs or []
         self.graph.add_output_node(parent=parent, args=extra_outputs + [v.port for v in vs])
 
-    def _make_delta(self, variables: VarMap, parent: Node, is_case: bool = False) -> tuple[Node, VarMap]:
-        delta = self.graph.add_case_node(parent) if is_case else self.graph.add_delta_node(parent)
-        new_vars = self._add_input(variables, delta)
-        return delta, new_vars
+    def _make_dfg(self, variables: VarMap, parent: Node, is_case: bool = False) -> tuple[Node, VarMap]:
+        dfg = self.graph.add_case_node(parent) if is_case else self.graph.add_dfg_node(parent)
+        new_vars = self._add_input(variables, dfg)
+        return dfg, new_vars
 
     def _make_empty_bb(self, parent: Node) -> BBNode:
-        return self.graph.add_beta_node(parent)
+        return self.graph.add_block_node(parent)
 
     def _make_bb(self, predecessor: BBNode, variables: VarMap) -> tuple[BBNode, VarMap]:
-        beta = self.graph.add_beta_node(predecessor.parent)
-        self.graph.add_edge(predecessor.add_out_port(None), beta.add_in_port(None))
-        new_vars = self._add_input(variables, beta)
-        return beta, new_vars
+        block = self.graph.add_block_node(predecessor.parent)
+        self.graph.add_edge(predecessor.add_out_port(None), block.add_in_port(None))
+        new_vars = self._add_input(variables, block)
+        return block, new_vars
 
     def _finish_bb(self, bb: BBNode, variables: Optional[VarMap] = None, outputs: Optional[list[OutPort]] = None,
                    branch_pred: Optional[OutPort] = None) -> None:
@@ -661,19 +661,19 @@ class FunctionalStatementCompiler(StatementCompiler):
         cond_port = self.expr_compiler.compile(node.test, variables, bb, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
         vs = list(sorted(variables.values(), key=lambda v: v.name))
-        gamma = self.graph.add_gamma_node(cond_arg=cond_port, args=[v.port for v in vs], parent=bb)
+        conditional = self.graph.add_conditional_node(cond_arg=cond_port, args=[v.port for v in vs], parent=bb)
 
-        if_delta, if_vars = self._make_delta(variables, gamma, is_case=True)
-        else_delta, else_vars = self._make_delta(variables, gamma, is_case=True)
-        self.compile_list(node.body, if_vars, if_delta, **kwargs)
-        self.compile_list(node.orelse, else_vars, else_delta, **kwargs)
+        if_dfg, if_vars = self._make_dfg(variables, conditional, is_case=True)
+        else_dfg, else_vars = self._make_dfg(variables, conditional, is_case=True)
+        self.compile_list(node.body, if_vars, if_dfg, **kwargs)
+        self.compile_list(node.orelse, else_vars, else_dfg, **kwargs)
 
-        if_output = self.graph.add_output_node(parent=if_delta)
-        else_output = self.graph.add_output_node(parent=else_delta)
+        if_output = self.graph.add_output_node(parent=if_dfg)
+        else_output = self.graph.add_output_node(parent=else_dfg)
         for name in set(if_vars.keys()) | set(else_vars.keys()):
             if name in if_vars and name in else_vars:
                 if_var, else_var = if_vars[name], else_vars[name]
-                variables[name] = merge_variables(if_var, else_var, new_port=gamma.add_out_port(if_var.ty))
+                variables[name] = merge_variables(if_var, else_var, new_port=conditional.add_out_port(if_var.ty))
                 self.graph.add_edge(if_var.port, if_output.add_in_port(if_var.ty))
                 self.graph.add_edge(else_var.port, else_output.add_in_port(else_var.ty))
             else:
@@ -688,29 +688,29 @@ class FunctionalStatementCompiler(StatementCompiler):
         # Turn into tail controlled loop by enclosing into initial if statement
         cond_port = self.expr_compiler.compile(node.test, variables, bb, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
-        gamma = self.graph.add_gamma_node(cond_arg=cond_port, parent=bb,
-                                          args=[v.port for v in sorted(variables.values(), key=lambda v: v.name)])
-        loop_delta, loop_vars = self._make_delta(variables, gamma, is_case=True)
-        skip_delta, skip_vars = self._make_delta(variables, gamma, is_case=True)
+        conditional = self.graph.add_conditional_node(cond_arg=cond_port, parent=bb,
+                                                      args=[v.port for v in sorted(variables.values(), key=lambda v: v.name)])
+        start_dfg, start_vars = self._make_dfg(variables, conditional, is_case=True)
+        skip_dfg, skip_vars = self._make_dfg(variables, conditional, is_case=True)
         # The skip block is just an identity DFG
         self.graph.add_output_node(args=[v.port for v in sorted(skip_vars.values(), key=lambda v: v.name)],
-                                   parent=skip_delta)
+                                   parent=skip_dfg)
 
-        # Now compile loop body itself as theta node
-        theta = self.graph.add_theta_node(args=[v.port for v in sorted(loop_vars.values(), key=lambda v: v.name)],
-                                          parent=loop_delta)
-        theta_vars = self._add_input(variables, theta)
-        self.compile_list(node.body, theta_vars, theta, **kwargs)
-        theta_delta_output = self.graph.add_output_node(inputs=[BoolType()],  # Reserve condition port
-                                                        parent=theta)
-        loop_delta_output = self.graph.add_output_node(parent=loop_delta)
-        for var in sorted(theta_vars.values(), key=lambda v: v.name):
+        # Now compile loop body itself as TailLoop node
+        loop = self.graph.add_tail_loop_node(args=[v.port for v in sorted(start_vars.values(), key=lambda v: v.name)],
+                                             parent=start_dfg)
+        loop_vars = self._add_input(variables, loop)
+        self.compile_list(node.body, loop_vars, loop, **kwargs)
+        loop_output = self.graph.add_output_node(inputs=[BoolType()],  # Reserve condition port
+                                                 parent=loop)
+        start_dfg_output = self.graph.add_output_node(parent=start_dfg)
+        for var in sorted(loop_vars.values(), key=lambda v: v.name):
             name = var.name
             if name in variables:
                 orig_var = variables[name]
-                variables[name] = merge_variables(var, orig_var, new_port=gamma.add_out_port(var.ty))
-                self.graph.add_edge(var.port, theta_delta_output.add_in_port(var.ty))
-                self.graph.add_edge(theta.add_out_port(var.ty), loop_delta_output.add_in_port(var.ty))
+                variables[name] = merge_variables(var, orig_var, new_port=conditional.add_out_port(var.ty))
+                self.graph.add_edge(var.port, loop_output.add_in_port(var.ty))
+                self.graph.add_edge(loop.add_out_port(var.ty), start_dfg_output.add_in_port(var.ty))
             else:
                 err = GuppyError(f"Variable `{name}` only defined in loop body")
                 variables[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
@@ -725,9 +725,9 @@ class FunctionalStatementCompiler(StatementCompiler):
                 if err.location is None:
                     err.location = name_node
                 raise err
-        cond_port = self.expr_compiler.compile(node.test, theta_vars, theta, **kwargs)
+        cond_port = self.expr_compiler.compile(node.test, loop_vars, loop, **kwargs)
         assert isinstance(cond_port.ty, BoolType)  # We already ensured this for the initial if
-        self.graph.add_edge(cond_port, theta_delta_output.in_port(0))
+        self.graph.add_edge(cond_port, loop_output.in_port(0))
         return bb
 
 
@@ -796,8 +796,8 @@ class FunctionCompiler(object):
         args = func_def.args.args
 
         def_input = self.graph.add_input_node(parent=def_node)
-        kappa = self.graph.add_kappa_node(def_node, args=[def_input.add_out_port(ty) for ty in func_ty.args])
-        input_bb = self.graph.add_beta_node(kappa)
+        cfg = self.graph.add_cfg_node(def_node, args=[def_input.add_out_port(ty) for ty in func_ty.args])
+        input_bb = self.graph.add_block_node(cfg)
         input_node = self.graph.add_input_node(outputs=func_ty.args, parent=input_bb)
 
         variables: VarMap = {}
@@ -806,8 +806,8 @@ class FunctionCompiler(object):
             port = input_node.out_port(i)
             variables[name] = Variable(name, port, {SourceLoc.from_ast(arg, self.line_offset)}, [])
 
-        return_beta = self.graph.add_exit_node(output_types=func_ty.returns, parent=kappa)
-        return_port = return_beta.add_in_port(None)
+        return_block = self.graph.add_exit_node(output_types=func_ty.returns, parent=cfg)
+        return_port = return_block.add_in_port(None)
 
         # Define hook that is executed on return
         def return_hook(curr_bb: BBNode, node: ast.Return, row: list[OutPort]) -> Optional[BBNode]:
@@ -831,7 +831,7 @@ class FunctionCompiler(object):
             self.graph.add_edge(final_bb.add_out_port(None), return_port)
 
         # Add final output node for the def block
-        self.graph.add_output_node(args=[kappa.add_out_port(ty) for ty in func_ty.returns], parent=def_node)
+        self.graph.add_output_node(args=[cfg.add_out_port(ty) for ty in func_ty.returns], parent=def_node)
 
         return GuppyFunction(func_def.name, module, def_node, func_ty, func_def)
 
