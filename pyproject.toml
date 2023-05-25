@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guppy"
+authors = [{name = "Mark Koch", email = "mark.koch@quantinuum.com"}]
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "graphviz",
+    "networkx",
+    "ormsgpack",
+    "pydantic",
+]
+
+[project.optional-dependencies]
+dev = [
+    # "pip-tools", # provides pip-compile
+    "pytest"
+]

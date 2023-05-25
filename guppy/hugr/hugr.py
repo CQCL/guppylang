@@ -139,4 +139,3 @@ class Hugr:
         src = self.get_node(src)
         tgt = self.get_node(tgt)
         return Edge(src.out_port(key[0]), tgt.in_port(key[1]))
-

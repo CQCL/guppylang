@@ -104,4 +104,3 @@ def type_from_python_value(val: object) -> Optional[GuppyType]:
     elif isinstance(val, str):
         return StringType()
     return None
-
