@@ -1,5 +1,6 @@
 import itertools
 from abc import ABC
+from contextlib import contextmanager
 
 import networkx
 from typing import Optional, Iterator, Tuple, Any, Callable, Union
@@ -117,122 +118,140 @@ TypeList = list[Optional[GuppyType]]
 
 class Hugr:
     """ Hierarchical unified graph representation. """
-    def __init__(self, name: str = None) -> None:
-        self.name = name
-        self._graph = networkx.MultiDiGraph()
-        self.default_parent = None
-        self._children = {-1: []}
-        self.root: Optional[Node] = None
+    name: str
+    root: Optional[Node]  # Non-module Hugrs may not have a root
+    _graph: networkx.MultiDiGraph  # TODO: We probably don't need networkx.
+    _children: dict[NodeIdx, list[Node]]
+    _default_parent: Optional[Node]
 
-    def add_node(self, op: ops.OpType, inputs: Optional[TypeList] = None, outputs: Optional[TypeList] = None,
-                 parent: Optional[Node] = None, args: Optional[list[OutPort]] = None,
-                 meta_data: Optional[dict[str, Any]] = None, node_class: Callable = Node) \
+    def __init__(self, name: Optional[str] = None) -> None:
+        """ Creates a new Hugr. """
+        self.name = name
+        self.root = None
+        self._graph = networkx.MultiDiGraph()
+        self._children = {-1: []}
+        self._default_parent = None
+
+    @contextmanager
+    def parent(self, parent: Node):
+        old_default = self._default_parent
+        self._default_parent = parent
+        yield
+        self._default_parent = old_default
+
+    def _add_node(self, op: ops.OpType, input_types: Optional[TypeList] = None, output_types: Optional[TypeList] = None,
+                  parent: Optional[Node] = None, inputs: Optional[list[OutPort]] = None,
+                  meta_data: Optional[dict[str, Any]] = None, node_class: Callable = Node) \
             -> Union[Node, DataflowContainingNode]:
-        inputs = inputs or []
-        outputs = outputs or []
-        parent = parent or self.default_parent
+        input_types = input_types or []
+        output_types = output_types or []
+        parent = parent or self._default_parent
         node = node_class(idx=self._graph.number_of_nodes(),
                           op=op,
-                          in_port_types=[p.ty for p in args] if args is not None else inputs,
-                          out_port_types=outputs,
+                          in_port_types=[p.ty for p in inputs] if inputs is not None else input_types,
+                          out_port_types=output_types,
                           parent=parent,
                           meta_data=meta_data or {})
         self._graph.add_node(node.idx, data=node)
         self._children[node.idx] = []
         self._children[parent.idx if parent else -1].append(node)
-        if args is not None:
-            for i, port in enumerate(args):
+        if inputs is not None:
+            for i, port in enumerate(inputs):
                 self.add_edge(port, node.in_port(i))
         return node
 
     def add_root(self, name: str) -> Node:
+        """ Adds a Root node to the graph.
+
+        Note that each Hugr may only have a single root.
+        """
         if self.root is not None:
             raise ValueError("Hugr already has a root node")
-        root = self.add_node(op=ops.Module(op=ops.Root()), meta_data={"name": name})
+        root = self._add_node(op=ops.Module(op=ops.Root()), meta_data={"name": name})
         root.parent = root
         self.root = root
         return root
 
-    def add_constant_node(self, value: object, parent: Optional[Node] = None) -> Node:
+    def add_constant(self, value: object, parent: Optional[Node] = None) -> Node:
+        """ Adds a constant node holding a given value to the graph. """
         # TODO Update this once we have a better constant spec
         # For now, we just create an external function call§
-        ext_decl = self.add_declare_node(FunctionType([], [type_from_python_value(value)]), self.root, f'"{value}"')
-        return self.add_call_node(ext_decl.out_port(0), [], parent)
+        ext_decl = self.add_declare(FunctionType([], [type_from_python_value(value)]), self.root, f'"{value}"')
+        return self.add_call(ext_decl.out_port(0), [], parent)
 
-    def add_arith_node(self, name: str, args: list[OutPort], outputs: TypeList, parent: Optional[Node] = None) -> Node:
+    def add_arith(self, name: str, args: list[OutPort], out_ty: GuppyType, parent: Optional[Node] = None) -> Node:
+        """ Adds a node for an arithmetic operation. """
         # TODO Work with arithmetic resource
         # For now, we just create an external function call
-        ext_decl = self.add_declare_node(FunctionType([p.ty for p in args], outputs), self.root, name)
-        return self.add_call_node(ext_decl.out_port(0), args, parent)
+        ext_decl = self.add_declare(FunctionType([p.ty for p in args], [out_ty]), self.root, name)
+        return self.add_call(ext_decl.out_port(0), args, parent)
 
-    def add_input_node(self, outputs: Optional[TypeList] = None, parent: Optional[Node] = None) -> Node:
-        parent = parent or self.default_parent
-        node = self.add_node(ops.Dataflow(op=ops.Input()), [], outputs, parent)
+    def add_input(self, output_tys: Optional[TypeList] = None, parent: Optional[Node] = None) -> Node:
+        parent = parent or self._default_parent
+        node = self._add_node(ops.Dataflow(op=ops.Input()), [], output_tys, parent)
         if isinstance(parent, DataflowContainingNode):
             parent.input_child = node
         return node
 
-    def add_output_node(self, inputs: Optional[TypeList] = None, parent: Optional[Node] = None,
-                        args: Optional[list[OutPort]] = None) -> Node:
-        node = self.add_node(ops.Dataflow(op=ops.Output()), inputs, [], parent, args)
+    def add_output(self, inputs: Optional[list[OutPort]] = None, input_tys: Optional[TypeList] = None,
+                   parent: Optional[Node] = None) -> Node:
+        node = self._add_node(ops.Dataflow(op=ops.Output()), input_tys, [], parent, inputs)
         if isinstance(parent, DataflowContainingNode):
             parent.output_child = node
         return node
 
-    def add_block_node(self, parent: Node) -> DataflowContainingNode:
-        return self.add_node(ops.BasicBlock(op=ops.Block()), [], [], parent, node_class=DataflowContainingNode)
+    def add_block(self, parent: Node) -> DataflowContainingNode:
+        return self._add_node(ops.BasicBlock(op=ops.Block()), [], [], parent, node_class=DataflowContainingNode)
 
-    def add_exit_node(self, output_types: list[GuppyType], parent: Node) -> Node:
-        outputs = tys.TypeRow(types=[ty.to_hugr() for ty in output_types])
-        return self.add_node(ops.BasicBlock(op=ops.Exit(cfg_outputs=outputs)), [], [], parent)
+    def add_exit(self, output_tys: list[GuppyType], parent: Node) -> Node:
+        outputs = tys.TypeRow(types=[ty.to_hugr() for ty in output_tys])
+        return self._add_node(ops.BasicBlock(op=ops.Exit(cfg_outputs=outputs)), [], [], parent)
 
-    def add_dfg_node(self, parent: Node) -> Node:
-        return self.add_node(ops.Dataflow(op=ops.DFG()), [], [], parent, node_class=DataflowContainingNode)
+    def add_dfg(self, parent: Node) -> Node:
+        return self._add_node(ops.Dataflow(op=ops.DFG()), [], [], parent, node_class=DataflowContainingNode)
 
-    def add_case_node(self, parent: Node) -> Node:
-        return self.add_node(ops.Case(op=ops.CaseOp()), [], [], parent, node_class=DataflowContainingNode)
+    def add_case(self, parent: Node) -> DataflowContainingNode:
+        return self._add_node(ops.Case(op=ops.CaseOp()), [], [], parent, node_class=DataflowContainingNode)
 
-    def add_cfg_node(self, parent: Node, args: Optional[list[OutPort]] = None) -> Node:
-        return self.add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.CFG())), [], [], parent, args)
+    def add_cfg(self, parent: Node, inputs: list[OutPort]) -> Node:
+        return self._add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.CFG())), [], [], parent, inputs)
 
-    def add_conditional_node(self, cond_arg: OutPort, args: list[OutPort], outputs: Optional[TypeList] = None,
-                             parent: Optional[Node] = None) -> Node:
-        args = [cond_arg] + args
-        return self.add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.Conditional())), None, outputs, parent, args)
+    def add_conditional(self, cond_input: OutPort, inputs: list[OutPort], parent: Optional[Node] = None) -> Node:
+        inputs = [cond_input] + inputs
+        return self._add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.Conditional())), None, None, parent, inputs)
 
-    def add_tail_loop_node(self, args: list[OutPort], outputs: Optional[TypeList] = None,
-                           parent: Optional[Node] = None) -> DataflowContainingNode:
-        return self.add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.TailLoop())), None, outputs, parent, args,
-                             node_class=DataflowContainingNode)
+    def add_tail_loop(self, inputs: list[OutPort], parent: Optional[Node] = None) -> DataflowContainingNode:
+        return self._add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.TailLoop())), None, None, parent, inputs,
+                              node_class=DataflowContainingNode)
 
-    def add_make_tuple_node(self, args: list[OutPort], parent: Optional[Node] = None) -> Node:
-        ty = TupleType([a.ty for a in args])
-        return self.add_node(ops.Dataflow(op=ops.Leaf(op=ops.MakeTuple())), None, [ty], parent, args)
+    def add_make_tuple(self, inputs: list[OutPort], parent: Optional[Node] = None) -> Node:
+        ty = TupleType([a.ty for a in inputs])
+        return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.MakeTuple())), None, [ty], parent, inputs)
 
-    def add_unpack_tuple_node(self, arg: OutPort, parent: Optional[Node] = None) -> Node:
-        assert isinstance(arg.ty, TupleType)
-        return self.add_node(ops.Dataflow(op=ops.Leaf(op=ops.UnpackTuple())), None, arg.ty.element_types, parent, [arg])
+    def add_unpack_tuple(self, input_tuple: OutPort, parent: Optional[Node] = None) -> Node:
+        assert isinstance(input_tuple.ty, TupleType)
+        return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.UnpackTuple())), None, input_tuple.ty.element_types, parent, [input_tuple])
 
-    def add_tag_node(self, variants: list[GuppyType], tag: int, arg: OutPort, parent: Optional[Node] = None) -> Node:
+    def add_tag(self, variants: list[GuppyType], tag: int, inp: OutPort, parent: Optional[Node] = None) -> Node:
         types = tys.TypeRow(types=[ty.to_hugr() for ty in variants])
-        assert arg.ty == variants[tag]
-        return self.add_node(ops.Dataflow(op=ops.Leaf(op=ops.Tag(tag=tag, variants=types))), None,
-                             [SumType(variants)], parent, [arg])
+        assert inp.ty == variants[tag]
+        return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.Tag(tag=tag, variants=types))), None,
+                              [SumType(variants)], parent, [inp])
 
-    def add_call_node(self, def_port: OutPort, args: list[OutPort], parent: Optional[Node] = None) -> Node:
+    def add_call(self, def_port: OutPort, args: list[OutPort], parent: Optional[Node] = None) -> Node:
         assert isinstance(def_port.ty, FunctionType)
-        return self.add_node(ops.Dataflow(op=ops.Call()), None, def_port.ty.returns, parent, args + [def_port])
+        return self._add_node(ops.Dataflow(op=ops.Call()), None, def_port.ty.returns, parent, args + [def_port])
 
-    def add_indirect_call_node(self, def_port: OutPort, args: list[OutPort], parent: Optional[Node] = None) -> Node:
+    def add_indirect_call(self, def_port: OutPort, args: list[OutPort], parent: Optional[Node] = None) -> Node:
         assert isinstance(def_port.ty, FunctionType)
-        return self.add_node(ops.Dataflow(op=ops.CallIndirect()), None, def_port.ty.returns, parent, args + [def_port])
+        return self._add_node(ops.Dataflow(op=ops.CallIndirect()), None, def_port.ty.returns, parent, args + [def_port])
 
-    def add_def_node(self, fun_ty: FunctionType, parent: Node, name: str) -> Node:
-        return self.add_node(ops.Module(op=ops.Def()), [], [fun_ty], parent, None, meta_data={"name": name},
-                             node_class=DataflowContainingNode)
+    def add_def(self, fun_ty: FunctionType, parent: Node, name: str) -> Node:
+        return self._add_node(ops.Module(op=ops.Def()), [], [fun_ty], parent, None, meta_data={"name": name},
+                              node_class=DataflowContainingNode)
 
-    def add_declare_node(self, fun_ty: FunctionType, parent: Node, name: str) -> Node:
-        return self.add_node(ops.Module(op=ops.Declare()), [], [fun_ty], parent, None, meta_data={"name": name})
+    def add_declare(self, fun_ty: FunctionType, parent: Node, name: str) -> Node:
+        return self._add_node(ops.Module(op=ops.Declare()), [], [fun_ty], parent, None, meta_data={"name": name})
 
     def add_edge(self, src_port: OutPort, tgt_port: InPort) -> Edge:
         assert src_port.ty == tgt_port.ty
@@ -288,7 +307,7 @@ class Hugr:
                         hugr_ty = ty.to_hugr()
                         assert isinstance(hugr_ty, tys.Classic)
                         copy_op = ops.Dataflow(op=ops.Leaf(op=ops.Copy(n_copies=len(edges), typ=hugr_ty.ty)))
-                        copy_node = self.add_node(copy_op, args=[port], parent=n.parent)
+                        copy_node = self._add_node(copy_op, inputs=[port], parent=n.parent)
                         for src, tgt in edges:
                             self.remove_edge(src, tgt)
                             self.add_edge(copy_node.add_out_port(ty), tgt)
