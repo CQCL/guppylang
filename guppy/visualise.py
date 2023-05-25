@@ -3,7 +3,7 @@
 import graphviz as gv
 from typing import Iterable
 
-from guppy.hugr.hugr import EKind, InPort, OutPort, Node, Hugr
+from guppy.hugr.hugr import InPort, OutPort, Node, Hugr
 
 # old palettte: https://colorhunt.co/palette/343a407952b3ffc107e1e8eb
 # _COLOURS = {
@@ -117,11 +117,11 @@ def _html_ports(ports: Iterable[str], id_prefix: str) -> str:
 
 
 def _in_port_name(p: InPort):
-    return f"{p.node_idx}:{_INPUT_PREFIX}{p.offset}"
+    return f"{p.node.idx}:{_INPUT_PREFIX}{p.offset}"
 
 
 def _out_port_name(p: OutPort):
-    return f"{p.node_idx}:{_OUTPUT_PREFIX}{p.offset}"
+    return f"{p.node.idx}:{_OUTPUT_PREFIX}{p.offset}"
 
 
 def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph):
@@ -137,7 +137,7 @@ def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph):
                 viz_node(child, hugr, sub)
             html_label = _format_html_label(
                 node_back_color=_COLOURS["edge"],
-                node_label=node.name,
+                node_label=node.op.display_name(),
                 node_data=data,
                 border_colour=_COLOURS["port_border"],
                 inputs_row=_html_ports(in_ports, _INPUT_PREFIX) if len(in_ports) > 0 else "",
@@ -148,7 +148,7 @@ def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph):
     else:
         html_label = _format_html_label(
             node_back_color=_COLOURS["node"],
-            node_label=node.name,
+            node_label=node.op.display_name(),
             node_data=data,
             inputs_row=_html_ports(in_ports, _INPUT_PREFIX) if len(in_ports) > 0 else "",
             outputs_row=_html_ports(out_ports, _OUTPUT_PREFIX) if len(out_ports) > 0 else "",
@@ -178,9 +178,9 @@ def hugr_to_graphviz(hugr: Hugr) -> gv.Digraph:
         "fontcolor": "black",
     }
     for edge in hugr.edges():
-        graph.edge(_out_port_name(edge.src_port), _in_port_name(edge.target_port),
-                   label=str(edge.type) if edge.type else "",
-                   color=_COLOURS["edge"] if edge.kind == EKind.Value else _COLOURS["dark"],
+        graph.edge(_out_port_name(edge.src_port), _in_port_name(edge.tgt_port),
+                   label=str(edge.src_port.ty) if edge.src_port.ty else "",
+                   color=_COLOURS["edge"] if edge.src_port.ty is not None else _COLOURS["dark"],
                    **edge_attr)
     return graph
 

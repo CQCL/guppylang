@@ -1,6 +1,6 @@
 import inspect
 import sys
-from typing import Annotated, Union, Optional
+from typing import Union
 from pydantic import Field
 
 from .pydantic_extensions import BaseModel
@@ -127,7 +127,7 @@ class Graph(BaseModel, list=True, tagged=True):
     signature: "Signature"
 
 
-ResourceSet = set[str]
+ResourceSet = list[str]  # TODO: Set not supported by MessagePack. Is list correct here?
 
 
 class ContainerClassic(BaseModel, list=True, tagged=True, tag="Container"):
@@ -173,6 +173,10 @@ class TypeRow(BaseModel):
     """ List of types, used for function signatures. """
     types: list[SimpleType]  # The datatypes in the row.
 
+    @classmethod
+    def empty(cls):
+        return TypeRow(types=[])
+
 
 # -------------------------------------------
 # --------------- Signature -----------------
@@ -186,7 +190,11 @@ class Signature(BaseModel):
     """
     input: TypeRow  # Value inputs of the function.
     output: TypeRow  # Value outputs of the function.
-    const_input: TypeRow  # Possible constE input (for call / load-constant).
+    const_input: TypeRow = Field(default_factory=TypeRow.empty)  # Possible constE input (for call / load-constant).
+
+    @classmethod
+    def empty(cls):
+        return Signature(input=TypeRow.empty(), output=TypeRow.empty(), const_input=TypeRow.empty())
 
 
 # Now that all classes are defined, we need to update the ForwardRefs
