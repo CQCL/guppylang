@@ -177,10 +177,10 @@ def hugr_to_graphviz(hugr: Hugr) -> gv.Digraph:
         "fontsize": "9",
         "fontcolor": "black",
     }
-    for edge in hugr.edges():
-        graph.edge(_out_port_name(edge.src_port), _in_port_name(edge.tgt_port),
-                   label=str(edge.src_port.ty) if edge.src_port.ty else "",
-                   color=_COLOURS["edge"] if edge.src_port.ty is not None else _COLOURS["dark"],
+    for src_port, tgt_port in hugr.edges():
+        graph.edge(_out_port_name(src_port), _in_port_name(tgt_port),
+                   label=str(src_port.ty) if src_port.ty else "",
+                   color=_COLOURS["edge"] if src_port.ty is not None else _COLOURS["dark"],
                    **edge_attr)
     return graph
 
