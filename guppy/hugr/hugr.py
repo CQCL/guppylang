@@ -134,6 +134,7 @@ class Hugr:
 
     @contextmanager
     def parent(self, parent: Node):
+        """ Context manager to set a default parent for adding new nodes. """
         old_default = self._default_parent
         self._default_parent = parent
         yield
@@ -187,6 +188,7 @@ class Hugr:
         return self.add_call(ext_decl.out_port(0), args, parent)
 
     def add_input(self, output_tys: Optional[TypeList] = None, parent: Optional[Node] = None) -> Node:
+        """ Adds an `Input` node to the graph. """
         parent = parent or self._default_parent
         node = self._add_node(ops.Dataflow(op=ops.Input()), [], output_tys, parent)
         if isinstance(parent, DataflowContainingNode):
@@ -195,94 +197,120 @@ class Hugr:
 
     def add_output(self, inputs: Optional[list[OutPort]] = None, input_tys: Optional[TypeList] = None,
                    parent: Optional[Node] = None) -> Node:
+        """ Adds an `Output` node to the graph. """
         node = self._add_node(ops.Dataflow(op=ops.Output()), input_tys, [], parent, inputs)
         if isinstance(parent, DataflowContainingNode):
             parent.output_child = node
         return node
 
     def add_block(self, parent: Node) -> DataflowContainingNode:
+        """ Adds a `Block` node to the graph. """
         return self._add_node(ops.BasicBlock(op=ops.Block()), [], [], parent, node_class=DataflowContainingNode)
 
     def add_exit(self, output_tys: list[GuppyType], parent: Node) -> Node:
+        """ Adds an `Exit` node to the graph. """
         outputs = tys.TypeRow(types=[ty.to_hugr() for ty in output_tys])
         return self._add_node(ops.BasicBlock(op=ops.Exit(cfg_outputs=outputs)), [], [], parent)
 
     def add_dfg(self, parent: Node) -> Node:
+        """ Adds a nested dataflow `DFG` node to the graph. """
         return self._add_node(ops.Dataflow(op=ops.DFG()), [], [], parent, node_class=DataflowContainingNode)
 
     def add_case(self, parent: Node) -> DataflowContainingNode:
+        """ Adds a `Case` node to the graph. """
         return self._add_node(ops.Case(op=ops.CaseOp()), [], [], parent, node_class=DataflowContainingNode)
 
     def add_cfg(self, parent: Node, inputs: list[OutPort]) -> Node:
+        """ Adds a nested control-flow `CFG` node to the graph. """
         return self._add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.CFG())), [], [], parent, inputs)
 
     def add_conditional(self, cond_input: OutPort, inputs: list[OutPort], parent: Optional[Node] = None) -> Node:
+        """ Adds a `Conditional` node to the graph. """
         inputs = [cond_input] + inputs
         return self._add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.Conditional())), None, None, parent, inputs)
 
     def add_tail_loop(self, inputs: list[OutPort], parent: Optional[Node] = None) -> DataflowContainingNode:
+        """ Adds a `TailLoop` node to the graph. """
         return self._add_node(ops.Dataflow(op=ops.ControlFlow(op=ops.TailLoop())), None, None, parent, inputs,
                               node_class=DataflowContainingNode)
 
     def add_make_tuple(self, inputs: list[OutPort], parent: Optional[Node] = None) -> Node:
+        """ Adds a `MakeTuple` node to the graph. """
         ty = TupleType([a.ty for a in inputs])
         return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.MakeTuple())), None, [ty], parent, inputs)
 
     def add_unpack_tuple(self, input_tuple: OutPort, parent: Optional[Node] = None) -> Node:
+        """ Adds an `UnpackTuple` node to the graph. """
         assert isinstance(input_tuple.ty, TupleType)
-        return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.UnpackTuple())), None, input_tuple.ty.element_types, parent, [input_tuple])
+        return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.UnpackTuple())), None, input_tuple.ty.element_types,
+                              parent, [input_tuple])
 
     def add_tag(self, variants: list[GuppyType], tag: int, inp: OutPort, parent: Optional[Node] = None) -> Node:
+        """ Adds a `Tag` node to the graph. """
         types = tys.TypeRow(types=[ty.to_hugr() for ty in variants])
         assert inp.ty == variants[tag]
         return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.Tag(tag=tag, variants=types))), None,
                               [SumType(variants)], parent, [inp])
 
     def add_call(self, def_port: OutPort, args: list[OutPort], parent: Optional[Node] = None) -> Node:
+        """ Adds a `Call` node to the graph. """
         assert isinstance(def_port.ty, FunctionType)
         return self._add_node(ops.Dataflow(op=ops.Call()), None, def_port.ty.returns, parent, args + [def_port])
 
     def add_indirect_call(self, def_port: OutPort, args: list[OutPort], parent: Optional[Node] = None) -> Node:
+        """ Adds an `IndirectCall` node to the graph. """
         assert isinstance(def_port.ty, FunctionType)
         return self._add_node(ops.Dataflow(op=ops.CallIndirect()), None, def_port.ty.returns, parent, args + [def_port])
 
     def add_def(self, fun_ty: FunctionType, parent: Node, name: str) -> Node:
+        """ Adds a `Def` node to the graph. """
         return self._add_node(ops.Module(op=ops.Def()), [], [fun_ty], parent, None, meta_data={"name": name},
                               node_class=DataflowContainingNode)
 
     def add_declare(self, fun_ty: FunctionType, parent: Node, name: str) -> Node:
+        """ Adds a `Declare` node to the graph. """
         return self._add_node(ops.Module(op=ops.Declare()), [], [fun_ty], parent, None, meta_data={"name": name})
 
     def add_edge(self, src_port: OutPort, tgt_port: InPort) -> Edge:
+        """ Adds an edge between two ports. """
         assert src_port.ty == tgt_port.ty
         self._graph.add_edge(src_port.node.idx, tgt_port.node.idx,
                              key=(src_port.offset, tgt_port.offset))
         return src_port, tgt_port
 
     def nodes(self) -> Iterator[Node]:
+        """ Returns an iterator over all nodes in the graph. """
         return (n["data"] for n in self._graph.nodes.values())
 
     def get_node(self, idx: int) -> Node:
+        """ Returns the node corresponding to given index. """
         return self._graph.nodes[idx]["data"]
 
     def children(self, node: Node) -> list[Node]:
-        """ Returns list of a node's immediate children in the hierarchy """
+        """ Returns list of a node's immediate children in the hierarchy. """
         return self._children[node.idx]
 
     def top_level_nodes(self) -> list[Node]:
-        """ Returns list of nodes at the top level of the hierarchy """
+        """ Returns list of nodes at the top level of the hierarchy.
+
+        These are nodes that do not have a parent. Usually this will just
+        be the `Root` node.
+        """
         return self._children[-1]
 
     def edges(self) -> Iterator[Edge]:
+        """ Returns an iterator over all edges in the graph. """
         return (self._to_edge(*e) for e in self._graph.edges(data=True, keys=True))
 
     def in_edges(self, port: InPort) -> Iterator[Edge]:
+        """ Returns an iterator over all edges connected to a given in-port. """
         for e in self._graph.in_edges(port.node.idx, keys=True, data=True):
             src, tgt = self._to_edge(*e)
             if tgt.offset == port.offset:
                 yield src, tgt
 
     def out_edges(self, port: OutPort) -> Iterator[Edge]:
+        """ Returns an iterator over all edges originating from a given out-port. """
         for e in self._graph.out_edges(port.node.idx, keys=True, data=True):
             src, tgt = self._to_edge(*e)
             if src.offset == port.offset:
@@ -294,6 +322,7 @@ class Hugr:
         return src.out_port(key[0]), tgt.in_port(key[1])
 
     def remove_edge(self, src_port: OutPort, tgt_port: InPort) -> None:
+        """ Removes an edge from the graph. """
         self._graph.remove_edge(src_port.node.idx, tgt_port.node.idx, key=(src_port.offset, tgt_port.offset))
 
     def insert_copies(self) -> "Hugr":
@@ -314,9 +343,10 @@ class Hugr:
         return self
 
     def insert_order_edges(self) -> "Hugr":
-        """
-        Adds state edges to all dataflow ops without inputs outputs connecting them
-        to the input or output node of the DFG.
+        """ Adds state edges to all dataflow ops without inputs outputs.
+
+        We add state edges connecting them to the input or output node of the DFG.
+        This action must be performed before serialisation.
         """
         for n in self.nodes():
             if isinstance(n.op, ops.Dataflow):
