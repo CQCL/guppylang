@@ -176,16 +176,13 @@ class Hugr:
     def add_constant(self, value: object, parent: Optional[Node] = None) -> Node:
         """ Adds a constant node holding a given value to the graph. """
         # TODO Update this once we have a better constant spec
-        # For now, we just create an external function call§
-        ext_decl = self.add_declare(FunctionType([], [type_from_python_value(value)]), self.root, f'"{value}"')
-        return self.add_call(ext_decl.out_port(0), [], parent)
+        # For now, we just create an external function call
+        return self._add_node(ops.DummyOp(name=f'Constant: {value}'), [], [type_from_python_value(value)], parent, None)
 
     def add_arith(self, name: str, args: list[OutPort], out_ty: GuppyType, parent: Optional[Node] = None) -> Node:
         """ Adds a node for an arithmetic operation. """
         # TODO Work with arithmetic resource
-        # For now, we just create an external function call
-        ext_decl = self.add_declare(FunctionType([p.ty for p in args], [out_ty]), self.root, name)
-        return self.add_call(ext_decl.out_port(0), args, parent)
+        return self._add_node(ops.DummyOp(name=name), None, [out_ty], parent, args)
 
     def add_input(self, output_tys: Optional[TypeList] = None, parent: Optional[Node] = None) -> Node:
         """ Adds an `Input` node to the graph. """
@@ -325,6 +322,19 @@ class Hugr:
         """ Removes an edge from the graph. """
         self._graph.remove_edge(src_port.node.idx, tgt_port.node.idx, key=(src_port.offset, tgt_port.offset))
 
+    def remove_dummy_nodes(self) -> "Hugr":
+        """ Replaces dummy ops with external function calls. """
+        if self.root is None:
+            raise ValueError("Dummy node removal requires a module root node")
+        for n in list(self.nodes()):
+            if isinstance(n.op, ops.DummyOp):
+                name = n.op.name
+                fun_ty = FunctionType(n.in_port_types, n.out_port_types)
+                decl = self.add_declare(fun_ty.clone(), self.root, name)
+                n.op = ops.Dataflow(op=ops.Call())
+                self.add_edge(decl.out_port(0), n.add_in_port(fun_ty.clone()))
+        return self
+
     def insert_copies(self) -> "Hugr":
         """ Adds explicit copy/discard nodes to the graph to make ports linear. """
         for n in list(self.nodes()):
@@ -370,6 +380,7 @@ class Hugr:
 
     def to_raw(self) -> raw.RawHugr:
         """ Returns the raw representation of this HUGR for serialisation. """
+        self.remove_dummy_nodes()
         self.insert_copies()
         self.insert_order_edges()
         # Hugr requires that Input/Output nodes are the first/last children in

@@ -59,7 +59,7 @@ class BasicBlock(BaseOp, list=True, tagged=True):
         return self.op.display_name()
 
 
-class Case(BaseOp, BaseModel, list=True, tagged=True):
+class Case(BaseOp, list=True, tagged=True):
     """ A branch in a dataflow graph - parent will be a Conditional node. """
     op: "CaseOp"
 
@@ -73,7 +73,7 @@ class Case(BaseOp, BaseModel, list=True, tagged=True):
         return self.op.display_name()
 
 
-class Dataflow(BaseOp, BaseModel, list=True, tagged=True):
+class Dataflow(BaseOp, list=True, tagged=True):
     """ Nodes used inside dataflow containers (DFG, Conditional, TailLoop, def, BasicBlock). """
     op: "DataflowOp" = Field(tagged_union=True)
 
@@ -87,7 +87,15 @@ class Dataflow(BaseOp, BaseModel, list=True, tagged=True):
         return self.op.display_name()
 
 
-OpType = Union[Module, BasicBlock, Case, Dataflow]
+class DummyOp(BaseOp, list=True, tagged=True):
+    """ Nodes used inside dataflow containers (DFG, Conditional, TailLoop, def, BasicBlock). """
+    name: str
+
+    def display_name(self) -> str:
+        return f'"{self.name}"'
+
+
+OpType = Union[Module, BasicBlock, Case, Dataflow, DummyOp]
 
 
 # -------------------------------------------
