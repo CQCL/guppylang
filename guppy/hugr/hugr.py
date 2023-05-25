@@ -1,15 +1,16 @@
 import networkx
 from typing import Optional, Iterator, Tuple, Any
 from enum import IntEnum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from guppy.guppy_types import GuppyType
+from guppy.guppy_types import GuppyType, type_from_python_value
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Port:
-    node_idx: int
+    node: "Node"
     offset: int
+    ty: Optional[GuppyType]
 
 
 class InPort(Port):
@@ -20,47 +21,49 @@ class OutPort(Port):
     pass
 
 
+TypeList = list[Optional[GuppyType]]
+
+
 @dataclass()
 class Node:
     idx: int
     parent: "Node"
     name: str
     meta_data: dict[str, Any]
-    num_in_ports: int
-    num_out_ports: int
+    in_port_types: TypeList
+    out_port_types: TypeList
 
-    def add_in_port(self) -> InPort:
-        p = InPort(self.idx, self.num_in_ports)
-        self.num_in_ports += 1
+    @property
+    def num_in_ports(self):
+        return len(self.in_port_types)
+
+    @property
+    def num_out_ports(self):
+        return len(self.out_port_types)
+
+    def add_in_port(self, ty: Optional[GuppyType]) -> InPort:
+        p = InPort(self, self.num_in_ports, ty)
+        self.in_port_types.append(ty)
         return p
 
-    def add_out_port(self) -> OutPort:
-        p = OutPort(self.idx, self.num_out_ports)
-        self.num_out_ports += 1
+    def add_out_port(self, ty: Optional[GuppyType]) -> OutPort:
+        p = OutPort(self, self.num_out_ports, ty)
+        self.out_port_types.append(ty)
         return p
 
     def in_port(self, idx: int) -> InPort:
         assert idx < self.num_in_ports
-        return InPort(self.idx, idx)
+        return InPort(self, idx, self.in_port_types[idx])
 
     def out_port(self, idx: int) -> OutPort:
         assert idx < self.num_out_ports
-        return OutPort(self.idx, idx)
-
-
-class EKind(IntEnum):
-    Value = 0
-    ConstE = 1
-    State = 2
-    ControlFlow = 3
+        return OutPort(self, idx, self.out_port_types[idx])
 
 
 @dataclass(frozen=True)
 class Edge:
     src_port: OutPort
     target_port: InPort
-    kind: EKind
-    type: Optional[GuppyType] = None
 
 
 class Hugr:
@@ -70,12 +73,15 @@ class Hugr:
         self.default_parent = None
         self._children = {-1: []}
 
-    def add_node(self, name: str, inputs: int = 0, outputs: int = 0, parent: Optional[Node] = None,
-                 args: Optional[list[tuple[OutPort, GuppyType]]] = None, meta_data: Optional[dict[str, Any]] = None) -> Node:
-        parent = parent if parent is not None else self.default_parent
+    def add_node(self, name: str, inputs: Optional[TypeList] = None, outputs: Optional[TypeList] = None,
+                 parent: Optional[Node] = None, args: Optional[list[OutPort]] = None,
+                 meta_data: Optional[dict[str, Any]] = None) -> Node:
+        inputs = inputs or []
+        outputs = outputs or []
+        parent = parent or self.default_parent
         node = Node(idx=self._graph.number_of_nodes(),
-                    num_in_ports=len(args) if args is not None else inputs,
-                    num_out_ports=outputs,
+                    in_port_types=[p.ty for p in args] if args is not None else inputs,
+                    out_port_types=outputs,
                     parent=parent,
                     name=name,
                     meta_data=meta_data or {})
@@ -83,34 +89,34 @@ class Hugr:
         self._children[node.idx] = []
         self._children[parent.idx if parent else -1].append(node)
         if args is not None:
-            for i, (port, ty) in enumerate(args):
-                self.add_edge(port, node.in_port(i), kind=EKind.Value, type=ty)
+            for i, port in enumerate(args):
+                self.add_edge(port, node.in_port(i))
         return node
 
     def add_constant_node(self, value: object, parent: Optional[Node] = None) -> Node:
-        return self.add_node("constant", 0, 1, parent, meta_data={"value": value})
+        return self.add_node("constant", [], [type_from_python_value(value)], parent, meta_data={"value": value})
 
-    def add_input_node(self, outputs: int = 0, parent: Optional[Node] = None) -> Node:
-        return self.add_node("input", 0, outputs, parent)
+    def add_input_node(self, outputs: Optional[TypeList] = None, parent: Optional[Node] = None) -> Node:
+        return self.add_node("input", [], outputs, parent)
 
-    def add_output_node(self, inputs: int = 0, parent: Optional[Node] = None,
-                        args: Optional[list[tuple[OutPort, GuppyType]]] = None) -> Node:
-        return self.add_node("output", inputs, 0, parent, args)
+    def add_output_node(self, inputs: Optional[TypeList] = None, parent: Optional[Node] = None,
+                        args: Optional[list[OutPort]] = None) -> Node:
+        return self.add_node("output", inputs, [], parent, args)
 
     def add_beta_node(self, parent: Node) -> Node:
-        return self.add_node("beta", 0, 0, parent)
+        return self.add_node("beta", [], [], parent)
 
     def add_delta_node(self, parent: Node) -> Node:
-        return self.add_node("delta", 0, 0, parent)
+        return self.add_node("delta", [], [], parent)
 
     def add_kappa_node(self, parent: Node) -> Node:
-        return self.add_node("kappa", 0, 0, parent)
+        return self.add_node("kappa", [], [], parent)
 
-    def add_edge(self, src_port: OutPort, tgt_port: InPort, kind: EKind, type: Optional["Type"] = None) -> Edge:
-        self._graph.add_edge(src_port.node_idx, tgt_port.node_idx,
-                             key=(src_port.offset, tgt_port.offset),
-                             data=(kind, type))
-        return Edge(src_port, tgt_port, kind)
+    def add_edge(self, src_port: OutPort, tgt_port: InPort) -> Edge:
+        assert src_port.ty == tgt_port.ty
+        self._graph.add_edge(src_port.node.idx, tgt_port.node.idx,
+                             key=(src_port.offset, tgt_port.offset))
+        return Edge(src_port, tgt_port)
 
     def nodes(self) -> Iterator[Node]:
         return (n["data"] for n in self._graph.nodes.values())
@@ -129,9 +135,8 @@ class Hugr:
     def edges(self) -> Iterator[Edge]:
         return (self._to_edge(*e) for e in self._graph.edges(data=True, keys=True))
 
-    def _to_edge(self, src: int, tgt: int, key: Tuple[int, int], data: dict[str, Tuple[EKind, Optional[GuppyType]]]) -> Edge:
+    def _to_edge(self, src: int, tgt: int, key: Tuple[int, int], data: dict[str, Any]) -> Edge:
         src = self.get_node(src)
         tgt = self.get_node(tgt)
-        data = data["data"]
-        return Edge(src.out_port(key[0]), tgt.in_port(key[1]), data[0], data[1])
+        return Edge(src.out_port(key[0]), tgt.in_port(key[1]))
 

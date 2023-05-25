@@ -3,7 +3,7 @@
 import graphviz as gv
 from typing import Iterable
 
-from guppy.hugr.hugr import EKind, InPort, OutPort, Node, Hugr
+from guppy.hugr.hugr import InPort, OutPort, Node, Hugr
 
 # old palettte: https://colorhunt.co/palette/343a407952b3ffc107e1e8eb
 # _COLOURS = {
@@ -117,11 +117,11 @@ def _html_ports(ports: Iterable[str], id_prefix: str) -> str:
 
 
 def _in_port_name(p: InPort):
-    return f"{p.node_idx}:{_INPUT_PREFIX}{p.offset}"
+    return f"{p.node.idx}:{_INPUT_PREFIX}{p.offset}"
 
 
 def _out_port_name(p: OutPort):
-    return f"{p.node_idx}:{_OUTPUT_PREFIX}{p.offset}"
+    return f"{p.node.idx}:{_OUTPUT_PREFIX}{p.offset}"
 
 
 def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph):
@@ -179,8 +179,8 @@ def hugr_to_graphviz(hugr: Hugr) -> gv.Digraph:
     }
     for edge in hugr.edges():
         graph.edge(_out_port_name(edge.src_port), _in_port_name(edge.target_port),
-                   label=str(edge.type) if edge.type else "",
-                   color=_COLOURS["edge"] if edge.kind == EKind.Value else _COLOURS["dark"],
+                   label=str(edge.src_port.ty) if edge.src_port.ty else "",
+                   color=_COLOURS["edge"] if edge.src_port.ty is not None else _COLOURS["dark"],
                    **edge_attr)
     return graph
 
