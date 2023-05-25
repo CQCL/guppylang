@@ -15,45 +15,45 @@ tag. Each BaseModel in the union must be tagged. For example:
 
     class Cat(BaseModel, tagged=True):
         cat_property: str
-    
+
     class Dog(BaseModel, tagged=True):
         dog_property: str
-    
+
     class Foo(BaseModel):
         pet: Union[Cat, Dog]
-    
+
     Foo(pet=Cat(cat_property="cute")).dict()  # -> {"pet": {"Cat": {"cat_property": "cute" }}}
     Foo(pet=Dog(dog_property="loud")).dict()  # -> {"pet": {"Dog": {"dog_property": "loud" }}}
 
 We need this because Rust enums are serialised via such an outer tag by Serde.
-There has been some discussion around a similar feature for Pydantic 2.0, but 
-it is not available yet. See: 
+There has been some discussion around a similar feature for Pydantic 2.0, but
+it is not available yet. See:
     https://github.com/pydantic/pydantic-core/issues/102
     https://github.com/pydantic/pydantic/issues/5244
 
 
 2. MODEL SERIALISATION VIA LISTS
 
-Support serialisation of models via lists instead of dicts. In that case, 
-the fields can be identified via the position in the list instead of the 
-name. If the model only has a single field, the entry is just serialised 
+Support serialisation of models via lists instead of dicts. In that case,
+the fields can be identified via the position in the list instead of the
+name. If the model only has a single field, the entry is just serialised
 on its own without wrapping it into a list:
 
     class Foo(BaseModel, list=True):
         x: int
         y: str
-        
+
     class Bar(BaseModel, list=True):
         z: float
-        
+
     class Baz(BaseModel, list=True):
         pass
-    
+
     Foo(x=42, y="abc").dict()  # -> [42, "abc"]
     Bar(z=13.37).dict()  # -> 13.37
     Baz().dict()  # -> "Baz"
 
-We need this feature since Rust's tuple enum variants are serialised as 
+We need this feature since Rust's tuple enum variants are serialised as
 lists by Serde. Note that deserialization is only implemented in the
 case where the list model occurs inside of a tagged union, since this
 is the only case we need for our use case at the moment.

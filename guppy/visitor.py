@@ -37,4 +37,3 @@ class AstVisitor(object):
                         self.visit(item, *args, **kwargs)
             elif isinstance(value, ast.AST):
                 self.visit(value, *args, **kwargs)
-
