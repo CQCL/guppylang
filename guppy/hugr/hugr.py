@@ -1,8 +1,8 @@
 import itertools
+import networkx
+
 from abc import ABC
 from contextlib import contextmanager
-
-import networkx
 from typing import Optional, Iterator, Tuple, Any, Callable, Union
 from dataclasses import dataclass, field
 
@@ -209,7 +209,7 @@ class Hugr:
         outputs = tys.TypeRow(types=[ty.to_hugr() for ty in output_tys])
         return self._add_node(ops.BasicBlock(op=ops.Exit(cfg_outputs=outputs)), [], [], parent)
 
-    def add_dfg(self, parent: Node) -> Node:
+    def add_dfg(self, parent: Node) -> DataflowContainingNode:
         """ Adds a nested dataflow `DFG` node to the graph. """
         return self._add_node(ops.Dataflow(op=ops.DFG()), [], [], parent, node_class=DataflowContainingNode)
 

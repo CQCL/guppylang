@@ -3,6 +3,7 @@ import inspect
 import sys
 import textwrap
 
+from abc import ABC
 from collections import deque
 from dataclasses import field, dataclass
 from typing import Callable, Union, Optional
@@ -10,24 +11,79 @@ from typing import Callable, Union, Optional
 from guppy.hugr.hugr import Hugr, OutPort, Node, DataflowContainingNode
 from guppy. guppy_types import (IntType, GuppyType, FloatType, BoolType, RowType, StringType, type_from_python_value,
                                 TupleType, FunctionType)
-from guppy.visitor import AstVisitor
+from guppy.visitor import AstVisitor, name_nodes_in_expr
+
+AstNode = Union[ast.AST, ast.operator, ast.expr, ast.arg, ast.stmt, ast.Name, ast.keyword, ast.FunctionDef]
+
+
+@dataclass(frozen=True)
+class SourceLoc:
+    """ A source location associated with an AST node.
+
+    This class translates the location data provided by the ast module
+    into a location inside the file
+    """
+    line: int
+    col: int
+    ast_node: Optional[AstNode]
+
+    @staticmethod
+    def from_ast(node: AstNode, line_offset: int) -> "SourceLoc":
+        return SourceLoc(line_offset + node.lineno, node.col_offset, node)
+
+    def __str__(self):
+        return f"{self.line}:{self.col}"
+
+    def __lt__(self, other):
+        if not isinstance(other, SourceLoc):
+            raise NotImplementedError()
+        return (self.line, self.col) < (other.line, other.col)
 
 
 @dataclass()
 class GuppyError(Exception):
+    """ General Guppy error tied to a node in the AST. """
     msg: str
-    location: Optional[Union[ast.AST, ast.operator, ast.expr, ast.arg, ast.stmt, ast.Name]] = None
+    location: Optional[AstNode] = None
 
 
 class GuppyTypeError(GuppyError):
+    """ Special Guppy exception for type errors. """
     pass
 
 
 class InternalGuppyError(Exception):
+    """ Exception for internal problems during compilation. """
     pass
 
 
+def assert_arith_type(ty: GuppyType, node: ast.expr) -> None:
+    """ Check that a given type is arithmetic, i.e. an integer or float,
+    or raise a type error otherwise. """
+    if not isinstance(ty, IntType) and not isinstance(ty, FloatType):
+        raise GuppyTypeError(f"Expected expression of type `int` or `float`, "
+                             f"but got `{ast.unparse(node)}` of type `{ty}`", node)
+
+
+def assert_int_type(ty: GuppyType, node: ast.expr) -> None:
+    """ Check that a given type is integer or raise a type error otherwise. """
+    if not isinstance(ty, IntType):
+        raise GuppyTypeError(f"Expected expression of type `int`, "
+                             f"but got `{ast.unparse(node)}` of type `{ty}`", node)
+
+
+def assert_bool_type(ty: GuppyType, node: ast.expr) -> None:
+    """ Check that a given type is boolean or raise a type error otherwise. """
+    if not isinstance(ty, BoolType):
+        raise GuppyTypeError(f"Expected expression of type `bool`, "
+                             f"but got `{ast.unparse(node)}` of type `{ty}`", node)
+
+
 class UndefinedPort(OutPort):
+    """ Dummy port for undefined variables.
+
+    Raises an `InternalGuppyError` if one tries to access one of its properties.
+    """
     def __init__(self, ty: Optional[GuppyType]):
         self.ty = ty
 
@@ -41,26 +97,13 @@ class UndefinedPort(OutPort):
 
 
 @dataclass(frozen=True)
-class SourceLoc:
-    line: int
-    col: int
-    ast_node: Optional[ast.AST]
-
-    @staticmethod
-    def from_ast(node: ast.AST, line_offset: int) -> "SourceLoc":
-        return SourceLoc(line_offset + node.lineno, node.col_offset, node)
-
-    def __str__(self):
-        return f"{self.line}:{self.col}"
-
-    def __lt__(self, other):
-        if not isinstance(other, SourceLoc):
-            raise NotImplementedError()
-        return (self.line, self.col) < (other.line, other.col)
-
-
-@dataclass(frozen=True)
 class Variable:
+    """ Class holding all data associated with a variable during compilation.
+
+    Each variable corresponds to a Hugr port. We store the locations where the
+    variable was last defined. Furthermore, variables may collect errors during
+    compilation that are only raised if the variable is actually used.
+    """
     name: str
     port: OutPort
     defined_at: set[SourceLoc]  # Set since variable can be defined in `if` and `else` branches
@@ -68,10 +111,17 @@ class Variable:
 
     @property
     def ty(self):
+        """ The type of the variable. """
         return self.port.ty
 
 
 def merge_variables(*vs: Variable, new_port: OutPort) -> Variable:
+    """ Merges variables with the same name coming from different control flow paths.
+
+    For example, if a new variable is defined in the if- and else-path of a
+    conditional we have to check that the types match up in both cases.
+    Additionally, the new port for the merged variable must be passed.
+    """
     assert len(vs) > 0
     v = vs[0]
     name, ty, defined_at, errors_on_usage = vs[0].name, v.ty, v.defined_at, v.errors_on_usage
@@ -80,36 +130,17 @@ def merge_variables(*vs: Variable, new_port: OutPort) -> Variable:
         assert v.name == name
         errors_on_usage += v.errors_on_usage
         if v.ty != ty:
+            # TODO: Collect all type mismatches in a single error?
             err = GuppyError(f"Variable `{name}` can refer to different types: "
-                             f"`{ty}` (at {', '.join(str(loc) for loc in sorted(vs[0].defined_at) )}) vs "
+                             f"`{ty}` (at {', '.join(str(loc) for loc in sorted(vs[0].defined_at))}) vs "
                              f"`{v.ty}` (at {', '.join(str(loc) for loc in sorted(v.defined_at))})")
             errors_on_usage.append(err)
         defined_at |= v.defined_at
     return Variable(name, new_port, defined_at, errors_on_usage)
 
 
-VarMap = dict[str, Variable]
-
-
-def assert_arith_type(ty: GuppyType, node: ast.expr) -> None:
-    if not isinstance(ty, IntType) and not isinstance(ty, FloatType):
-        raise GuppyTypeError(f"Expected expression of type `int` or `float`, "
-                             f"but got `{ast.unparse(node)}` of type `{ty}`", node)
-
-
-def assert_int_type(ty: GuppyType, node: ast.expr) -> None:
-    if not isinstance(ty, IntType):
-        raise GuppyTypeError(f"Expected expression of type `int`, "
-                             f"but got `{ast.unparse(node)}` of type `{ty}`", node)
-
-
-def assert_bool_type(ty: GuppyType, node: ast.expr) -> None:
-    if not isinstance(ty, BoolType):
-        raise GuppyTypeError(f"Expected expression of type `bool`, "
-                             f"but got `{ast.unparse(node)}` of type `{ty}`", node)
-
-
 def type_from_ast(node: ast.expr) -> GuppyType:
+    """ Turns an AST expression into a Guppy type. """
     if isinstance(node, ast.Constant) and node.value is None:
         return RowType([])
     elif isinstance(node, ast.Name):
@@ -125,20 +156,11 @@ def type_from_ast(node: ast.expr) -> GuppyType:
     raise GuppyError(f"Invalid type: `{ast.unparse(node)}`", node)
 
 
-def name_nodes_in_expr(expr: ast.expr) -> list[ast.Name]:
-    class Visitor(AstVisitor):
-        def __init__(self):
-            self.names = []
-
-        def visit_Name(self, node: ast.Name):
-            self.names.append(node)
-
-    v = Visitor()
-    v.visit(expr)
-    return v.names
-
-
 def is_functional_annotation(stmt: ast.stmt) -> bool:
+    """ Returns `True` iff the given statement is the functional pseudo-decorator.
+
+    Pseudo-decorators are built using the matmul operator `@`, i.e. `_@functional`.
+    """
     if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.BinOp):
         op = stmt.value
         if isinstance(op.op, ast.MatMult) and isinstance(op.left, ast.Name) and isinstance(op.right, ast.Name):
@@ -146,8 +168,92 @@ def is_functional_annotation(stmt: ast.stmt) -> bool:
     return False
 
 
-class ExpressionCompiler(AstVisitor):
+# We can treat anything that contains a DFG on Hugr level as a basic block
+BBNode = DataflowContainingNode
+
+# A dictionary mapping names to live variables
+VarMap = dict[str, Variable]
+
+
+class CompilerBase(ABC):
+    """ Base class for the Guppy compiler.
+
+    Provides utility methods for working with inputs, outputs, DFGs, and blocks.
+    """
     graph: Hugr
+
+    def _add_input(self, variables: VarMap, parent: Node) -> VarMap:
+        """ Adds an input node with ports for each live variable. """
+        # Inputs are ordered lexicographically
+        # TODO: Instead we could pass around an explicit variable ordering
+        vs = sorted(variables.values(), key=lambda v: v.name)
+        inp = self.graph.add_input(output_tys=[v.ty for v in vs], parent=parent)
+        new_vars: VarMap = {v.name: Variable(v.name, inp.out_port(i), v.defined_at, v.errors_on_usage)
+                            for (i, v) in enumerate(vs)}
+        return new_vars
+
+    def _add_output(self, variables: VarMap, parent: Node, extra_outputs: Optional[list[OutPort]] = None) -> None:
+        """ Adds an output node and connects all live variables to it.
+
+        Optionally, some extra ports can be prepended before the variables.
+        """
+        # Outputs are order lexicographically
+        # TODO: Instead we could pass around an explicit variable ordering
+        vs = sorted(variables.values(), key=lambda v: v.name)
+        extra_outputs = extra_outputs or []
+        self.graph.add_output(parent=parent, inputs=extra_outputs + [v.port for v in vs])
+
+    def _make_dfg(self, variables: VarMap, parent: Node) -> tuple[DataflowContainingNode, VarMap]:
+        """ Creates a `DFG` node with input capturing all live variables.
+
+        Additionally, returns a new variable map for use inside the dataflow grap.
+        """
+        dfg = self.graph.add_dfg(parent)
+        new_vars = self._add_input(variables, dfg)
+        return dfg, new_vars
+
+    def _make_case(self, variables: VarMap, parent: Node) -> tuple[DataflowContainingNode, VarMap]:
+        """ Creates a `Case`` node with input capturing all live variables.
+
+        Additionally, returns a new variable map for use inside the `Case`
+        dataflow graph.
+        """
+        dfg = self.graph.add_case(parent)
+        new_vars = self._add_input(variables, dfg)
+        return dfg, new_vars
+
+    def _make_bb(self, predecessor: BBNode, variables: VarMap) -> tuple[BBNode, VarMap]:
+        """ Creates a basic block, i.e. a `Block` node with an input capturing
+        all live variables and connects it to a control flow predecessor BB.
+
+        Additionally, returns a new variable map for use inside the BB.
+        """
+        block = self.graph.add_block(predecessor.parent)
+        self.graph.add_edge(predecessor.add_out_port(None), block.add_in_port(None))
+        new_vars = self._add_input(variables, block)
+        return block, new_vars
+
+    def _finish_bb(self, bb: BBNode, variables: Optional[VarMap] = None, outputs: Optional[list[OutPort]] = None,
+                   branch_pred: Optional[OutPort] = None) -> None:
+        """ Finishes a basic block by adding an output node.
+
+        The outputs of the BB can be given by a variable map, or manually
+        specified by a list of ports. If the block branches, an optional
+        port holding the branching predicate can be passed.
+        """
+        assert variables or outputs
+        # If the BB doesn't branch, we still need to add a unit () output
+        if branch_pred is None:
+            unit = self.graph.add_make_tuple([], parent=bb).out_port(0)
+            branch_pred = self.graph.add_tag(variants=[TupleType([])], tag=0, inp=unit, parent=bb).out_port(0)
+        if variables is not None:
+            self._add_output(variables, bb, [branch_pred])
+        else:
+            self.graph.add_output(inputs=[branch_pred] + outputs, parent=bb)
+
+
+class ExpressionCompiler(CompilerBase, AstVisitor):
+    """ A compiler from Python expressions to Hugr. """
     variables: VarMap
     global_variables: VarMap
 
@@ -158,6 +264,7 @@ class ExpressionCompiler(AstVisitor):
 
     def compile(self, expr: ast.expr, variables: VarMap, parent: Node, global_variables: VarMap, **kwargs) \
             -> OutPort:
+        """ Compiles an expression and returns a single port holding the output value. """
         self.variables = variables
         self.global_variables = global_variables
         with self.graph.parent(parent):
@@ -166,13 +273,20 @@ class ExpressionCompiler(AstVisitor):
 
     def compile_row(self, expr: ast.expr, variables: VarMap, parent: Node, global_variables: VarMap, **kwargs) \
             -> list[OutPort]:
+        """ Compiles a row expression and returns a list of ports, one for
+        each value in the row.
+
+        On Python-level, we treat tuples like rows on top-level. However,
+        nested tuples are treated like regular Guppy tuples.
+        """
         # Top-level tuple is turned into row
         if isinstance(expr, ast.Tuple):
             return [self.compile(e, variables, parent, global_variables, **kwargs) for e in expr.elts]
         else:
             return [self.compile(expr, variables, parent, global_variables)]
 
-    def visit(self,  node, *args, **kwargs) -> OutPort:
+    def visit(self, node: ast.expr, *args, **kwargs) -> OutPort:
+        # Overload visitor method restricting type to expressions
         return super().visit(node, *args, **kwargs)
 
     def visit_Constant(self, node: ast.Constant) -> OutPort:
@@ -353,13 +467,13 @@ class ExpressionCompiler(AstVisitor):
         return returns[0]
 
 
-BBNode = DataflowContainingNode
+# Types for control-flow hooks needed for statement compilation
 LoopHook = Callable[[BBNode, VarMap], Optional[BBNode]]
 ReturnHook = Callable[[BBNode, ast.Return, list[OutPort]], Optional[BBNode]]
 
 
-class StatementCompiler(AstVisitor):
-    graph: Hugr
+class StatementCompiler(CompilerBase, AstVisitor):
+    """ A compiler from Python statements to Hugr. """
     line_offset: int
     expr_compiler: ExpressionCompiler
     functional_stmt_compiler: "FunctionalStatementCompiler"
@@ -372,6 +486,13 @@ class StatementCompiler(AstVisitor):
     def compile_list(self, nodes: list[ast.stmt], variables: VarMap, bb: BBNode, global_variables: VarMap,
                      return_hook: ReturnHook, continue_hook: Optional[LoopHook] = None,
                      break_hook: Optional[LoopHook] = None) -> Optional[BBNode]:
+        """ Compiles a list of statements into a basic block given
+        a map of all active variables.
+
+        Returns the basic block in which compilation can be resumed afterward.
+        Or, returns `None` if all control-flow paths do a jump (i.e. `return`,
+        `break` or `continue`.
+        """
         next_functional = False
         for node in nodes:
             if bb is None:
@@ -389,48 +510,6 @@ class StatementCompiler(AstVisitor):
                 bb = self.visit(node, variables, bb, global_variables=global_variables, return_hook=return_hook,
                                 continue_hook=continue_hook, break_hook=break_hook)
         return bb
-
-    def _add_input(self, variables: VarMap, parent: Node) -> VarMap:
-        # Inputs are ordered lexicographically
-        # TODO: Instead we could pass around an explicit variable ordering
-        vs = sorted(variables.values(), key=lambda v: v.name)
-        inp = self.graph.add_input(output_tys=[v.ty for v in vs], parent=parent)
-        new_vars: VarMap = {v.name: Variable(v.name, inp.out_port(i), v.defined_at, v.errors_on_usage)
-                            for (i, v) in enumerate(vs)}
-        return new_vars
-
-    def _add_output(self, variables: VarMap, parent: Node, extra_outputs: Optional[list[OutPort]] = None) -> None:
-        # Outputs are order lexicographically
-        # TODO: Instead we could pass around an explicit variable ordering
-        vs = sorted(variables.values(), key=lambda v: v.name)
-        extra_outputs = extra_outputs or []
-        self.graph.add_output(parent=parent, inputs=extra_outputs + [v.port for v in vs])
-
-    def _make_dfg(self, variables: VarMap, parent: Node, is_case: bool = False) -> tuple[DataflowContainingNode, VarMap]:
-        dfg = self.graph.add_case(parent) if is_case else self.graph.add_dfg(parent)
-        new_vars = self._add_input(variables, dfg)
-        return dfg, new_vars
-
-    def _make_empty_bb(self, parent: Node) -> BBNode:
-        return self.graph.add_block(parent)
-
-    def _make_bb(self, predecessor: BBNode, variables: VarMap) -> tuple[BBNode, VarMap]:
-        block = self.graph.add_block(predecessor.parent)
-        self.graph.add_edge(predecessor.add_out_port(None), block.add_in_port(None))
-        new_vars = self._add_input(variables, block)
-        return block, new_vars
-
-    def _finish_bb(self, bb: BBNode, variables: Optional[VarMap] = None, outputs: Optional[list[OutPort]] = None,
-                   branch_pred: Optional[OutPort] = None) -> None:
-        assert variables or outputs
-        # If the BB doesn't branch, we still need to add a unit () output
-        if branch_pred is None:
-            unit = self.graph.add_make_tuple([], parent=bb).out_port(0)
-            branch_pred = self.graph.add_tag(variants=[TupleType([])], tag=0, inp=unit, parent=bb).out_port(0)
-        if variables is not None:
-            self._add_output(variables, bb, [branch_pred])
-        else:
-            self.graph.add_output(inputs=[branch_pred] + outputs, parent=bb)
 
     def visit_Assign(self, node: ast.Assign, variables: VarMap, bb: BBNode, **kwargs) -> Optional[BBNode]:
         if len(node.targets) > 1:
@@ -548,7 +627,7 @@ class StatementCompiler(AstVisitor):
             # No branch jumps: We have to merge the control flow
             # Input of the merge BB will be all variables that are defined in both
             # the `if` and `else` branch
-            merge_bb = self._make_empty_bb(parent=bb.parent)
+            merge_bb = self.graph.add_block(bb.parent)
             merge_input = self.graph.add_input(output_tys=[], parent=merge_bb)
             self.graph.add_edge(if_bb.add_out_port(None), merge_bb.add_in_port(None))
             self.graph.add_edge(else_bb.add_out_port(None), merge_bb.add_in_port(None))
@@ -646,6 +725,7 @@ class StatementCompiler(AstVisitor):
 
 
 class FunctionalStatementCompiler(StatementCompiler):
+    """ A compiler from Python statements to Hugr only using functional control-flow nodes. """
     def visit_Break(self, node: ast.Break, *args, **kwargs) -> BBNode:
         raise GuppyError("Break is not allowed in a functional statement", node)
 
@@ -661,8 +741,8 @@ class FunctionalStatementCompiler(StatementCompiler):
         vs = list(sorted(variables.values(), key=lambda v: v.name))
         conditional = self.graph.add_conditional(cond_input=cond_port, inputs=[v.port for v in vs], parent=bb)
 
-        if_dfg, if_vars = self._make_dfg(variables, conditional, is_case=True)
-        else_dfg, else_vars = self._make_dfg(variables, conditional, is_case=True)
+        if_dfg, if_vars = self._make_case(variables, conditional)
+        else_dfg, else_vars = self._make_case(variables, conditional)
         self.compile_list(node.body, if_vars, if_dfg, **kwargs)
         self.compile_list(node.orelse, else_vars, else_dfg, **kwargs)
 
@@ -688,8 +768,8 @@ class FunctionalStatementCompiler(StatementCompiler):
         assert_bool_type(cond_port.ty, node.test)
         conditional = self.graph.add_conditional(cond_input=cond_port, parent=bb,
                                                  inputs=[v.port for v in sorted(variables.values(), key=lambda v: v.name)])
-        start_dfg, start_vars = self._make_dfg(variables, conditional, is_case=True)
-        skip_dfg, skip_vars = self._make_dfg(variables, conditional, is_case=True)
+        start_dfg, start_vars = self._make_case(variables, conditional)
+        skip_dfg, skip_vars = self._make_case(variables, conditional)
         # The skip block is just an identity DFG
         self.graph.add_output(inputs=[v.port for v in sorted(skip_vars.values(), key=lambda v: v.name)],
                               parent=skip_dfg)
@@ -731,6 +811,7 @@ class FunctionalStatementCompiler(StatementCompiler):
 
 @dataclass()
 class GuppyFunction:
+    """ Class holding all information associated with a Function during compilation. """
     name: str
     module: "GuppyModule"
     def_node: Node
@@ -738,11 +819,13 @@ class GuppyFunction:
     ast: ast.FunctionDef
 
     def __call__(self, *args, **kwargs):
-        raise GuppyError("Guppy functions can only be called inside of guppy functions")
+        # The `@guppy` annotator returns a `GuppyFunction`. If the user
+        # tries to call it, we can give a nice error message:
+        raise GuppyError("Guppy functions can only be called inside of Guppy functions")
 
 
-class FunctionCompiler(object):
-    graph: Hugr
+class FunctionCompiler(CompilerBase):
+    """ A compiler from Python function definitions to Hugr functions. """
     stmt_compiler: StatementCompiler
     line_offset: int
 
@@ -755,6 +838,8 @@ class FunctionCompiler(object):
 
     @staticmethod
     def validate_signature(func_def: ast.FunctionDef) -> FunctionType:
+        """ Checks the signature of a function definition and returns the
+        corresponding Guppy type. """
         if len(func_def.args.posonlyargs) != 0:
             raise GuppyError("Positional-only parameters not supported", func_def.args.posonlyargs[0])
         if len(func_def.args.kwonlyargs) != 0:
@@ -787,6 +872,7 @@ class FunctionCompiler(object):
 
     def compile(self, module: "GuppyModule", func_def: ast.FunctionDef, def_node: Optional[Node],
                 global_variables: VarMap, line_offset: int) -> GuppyFunction:
+        """ Compiles a `FunctionDef` AST node into a Guppy function. """
         self.line_offset = line_offset
         self.stmt_compiler.line_offset = line_offset
 
@@ -836,6 +922,7 @@ class FunctionCompiler(object):
 
 def format_source_location(source_lines: list[str], loc: Union[ast.AST, ast.operator, ast.expr, ast.arg, ast.Name],
                            line_offset: int, num_lines: int = 3, indent: int = 4) -> str:
+    """ Creates a pretty banner to show source locations for errors. """
     s = "".join(source_lines[max(loc.lineno-num_lines, 0):loc.lineno]).rstrip()
     s += "\n" + loc.col_offset * " " + (loc.end_col_offset - loc.col_offset) * "^"
     s = textwrap.dedent(s).splitlines()
@@ -851,6 +938,12 @@ def format_source_location(source_lines: list[str], loc: Union[ast.AST, ast.oper
 
 
 class GuppyModule(object):
+    """ A Guppy module backed by a Hugr graph.
+
+    Instances of this class can be used as a decorator to add functions
+    to the module. After all functions are added, `compile()` must be
+    called to obtain the Hugr.
+    """
     name: str
     graph: Hugr
     module_node: Node
@@ -876,12 +969,13 @@ class GuppyModule(object):
             raise GuppyError("Only functions can be placed in modules", func_ast)
         if func_ast.name in self.annotated_funcs:
             raise GuppyError(f"Module `{self.name}` already contains a function named `{func_ast.name}` "
-                             f"(declared at {SourceLoc.from_ast(self.annotated_funcs[func_ast.name][0], line_offset)})",
+                             f"(declared at {SourceLoc.from_ast(self.annotated_funcs[func_ast.name][1], line_offset)})",
                              func_ast)
         self.annotated_funcs[func_ast.name] = f, func_ast, source_lines, line_offset
         return None
 
     def compile(self) -> Hugr:
+        """ Compiles the module and returns the final Hugr. """
         try:
             global_variables = {}
             defs = {}
@@ -909,10 +1003,15 @@ class GuppyModule(object):
 
 
 def guppy(f) -> Hugr:
+    """ Decorator to compile functions outside of modules for testing.
+
+    Note that recursion without a module is not supported.
+    """
     source_lines, line_offset = inspect.getsourcelines(f)
     source = "".join(source_lines)  # Lines already have trailing \n's
     graph = Hugr()
     func_ast = ast.parse(source).body[0]
+    assert isinstance(func_ast, ast.FunctionDef)
     compiler = FunctionCompiler(graph)
     try:
         compiler.compile(GuppyModule(""), func_ast, None, {}, line_offset-1)

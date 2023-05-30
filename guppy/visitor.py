@@ -37,3 +37,17 @@ class AstVisitor(object):
                         self.visit(item, *args, **kwargs)
             elif isinstance(value, ast.AST):
                 self.visit(value, *args, **kwargs)
+
+
+def name_nodes_in_expr(expr: ast.expr) -> list[ast.Name]:
+    """ Returns a list of all `Name` nodes occurring in an expression. """
+    class Visitor(AstVisitor):
+        def __init__(self):
+            self.names = []
+
+        def visit_Name(self, node: ast.Name):
+            self.names.append(node)
+
+    v = Visitor()
+    v.visit(expr)
+    return v.names
