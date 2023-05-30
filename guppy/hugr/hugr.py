@@ -44,7 +44,7 @@ class Node:
     op: ops.OpType
     in_port_types: list[Optional[GuppyType]]
     out_port_types: list[Optional[GuppyType]]
-    parent: "Node"
+    parent: Optional["Node"]
     meta_data: dict[str, Any] = field(default_factory=dict)
 
     @property
