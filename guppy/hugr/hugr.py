@@ -116,6 +116,9 @@ class DataflowContainingNode(Node):
 
 TypeList = Sequence[Optional[GuppyType]]
 
+OrderEdge = tuple["Node", "Node"]
+ORDER_EDGE_KEY = (-1, -1)
+
 
 class Hugr:
     """ Hierarchical unified graph representation. """
@@ -155,8 +158,6 @@ class Hugr:
         input_types = input_types or []
         output_types = output_types or []
         parent = parent or self._default_parent
-        if parent is None:
-            raise ValueError("Parent or default parent must be set!")
         node = Node(idx=self._graph.number_of_nodes(),
                     op=op,
                     in_port_types=[p.ty for p in inputs] if inputs is not None else list(input_types),
@@ -292,12 +293,14 @@ class Hugr:
         """ Adds a `Declare` node to the graph. """
         return self._add_node(ops.Module(op=ops.Declare()), [], [fun_ty], parent, None, meta_data={"name": name})
 
-    def add_edge(self, src_port: OutPort, tgt_port: InPort) -> Edge:
+    def add_edge(self, src_port: OutPort, tgt_port: InPort) -> None:
         """ Adds an edge between two ports. """
         assert src_port.ty == tgt_port.ty
-        self._graph.add_edge(src_port.node.idx, tgt_port.node.idx,
-                             key=(src_port.offset, tgt_port.offset))
-        return src_port, tgt_port
+        self._graph.add_edge(src_port.node.idx, tgt_port.node.idx, key=(src_port.offset, tgt_port.offset))
+
+    def add_order_edge(self, src: Node, tgt: Node) -> None:
+        """ Adds a order-edge between two nodes. """
+        self._graph.add_edge(src.idx, tgt.idx, key=ORDER_EDGE_KEY)
 
     def nodes(self) -> Iterator[Node]:
         """ Returns an iterator over all nodes in the graph. """
@@ -321,7 +324,12 @@ class Hugr:
 
     def edges(self) -> Iterator[Edge]:
         """ Returns an iterator over all edges in the graph. """
-        return (self._to_edge(*e) for e in self._graph.edges(data=True, keys=True))
+        return (self._to_edge(*e) for e in self._graph.edges(data=True, keys=True) if e[2] != ORDER_EDGE_KEY)
+
+    def order_edges(self) -> Iterator[OrderEdge]:
+        """ Returns an iterator over all order-edges in the graph. """
+        return ((self.get_node(e[0]), self.get_node(e[1])) for e in self._graph.edges(data=True, keys=True)
+                if e[2] == ORDER_EDGE_KEY)
 
     def in_edges(self, port: InPort) -> Iterator[Edge]:
         """ Returns an iterator over all edges connected to a given in-port. """
@@ -336,6 +344,20 @@ class Hugr:
             src, tgt = self._to_edge(*e)
             if src.offset == port.offset:
                 yield src, tgt
+
+    def order_successors(self, node: Node) -> Iterator[Node]:
+        """ Returns an iterator over all nodes that this node connects to via an
+        order edge. """
+        for src, tgt, key in self._graph.out_edges(node.idx, keys=True):
+            if key == ORDER_EDGE_KEY:
+                yield tgt
+
+    def order_predecessors(self, node: Node) -> Iterator[Node]:
+        """ Returns an iterator over all nodes that are connected to this node via an
+        order edge. """
+        for src, tgt, key in self._graph.in_edges(node.idx, keys=True):
+            if key == ORDER_EDGE_KEY:
+                yield src
 
     def _to_edge(self, src: int, tgt: int, key: Tuple[int, int], _data: dict[str, Any]) -> Edge:
         src_node = self.get_node(src)
@@ -353,9 +375,11 @@ class Hugr:
         for n in list(self.nodes()):
             if isinstance(n.op, ops.DummyOp):
                 name = n.op.name
-                fun_ty = FunctionType(list(*n.in_port_types), list(*n.out_port_types))
+                fun_ty = FunctionType(list(n.in_port_types), list(n.out_port_types))
                 decl = self.add_declare(fun_ty.clone(), self.root, name)
-                n.op = ops.Dataflow(op=ops.Call())
+                sig = tys.Signature(input=tys.TypeRow(types=[t.to_hugr() for t in fun_ty.args]),
+                                    output=tys.TypeRow(types=[t.to_hugr() for t in fun_ty.returns]))
+                n.op = ops.Dataflow(op=ops.Call(signature=sig))
                 self.add_edge(decl.out_port(0), n.add_in_port(fun_ty.clone()))
         return self
 
@@ -388,22 +412,16 @@ class Hugr:
                 assert isinstance(n.parent, DataflowContainingNode)
                 if n.num_in_ports == 0 and not isinstance(n.op.op, ops.Input):
                     assert n.parent.input_child is not None
-                    src = n.parent.input_child.add_out_port(None)
-                    tgt = n.add_in_port(None)
-                    self.add_edge(src, tgt)
+                    self.add_order_edge(n.parent.input_child, n)
                 if n.num_out_ports == 0 and not isinstance(n.op.op, ops.Output):
                     assert n.parent.output_child is not None
-                    src = n.add_out_port(None)
-                    tgt = n.parent.output_child.add_in_port(None)
-                    self.add_edge(src, tgt)
+                    self.add_order_edge(n, n.parent.output_child)
                 # Special case: Call ops for functions without any arguments are
                 # only connected to the top-level def/declare and also need an
                 # order edge
                 if isinstance(n.op.op, ops.Call) and n.num_in_ports == 1:
                     assert n.parent.input_child is not None
-                    src = n.parent.input_child.add_out_port(None)
-                    tgt = n.add_in_port(None)
-                    self.add_edge(src, tgt)
+                    self.add_order_edge(n.parent.input_child, n)
         return self
 
     def to_raw(self) -> raw.RawHugr:
@@ -444,13 +462,23 @@ class Hugr:
             is_const = not isinstance(n.op, ops.Dataflow) and n.num_out_ports == 1 and n.out_port_types[0] is not None
             num_out_ports = 0 if is_const and next(self.out_edges(n.out_port(0)), None) is None else n.num_out_ports
             idx = raw_index[n.idx]
-            nodes[idx - 1] = (raw_index[n.parent.idx], n.num_in_ports, num_out_ports)
+            # Order edges get their own ports at the end
+            num_in_ports = n.num_in_ports + len(list(self.order_predecessors(n)))
+            num_out_ports = num_out_ports + len(list(self.order_successors(n)))
+            nodes[idx - 1] = (raw_index[n.parent.idx], num_in_ports, num_out_ports)
             n.update_op()
             op_types[idx] = n.op
 
         edges: list[raw.Edge] = []
         for src, tgt in self.edges():
             edges.append(((raw_index[src.node.idx], src.offset), (raw_index[tgt.node.idx], tgt.offset)))
+
+        order_in_offsets = {n.idx: itertools.count(start=0) for n in self.nodes()}
+        order_out_offsets = {n.idx: itertools.count(start=0) for n in self.nodes()}
+        for src, tgt in self.order_edges():
+            out_offset = src.num_out_ports + next(order_out_offsets[src.idx])
+            in_offset = tgt.num_in_ports + next(order_in_offsets[tgt.idx])
+            edges.append(((raw_index[src.idx], out_offset), (raw_index[tgt.idx], in_offset)))
 
         if self.root is None:
             raise ValueError("Raw Hugr requires a root node")
