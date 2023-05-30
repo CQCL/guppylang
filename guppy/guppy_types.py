@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any, Sequence
 
 import guppy.hugr.tys as tys
 
@@ -17,9 +17,9 @@ class GuppyType(ABC):
 
 @dataclass(frozen=True)
 class RowType(GuppyType):
-    element_types: list[GuppyType]
+    element_types: Sequence[GuppyType]
 
-    def __str__(self):
+    def __str__(self) -> str:
         if len(self.element_types) == 0:
             return "None"
         elif len(self.element_types) == 1:
@@ -27,8 +27,9 @@ class RowType(GuppyType):
         else:
             return f"({', '.join(str(e) for e in self.element_types)})"
 
-    def to_hugr(self) -> tys.TypeRow:
-        return tys.TypeRow(types=[t.to_hugr() for t in self.element_types])
+    def to_hugr(self) -> tys.SimpleType:
+        raise NotImplementedError()
+        # return tys.TypeRow(types=[t.to_hugr() for t in self.element_types])
 
     def clone(self) -> "RowType":
         return RowType([t.clone() for t in self.element_types])
@@ -36,7 +37,7 @@ class RowType(GuppyType):
 
 @dataclass(frozen=True)
 class IntType(GuppyType):
-    def __str__(self):
+    def __str__(self) -> str:
         return "int"
 
     def to_hugr(self) -> tys.SimpleType:
@@ -48,7 +49,7 @@ class IntType(GuppyType):
 
 @dataclass(frozen=True)
 class FloatType(GuppyType):
-    def __str__(self):
+    def __str__(self) -> str:
         return "float"
 
     def to_hugr(self) -> tys.SimpleType:
@@ -60,7 +61,7 @@ class FloatType(GuppyType):
 
 @dataclass(frozen=True)
 class BoolType(GuppyType):
-    def __str__(self):
+    def __str__(self) -> str:
         return "bool"
 
     def to_hugr(self) -> tys.SimpleType:
@@ -75,11 +76,11 @@ class BoolType(GuppyType):
 
 @dataclass(frozen=True)
 class FunctionType(GuppyType):
-    args: list[GuppyType]
-    returns: list[GuppyType]
-    arg_names: Optional[list[str]] = None
+    args: Sequence[GuppyType]
+    returns: Sequence[GuppyType]
+    arg_names: Optional[Sequence[str]] = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{RowType(self.args)} -> {RowType(self.returns)}"
 
     def to_hugr(self) -> tys.SimpleType:
@@ -91,14 +92,14 @@ class FunctionType(GuppyType):
 
     def clone(self) -> "FunctionType":
         return FunctionType([t.clone() for t in self.args], [t.clone() for t in self.returns],
-                            self.arg_names.copy() if self.arg_names is not None else None)
+                            self.arg_names if self.arg_names is not None else None)
 
 
 @dataclass(frozen=True)
 class TupleType(GuppyType):
-    element_types: list[GuppyType]
+    element_types: Sequence[GuppyType]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"({', '.join(str(e) for e in self.element_types)})"
 
     def to_hugr(self) -> tys.SimpleType:
@@ -115,9 +116,9 @@ class TupleType(GuppyType):
 
 @dataclass(frozen=True)
 class SumType(GuppyType):
-    element_types: list[GuppyType]
+    element_types: Sequence[GuppyType]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Sum({', '.join(str(e) for e in self.element_types)})"
 
     def to_hugr(self) -> tys.SimpleType:
@@ -134,7 +135,7 @@ class SumType(GuppyType):
 
 @dataclass(frozen=True)
 class StringType(GuppyType):
-    def __str__(self):
+    def __str__(self) -> str:
         return "str"
 
     def to_hugr(self) -> tys.SimpleType:
@@ -148,7 +149,7 @@ class StringType(GuppyType):
 class ListType(GuppyType):
     element_type: GuppyType
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"list[{self.element_type}]"
 
     def to_hugr(self) -> tys.SimpleType:
@@ -166,7 +167,7 @@ class ListType(GuppyType):
 class SetType(GuppyType):
     element_type: GuppyType
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"set[{self.element_type}]"
 
     def to_hugr(self) -> tys.SimpleType:
@@ -182,7 +183,7 @@ class DictType(GuppyType):
     key_type: GuppyType
     value_type: GuppyType
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"dict[{self.key_type}, {self.value_type}]"
 
     def to_hugr(self) -> tys.SimpleType:
@@ -193,7 +194,7 @@ class DictType(GuppyType):
         return DictType(self.key_type.clone(), self.value_type.clone())
 
 
-def type_from_python_value(val: object) -> Optional[GuppyType]:
+def type_from_python_value(val: Any) -> Optional[GuppyType]:
     """ Checks if the given Python value is a valid Guppy value.
     In that case, the Guppy type of the value is returned.
     """

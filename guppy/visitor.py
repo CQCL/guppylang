@@ -1,6 +1,7 @@
 """ AST visitor based on ast.NodeVisitor that can pass extra arguments to visit(...). """
 
 import ast
+from typing import Any
 
 
 class AstVisitor(object):
@@ -22,13 +23,13 @@ class AstVisitor(object):
     traversing.  For this a special visitor exists (`NodeTransformer`) that
     allows modifications.
     """
-    def visit(self, node, *args, **kwargs):
+    def visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
         """Visit a node."""
         method = 'visit_' + node.__class__.__name__
         visitor = getattr(self, method, self.generic_visit)
         return visitor(node, *args, **kwargs)
 
-    def generic_visit(self, node, *args, **kwargs):
+    def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
         """Called if no explicit visitor function exists for a node."""
         for field, value in ast.iter_fields(node):
             if isinstance(value, list):
@@ -42,10 +43,12 @@ class AstVisitor(object):
 def name_nodes_in_expr(expr: ast.expr) -> list[ast.Name]:
     """ Returns a list of all `Name` nodes occurring in an expression. """
     class Visitor(AstVisitor):
-        def __init__(self):
+        names: list[ast.Name]
+
+        def __init__(self) -> None:
             self.names = []
 
-        def visit_Name(self, node: ast.Name):
+        def visit_Name(self, node: ast.Name) -> None:
             self.names.append(node)
 
     v = Visitor()

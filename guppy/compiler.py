@@ -6,7 +6,7 @@ import textwrap
 from abc import ABC
 from collections import deque
 from dataclasses import field, dataclass
-from typing import Callable, Union, Optional
+from typing import Callable, Union, Optional, Any
 
 from guppy.hugr.hugr import Hugr, OutPort, Node, DataflowContainingNode
 from guppy. guppy_types import (IntType, GuppyType, FloatType, BoolType, RowType, StringType, type_from_python_value,
@@ -31,10 +31,10 @@ class SourceLoc:
     def from_ast(node: AstNode, line_offset: int) -> "SourceLoc":
         return SourceLoc(line_offset + node.lineno, node.col_offset, node)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.line}:{self.col}"
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> bool:
         if not isinstance(other, SourceLoc):
             raise NotImplementedError()
         return (self.line, self.col) < (other.line, other.col)
@@ -57,7 +57,7 @@ class InternalGuppyError(Exception):
     pass
 
 
-def assert_arith_type(ty: GuppyType, node: ast.expr) -> None:
+def assert_arith_type(ty: Optional[GuppyType], node: ast.expr) -> None:
     """ Check that a given type is arithmetic, i.e. an integer or float,
     or raise a type error otherwise. """
     if not isinstance(ty, IntType) and not isinstance(ty, FloatType):
@@ -65,14 +65,14 @@ def assert_arith_type(ty: GuppyType, node: ast.expr) -> None:
                              f"but got `{ast.unparse(node)}` of type `{ty}`", node)
 
 
-def assert_int_type(ty: GuppyType, node: ast.expr) -> None:
+def assert_int_type(ty: Optional[GuppyType], node: ast.expr) -> None:
     """ Check that a given type is integer or raise a type error otherwise. """
     if not isinstance(ty, IntType):
         raise GuppyTypeError(f"Expected expression of type `int`, "
                              f"but got `{ast.unparse(node)}` of type `{ty}`", node)
 
 
-def assert_bool_type(ty: GuppyType, node: ast.expr) -> None:
+def assert_bool_type(ty: Optional[GuppyType], node: ast.expr) -> None:
     """ Check that a given type is boolean or raise a type error otherwise. """
     if not isinstance(ty, BoolType):
         raise GuppyTypeError(f"Expected expression of type `bool`, "
@@ -88,11 +88,11 @@ class UndefinedPort(OutPort):
         self.ty = ty
 
     @property
-    def node_idx(self) -> int:
+    def node(self) -> Node:  # type: ignore
         raise InternalGuppyError("Tried to access undefined Port")
 
     @property
-    def offset(self) -> int:
+    def offset(self) -> int:  # type: ignore
         raise InternalGuppyError("Tried to access undefined Port")
 
 
@@ -110,7 +110,7 @@ class Variable:
     errors_on_usage: list[GuppyError] = field(default_factory=list)
 
     @property
-    def ty(self):
+    def ty(self) -> Optional[GuppyType]:
         """ The type of the variable. """
         return self.port.ty
 
@@ -249,6 +249,7 @@ class CompilerBase(ABC):
         if variables is not None:
             self._add_output(variables, bb, [branch_pred])
         else:
+            assert outputs is not None
             self.graph.add_output(inputs=[branch_pred] + outputs, parent=bb)
 
 
@@ -262,7 +263,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         self.variables = {}
         self.global_variables = {}
 
-    def compile(self, expr: ast.expr, variables: VarMap, parent: Node, global_variables: VarMap, **kwargs) \
+    def compile(self, expr: ast.expr, variables: VarMap, parent: Node, global_variables: VarMap, **_kwargs: Any) \
             -> OutPort:
         """ Compiles an expression and returns a single port holding the output value. """
         self.variables = variables
@@ -271,7 +272,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
             res = self.visit(expr)
         return res
 
-    def compile_row(self, expr: ast.expr, variables: VarMap, parent: Node, global_variables: VarMap, **kwargs) \
+    def compile_row(self, expr: ast.expr, variables: VarMap, parent: Node, global_variables: VarMap, **kwargs: Any) \
             -> list[OutPort]:
         """ Compiles a row expression and returns a list of ports, one for
         each value in the row.
@@ -285,9 +286,9 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         else:
             return [self.compile(expr, variables, parent, global_variables)]
 
-    def visit(self, node: ast.expr, *args, **kwargs) -> OutPort:
+    def visit(self, node: ast.expr, *args: Any, **kwargs: Any) -> OutPort:
         # Overload visitor method restricting type to expressions
-        return super().visit(node, *args, **kwargs)
+        return super().visit(node, *args, **kwargs)  # type: ignore
 
     def visit_Constant(self, node: ast.Constant) -> OutPort:
         if type_from_python_value(node.value) is None:

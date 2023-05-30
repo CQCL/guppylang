@@ -174,7 +174,7 @@ class TypeRow(BaseModel):
     types: list[SimpleType]  # The datatypes in the row.
 
     @classmethod
-    def empty(cls):
+    def empty(cls) -> "TypeRow":
         return TypeRow(types=[])
 
 
@@ -193,7 +193,7 @@ class Signature(BaseModel):
     const_input: TypeRow = Field(default_factory=TypeRow.empty)  # Possible constE input (for call / load-constant).
 
     @classmethod
-    def empty(cls):
+    def empty(cls) -> "Signature":
         return Signature(input=TypeRow.empty(), output=TypeRow.empty(), const_input=TypeRow.empty())
 
 
