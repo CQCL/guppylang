@@ -10,12 +10,11 @@ from .pydantic_extensions import BaseModel
 
 
 TypeList = list[SimpleType]
-OptTypeList = list[Optional[SimpleType]]
 
 
 class BaseOp(ABC, BaseModel):
     """ Base class for ops that store their node's input/output types """
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         """ Hook to insert type information from the input and output ports into the op """
         pass
 
@@ -36,7 +35,7 @@ class Module(BaseOp, list=True, tagged=True):
     """ A module region node - parent will be the Root (or the node itself is the Root). """
     op: "ModuleOp"
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         self.op.insert_port_types(in_types, out_types)
 
     def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
@@ -50,7 +49,7 @@ class BasicBlock(BaseOp, list=True, tagged=True):
     """ A basic block in a control flow graph - parent will be a CFG node. """
     op: "BasicBlockOp"
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         self.op.insert_port_types(in_types, out_types)
 
     def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
@@ -64,7 +63,7 @@ class Case(BaseOp, list=True, tagged=True):
     """ A branch in a dataflow graph - parent will be a Conditional node. """
     op: "CaseOp"
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         self.op.insert_port_types(in_types, out_types)
 
     def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
@@ -78,7 +77,7 @@ class Dataflow(BaseOp, list=True, tagged=True):
     """ Nodes used inside dataflow containers (DFG, Conditional, TailLoop, def, BasicBlock). """
     op: "DataflowOp" = Field(tagged_union=True)
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         self.op.insert_port_types(in_types, out_types)
 
     def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
@@ -112,11 +111,11 @@ class Def(BaseOp, tagged=True):
     """ A function definition. Children nodes are the body of the definition. """
     signature: Signature = Field(default_factory=Signature.empty)
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         assert len(in_types) == 0
         assert len(out_types) == 1
         out = out_types[0]
-        assert out is not None and isinstance(out.ty, Graph)
+        assert isinstance(out.ty, Graph)
         self.signature = out.ty.signature
 
 
@@ -124,11 +123,11 @@ class Declare(BaseOp, tagged=True):
     """ External function declaration, linked at runtime. """
     signature: Signature = Field(default_factory=Signature.empty)
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         assert len(in_types) == 0
         assert len(out_types) == 1
         out = out_types[0]
-        assert out is not None and isinstance(out.ty, Graph)
+        assert isinstance(out.ty, Graph)
         self.signature = out.ty.signature
 
 
@@ -156,7 +155,7 @@ class Block(BaseOp, tagged=True):
     other_outputs: TypeRow = Field(default_factory=TypeRow.empty)
     predicate_variants: list[TypeRow] = Field(default_factory=list)
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         # The types will be all None because it's not dataflow, but we only
         # care about the number of outputs. Note that we don't make use of
         # the HUGR feature where the variant data is appended to successor
@@ -197,10 +196,8 @@ class Input(BaseOp, tagged=True):
     """ An input node. The outputs of this node are the inputs to the function. """
     types: TypeRow = Field(default_factory=TypeRow.empty)
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         assert len(in_types) == 0
-        # Input node may have extra order edges connected, so we filter Nones here
-        out_types = [ty for ty in out_types if ty is not None]
         self.types = TypeRow(types=out_types)
 
 
@@ -208,10 +205,8 @@ class Output(BaseOp, tagged=True):
     """ An output node. The inputs are the outputs of the function. """
     types: TypeRow = Field(default_factory=TypeRow.empty)
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         assert len(out_types) == 0
-        # Output node may have extra order edges connected, so we filter Nones here
-        in_types = [ty for ty in in_types if ty is not None]
         self.types = TypeRow(types=in_types)
 
 
@@ -225,11 +220,10 @@ class Call(BaseOp, tagged=True):
     """
     signature: Signature = Field(default_factory=Signature.empty)
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
-        # The constE edge comes after the value inputs but there may
-        # be one more order edge after that.
-        fun_ty = in_types[-1] if in_types[-1] is not None else in_types[-2]
-        assert fun_ty is not None and isinstance(fun_ty.ty, Graph)
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+        # The constE edge comes after the value inputs
+        fun_ty = in_types[-1]
+        assert isinstance(fun_ty.ty, Graph)
         self.signature = fun_ty.ty.signature
 
 
@@ -237,7 +231,7 @@ class CallIndirect(BaseOp, tagged=True):
     """ Call a function indirectly. Like call, but the first input is a standard dataflow graph type. """
     signature: Signature = Field(default_factory=Signature.empty)
     
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         fun_ty = in_types[0]
         assert isinstance(fun_ty, Graph)
         assert len(fun_ty.signature.input.types) == len(in_types) - 1
@@ -254,7 +248,7 @@ class Leaf(BaseOp, tagged=True):
     """ Simple operation that has only value inputs+outputs and (potentially) StateOrder edges. """
     op: "LeafOp"
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         self.op.insert_port_types(in_types, out_types)
 
     def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
@@ -276,7 +270,7 @@ class ControlFlow(BaseOp, tagged=True):
     """ Operation related to control flow. """
     op: "ControlFlowOp"
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         self.op.insert_port_types(in_types, out_types)
 
     def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
@@ -299,11 +293,10 @@ class Conditional(BaseOp, list=True, tagged=True):
     other_inputs: TypeRow = Field(default_factory=TypeRow.empty)  # Remaining input types
     outputs: TypeRow = Field(default_factory=TypeRow.empty)  # Output types
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         # First port is a predicate, i.e. a sum of tuple types. We need to unpack
         # those into a list of type rows
         pred = in_types[0]
-        assert pred is not None
         assert isinstance(pred.ty, ContainerClassic) or isinstance(pred.ty, ContainerLinear)
         assert isinstance(pred.ty.ty, tys.Sum)
         self.predicate_inputs = []
@@ -321,7 +314,7 @@ class TailLoop(BaseOp, list=True, tagged=True):
     just_outputs: TypeRow = Field(default_factory=TypeRow.empty)  # Types that are only output
     rest: TypeRow = Field(default_factory=TypeRow.empty)  # Types that are appended to both input and output
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         assert in_types == out_types
         # self.just_inputs = TypeRow(types=in_types)
         # self.just_outputs = TypeRow(types=out_types)
@@ -333,7 +326,7 @@ class CFG(BaseOp, tagged=True):
     inputs: TypeRow = Field(default_factory=TypeRow.empty)
     outputs: TypeRow = Field(default_factory=TypeRow.empty)
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         self.inputs = TypeRow(types=in_types)
         self.outputs = TypeRow(types=out_types)
 
@@ -412,10 +405,10 @@ class Noop(BaseOp, list=True, tagged=True):
     """ A no-op operation. """
     ty: SimpleType
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         assert len(in_types) == 1
         assert len(out_types) == 1
-        assert in_types[0] == out_types[0] and in_types[0] is not None
+        assert in_types[0] == out_types[0]
         self.ty = in_types[0]
 
 
@@ -437,11 +430,11 @@ class Copy(BaseOp, tagged=True):
     n_copies: int  # The number of copies to make.
     typ: ClassicType  # The type of the data to copy.
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         assert len(in_types) == 1
         assert isinstance(in_types[0], Classic)
         # Filter order edges
-        self.n_copies = len([ty for ty in out_types if ty is not None])
+        self.n_copies = len(out_types)
         self.typ = in_types[0].ty
 
 
@@ -454,7 +447,7 @@ class MakeTuple(BaseOp, list=True, tagged=True):
     """ An operation that packs all its inputs into a tuple. """
     tys: TypeRow = Field(default_factory=TypeRow.empty)
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         # If we have a single order edge as input, this is a unit
         if in_types == [None]:
             in_types = []
@@ -465,7 +458,7 @@ class UnpackTuple(BaseOp, list=True, tagged=True):
     """ An operation that packs all its inputs into a tuple. """
     tys: TypeRow = Field(default_factory=TypeRow.empty)
 
-    def insert_port_types(self, in_types: OptTypeList, out_types: OptTypeList) -> None:
+    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
         self.tys = TypeRow(types=out_types)
 
 

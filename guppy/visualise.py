@@ -3,7 +3,7 @@
 import graphviz as gv
 from typing import Iterable
 
-from guppy.hugr.hugr import InPort, OutPort, Node, Hugr
+from guppy.hugr.hugr import InPort, OutPort, Node, Hugr, OutPortV
 
 # old palettte: https://colorhunt.co/palette/343a407952b3ffc107e1e8eb
 # _COLOURS = {
@@ -179,8 +179,8 @@ def hugr_to_graphviz(hugr: Hugr) -> gv.Digraph:
     }
     for src_port, tgt_port in hugr.edges():
         graph.edge(_out_port_name(src_port), _in_port_name(tgt_port),
-                   label=str(src_port.ty) if src_port.ty else "",
-                   color=_COLOURS["edge"] if src_port.ty is not None else _COLOURS["dark"],
+                   label=str(src_port.ty) if isinstance(src_port, OutPortV) else "",
+                   color=_COLOURS["edge"] if isinstance(src_port, OutPortV) else _COLOURS["dark"],
                    **edge_attr)
     return graph
 

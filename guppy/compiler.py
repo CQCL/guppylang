@@ -8,7 +8,7 @@ from collections import deque
 from dataclasses import field, dataclass
 from typing import Callable, Union, Optional, Any
 
-from guppy.hugr.hugr import Hugr, OutPort, Node, DataflowContainingNode
+from guppy.hugr.hugr import Hugr, OutPort, Node, DFContainingNode, OutPortV, BlockNode
 from guppy. guppy_types import (IntType, GuppyType, FloatType, BoolType, RowType, StringType, type_from_python_value,
                                 TupleType, FunctionType)
 from guppy.visitor import AstVisitor, name_nodes_in_expr
@@ -79,7 +79,7 @@ def assert_bool_type(ty: Optional[GuppyType], node: ast.expr) -> None:
                              f"but got `{ast.unparse(node)}` of type `{ty}`", node)
 
 
-class UndefinedPort(OutPort):
+class UndefinedPort(OutPortV):
     """ Dummy port for undefined variables.
 
     Raises an `InternalGuppyError` if one tries to access one of its properties.
@@ -105,7 +105,7 @@ class Variable:
     compilation that are only raised if the variable is actually used.
     """
     name: str
-    port: OutPort
+    port: OutPortV
     defined_at: set[SourceLoc]  # Set since variable can be defined in `if` and `else` branches
     errors_on_usage: list[GuppyError] = field(default_factory=list)
 
@@ -115,7 +115,7 @@ class Variable:
         return self.port.ty
 
 
-def merge_variables(*vs: Variable, new_port: OutPort) -> Variable:
+def merge_variables(*vs: Variable, new_port: OutPortV) -> Variable:
     """ Merges variables with the same name coming from different control flow paths.
 
     For example, if a new variable is defined in the if- and else-path of a
@@ -168,9 +168,6 @@ def is_functional_annotation(stmt: ast.stmt) -> bool:
     return False
 
 
-# We can treat anything that contains a DFG on Hugr level as a basic block
-BBNode = DataflowContainingNode
-
 # A dictionary mapping names to live variables
 VarMap = dict[str, Variable]
 
@@ -192,7 +189,7 @@ class CompilerBase(ABC):
                             for (i, v) in enumerate(vs)}
         return new_vars
 
-    def _add_output(self, variables: VarMap, parent: Node, extra_outputs: Optional[list[OutPort]] = None) -> None:
+    def _add_output(self, variables: VarMap, parent: Node, extra_outputs: Optional[list[OutPortV]] = None) -> None:
         """ Adds an output node and connects all live variables to it.
 
         Optionally, some extra ports can be prepended before the variables.
@@ -203,7 +200,7 @@ class CompilerBase(ABC):
         extra_outputs = extra_outputs or []
         self.graph.add_output(parent=parent, inputs=extra_outputs + [v.port for v in vs])
 
-    def _make_dfg(self, variables: VarMap, parent: Node) -> tuple[DataflowContainingNode, VarMap]:
+    def _make_dfg(self, variables: VarMap, parent: Node) -> tuple[DFContainingNode, VarMap]:
         """ Creates a `DFG` node with input capturing all live variables.
 
         Additionally, returns a new variable map for use inside the dataflow grap.
@@ -212,7 +209,7 @@ class CompilerBase(ABC):
         new_vars = self._add_input(variables, dfg)
         return dfg, new_vars
 
-    def _make_case(self, variables: VarMap, parent: Node) -> tuple[DataflowContainingNode, VarMap]:
+    def _make_case(self, variables: VarMap, parent: Node) -> tuple[DFContainingNode, VarMap]:
         """ Creates a `Case`` node with input capturing all live variables.
 
         Additionally, returns a new variable map for use inside the `Case`
@@ -222,18 +219,18 @@ class CompilerBase(ABC):
         new_vars = self._add_input(variables, dfg)
         return dfg, new_vars
 
-    def _make_bb(self, predecessor: BBNode, variables: VarMap) -> tuple[BBNode, VarMap]:
+    def _make_bb(self, predecessor: BlockNode, variables: VarMap) -> tuple[BlockNode, VarMap]:
         """ Creates a basic block, i.e. a `Block` node with an input capturing
         all live variables and connects it to a control flow predecessor BB.
 
         Additionally, returns a new variable map for use inside the BB.
         """
         block = self.graph.add_block(predecessor.parent)
-        self.graph.add_edge(predecessor.add_out_port(None), block.add_in_port(None))
+        self.graph.add_edge(predecessor.add_out_port(), block.add_in_port())
         new_vars = self._add_input(variables, block)
         return block, new_vars
 
-    def _finish_bb(self, bb: BBNode, variables: Optional[VarMap] = None, outputs: Optional[list[OutPort]] = None,
+    def _finish_bb(self, bb: BlockNode, variables: Optional[VarMap] = None, outputs: Optional[list[OutPort]] = None,
                    branch_pred: Optional[OutPort] = None) -> None:
         """ Finishes a basic block by adding an output node.
 
@@ -264,7 +261,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         self.global_variables = {}
 
     def compile(self, expr: ast.expr, variables: VarMap, parent: Node, global_variables: VarMap, **_kwargs: Any) \
-            -> OutPort:
+            -> OutPortV:
         """ Compiles an expression and returns a single port holding the output value. """
         self.variables = variables
         self.global_variables = global_variables
@@ -273,7 +270,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         return res
 
     def compile_row(self, expr: ast.expr, variables: VarMap, parent: Node, global_variables: VarMap, **kwargs: Any) \
-            -> list[OutPort]:
+            -> list[OutPortV]:
         """ Compiles a row expression and returns a list of ports, one for
         each value in the row.
 
@@ -286,16 +283,16 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         else:
             return [self.compile(expr, variables, parent, global_variables)]
 
-    def visit(self, node: ast.expr, *args: Any, **kwargs: Any) -> OutPort:
+    def visit(self, node: ast.expr, *args: Any, **kwargs: Any) -> OutPortV:
         # Overload visitor method restricting type to expressions
         return super().visit(node, *args, **kwargs)  # type: ignore
 
-    def visit_Constant(self, node: ast.Constant) -> OutPort:
+    def visit_Constant(self, node: ast.Constant) -> OutPortV:
         if type_from_python_value(node.value) is None:
             raise GuppyError("Unsupported constant expression", node)
         return self.graph.add_constant(node.value).out_port(0)
 
-    def visit_Name(self, node: ast.Name) -> OutPort:
+    def visit_Name(self, node: ast.Name) -> OutPortV:
         x = node.id
         if x in self.variables or x in self.global_variables:
             var = self.variables[x] or self.global_variables[x]
@@ -307,22 +304,22 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
             return var.port
         raise GuppyError(f"Variable `{x}` is not defined", node)
 
-    def visit_JoinedString(self, node: ast.JoinedStr) -> OutPort:
+    def visit_JoinedString(self, node: ast.JoinedStr) -> OutPortV:
         raise GuppyError("Guppy does not support formatted strings", node)
 
-    def visit_Tuple(self, node: ast.Tuple) -> OutPort:
+    def visit_Tuple(self, node: ast.Tuple) -> OutPortV:
         return self.graph.add_make_tuple(inputs=[self.visit(e) for e in node.elts]).out_port(0)
 
-    def visit_List(self, node: ast.List) -> OutPort:
+    def visit_List(self, node: ast.List) -> OutPortV:
         raise NotImplementedError()
 
-    def visit_Set(self, node: ast.Set) -> OutPort:
+    def visit_Set(self, node: ast.Set) -> OutPortV:
         raise NotImplementedError()
 
-    def visit_Dict(self, node: ast.Dict) -> OutPort:
+    def visit_Dict(self, node: ast.Dict) -> OutPortV:
         raise NotImplementedError()
 
-    def visit_UnaryOp(self, node: ast.UnaryOp) -> OutPort:
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> OutPortV:
         port = self.visit(node.operand)
         ty = port.ty
         if isinstance(node.op, ast.UAdd):
@@ -331,24 +328,24 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         elif isinstance(node.op, ast.USub):
             assert_arith_type(ty, node.operand)
             func = "ineg" if isinstance(ty, IntType) else "fneg"
-            return self.graph.add_arith(func, args=[port], out_ty=ty).out_port(0)
+            return self.graph.add_arith(func, inputs=[port], out_ty=ty).out_port(0)
         elif isinstance(node.op, ast.Not):
             assert_bool_type(ty, node.operand)
-            return self.graph.add_arith("not", args=[port], out_ty=ty).out_port(0)
+            return self.graph.add_arith("not", inputs=[port], out_ty=ty).out_port(0)
         elif isinstance(node.op, ast.Invert):
             # The unary invert operator `~` is defined as `~x = -(x + 1)` and only valid for integer
             # types. See https://docs.python.org/3/reference/expressions.html#unary-arithmetic-and-bitwise-operations
             # TODO: Do we want to follow the Python definition or have a custom HUGR op?
             assert_int_type(ty, node.operand)
             one = self.graph.add_constant(0)
-            inc = self.graph.add_arith("iadd", args=[port, one.out_port(0)], out_ty=ty)
-            inv = self.graph.add_arith("ineg", args=[inc.out_port(0)], out_ty=ty)
+            inc = self.graph.add_arith("iadd", inputs=[port, one.out_port(0)], out_ty=ty)
+            inv = self.graph.add_arith("ineg", inputs=[inc.out_port(0)], out_ty=ty)
             return inv.out_port(0)
         else:
             raise InternalGuppyError(f"Unexpected unary operator encountered: {node.op}")
 
-    def binary_arith_op(self, left: OutPort, left_expr: ast.expr, right: OutPort, right_expr: ast.expr,
-                        int_func: str, float_func: str, bool_out: bool) -> OutPort:
+    def binary_arith_op(self, left: OutPortV, left_expr: ast.expr, right: OutPortV, right_expr: ast.expr,
+                        int_func: str, float_func: str, bool_out: bool) -> OutPortV:
         """ Helper function for compiling binary arithmetic operations. """
         assert_arith_type(left.ty, left_expr)
         assert_arith_type(right.ty, right_expr)
@@ -356,14 +353,14 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         is_float = isinstance(left.ty, FloatType) or isinstance(right.ty, FloatType)
         if is_float:
             if isinstance(left.ty, IntType):
-                left = self.graph.add_arith("int_to_float", args=[left], out_ty=FloatType()).out_port(0)
+                left = self.graph.add_arith("int_to_float", inputs=[left], out_ty=FloatType()).out_port(0)
             if isinstance(right.ty, IntType):
-                right = self.graph.add_arith("int_to_float", args=[right], out_ty=IntType()).out_port(0)
+                right = self.graph.add_arith("int_to_float", inputs=[right], out_ty=IntType()).out_port(0)
         return_ty = BoolType() if bool_out else left.ty  # At this point we have `left.ty == right.ty`
-        node = self.graph.add_arith(float_func if is_float else int_func, args=[left, right], out_ty=return_ty)
+        node = self.graph.add_arith(float_func if is_float else int_func, inputs=[left, right], out_ty=return_ty)
         return node.out_port(0)
 
-    def visit_BinOp(self, node: ast.BinOp) -> OutPort:
+    def visit_BinOp(self, node: ast.BinOp) -> OutPortV:
         left = self.visit(node.left)
         right = self.visit(node.right)
         if isinstance(node.op, ast.Add):
@@ -381,7 +378,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         else:
             raise GuppyError(f"Binary operator `{node.op}` is not supported", node.op)
 
-    def visit_Compare(self, node: ast.Compare) -> OutPort:
+    def visit_Compare(self, node: ast.Compare) -> OutPortV:
         # Support chained comparisons, e.g. `x <= 5 < y` by compiling to `and(x <= 5, 5 < y)`
         left_expr = node.left
         left = self.visit(left_expr)
@@ -390,9 +387,9 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
             right = self.visit(right_expr)
             if isinstance(op, ast.Eq) or isinstance(op, ast.Is):
                 # TODO: How is equality defined? What can the operators be?
-                res = self.graph.add_arith("eq", args=[left, right], out_ty=BoolType()).out_port(0)
+                res = self.graph.add_arith("eq", inputs=[left, right], out_ty=BoolType()).out_port(0)
             elif isinstance(op, ast.NotEq) or isinstance(op, ast.IsNot):
-                res = self.graph.add_arith("neq", args=[left, right], out_ty=BoolType()).out_port(0)
+                res = self.graph.add_arith("neq", inputs=[left, right], out_ty=BoolType()).out_port(0)
             elif isinstance(op, ast.Lt):
                 res = self.binary_arith_op(left, left_expr, right, right_expr, "ilt", "flt", True)
             elif isinstance(op, ast.LtE):
@@ -410,10 +407,10 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
             if acc is None:
                 acc = res
             else:
-                acc = self.graph.add_arith("and", args=[acc, res], out_ty=BoolType()).out_port(0)
+                acc = self.graph.add_arith("and", inputs=[acc, res], out_ty=BoolType()).out_port(0)
         return acc
 
-    def visit_BoolOp(self, node: ast.BoolOp) -> OutPort:
+    def visit_BoolOp(self, node: ast.BoolOp) -> OutPortV:
         if isinstance(node.op, ast.And):
             func = "and"
         elif isinstance(node.op, ast.Or):
@@ -423,10 +420,10 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         operands = [self.visit(operand) for operand in node.values]
         acc = operands[0]
         for operand in operands[1:]:
-            acc = self.graph.add_arith(func, args=[acc, operand], out_ty=BoolType()).out_port(0)
+            acc = self.graph.add_arith(func, inputs=[acc, operand], out_ty=BoolType()).out_port(0)
         return acc
 
-    def visit_Call(self, node: ast.Call) -> OutPort:
+    def visit_Call(self, node: ast.Call) -> OutPortV:
         # We need to figure out if this is a direct or indirect call
         f = node.func
         if isinstance(f, ast.Name) and f.id in self.global_variables and f.id not in self.variables:
@@ -469,8 +466,8 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
 
 
 # Types for control-flow hooks needed for statement compilation
-LoopHook = Callable[[BBNode, VarMap], Optional[BBNode]]
-ReturnHook = Callable[[BBNode, ast.Return, list[OutPort]], Optional[BBNode]]
+LoopHook = Callable[[BlockNode, VarMap], Optional[BlockNode]]
+ReturnHook = Callable[[BlockNode, ast.Return, list[OutPortV]], Optional[BlockNode]]
 
 
 class StatementCompiler(CompilerBase, AstVisitor):
@@ -484,9 +481,9 @@ class StatementCompiler(CompilerBase, AstVisitor):
         self.line_offset = line_offset
         self.expr_compiler = ExpressionCompiler(graph)
 
-    def compile_list(self, nodes: list[ast.stmt], variables: VarMap, bb: BBNode, global_variables: VarMap,
+    def compile_list(self, nodes: list[ast.stmt], variables: VarMap, bb: BlockNode, global_variables: VarMap,
                      return_hook: ReturnHook, continue_hook: Optional[LoopHook] = None,
-                     break_hook: Optional[LoopHook] = None) -> Optional[BBNode]:
+                     break_hook: Optional[LoopHook] = None) -> Optional[BlockNode]:
         """ Compiles a list of statements into a basic block given
         a map of all active variables.
 
@@ -503,16 +500,14 @@ class StatementCompiler(CompilerBase, AstVisitor):
                 continue
 
             if next_functional:
-                bb = self.functional_stmt_compiler.visit(node, variables, bb, global_variables=global_variables,
-                                                         return_hook=return_hook, continue_hook=continue_hook,
-                                                         break_hook=break_hook)
+                self.functional_stmt_compiler.visit(node, variables, bb, global_variables=global_variables)
                 next_functional = False
             else:
                 bb = self.visit(node, variables, bb, global_variables=global_variables, return_hook=return_hook,
                                 continue_hook=continue_hook, break_hook=break_hook)
         return bb
 
-    def visit_Assign(self, node: ast.Assign, variables: VarMap, bb: BBNode, **kwargs) -> Optional[BBNode]:
+    def visit_Assign(self, node: ast.Assign, variables: VarMap, bb: BlockNode, **kwargs) -> Optional[BlockNode]:
         if len(node.targets) > 1:
             # This is the case for assignments like `a = b = 1`
             raise GuppyError("Multi assignment not supported", node)
@@ -538,7 +533,7 @@ class StatementCompiler(CompilerBase, AstVisitor):
             raise InternalGuppyError(f"Unexpected node on LHS of assign: {node}")
         if len(row) == 1:
             # If the row only contains a single element, put it on the unpack stack
-            to_unpack: deque[tuple[ast.expr, OutPort]] = deque([(target, row[0])])
+            to_unpack: deque[tuple[ast.expr, OutPortV]] = deque([(target, row[0])])
         else:
             # Otherwise, the number of row elements must match with the pattern and
             # each element is put separately on the unpack stack
@@ -574,21 +569,21 @@ class StatementCompiler(CompilerBase, AstVisitor):
                     to_unpack.append((el_pat, unpack.out_port(i)))
         return bb
 
-    def visit_AnnAssign(self, node: ast.AnnAssign, variables: VarMap, bb: BBNode, **kwargs) -> Optional[BBNode]:
+    def visit_AnnAssign(self, node: ast.AnnAssign, variables: VarMap, bb: BlockNode, **kwargs) -> Optional[BlockNode]:
         # TODO: Figure out what to do with type annotations
         raise NotImplementedError()
 
-    def visit_AugAssign(self, node: ast.AugAssign, variables: VarMap, bb: BBNode, **kwargs) -> Optional[BBNode]:
+    def visit_AugAssign(self, node: ast.AugAssign, variables: VarMap, bb: BlockNode, **kwargs) -> Optional[BlockNode]:
         # TODO: Set all source location attributes
         bin_op = ast.BinOp(left=node.target, op=node.op, right=node.value)
         assign = ast.Assign(targets=[node.target], value=bin_op, lineno=node.lineno, col_offset=node.col_offset)
         return self.visit_Assign(assign, variables, bb, **kwargs)
 
-    def visit_Return(self, node: ast.Return, variables: VarMap, bb: BBNode, return_hook: ReturnHook,
-                     **kwargs) -> Optional[BBNode]:
+    def visit_Return(self, node: ast.Return, variables: VarMap, bb: BlockNode, return_hook: ReturnHook,
+                     **kwargs) -> Optional[BlockNode]:
         return return_hook(bb, node, self.expr_compiler.compile_row(node.value, variables, bb, **kwargs))
 
-    def visit_If(self, node: ast.If, variables: VarMap, bb: BBNode, **kwargs) -> Optional[BBNode]:
+    def visit_If(self, node: ast.If, variables: VarMap, bb: BlockNode, **kwargs) -> Optional[BlockNode]:
         # Finish the current basic block by putting the if condition at the end
         cond_port = self.expr_compiler.compile(node.test, variables, bb, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
@@ -630,8 +625,8 @@ class StatementCompiler(CompilerBase, AstVisitor):
             # the `if` and `else` branch
             merge_bb = self.graph.add_block(bb.parent)
             merge_input = self.graph.add_input(output_tys=[], parent=merge_bb)
-            self.graph.add_edge(if_bb.add_out_port(None), merge_bb.add_in_port(None))
-            self.graph.add_edge(else_bb.add_out_port(None), merge_bb.add_in_port(None))
+            self.graph.add_edge(if_bb.add_out_port(), merge_bb.add_in_port())
+            self.graph.add_edge(else_bb.add_out_port(), merge_bb.add_in_port())
             if_outputs: list[OutPort] = []
             else_outputs: list[OutPort] = []
             for name in set(if_vars.keys()) | set(else_vars.keys()):
@@ -650,7 +645,7 @@ class StatementCompiler(CompilerBase, AstVisitor):
                 self._finish_bb(else_bb, outputs=else_outputs)
             return merge_bb
 
-    def visit_While(self, node: ast.While, variables: VarMap, bb: BBNode, **kwargs) -> Optional[BBNode]:
+    def visit_While(self, node: ast.While, variables: VarMap, bb: BlockNode, **kwargs) -> Optional[BlockNode]:
         # Finish the current basic block
         self._finish_bb(bb, variables)
         # Add basic blocks for loop head, loop body, and loop tail
@@ -663,10 +658,10 @@ class StatementCompiler(CompilerBase, AstVisitor):
         self._finish_bb(head_bb, head_vars, branch_pred=cond_port)
 
         # Define hook that is executed on `continue` and `break`
-        def jump_hook(target_bb: BBNode, curr_bb: BBNode, curr_vars: VarMap) -> Optional[BBNode]:
+        def jump_hook(target_bb: BlockNode, curr_bb: BlockNode, curr_vars: VarMap) -> Optional[BlockNode]:
             # Ignore new variables that are only defined in the loop
             self._finish_bb(curr_bb, {name: curr_vars[name] for name in curr_vars if name in variables})
-            self.graph.add_edge(curr_bb.add_out_port(None), target_bb.add_in_port(None))
+            self.graph.add_edge(curr_bb.add_out_port(), target_bb.add_in_port())
             for curr_var in curr_vars.values():
                 name = curr_var.name
                 if name in variables:
@@ -706,8 +701,8 @@ class StatementCompiler(CompilerBase, AstVisitor):
         # Continue compilation in the tail
         return tail_bb
 
-    def visit_Continue(self, node: ast.Continue, variables: VarMap, bb: BBNode, continue_hook: Optional[LoopHook],
-                       **kwargs) -> Optional[BBNode]:
+    def visit_Continue(self, node: ast.Continue, variables: VarMap, bb: BlockNode, continue_hook: Optional[LoopHook],
+                       **kwargs) -> Optional[BlockNode]:
         if not continue_hook:
             # The Python parser ensures that `continue` can only occur inside of loops.
             # If `continue_bb` is not defined, this means that the `continue` must refer
@@ -715,8 +710,8 @@ class StatementCompiler(CompilerBase, AstVisitor):
             raise GuppyError("Cannot continue external loop inside of Guppy function", node)
         return continue_hook(bb, variables)
 
-    def visit_Break(self, node: ast.Break, variables: VarMap, bb: BBNode, break_hook: Optional[LoopHook],
-                    **kwargs) -> Optional[BBNode]:
+    def visit_Break(self, node: ast.Break, variables: VarMap, bb: BlockNode, break_hook: Optional[LoopHook],
+                    **kwargs) -> Optional[BlockNode]:
         if not break_hook:
             # The Python parser ensures that `break` can only occur inside of loops.
             # If `break_bb` is not defined, this means that the `break` must refer
@@ -727,25 +722,39 @@ class StatementCompiler(CompilerBase, AstVisitor):
 
 class FunctionalStatementCompiler(StatementCompiler):
     """ A compiler from Python statements to Hugr only using functional control-flow nodes. """
-    def visit_Break(self, node: ast.Break, *args, **kwargs) -> BBNode:
+    def compile_list(self, nodes: list[ast.stmt], variables: VarMap, bb: BlockNode, global_variables: VarMap,
+                     return_hook: ReturnHook, continue_hook: Optional[LoopHook] = None,
+                     break_hook: Optional[LoopHook] = None) -> Optional[BlockNode]:
+        self.compile_list_functional(nodes, variables, bb, global_variables)
+        return bb
+
+    def compile_list_functional(self, nodes: list[ast.stmt], variables: VarMap, parent: DFContainingNode,
+                                global_variables: VarMap, **kwargs) -> None:
+        """ Compiles a list of statements using only functional control-flow """
+        for node in nodes:
+            if is_functional_annotation(node):
+                raise GuppyError("Statement already contained in a functional block")
+            self.visit(node, variables, parent, global_variables=global_variables)
+
+    def visit_Break(self, node: ast.Break, *args, **kwargs) -> BlockNode:
         raise GuppyError("Break is not allowed in a functional statement", node)
 
-    def visit_Continue(self, node: ast.Continue, *args, **kwargs) -> BBNode:
+    def visit_Continue(self, node: ast.Continue, *args, **kwargs) -> BlockNode:
         raise GuppyError("Continue is not allowed in a functional statement", node)
 
-    def visit_Return(self, node: ast.Return, *args, **kwargs) -> BBNode:
+    def visit_Return(self, node: ast.Return, *args, **kwargs) -> BlockNode:
         raise GuppyError("Return is not allowed in a functional statement", node)
 
-    def visit_If(self, node: ast.If, variables: VarMap, bb: BBNode, **kwargs) -> BBNode:
-        cond_port = self.expr_compiler.compile(node.test, variables, bb, **kwargs)
+    def visit_If(self, node: ast.If, variables: VarMap, parent: DFContainingNode, **kwargs) -> None:
+        cond_port = self.expr_compiler.compile(node.test, variables, parent, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
         vs = list(sorted(variables.values(), key=lambda v: v.name))
-        conditional = self.graph.add_conditional(cond_input=cond_port, inputs=[v.port for v in vs], parent=bb)
+        conditional = self.graph.add_conditional(cond_input=cond_port, inputs=[v.port for v in vs], parent=parent)
 
         if_dfg, if_vars = self._make_case(variables, conditional)
         else_dfg, else_vars = self._make_case(variables, conditional)
-        self.compile_list(node.body, if_vars, if_dfg, **kwargs)
-        self.compile_list(node.orelse, else_vars, else_dfg, **kwargs)
+        self.compile_list_functional(node.body, if_vars, if_dfg, **kwargs)
+        self.compile_list_functional(node.orelse, else_vars, else_dfg, **kwargs)
 
         if_output = self.graph.add_output(parent=if_dfg)
         else_output = self.graph.add_output(parent=else_dfg)
@@ -759,15 +768,14 @@ class FunctionalStatementCompiler(StatementCompiler):
                 var = if_vars[name] if name in if_vars else else_vars[name]
                 err = GuppyError(f"Variable `{name}` only defined in `{'if' if name in if_vars else 'else'}` branch")
                 variables[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
-        return bb
 
-    def visit_While(self, node: ast.While, variables: VarMap, bb: BBNode, **kwargs) -> BBNode:
+    def visit_While(self, node: ast.While, variables: VarMap, parent: DFContainingNode, **kwargs) -> None:
         # TODO: Once we have explicit variable tracking for nested functions, we can remove the
         #  variable sorting in the code below
         # Turn into tail controlled loop by enclosing into initial if statement
-        cond_port = self.expr_compiler.compile(node.test, variables, bb, **kwargs)
+        cond_port = self.expr_compiler.compile(node.test, variables, parent, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
-        conditional = self.graph.add_conditional(cond_input=cond_port, parent=bb,
+        conditional = self.graph.add_conditional(cond_input=cond_port, parent=parent,
                                                  inputs=[v.port for v in sorted(variables.values(), key=lambda v: v.name)])
         start_dfg, start_vars = self._make_case(variables, conditional)
         skip_dfg, skip_vars = self._make_case(variables, conditional)
@@ -779,7 +787,7 @@ class FunctionalStatementCompiler(StatementCompiler):
         loop = self.graph.add_tail_loop(inputs=[v.port for v in sorted(start_vars.values(), key=lambda v: v.name)],
                                         parent=start_dfg)
         loop_vars = self._add_input(variables, loop)
-        self.compile_list(node.body, loop_vars, loop, **kwargs)
+        self.compile_list_functional(node.body, loop_vars, loop, **kwargs)
         loop_output = self.graph.add_output(input_tys=[BoolType()],  # Reserve condition port
                                             parent=loop)
         start_dfg_output = self.graph.add_output(parent=start_dfg)
@@ -807,7 +815,6 @@ class FunctionalStatementCompiler(StatementCompiler):
         cond_port = self.expr_compiler.compile(node.test, loop_vars, loop, **kwargs)
         assert isinstance(cond_port.ty, BoolType)  # We already ensured this for the initial if
         self.graph.add_edge(cond_port, loop_output.in_port(0))
-        return bb
 
 
 @dataclass()
@@ -892,16 +899,15 @@ class FunctionCompiler(CompilerBase):
             variables[name] = Variable(name, port, {SourceLoc.from_ast(arg, self.line_offset)}, [])
 
         return_block = self.graph.add_exit(output_tys=func_ty.returns, parent=cfg)
-        return_port = return_block.add_in_port(None)
 
         # Define hook that is executed on return
-        def return_hook(curr_bb: BBNode, node: ast.Return, row: list[OutPort]) -> Optional[BBNode]:
+        def return_hook(curr_bb: BlockNode, node: ast.Return, row: list[OutPortV]) -> Optional[BlockNode]:
             tys = [p.ty for p in row]
             if tys != func_ty.returns:
                 raise GuppyTypeError(f"Return type mismatch: expected `{RowType(func_ty.returns)}`, "
                                      f"got `{RowType(tys)}`", node.value)
             self.stmt_compiler._finish_bb(curr_bb, outputs=row)
-            self.graph.add_edge(curr_bb.add_out_port(None), return_port)
+            self.graph.add_edge(curr_bb.add_out_port(), return_block.add_in_port())
             return None
 
         # Compile function body
@@ -913,7 +919,7 @@ class FunctionCompiler(CompilerBase):
             if len(func_ty.returns) > 0:
                 raise GuppyError(f"Expected return statement of type `{RowType(func_ty.returns)}`", func_def.body[-1])
             self.stmt_compiler._finish_bb(final_bb, outputs=[])
-            self.graph.add_edge(final_bb.add_out_port(None), return_port)
+            self.graph.add_edge(final_bb.add_out_port(), return_block.add_in_port())
 
         # Add final output node for the def block
         self.graph.add_output(inputs=[cfg.add_out_port(ty) for ty in func_ty.returns], parent=def_node)

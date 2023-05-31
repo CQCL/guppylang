@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Any, Sequence
+from typing import Optional, Any
 
 import guppy.hugr.tys as tys
 
@@ -17,7 +17,7 @@ class GuppyType(ABC):
 
 @dataclass(frozen=True)
 class RowType(GuppyType):
-    element_types: Sequence[GuppyType]
+    element_types: list[GuppyType]
 
     def __str__(self) -> str:
         if len(self.element_types) == 0:
@@ -76,9 +76,9 @@ class BoolType(GuppyType):
 
 @dataclass(frozen=True)
 class FunctionType(GuppyType):
-    args: Sequence[GuppyType]
-    returns: Sequence[GuppyType]
-    arg_names: Optional[Sequence[str]] = None
+    args: list[GuppyType]
+    returns: list[GuppyType]
+    arg_names: Optional[list[str]] = None
 
     def __str__(self) -> str:
         return f"{RowType(self.args)} -> {RowType(self.returns)}"
@@ -92,12 +92,12 @@ class FunctionType(GuppyType):
 
     def clone(self) -> "FunctionType":
         return FunctionType([t.clone() for t in self.args], [t.clone() for t in self.returns],
-                            self.arg_names if self.arg_names is not None else None)
+                            self.arg_names.copy() if self.arg_names is not None else None)
 
 
 @dataclass(frozen=True)
 class TupleType(GuppyType):
-    element_types: Sequence[GuppyType]
+    element_types: list[GuppyType]
 
     def __str__(self) -> str:
         return f"({', '.join(str(e) for e in self.element_types)})"
@@ -116,7 +116,7 @@ class TupleType(GuppyType):
 
 @dataclass(frozen=True)
 class SumType(GuppyType):
-    element_types: Sequence[GuppyType]
+    element_types: list[GuppyType]
 
     def __str__(self) -> str:
         return f"Sum({', '.join(str(e) for e in self.element_types)})"
