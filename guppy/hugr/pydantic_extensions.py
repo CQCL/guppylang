@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, Extra, root_validator
-from typing import get_origin, get_args, Literal, Union, Any, Optional, Callable
+from typing import get_origin, get_args, Literal, Union, Any, Optional
 
 """
 This is all very hacky, but we need the following two extra Pydantic features

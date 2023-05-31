@@ -8,7 +8,7 @@ from collections import deque
 from dataclasses import field, dataclass
 from typing import Callable, Union, Optional, Any
 
-from guppy.hugr.hugr import Hugr, OutPort, Node, DFContainingNode, OutPortV, BlockNode
+from guppy.hugr.hugr import Hugr, Node, DFContainingNode, OutPortV, BlockNode
 from guppy. guppy_types import (IntType, GuppyType, FloatType, BoolType, RowType, StringType, type_from_python_value,
                                 TupleType, FunctionType)
 from guppy.visitor import AstVisitor, name_nodes_in_expr

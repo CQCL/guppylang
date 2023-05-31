@@ -3,8 +3,8 @@ import networkx  # type: ignore
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import Optional, Iterator, Tuple, Any, Callable, Union, Sequence
-from dataclasses import dataclass, field
+from typing import Optional, Iterator, Tuple, Any
+from dataclasses import dataclass
 
 import guppy.hugr.ops as ops
 import guppy.hugr.tys as tys
