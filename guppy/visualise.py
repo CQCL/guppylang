@@ -1,6 +1,6 @@
 """Visualise HUGR using graphviz."""
 
-import graphviz as gv
+import graphviz as gv  # type: ignore
 from typing import Iterable
 
 from guppy.hugr.hugr import InPort, OutPort, Node, Hugr, OutPortV
@@ -61,7 +61,7 @@ _HTML_LABEL_TEMPLATE = """
 """
 
 
-def _format_html_label(**kwargs):
+def _format_html_label(**kwargs: str) -> str:
     _HTML_LABEL_DEFAULTS = {
         "label_color": _COLOURS["dark"],
         "node_back_color": _COLOURS["node"],
@@ -116,15 +116,15 @@ def _html_ports(ports: Iterable[str], id_prefix: str) -> str:
     )
 
 
-def _in_port_name(p: InPort):
+def _in_port_name(p: InPort) -> str:
     return f"{p.node.idx}:{_INPUT_PREFIX}{p.offset}"
 
 
-def _out_port_name(p: OutPort):
+def _out_port_name(p: OutPort) -> str:
     return f"{p.node.idx}:{_OUTPUT_PREFIX}{p.offset}"
 
 
-def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph):
+def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph) -> None:
     in_ports = [str(i) for i in range(node.num_in_ports)]
     out_ports = [str(i) for i in range(node.num_out_ports)]
     if len(node.meta_data) > 0:
