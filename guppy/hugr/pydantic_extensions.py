@@ -147,7 +147,7 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
             vs = [d[f] for f in self.__fields__ if f != "tag_"]
             d = vs[0] if len(vs) == 1 else vs
         if self._tagged:
-            return self.tag_ if d == [] else {self.tag_: d}
+            return self.tag_ if isinstance(d, list) and d == [] else {self.tag_: d}
         return d
 
 

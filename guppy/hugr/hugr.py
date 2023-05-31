@@ -274,7 +274,7 @@ class Hugr:
         yield
         self._default_parent = old_default
 
-    def _insert_node(self, node: Node, inputs: Optional[list[OutPort]] = None) -> None:
+    def _insert_node(self, node: Node, inputs: Optional[list[OutPortV]] = None) -> None:
         """ Helper method to insert a node into the graph datastructure. """
         self._graph.add_node(node.idx, data=node)
         self._children[node.idx] = []
@@ -318,14 +318,16 @@ class Hugr:
         if self.root is not None:
             raise ValueError("Hugr already has a root node")
         root = self._add_node(op=ops.Module(op=ops.Root()), meta_data={"name": name})
-        root.parent = root
         self.root = root
         return root
 
     def add_constant(self, value: object, parent: Optional[Node] = None) -> VNode:
         """ Adds a constant node holding a given value to the graph. """
         # TODO Update this once we have a better constant spec
-        return self._add_node(ops.DummyOp(name=f'Constant: {value}'), [], [type_from_python_value(value)], parent, None)
+        ty = type_from_python_value(value)
+        if ty is None:
+            raise ValueError(f"Invalid constant value: {value}")
+        return self._add_node(ops.DummyOp(name=f'Constant: {value}'), [], [ty], parent, None)
 
     def add_arith(self, name: str, inputs: list[OutPortV], out_ty: GuppyType, parent: Optional[Node] = None) \
             -> VNode:
@@ -349,7 +351,7 @@ class Hugr:
             parent.output_child = node
         return node
 
-    def add_block(self, parent: Node) -> BlockNode:
+    def add_block(self, parent: Optional[Node]) -> BlockNode:
         """ Adds a `Block` node to the graph. """
         node = BlockNode(idx=self._graph.number_of_nodes(), op=ops.BasicBlock(op=ops.Block()), parent=parent,
                          meta_data={})
@@ -413,7 +415,7 @@ class Hugr:
         assert isinstance(def_port.ty, FunctionType)
         return self._add_node(ops.Dataflow(op=ops.CallIndirect()), None, def_port.ty.returns, parent, args + [def_port])
 
-    def add_def(self, fun_ty: FunctionType, parent: Node, name: str) -> DFContainingVNode:
+    def add_def(self, fun_ty: FunctionType, parent: Optional[Node], name: str) -> DFContainingVNode:
         """ Adds a `Def` node to the graph. """
         return self._add_dfg_node(ops.Module(op=ops.Def()), [], [fun_ty], parent, None, meta_data={"name": name})
 
@@ -594,7 +596,9 @@ class Hugr:
             # Order edges get their own ports at the end
             num_in_ports = n.num_in_ports + len(list(self.order_predecessors(n)))
             num_out_ports = num_out_ports + len(list(self.order_successors(n)))
-            nodes[idx - 1] = (raw_index[n.parent.idx], num_in_ports, num_out_ports)
+            # Nodes without parent have themselves as parent in the serialised format
+            parent = n.parent or n
+            nodes[idx - 1] = (raw_index[parent.idx], num_in_ports, num_out_ports)
             n.update_op()
             op_types[idx] = n.op
 

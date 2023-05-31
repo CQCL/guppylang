@@ -84,7 +84,7 @@ class UndefinedPort(OutPortV):
 
     Raises an `InternalGuppyError` if one tries to access one of its properties.
     """
-    def __init__(self, ty: Optional[GuppyType]):
+    def __init__(self, ty: GuppyType):
         self.ty = ty
 
     @property
@@ -110,7 +110,7 @@ class Variable:
     errors_on_usage: list[GuppyError] = field(default_factory=list)
 
     @property
-    def ty(self) -> Optional[GuppyType]:
+    def ty(self) -> GuppyType:
         """ The type of the variable. """
         return self.port.ty
 
@@ -230,8 +230,8 @@ class CompilerBase(ABC):
         new_vars = self._add_input(variables, block)
         return block, new_vars
 
-    def _finish_bb(self, bb: BlockNode, variables: Optional[VarMap] = None, outputs: Optional[list[OutPort]] = None,
-                   branch_pred: Optional[OutPort] = None) -> None:
+    def _finish_bb(self, bb: BlockNode, variables: Optional[VarMap] = None, outputs: Optional[list[OutPortV]] = None,
+                   branch_pred: Optional[OutPortV] = None) -> None:
         """ Finishes a basic block by adding an output node.
 
         The outputs of the BB can be given by a variable map, or manually
@@ -408,6 +408,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
                 acc = res
             else:
                 acc = self.graph.add_arith("and", inputs=[acc, res], out_ty=BoolType()).out_port(0)
+        assert acc is not None
         return acc
 
     def visit_BoolOp(self, node: ast.BoolOp) -> OutPortV:
@@ -507,7 +508,7 @@ class StatementCompiler(CompilerBase, AstVisitor):
                                 continue_hook=continue_hook, break_hook=break_hook)
         return bb
 
-    def visit_Assign(self, node: ast.Assign, variables: VarMap, bb: BlockNode, **kwargs) -> Optional[BlockNode]:
+    def visit_Assign(self, node: ast.Assign, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
         if len(node.targets) > 1:
             # This is the case for assignments like `a = b = 1`
             raise GuppyError("Multi assignment not supported", node)
@@ -569,21 +570,25 @@ class StatementCompiler(CompilerBase, AstVisitor):
                     to_unpack.append((el_pat, unpack.out_port(i)))
         return bb
 
-    def visit_AnnAssign(self, node: ast.AnnAssign, variables: VarMap, bb: BlockNode, **kwargs) -> Optional[BlockNode]:
+    def visit_AnnAssign(self, node: ast.AnnAssign, variables: VarMap, bb: BlockNode, **kwargs: Any) \
+            -> Optional[BlockNode]:
         # TODO: Figure out what to do with type annotations
         raise NotImplementedError()
 
-    def visit_AugAssign(self, node: ast.AugAssign, variables: VarMap, bb: BlockNode, **kwargs) -> Optional[BlockNode]:
+    def visit_AugAssign(self, node: ast.AugAssign, variables: VarMap, bb: BlockNode, **kwargs: Any) \
+            -> Optional[BlockNode]:
         # TODO: Set all source location attributes
         bin_op = ast.BinOp(left=node.target, op=node.op, right=node.value)
         assign = ast.Assign(targets=[node.target], value=bin_op, lineno=node.lineno, col_offset=node.col_offset)
         return self.visit_Assign(assign, variables, bb, **kwargs)
 
     def visit_Return(self, node: ast.Return, variables: VarMap, bb: BlockNode, return_hook: ReturnHook,
-                     **kwargs) -> Optional[BlockNode]:
-        return return_hook(bb, node, self.expr_compiler.compile_row(node.value, variables, bb, **kwargs))
+                     **kwargs: Any) -> Optional[BlockNode]:
+        if node.value is not None:
+            return return_hook(bb, node, self.expr_compiler.compile_row(node.value, variables, bb, **kwargs))
+        return return_hook(bb, node, [])
 
-    def visit_If(self, node: ast.If, variables: VarMap, bb: BlockNode, **kwargs) -> Optional[BlockNode]:
+    def visit_If(self, node: ast.If, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
         # Finish the current basic block by putting the if condition at the end
         cond_port = self.expr_compiler.compile(node.test, variables, bb, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
@@ -627,8 +632,8 @@ class StatementCompiler(CompilerBase, AstVisitor):
             merge_input = self.graph.add_input(output_tys=[], parent=merge_bb)
             self.graph.add_edge(if_bb.add_out_port(), merge_bb.add_in_port())
             self.graph.add_edge(else_bb.add_out_port(), merge_bb.add_in_port())
-            if_outputs: list[OutPort] = []
-            else_outputs: list[OutPort] = []
+            if_outputs: list[OutPortV] = []
+            else_outputs: list[OutPortV] = []
             for name in set(if_vars.keys()) | set(else_vars.keys()):
                 if name in if_vars and name in else_vars:
                     if_var, else_var = if_vars[name], else_vars[name]
@@ -645,10 +650,11 @@ class StatementCompiler(CompilerBase, AstVisitor):
                 self._finish_bb(else_bb, outputs=else_outputs)
             return merge_bb
 
-    def visit_While(self, node: ast.While, variables: VarMap, bb: BlockNode, **kwargs) -> Optional[BlockNode]:
+    def visit_While(self, node: ast.While, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
         # Finish the current basic block
         self._finish_bb(bb, variables)
         # Add basic blocks for loop head, loop body, and loop tail
+        body_bb: Optional[BlockNode]
         head_bb, head_vars = self._make_bb(bb, variables)
         body_bb, body_vars = self._make_bb(head_bb, variables)  # Body must be first successor of head
         tail_bb, tail_vars = self._make_bb(head_bb, variables)
@@ -702,7 +708,7 @@ class StatementCompiler(CompilerBase, AstVisitor):
         return tail_bb
 
     def visit_Continue(self, node: ast.Continue, variables: VarMap, bb: BlockNode, continue_hook: Optional[LoopHook],
-                       **kwargs) -> Optional[BlockNode]:
+                       **kwargs: Any) -> Optional[BlockNode]:
         if not continue_hook:
             # The Python parser ensures that `continue` can only occur inside of loops.
             # If `continue_bb` is not defined, this means that the `continue` must refer
@@ -711,7 +717,7 @@ class StatementCompiler(CompilerBase, AstVisitor):
         return continue_hook(bb, variables)
 
     def visit_Break(self, node: ast.Break, variables: VarMap, bb: BlockNode, break_hook: Optional[LoopHook],
-                    **kwargs) -> Optional[BlockNode]:
+                    **kwargs: Any) -> Optional[BlockNode]:
         if not break_hook:
             # The Python parser ensures that `break` can only occur inside of loops.
             # If `break_bb` is not defined, this means that the `break` must refer
@@ -729,23 +735,24 @@ class FunctionalStatementCompiler(StatementCompiler):
         return bb
 
     def compile_list_functional(self, nodes: list[ast.stmt], variables: VarMap, parent: DFContainingNode,
-                                global_variables: VarMap, **kwargs) -> None:
+                                global_variables: VarMap) -> None:
         """ Compiles a list of statements using only functional control-flow """
         for node in nodes:
             if is_functional_annotation(node):
                 raise GuppyError("Statement already contained in a functional block")
             self.visit(node, variables, parent, global_variables=global_variables)
 
-    def visit_Break(self, node: ast.Break, *args, **kwargs) -> BlockNode:
+    def visit_Break(self, node: ast.Break, *args: Any, **kwargs: Any) -> BlockNode:
         raise GuppyError("Break is not allowed in a functional statement", node)
 
-    def visit_Continue(self, node: ast.Continue, *args, **kwargs) -> BlockNode:
+    def visit_Continue(self, node: ast.Continue, *args: Any, **kwargs: Any) -> BlockNode:
         raise GuppyError("Continue is not allowed in a functional statement", node)
 
-    def visit_Return(self, node: ast.Return, *args, **kwargs) -> BlockNode:
+    def visit_Return(self, node: ast.Return, *args: Any, **kwargs: Any) -> BlockNode:
         raise GuppyError("Return is not allowed in a functional statement", node)
 
-    def visit_If(self, node: ast.If, variables: VarMap, parent: DFContainingNode, **kwargs) -> None:
+    def visit_If(self, node: ast.If, variables: VarMap, parent: DFContainingNode,  # type: ignore
+                 **kwargs: Any) -> None:
         cond_port = self.expr_compiler.compile(node.test, variables, parent, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
         vs = list(sorted(variables.values(), key=lambda v: v.name))
@@ -769,7 +776,8 @@ class FunctionalStatementCompiler(StatementCompiler):
                 err = GuppyError(f"Variable `{name}` only defined in `{'if' if name in if_vars else 'else'}` branch")
                 variables[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
 
-    def visit_While(self, node: ast.While, variables: VarMap, parent: DFContainingNode, **kwargs) -> None:
+    def visit_While(self, node: ast.While, variables: VarMap, parent: DFContainingNode,  # type: ignore
+                    **kwargs: Any) -> None:
         # TODO: Once we have explicit variable tracking for nested functions, we can remove the
         #  variable sorting in the code below
         # Turn into tail controlled loop by enclosing into initial if statement
@@ -826,7 +834,7 @@ class GuppyFunction:
     ty: FunctionType
     ast: ast.FunctionDef
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         # The `@guppy` annotator returns a `GuppyFunction`. If the user
         # tries to call it, we can give a nice error message:
         raise GuppyError("Guppy functions can only be called inside of Guppy functions")
@@ -878,8 +886,8 @@ class FunctionCompiler(CompilerBase):
 
         return FunctionType(arg_tys, ret_tys, arg_names)
 
-    def compile(self, module: "GuppyModule", func_def: ast.FunctionDef, def_node: Optional[Node],
-                global_variables: VarMap, line_offset: int) -> GuppyFunction:
+    def compile(self, module: "GuppyModule", func_def: ast.FunctionDef, def_node: Node, global_variables: VarMap,
+                line_offset: int) -> GuppyFunction:
         """ Compiles a `FunctionDef` AST node into a Guppy function. """
         self.line_offset = line_offset
         self.stmt_compiler.line_offset = line_offset
@@ -930,6 +938,7 @@ class FunctionCompiler(CompilerBase):
 def format_source_location(source_lines: list[str], loc: Union[ast.AST, ast.operator, ast.expr, ast.arg, ast.Name],
                            line_offset: int, num_lines: int = 3, indent: int = 4) -> str:
     """ Creates a pretty banner to show source locations for errors. """
+    assert loc.end_col_offset is not None  # TODO
     s = "".join(source_lines[max(loc.lineno-num_lines, 0):loc.lineno]).rstrip()
     s += "\n" + loc.col_offset * " " + (loc.end_col_offset - loc.col_offset) * "^"
     s = textwrap.dedent(s).splitlines()
@@ -955,18 +964,19 @@ class GuppyModule(object):
     graph: Hugr
     module_node: Node
     compiler: FunctionCompiler
-    annotated_funcs: dict[str, tuple[Callable, ast.FunctionDef, list[str], int]]  # function, AST, source lines, line offset
+    # function, AST, source lines, line offset
+    annotated_funcs: dict[str, tuple[Callable[..., Any], ast.FunctionDef, list[str], int]]
     fun_decls: list[GuppyFunction]
 
     def __init__(self, name: str):
         self.name = name
         self.graph = Hugr(name)
-        self.module_node = self.graph.add_root("module")
+        self.module_node = self.graph.add_root(self.name)
         self.compiler = FunctionCompiler(self.graph)
         self.annotated_funcs = {}
         self.fun_decls = []
 
-    def __call__(self, f):
+    def __call__(self, f: Callable[..., Any]) -> None:
         source_lines, line_offset = inspect.getsourcelines(f)
         line_offset -= 1
         source = "".join(source_lines)  # Lines already have trailing \n's
@@ -979,9 +989,8 @@ class GuppyModule(object):
                              f"(declared at {SourceLoc.from_ast(self.annotated_funcs[func_ast.name][1], line_offset)})",
                              func_ast)
         self.annotated_funcs[func_ast.name] = f, func_ast, source_lines, line_offset
-        return None
 
-    def compile(self) -> Hugr:
+    def compile(self, exit_on_error: bool = False) -> Optional[Hugr]:
         """ Compiles the module and returns the final Hugr. """
         try:
             global_variables = {}
@@ -990,8 +999,8 @@ class GuppyModule(object):
                 func_ty = self.compiler.validate_signature(func_ast)
                 def_node = self.graph.add_def(func_ty, self.module_node, func_ast.name)
                 defs[name] = def_node
-                loc = SourceLoc.from_ast(func_ast, line_offset)
-                global_variables[name] = Variable(name, def_node.out_port(0), {loc}, [])
+                source_loc = SourceLoc.from_ast(func_ast, line_offset)
+                global_variables[name] = Variable(name, def_node.out_port(0), {source_loc}, [])
             for name, (f, func_ast, source_lines, line_offset) in self.annotated_funcs.items():
                 func = self.compiler.compile(self, func_ast, defs[name], global_variables, line_offset)
                 self.fun_decls.append(func)
@@ -1000,37 +1009,20 @@ class GuppyModule(object):
             if err.location:
                 loc = err.location
                 line = line_offset + loc.lineno
+                module = inspect.getmodule(f)
                 print(f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}", '
-                      f"line {line}, in {inspect.getmodule(f).__name__}\n", file=sys.stderr)
+                      f"line {line}, in {module.__name__ if module else '?'}\n", file=sys.stderr)
                 print(format_source_location(source_lines, loc, line_offset+1), file=sys.stderr)
             else:
                 print(f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}"\n', file=sys.stderr)
             print(f"{err.__class__.__name__}: {err.msg}", file=sys.stderr)
-            sys.exit(1)
+            if exit_on_error:
+                sys.exit(1)
+            return None
 
 
-def guppy(f) -> Hugr:
-    """ Decorator to compile functions outside of modules for testing.
-
-    Note that recursion without a module is not supported.
-    """
-    source_lines, line_offset = inspect.getsourcelines(f)
-    source = "".join(source_lines)  # Lines already have trailing \n's
-    graph = Hugr()
-    func_ast = ast.parse(source).body[0]
-    assert isinstance(func_ast, ast.FunctionDef)
-    compiler = FunctionCompiler(graph)
-    try:
-        compiler.compile(GuppyModule(""), func_ast, None, {}, line_offset-1)
-    except GuppyError as err:
-        if err.location:
-            loc = err.location
-            line = line_offset + loc.lineno - 1
-            print(f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}", '
-                  f"line {line}, in {inspect.getmodule(f).__name__}\n", file=sys.stderr)
-            print(format_source_location(source_lines, loc, line_offset), file=sys.stderr)
-        else:
-            print(f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}"\n', file=sys.stderr)
-        print(f"{err.__class__.__name__}: {err.msg}", file=sys.stderr)
-        # sys.exit(1)
-    return graph
+def guppy(f: Callable[..., Any]) -> Optional[Hugr]:
+    """ Decorator to compile functions outside of modules for testing. """
+    module = GuppyModule("module")
+    module(f)
+    return module.compile(exit_on_error=False)
