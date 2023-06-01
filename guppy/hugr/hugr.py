@@ -617,3 +617,7 @@ class Hugr:
             raise ValueError("Raw Hugr requires a root node")
 
         return raw.RawHugr(nodes=nodes, edges=edges, root=raw_index[self.root.idx], op_types=op_types)
+
+    def serialize(self) -> bytes:
+        """ Serialize this Hugr in binary format. """
+        return self.to_raw().packb()
