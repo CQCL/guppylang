@@ -1,0 +1,60 @@
+name: Pull Request
+
+on:
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+  build-validator:
+    name: Build Rust Hugr validator
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: validator
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build validator
+        run: cargo build --release
+      - uses: actions/upload-artifact@v2
+        with:
+          name: validator
+          path: target/release/validator
+
+  check:
+    name: Check Python
+    runs-on: ubuntu-latest
+    needs: build-validator
+
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Type check with mypy
+        run: mypy guppy
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: validator
+          path: target/release
+
+      - name: Run tests
+        run: pytest
