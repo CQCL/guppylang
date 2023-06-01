@@ -289,6 +289,9 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         # Overload visitor method restricting type to expressions
         return super().visit(node, *args, **kwargs)  # type: ignore
 
+    def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
+        raise GuppyError("Expression not supported", node)
+
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
         if type_from_python_value(node.value) is None:
             raise GuppyError("Unsupported constant expression", node)
@@ -508,6 +511,12 @@ class StatementCompiler(CompilerBase, AstVisitor):
             else:
                 bb = self.visit(node, variables, bb, global_variables=global_variables, return_hook=return_hook,
                                 continue_hook=continue_hook, break_hook=break_hook)
+        return bb
+
+    def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
+        raise GuppyError("Statement not supported", node)
+
+    def visit_Pass(self, node: ast.Pass, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
         return bb
 
     def visit_Assign(self, node: ast.Assign, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
