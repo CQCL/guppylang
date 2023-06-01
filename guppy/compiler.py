@@ -152,6 +152,8 @@ def type_from_ast(node: ast.expr) -> GuppyType:
             return BoolType()
         elif node.id == "str":
             return StringType()
+    elif isinstance(node, ast.Tuple):
+        return RowType([type_from_ast(el) for el in node.elts])
     # TODO: Remaining cases
     raise GuppyError(f"Invalid type: `{ast.unparse(node)}`", node)
 
