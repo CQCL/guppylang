@@ -12,10 +12,11 @@ jobs:
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        working-directory: validator
+        with:
+          working-directory: validator
       - name: Build validator
-        run: cargo build --release
         working-directory: validator
+        run: cargo build --release
       - uses: actions/upload-artifact@v2
         with:
           name: validator
