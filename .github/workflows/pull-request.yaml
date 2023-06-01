@@ -4,24 +4,22 @@ on: pull_request
 
 jobs:
   build-validator:
-    name: Build Rust Hugr validator
+    name: Build Hugr validator
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: validator
 
     steps:
       - uses: actions/checkout@v3
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        working-directory: validator
       - name: Build validator
         run: cargo build --release
+        working-directory: validator
       - uses: actions/upload-artifact@v2
         with:
           name: validator
-          path: target/release/validator
+          path: validator/target/release/validator
 
   check:
     name: Check Python
@@ -51,7 +49,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: validator
-          path: target/release
+          path: validator/target/release
 
       - name: Run tests
         run: pytest

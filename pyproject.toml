@@ -22,6 +22,9 @@ dev = [
     "mypy",
 ]
 
+[tool.setuptools]
+py-modules = ["guppy"]
+
 [tool.mypy]
 plugins = [
     "pydantic.mypy"
