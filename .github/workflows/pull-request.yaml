@@ -42,7 +42,7 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Install
-        run: pip install -e .
+        run: pip install -e '.[dev]'
 
       - name: Type check with mypy
         run: mypy guppy
