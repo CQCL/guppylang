@@ -13,3 +13,13 @@ def validate(hugr: Hugr, tmp_path: Path):
         f.write(hugr.serialize())
     proc = subprocess.run([VALIDATOR_PATH, p])
     assert proc.returncode == 0, "Validation failed:\n" + str(proc.stderr)
+
+
+class Decorator:
+    def __matmul__(self, other):
+        return None
+
+
+# Dummy names to import to avoid errors for `_@functional` pseudo-decorator:
+functional = Decorator()
+_ = Decorator()

@@ -1,5 +1,5 @@
 from guppy.compiler import guppy, GuppyModule
-from tests.integration.util import validate
+from tests.integration.util import validate, functional, _
 
 
 def test_factorial(tmp_path):
