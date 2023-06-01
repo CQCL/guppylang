@@ -991,6 +991,7 @@ class GuppyModule(object):
         source_lines, line_offset = inspect.getsourcelines(f)
         line_offset -= 1
         source = "".join(source_lines)  # Lines already have trailing \n's
+        source = textwrap.dedent(source)
 
         func_ast = ast.parse(source).body[0]
         if not isinstance(func_ast, ast.FunctionDef):
