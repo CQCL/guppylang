@@ -240,7 +240,7 @@ class CompilerBase(ABC):
         specified by a list of ports. If the block branches, an optional
         port holding the branching predicate can be passed.
         """
-        assert variables or outputs
+        assert variables is not None or outputs is not None
         # If the BB doesn't branch, we still need to add a unit () output
         if branch_pred is None:
             unit = self.graph.add_make_tuple([], parent=bb).out_port(0)
