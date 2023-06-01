@@ -53,7 +53,7 @@ jobs:
           path: validator/target/release
 
       - name: Chmod
-      - run: chmod +x validator/target/release/validator
+        run: chmod +x validator/target/release/validator
 
       - name: Run tests
         run: pytest
