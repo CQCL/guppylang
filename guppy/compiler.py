@@ -265,7 +265,7 @@ class CompilerBase(ABC):
             self.graph.add_output(inputs=[branch_pred] + outputs, parent=bb)
 
 
-class ExpressionCompiler(CompilerBase, AstVisitor):
+class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
     """ A compiler from Python expressions to Hugr. """
     variables: VarMap
     global_variables: VarMap
@@ -297,10 +297,6 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
             return [self.compile(e, variables, parent, global_variables, **kwargs) for e in expr.elts]
         else:
             return [self.compile(expr, variables, parent, global_variables)]
-
-    def visit(self, node: ast.expr, *args: Any, **kwargs: Any) -> OutPortV:
-        # Overload visitor method restricting type to expressions
-        return super().visit(node, *args, **kwargs)  # type: ignore
 
     def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
         raise GuppyError("Expression not supported", node)
@@ -489,7 +485,7 @@ LoopHook = Callable[[BlockNode, VarMap], Optional[BlockNode]]
 ReturnHook = Callable[[BlockNode, ast.Return, list[OutPortV]], Optional[BlockNode]]
 
 
-class StatementCompiler(CompilerBase, AstVisitor):
+class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
     """ A compiler from Python statements to Hugr. """
     line_offset: int
     expr_compiler: ExpressionCompiler
@@ -526,7 +522,7 @@ class StatementCompiler(CompilerBase, AstVisitor):
                                 continue_hook=continue_hook, break_hook=break_hook)
         return bb
 
-    def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
+    def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Optional[BlockNode]:
         raise GuppyError("Statement not supported", node)
 
     def visit_Pass(self, node: ast.Pass, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
