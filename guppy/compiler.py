@@ -456,7 +456,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor):
         for i, arg in enumerate(node.args):
             port = self.visit(arg)
             if port.ty != func_ty.args[i]:
-                raise GuppyTypeError(f"Expected argument of type `{func_ty.args[i]}`, got `ty`", arg)
+                raise GuppyTypeError(f"Expected argument of type `{func_ty.args[i]}`, got `{port.ty}`", arg)
             args.append(port)
 
         if is_direct:
@@ -1021,9 +1021,7 @@ class GuppyModule(object):
             if err.location:
                 loc = err.location
                 line = line_offset + loc.lineno
-                module = inspect.getmodule(f)
-                print(f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}", '
-                      f"line {line}, in {module.__name__ if module else '?'}\n", file=sys.stderr)
+                print(f"Guppy compilation failed. Error in file {inspect.getsourcefile(f)}:{line}\n", file=sys.stderr)
                 print(format_source_location(source_lines, loc, line_offset+1), file=sys.stderr)
             else:
                 print(f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}"\n', file=sys.stderr)

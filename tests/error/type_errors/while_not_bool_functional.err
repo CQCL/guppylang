@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:7
+
+5:    def foo() -> int:
+6:        _@functional
+7:        while 42:
+                ^^
+GuppyTypeError: Expected expression of type `bool`, but got `42` of type `int`
