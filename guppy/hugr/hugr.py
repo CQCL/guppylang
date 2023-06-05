@@ -151,6 +151,16 @@ class VNode(Node):
         assert offset < self.num_out_ports
         return OutPortV(self, offset, self.out_port_types[offset])
 
+    @property
+    def in_ports(self) -> Iterator[InPortV]:
+        """ Returns an iterator over all input ports from left to right. """
+        return (self.in_port(i) for i in range(self.num_in_ports))
+
+    @property
+    def out_ports(self) -> Iterator[OutPortV]:
+        """ Returns an iterator over all output ports from left to right. """
+        return (self.out_port(i) for i in range(self.num_out_ports))
+
     def update_op(self) -> None:
         """ Updates the operation associated with this node with type information.
 

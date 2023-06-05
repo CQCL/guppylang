@@ -541,7 +541,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
         assert len(row) > 0
 
         # Helper function to unpack the row based on the LHS pattern
-        def unpack(pattern: AstNode, ports: list[OutPortV]):
+        def unpack(pattern: AstNode, ports: list[OutPortV]) -> None:
             # Easiest case is if the LHS pattern is a single variable. Note
             # we implicitly pack the row into a tuple if it has more than
             # one element. I.e. `x = 1, 2` works just like `x = (1, 2)`.
