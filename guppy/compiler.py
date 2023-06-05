@@ -350,7 +350,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             # types. See https://docs.python.org/3/reference/expressions.html#unary-arithmetic-and-bitwise-operations
             # TODO: Do we want to follow the Python definition or have a custom HUGR op?
             assert_int_type(ty, node.operand)
-            one = self.graph.add_constant(0)
+            one = self.graph.add_constant(1)
             inc = self.graph.add_arith("iadd", inputs=[port, one.out_port(0)], out_ty=ty)
             inv = self.graph.add_arith("ineg", inputs=[inc.out_port(0)], out_ty=ty)
             return inv.out_port(0)
