@@ -542,14 +542,12 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
 
         # Helper function to unpack the row based on the LHS pattern
         def unpack(pattern: AstNode, ports: list[OutPortV]):
-            # Easiest case is if the LHS pattern is a single variable
+            # Easiest case is if the LHS pattern is a single variable. Note
+            # we implicitly pack the row into a tuple if it has more than
+            # one element. I.e. `x = 1, 2` works just like `x = (1, 2)`.
             if isinstance(pattern, ast.Name):
-                if len(ports) == 1:
-                    variables[pattern.id] = Variable(pattern.id, ports[0], loc)
-                else:
-                    # Pack row into tuple
-                    port = self.graph.add_make_tuple(inputs=ports, parent=bb).out_port(0)
-                    variables[pattern.id] = Variable(pattern.id, port, loc)
+                port = ports[0] if len(ports) == 1 else self.graph.add_make_tuple(inputs=ports, parent=bb).out_port(0)
+                variables[pattern.id] = Variable(pattern.id, port, loc)
             # The only other thing we support right now are tuples
             elif isinstance(pattern, ast.Tuple):
                 if len(ports) == 1 and isinstance(ports[0].ty, TupleType):
