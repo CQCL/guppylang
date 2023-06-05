@@ -217,7 +217,7 @@ class CompilerBase(ABC):
     def _make_dfg(self, variables: VarMap, parent: Node) -> tuple[DFContainingNode, VarMap]:
         """ Creates a `DFG` node with input capturing all live variables.
 
-        Additionally, returns a new variable map for use inside the dataflow grap.
+        Additionally, returns a new variable map for use inside the dataflow graph.
         """
         dfg = self.graph.add_dfg(parent)
         new_vars = self._add_input(variables, dfg)
