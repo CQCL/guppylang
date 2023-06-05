@@ -12,20 +12,16 @@ class GuppyType(ABC):
 
 
 @dataclass(frozen=True)
-class RowType(GuppyType):
-    element_types: list[GuppyType]
+class TypeRow:
+    tys: list[GuppyType]
 
     def __str__(self) -> str:
-        if len(self.element_types) == 0:
+        if len(self.tys) == 0:
             return "None"
-        elif len(self.element_types) == 1:
-            return str(self.element_types[0])
+        elif len(self.tys) == 1:
+            return str(self.tys[0])
         else:
-            return f"({', '.join(str(e) for e in self.element_types)})"
-
-    def to_hugr(self) -> tys.SimpleType:
-        raise NotImplementedError()
-        # return tys.TypeRow(types=[t.to_hugr() for t in self.element_types])
+            return f"({', '.join(str(e) for e in self.tys)})"
 
 
 @dataclass(frozen=True)
@@ -65,7 +61,7 @@ class FunctionType(GuppyType):
     arg_names: Optional[list[str]] = None
 
     def __str__(self) -> str:
-        return f"{RowType(self.args)} -> {RowType(self.returns)}"
+        return f"{TypeRow(self.args)} -> {TypeRow(self.returns)}"
 
     def to_hugr(self) -> tys.SimpleType:
         ins = tys.TypeRow(types=[t.to_hugr() for t in self.args])

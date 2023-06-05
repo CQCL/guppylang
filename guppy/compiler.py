@@ -9,7 +9,7 @@ from dataclasses import field, dataclass
 from typing import Callable, Union, Optional, Any
 
 from guppy.hugr.hugr import Hugr, Node, DFContainingNode, OutPortV, BlockNode
-from guppy. guppy_types import (IntType, GuppyType, FloatType, BoolType, RowType, StringType, type_from_python_value,
+from guppy. guppy_types import (IntType, GuppyType, FloatType, BoolType, TypeRow, StringType, type_from_python_value,
                                 TupleType, FunctionType)
 from guppy.visitor import AstVisitor, name_nodes_in_expr
 
@@ -140,9 +140,7 @@ def merge_variables(*vs: Variable, new_port: OutPortV) -> Variable:
 
 def type_from_ast(node: ast.expr) -> GuppyType:
     """ Turns an AST expression into a Guppy type. """
-    if isinstance(node, ast.Constant) and node.value is None:
-        return RowType([])
-    elif isinstance(node, ast.Name):
+    if isinstance(node, ast.Name):
         if node.id == "int":
             return IntType()
         elif node.id == "float":
@@ -152,9 +150,25 @@ def type_from_ast(node: ast.expr) -> GuppyType:
         elif node.id == "str":
             return StringType()
     elif isinstance(node, ast.Tuple):
-        return RowType([type_from_ast(el) for el in node.elts])
+        return TupleType([type_from_ast(el) for el in node.elts])
     # TODO: Remaining cases
     raise GuppyError(f"Invalid type: `{ast.unparse(node)}`", node)
+
+
+def type_row_from_ast(node: ast.expr) -> TypeRow:
+    """ Turns an AST expression into a Guppy type row.
+
+    This is needed to interpret the return type annotation of functions.
+    """
+    # The return type `-> None` is represented in the ast as `ast.Constant(vale=None)`
+    if isinstance(node, ast.Constant) and node.value is None:
+        return TypeRow([])
+    # We turn a tuple return into a row
+    elif isinstance(node, ast.Tuple):
+        return TypeRow([type_from_ast(el) for el in node.elts])
+    # Otherwise, it's a singleton row
+    else:
+        return TypeRow([type_from_ast(node)])
 
 
 def is_functional_annotation(stmt: ast.stmt) -> bool:
@@ -886,15 +900,8 @@ class FunctionCompiler(CompilerBase):
             arg_tys.append(ty)
             arg_names.append(arg.arg)
 
-        ret_type = type_from_ast(func_def.returns)
-        if isinstance(ret_type, TupleType):
-            ret_tys = ret_type.element_types
-        elif isinstance(ret_type, RowType):
-            ret_tys = ret_type.element_types
-        else:
-            ret_tys = [ret_type]
-
-        return FunctionType(arg_tys, ret_tys, arg_names)
+        ret_type_row = type_row_from_ast(func_def.returns)
+        return FunctionType(arg_tys, ret_type_row.tys, arg_names)
 
     def compile(self, module: "GuppyModule", func_def: ast.FunctionDef, def_node: Node, global_variables: VarMap,
                 line_offset: int) -> GuppyFunction:
@@ -922,8 +929,8 @@ class FunctionCompiler(CompilerBase):
         def return_hook(curr_bb: BlockNode, node: ast.Return, row: list[OutPortV]) -> Optional[BlockNode]:
             tys = [p.ty for p in row]
             if tys != func_ty.returns:
-                raise GuppyTypeError(f"Return type mismatch: expected `{RowType(func_ty.returns)}`, "
-                                     f"got `{RowType(tys)}`", node.value)
+                raise GuppyTypeError(f"Return type mismatch: expected `{TypeRow(func_ty.returns)}`, "
+                                     f"got `{TypeRow(tys)}`", node.value)
             self.stmt_compiler._finish_bb(curr_bb, outputs=row)
             self.graph.add_edge(curr_bb.add_out_port(), return_block.add_in_port())
             return None
@@ -935,7 +942,7 @@ class FunctionCompiler(CompilerBase):
         # we have to add an implicit void return
         if final_bb is not None:
             if len(func_ty.returns) > 0:
-                raise GuppyError(f"Expected return statement of type `{RowType(func_ty.returns)}`", func_def.body[-1])
+                raise GuppyError(f"Expected return statement of type `{TypeRow(func_ty.returns)}`", func_def.body[-1])
             self.stmt_compiler._finish_bb(final_bb, outputs=[])
             self.graph.add_edge(final_bb.add_out_port(), return_block.add_in_port())
 
