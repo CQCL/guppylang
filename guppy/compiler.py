@@ -533,59 +533,37 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
         target = node.targets[0]
         loc = {SourceLoc.from_ast(node, self.line_offset)}
         row = self.expr_compiler.compile_row(node.value, variables, bb, **kwargs)
+        if len(row) == 0:
+            # In Python it's fine to assign a void return with the variable
+            # being bound to `None` afterward. At the moment, we don't have
+            # a `None` type in Guppy, so we raise an error for now.
+            # TODO: Think about this. Maybe we should uniformly treat `None`
+            #  as the empty tuple?
+            raise GuppyError("Cannot unpack empty row")
         assert len(row) > 0
 
-        # Easiest case is if the LHS is a single variable
-        if isinstance(target, ast.Name):
-            if len(row) == 1:
-                port = row[0]
-                variables[target.id] = Variable(target.id, port, loc)
-            else:
-                # Pack row into tuple
-                port = self.graph.add_make_tuple(inputs=row, parent=bb).out_port(0)
-                variables[target.id] = Variable(target.id, port, loc)
-            return bb
-
-        # Otherwise, the LHS is a (potentially nested) tuple pattern which might
-        # require unpacking
-        if not isinstance(target, ast.Tuple):
-            raise InternalGuppyError(f"Unexpected node on LHS of assign: {node}")
-        if len(row) == 1:
-            # If the row only contains a single element, put it on the unpack stack
-            to_unpack: deque[tuple[ast.expr, OutPortV]] = deque([(target, row[0])])
-        else:
-            # Otherwise, the number of row elements must match with the pattern and
-            # each element is put separately on the unpack stack
-            n, m = len(target.elts), len(row)
-            if n != m:
-                raise GuppyTypeError(f"{'Too many' if n < m else 'Not enough'} "
-                                     f"values to unpack (expected {n}, got {m})", node)
-            to_unpack = deque(zip(target.elts, row))
-
-        names = set()
-        while len(to_unpack) > 0:
-            pattern, port = to_unpack.popleft()
+        # Helper function to unpack the row based on the LHS pattern
+        def unpack(pattern: AstNode, ports: list[OutPortV]):
+            # Easiest case is if the LHS pattern is a single variable
             if isinstance(pattern, ast.Name):
-                name = pattern.id
-                if name in names:
-                    # Python actually allows statements like `x, x = 1, 2` with `x` being
-                    # bound to `2` afterward. It would be easy to implement this behaviour
-                    # here, but do we want that?
-                    # TODO: Decide whether we allow this or not
-                    raise GuppyError(f"Variable {name} already occurred in this pattern", pattern)
-                names.add(name)
-                variables[name] = Variable(name, port, loc)
+                if len(ports) == 1:
+                    variables[pattern.id] = Variable(pattern.id, ports[0], loc)
+                else:
+                    # Pack row into tuple
+                    port = self.graph.add_make_tuple(inputs=ports, parent=bb).out_port(0)
+                    variables[pattern.id] = Variable(pattern.id, port, loc)
+            # The only other thing we support right now are tuples
             elif isinstance(pattern, ast.Tuple):
-                ty = port.ty
-                if not isinstance(ty, TupleType):
-                    raise GuppyTypeError(f"Expected tuple type to unpack, but got `{ty}`", node.value)
-                n, m = len(pattern.elts), len(ty.element_types)
+                if len(ports) == 1 and isinstance(ports[0].ty, TupleType):
+                    ports = list(self.graph.add_unpack_tuple(input_tuple=ports[0], parent=bb).out_ports)
+                n, m = len(pattern.elts), len(ports)
                 if n != m:
                     raise GuppyTypeError(f"{'Too many' if n < m else 'Not enough'} "
                                          f"values to unpack (expected {n}, got {m})", node)
-                unpack = self.graph.add_unpack_tuple(input_tuple=port, parent=bb)
-                for i, el_pat in enumerate(pattern.elts):
-                    to_unpack.append((el_pat, unpack.out_port(i)))
+                for pat, port in zip(pattern.elts, ports):
+                    unpack(pat, [port])
+
+        unpack(target, row)
         return bb
 
     def visit_AnnAssign(self, node: ast.AnnAssign, variables: VarMap, bb: BlockNode, **kwargs: Any) \
