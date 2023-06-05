@@ -136,8 +136,13 @@ class DictType(GuppyType):
         return f"dict[{self.key_type}, {self.value_type}]"
 
     def to_hugr(self) -> tys.SimpleType:
-        # Not yet available in Hugr
-        raise NotImplementedError()
+        kt = self.key_type.to_hugr()
+        vt = self.value_type.to_hugr()
+        assert isinstance(kt, tys.Classic)
+        if isinstance(vt, tys.Linear):
+            return tys.Linear(ty=tys.ContainerLinear(ty=tys.MapLinear(key=kt.ty, value=vt.ty)))
+        else:
+            return tys.Classic(ty=tys.ContainerClassic(ty=tys.MapClassic(key=kt.ty, value=vt.ty)))
 
 
 def type_from_python_value(val: Any) -> Optional[GuppyType]:
