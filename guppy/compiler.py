@@ -6,7 +6,7 @@ import textwrap
 from abc import ABC
 from collections import deque
 from dataclasses import field, dataclass
-from typing import Callable, Union, Optional, Any
+from typing import Callable, Union, Optional, Any, Iterator
 
 from guppy.hugr.hugr import Hugr, Node, DFContainingNode, OutPortV, BlockNode
 from guppy. guppy_types import (IntType, GuppyType, FloatType, BoolType, TypeRow, StringType, type_from_python_value,
@@ -393,35 +393,34 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
 
     def visit_Compare(self, node: ast.Compare) -> OutPortV:
         # Support chained comparisons, e.g. `x <= 5 < y` by compiling to `and(x <= 5, 5 < y)`
-        left_expr = node.left
-        left = self.visit(left_expr)
-        acc = None
-        for right_expr, op in zip(node.comparators, node.ops):
-            right = self.visit(right_expr)
-            if isinstance(op, ast.Eq) or isinstance(op, ast.Is):
-                # TODO: How is equality defined? What can the operators be?
-                res = self.graph.add_arith("eq", inputs=[left, right], out_ty=BoolType()).out_port(0)
-            elif isinstance(op, ast.NotEq) or isinstance(op, ast.IsNot):
-                res = self.graph.add_arith("neq", inputs=[left, right], out_ty=BoolType()).out_port(0)
-            elif isinstance(op, ast.Lt):
-                res = self.binary_arith_op(left, left_expr, right, right_expr, "ilt", "flt", True)
-            elif isinstance(op, ast.LtE):
-                res = self.binary_arith_op(left, left_expr, right, right_expr, "ileq", "fleq", True)
-            elif isinstance(op, ast.Gt):
-                res = self.binary_arith_op(left, left_expr, right, right_expr, "igt", "fgt", True)
-            elif isinstance(op, ast.GtE):
-                res = self.binary_arith_op(left, left_expr, right, right_expr, "igeg", "fgeg", True)
-            else:
-                # Remaining cases are `in`, and `not in`.
-                # TODO: We want to support this once collections are added
-                raise GuppyError(f"Binary operator `{ast.unparse(op)}` is not supported", op)
-            left = right
-            left_expr = right_expr
-            if acc is None:
-                acc = res
-            else:
-                acc = self.graph.add_arith("and", inputs=[acc, res], out_ty=BoolType()).out_port(0)
-        assert acc is not None
+        def compile_comparisons() -> Iterator[OutPortV]:
+            left_expr = node.left
+            left = self.visit(left_expr)
+            for right_expr, op in zip(node.comparators, node.ops):
+                right = self.visit(right_expr)
+                if isinstance(op, ast.Eq) or isinstance(op, ast.Is):
+                    # TODO: How is equality defined? What can the operators be?
+                    yield self.graph.add_arith("eq", inputs=[left, right], out_ty=BoolType()).out_port(0)
+                elif isinstance(op, ast.NotEq) or isinstance(op, ast.IsNot):
+                    yield self.graph.add_arith("neq", inputs=[left, right], out_ty=BoolType()).out_port(0)
+                elif isinstance(op, ast.Lt):
+                    yield self.binary_arith_op(left, left_expr, right, right_expr, "ilt", "flt", True)
+                elif isinstance(op, ast.LtE):
+                    yield self.binary_arith_op(left, left_expr, right, right_expr, "ileq", "fleq", True)
+                elif isinstance(op, ast.Gt):
+                    yield self.binary_arith_op(left, left_expr, right, right_expr, "igt", "fgt", True)
+                elif isinstance(op, ast.GtE):
+                    yield self.binary_arith_op(left, left_expr, right, right_expr, "igeg", "fgeg", True)
+                else:
+                    # Remaining cases are `in`, and `not in`.
+                    # TODO: We want to support this once collections are added
+                    raise GuppyError(f"Binary operator `{ast.unparse(op)}` is not supported", op)
+                left = right
+                left_expr = right_expr
+
+        acc, *rest = list(compile_comparisons())
+        for port in rest:
+            acc = self.graph.add_arith("and", inputs=[acc, port], out_ty=BoolType()).out_port(0)
         return acc
 
     def visit_BoolOp(self, node: ast.BoolOp) -> OutPortV:
