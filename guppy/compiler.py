@@ -459,12 +459,10 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         if act < exp:
             raise GuppyError(f"Unexpected argument", node.args[-1])
 
-        args = []
-        for i, arg in enumerate(node.args):
-            port = self.visit(arg)
+        args = [self.visit(arg) for arg in node.args]
+        for i, port in enumerate(args):
             if port.ty != func_ty.args[i]:
-                raise GuppyTypeError(f"Expected argument of type `{func_ty.args[i]}`, got `ty`", arg)
-            args.append(port)
+                raise GuppyTypeError(f"Expected argument of type `{func_ty.args[i]}`, got `ty`", node.args[i])
 
         if is_direct:
             call = self.graph.add_call(func_port, args)
