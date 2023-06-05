@@ -17,7 +17,7 @@ NodeIdx = int
 PortOffset = int
 
 
-@dataclass()
+@dataclass
 class Port(ABC):
     """ Base class for ports on nodes. """
     node: "Node"
@@ -34,13 +34,13 @@ class OutPort(Port, ABC):
     pass
 
 
-@dataclass()
+@dataclass
 class InPortV(InPort):
     """ A typed value input port. """
     ty: GuppyType
 
 
-@dataclass()
+@dataclass
 class OutPortV(OutPort):
     """ A typed value output port. """
     ty: GuppyType
@@ -59,7 +59,7 @@ class OutPortCF(OutPort):
 Edge = tuple[OutPort, InPort]
 
 
-@dataclass()
+@dataclass
 class Node(ABC):
     """ Base class for a node in the graph.
 
@@ -111,7 +111,7 @@ class Node(ABC):
         return (self.out_port(i) for i in range(self.num_out_ports))
 
 
-@dataclass()
+@dataclass
 class VNode(Node):
     """ A node with typed value ports. """
     in_port_types: list[GuppyType]

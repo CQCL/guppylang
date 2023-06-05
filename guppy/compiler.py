@@ -40,7 +40,7 @@ class SourceLoc:
         return (self.line, self.col) < (other.line, other.col)
 
 
-@dataclass()
+@dataclass
 class GuppyError(Exception):
     """ General Guppy error tied to a node in the AST. """
     msg: str
@@ -849,7 +849,7 @@ class FunctionalStatementCompiler(StatementCompiler):
         self.graph.add_edge(cond_port, loop_output.in_port(0))
 
 
-@dataclass()
+@dataclass
 class GuppyFunction:
     """ Class holding all information associated with a Function during compilation. """
     name: str
