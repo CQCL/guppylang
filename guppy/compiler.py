@@ -581,9 +581,8 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
 
     def visit_Return(self, node: ast.Return, variables: VarMap, bb: BlockNode, return_hook: ReturnHook,
                      **kwargs: Any) -> Optional[BlockNode]:
-        if node.value is not None:
-            return return_hook(bb, node, self.expr_compiler.compile_row(node.value, variables, bb, **kwargs))
-        return return_hook(bb, node, [])
+        row = self.expr_compiler.compile_row(node.value, variables, bb, **kwargs) if node.value is not None else []
+        return return_hook(bb, node, row)
 
     def visit_If(self, node: ast.If, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
         # Finish the current basic block by putting the if condition at the end
