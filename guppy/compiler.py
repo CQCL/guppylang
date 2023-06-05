@@ -492,7 +492,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
         self.line_offset = line_offset
         self.expr_compiler = ExpressionCompiler(graph)
 
-    def compile_list(self, nodes: list[ast.stmt], variables: VarMap, bb: BlockNode, global_variables: VarMap,
+    def compile_stms(self, nodes: list[ast.stmt], variables: VarMap, bb: BlockNode, global_variables: VarMap,
                      return_hook: ReturnHook, continue_hook: Optional[LoopHook] = None,
                      break_hook: Optional[LoopHook] = None) -> Optional[BlockNode]:
         """ Compiles a list of statements into a basic block given
@@ -502,21 +502,22 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
         Or, returns `None` if all control-flow paths do a jump (i.e. `return`,
         `break` or `continue`.
         """
+        bb_opt: Optional[BlockNode] = bb
         next_functional = False
         for node in nodes:
-            if bb is None:
+            if bb_opt is None:
                 raise GuppyError("Unreachable code", node)
             if is_functional_annotation(node):
                 next_functional = True
                 continue
 
             if next_functional:
-                self.functional_stmt_compiler.visit(node, variables, bb, global_variables=global_variables)
+                self.functional_stmt_compiler.visit(node, variables, bb_opt, global_variables=global_variables)
                 next_functional = False
             else:
-                bb = self.visit(node, variables, bb, global_variables=global_variables, return_hook=return_hook,
-                                continue_hook=continue_hook, break_hook=break_hook)
-        return bb
+                bb_opt = self.visit(node, variables, bb_opt, global_variables=global_variables, return_hook=return_hook,
+                                    continue_hook=continue_hook, break_hook=break_hook)
+        return bb_opt
 
     def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Optional[BlockNode]:
         raise GuppyError("Statement not supported", node)
@@ -591,14 +592,14 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
         self._finish_bb(bb, variables, branch_pred=cond_port)
         # Compile statements in the `if` branch
         if_bb, if_vars = self._make_bb(bb, variables)
-        if_bb = self.compile_list(node.body, if_vars, if_bb, **kwargs)
+        if_bb = self.compile_stms(node.body, if_vars, if_bb, **kwargs)
         # Compile statements in the `else` branch
         else_exists = len(node.orelse) > 0
         if else_exists:
             # TODO: The logic later would be easier if we always create an else BB, even
             #  if else_exists = False
             else_bb, else_vars = self._make_bb(bb, variables)
-            else_bb = self.compile_list(node.orelse, else_vars, else_bb, **kwargs)
+            else_bb = self.compile_stms(node.orelse, else_vars, else_bb, **kwargs)
         else:  # If we don't have an `else` branch, just use the initial BB
             else_bb = bb
             else_vars = variables.copy()
@@ -677,7 +678,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
         # Compile loop body
         kwargs.pop("continue_hook")
         kwargs.pop("break_hook")
-        body_bb = self.compile_list(node.body, body_vars, body_bb,
+        body_bb = self.compile_stms(node.body, body_vars, body_bb,
                                     continue_hook=lambda curr_bb, curr_vars: jump_hook(head_bb, curr_bb, curr_vars),
                                     break_hook=lambda curr_bb, curr_vars: jump_hook(tail_bb, curr_bb, curr_vars),
                                     **kwargs)
@@ -724,7 +725,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
 
 class FunctionalStatementCompiler(StatementCompiler):
     """ A compiler from Python statements to Hugr only using functional control-flow nodes. """
-    def compile_list(self, nodes: list[ast.stmt], variables: VarMap, bb: BlockNode, global_variables: VarMap,
+    def compile_stms(self, nodes: list[ast.stmt], variables: VarMap, bb: BlockNode, global_variables: VarMap,
                      return_hook: ReturnHook, continue_hook: Optional[LoopHook] = None,
                      break_hook: Optional[LoopHook] = None) -> Optional[BlockNode]:
         self.compile_list_functional(nodes, variables, bb, global_variables)
@@ -908,7 +909,7 @@ class FunctionCompiler(CompilerBase):
             return None
 
         # Compile function body
-        final_bb = self.stmt_compiler.compile_list(func_def.body, variables, input_bb, global_variables, return_hook)
+        final_bb = self.stmt_compiler.compile_stms(func_def.body, variables, input_bb, global_variables, return_hook)
 
         # If we're still in a basic block after compiling the whole body,
         # we have to add an implicit void return
