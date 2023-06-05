@@ -58,6 +58,8 @@ class OutPortCF(OutPort):
 
 Edge = tuple[OutPort, InPort]
 
+TypeList = list[GuppyType]
+
 
 @dataclass
 class Node(ABC):
@@ -114,8 +116,8 @@ class Node(ABC):
 @dataclass
 class VNode(Node):
     """ A node with typed value ports. """
-    in_port_types: list[GuppyType]
-    out_port_types: list[GuppyType]
+    in_port_types: TypeList
+    out_port_types: TypeList
 
     @property
     def num_in_ports(self) -> int:
@@ -245,8 +247,6 @@ class BlockNode(DFContainingNode, CFNode):
         super().update_op()
 
 
-TypeList = list[GuppyType]
-
 OrderEdge = tuple["Node", "Node"]
 ORDER_EDGE_KEY = (-1, -1)
 
@@ -359,7 +359,7 @@ class Hugr:
         self._insert_node(node)
         return node
 
-    def add_exit(self, output_tys: list[GuppyType], parent: Node) -> CFNode:
+    def add_exit(self, output_tys: TypeList, parent: Node) -> CFNode:
         """ Adds an `Exit` node to the graph. """
         outputs = tys.TypeRow(types=[ty.to_hugr() for ty in output_tys])
         node = CFNode(idx=self._graph.number_of_nodes(), op=ops.BasicBlock(op=ops.Exit(cfg_outputs=outputs)),
@@ -399,7 +399,7 @@ class Hugr:
         return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.UnpackTuple())), None, input_tuple.ty.element_types,
                               parent, [input_tuple])
 
-    def add_tag(self, variants: list[GuppyType], tag: int, inp: OutPortV, parent: Optional[Node] = None) -> VNode:
+    def add_tag(self, variants: TypeList, tag: int, inp: OutPortV, parent: Optional[Node] = None) -> VNode:
         """ Adds a `Tag` node to the graph. """
         types = tys.TypeRow(types=[ty.to_hugr() for ty in variants])
         assert inp.ty == variants[tag]
