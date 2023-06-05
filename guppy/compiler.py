@@ -122,9 +122,8 @@ def merge_variables(*vs: Variable, new_port: OutPortV) -> Variable:
     conditional we have to check that the types match up in both cases.
     Additionally, the new port for the merged variable must be passed.
     """
-    assert len(vs) > 0
-    v = vs[0]
-    name, ty, defined_at, errors_on_usage = vs[0].name, v.ty, v.defined_at, v.errors_on_usage
+    v, *_ = vs
+    name, ty, defined_at, errors_on_usage = v.name, v.ty, v.defined_at, v.errors_on_usage
     assert ty == new_port.ty
     for v in vs:
         assert v.name == name
