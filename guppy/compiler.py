@@ -558,6 +558,11 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
                                          f"values to unpack (expected {n}, got {m})", node)
                 for pat, port in zip(pattern.elts, ports):
                     unpack(pat, [port])
+            # TODO: Python also supports assignments like `[a, b] = [1, 2]` or
+            #  `a, *b = ...`. The former would require some runtime checks but
+            #  the latter should be easier to do (unpack and repack the rest).
+            else:
+                raise GuppyError("Assignment pattern not supported", pattern)
 
         unpack(target, row)
         return bb
