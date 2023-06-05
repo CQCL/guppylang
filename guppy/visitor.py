@@ -1,10 +1,10 @@
 """ AST visitor based on ast.NodeVisitor that can pass extra arguments to visit(...). """
 
 import ast
-from functools import singledispatch
 from typing import Any, TypeVar, Generic
 
-T = TypeVar("T")
+
+T = TypeVar("T", covariant=True)
 
 
 class AstVisitor(Generic[T]):
@@ -32,7 +32,6 @@ class AstVisitor(Generic[T]):
     allows modifications.
     """
 
-    @singledispatch
     def visit(self, node: Any, *args: Any, **kwargs: Any) -> T:
         """Visit a node."""
         method = 'visit_' + node.__class__.__name__
