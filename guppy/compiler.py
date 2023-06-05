@@ -200,9 +200,8 @@ class CompilerBase(ABC):
         # TODO: Instead we could pass around an explicit variable ordering
         vs = sorted(variables.values(), key=lambda v: v.name)
         inp = self.graph.add_input(output_tys=[v.ty for v in vs], parent=parent)
-        new_vars: VarMap = {v.name: Variable(v.name, inp.out_port(i), v.defined_at, v.errors_on_usage)
-                            for (i, v) in enumerate(vs)}
-        return new_vars
+        return {v.name: Variable(v.name, inp.out_port(i), v.defined_at, v.errors_on_usage)
+                for (i, v) in enumerate(vs)}
 
     def _add_output(self, variables: VarMap, parent: Node, extra_outputs: Optional[list[OutPortV]] = None) -> None:
         """ Adds an output node and connects all live variables to it.
