@@ -128,18 +128,6 @@ class ListType(GuppyType):
 
 
 @dataclass(frozen=True)
-class SetType(GuppyType):
-    element_type: GuppyType
-
-    def __str__(self) -> str:
-        return f"set[{self.element_type}]"
-
-    def to_hugr(self) -> tys.SimpleType:
-        # Not yet available in Hugr
-        raise NotImplementedError()
-
-
-@dataclass(frozen=True)
 class DictType(GuppyType):
     key_type: GuppyType
     value_type: GuppyType
