@@ -262,7 +262,7 @@ class CompilerBase(ABC):
         extra_outputs = extra_outputs or []
         self.graph.add_output(parent=parent, inputs=extra_outputs + [v.port for v in vs])
 
-    def _make_bb(self, predecessor: BasicBlock) -> BasicBlock:
+    def _begin_new_bb(self, predecessor: BasicBlock) -> BasicBlock:
         """ Creates a basic block, i.e. a `Block` node with an input capturing
         all live variables and connects it to a control flow predecessor BB.
 
@@ -616,7 +616,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
         self._finish_bb(bb, branch_pred=cond_port)
 
         # Compile statements in the `if` branch
-        if_bb = self._make_bb(predecessor=bb)
+        if_bb = self._begin_new_bb(predecessor=bb)
         if_bb = self.compile_stms(node.body, if_bb, hooks)
 
         # Compile statements in the `else` branch
@@ -624,7 +624,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
         if else_exists:
             # TODO: The logic later would be easier if we always create an else BB, even
             #  if else_exists = False
-            else_bb = self._make_bb(predecessor=bb)
+            else_bb = self._begin_new_bb(predecessor=bb)
             else_bb = self.compile_stms(node.orelse, else_bb, hooks)
         else:  # If we don't have an `else` branch, just use the initial BB
             else_bb = copy.copy(bb)
@@ -637,7 +637,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
             # If branch jumps: If else branch exists, we can continue in its BB. Otherwise,
             # we have to create a new BB
             if not else_exists:
-                else_bb = self._make_bb(predecessor=bb)
+                else_bb = self._begin_new_bb(predecessor=bb)
             return else_bb
         elif else_bb is None:
             # Else branch jumps: We continue in the BB of the if branch
@@ -673,9 +673,9 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
         # Finish the current basic block
         self._finish_bb(bb)
         # Add basic blocks for loop head, loop body, and loop tail
-        head_bb = self._make_bb(predecessor=bb)
-        body_bb = self._make_bb(predecessor=head_bb)  # Body must be first successor of head
-        tail_bb = self._make_bb(predecessor=head_bb)
+        head_bb = self._begin_new_bb(predecessor=bb)
+        body_bb = self._begin_new_bb(predecessor=head_bb)  # Body must be first successor of head
+        tail_bb = self._begin_new_bb(predecessor=head_bb)
         # Insert loop condition into the head
         cond_port = self.expr_compiler.compile(node.test, head_bb)
         assert_bool_type(cond_port.ty, node.test)
@@ -751,7 +751,7 @@ class FunctionalStatementCompiler(StatementCompiler):
                 raise GuppyError("Statement already contained in a functional block")
             self.visit(node, dfg, hooks)
 
-    def _make_conditional(self, dfg: DFContainer, cond_port: OutPortV, num_cases: int = 2) \
+    def _begin_conditional(self, dfg: DFContainer, cond_port: OutPortV, num_cases: int = 2) \
             -> tuple[VNode, list[DFContainer]]:
         """ Creates a `Conditional` capturing all live variables along with
         a given number of child dataflow `Case` nodes.
@@ -767,7 +767,7 @@ class FunctionalStatementCompiler(StatementCompiler):
             cases.append(DFContainer(case, new_vars, dfg.global_variables))
         return cond, cases
 
-    def _make_tail_loop(self, dfg: DFContainer) -> DFContainer:
+    def _begin_tail_loop(self, dfg: DFContainer) -> DFContainer:
         """ Creates a `TailLoop` node with input capturing all live variables. """
         vs = sorted(dfg.variables.values(), key=lambda v: v.name)
         loop = self.graph.add_tail_loop(inputs=[v.port for v in vs], parent=dfg.node)
@@ -786,7 +786,7 @@ class FunctionalStatementCompiler(StatementCompiler):
     def visit_If(self, node: ast.If, dfg: DFContainer, hooks: Hooks) -> Optional[BasicBlock]:
         cond_port = self.expr_compiler.compile(node.test, dfg)
         assert_bool_type(cond_port.ty, node.test)
-        conditional, [if_dfg, else_dfg] = self._make_conditional(dfg, cond_port)
+        conditional, [if_dfg, else_dfg] = self._begin_conditional(dfg, cond_port)
         self.compile_stmts_functional(node.body, if_dfg, hooks)
         self.compile_stmts_functional(node.orelse, else_dfg, hooks)
 
@@ -813,10 +813,10 @@ class FunctionalStatementCompiler(StatementCompiler):
         #        else:
         #            break
 
-        loop_dfg = self._make_tail_loop(dfg)
+        loop_dfg = self._begin_tail_loop(dfg)
         cond_port = self.expr_compiler.compile(node.test, loop_dfg)
         assert_bool_type(cond_port.ty, node.test)
-        conditional, [body_dfg, break_dfg] = self._make_conditional(loop_dfg, cond_port)
+        conditional, [body_dfg, break_dfg] = self._begin_conditional(loop_dfg, cond_port)
         self.compile_stmts_functional(node.body, body_dfg, hooks)
 
         self._add_output(variables={x: body_dfg[x] for x in dfg.variables}, parent=body_dfg.node,
