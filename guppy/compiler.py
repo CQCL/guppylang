@@ -769,16 +769,16 @@ class FunctionalStatementCompiler(StatementCompiler):
             cases.append(DFContainer(case, new_vars, dfg.global_variables))
         return cond, cases
 
-    def visit_Break(self, node: ast.Break, dfg: DFContainer, hooks: Hooks) -> DFContainer:
+    def visit_Break(self, node: ast.Break, dfg: DFContainer, hooks: Hooks) -> Optional[BasicBlock]:
         raise GuppyError("Break is not allowed in a functional statement", node)
 
-    def visit_Continue(self, node: ast.Continue, dfg: DFContainer, hooks: Hooks) -> DFContainer:
+    def visit_Continue(self, node: ast.Continue, dfg: DFContainer, hooks: Hooks) -> Optional[BasicBlock]:
         raise GuppyError("Continue is not allowed in a functional statement", node)
 
-    def visit_Return(self, node: ast.Return, dfg: DFContainer, hooks: Hooks) -> DFContainer:
+    def visit_Return(self, node: ast.Return, dfg: DFContainer, hooks: Hooks) -> Optional[BasicBlock]:
         raise GuppyError("Return is not allowed in a functional statement", node)
 
-    def visit_If(self, node: ast.If, dfg: DFContainer, hooks: Hooks) -> DFContainer:
+    def visit_If(self, node: ast.If, dfg: DFContainer, hooks: Hooks) -> Optional[BasicBlock]:
         cond_port = self.expr_compiler.compile(node.test, dfg)
         assert_bool_type(cond_port.ty, node.test)
         conditional, [if_dfg, else_dfg] = self._make_conditional(dfg, cond_port)
@@ -797,9 +797,9 @@ class FunctionalStatementCompiler(StatementCompiler):
                 var = if_dfg[name] if name in if_dfg else else_dfg[name]
                 err = GuppyError(f"Variable `{name}` only defined in `{'if' if name in if_dfg else 'else'}` branch")
                 dfg[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
-        return dfg
+        return None
 
-    def visit_While(self, node: ast.While, dfg: DFContainer, hooks: Hooks) -> DFContainer:
+    def visit_While(self, node: ast.While, dfg: DFContainer, hooks: Hooks) -> Optional[BasicBlock]:
         # Turn into tail controlled loop by enclosing into initial if statement
         cond_port = self.expr_compiler.compile(node.test, dfg)
         assert_bool_type(cond_port.ty, node.test)
@@ -841,7 +841,7 @@ class FunctionalStatementCompiler(StatementCompiler):
         cond_port = self.expr_compiler.compile(node.test, DFContainer(loop, loop_vars, dfg.global_variables))
         assert isinstance(cond_port.ty, BoolType)  # We already ensured this for the initial if
         self.graph.add_edge(cond_port, loop_output.in_port(0))
-        return dfg
+        return None
 
 
 @dataclass
@@ -922,7 +922,7 @@ class FunctionCompiler(CompilerBase):
         return_block = self.graph.add_exit(output_tys=func_ty.returns, parent=cfg)
 
         # Define hook that is executed on return
-        def return_hook(curr_bb: BasicBlock, node: ast.Return, row: list[OutPortV]) -> Optional[BlockNode]:
+        def return_hook(curr_bb: BasicBlock, node: ast.Return, row: list[OutPortV]) -> Optional[BasicBlock]:
             tys = [p.ty for p in row]
             if tys != func_ty.returns:
                 raise GuppyTypeError(f"Return type mismatch: expected `{TypeRow(func_ty.returns)}`, "
