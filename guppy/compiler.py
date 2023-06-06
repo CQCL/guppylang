@@ -189,6 +189,13 @@ VarMap = dict[str, Variable]
 
 @dataclass(frozen=True)
 class DFContainer:
+    """ A dataflow graph under construction.
+
+    This class is passed through the entire compilation pipeline and stores
+    the node whose dataflow child-graph is currently being constructed as well
+    as all live variables. Note that the variable map is mutated in-place and
+    always reflects the current compilation state.
+    """
     node: DFContainingNode
     variables: VarMap
     global_variables: VarMap
@@ -208,14 +215,23 @@ class DFContainer:
         return item in self.variables.values()
 
     def __copy__(self) -> "DFContainer":
+        # Make a copy of the var map so that mutating the copy doesn't
+        # mutate our variable mapping
         return DFContainer(self.node, self.variables.copy(), self.global_variables)
 
 
 @dataclass(frozen=True)
 class BasicBlock(DFContainer):
+    """ A basis block under construction.
+
+    The only difference from a regular `DFContainer` is that the node has
+    the refined `BlockNode` type.
+    """
     node: BlockNode
 
     def __copy__(self) -> "BasicBlock":
+        # Make a copy of the var map so that mutating the copy doesn't
+        # mutate our variable mapping
         return BasicBlock(self.node, self.variables.copy(), self.global_variables)
 
 
@@ -739,7 +755,8 @@ class FunctionalStatementCompiler(StatementCompiler):
 
     def _make_conditional(self, dfg: DFContainer, cond_port: OutPortV, num_cases: int = 2) \
             -> tuple[VNode, list[DFContainer]]:
-        """ Creates a `Case`` node with input capturing all live variables.
+        """ Creates a `Conditional` capturing all live variables along with
+        a given number of child dataflow `Case` nodes.
 
         Additionally, returns a new variable map for use inside the `Case`
         dataflow graph.
