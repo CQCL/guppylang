@@ -11,7 +11,7 @@ from typing import Callable, Union, Optional, Any, Iterator, NamedTuple
 from guppy.hugr.hugr import Hugr, Node, DFContainingNode, OutPortV, BlockNode, VNode
 from guppy. guppy_types import (IntType, GuppyType, FloatType, BoolType, TypeRow, StringType, type_from_python_value,
                                 TupleType, FunctionType)
-from guppy.visitor import AstVisitor, name_nodes_in_expr
+from guppy.visitor import AstVisitor, name_nodes_in_stmt
 
 AstNode = Union[ast.AST, ast.operator, ast.expr, ast.arg, ast.stmt, ast.Name, ast.keyword, ast.FunctionDef]
 
@@ -690,7 +690,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
                 name = curr_var.name
                 if name in bb:
                     orig_var = bb[name]
-                    target_bb[name] = merge_variables(curr_var, orig_var, new_port=tail_bb[name].port)
+                    target_bb[name] = merge_variables(orig_var, curr_var, new_port=tail_bb[name].port)
                 else:
                     err = GuppyError(f"Variable `{name}` only defined inside of loop body")
                     target_bb[name] = Variable(name, UndefinedPort(curr_var.ty), curr_var.defined_at, [err])
@@ -708,17 +708,21 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
             # so it's not a guaranteed return
             return tail_bb
 
-        # Otherwise, jump back to the head. We also have to check that the variables used
-        # in the head haven't collected errors_on_usage
+        # Otherwise, jump back to the head.
         jump_hook(head_bb, body_bb_final)
-        for name_node in name_nodes_in_expr(node.test):
-            errs = body_bb_final[name_node.id].errors_on_usage
-            if len(errs) > 0:
-                # TODO: Show all errors?
-                err = errs[0]
-                if err.location is None:
-                    err.location = name_node
-                raise err
+
+        # We have to check that the variables used in the loop head and body haven't
+        # collected `errors_on_usage` in the previous iteration.
+        for name_node in name_nodes_in_stmt(node):
+            if name_node.id in bb:
+                errs = body_bb_final[name_node.id].errors_on_usage
+                errs += head_bb[name_node.id].errors_on_usage
+                if len(errs) > 0:
+                    # TODO: Show all errors?
+                    err = errs[0]
+                    if err.location is None:
+                        err.location = name_node
+                    raise err
 
         # Continue compilation in the tail
         return tail_bb
@@ -815,23 +819,26 @@ class FunctionalStatementCompiler(StatementCompiler):
             name = var.name
             if name in dfg:
                 orig_var = dfg[name]
-                dfg[name] = merge_variables(var, orig_var, new_port=conditional.add_out_port(var.ty))
+                dfg[name] = merge_variables(orig_var, var, new_port=conditional.add_out_port(orig_var.ty))
                 self.graph.add_edge(var.port, loop_output.add_in_port(var.ty))
                 self.graph.add_edge(loop.add_out_port(var.ty), start_dfg_output.add_in_port(var.ty))
             else:
                 err = GuppyError(f"Variable `{name}` only defined in loop body")
                 dfg[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
 
-        # Insert loop condition. We have to check first that the variables used in
-        # the loop condition haven't collected errors_on_usage
-        for name_node in name_nodes_in_expr(node.test):
-            errs = dfg[name_node.id].errors_on_usage
-            if len(errs) > 0:
-                # TODO: Show all errors?
-                err = errs[0]
-                if err.location is None:
-                    err.location = name_node
-                raise err
+        # We have to check that the variables used in the loop head and body haven't
+        # collected `errors_on_usage` in the previous iteration.
+        for name_node in name_nodes_in_stmt(node):
+            if name_node.id in dfg:
+                errs = dfg[name_node.id].errors_on_usage
+                if len(errs) > 0:
+                    # TODO: Show all errors?
+                    err = errs[0]
+                    if err.location is None:
+                        err.location = name_node
+                    raise err
+
+        # Insert loop condition.
         cond_port = self.expr_compiler.compile(node.test, DFContainer(loop, loop_vars, dfg.global_variables))
         assert isinstance(cond_port.ty, BoolType)  # We already ensured this for the initial if
         self.graph.add_edge(cond_port, loop_output.in_port(0))
