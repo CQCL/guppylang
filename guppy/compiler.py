@@ -259,14 +259,14 @@ class CompilerBase(ABC):
     #     new_vars = self._add_input(variables, dfg)
     #     return dfg, new_vars
 
-    def _make_case(self, parent: DFContainer) -> DFContainer:
+    def _make_case(self, variables: VarMap, parent: Node) -> DFContainer:
         """ Creates a `Case`` node with input capturing all live variables.
 
         Additionally, returns a new variable map for use inside the `Case`
         dataflow graph.
         """
-        case = self.graph.add_case(parent=parent.node)
-        new_vars = self._add_input(parent.variables, case)
+        case = self.graph.add_case(parent)
+        new_vars = self._add_input(variables, case)
         return DFContainer(case, new_vars)
 
     def _make_bb(self, predecessor: BasicBlock) -> BasicBlock:
@@ -786,8 +786,8 @@ class FunctionalStatementCompiler(StatementCompiler):
         vs = list(sorted(dfg.variables.values(), key=lambda v: v.name))
         conditional = self.graph.add_conditional(cond_input=cond_port, inputs=[v.port for v in vs], parent=dfg.node)
 
-        if_dfg = self._make_case(parent=dfg)
-        else_dfg = self._make_case(parent=dfg)
+        if_dfg = self._make_case(dfg.variables, conditional)
+        else_dfg = self._make_case(dfg.variables, conditional)
         self.compile_stmts_functional(node.body, if_dfg, **kwargs)
         self.compile_stmts_functional(node.orelse, else_dfg, **kwargs)
 
@@ -811,8 +811,8 @@ class FunctionalStatementCompiler(StatementCompiler):
         assert_bool_type(cond_port.ty, node.test)
         vs = list(sorted(dfg.variables.values(), key=lambda v: v.name))
         conditional = self.graph.add_conditional(cond_input=cond_port, parent=dfg.node, inputs=[v.port for v in vs])
-        start_dfg = self._make_case(parent=dfg)
-        skip_dfg = self._make_case(parent=dfg)
+        start_dfg = self._make_case(dfg.variables, conditional)
+        skip_dfg = self._make_case(dfg.variables, conditional)
         # The skip block is just an identity DFG
         self.graph.add_output(inputs=[v.port for v in sorted(skip_dfg, key=lambda v: v.name)],
                               parent=skip_dfg.node)
