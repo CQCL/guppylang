@@ -301,7 +301,6 @@ class CompilerBase(ABC):
             self.graph.add_output(inputs=[branch_pred] + outputs, parent=bb.node)
 
 
-
 class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
     """ A compiler from Python expressions to Hugr. """
     variables: VarMap
@@ -312,16 +311,15 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         self.variables = {}
         self.global_variables = {}
 
-    def compile(self, expr: ast.expr, variables: VarMap, parent: Node, global_variables: VarMap, **_kwargs: Any) \
-            -> OutPortV:
+    def compile(self, expr: ast.expr, dfg: DFContainer, global_variables: VarMap, **_kwargs: Any) -> OutPortV:
         """ Compiles an expression and returns a single port holding the output value. """
-        self.variables = variables
+        self.variables = dfg.variables
         self.global_variables = global_variables
-        with self.graph.parent(parent):
+        with self.graph.parent(dfg.node):
             res = self.visit(expr)
         return res
 
-    def compile_row(self, expr: ast.expr, variables: VarMap, parent: Node, global_variables: VarMap, **kwargs: Any) \
+    def compile_row(self, expr: ast.expr, dfg: DFContainer, global_variables: VarMap, **kwargs: Any) \
             -> list[OutPortV]:
         """ Compiles a row expression and returns a list of ports, one for
         each value in the row.
@@ -331,9 +329,9 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         """
         # Top-level tuple is turned into row
         if isinstance(expr, ast.Tuple):
-            return [self.compile(e, variables, parent, global_variables, **kwargs) for e in expr.elts]
+            return [self.compile(e, dfg, global_variables, **kwargs) for e in expr.elts]
         else:
-            return [self.compile(expr, variables, parent, global_variables)]
+            return [self.compile(expr, dfg, global_variables)]
 
     def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
         raise GuppyError("Expression not supported", node)
@@ -569,7 +567,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
             raise GuppyError("Multi assignment not supported", node)
         target = node.targets[0]
         loc = {SourceLoc.from_ast(node, self.line_offset)}
-        row = self.expr_compiler.compile_row(node.value, bb.variables, bb.node, **kwargs)
+        row = self.expr_compiler.compile_row(node.value, bb, **kwargs)
         if len(row) == 0:
             # In Python it's fine to assign a void return with the variable
             # being bound to `None` afterward. At the moment, we don't have
@@ -618,12 +616,12 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
 
     def visit_Return(self, node: ast.Return, bb: BasicBlock, return_hook: ReturnHook,
                      **kwargs: Any) -> Optional[BasicBlock]:
-        row = self.expr_compiler.compile_row(node.value, bb.variables, bb.node, **kwargs) if node.value is not None else []
+        row = self.expr_compiler.compile_row(node.value, bb, **kwargs) if node.value is not None else []
         return return_hook(bb, node, row)
 
     def visit_If(self, node: ast.If, bb: BasicBlock, **kwargs: Any) -> Optional[BasicBlock]:
         # Finish the current basic block by putting the if condition at the end
-        cond_port = self.expr_compiler.compile(node.test, bb.variables, bb.node, **kwargs)
+        cond_port = self.expr_compiler.compile(node.test, bb, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
         self._finish_bb(bb, branch_pred=cond_port)
 
@@ -689,7 +687,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
         body_bb = self._make_bb(predecessor=head_bb)  # Body must be first successor of head
         tail_bb = self._make_bb(predecessor=head_bb)
         # Insert loop condition into the head
-        cond_port = self.expr_compiler.compile(node.test, head_bb.variables, head_bb.node, **kwargs)
+        cond_port = self.expr_compiler.compile(node.test, head_bb, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
         self._finish_bb(head_bb, branch_pred=cond_port)
 
@@ -781,7 +779,7 @@ class FunctionalStatementCompiler(StatementCompiler):
         raise GuppyError("Return is not allowed in a functional statement", node)
 
     def visit_If(self, node: ast.If, dfg: DFContainer, **kwargs: Any) -> DFContainer:
-        cond_port = self.expr_compiler.compile(node.test, dfg.variables, dfg.node, **kwargs)
+        cond_port = self.expr_compiler.compile(node.test, dfg, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
         vs = list(sorted(dfg.variables.values(), key=lambda v: v.name))
         conditional = self.graph.add_conditional(cond_input=cond_port, inputs=[v.port for v in vs], parent=dfg.node)
@@ -807,7 +805,7 @@ class FunctionalStatementCompiler(StatementCompiler):
 
     def visit_While(self, node: ast.While, dfg: DFContainer, **kwargs: Any) -> DFContainer:
         # Turn into tail controlled loop by enclosing into initial if statement
-        cond_port = self.expr_compiler.compile(node.test, dfg.variables, dfg.node, **kwargs)
+        cond_port = self.expr_compiler.compile(node.test, dfg, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
         vs = list(sorted(dfg.variables.values(), key=lambda v: v.name))
         conditional = self.graph.add_conditional(cond_input=cond_port, parent=dfg.node, inputs=[v.port for v in vs])
@@ -846,7 +844,7 @@ class FunctionalStatementCompiler(StatementCompiler):
                 if err.location is None:
                     err.location = name_node
                 raise err
-        cond_port = self.expr_compiler.compile(node.test, loop_vars, loop, **kwargs)
+        cond_port = self.expr_compiler.compile(node.test, DFContainer(loop, loop_vars), **kwargs)
         assert isinstance(cond_port.ty, BoolType)  # We already ensured this for the initial if
         self.graph.add_edge(cond_port, loop_output.in_port(0))
         return dfg
