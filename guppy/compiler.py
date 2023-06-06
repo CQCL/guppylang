@@ -767,6 +767,13 @@ class FunctionalStatementCompiler(StatementCompiler):
             cases.append(DFContainer(case, new_vars, dfg.global_variables))
         return cond, cases
 
+    def _make_tail_loop(self, dfg: DFContainer) -> DFContainer:
+        """ Creates a `TailLoop` node with input capturing all live variables. """
+        vs = sorted(dfg.variables.values(), key=lambda v: v.name)
+        loop = self.graph.add_tail_loop(inputs=[v.port for v in vs], parent=dfg.node)
+        new_vars = self._add_input(dfg.variables, loop)
+        return DFContainer(loop, new_vars, dfg.global_variables)
+
     def visit_Break(self, node: ast.Break, dfg: DFContainer, hooks: Hooks) -> Optional[BasicBlock]:
         raise GuppyError("Break is not allowed in a functional statement", node)
 
@@ -798,30 +805,36 @@ class FunctionalStatementCompiler(StatementCompiler):
         return None
 
     def visit_While(self, node: ast.While, dfg: DFContainer, hooks: Hooks) -> Optional[BasicBlock]:
-        # Turn into tail controlled loop by enclosing into initial if statement
-        cond_port = self.expr_compiler.compile(node.test, dfg)
+        # Turn into tail-controlled loop using the following transformation:
+        #    loop:
+        #        if [condition]:
+        #            [body]
+        #            continue
+        #        else:
+        #            break
+
+        loop_dfg = self._make_tail_loop(dfg)
+        cond_port = self.expr_compiler.compile(node.test, loop_dfg)
         assert_bool_type(cond_port.ty, node.test)
-        conditional, [start_dfg, skip_dfg] = self._make_conditional(dfg, cond_port)
+        conditional, [body_dfg, break_dfg] = self._make_conditional(loop_dfg, cond_port)
+        self.compile_stmts_functional(node.body, body_dfg, hooks)
 
-        # The skip block is just an identity DFG
-        self.graph.add_output(inputs=[v.port for v in sorted(skip_dfg, key=lambda v: v.name)],
-                              parent=skip_dfg.node)
+        self._add_output(variables={x: body_dfg[x] for x in dfg.variables}, parent=body_dfg.node,
+                         # Return True to continue
+                         extra_outputs=[self.graph.add_constant(True, body_dfg.node).out_port(0)])
+        self._add_output(variables=break_dfg.variables, parent=break_dfg.node,
+                         # Return False to break
+                         extra_outputs=[self.graph.add_constant(False, break_dfg.node).out_port(0)])
 
-        # Now compile loop body itself as TailLoop node
-        loop = self.graph.add_tail_loop(inputs=[v.port for v in sorted(start_dfg, key=lambda v: v.name)],
-                                        parent=start_dfg.node)
-        loop_vars = self._add_input(dfg.variables, loop)
-        self.compile_stmts_functional(node.body, DFContainer(loop, loop_vars, dfg.global_variables), hooks)
-        loop_output = self.graph.add_output(input_tys=[BoolType()],  # Reserve condition port
-                                            parent=loop)
-        start_dfg_output = self.graph.add_output(parent=start_dfg.node)
-        for var in sorted(loop_vars.values(), key=lambda v: v.name):
+        # Add output for loop node and update variable map
+        assert isinstance(loop_dfg.node, VNode)
+        loop_output = self.graph.add_output(inputs=[conditional.add_out_port(BoolType())], parent=loop_dfg.node)
+        for var in sorted(body_dfg.variables.values(), key=lambda v: v.name):
             name = var.name
             if name in dfg:
                 orig_var = dfg[name]
-                dfg[name] = merge_variables(orig_var, var, new_port=conditional.add_out_port(orig_var.ty))
-                self.graph.add_edge(var.port, loop_output.add_in_port(var.ty))
-                self.graph.add_edge(loop.add_out_port(var.ty), start_dfg_output.add_in_port(var.ty))
+                dfg[name] = merge_variables(orig_var, var, new_port=loop_dfg.node.add_out_port(orig_var.ty))
+                self.graph.add_edge(conditional.add_out_port(var.ty), loop_output.add_in_port(var.ty))
             else:
                 err = GuppyError(f"Variable `{name}` only defined in loop body")
                 dfg[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
@@ -837,11 +850,6 @@ class FunctionalStatementCompiler(StatementCompiler):
                     if err.location is None:
                         err.location = name_node
                     raise err
-
-        # Insert loop condition.
-        cond_port = self.expr_compiler.compile(node.test, DFContainer(loop, loop_vars, dfg.global_variables))
-        assert isinstance(cond_port.ty, BoolType)  # We already ensured this for the initial if
-        self.graph.add_edge(cond_port, loop_output.in_port(0))
         return None
 
 
