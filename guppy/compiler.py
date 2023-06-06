@@ -1,10 +1,10 @@
 import ast
+import copy
 import inspect
 import sys
 import textwrap
 
 from abc import ABC
-from collections import deque
 from dataclasses import field, dataclass
 from typing import Callable, Union, Optional, Any, Iterator
 
@@ -187,6 +187,42 @@ def is_functional_annotation(stmt: ast.stmt) -> bool:
 VarMap = dict[str, Variable]
 
 
+@dataclass(frozen=True)
+class DFContainer:
+    node: DFContainingNode
+    variables: VarMap
+
+    def __getitem__(self, item: str) -> Variable:
+        return self.variables[item]
+
+    def __setitem__(self, key: str, value: Variable) -> None:
+        self.variables[key] = value
+
+    def __iter__(self) -> Iterator[Variable]:
+        return iter(self.variables.values())
+
+    def __contains__(self, item: Union[str, Variable]) -> bool:
+        if isinstance(item, str):
+            return item in self.variables
+        return item in self.variables.values()
+
+    def __copy__(self):
+        return DFContainer(self.node, self.variables.copy())
+
+
+@dataclass(frozen=True)
+class BasicBlock(DFContainer):
+    node: BlockNode
+
+    def __copy__(self):
+        return BasicBlock(self.node, self.variables.copy())
+
+
+
+
+
+
+
 class CompilerBase(ABC):
     """ Base class for the Guppy compiler.
 
@@ -214,54 +250,56 @@ class CompilerBase(ABC):
         extra_outputs = extra_outputs or []
         self.graph.add_output(parent=parent, inputs=extra_outputs + [v.port for v in vs])
 
-    def _make_dfg(self, variables: VarMap, parent: Node) -> tuple[DFContainingNode, VarMap]:
-        """ Creates a `DFG` node with input capturing all live variables.
+    # def _make_dfg(self, variables: VarMap, parent: Node) -> tuple[DFContainingNode, VarMap]:
+    #     """ Creates a `DFG` node with input capturing all live variables.
+    #
+    #     Additionally, returns a new variable map for use inside the dataflow graph.
+    #     """
+    #     dfg = self.graph.add_dfg(parent)
+    #     new_vars = self._add_input(variables, dfg)
+    #     return dfg, new_vars
 
-        Additionally, returns a new variable map for use inside the dataflow graph.
-        """
-        dfg = self.graph.add_dfg(parent)
-        new_vars = self._add_input(variables, dfg)
-        return dfg, new_vars
-
-    def _make_case(self, variables: VarMap, parent: Node) -> tuple[DFContainingNode, VarMap]:
+    def _make_case(self, parent: DFContainer) -> DFContainer:
         """ Creates a `Case`` node with input capturing all live variables.
 
         Additionally, returns a new variable map for use inside the `Case`
         dataflow graph.
         """
-        dfg = self.graph.add_case(parent)
-        new_vars = self._add_input(variables, dfg)
-        return dfg, new_vars
+        case = self.graph.add_case(parent=parent.node)
+        new_vars = self._add_input(parent.variables, case)
+        return DFContainer(case, new_vars)
 
-    def _make_bb(self, predecessor: BlockNode, variables: VarMap) -> tuple[BlockNode, VarMap]:
+    def _make_bb(self, predecessor: BasicBlock) -> BasicBlock:
         """ Creates a basic block, i.e. a `Block` node with an input capturing
         all live variables and connects it to a control flow predecessor BB.
 
         Additionally, returns a new variable map for use inside the BB.
         """
-        block = self.graph.add_block(predecessor.parent)
-        self.graph.add_edge(predecessor.add_out_port(), block.add_in_port())
-        new_vars = self._add_input(variables, block)
-        return block, new_vars
+        block = self.graph.add_block(predecessor.node.parent)
+        self.graph.add_edge(predecessor.node.add_out_port(), block.add_in_port())
+        new_vars = self._add_input(predecessor.variables, block)
+        return BasicBlock(block, new_vars)
 
-    def _finish_bb(self, bb: BlockNode, variables: Optional[VarMap] = None, outputs: Optional[list[OutPortV]] = None,
-                   branch_pred: Optional[OutPortV] = None) -> None:
+    def _finish_bb(self, bb: BasicBlock, subset: Optional[set[str]] = None, branch_pred: Optional[OutPortV] = None,
+                   outputs: Optional[list[OutPortV]] = None) -> None:
         """ Finishes a basic block by adding an output node.
 
-        The outputs of the BB can be given by a variable map, or manually
-        specified by a list of ports. If the block branches, an optional
-        port holding the branching predicate can be passed.
+        Optionally, only a subset of the active variables in the BB can be
+        outputted. Also, if the block branches, an optional port holding the
+        branching predicate can be passed.
+        Alternatively, a list of ports to output can be passed manually.
         """
         # If the BB doesn't branch, we still need to add a unit () output
         if branch_pred is None:
-            unit = self.graph.add_make_tuple([], parent=bb).out_port(0)
-            branch_pred = self.graph.add_tag(variants=[TupleType([])], tag=0, inp=unit, parent=bb).out_port(0)
-        if variables is not None:
-            assert outputs is None
-            self._add_output(variables, bb, [branch_pred])
+            unit = self.graph.add_make_tuple([], parent=bb.node).out_port(0)
+            branch_pred = self.graph.add_tag(variants=[TupleType([])], tag=0, inp=unit, parent=bb.node).out_port(0)
+        if outputs is None:
+            variables = {v.name: v for v in bb.variables.values() if subset is None or v.name in subset}
+            self._add_output(variables, bb.node, [branch_pred])
         else:
-            assert outputs is not None
-            self.graph.add_output(inputs=[branch_pred] + outputs, parent=bb)
+            assert subset is None
+            self.graph.add_output(inputs=[branch_pred] + outputs, parent=bb.node)
+
 
 
 class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
@@ -477,11 +515,11 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
 
 
 # Types for control-flow hooks needed for statement compilation
-LoopHook = Callable[[BlockNode, VarMap], Optional[BlockNode]]
-ReturnHook = Callable[[BlockNode, ast.Return, list[OutPortV]], Optional[BlockNode]]
+LoopHook = Callable[[BasicBlock], Optional[BasicBlock]]
+ReturnHook = Callable[[BasicBlock, ast.Return, list[OutPortV]], Optional[BasicBlock]]
 
 
-class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
+class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
     """ A compiler from Python statements to Hugr. """
     line_offset: int
     expr_compiler: ExpressionCompiler
@@ -492,9 +530,9 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
         self.line_offset = line_offset
         self.expr_compiler = ExpressionCompiler(graph)
 
-    def compile_stms(self, nodes: list[ast.stmt], variables: VarMap, bb: BlockNode, global_variables: VarMap,
-                     return_hook: ReturnHook, continue_hook: Optional[LoopHook] = None,
-                     break_hook: Optional[LoopHook] = None) -> Optional[BlockNode]:
+    def compile_stms(self, nodes: list[ast.stmt], bb: BasicBlock, global_variables: VarMap, return_hook: ReturnHook,
+                     continue_hook: Optional[LoopHook] = None, break_hook: Optional[LoopHook] = None) \
+            -> Optional[BasicBlock]:
         """ Compiles a list of statements into a basic block given
         a map of all active variables.
 
@@ -502,7 +540,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
         Or, returns `None` if all control-flow paths do a jump (i.e. `return`,
         `break` or `continue`.
         """
-        bb_opt: Optional[BlockNode] = bb
+        bb_opt: Optional[BasicBlock] = bb
         next_functional = False
         for node in nodes:
             if bb_opt is None:
@@ -512,26 +550,26 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
                 continue
 
             if next_functional:
-                self.functional_stmt_compiler.visit(node, variables, bb_opt, global_variables=global_variables)
+                self.functional_stmt_compiler.visit(node, bb_opt, global_variables=global_variables)
                 next_functional = False
             else:
-                bb_opt = self.visit(node, variables, bb_opt, global_variables=global_variables, return_hook=return_hook,
+                bb_opt = self.visit(node, bb_opt, global_variables=global_variables, return_hook=return_hook,
                                     continue_hook=continue_hook, break_hook=break_hook)
         return bb_opt
 
-    def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Optional[BlockNode]:
+    def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Optional[BasicBlock]:
         raise GuppyError("Statement not supported", node)
 
-    def visit_Pass(self, node: ast.Pass, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
+    def visit_Pass(self, node: ast.Pass, bb: BasicBlock, **kwargs: Any) -> Optional[BasicBlock]:
         return bb
 
-    def visit_Assign(self, node: ast.Assign, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
+    def visit_Assign(self, node: ast.Assign, bb: BasicBlock, **kwargs: Any) -> Optional[BasicBlock]:
         if len(node.targets) > 1:
             # This is the case for assignments like `a = b = 1`
             raise GuppyError("Multi assignment not supported", node)
         target = node.targets[0]
         loc = {SourceLoc.from_ast(node, self.line_offset)}
-        row = self.expr_compiler.compile_row(node.value, variables, bb, **kwargs)
+        row = self.expr_compiler.compile_row(node.value, bb.variables, bb.node, **kwargs)
         if len(row) == 0:
             # In Python it's fine to assign a void return with the variable
             # being bound to `None` afterward. At the moment, we don't have
@@ -547,12 +585,12 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
             # we implicitly pack the row into a tuple if it has more than
             # one element. I.e. `x = 1, 2` works just like `x = (1, 2)`.
             if isinstance(pattern, ast.Name):
-                port = ports[0] if len(ports) == 1 else self.graph.add_make_tuple(inputs=ports, parent=bb).out_port(0)
-                variables[pattern.id] = Variable(pattern.id, port, loc)
+                port = ports[0] if len(ports) == 1 else self.graph.add_make_tuple(inputs=ports, parent=bb.node).out_port(0)
+                bb[pattern.id] = Variable(pattern.id, port, loc)
             # The only other thing we support right now are tuples
             elif isinstance(pattern, ast.Tuple):
                 if len(ports) == 1 and isinstance(ports[0].ty, TupleType):
-                    ports = list(self.graph.add_unpack_tuple(input_tuple=ports[0], parent=bb).out_ports)
+                    ports = list(self.graph.add_unpack_tuple(input_tuple=ports[0], parent=bb.node).out_ports)
                 n, m = len(pattern.elts), len(ports)
                 if n != m:
                     raise GuppyTypeError(f"{'Too many' if n < m else 'Not enough'} "
@@ -568,41 +606,40 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
         unpack(target, row)
         return bb
 
-    def visit_AnnAssign(self, node: ast.AnnAssign, variables: VarMap, bb: BlockNode, **kwargs: Any) \
-            -> Optional[BlockNode]:
+    def visit_AnnAssign(self, node: ast.AnnAssign, bb: BasicBlock, **kwargs: Any) -> Optional[BasicBlock]:
         # TODO: Figure out what to do with type annotations
         raise NotImplementedError()
 
-    def visit_AugAssign(self, node: ast.AugAssign, variables: VarMap, bb: BlockNode, **kwargs: Any) \
-            -> Optional[BlockNode]:
+    def visit_AugAssign(self, node: ast.AugAssign, bb: BasicBlock, **kwargs: Any) -> Optional[BasicBlock]:
         # TODO: Set all source location attributes
         bin_op = ast.BinOp(left=node.target, op=node.op, right=node.value)
         assign = ast.Assign(targets=[node.target], value=bin_op, lineno=node.lineno, col_offset=node.col_offset)
-        return self.visit_Assign(assign, variables, bb, **kwargs)
+        return self.visit_Assign(assign, bb, **kwargs)
 
-    def visit_Return(self, node: ast.Return, variables: VarMap, bb: BlockNode, return_hook: ReturnHook,
-                     **kwargs: Any) -> Optional[BlockNode]:
-        row = self.expr_compiler.compile_row(node.value, variables, bb, **kwargs) if node.value is not None else []
+    def visit_Return(self, node: ast.Return, bb: BasicBlock, return_hook: ReturnHook,
+                     **kwargs: Any) -> Optional[BasicBlock]:
+        row = self.expr_compiler.compile_row(node.value, bb.variables, bb.node, **kwargs) if node.value is not None else []
         return return_hook(bb, node, row)
 
-    def visit_If(self, node: ast.If, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
+    def visit_If(self, node: ast.If, bb: BasicBlock, **kwargs: Any) -> Optional[BasicBlock]:
         # Finish the current basic block by putting the if condition at the end
-        cond_port = self.expr_compiler.compile(node.test, variables, bb, **kwargs)
+        cond_port = self.expr_compiler.compile(node.test, bb.variables, bb.node, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
-        self._finish_bb(bb, variables, branch_pred=cond_port)
+        self._finish_bb(bb, branch_pred=cond_port)
+
         # Compile statements in the `if` branch
-        if_bb, if_vars = self._make_bb(bb, variables)
-        if_bb = self.compile_stms(node.body, if_vars, if_bb, **kwargs)
+        if_bb = self._make_bb(predecessor=bb)
+        if_bb = self.compile_stms(node.body, if_bb, **kwargs)
+
         # Compile statements in the `else` branch
         else_exists = len(node.orelse) > 0
         if else_exists:
             # TODO: The logic later would be easier if we always create an else BB, even
             #  if else_exists = False
-            else_bb, else_vars = self._make_bb(bb, variables)
-            else_bb = self.compile_stms(node.orelse, else_vars, else_bb, **kwargs)
+            else_bb = self._make_bb(predecessor=bb)
+            else_bb = self.compile_stms(node.orelse, else_bb, **kwargs)
         else:  # If we don't have an `else` branch, just use the initial BB
-            else_bb = bb
-            else_vars = variables.copy()
+            else_bb = copy.copy(bb)
 
         # We need to handle different cases depending on whether branches jump (i.e. return, continue, or break)
         if if_bb is None and else_bb is None:
@@ -612,78 +649,74 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
             # If branch jumps: If else branch exists, we can continue in its BB. Otherwise,
             # we have to create a new BB
             if not else_exists:
-                else_bb, else_vars = self._make_bb(bb, variables)
-            for var in else_vars.values():
-                variables[var.name] = var
+                else_bb = self._make_bb(predecessor=bb)
             return else_bb
         elif else_bb is None:
             # Else branch jumps: We continue in the BB of the if branch
-            for var in if_vars.values():
-                variables[var.name] = var
             return if_bb
         else:
-            # No branch jumps: We have to merge the control flow
+            # No branch jumps: We have to merge the control flow.
             # Input of the merge BB will be all variables that are defined in both
             # the `if` and `else` branch
-            merge_bb = self.graph.add_block(bb.parent)
-            merge_input = self.graph.add_input(output_tys=[], parent=merge_bb)
-            self.graph.add_edge(if_bb.add_out_port(), merge_bb.add_in_port())
-            self.graph.add_edge(else_bb.add_out_port(), merge_bb.add_in_port())
-            if_outputs: list[OutPortV] = []
-            else_outputs: list[OutPortV] = []
-            for name in set(if_vars.keys()) | set(else_vars.keys()):
-                if name in if_vars and name in else_vars:
-                    if_var, else_var = if_vars[name], else_vars[name]
-                    variables[name] = merge_variables(if_var, else_var, new_port=merge_input.add_out_port(if_var.ty))
-                    if_outputs.append(if_var.port)
+            merge_block = self.graph.add_block(bb.node.parent)
+            merge_input = self.graph.add_input(output_tys=[], parent=merge_block)
+            merge_vars: VarMap = {}
+            self.graph.add_edge(if_bb.node.add_out_port(), merge_block.add_in_port())
+            self.graph.add_edge(else_bb.node.add_out_port(), merge_block.add_in_port())
+            if_outputs: set[str] = set()
+            else_outputs: set[str] = set()
+            for name in set(if_bb.variables.keys()) | set(else_bb.variables.keys()):
+                if name in if_bb and name in else_bb:
+                    if_var, else_var = if_bb[name], else_bb[name]
+                    merge_vars[name] = merge_variables(if_var, else_var, new_port=merge_input.add_out_port(if_var.ty))
+                    if_outputs.add(if_var.name)
                     if else_exists:
-                        else_outputs.append(else_var.port)
+                        else_outputs.add(else_var.name)
                 else:
-                    var = if_vars[name] if name in if_vars else else_vars[name]
-                    err = GuppyError(f"Variable `{name}` only defined in `{'if' if name in if_vars else 'else'}` branch")
-                    variables[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
-            self._finish_bb(if_bb, outputs=if_outputs)
+                    var = if_bb[name] if name in if_bb else else_bb[name]
+                    err = GuppyError(f"Variable `{name}` only defined in `{'if' if name in if_bb else 'else'}` branch")
+                    merge_vars[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
+            self._finish_bb(if_bb, subset=if_outputs)
             if else_exists:
-                self._finish_bb(else_bb, outputs=else_outputs)
-            return merge_bb
+                self._finish_bb(else_bb, subset=else_outputs)
+            return BasicBlock(merge_block, merge_vars)
 
-    def visit_While(self, node: ast.While, variables: VarMap, bb: BlockNode, **kwargs: Any) -> Optional[BlockNode]:
+    def visit_While(self, node: ast.While, bb: BasicBlock, **kwargs: Any) -> Optional[BasicBlock]:
         # Finish the current basic block
-        self._finish_bb(bb, variables)
+        self._finish_bb(bb)
         # Add basic blocks for loop head, loop body, and loop tail
-        body_bb: Optional[BlockNode]
-        head_bb, head_vars = self._make_bb(bb, variables)
-        body_bb, body_vars = self._make_bb(head_bb, variables)  # Body must be first successor of head
-        tail_bb, tail_vars = self._make_bb(head_bb, variables)
+        head_bb = self._make_bb(predecessor=bb)
+        body_bb = self._make_bb(predecessor=head_bb)  # Body must be first successor of head
+        tail_bb = self._make_bb(predecessor=head_bb)
         # Insert loop condition into the head
-        cond_port = self.expr_compiler.compile(node.test, head_vars, head_bb, **kwargs)
+        cond_port = self.expr_compiler.compile(node.test, head_bb.variables, head_bb.node, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
-        self._finish_bb(head_bb, head_vars, branch_pred=cond_port)
+        self._finish_bb(head_bb, branch_pred=cond_port)
 
         # Define hook that is executed on `continue` and `break`
-        def jump_hook(target_bb: BlockNode, curr_bb: BlockNode, curr_vars: VarMap) -> Optional[BlockNode]:
+        def jump_hook(target_bb: BasicBlock, curr_bb: BasicBlock) -> Optional[BasicBlock]:
             # Ignore new variables that are only defined in the loop
-            self._finish_bb(curr_bb, {name: curr_vars[name] for name in curr_vars if name in variables})
-            self.graph.add_edge(curr_bb.add_out_port(), target_bb.add_in_port())
-            for curr_var in curr_vars.values():
+            self._finish_bb(curr_bb, subset=set(bb.variables.keys()))
+            self.graph.add_edge(curr_bb.node.add_out_port(), target_bb.node.add_in_port())
+            for curr_var in curr_bb:
                 name = curr_var.name
-                if name in variables:
-                    orig_var = variables[name]
-                    variables[name] = merge_variables(curr_var, orig_var, new_port=tail_vars[name].port)
+                if name in bb:
+                    orig_var = bb[name]
+                    target_bb[name] = merge_variables(curr_var, orig_var, new_port=tail_bb[name].port)
                 else:
                     err = GuppyError(f"Variable `{name}` only defined inside of loop body")
-                    variables[name] = Variable(name, UndefinedPort(curr_var.ty), curr_var.defined_at, [err])
+                    target_bb[name] = Variable(name, UndefinedPort(curr_var.ty), curr_var.defined_at, [err])
             return None
 
         # Compile loop body
         kwargs.pop("continue_hook")
         kwargs.pop("break_hook")
-        body_bb = self.compile_stms(node.body, body_vars, body_bb,
-                                    continue_hook=lambda curr_bb, curr_vars: jump_hook(head_bb, curr_bb, curr_vars),
-                                    break_hook=lambda curr_bb, curr_vars: jump_hook(tail_bb, curr_bb, curr_vars),
-                                    **kwargs)
+        body_bb_final = self.compile_stms(node.body, body_bb,
+                                          continue_hook=lambda curr_bb: jump_hook(head_bb, curr_bb),
+                                          break_hook=lambda curr_bb: jump_hook(tail_bb, curr_bb),
+                                          **kwargs)
 
-        if body_bb is None:
+        if body_bb_final is None:
             # This happens if the loop body always returns. We continue with tail_bb
             # nonetheless since the loop condition could be false for the first iteration,
             # so it's not a guaranteed return
@@ -691,9 +724,9 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
 
         # Otherwise, jump back to the head. We also have to check that the variables used
         # in the head haven't collected errors_on_usage
-        jump_hook(head_bb, body_bb, body_vars)
+        jump_hook(head_bb, body_bb_final)
         for name_node in name_nodes_in_expr(node.test):
-            errs = variables[name_node.id].errors_on_usage
+            errs = body_bb_final[name_node.id].errors_on_usage
             if len(errs) > 0:
                 # TODO: Show all errors?
                 err = errs[0]
@@ -704,113 +737,109 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BlockNode]]):
         # Continue compilation in the tail
         return tail_bb
 
-    def visit_Continue(self, node: ast.Continue, variables: VarMap, bb: BlockNode, continue_hook: Optional[LoopHook],
-                       **kwargs: Any) -> Optional[BlockNode]:
+    def visit_Continue(self, node: ast.Continue, bb: BasicBlock, continue_hook: Optional[LoopHook],
+                       **kwargs: Any) -> Optional[BasicBlock]:
         if not continue_hook:
             # The Python parser ensures that `continue` can only occur inside of loops.
             # If `continue_bb` is not defined, this means that the `continue` must refer
             # to some outer loop (either in nested graph or outer Python)
             raise GuppyError("Cannot continue external loop inside of Guppy function", node)
-        return continue_hook(bb, variables)
+        return continue_hook(bb)
 
-    def visit_Break(self, node: ast.Break, variables: VarMap, bb: BlockNode, break_hook: Optional[LoopHook],
-                    **kwargs: Any) -> Optional[BlockNode]:
+    def visit_Break(self, node: ast.Break, bb: BasicBlock, break_hook: Optional[LoopHook],
+                    **kwargs: Any) -> Optional[BasicBlock]:
         if not break_hook:
             # The Python parser ensures that `break` can only occur inside of loops.
             # If `break_bb` is not defined, this means that the `break` must refer
             # to some outer loop (either in nested graph or outer Python)
             raise GuppyError("Cannot break external loop inside of Guppy function", node)
-        return break_hook(bb, variables)
+        return break_hook(bb)
 
 
 class FunctionalStatementCompiler(StatementCompiler):
     """ A compiler from Python statements to Hugr only using functional control-flow nodes. """
-    def compile_stms(self, nodes: list[ast.stmt], variables: VarMap, bb: BlockNode, global_variables: VarMap,
+    def compile_stms(self, nodes: list[ast.stmt], bb: BasicBlock, global_variables: VarMap,
                      return_hook: ReturnHook, continue_hook: Optional[LoopHook] = None,
-                     break_hook: Optional[LoopHook] = None) -> Optional[BlockNode]:
-        self.compile_list_functional(nodes, variables, bb, global_variables)
+                     break_hook: Optional[LoopHook] = None) -> Optional[BasicBlock]:
+        self.compile_stmts_functional(nodes, bb, global_variables)
         return bb
 
-    def compile_list_functional(self, nodes: list[ast.stmt], variables: VarMap, parent: DFContainingNode,
-                                global_variables: VarMap) -> None:
+    def compile_stmts_functional(self, nodes: list[ast.stmt], dfg: DFContainer, global_variables: VarMap) -> None:
         """ Compiles a list of statements using only functional control-flow """
         for node in nodes:
             if is_functional_annotation(node):
                 raise GuppyError("Statement already contained in a functional block")
-            self.visit(node, variables, parent, global_variables=global_variables)
+            self.visit(node, dfg, global_variables=global_variables)
 
-    def visit_Break(self, node: ast.Break, *args: Any, **kwargs: Any) -> BlockNode:
+    def visit_Break(self, node: ast.Break, *args: Any, **kwargs: Any) -> DFContainer:
         raise GuppyError("Break is not allowed in a functional statement", node)
 
-    def visit_Continue(self, node: ast.Continue, *args: Any, **kwargs: Any) -> BlockNode:
+    def visit_Continue(self, node: ast.Continue, *args: Any, **kwargs: Any) -> DFContainer:
         raise GuppyError("Continue is not allowed in a functional statement", node)
 
-    def visit_Return(self, node: ast.Return, *args: Any, **kwargs: Any) -> BlockNode:
+    def visit_Return(self, node: ast.Return, *args: Any, **kwargs: Any) -> DFContainer:
         raise GuppyError("Return is not allowed in a functional statement", node)
 
-    def visit_If(self, node: ast.If, variables: VarMap, parent: DFContainingNode,  # type: ignore
-                 **kwargs: Any) -> None:
-        cond_port = self.expr_compiler.compile(node.test, variables, parent, **kwargs)
+    def visit_If(self, node: ast.If, dfg: DFContainer, **kwargs: Any) -> DFContainer:
+        cond_port = self.expr_compiler.compile(node.test, dfg.variables, dfg.node, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
-        vs = list(sorted(variables.values(), key=lambda v: v.name))
-        conditional = self.graph.add_conditional(cond_input=cond_port, inputs=[v.port for v in vs], parent=parent)
+        vs = list(sorted(dfg.variables.values(), key=lambda v: v.name))
+        conditional = self.graph.add_conditional(cond_input=cond_port, inputs=[v.port for v in vs], parent=dfg.node)
 
-        if_dfg, if_vars = self._make_case(variables, conditional)
-        else_dfg, else_vars = self._make_case(variables, conditional)
-        self.compile_list_functional(node.body, if_vars, if_dfg, **kwargs)
-        self.compile_list_functional(node.orelse, else_vars, else_dfg, **kwargs)
+        if_dfg = self._make_case(parent=dfg)
+        else_dfg = self._make_case(parent=dfg)
+        self.compile_stmts_functional(node.body, if_dfg, **kwargs)
+        self.compile_stmts_functional(node.orelse, else_dfg, **kwargs)
 
-        if_output = self.graph.add_output(parent=if_dfg)
-        else_output = self.graph.add_output(parent=else_dfg)
-        for name in set(if_vars.keys()) | set(else_vars.keys()):
-            if name in if_vars and name in else_vars:
-                if_var, else_var = if_vars[name], else_vars[name]
-                variables[name] = merge_variables(if_var, else_var, new_port=conditional.add_out_port(if_var.ty))
+        if_output = self.graph.add_output(parent=if_dfg.node)
+        else_output = self.graph.add_output(parent=else_dfg.node)
+        for name in set(if_dfg.variables.keys()) | set(else_dfg.variables.keys()):
+            if name in if_dfg and name in else_dfg:
+                if_var, else_var = if_dfg[name], else_dfg[name]
+                dfg[name] = merge_variables(if_var, else_var, new_port=conditional.add_out_port(if_var.ty))
                 self.graph.add_edge(if_var.port, if_output.add_in_port(if_var.ty))
                 self.graph.add_edge(else_var.port, else_output.add_in_port(else_var.ty))
             else:
-                var = if_vars[name] if name in if_vars else else_vars[name]
-                err = GuppyError(f"Variable `{name}` only defined in `{'if' if name in if_vars else 'else'}` branch")
-                variables[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
+                var = if_dfg[name] if name in if_dfg else else_dfg[name]
+                err = GuppyError(f"Variable `{name}` only defined in `{'if' if name in if_dfg else 'else'}` branch")
+                dfg[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
+        return dfg
 
-    def visit_While(self, node: ast.While, variables: VarMap, parent: DFContainingNode,  # type: ignore
-                    **kwargs: Any) -> None:
-        # TODO: Once we have explicit variable tracking for nested functions, we can remove the
-        #  variable sorting in the code below
+    def visit_While(self, node: ast.While, dfg: DFContainer, **kwargs: Any) -> DFContainer:
         # Turn into tail controlled loop by enclosing into initial if statement
-        cond_port = self.expr_compiler.compile(node.test, variables, parent, **kwargs)
+        cond_port = self.expr_compiler.compile(node.test, dfg.variables, dfg.node, **kwargs)
         assert_bool_type(cond_port.ty, node.test)
-        conditional = self.graph.add_conditional(cond_input=cond_port, parent=parent,
-                                                 inputs=[v.port for v in sorted(variables.values(), key=lambda v: v.name)])
-        start_dfg, start_vars = self._make_case(variables, conditional)
-        skip_dfg, skip_vars = self._make_case(variables, conditional)
+        vs = list(sorted(dfg.variables.values(), key=lambda v: v.name))
+        conditional = self.graph.add_conditional(cond_input=cond_port, parent=dfg.node, inputs=[v.port for v in vs])
+        start_dfg = self._make_case(parent=dfg)
+        skip_dfg = self._make_case(parent=dfg)
         # The skip block is just an identity DFG
-        self.graph.add_output(inputs=[v.port for v in sorted(skip_vars.values(), key=lambda v: v.name)],
-                              parent=skip_dfg)
+        self.graph.add_output(inputs=[v.port for v in sorted(skip_dfg, key=lambda v: v.name)],
+                              parent=skip_dfg.node)
 
         # Now compile loop body itself as TailLoop node
-        loop = self.graph.add_tail_loop(inputs=[v.port for v in sorted(start_vars.values(), key=lambda v: v.name)],
-                                        parent=start_dfg)
-        loop_vars = self._add_input(variables, loop)
-        self.compile_list_functional(node.body, loop_vars, loop, **kwargs)
+        loop = self.graph.add_tail_loop(inputs=[v.port for v in sorted(start_dfg, key=lambda v: v.name)],
+                                        parent=start_dfg.node)
+        loop_vars = self._add_input(dfg.variables, loop)
+        self.compile_stmts_functional(node.body, DFContainer(loop, loop_vars), **kwargs)
         loop_output = self.graph.add_output(input_tys=[BoolType()],  # Reserve condition port
                                             parent=loop)
-        start_dfg_output = self.graph.add_output(parent=start_dfg)
+        start_dfg_output = self.graph.add_output(parent=start_dfg.node)
         for var in sorted(loop_vars.values(), key=lambda v: v.name):
             name = var.name
-            if name in variables:
-                orig_var = variables[name]
-                variables[name] = merge_variables(var, orig_var, new_port=conditional.add_out_port(var.ty))
+            if name in dfg:
+                orig_var = dfg[name]
+                dfg[name] = merge_variables(var, orig_var, new_port=conditional.add_out_port(var.ty))
                 self.graph.add_edge(var.port, loop_output.add_in_port(var.ty))
                 self.graph.add_edge(loop.add_out_port(var.ty), start_dfg_output.add_in_port(var.ty))
             else:
                 err = GuppyError(f"Variable `{name}` only defined in loop body")
-                variables[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
+                dfg[name] = Variable(name, UndefinedPort(var.ty), var.defined_at, [err])
 
         # Insert loop condition. We have to check first that the variables used in
         # the loop condition haven't collected errors_on_usage
         for name_node in name_nodes_in_expr(node.test):
-            errs = variables[name_node.id].errors_on_usage
+            errs = dfg[name_node.id].errors_on_usage
             if len(errs) > 0:
                 # TODO: Show all errors?
                 err = errs[0]
@@ -820,6 +849,7 @@ class FunctionalStatementCompiler(StatementCompiler):
         cond_port = self.expr_compiler.compile(node.test, loop_vars, loop, **kwargs)
         assert isinstance(cond_port.ty, BoolType)  # We already ensured this for the initial if
         self.graph.add_edge(cond_port, loop_output.in_port(0))
+        return dfg
 
 
 @dataclass
@@ -887,8 +917,8 @@ class FunctionCompiler(CompilerBase):
 
         def_input = self.graph.add_input(parent=def_node)
         cfg = self.graph.add_cfg(def_node, inputs=[def_input.add_out_port(ty) for ty in func_ty.args])
-        input_bb = self.graph.add_block(cfg)
-        input_node = self.graph.add_input(output_tys=func_ty.args, parent=input_bb)
+        input_block = self.graph.add_block(cfg)
+        input_node = self.graph.add_input(output_tys=func_ty.args, parent=input_block)
 
         variables: VarMap = {}
         for i, arg in enumerate(args):
@@ -899,17 +929,18 @@ class FunctionCompiler(CompilerBase):
         return_block = self.graph.add_exit(output_tys=func_ty.returns, parent=cfg)
 
         # Define hook that is executed on return
-        def return_hook(curr_bb: BlockNode, node: ast.Return, row: list[OutPortV]) -> Optional[BlockNode]:
+        def return_hook(curr_bb: BasicBlock, node: ast.Return, row: list[OutPortV]) -> Optional[BlockNode]:
             tys = [p.ty for p in row]
             if tys != func_ty.returns:
                 raise GuppyTypeError(f"Return type mismatch: expected `{TypeRow(func_ty.returns)}`, "
                                      f"got `{TypeRow(tys)}`", node.value)
             self.stmt_compiler._finish_bb(curr_bb, outputs=row)
-            self.graph.add_edge(curr_bb.add_out_port(), return_block.add_in_port())
+            self.graph.add_edge(curr_bb.node.add_out_port(), return_block.add_in_port())
             return None
 
         # Compile function body
-        final_bb = self.stmt_compiler.compile_stms(func_def.body, variables, input_bb, global_variables, return_hook)
+        final_bb = self.stmt_compiler.compile_stms(func_def.body, BasicBlock(input_block, variables),
+                                                   global_variables, return_hook)
 
         # If we're still in a basic block after compiling the whole body,
         # we have to add an implicit void return
@@ -917,7 +948,7 @@ class FunctionCompiler(CompilerBase):
             if len(func_ty.returns) > 0:
                 raise GuppyError(f"Expected return statement of type `{TypeRow(func_ty.returns)}`", func_def.body[-1])
             self.stmt_compiler._finish_bb(final_bb, outputs=[])
-            self.graph.add_edge(final_bb.add_out_port(), return_block.add_in_port())
+            self.graph.add_edge(final_bb.node.add_out_port(), return_block.add_in_port())
 
         # Add final output node for the def block
         self.graph.add_output(inputs=[cfg.add_out_port(ty) for ty in func_ty.returns], parent=def_node)
