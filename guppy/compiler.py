@@ -725,18 +725,12 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
 
     def visit_Continue(self, node: ast.Continue, bb: BasicBlock, hooks: Hooks) -> Optional[BasicBlock]:
         if not hooks.continue_hook:
-            # The Python parser ensures that `continue` can only occur inside of loops.
-            # If `continue_bb` is not defined, this means that the `continue` must refer
-            # to some outer loop (either in nested graph or outer Python)
-            raise GuppyError("Cannot continue external loop inside of Guppy function", node)
+            raise InternalGuppyError("Continue hook not defined")
         return hooks.continue_hook(bb)
 
     def visit_Break(self, node: ast.Break, bb: BasicBlock, hooks: Hooks) -> Optional[BasicBlock]:
         if not hooks.break_hook:
-            # The Python parser ensures that `break` can only occur inside of loops.
-            # If `break_bb` is not defined, this means that the `break` must refer
-            # to some outer loop (either in nested graph or outer Python)
-            raise GuppyError("Cannot break external loop inside of Guppy function", node)
+            raise InternalGuppyError("Break hook not defined")
         return hooks.break_hook(bb)
 
 
