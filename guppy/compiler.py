@@ -5,14 +5,14 @@ import sys
 import textwrap
 
 from abc import ABC
-from dataclasses import field, dataclass
+from dataclasses import dataclass
 from typing import Callable, Union, Optional, Any, Iterator, NamedTuple, Iterable
 
 from guppy.free_names import free_names
 from guppy.hugr.hugr import Hugr, Node, DFContainingNode, OutPortV, BlockNode, VNode
 from guppy. guppy_types import (IntType, GuppyType, FloatType, BoolType, TypeRow, StringType, type_from_python_value,
                                 TupleType, FunctionType)
-from guppy.visitor import AstVisitor, name_nodes_in_stmt
+from guppy.visitor import AstVisitor
 
 AstNode = Union[ast.AST, ast.operator, ast.expr, ast.arg, ast.stmt, ast.Name, ast.keyword, ast.FunctionDef]
 
@@ -850,7 +850,7 @@ class FunctionalStatementCompiler(StatementCompiler):
 
         # We have to check that the variables used in the loop head and body haven't
         # collected `errors_on_usage` in the previous iteration.
-        for name_node in name_nodes_in_stmt(node):
+        for name_node in free_names(node).values():
             dfg.check_errs_on_usage(name_node)
         return None
 

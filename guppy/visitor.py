@@ -41,32 +41,3 @@ class AstVisitor(Generic[T]):
     def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> T:
         """Called if no explicit visitor function exists for a node."""
         raise NotImplementedError(f"visit_{node.__class__.__name__} is not implemented")
-
-
-def name_nodes_in_stmt(stmt: ast.stmt) -> list[ast.Name]:
-    """ Returns a list of all `Name` nodes occurring in an expression. """
-    class Visitor(AstVisitor[None]):
-        names: list[ast.Name]
-
-        def __init__(self) -> None:
-            self.names = []
-
-        def visit_Name(self, node: ast.Name) -> None:
-            self.names.append(node)
-
-        def visit_Assign(self, node: ast.Assign) -> None:
-            # Only visit the RHS!
-            self.visit(node.value)
-
-        def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> None:
-            for field, value in ast.iter_fields(node):
-                if isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, ast.AST):
-                            self.visit(item)
-                elif isinstance(value, ast.AST):
-                    self.visit(value)
-
-    v = Visitor()
-    v.visit(stmt)
-    return v.names
