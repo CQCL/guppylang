@@ -239,8 +239,8 @@ def merge_variables(dfg1: DFContainer, dfg2: DFContainer, port_factory: Callable
     return merged_vars, merge_err_maps(errs, dfg1.errs_on_usage, dfg2.errs_on_usage)
 
 
-def merge_err_maps(*err_maps: ErrMap):
-    res = {}
+def merge_err_maps(*err_maps: ErrMap) -> ErrMap:
+    res: ErrMap = {}
     for d in err_maps:
         for k, v in d.items():
             res.setdefault(k, [])
@@ -699,7 +699,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
             _, errs = merge_variables(bb, curr_bb)
 
             # TODO: If we reassign a global variable with a different type
-            #   int the loop, we run into lots of issues. For example, the
+            #   in the loop, we run into lots of issues. For example, the
             #   following produces an invalid Hugr since we plug the wrong
             #   type into the output:
             #
@@ -726,16 +726,16 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
         new_hooks = Hooks(return_hook=hooks.return_hook,
                           continue_hook=lambda curr_bb: jump_hook(curr_bb, True),
                           break_hook=lambda curr_bb: jump_hook(curr_bb, False))
-        body_bb = self.compile_stms(node.body, body_bb, new_hooks)
+        body_bb_final = self.compile_stms(node.body, body_bb, new_hooks)
 
-        if body_bb is None:
+        if body_bb_final is None:
             # This happens if the loop body always returns. We continue with tail_bb
             # nonetheless since the loop condition could be false for the first iteration,
             # so it's not a guaranteed return
             return tail_bb
 
         # Otherwise, jump back to the head.
-        jump_hook(body_bb, True)
+        jump_hook(body_bb_final, True)
 
         # Continue compilation in the tail
         return tail_bb
