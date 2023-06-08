@@ -1,3 +1,5 @@
+import pytest
+
 from guppy.compiler import guppy
 from tests.integration.util import validate
 
@@ -96,6 +98,98 @@ def test_nested_return(tmp_path):
             else:
                 return y
         return x
+
+    validate(foo, tmp_path)
+
+
+def test_return_defined1(tmp_path):
+    @guppy
+    def foo(x: int, y: int) -> int:
+        if x > 5:
+            return y
+        else:
+            z = 5
+        return z
+
+    validate(foo, tmp_path)
+
+
+def test_return_defined2(tmp_path):
+    @guppy
+    def foo(x: int) -> int:
+        if x > 5:
+            z = 45
+        else:
+            return x
+        return z
+
+    validate(foo, tmp_path)
+
+
+@pytest.mark.skip("Known bug")
+def test_break_different_types1(tmp_path):
+    @guppy
+    def foo(x: int) -> int:
+        z = 0
+        while True:
+            if x > 5:
+                z = False
+                break
+            else:
+                z = 8
+            z += x
+        return 0
+
+    validate(foo, tmp_path)
+
+
+@pytest.mark.skip("Known bug")
+def test_break_different_types2(tmp_path):
+    @guppy
+    def foo(x: int) -> int:
+        z = 0
+        while True:
+            if x > 5:
+                z = 8
+            else:
+                z = True
+                break
+            z += x
+        return 0
+
+    validate(foo, tmp_path)
+
+
+@pytest.mark.skip("Known bug")
+def test_continue_different_types1(tmp_path):
+    @guppy
+    def foo(x: int) -> int:
+        z = 0
+        while True:
+            if x > 5:
+                z = False
+                continue
+            else:
+                z = 8
+            z += x
+        return z
+
+    validate(foo, tmp_path)
+
+
+@pytest.mark.skip("Known bug")
+def test_continue_different_types2(tmp_path):
+    @guppy
+    def foo(x: int) -> int:
+        z = 0
+        while True:
+            if x > 5:
+                z = 8
+            else:
+                z = False
+                continue
+            z += x
+        return z
 
     validate(foo, tmp_path)
 
