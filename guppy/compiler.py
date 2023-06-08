@@ -696,13 +696,17 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
         def jump_hook(curr_bb: BasicBlock, is_continue: bool) -> Optional[BasicBlock]:
             target_bb = head_bb if is_continue else tail_bb
             self.graph.add_edge(curr_bb.node.add_out_port(), target_bb.node.add_in_port())
-            merge_vars, errs = merge_variables(bb, curr_bb)
-            # After merging, some variables that were initially present
-            # might be lost because they ended up in `errs`. However, we
-            # still need a wire to fill the output slot! ???
-            # TODO: When a variable collects an error_on_usage, replace its
-            #   port with the original input port of the BB and connect it
-            #   anyways
+            _, errs = merge_variables(bb, curr_bb)
+
+            # TODO: If we reassign a global variable with a different type
+            #   int the loop, we run into lots of issues. For example, the
+            #   following produces an invalid Hugr since we plug the wrong
+            #   type into the output:
+            #
+            #       x = 42
+            #       while True:
+            #           x = True
+
             # Ignore new variables that are only defined in the loop
             self._finish_bb(curr_bb, subset=bb.variables.keys())
 
