@@ -648,25 +648,16 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
         if_bb = self._begin_new_bb(predecessor=bb)
         if_bb = self.compile_stms(node.body, if_bb, hooks)
 
-        # Compile statements in the `else` branch
-        else_exists = len(node.orelse) > 0
-        if else_exists:
-            # TODO: The logic later would be easier if we always create an else BB, even
-            #  if else_exists = False
-            else_bb = self._begin_new_bb(predecessor=bb)
-            else_bb = self.compile_stms(node.orelse, else_bb, hooks)
-        else:  # If we don't have an `else` branch, just use the initial BB
-            else_bb = copy.copy(bb)
+        # Compile statements in the `if` branch
+        else_bb = self._begin_new_bb(predecessor=bb)
+        else_bb = self.compile_stms(node.orelse, else_bb, hooks) if node.orelse else else_bb
 
         # We need to handle different cases depending on whether branches jump (i.e. return, continue, or break)
         if if_bb is None and else_bb is None:
             # Both jump: This means the whole if-statement jumps, so we don't have to do anything
             return None
         elif if_bb is None:
-            # If branch jumps: If else branch exists, we can continue in its BB. Otherwise,
-            # we have to create a new BB
-            if not else_exists:
-                else_bb = self._begin_new_bb(predecessor=bb)
+            # If branch jumps: We continue in the BB of the else branch
             return else_bb
         elif else_bb is None:
             # Else branch jumps: We continue in the BB of the if branch
