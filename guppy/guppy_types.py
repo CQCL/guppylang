@@ -10,29 +10,18 @@ class GuppyType(ABC):
     def to_hugr(self) -> tys.SimpleType:
         pass
 
-    @abstractmethod
-    def clone(self) -> "GuppyType":
-        pass
-
 
 @dataclass(frozen=True)
-class RowType(GuppyType):
-    element_types: list[GuppyType]
+class TypeRow:
+    tys: list[GuppyType]
 
     def __str__(self) -> str:
-        if len(self.element_types) == 0:
+        if len(self.tys) == 0:
             return "None"
-        elif len(self.element_types) == 1:
-            return str(self.element_types[0])
+        elif len(self.tys) == 1:
+            return str(self.tys[0])
         else:
-            return f"({', '.join(str(e) for e in self.element_types)})"
-
-    def to_hugr(self) -> tys.SimpleType:
-        raise NotImplementedError()
-        # return tys.TypeRow(types=[t.to_hugr() for t in self.element_types])
-
-    def clone(self) -> "RowType":
-        return RowType([t.clone() for t in self.element_types])
+            return f"({', '.join(str(e) for e in self.tys)})"
 
 
 @dataclass(frozen=True)
@@ -43,9 +32,6 @@ class IntType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         return tys.Classic(ty=tys.Int(size=32))  # TODO: Parametrise over size
 
-    def clone(self) -> "IntType":
-        return IntType()
-
 
 @dataclass(frozen=True)
 class FloatType(GuppyType):
@@ -54,9 +40,6 @@ class FloatType(GuppyType):
 
     def to_hugr(self) -> tys.SimpleType:
         return tys.Classic(ty=tys.F64())
-
-    def clone(self) -> "FloatType":
-        return FloatType()
 
 
 @dataclass(frozen=True)
@@ -70,9 +53,6 @@ class BoolType(GuppyType):
         s = tys.Sum(tys=tys.TypeRow(types=[unit, unit]))
         return tys.Classic(ty=tys.ContainerClassic(ty=s))
 
-    def clone(self) -> "BoolType":
-        return BoolType()
-
 
 @dataclass(frozen=True)
 class FunctionType(GuppyType):
@@ -81,7 +61,7 @@ class FunctionType(GuppyType):
     arg_names: Optional[list[str]] = None
 
     def __str__(self) -> str:
-        return f"{RowType(self.args)} -> {RowType(self.returns)}"
+        return f"{TypeRow(self.args)} -> {TypeRow(self.returns)}"
 
     def to_hugr(self) -> tys.SimpleType:
         ins = tys.TypeRow(types=[t.to_hugr() for t in self.args])
@@ -89,10 +69,6 @@ class FunctionType(GuppyType):
         sig = tys.Signature(input=ins, output=outs, const_input=tys.TypeRow(types=[]))
         # TODO: Resources
         return tys.Classic(ty=tys.Graph(resources=[], signature=sig))
-
-    def clone(self) -> "FunctionType":
-        return FunctionType([t.clone() for t in self.args], [t.clone() for t in self.returns],
-                            self.arg_names.copy() if self.arg_names is not None else None)
 
 
 @dataclass(frozen=True)
@@ -110,9 +86,6 @@ class TupleType(GuppyType):
         else:
             return tys.Classic(ty=tys.ContainerClassic(ty=tys.Tuple(tys=tys.TypeRow(types=ts))))
 
-    def clone(self) -> "TupleType":
-        return TupleType([t.clone() for t in self.element_types])
-
 
 @dataclass(frozen=True)
 class SumType(GuppyType):
@@ -129,9 +102,6 @@ class SumType(GuppyType):
         else:
             return tys.Classic(ty=tys.ContainerClassic(ty=tys.Sum(tys=tys.TypeRow(types=ts))))
 
-    def clone(self) -> "SumType":
-        return SumType([t.clone() for t in self.element_types])
-
 
 @dataclass(frozen=True)
 class StringType(GuppyType):
@@ -140,9 +110,6 @@ class StringType(GuppyType):
 
     def to_hugr(self) -> tys.SimpleType:
         return tys.Classic(ty=tys.String())
-
-    def clone(self) -> "StringType":
-        return StringType()
 
 
 @dataclass(frozen=True)
@@ -159,24 +126,6 @@ class ListType(GuppyType):
         else:
             return tys.Classic(ty=tys.ContainerClassic(ty=tys.ListClassic(ty=t.ty)))
 
-    def clone(self) -> "ListType":
-        return ListType(self.element_type.clone())
-
-
-@dataclass(frozen=True)
-class SetType(GuppyType):
-    element_type: GuppyType
-
-    def __str__(self) -> str:
-        return f"set[{self.element_type}]"
-
-    def to_hugr(self) -> tys.SimpleType:
-        # Not yet available in Hugr
-        raise NotImplementedError()
-
-    def clone(self) -> "SetType":
-        return SetType(self.element_type.clone())
-
 
 @dataclass(frozen=True)
 class DictType(GuppyType):
@@ -187,11 +136,13 @@ class DictType(GuppyType):
         return f"dict[{self.key_type}, {self.value_type}]"
 
     def to_hugr(self) -> tys.SimpleType:
-        # Not yet available in Hugr
-        raise NotImplementedError()
-
-    def clone(self) -> "DictType":
-        return DictType(self.key_type.clone(), self.value_type.clone())
+        kt = self.key_type.to_hugr()
+        vt = self.value_type.to_hugr()
+        assert isinstance(kt, tys.Classic)
+        if isinstance(vt, tys.Linear):
+            return tys.Linear(ty=tys.ContainerLinear(ty=tys.MapLinear(key=kt.ty, value=vt.ty)))
+        else:
+            return tys.Classic(ty=tys.ContainerClassic(ty=tys.MapClassic(key=kt.ty, value=vt.ty)))
 
 
 def type_from_python_value(val: Any) -> Optional[GuppyType]:

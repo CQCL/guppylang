@@ -1,3 +1,4 @@
+import copy
 import itertools
 import networkx  # type: ignore
 
@@ -16,7 +17,7 @@ NodeIdx = int
 PortOffset = int
 
 
-@dataclass()
+@dataclass
 class Port(ABC):
     """ Base class for ports on nodes. """
     node: "Node"
@@ -33,13 +34,13 @@ class OutPort(Port, ABC):
     pass
 
 
-@dataclass()
+@dataclass
 class InPortV(InPort):
     """ A typed value input port. """
     ty: GuppyType
 
 
-@dataclass()
+@dataclass
 class OutPortV(OutPort):
     """ A typed value output port. """
     ty: GuppyType
@@ -57,8 +58,10 @@ class OutPortCF(OutPort):
 
 Edge = tuple[OutPort, InPort]
 
+TypeList = list[GuppyType]
 
-@dataclass()
+
+@dataclass
 class Node(ABC):
     """ Base class for a node in the graph.
 
@@ -110,11 +113,11 @@ class Node(ABC):
         return (self.out_port(i) for i in range(self.num_out_ports))
 
 
-@dataclass()
+@dataclass
 class VNode(Node):
     """ A node with typed value ports. """
-    in_port_types: list[GuppyType]
-    out_port_types: list[GuppyType]
+    in_port_types: TypeList
+    out_port_types: TypeList
 
     @property
     def num_in_ports(self) -> int:
@@ -147,6 +150,16 @@ class VNode(Node):
         """ Returns the output port at the given offset. """
         assert offset < self.num_out_ports
         return OutPortV(self, offset, self.out_port_types[offset])
+
+    @property
+    def in_ports(self) -> Iterator[InPortV]:
+        """ Returns an iterator over all input ports from left to right. """
+        return (self.in_port(i) for i in range(self.num_in_ports))
+
+    @property
+    def out_ports(self) -> Iterator[OutPortV]:
+        """ Returns an iterator over all output ports from left to right. """
+        return (self.out_port(i) for i in range(self.num_out_ports))
 
     def update_op(self) -> None:
         """ Updates the operation associated with this node with type information.
@@ -243,8 +256,6 @@ class BlockNode(DFContainingNode, CFNode):
         self.op.op.predicate_variants = [tys.TypeRow(types=[]) for _ in range(self.num_out_ports)]
         super().update_op()
 
-
-TypeList = list[GuppyType]
 
 OrderEdge = tuple["Node", "Node"]
 ORDER_EDGE_KEY = (-1, -1)
@@ -358,7 +369,7 @@ class Hugr:
         self._insert_node(node)
         return node
 
-    def add_exit(self, output_tys: list[GuppyType], parent: Node) -> CFNode:
+    def add_exit(self, output_tys: TypeList, parent: Node) -> CFNode:
         """ Adds an `Exit` node to the graph. """
         outputs = tys.TypeRow(types=[ty.to_hugr() for ty in output_tys])
         node = CFNode(idx=self._graph.number_of_nodes(), op=ops.BasicBlock(op=ops.Exit(cfg_outputs=outputs)),
@@ -398,7 +409,7 @@ class Hugr:
         return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.UnpackTuple())), None, input_tuple.ty.element_types,
                               parent, [input_tuple])
 
-    def add_tag(self, variants: list[GuppyType], tag: int, inp: OutPortV, parent: Optional[Node] = None) -> VNode:
+    def add_tag(self, variants: TypeList, tag: int, inp: OutPortV, parent: Optional[Node] = None) -> VNode:
         """ Adds a `Tag` node to the graph. """
         types = tys.TypeRow(types=[ty.to_hugr() for ty in variants])
         assert inp.ty == variants[tag]
@@ -509,11 +520,11 @@ class Hugr:
             if isinstance(n, VNode) and isinstance(n.op, ops.DummyOp):
                 name = n.op.name
                 fun_ty = FunctionType(list(n.in_port_types), list(n.out_port_types))
-                decl = self.add_declare(fun_ty.clone(), self.root, name)
+                decl = self.add_declare(copy.deepcopy(fun_ty), self.root, name)
                 sig = tys.Signature(input=tys.TypeRow(types=[t.to_hugr() for t in fun_ty.args]),
                                     output=tys.TypeRow(types=[t.to_hugr() for t in fun_ty.returns]))
                 n.op = ops.Dataflow(op=ops.Call(signature=sig))
-                self.add_edge(decl.out_port(0), n.add_in_port(fun_ty.clone()))
+                self.add_edge(decl.out_port(0), n.add_in_port(copy.deepcopy(fun_ty)))
         return self
 
     def insert_copies(self) -> "Hugr":
