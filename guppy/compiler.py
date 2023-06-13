@@ -6,6 +6,7 @@ import textwrap
 
 from abc import ABC
 from dataclasses import dataclass
+from functools import partial
 from typing import Callable, Union, Optional, Any, Iterator, NamedTuple, Iterable
 
 from guppy.free_names import free_names
@@ -711,8 +712,8 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
 
         # Compile loop body
         new_hooks = Hooks(return_hook=hooks.return_hook,
-                          continue_hook=lambda curr_bb: jump_hook(curr_bb, True),
-                          break_hook=lambda curr_bb: jump_hook(curr_bb, False))
+                          continue_hook=partial(jump_hook, is_continue=True),
+                          break_hook=partial(jump_hook, is_continue=False))
         body_bb_final = self.compile_stms(node.body, body_bb, new_hooks)
 
         if body_bb_final is None:
