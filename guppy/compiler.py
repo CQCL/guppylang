@@ -248,6 +248,11 @@ def merge_err_maps(*err_maps: ErrMap) -> ErrMap:
     return res
 
 
+def expr_to_row(expr: ast.expr) -> list[ast.expr]:
+    """ Turns an expression into a row expressions by unpacking top-level tuples. """
+    return expr.elts if isinstance(expr, ast.Tuple) else [expr]
+
+
 @dataclass
 class BasicBlock(DFContainer):
     """ A basis block under construction.
@@ -348,11 +353,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         On Python-level, we treat tuples like rows on top-level. However,
         nested tuples are treated like regular Guppy tuples.
         """
-        # Top-level tuple is turned into row
-        if isinstance(expr, ast.Tuple):
-            return [self.compile(e, dfg) for e in expr.elts]
-        else:
-            return [self.compile(expr, dfg)]
+        return [self.compile(e, dfg) for e in expr_to_row(expr)]
 
     def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
         raise GuppyError("Expression not supported", node)
