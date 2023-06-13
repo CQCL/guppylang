@@ -71,7 +71,7 @@ def name_nodes_in_ast(node: Any) -> list[ast.Name]:
 
 
 def free_names(node: Any, bound: Optional[set[str]] = None) -> dict[str, ast.Name]:
-    """ Computes all free variables in an AST statament.
+    """ Computes all free variables in an AST statement.
 
     Returns a mapping from a free variable to its usage `Name` node in the AST. """
     v = FreeNameVisitor(bound)

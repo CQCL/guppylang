@@ -137,7 +137,7 @@ def type_row_from_ast(node: ast.expr) -> TypeRow:
 
     This is needed to interpret the return type annotation of functions.
     """
-    # The return type `-> None` is represented in the ast as `ast.Constant(vale=None)`
+    # The return type `-> None` is represented in the ast as `ast.Constant(value=None)`
     if isinstance(node, ast.Constant) and node.value is None:
         return TypeRow([])
     # We turn a tuple return into a row
