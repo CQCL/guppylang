@@ -693,7 +693,6 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
             #       x = 42
             #       while True:
             #           x = True
-            #       return x
 
             # Ignore new variables that are only defined in the loop
             self._finish_bb(curr_bb, subset=bb.variables.keys())
