@@ -140,12 +140,7 @@ def type_row_from_ast(node: ast.expr) -> TypeRow:
     # The return type `-> None` is represented in the ast as `ast.Constant(value=None)`
     if isinstance(node, ast.Constant) and node.value is None:
         return TypeRow([])
-    # We turn a tuple return into a row
-    elif isinstance(node, ast.Tuple):
-        return TypeRow([type_from_ast(el) for el in node.elts])
-    # Otherwise, it's a singleton row
-    else:
-        return TypeRow([type_from_ast(node)])
+    return TypeRow([type_from_ast(e) for e in expr_to_row(node)])
 
 
 def is_functional_annotation(stmt: ast.stmt) -> bool:
