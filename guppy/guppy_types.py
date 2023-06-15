@@ -49,8 +49,8 @@ class BoolType(GuppyType):
 
     def to_hugr(self) -> tys.SimpleType:
         # Hugr bools are encoded as Sum((), ())
-        unit = tys.Classic(ty=tys.ContainerClassic(ty=tys.Tuple(tys=tys.TypeRow(types=[]))))
-        s = tys.Sum(tys=tys.TypeRow(types=[unit, unit]))
+        unit = tys.Classic(ty=tys.ContainerClassic(ty=tys.Tuple(tys=list([]))))
+        s = tys.Sum(tys=list([unit, unit]))
         return tys.Classic(ty=tys.ContainerClassic(ty=s))
 
 
@@ -64,9 +64,9 @@ class FunctionType(GuppyType):
         return f"{TypeRow(self.args)} -> {TypeRow(self.returns)}"
 
     def to_hugr(self) -> tys.SimpleType:
-        ins = tys.TypeRow(types=[t.to_hugr() for t in self.args])
-        outs = tys.TypeRow(types=[t.to_hugr() for t in self.returns])
-        sig = tys.Signature(input=ins, output=outs, const_input=tys.TypeRow(types=[]))
+        ins = list([t.to_hugr() for t in self.args])
+        outs = list([t.to_hugr() for t in self.returns])
+        sig = tys.Signature(input=ins, output=outs, const_input=list([]))
         # TODO: Resources
         return tys.Classic(ty=tys.Graph(resources=[], signature=sig))
 
@@ -82,9 +82,9 @@ class TupleType(GuppyType):
         ts = [t.to_hugr() for t in self.element_types]
         # As soon as one element is linear, the whole tuple must be linear
         if any(isinstance(t, tys.Linear) for t in ts):
-            return tys.Linear(ty=tys.ContainerLinear(ty=tys.Tuple(tys=tys.TypeRow(types=ts))))
+            return tys.Linear(ty=tys.ContainerLinear(ty=tys.Tuple(tys=list(ts))))
         else:
-            return tys.Classic(ty=tys.ContainerClassic(ty=tys.Tuple(tys=tys.TypeRow(types=ts))))
+            return tys.Classic(ty=tys.ContainerClassic(ty=tys.Tuple(tys=list(ts))))
 
 
 @dataclass(frozen=True)
@@ -98,9 +98,9 @@ class SumType(GuppyType):
         ts = [t.to_hugr() for t in self.element_types]
         # As soon as one element is linear, the whole sum type must be linear
         if any(isinstance(t, tys.Linear) for t in ts):
-            return tys.Linear(ty=tys.ContainerLinear(ty=tys.Sum(tys=tys.TypeRow(types=ts))))
+            return tys.Linear(ty=tys.ContainerLinear(ty=tys.Sum(tys=list(ts))))
         else:
-            return tys.Classic(ty=tys.ContainerClassic(ty=tys.Sum(tys=tys.TypeRow(types=ts))))
+            return tys.Classic(ty=tys.ContainerClassic(ty=tys.Sum(tys=list(ts))))
 
 
 @dataclass(frozen=True)

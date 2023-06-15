@@ -98,11 +98,13 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
     # This can be set by passing `tagged=True` when defining a subclass.
     _tagged: bool = False
 
-    def __init_subclass__(cls, list: bool = False, tagged: bool = False, tag: Optional[str] = None,
+    _newtype: bool = False
+    def __init_subclass__(cls, list: bool = False, tagged: bool = False, tag: Optional[str] = None, newtype: bool = False,
                           **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         cls._is_list_model = list
         cls._tagged = tagged
+        cls._newtype = newtype
 
         # Initialise the tag field with the correct class name
         cls.__fields__["tag_"].type_ = Literal[tag or cls.__name__]
@@ -147,7 +149,7 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
             vs = [d[f] for f in self.__fields__ if f != "tag_"]
             d = vs[0] if len(vs) == 1 else vs
         if self._tagged:
-            return self.tag_ if isinstance(d, list) and d == [] else {self.tag_: d}
+            return self.tag_ if isinstance(d, list) and d == [] and not self._newtype else {self.tag_: d}
         return d
 
 

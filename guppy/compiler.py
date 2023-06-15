@@ -1,5 +1,4 @@
 import ast
-import copy
 import inspect
 import sys
 import textwrap
@@ -991,7 +990,7 @@ class GuppyModule(object):
     def __init__(self, name: str):
         self.name = name
         self.graph = Hugr(name)
-        self.module_node = self.graph.add_root(self.name)
+        self.module_node = self.graph.set_root_name(self.name)
         self.compiler = FunctionCompiler(self.graph)
         self.annotated_funcs = {}
         self.fun_decls = []

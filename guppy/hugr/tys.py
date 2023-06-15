@@ -20,12 +20,12 @@ class CustomType(BaseModel):
 # --------------- SimpleType ------------------
 # ---------------------------------------------
 
-class Classic(BaseModel, list=True, tagged=True):
+class Classic(BaseModel, list=True, tagged=True, tag="c"):
     """ A type containing classical data. Elements of this type can be copied. """
     ty: "ClassicType"
 
 
-class Linear(BaseModel, list=True, tagged=True):
+class Linear(BaseModel, list=True, tagged=True, tag="l"):
     """ A type containing linear data. Elements of this type must be used exactly once. """
     ty: "LinearType"
 
@@ -37,45 +37,45 @@ SimpleType = Union[Classic, Linear]
 # --------------- Container ------------------
 # --------------------------------------------
 
-class ListClassic(BaseModel, list=True, tagged=True, tag="List"):
+class ListClassic(BaseModel, list=True, tagged=True, tag="List", newtype=True):
     """ Variable sized list of types """
     ty: "ClassicType"
 
 
-class ListLinear(BaseModel, list=True, tagged=True, tag="List"):
+class ListLinear(BaseModel, list=True, tagged=True, tag="List", newtype=True):
     """ Variable sized list of types """
     ty: "LinearType"
 
 
-class MapClassic(BaseModel, list=True, tagged=True, tag="Map"):
+class MapClassic(BaseModel, list=True, tagged=True, tag="Map", newtype=True):
     """ Hash map from hashable key type to value type """
     key: "ClassicType"
     value: "ClassicType"
 
 
-class MapLinear(BaseModel, list=True, tagged=True, tag="Map"):
+class MapLinear(BaseModel, list=True, tagged=True, tag="Map", newtype=True):
     """ Hash map from hashable key type to value type """
     key: "ClassicType"
     value: "LinearType"
 
 
-class Tuple(BaseModel, list=True, tagged=True):
+class Tuple(BaseModel, list=True, tagged=True, newtype=True):
     """ Product type, known-size tuple over elements of type row """
     tys: "TypeRow"
 
 
-class Sum(BaseModel, list=True, tagged=True):
+class Sum(BaseModel, list=True, tagged=True, newtype=True):
     """ Sum type, variants are tagged by their position in the type row """
     tys: "TypeRow"
 
 
-class ArrayClassic(BaseModel, list=True, tagged=True, tag="Array"):
+class ArrayClassic(BaseModel, list=True, tagged=True, tag="Array", newtype=True):
     """ Known size array of """
     ty: "ClassicType"
     size: int
 
 
-class ArrayLinear(BaseModel, list=True, tagged=True, tag="Array"):
+class ArrayLinear(BaseModel, list=True, tagged=True, tag="Array", newtype=True):
     """ Known size array of """
     ty: "LinearType"
     size: int
@@ -169,13 +169,7 @@ LinearType = Union[Qubit, OpaqueLinear, ContainerLinear]
 # --------------- TypeRow -------------------
 # -------------------------------------------
 
-class TypeRow(BaseModel):
-    """ List of types, used for function signatures. """
-    types: list[SimpleType]  # The datatypes in the row.
-
-    @classmethod
-    def empty(cls) -> "TypeRow":
-        return TypeRow(types=[])
+TypeRow = list[SimpleType]
 
 
 # -------------------------------------------
@@ -190,11 +184,13 @@ class Signature(BaseModel):
     """
     input: TypeRow  # Value inputs of the function.
     output: TypeRow  # Value outputs of the function.
-    const_input: TypeRow = Field(default_factory=TypeRow.empty)  # Possible constE input (for call / load-constant).
+    const_input: TypeRow = Field(default_factory=list)  # Possible constE input (for call / load-constant).
+    input_resources: ResourceSet = Field(default_factory=list)
+    output_resources: ResourceSet= Field(default_factory=list)
 
     @classmethod
     def empty(cls) -> "Signature":
-        return Signature(input=TypeRow.empty(), output=TypeRow.empty(), const_input=TypeRow.empty())
+        return Signature(input=[], output=[], const_input=[])
 
 
 # Now that all classes are defined, we need to update the ForwardRefs
