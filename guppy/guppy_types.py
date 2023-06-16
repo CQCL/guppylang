@@ -50,7 +50,7 @@ class BoolType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         # Hugr bools are encoded as Sum((), ())
         unit = tys.Tuple(tys=[], linear=False)
-        s = tys.Sum(tys=list([unit, unit]), linear=False)
+        s = tys.Sum(tys=[unit, unit], linear=False)
         return s
 
 
@@ -64,9 +64,9 @@ class FunctionType(GuppyType):
         return f"{TypeRow(self.args)} -> {TypeRow(self.returns)}"
 
     def to_hugr(self) -> tys.SimpleType:
-        ins = list([t.to_hugr() for t in self.args])
-        outs = list([t.to_hugr() for t in self.returns])
-        sig = tys.Signature(input=ins, output=outs, const_input=list([]))
+        ins = [t.to_hugr() for t in self.args]
+        outs = [t.to_hugr() for t in self.returns]
+        sig = tys.Signature(input=ins, output=outs, const_input=[])
         # TODO: Resources
         return tys.Graph(resources=[], signature=sig)
 

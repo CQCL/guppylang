@@ -251,7 +251,7 @@ class BlockNode(DFContainingNode, CFNode):
         # successor input. Thus, `predicate_variants` will only contain empty
         # rows.
         assert isinstance(self.op, ops.BasicBlock) and isinstance(self.op.op, ops.DFB)
-        self.op.op.predicate_variants = [list([]) for _ in range(self.num_out_ports)]
+        self.op.op.predicate_variants = [[] for _ in range(self.num_out_ports)]
         super().update_op()
 
 
@@ -366,7 +366,7 @@ class Hugr:
 
     def add_exit(self, output_tys: TypeList, parent: Node) -> CFNode:
         """ Adds an `Exit` node to the graph. """
-        outputs = list([ty.to_hugr() for ty in output_tys])
+        outputs = [ty.to_hugr() for ty in output_tys]
         node = CFNode(idx=self._graph.number_of_nodes(), op=ops.BasicBlock(op=ops.Exit(cfg_outputs=outputs)),
                       parent=parent, meta_data={})
         self._insert_node(node)
@@ -406,7 +406,7 @@ class Hugr:
 
     def add_tag(self, variants: TypeList, tag: int, inp: OutPortV, parent: Optional[Node] = None) -> VNode:
         """ Adds a `Tag` node to the graph. """
-        types = list([ty.to_hugr() for ty in variants])
+        types = [ty.to_hugr() for ty in variants]
         assert inp.ty == variants[tag]
         return self._add_node(ops.LeafOp(op=ops.Tag(tag=tag, variants=types)), None,
                               [SumType(variants)], parent, [inp])
@@ -516,8 +516,8 @@ class Hugr:
                 name = n.op.name
                 fun_ty = FunctionType(list(n.in_port_types), list(n.out_port_types))
                 decl = self.add_declare(copy.deepcopy(fun_ty), self.root, name)
-                sig = tys.Signature(input=list([t.to_hugr() for t in fun_ty.args]),
-                                    output=list([t.to_hugr() for t in fun_ty.returns]))
+                sig = tys.Signature(input=[t.to_hugr() for t in fun_ty.args],
+                                    output=[t.to_hugr() for t in fun_ty.returns])
                 n.op = ops.Call(signature=sig)
                 self.add_edge(decl.out_port(0), n.add_in_port(copy.deepcopy(fun_ty)))
         return self

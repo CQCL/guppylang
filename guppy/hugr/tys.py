@@ -50,7 +50,6 @@ class Array(BaseModel, list=True, tagged=True,newtype=True):
     linear:bool 
 
 
-Container = Union[List, Tuple, Sum, Array, Map]
 
 # ----------------------------------------------
 # --------------- ClassicType ------------------
@@ -109,7 +108,7 @@ SimpleType = Union[Qubit, Variable, Int, F64, String, Graph, List, Array, Map, T
 def is_linear(ty: SimpleType) -> bool:
     if isinstance(ty, Qubit):
         return True
-    elif isinstance(ty, Container) or isinstance(ty, Opaque):
+    elif isinstance(ty, (List, Tuple, Sum, Array, Map, Opaque)):
         return ty.linear
     return False
     
