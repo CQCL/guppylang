@@ -16,86 +16,41 @@ class CustomType(BaseModel):
     params: "TypeRow"
 
 
-# ---------------------------------------------
-# --------------- SimpleType ------------------
-# ---------------------------------------------
-
-class Classic(BaseModel, list=True, tagged=True, tag="c"):
-    """ A type containing classical data. Elements of this type can be copied. """
-    ty: "ClassicType"
-
-
-class Linear(BaseModel, list=True, tagged=True, tag="l"):
-    """ A type containing linear data. Elements of this type must be used exactly once. """
-    ty: "LinearType"
-
-
-SimpleType = Union[Classic, Linear]
-
-
 # --------------------------------------------
 # --------------- Container ------------------
 # --------------------------------------------
 
-class ListClassic(BaseModel, list=True, tagged=True, tag="List", newtype=True):
-    """ Variable sized list of types """
-    ty: "ClassicType"
-
-
-class ListLinear(BaseModel, list=True, tagged=True, tag="List", newtype=True):
-    """ Variable sized list of types """
-    ty: "LinearType"
-
-
-class MapClassic(BaseModel, list=True, tagged=True, tag="Map", newtype=True):
+class Map(BaseModel, list=True, tagged=True, newtype=True):
     """ Hash map from hashable key type to value type """
-    key: "ClassicType"
-    value: "ClassicType"
+    key: "SimpleType"
+    value: "SimpleType"
+    linear: bool
 
-
-class MapLinear(BaseModel, list=True, tagged=True, tag="Map", newtype=True):
-    """ Hash map from hashable key type to value type """
-    key: "ClassicType"
-    value: "LinearType"
+class List(BaseModel, list=True, tagged=True, newtype=True):
+    """ Variable sized list of types """
+    ty: "SimpleType"
+    linear: bool
 
 
 class Tuple(BaseModel, list=True, tagged=True, newtype=True):
     """ Product type, known-size tuple over elements of type row """
     tys: "TypeRow"
-
+    linear: bool
 
 class Sum(BaseModel, list=True, tagged=True, newtype=True):
     """ Sum type, variants are tagged by their position in the type row """
     tys: "TypeRow"
+    linear: bool
 
 
-class ArrayClassic(BaseModel, list=True, tagged=True, tag="Array", newtype=True):
+class Array(BaseModel, list=True, tagged=True,newtype=True):
     """ Known size array of """
-    ty: "ClassicType"
+    ty: "SimpleType"
     size: int
+    linear:bool 
 
 
-class ArrayLinear(BaseModel, list=True, tagged=True, tag="Array", newtype=True):
-    """ Known size array of """
-    ty: "LinearType"
-    size: int
-
-
-class NewClassicType(BaseModel, list=True, tagged=True, tag="NewType"):
-    """ Named type defined by, but distinct from, ty. """
-    name: str
-    ty: "ClassicType"
-
-
-class NewLinearType(BaseModel, list=True, tagged=True, tag="NewType"):
-    """ Named type defined by, but distinct from, ty. """
-    name: str
-    ty: "LinearType"
-
-
-ContainerC = Union[ListClassic, MapClassic, Tuple, Sum, ArrayClassic, NewClassicType]
-ContainerL = Union[ListLinear, MapLinear, Tuple, Sum, ArrayLinear, NewLinearType]
-
+Container = Union[List, Tuple, Sum, Array, Map]
 
 # ----------------------------------------------
 # --------------- ClassicType ------------------
@@ -106,22 +61,22 @@ class Variable(BaseModel, list=True, tagged=True):
     name: str
 
 
-class Int(BaseModel, list=True, tagged=True):
+class Int(BaseModel, list=True, tagged=True, tag="I"):
     """ An arbitrary size integer. """
     size: int
 
 
-class F64(BaseModel, list=True, tagged=True):
+class F64(BaseModel, list=True, tagged=True, tag="F"):
     """ A 64-bit floating point number. """
     pass
 
 
-class String(BaseModel, list=True, tagged=True):
+class String(BaseModel, list=True, tagged=True, tag="S"):
     """ An arbitrary length string. """
     pass
 
 
-class Graph(BaseModel, list=True, tagged=True):
+class Graph(BaseModel, list=True, tagged=True, tag="G"):
     """ A graph encoded as a value. It contains a concrete signature and a set of required resources. """
     resources: "ResourceSet"
     signature: "Signature"
@@ -130,41 +85,34 @@ class Graph(BaseModel, list=True, tagged=True):
 ResourceSet = list[str]  # TODO: Set not supported by MessagePack. Is list correct here?
 
 
-class ContainerClassic(BaseModel, list=True, tagged=True, tag="Container"):
-    """ A nested definition containing other classic types. """
-    ty: ContainerC
 
-
-class OpaqueClassic(BaseModel, list=True, tagged=True, tag="Opaque"):
+class Opaque(BaseModel, list=True, tagged=True, tag="Opaque"):
     """ An opaque operation that can be downcasted by the extensions that define it. """
     ty: CustomType
+    linear: bool
 
 
-ClassicType = Union[Variable, Int, F64, String, Graph, ContainerClassic, OpaqueClassic]
 
 
 # ----------------------------------------------
 # --------------- LinearType -------------------
 # ----------------------------------------------
 
-class Qubit(BaseModel, list=True, tagged=True):
+class Qubit(BaseModel, list=True, tagged=True, tag="Q"):
     """ A qubit. """
     pass
 
 
-class OpaqueLinear(BaseModel, list=True, tagged=True, tag="Opaque"):
-    """ A linear opaque operation that can be downcasted by the extensions that define it. """
-    ty: CustomType
 
+SimpleType = Union[Qubit, Variable, Int, F64, String, Graph, List, Array, Map, Tuple, Sum]
 
-class ContainerLinear(BaseModel, list=True, tagged=True, tag="Container"):
-    """ A nested definition containing other linear types. """
-    ty: ContainerL
-
-
-LinearType = Union[Qubit, OpaqueLinear, ContainerLinear]
-
-
+def is_linear(ty: SimpleType) -> bool:
+    if isinstance(ty, Qubit):
+        return True
+    elif isinstance(ty, Container) or isinstance(ty, Opaque):
+        return ty.linear
+    return False
+    
 # -------------------------------------------
 # --------------- TypeRow -------------------
 # -------------------------------------------

@@ -4,7 +4,7 @@ from abc import ABC
 from typing import Union, Optional, Any
 from pydantic import Field
 
-from .tys import Signature, TypeRow, ClassicType, SimpleType, ResourceSet, Graph, ContainerClassic, ContainerLinear
+from .tys import Signature, TypeRow,  SimpleType, ResourceSet, Graph
 import guppy.hugr.tys as tys
 from .pydantic_extensions import BaseModel
 
@@ -82,8 +82,8 @@ class Def(BaseOp, tagged=True):
         assert len(in_types) == 0
         assert len(out_types) == 1
         out = out_types[0]
-        assert isinstance(out.ty, Graph)
-        self.signature = out.ty.signature
+        assert isinstance(out, Graph)
+        self.signature = out.signature
 
 
 class Declare(BaseOp, tagged=True):
@@ -95,8 +95,8 @@ class Declare(BaseOp, tagged=True):
         assert len(in_types) == 0
         assert len(out_types) == 1
         out = out_types[0]
-        assert isinstance(out.ty, Graph)
-        self.signature = out.ty.signature
+        assert isinstance(out, Graph)
+        self.signature = out.signature
 
 
 class NewType(BaseOp, tagged=True):
@@ -194,8 +194,8 @@ class Call(DataflowOp, tagged=True):
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         # The constE edge comes after the value inputs
         fun_ty = in_types[-1]
-        assert isinstance(fun_ty.ty, Graph)
-        self.signature = fun_ty.ty.signature
+        assert isinstance(fun_ty, Graph)
+        self.signature = fun_ty.signature
 
 
 class CallIndirect(DataflowOp, tagged=True):
@@ -205,14 +205,14 @@ class CallIndirect(DataflowOp, tagged=True):
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         fun_ty = in_types[0]
         assert isinstance(fun_ty, Graph)
-        assert len(fun_ty.signature.input.types) == len(in_types) - 1
-        assert len(fun_ty.signature.output.types) == len(out_types)
+        assert len(fun_ty.signature.input) == len(in_types) - 1
+        assert len(fun_ty.signature.output) == len(out_types)
         self.signature = fun_ty.signature
 
 
 class LoadConstant(DataflowOp, tagged=True):
     """ Load a static constant in to the local dataflow graph. """
-    datatype: ClassicType
+    datatype: SimpleType
 
 
 class LeafOp(DataflowOp, tagged=True, list=True):
@@ -251,13 +251,12 @@ class Conditional(DataflowOp, list=True, tagged=True):
         # First port is a predicate, i.e. a sum of tuple types. We need to unpack
         # those into a list of type rows
         pred = in_types[0]
-        assert isinstance(pred.ty, ContainerClassic) or isinstance(pred.ty, ContainerLinear)
-        assert isinstance(pred.ty.ty, tys.Sum)
+        assert isinstance(pred, tys.Sum)
         self.predicate_inputs = []
-        for ty in pred.ty.ty.tys:
-            assert isinstance(ty.ty, ContainerClassic) or isinstance(ty.ty, ContainerLinear)
-            assert isinstance(ty.ty.ty, tys.Tuple)
-            self.predicate_inputs.append(ty.ty.ty.tys)
+        for ty in pred.tys:
+            # assert isinstance(ty.ty, ContainerClassic) or isinstance(ty.ty, ContainerLinear)
+            assert isinstance(ty, tys.Tuple)
+            self.predicate_inputs.append(ty.tys)
         self.other_inputs = list(in_types[1:])
         self.outputs = list(out_types)
 
