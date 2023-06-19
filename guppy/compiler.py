@@ -330,7 +330,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         self.dfg.check_errs_on_usage(node)
         x = node.id
         if x in self.dfg.variables or x in self.dfg.global_variables:
-            var = self.dfg.variables[x] or self.dfg.global_variables[x]
+            var = self.dfg.variables.get(x, self.dfg.global_variables.get(x))
             return var.port
         raise GuppyError(f"Variable `{x}` is not defined", node)
 
