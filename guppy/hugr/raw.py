@@ -2,7 +2,7 @@ from typing import Literal, Optional
 
 import ormsgpack
 
-from guppy.hugr.pydantic_extensions import BaseModel
+from pydantic import BaseModel
 from guppy.hugr.ops import OpType
 
 

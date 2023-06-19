@@ -250,8 +250,8 @@ class BlockNode(DFContainingNode, CFNode):
         # make use of the HUGR feature where the variant data is appended to
         # successor input. Thus, `predicate_variants` will only contain empty
         # rows.
-        assert isinstance(self.op, ops.BasicBlock) and isinstance(self.op.op, ops.DFB)
-        self.op.op.predicate_variants = [[] for _ in range(self.num_out_ports)]
+        assert isinstance(self.op, ops.DFB)
+        self.op.predicate_variants = [[] for _ in range(self.num_out_ports)]
         super().update_op()
 
 
@@ -359,7 +359,7 @@ class Hugr:
 
     def add_block(self, parent: Optional[Node]) -> BlockNode:
         """ Adds a `Block` node to the graph. """
-        node = BlockNode(idx=self._graph.number_of_nodes(), op=ops.BasicBlock(op=ops.DFB()), parent=parent,
+        node = BlockNode(idx=self._graph.number_of_nodes(), op=ops.DFB(), parent=parent,
                          meta_data={})
         self._insert_node(node)
         return node
@@ -367,7 +367,7 @@ class Hugr:
     def add_exit(self, output_tys: TypeList, parent: Node) -> CFNode:
         """ Adds an `Exit` node to the graph. """
         outputs = [ty.to_hugr() for ty in output_tys]
-        node = CFNode(idx=self._graph.number_of_nodes(), op=ops.BasicBlock(op=ops.Exit(cfg_outputs=outputs)),
+        node = CFNode(idx=self._graph.number_of_nodes(), op=ops.Exit(cfg_outputs=outputs),
                       parent=parent, meta_data={})
         self._insert_node(node)
         return node
@@ -378,7 +378,7 @@ class Hugr:
 
     def add_case(self, parent: Node) -> DFContainingVNode:
         """ Adds a `Case` node to the graph. """
-        return self._add_dfg_node(ops.Case(op=ops.CaseOp()), [], [], parent)
+        return self._add_dfg_node(ops.Case(), [], [], parent)
 
     def add_cfg(self, parent: Node, inputs: list[OutPortV]) -> VNode:
         """ Adds a nested control-flow `CFG` node to the graph. """
@@ -396,19 +396,19 @@ class Hugr:
     def add_make_tuple(self, inputs: list[OutPortV], parent: Optional[Node] = None) -> VNode:
         """ Adds a `MakeTuple` node to the graph. """
         ty = TupleType([port.ty for port in inputs])
-        return self._add_node(ops.LeafOp(op=ops.MakeTuple()), None, [ty], parent, inputs)
+        return self._add_node(ops.MakeTuple(), None, [ty], parent, inputs)
 
     def add_unpack_tuple(self, input_tuple: OutPortV, parent: Optional[Node] = None) -> VNode:
         """ Adds an `UnpackTuple` node to the graph. """
         assert isinstance(input_tuple.ty, TupleType)
-        return self._add_node(ops.LeafOp(op=ops.UnpackTuple()), None, input_tuple.ty.element_types,
+        return self._add_node(ops.UnpackTuple(), None, input_tuple.ty.element_types,
                               parent, [input_tuple])
 
     def add_tag(self, variants: TypeList, tag: int, inp: OutPortV, parent: Optional[Node] = None) -> VNode:
         """ Adds a `Tag` node to the graph. """
         types = [ty.to_hugr() for ty in variants]
         assert inp.ty == variants[tag]
-        return self._add_node(ops.LeafOp(op=ops.Tag(tag=tag, variants=types)), None,
+        return self._add_node(ops.Tag(tag=tag, variants=types), None,
                               [SumType(variants)], parent, [inp])
 
     def add_call(self, def_port: OutPortV, args: list[OutPortV], parent: Optional[Node] = None) -> VNode:
@@ -578,7 +578,7 @@ class Hugr:
                                  iter(exit_nodes)):
             raw_index[n.idx] = next(indices)
 
-        nodes: list[Optional[raw.Node]] = [None] * self._graph.number_of_nodes()
+        nodes: list[raw.Node] = [(0, ops.Module())] * self._graph.number_of_nodes()
         for n in self.nodes():
             # Ports for constE edges are only present if they are connected
             # is_const = not isinstance(n.op, ops.DataflowOp) and n.num_out_ports == 1 and isinstance(n, VNode)
@@ -598,7 +598,6 @@ class Hugr:
 
         if self.root is None:
             raise ValueError("Raw Hugr requires a root node")
-
         return raw.RawHugr(nodes=nodes, edges=edges)
 
     def serialize(self) -> bytes:
