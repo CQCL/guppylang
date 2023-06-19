@@ -194,6 +194,9 @@ class DFContainer:
         # mutate our variable mapping
         return DFContainer(self.node, self.variables.copy(), self.errs_on_usage.copy())
 
+    def get_var(self, name: str) -> Optional[Variable]:
+        return self.variables.get(name, None)
+
     def check_errs_on_usage(self, name_node: ast.Name) -> None:
         if name_node.id in self.errs_on_usage:
             errs = self.errs_on_usage[name_node.id]
@@ -328,7 +331,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         self.dfg.check_errs_on_usage(node)
         x = node.id
         if x in self.dfg or x in self.global_variables:
-            var = self.dfg[x] if x in self.dfg else self.global_variables[x]
+            var = self.dfg.get_var(x) or self.global_variables[x]
             return var.port
         raise GuppyError(f"Variable `{x}` is not defined", node)
 
