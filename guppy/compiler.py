@@ -472,10 +472,10 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             # TODO: Implement this
             raise GuppyError(f"Argument passing by keyword is not supported", node.keywords[0])
         exp, act = len(func_ty.args), len(node.args)
-        if exp < act:
-            raise GuppyError(f"Not enough arguments passed (expected {exp}, got {act})", node)
         if act < exp:
-            raise GuppyError(f"Unexpected argument", node.args[-1])
+            raise GuppyError(f"Not enough arguments passed (expected {exp}, got {act})", node)
+        if exp < act:
+            raise GuppyError(f"Unexpected argument", node.args[exp])
 
         args = [self.visit(arg) for arg in node.args]
         for i, port in enumerate(args):
