@@ -264,7 +264,7 @@ ORDER_EDGE_KEY = (-1, -1)
 class Hugr:
     """ Hierarchical unified graph representation. """
     name: str
-    root: Optional[Node]  # Non-module Hugrs may not have a root
+    root: Optional[Node]  # Non-module Hugrs may have no root
     _graph: networkx.MultiDiGraph  # TODO: We probably don't need networkx.
     _children: dict[NodeIdx, list[Node]]
     _default_parent: Optional[Node]
