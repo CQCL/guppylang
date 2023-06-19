@@ -783,10 +783,8 @@ class FunctionalStatementCompiler(StatementCompiler):
         assert isinstance(dfg.node, VNode)
         variables = {x: v for x, v in dfg.variables.items() if subset is None or x in subset}
         self._add_output(dfg.node, variables, extra_outputs=[cond_port])
-        out_vars = {}
-        for v in sorted(variables.values(), key=lambda v: v.name):
-            out_vars[v.name] = Variable(v.name, dfg.node.add_out_port(v.ty), v.defined_at)
-        return out_vars
+        return {v.name: Variable(v.name, dfg.node.add_out_port(v.ty), v.defined_at)
+                for v in sorted(variables.values(), key=lambda v: v.name)}
 
     def visit_Break(self, node: ast.Break, dfg: DFContainer, hooks: Hooks) -> Optional[BasicBlock]:
         raise GuppyError("Break is not allowed in a functional statement", node)
