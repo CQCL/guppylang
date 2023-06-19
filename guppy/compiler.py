@@ -186,10 +186,8 @@ class DFContainer:
     def __iter__(self) -> Iterator[Variable]:
         return iter(self.variables.values())
 
-    def __contains__(self, item: Union[str, Variable]) -> bool:
-        if isinstance(item, str):
-            return item in self.variables
-        return item in self.variables.values()
+    def __contains__(self, item: str) -> bool:
+        return item in self.variables
 
     def __copy__(self) -> "DFContainer":
         # Make a copy of the var map so that mutating the copy doesn't
