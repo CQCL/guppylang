@@ -253,10 +253,10 @@ class Conditional(DataflowOp, list=True, tagged=True):
         pred = in_types[0]
         assert isinstance(pred, tys.Sum)
         self.predicate_inputs = []
-        for ty in pred.tys:
+        for ty in pred.row:
             # assert isinstance(ty.ty, ContainerClassic) or isinstance(ty.ty, ContainerLinear)
             assert isinstance(ty, tys.Tuple)
-            self.predicate_inputs.append(ty.tys)
+            self.predicate_inputs.append(ty.row)
         self.other_inputs = list(in_types[1:])
         self.outputs = list(out_types)
 

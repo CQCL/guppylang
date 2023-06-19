@@ -30,7 +30,7 @@ class IntType(GuppyType):
         return "int"
 
     def to_hugr(self) -> tys.SimpleType:
-        return tys.Int(size=32)  # TODO: Parametrise over size
+        return tys.Int(width=32)  # TODO: Parametrise over size
 
 
 @dataclass(frozen=True)
@@ -49,8 +49,8 @@ class BoolType(GuppyType):
 
     def to_hugr(self) -> tys.SimpleType:
         # Hugr bools are encoded as Sum((), ())
-        unit = tys.Tuple(tys=[], linear=False)
-        s = tys.Sum(tys=[unit, unit], linear=False)
+        unit = tys.Tuple(row=[], l=False)
+        s = tys.Sum(row=[unit, unit], l=False)
         return s
 
 
@@ -81,7 +81,7 @@ class TupleType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         ts = [t.to_hugr() for t in self.element_types]
         # As soon as one element is linear, the whole tuple must be linear
-        return tys.Tuple(tys=ts, linear=any(tys.is_linear(t) for t in ts))
+        return tys.Tuple(row=ts, l=any(tys.is_linear(t) for t in ts))
 
 
 @dataclass(frozen=True)
@@ -94,7 +94,7 @@ class SumType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         ts = [t.to_hugr() for t in self.element_types]
         # As soon as one element is linear, the whole sum type must be linear
-        return tys.Sum(tys=ts, linear=any(tys.is_linear(t) for t in ts))
+        return tys.Sum(row=ts, l=any(tys.is_linear(t) for t in ts))
 
 
 @dataclass(frozen=True)
@@ -115,7 +115,7 @@ class ListType(GuppyType):
 
     def to_hugr(self) -> tys.SimpleType:
         t = self.element_type.to_hugr()
-        return tys.List(ty=t, linear=tys.is_linear(t))
+        return tys.List(ty=t, l=tys.is_linear(t))
 
 
 @dataclass(frozen=True)
@@ -130,7 +130,7 @@ class DictType(GuppyType):
         kt = self.key_type.to_hugr()
         vt = self.value_type.to_hugr()
         assert not tys.is_linear(kt)
-        return tys.Map(key=kt, value=vt, linear = tys.is_linear(vt))
+        return tys.Map(k=kt, v=vt, l = tys.is_linear(vt))
 
 
 def type_from_python_value(val: Any) -> Optional[GuppyType]:

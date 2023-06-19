@@ -1,9 +1,7 @@
 import inspect
 import sys
-from typing import Union
-from pydantic import Field
-
-from .pydantic_extensions import BaseModel
+from typing import Literal, Union, Annotated
+from pydantic import Field, BaseModel
 
 
 # ---------------------------------------------
@@ -20,34 +18,39 @@ class CustomType(BaseModel):
 # --------------- Container ------------------
 # --------------------------------------------
 
-class Map(BaseModel, list=True, tagged=True, newtype=True):
+class Map(BaseModel):
     """ Hash map from hashable key type to value type """
-    key: "SimpleType"
-    value: "SimpleType"
-    linear: bool
+    t: Literal['Map'] = "Map"
+    k: "SimpleType"
+    v: "SimpleType"
+    l: bool
 
-class List(BaseModel, list=True, tagged=True, newtype=True):
+class List(BaseModel):
     """ Variable sized list of types """
+    t: Literal['List'] = "List"
     ty: "SimpleType"
-    linear: bool
+    l: bool
 
 
-class Tuple(BaseModel, list=True, tagged=True, newtype=True):
+class Tuple(BaseModel):
     """ Product type, known-size tuple over elements of type row """
-    tys: "TypeRow"
-    linear: bool
+    t: Literal['Tuple'] = "Tuple"
+    row: "TypeRow"
+    l: bool
 
-class Sum(BaseModel, list=True, tagged=True, newtype=True):
+class Sum(BaseModel):
     """ Sum type, variants are tagged by their position in the type row """
-    tys: "TypeRow"
-    linear: bool
+    t: Literal['Sum'] = "Sum"
+    row: "TypeRow"
+    l: bool
 
 
-class Array(BaseModel, list=True, tagged=True,newtype=True):
+class Array(BaseModel):
     """ Known size array of """
+    t: Literal['Array'] = "Array"
     ty: "SimpleType"
-    size: int
-    linear:bool 
+    len: int
+    l:bool 
 
 
 
@@ -55,28 +58,31 @@ class Array(BaseModel, list=True, tagged=True,newtype=True):
 # --------------- ClassicType ------------------
 # ----------------------------------------------
 
-class Variable(BaseModel, list=True, tagged=True):
+class Variable(BaseModel):
     """ A type variable identified by a name. """
+    t: Literal['Var'] = "Var"
     name: str
 
 
-class Int(BaseModel, list=True, tagged=True, tag="I"):
+class Int(BaseModel):
     """ An arbitrary size integer. """
-    size: int
+    t: Literal['I'] = "I"
+    width: int
 
 
-class F64(BaseModel, list=True, tagged=True, tag="F"):
+class F64(BaseModel):
     """ A 64-bit floating point number. """
-    pass
+    t: Literal['F'] = "F"
 
 
-class String(BaseModel, list=True, tagged=True, tag="S"):
+class String(BaseModel):
     """ An arbitrary length string. """
-    pass
+    t: Literal['S'] = "S"
 
 
-class Graph(BaseModel, list=True, tagged=True, tag="G"):
+class Graph(BaseModel):
     """ A graph encoded as a value. It contains a concrete signature and a set of required resources. """
+    t: Literal['G'] = "G"
     resources: "ResourceSet"
     signature: "Signature"
 
@@ -85,8 +91,9 @@ ResourceSet = list[str]  # TODO: Set not supported by MessagePack. Is list corre
 
 
 
-class Opaque(BaseModel, list=True, tagged=True, tag="Opaque"):
+class Opaque(BaseModel):
     """ An opaque operation that can be downcasted by the extensions that define it. """
+    t: Literal['Opaque'] = "Opaque"
     ty: CustomType
     linear: bool
 
@@ -97,19 +104,20 @@ class Opaque(BaseModel, list=True, tagged=True, tag="Opaque"):
 # --------------- LinearType -------------------
 # ----------------------------------------------
 
-class Qubit(BaseModel, list=True, tagged=True, tag="Q"):
+class Qubit(BaseModel):
     """ A qubit. """
-    pass
+    t: Literal['Q'] = "Q"
+    
 
 
 
-SimpleType = Union[Qubit, Variable, Int, F64, String, Graph, List, Array, Map, Tuple, Sum]
+SimpleType = Annotated[Union[Qubit, Variable, Int, F64, String, Graph, List, Array, Map, Tuple, Sum], Field(discriminator="t")]
 
 def is_linear(ty: SimpleType) -> bool:
     if isinstance(ty, Qubit):
         return True
     elif isinstance(ty, (List, Tuple, Sum, Array, Map, Opaque)):
-        return ty.linear
+        return ty.l
     return False
     
 # -------------------------------------------
