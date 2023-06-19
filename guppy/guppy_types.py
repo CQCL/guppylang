@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Any
+from typing import Optional, Any, Sequence
 
 import guppy.hugr.tys as tys
 
@@ -13,7 +13,7 @@ class GuppyType(ABC):
 
 @dataclass(frozen=True)
 class TypeRow:
-    tys: list[GuppyType]
+    tys: Sequence[GuppyType]
 
     def __str__(self) -> str:
         if len(self.tys) == 0:
@@ -56,9 +56,9 @@ class BoolType(GuppyType):
 
 @dataclass(frozen=True)
 class FunctionType(GuppyType):
-    args: list[GuppyType]
-    returns: list[GuppyType]
-    arg_names: Optional[list[str]] = None
+    args: Sequence[GuppyType]
+    returns: Sequence[GuppyType]
+    arg_names: Optional[Sequence[str]] = None
 
     def __str__(self) -> str:
         return f"{TypeRow(self.args)} -> {TypeRow(self.returns)}"
@@ -73,7 +73,7 @@ class FunctionType(GuppyType):
 
 @dataclass(frozen=True)
 class TupleType(GuppyType):
-    element_types: list[GuppyType]
+    element_types: Sequence[GuppyType]
 
     def __str__(self) -> str:
         return f"({', '.join(str(e) for e in self.element_types)})"
@@ -89,7 +89,7 @@ class TupleType(GuppyType):
 
 @dataclass(frozen=True)
 class SumType(GuppyType):
-    element_types: list[GuppyType]
+    element_types: Sequence[GuppyType]
 
     def __str__(self) -> str:
         return f"Sum({', '.join(str(e) for e in self.element_types)})"

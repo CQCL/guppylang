@@ -406,7 +406,7 @@ class Hugr:
     def add_unpack_tuple(self, input_tuple: OutPortV, parent: Optional[Node] = None) -> VNode:
         """ Adds an `UnpackTuple` node to the graph. """
         assert isinstance(input_tuple.ty, TupleType)
-        return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.UnpackTuple())), None, input_tuple.ty.element_types,
+        return self._add_node(ops.Dataflow(op=ops.Leaf(op=ops.UnpackTuple())), None, list(input_tuple.ty.element_types),
                               parent, [input_tuple])
 
     def add_tag(self, variants: TypeList, tag: int, inp: OutPortV, parent: Optional[Node] = None) -> VNode:
@@ -419,12 +419,12 @@ class Hugr:
     def add_call(self, def_port: OutPortV, args: list[OutPortV], parent: Optional[Node] = None) -> VNode:
         """ Adds a `Call` node to the graph. """
         assert isinstance(def_port.ty, FunctionType)
-        return self._add_node(ops.Dataflow(op=ops.Call()), None, def_port.ty.returns, parent, args + [def_port])
+        return self._add_node(ops.Dataflow(op=ops.Call()), None, list(def_port.ty.returns), parent, args + [def_port])
 
     def add_indirect_call(self, def_port: OutPortV, args: list[OutPortV], parent: Optional[Node] = None) -> VNode:
         """ Adds an `IndirectCall` node to the graph. """
         assert isinstance(def_port.ty, FunctionType)
-        return self._add_node(ops.Dataflow(op=ops.CallIndirect()), None, def_port.ty.returns, parent, args + [def_port])
+        return self._add_node(ops.Dataflow(op=ops.CallIndirect()), None, list(def_port.ty.returns), parent, args + [def_port])
 
     def add_def(self, fun_ty: FunctionType, parent: Optional[Node], name: str) -> DFContainingVNode:
         """ Adds a `Def` node to the graph. """
@@ -520,11 +520,11 @@ class Hugr:
             if isinstance(n, VNode) and isinstance(n.op, ops.DummyOp):
                 name = n.op.name
                 fun_ty = FunctionType(list(n.in_port_types), list(n.out_port_types))
-                decl = self.add_declare(copy.deepcopy(fun_ty), self.root, name)
+                decl = self.add_declare(copy.copy(fun_ty), self.root, name)
                 sig = tys.Signature(input=tys.TypeRow(types=[t.to_hugr() for t in fun_ty.args]),
                                     output=tys.TypeRow(types=[t.to_hugr() for t in fun_ty.returns]))
                 n.op = ops.Dataflow(op=ops.Call(signature=sig))
-                self.add_edge(decl.out_port(0), n.add_in_port(copy.deepcopy(fun_ty)))
+                self.add_edge(decl.out_port(0), n.add_in_port(copy.copy(fun_ty)))
         return self
 
     def insert_copies(self) -> "Hugr":
