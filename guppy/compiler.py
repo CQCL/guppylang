@@ -114,6 +114,9 @@ class Variable:
         """ The type of the variable. """
         return self.port.ty
 
+    def __lt__(self, other: "Variable") -> bool:
+        return self.name < other.name
+
 
 def type_from_ast(node: ast.expr) -> GuppyType:
     """ Turns an AST expression into a Guppy type. """
@@ -275,7 +278,7 @@ class CompilerBase(ABC):
         """ Adds an input node with ports for each live variable. """
         # Inputs are ordered lexicographically
         # TODO: Instead we could pass around an explicit variable ordering
-        vs = sorted(variables.values(), key=lambda v: v.name)
+        vs = sorted(variables.values())
         inp = self.graph.add_input(output_tys=[v.ty for v in vs], parent=parent)
         return {v.name: Variable(v.name, inp.out_port(i), v.defined_at)
                 for (i, v) in enumerate(vs)}
@@ -287,7 +290,7 @@ class CompilerBase(ABC):
         """
         # Outputs are order lexicographically
         # TODO: Instead we could pass around an explicit variable ordering
-        vs = sorted(variables.values(), key=lambda v: v.name)
+        vs = sorted(variables.values())
         extra_outputs = extra_outputs or []
         self.graph.add_output(parent=parent, inputs=extra_outputs + [v.port for v in vs])
 
@@ -770,7 +773,7 @@ class FunctionalStatementCompiler(StatementCompiler):
 
     def _begin_tail_loop(self, dfg: DFContainer) -> DFContainer:
         """ Creates a `TailLoop` node with input capturing all live variables. """
-        vs = sorted(dfg.variables.values(), key=lambda v: v.name)
+        vs = sorted(dfg.variables.values())
         loop = self.graph.add_tail_loop(inputs=[v.port for v in vs], parent=dfg.node)
         new_vars = self._add_input(dfg.variables, loop)
         return DFContainer(loop, new_vars, dfg.global_variables, dfg.errs_on_usage.copy())
@@ -784,7 +787,7 @@ class FunctionalStatementCompiler(StatementCompiler):
         variables = {x: v for x, v in dfg.variables.items() if subset is None or x in subset}
         self._add_output(dfg.node, variables, extra_outputs=[cond_port])
         return {v.name: Variable(v.name, dfg.node.add_out_port(v.ty), v.defined_at)
-                for v in sorted(variables.values(), key=lambda v: v.name)}
+                for v in sorted(variables.values())}
 
     def visit_Break(self, node: ast.Break, dfg: DFContainer, hooks: Hooks) -> Optional[BasicBlock]:
         raise GuppyError("Break is not allowed in a functional statement", node)
