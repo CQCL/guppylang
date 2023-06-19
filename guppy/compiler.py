@@ -492,7 +492,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
 
 # Types for control-flow hooks needed for statement compilation
 LoopHook = Callable[[BasicBlock], Optional[BasicBlock]]
-ReturnHook = Callable[[BasicBlock, ast.Return, list[OutPortV]], Optional[BasicBlock]]
+ReturnHook = Callable[[BasicBlock, Optional[ast.Return], list[OutPortV]], Optional[BasicBlock]]
 
 
 class Hooks(NamedTuple):
@@ -923,7 +923,7 @@ class FunctionCompiler(CompilerBase):
         return_block = self.graph.add_exit(output_tys=func_ty.returns, parent=cfg)
 
         # Define hook that is executed on return
-        def return_hook(curr_bb: BasicBlock, node: ast.Return, row: list[OutPortV]) -> Optional[BasicBlock]:
+        def return_hook(curr_bb: BasicBlock, node: Optional[ast.Return], row: list[OutPortV]) -> Optional[BasicBlock]:
             tys = [p.ty for p in row]
             if tys != func_ty.returns:
                 raise GuppyTypeError(f"Return type mismatch: expected `{TypeRow(func_ty.returns)}`, "
@@ -941,8 +941,8 @@ class FunctionCompiler(CompilerBase):
         if final_bb is not None:
             if len(func_ty.returns) > 0:
                 raise GuppyError(f"Expected return statement of type `{TypeRow(func_ty.returns)}`", func_def.body[-1])
+            return_hook(final_bb, None, [])
             self.stmt_compiler._finish_bb(final_bb, outputs=[])
-            self.graph.add_edge(final_bb.node.add_out_port(), return_block.add_in_port())
 
         # Add final output node for the def block
         self.graph.add_output(inputs=[cfg.add_out_port(ty) for ty in func_ty.returns], parent=def_node)
