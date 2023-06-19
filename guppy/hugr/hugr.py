@@ -17,7 +17,7 @@ NodeIdx = int
 PortOffset = int
 
 
-@dataclass
+@dataclass(frozen=True)
 class Port(ABC):
     """ Base class for ports on nodes. """
     node: "Node"
@@ -34,13 +34,13 @@ class OutPort(Port, ABC):
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class InPortV(InPort):
     """ A typed value input port. """
     ty: GuppyType
 
 
-@dataclass
+@dataclass(frozen=True)
 class OutPortV(OutPort):
     """ A typed value output port. """
     ty: GuppyType
