@@ -89,11 +89,11 @@ class UndefinedPort(OutPortV):
         pass
 
     @property
-    def node(self) -> Node:  # type: ignore
+    def node(self) -> Node:
         raise InternalGuppyError("Tried to access undefined Port")
 
     @property
-    def offset(self) -> int:  # type: ignore
+    def offset(self) -> int:
         raise InternalGuppyError("Tried to access undefined Port")
 
 
