@@ -174,7 +174,6 @@ class DFContainer:
     """
     node: DFContainingNode
     variables: VarMap
-    global_variables: VarMap
     errs_on_usage: ErrMap
 
     def __getitem__(self, item: str) -> Variable:
@@ -195,7 +194,7 @@ class DFContainer:
     def __copy__(self) -> "DFContainer":
         # Make a copy of the var map so that mutating the copy doesn't
         # mutate our variable mapping
-        return DFContainer(self.node, self.variables.copy(), self.global_variables, self.errs_on_usage.copy())
+        return DFContainer(self.node, self.variables.copy(), self.errs_on_usage.copy())
 
     def check_errs_on_usage(self, name_node: ast.Name) -> None:
         if name_node.id in self.errs_on_usage:
@@ -264,7 +263,7 @@ class BasicBlock(DFContainer):
     def __copy__(self) -> "BasicBlock":
         # Make a copy of the var map so that mutating the copy doesn't
         # mutate our variable mapping
-        return BasicBlock(self.node, self.variables.copy(), self.global_variables, self.errs_on_usage.copy())
+        return BasicBlock(self.node, self.variables.copy(), self.errs_on_usage.copy())
 
 
 class CompilerBase(ABC):
@@ -273,6 +272,7 @@ class CompilerBase(ABC):
     Provides utility methods for working with inputs, outputs, DFGs, and blocks.
     """
     graph: Hugr
+    global_variables: VarMap
 
     def _add_input(self, variables: VarMap, parent: Node) -> VarMap:
         """ Adds an input node with ports for each live variable. """
@@ -329,8 +329,8 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
     def visit_Name(self, node: ast.Name) -> OutPortV:
         self.dfg.check_errs_on_usage(node)
         x = node.id
-        if x in self.dfg.variables or x in self.dfg.global_variables:
-            var = self.dfg.variables.get(x, self.dfg.global_variables.get(x))
+        if x in self.dfg or x in self.global_variables:
+            var = self.dfg[x] if x in self.dfg else self.global_variables[x]
             return var.port
         raise GuppyError(f"Variable `{x}` is not defined", node)
 
@@ -456,9 +456,9 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
     def visit_Call(self, node: ast.Call) -> OutPortV:
         # We need to figure out if this is a direct or indirect call
         f = node.func
-        if isinstance(f, ast.Name) and f.id in self.dfg.global_variables and f.id not in self.dfg.variables:
+        if isinstance(f, ast.Name) and f.id in self.global_variables and f.id not in self.dfg:
             is_direct = True
-            var = self.dfg.global_variables[f.id]
+            var = self.global_variables[f.id]
             func_port = var.port
         else:
             is_direct = False
@@ -547,7 +547,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
         for p in predecessors:
             self.graph.add_edge(p.node.add_out_port(), block.add_in_port())
         new_vars = self._add_input(merge_vars, block)
-        return BasicBlock(block, new_vars, predecessors[0].global_variables, errs_on_usage)
+        return BasicBlock(block, new_vars, errs_on_usage)
 
     def _begin_new_bb(self, predecessor: BasicBlock) -> BasicBlock:
         """ Creates a basic block, i.e. a `Block` node with an input capturing
@@ -768,7 +768,7 @@ class FunctionalStatementCompiler(StatementCompiler):
         for _ in range(num_cases):
             case = self.graph.add_case(cond)
             new_vars = self._add_input(dfg.variables, case)
-            cases.append(DFContainer(case, new_vars, dfg.global_variables, dfg.errs_on_usage.copy()))
+            cases.append(DFContainer(case, new_vars, dfg.errs_on_usage.copy()))
         return cond, cases
 
     def _begin_tail_loop(self, dfg: DFContainer) -> DFContainer:
@@ -776,7 +776,7 @@ class FunctionalStatementCompiler(StatementCompiler):
         vs = sorted(dfg.variables.values())
         loop = self.graph.add_tail_loop(inputs=[v.port for v in vs], parent=dfg.node)
         new_vars = self._add_input(dfg.variables, loop)
-        return DFContainer(loop, new_vars, dfg.global_variables, dfg.errs_on_usage.copy())
+        return DFContainer(loop, new_vars, dfg.errs_on_usage.copy())
 
     def _finish_dfg(self, dfg: DFContainer, subset: Optional[Iterable[str]] = None) -> None:
         variables = {x: v for x, v in dfg.variables.items() if subset is None or x in subset}
@@ -907,6 +907,9 @@ class FunctionCompiler(CompilerBase):
         """ Compiles a `FunctionDef` AST node into a Guppy function. """
         self.line_offset = line_offset
         self.stmt_compiler.line_offset = line_offset
+        self.global_variables = global_variables
+        self.stmt_compiler.global_variables = global_variables
+        self.stmt_compiler.expr_compiler.global_variables = global_variables
 
         func_ty = self.validate_signature(func_def)
         args = func_def.args.args
@@ -922,7 +925,7 @@ class FunctionCompiler(CompilerBase):
             port = input_node.out_port(i)
             variables[name] = Variable(name, port, {SourceLoc.from_ast(arg, self.line_offset)})
 
-        input_bb = BasicBlock(input_block, variables, global_variables, {})
+        input_bb = BasicBlock(input_block, variables, {})
         return_block = self.graph.add_exit(output_tys=func_ty.returns, parent=cfg)
 
         # Define hook that is executed on return
