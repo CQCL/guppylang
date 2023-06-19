@@ -949,7 +949,6 @@ class FunctionCompiler(CompilerBase):
             if len(func_ty.returns) > 0:
                 raise GuppyError(f"Expected return statement of type `{TypeRow(func_ty.returns)}`", func_def.body[-1])
             return_hook(final_bb, None, [])
-            self.stmt_compiler._finish_bb(final_bb, outputs=[])
 
         # Add final output node for the def block
         self.graph.add_output(inputs=[cfg.add_out_port(ty) for ty in func_ty.returns], parent=def_node)
