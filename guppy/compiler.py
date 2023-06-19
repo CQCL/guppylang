@@ -1,5 +1,4 @@
 import ast
-import copy
 import inspect
 import sys
 import textwrap
@@ -292,42 +291,6 @@ class CompilerBase(ABC):
         extra_outputs = extra_outputs or []
         self.graph.add_output(parent=parent, inputs=extra_outputs + [v.port for v in vs])
 
-    def _begin_new_merge_bb(self, predecessors: list[BasicBlock], merge_vars: VarMap,
-                            errs_on_usage: Optional[ErrMap] = None) -> BasicBlock:
-        assert len(predecessors) > 0
-        block = self.graph.add_block(predecessors[0].node.parent)
-        errs_on_usage = merge_err_maps(errs_on_usage or {}, *(p.errs_on_usage for p in predecessors))
-        for p in predecessors:
-            self.graph.add_edge(p.node.add_out_port(), block.add_in_port())
-        new_vars = self._add_input(merge_vars, block)
-        return BasicBlock(block, new_vars, predecessors[0].global_variables, errs_on_usage)
-
-    def _begin_new_bb(self, predecessor: BasicBlock) -> BasicBlock:
-        """ Creates a basic block, i.e. a `Block` node with an input capturing
-        all live variables and connects it to a control flow predecessor BB.
-        """
-        return self._begin_new_merge_bb([predecessor], predecessor.variables)
-
-    def _finish_bb(self, bb: BasicBlock, subset: Optional[Iterable[str]] = None, branch_pred: Optional[OutPortV] = None,
-                   outputs: Optional[list[OutPortV]] = None) -> None:
-        """ Finishes a basic block by adding an output node.
-
-        Optionally, only a subset of the active variables in the BB can be
-        outputted. Also, if the block branches, an optional port holding the
-        branching predicate can be passed.
-        Alternatively, a list of ports to output can be passed manually.
-        """
-        # If the BB doesn't branch, we still need to add a unit () output
-        if branch_pred is None:
-            unit = self.graph.add_make_tuple([], parent=bb.node).out_port(0)
-            branch_pred = self.graph.add_tag(variants=[TupleType([])], tag=0, inp=unit, parent=bb.node).out_port(0)
-        if outputs is None:
-            variables = {v.name: v for v in bb.variables.values() if subset is None or v.name in subset}
-            self._add_output(bb.node, variables, [branch_pred])
-        else:
-            assert subset is None
-            self.graph.add_output(inputs=[branch_pred] + outputs, parent=bb.node)
-
 
 class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
     """ A compiler from Python expressions to Hugr. """
@@ -572,6 +535,42 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
             else:
                 bb_opt = self.visit(node, bb_opt, hooks)
         return bb_opt
+
+    def _begin_new_merge_bb(self, predecessors: list[BasicBlock], merge_vars: VarMap,
+                            errs_on_usage: Optional[ErrMap] = None) -> BasicBlock:
+        assert len(predecessors) > 0
+        block = self.graph.add_block(predecessors[0].node.parent)
+        errs_on_usage = merge_err_maps(errs_on_usage or {}, *(p.errs_on_usage for p in predecessors))
+        for p in predecessors:
+            self.graph.add_edge(p.node.add_out_port(), block.add_in_port())
+        new_vars = self._add_input(merge_vars, block)
+        return BasicBlock(block, new_vars, predecessors[0].global_variables, errs_on_usage)
+
+    def _begin_new_bb(self, predecessor: BasicBlock) -> BasicBlock:
+        """ Creates a basic block, i.e. a `Block` node with an input capturing
+        all live variables and connects it to a control flow predecessor BB.
+        """
+        return self._begin_new_merge_bb([predecessor], predecessor.variables)
+
+    def _finish_bb(self, bb: BasicBlock, subset: Optional[Iterable[str]] = None, branch_pred: Optional[OutPortV] = None,
+                   outputs: Optional[list[OutPortV]] = None) -> None:
+        """ Finishes a basic block by adding an output node.
+
+        Optionally, only a subset of the active variables in the BB can be
+        outputted. Also, if the block branches, an optional port holding the
+        branching predicate can be passed.
+        Alternatively, a list of ports to output can be passed manually.
+        """
+        # If the BB doesn't branch, we still need to add a unit () output
+        if branch_pred is None:
+            unit = self.graph.add_make_tuple([], parent=bb.node).out_port(0)
+            branch_pred = self.graph.add_tag(variants=[TupleType([])], tag=0, inp=unit, parent=bb.node).out_port(0)
+        if outputs is None:
+            variables = {v.name: v for v in bb.variables.values() if subset is None or v.name in subset}
+            self._add_output(bb.node, variables, [branch_pred])
+        else:
+            assert subset is None
+            self.graph.add_output(inputs=[branch_pred] + outputs, parent=bb.node)
 
     def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Optional[BasicBlock]:
         raise GuppyError("Statement not supported", node)
