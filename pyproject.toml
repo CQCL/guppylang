@@ -20,3 +20,10 @@ dev = [
     "build",
     "pytest",
 ]
+
+[tool.mypy]
+plugins = [
+    "pydantic.mypy"
+]
+strict = true
+allow_redefinition = true

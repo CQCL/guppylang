@@ -1,9 +1,9 @@
 """Visualise HUGR using graphviz."""
 
-import graphviz as gv
+import graphviz as gv  # type: ignore
 from typing import Iterable
 
-from guppy.hugr.hugr import InPort, OutPort, Node, Hugr
+from guppy.hugr.hugr import InPort, OutPort, Node, Hugr, OutPortV
 
 # old palettte: https://colorhunt.co/palette/343a407952b3ffc107e1e8eb
 # _COLOURS = {
@@ -61,7 +61,7 @@ _HTML_LABEL_TEMPLATE = """
 """
 
 
-def _format_html_label(**kwargs):
+def _format_html_label(**kwargs: str) -> str:
     _HTML_LABEL_DEFAULTS = {
         "label_color": _COLOURS["dark"],
         "node_back_color": _COLOURS["node"],
@@ -116,15 +116,15 @@ def _html_ports(ports: Iterable[str], id_prefix: str) -> str:
     )
 
 
-def _in_port_name(p: InPort):
+def _in_port_name(p: InPort) -> str:
     return f"{p.node.idx}:{_INPUT_PREFIX}{p.offset}"
 
 
-def _out_port_name(p: OutPort):
+def _out_port_name(p: OutPort) -> str:
     return f"{p.node.idx}:{_OUTPUT_PREFIX}{p.offset}"
 
 
-def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph):
+def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph) -> None:
     in_ports = [str(i) for i in range(node.num_in_ports)]
     out_ports = [str(i) for i in range(node.num_out_ports)]
     if len(node.meta_data) > 0:
@@ -137,7 +137,7 @@ def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph):
                 viz_node(child, hugr, sub)
             html_label = _format_html_label(
                 node_back_color=_COLOURS["edge"],
-                node_label=node.name,
+                node_label=node.op.display_name(),
                 node_data=data,
                 border_colour=_COLOURS["port_border"],
                 inputs_row=_html_ports(in_ports, _INPUT_PREFIX) if len(in_ports) > 0 else "",
@@ -148,7 +148,7 @@ def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph):
     else:
         html_label = _format_html_label(
             node_back_color=_COLOURS["node"],
-            node_label=node.name,
+            node_label=node.op.display_name(),
             node_data=data,
             inputs_row=_html_ports(in_ports, _INPUT_PREFIX) if len(in_ports) > 0 else "",
             outputs_row=_html_ports(out_ports, _OUTPUT_PREFIX) if len(out_ports) > 0 else "",
@@ -177,10 +177,10 @@ def hugr_to_graphviz(hugr: Hugr) -> gv.Digraph:
         "fontsize": "9",
         "fontcolor": "black",
     }
-    for edge in hugr.edges():
-        graph.edge(_out_port_name(edge.src_port), _in_port_name(edge.target_port),
-                   label=str(edge.src_port.ty) if edge.src_port.ty else "",
-                   color=_COLOURS["edge"] if edge.src_port.ty is not None else _COLOURS["dark"],
+    for src_port, tgt_port in hugr.edges():
+        graph.edge(_out_port_name(src_port), _in_port_name(tgt_port),
+                   label=str(src_port.ty) if isinstance(src_port, OutPortV) else "",
+                   color=_COLOURS["edge"] if isinstance(src_port, OutPortV) else _COLOURS["dark"],
                    **edge_attr)
     return graph
 

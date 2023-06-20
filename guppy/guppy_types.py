@@ -1,80 +1,134 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any, Sequence
+
+import guppy.hugr.tys as tys
 
 
-class GuppyType(object):
-    pass
+class GuppyType(ABC):
+    """ Base class for all Guppy types.
+
+    Note that all instances of `GuppyType` subclasses are expected to be immutable.
+    """
+    @abstractmethod
+    def to_hugr(self) -> tys.SimpleType:
+        pass
 
 
 @dataclass(frozen=True)
-class RowType(GuppyType):
-    element_types: list[GuppyType]
+class TypeRow:
+    tys: Sequence[GuppyType]
 
-    def __str__(self):
-        if len(self.element_types) == 0:
+    def __str__(self) -> str:
+        if len(self.tys) == 0:
             return "None"
-        elif len(self.element_types) == 1:
-            return str(self.element_types[0])
+        elif len(self.tys) == 1:
+            return str(self.tys[0])
         else:
-            return f"({', '.join(str(e) for e in self.element_types)})"
+            return f"({', '.join(str(e) for e in self.tys)})"
 
 
 @dataclass(frozen=True)
 class IntType(GuppyType):
-    def __str__(self):
+    def __str__(self) -> str:
         return "int"
+
+    def to_hugr(self) -> tys.SimpleType:
+        return tys.Classic(ty=tys.Int(size=32))  # TODO: Parametrise over size
 
 
 @dataclass(frozen=True)
 class FloatType(GuppyType):
-    def __str__(self):
+    def __str__(self) -> str:
         return "float"
+
+    def to_hugr(self) -> tys.SimpleType:
+        return tys.Classic(ty=tys.F64())
 
 
 @dataclass(frozen=True)
 class BoolType(GuppyType):
-    def __str__(self):
+    def __str__(self) -> str:
         return "bool"
+
+    def to_hugr(self) -> tys.SimpleType:
+        # Hugr bools are encoded as Sum((), ())
+        unit = tys.Classic(ty=tys.ContainerClassic(ty=tys.Tuple(tys=tys.TypeRow(types=[]))))
+        s = tys.Sum(tys=tys.TypeRow(types=[unit, unit]))
+        return tys.Classic(ty=tys.ContainerClassic(ty=s))
 
 
 @dataclass(frozen=True)
 class FunctionType(GuppyType):
-    args: list[GuppyType]
-    returns: list[GuppyType]
-    arg_names: list[str]
+    args: Sequence[GuppyType]
+    returns: Sequence[GuppyType]
+    arg_names: Optional[Sequence[str]] = None
 
-    def __str__(self):
-        return f"{RowType(self.args)} -> {RowType(self.returns)}"
+    def __str__(self) -> str:
+        return f"{TypeRow(self.args)} -> {TypeRow(self.returns)}"
+
+    def to_hugr(self) -> tys.SimpleType:
+        ins = tys.TypeRow(types=[t.to_hugr() for t in self.args])
+        outs = tys.TypeRow(types=[t.to_hugr() for t in self.returns])
+        sig = tys.Signature(input=ins, output=outs, const_input=tys.TypeRow(types=[]))
+        # TODO: Resources
+        return tys.Classic(ty=tys.Graph(resources=[], signature=sig))
 
 
 @dataclass(frozen=True)
 class TupleType(GuppyType):
-    element_types: list[GuppyType]
+    element_types: Sequence[GuppyType]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"({', '.join(str(e) for e in self.element_types)})"
+
+    def to_hugr(self) -> tys.SimpleType:
+        ts = [t.to_hugr() for t in self.element_types]
+        # As soon as one element is linear, the whole tuple must be linear
+        if any(isinstance(t, tys.Linear) for t in ts):
+            return tys.Linear(ty=tys.ContainerLinear(ty=tys.Tuple(tys=tys.TypeRow(types=ts))))
+        else:
+            return tys.Classic(ty=tys.ContainerClassic(ty=tys.Tuple(tys=tys.TypeRow(types=ts))))
+
+
+@dataclass(frozen=True)
+class SumType(GuppyType):
+    element_types: Sequence[GuppyType]
+
+    def __str__(self) -> str:
+        return f"Sum({', '.join(str(e) for e in self.element_types)})"
+
+    def to_hugr(self) -> tys.SimpleType:
+        ts = [t.to_hugr() for t in self.element_types]
+        # As soon as one element is linear, the whole sum type must be linear
+        if any(isinstance(t, tys.Linear) for t in ts):
+            return tys.Linear(ty=tys.ContainerLinear(ty=tys.Sum(tys=tys.TypeRow(types=ts))))
+        else:
+            return tys.Classic(ty=tys.ContainerClassic(ty=tys.Sum(tys=tys.TypeRow(types=ts))))
 
 
 @dataclass(frozen=True)
 class StringType(GuppyType):
-    def __str__(self):
+    def __str__(self) -> str:
         return "str"
+
+    def to_hugr(self) -> tys.SimpleType:
+        return tys.Classic(ty=tys.String())
 
 
 @dataclass(frozen=True)
 class ListType(GuppyType):
     element_type: GuppyType
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"list[{self.element_type}]"
 
-
-@dataclass(frozen=True)
-class SetType(GuppyType):
-    element_type: GuppyType
-
-    def __str__(self):
-        return f"set[{self.element_type}]"
+    def to_hugr(self) -> tys.SimpleType:
+        t = self.element_type.to_hugr()
+        if isinstance(t, tys.Linear):
+            return tys.Linear(ty=tys.ContainerLinear(ty=tys.ListLinear(ty=t.ty)))
+        else:
+            return tys.Classic(ty=tys.ContainerClassic(ty=tys.ListClassic(ty=t.ty)))
 
 
 @dataclass(frozen=True)
@@ -82,16 +136,20 @@ class DictType(GuppyType):
     key_type: GuppyType
     value_type: GuppyType
 
-    def __str__(self):
-        return f"dct[{self.key_type}, {self.value_type}]"
+    def __str__(self) -> str:
+        return f"dict[{self.key_type}, {self.value_type}]"
+
+    def to_hugr(self) -> tys.SimpleType:
+        kt = self.key_type.to_hugr()
+        vt = self.value_type.to_hugr()
+        assert isinstance(kt, tys.Classic)
+        if isinstance(vt, tys.Linear):
+            return tys.Linear(ty=tys.ContainerLinear(ty=tys.MapLinear(key=kt.ty, value=vt.ty)))
+        else:
+            return tys.Classic(ty=tys.ContainerClassic(ty=tys.MapClassic(key=kt.ty, value=vt.ty)))
 
 
-@dataclass(frozen=True)
-class TypeVar(GuppyType):
-    name: str
-
-
-def type_from_python_value(val: object) -> Optional[GuppyType]:
+def type_from_python_value(val: Any) -> Optional[GuppyType]:
     """ Checks if the given Python value is a valid Guppy value.
     In that case, the Guppy type of the value is returned.
     """

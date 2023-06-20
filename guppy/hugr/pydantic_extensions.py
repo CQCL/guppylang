@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, Extra, root_validator
-from typing import get_origin, get_args, Literal, Union, Any
+from typing import get_origin, get_args, Literal, Union, Any, Optional
 
 """
 This is all very hacky, but we need the following two extra Pydantic features
@@ -98,7 +98,8 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
     # This can be set by passing `tagged=True` when defining a subclass.
     _tagged: bool = False
 
-    def __init_subclass__(cls, list=False, tagged=False, tag=None, **kwargs):
+    def __init_subclass__(cls, list: bool = False, tagged: bool = False, tag: Optional[str] = None,
+                          **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         cls._is_list_model = list
         cls._tagged = tagged
@@ -114,9 +115,9 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
         # we can trick the Pydantic IDE support to still give hints for
         # the original constructor
         old_init = cls.__init__
-        cls.__init__ = lambda self, *args, **kwargs_: cls.__new_init__(self, old_init, *args, **kwargs_)
+        cls.__init__ = lambda self, *args, **kwargs_: cls.__new_init__(self, old_init, *args, **kwargs_)  # type: ignore
 
-    def __new_init__(self, old_init, *args, **kwargs):
+    def __new_init__(self, old_init: Any, *args: Any, **kwargs: Any) -> None:
         # Accept positional arguments for list models
         fields = self.__fields__.copy()
         fields.pop("tag_")  # Ignore `tag_` field
@@ -124,11 +125,11 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
             field_order = list(fields)
             for (i, arg) in enumerate(args):
                 kwargs[field_order[i]] = arg
-            args = []
+            args = tuple()
         old_init(self, *args, **kwargs)
 
     @root_validator(pre=True)
-    def parse_tagged_union(cls, values):
+    def parse_tagged_union(cls, values: dict[str, Any]) -> dict[str, Any]:
         # We need to handle dict-parsing of externally tagged unions ourselves using
         # this custom root validator
         for field_name, value in values.items():
@@ -139,14 +140,14 @@ class BaseModel(PydanticBaseModel, extra=Extra.forbid):
                 values[field_name] = parse_tagged_union(field.outer_type_, values[field_name])
         return values
 
-    def dict(self, *args, **kwargs):
+    def dict(self, *args: Any, **kwargs: Any) -> Union[dict[str, Any], list[Any], str]:  # type: ignore
         # We override the dict() method to alter the serialisation behaviour
         d = super().dict(*args, **kwargs)
         if self._is_list_model:
             vs = [d[f] for f in self.__fields__ if f != "tag_"]
             d = vs[0] if len(vs) == 1 else vs
         if self._tagged:
-            d = self.tag_ if d == [] else {self.tag_: d}
+            return self.tag_ if isinstance(d, list) and d == [] else {self.tag_: d}
         return d
 
 
