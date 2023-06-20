@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from guppy.hugr.ops import NodeID, OpType
 
 
-# Node = tuple[NodeID,  OpType]  # (parent, optype)
 Port = tuple[NodeID, Optional[int]]  # (node, offset)
 Edge = tuple[Port, Port]
 

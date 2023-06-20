@@ -317,9 +317,7 @@ class Hugr:
         return node
 
     def set_root_name(self, name: str) -> VNode:
-        """ Adds a Root node to the graph.
-
-        Note that each Hugr may only have a single root.
+        """ Sets the name of the root node.
         """
         self.root.meta_data["name"]=name
         return self.root
@@ -545,7 +543,6 @@ class Hugr:
     def to_raw(self) -> raw.RawHugr:
         """ Returns the raw representation of this HUGR for serialisation. """
         self.remove_dummy_nodes()
-        # self.insert_copies()
         self.insert_order_edges()
         # Hugr requires that Input/Output nodes are the first/second children in
         # a DFG. Furthermore, exit nodes must be the second children of CFGs. We're
@@ -556,7 +553,7 @@ class Hugr:
         entry_nodes: list[Node] = []
         exit_nodes: list[Node] = []
         remaining_nodes: list[Node] = []
-        indices = itertools.count()  # Hugr indices start from 1
+        indices = itertools.count()
         raw_index: dict[int, ops.NodeID] = {}
         all_nodes = self.nodes()
         root_node = next(all_nodes)
@@ -564,22 +561,19 @@ class Hugr:
             if isinstance(n.op, ops.DataflowOp) and isinstance(n.op, ops.Input):
                 input_nodes.append(n)
             elif isinstance(n.op, ops.DataflowOp) and isinstance(n.op, ops.Output):
-                input_nodes.append(n)
+                output_nodes.append(n)
             elif isinstance(n.op, ops.BasicBlock) and isinstance(n.op, ops.DFB) and n.num_in_ports == 0:
                 entry_nodes.append(n)
             elif isinstance(n.op, ops.BasicBlock) and isinstance(n.op, ops.Exit):
                 entry_nodes.append(n)
             else:
                 remaining_nodes.append(n)
-        for n in itertools.chain(iter([root_node]), iter(entry_nodes), iter(input_nodes), iter(remaining_nodes), iter(output_nodes),
+        for n in itertools.chain(iter([root_node]), iter(entry_nodes), iter(input_nodes), iter(output_nodes), iter(remaining_nodes),
                                  iter(exit_nodes)):
             raw_index[n.idx] = next(indices)
 
         nodes: list[ops.OpType] = [ops.Module()] * self._graph.number_of_nodes()
         for n in self.nodes():
-            # Ports for constE edges are only present if they are connected
-            # is_const = not isinstance(n.op, ops.DataflowOp) and n.num_out_ports == 1 and isinstance(n, VNode)
-            # num_out_ports = 0 if is_const and next(self.out_edges(n.out_port(0)), None) is None else n.num_out_ports
             idx = raw_index[n.idx]
             # Nodes without parent have themselves as parent in the serialised format
             parent = n.parent or n
