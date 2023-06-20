@@ -26,13 +26,6 @@ class BaseOp(ABC, BaseModel):
         return self.__class__.__name__
 
 
-# -----------------------------------------
-# --------------- OpType ------------------
-# -----------------------------------------
-class BasicBlock(BaseOp):
-    """ A basic block in a control flow graph - parent will be a CFG node. """
-    op: Literal["BasicBlock"] = "BasicBlock"
-
 class DummyOp(BaseOp):
     """ Nodes used inside dataflow containers (DFG, Conditional, TailLoop, def,
     BasicBlock). """
@@ -44,10 +37,9 @@ class DummyOp(BaseOp):
 
 
 
-
-# -------------------------------------------
-# --------------- ModuleOp ------------------
-# -------------------------------------------
+# ----------------------------------------------------------
+# --------------- Module level operations ------------------
+# ----------------------------------------------------------
 
 class Module(BaseOp):
     """ The root of a module, parent of all other `ModuleOp`s. """
@@ -92,8 +84,14 @@ class Const(BaseOp):
 
 
 # -----------------------------------------------
-# --------------- BasicBlockOp ------------------
+# --------------- BasicBlock types ------------------
 # -----------------------------------------------
+
+
+class BasicBlock(BaseOp):
+    """ A basic block in a control flow graph - parent will be a CFG node. """
+    op: Literal["BasicBlock"] = "BasicBlock"
+
 
 class DFB(BasicBlock):
     """ A CFG basic block node. The signature is that of the internal Dataflow
@@ -126,25 +124,13 @@ class Exit(BasicBlock):
 BasicBlockOp = Annotated[Union[DFB, Exit], Field(discriminator="block")]
 
 
-# -----------------------------------------
-# --------------- CaseOp ------------------
-# -----------------------------------------
-
-class Case(BaseOp):
-    """ Case ops - nodes valid inside Conditional nodes. """
-    op: Literal["Case"] = "Case"
-    signature: Signature = Field(default_factory=Signature.empty)  # The signature of the contained dataflow graph.
-
-    def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
-        self.signature = tys.Signature(input=list(inputs), output=list(outputs))
-
-
 # ---------------------------------------------
 # --------------- DataflowOp ------------------
 # ---------------------------------------------
 
 class DataflowOp(BaseOp):
     pass
+
 class Input(DataflowOp):
     """ An input node. The outputs of this node are the inputs to the function. """
     op: Literal["Input"] = "Input"
@@ -241,6 +227,15 @@ class Conditional(DataflowOp):
             self.predicate_inputs.append(ty.row)
         self.other_inputs = list(in_types[1:])
         self.outputs = list(out_types)
+
+
+class Case(BaseOp):
+    """ Case ops - nodes valid inside Conditional nodes. """
+    op: Literal["Case"] = "Case"
+    signature: Signature = Field(default_factory=Signature.empty)  # The signature of the contained dataflow graph.
+
+    def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
+        self.signature = tys.Signature(input=list(inputs), output=list(outputs))
 
 
 class TailLoop(DataflowOp):
