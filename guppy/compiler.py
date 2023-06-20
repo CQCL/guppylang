@@ -922,7 +922,7 @@ class FunctionCompiler(CompilerBase):
         def_input = self.graph.add_input(parent=def_node)
         cfg = self.graph.add_cfg(def_node, inputs=[def_input.add_out_port(ty) for ty in func_ty.args])
         input_block = self.graph.add_block(cfg)
-        input_node = self.graph.add_input(output_tys=func_ty.args, parent=input_block)
+        input_node = self.graph.add_input(output_tys=list(func_ty.args), parent=input_block)
 
         variables: VarMap = {}
         for i, arg in enumerate(args):
@@ -931,12 +931,13 @@ class FunctionCompiler(CompilerBase):
             variables[name] = Variable(name, port, {SourceLoc.from_ast(arg, self.line_offset)})
 
         input_bb = BasicBlock(input_block, variables, {})
-        return_block = self.graph.add_exit(output_tys=func_ty.returns, parent=cfg)
+        return_block = self.graph.add_exit(output_tys=list(func_ty.returns), parent=cfg)
 
         # Define hook that is executed on return
         def return_hook(curr_bb: BasicBlock, node: Optional[ast.Return], row: list[OutPortV]) -> Optional[BasicBlock]:
             tys = [p.ty for p in row]
             if tys != func_ty.returns:
+                assert node is not None
                 raise GuppyTypeError(f"Return type mismatch: expected `{TypeRow(func_ty.returns)}`, "
                                      f"got `{TypeRow(tys)}`", node.value)
             self.stmt_compiler._finish_bb(curr_bb, outputs=row)
