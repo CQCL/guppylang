@@ -6,6 +6,10 @@ import guppy.hugr.tys as tys
 
 
 class GuppyType(ABC):
+    """ Base class for all Guppy types.
+
+    Note that all instances of `GuppyType` subclasses are expected to be immutable.
+    """
     @abstractmethod
     def to_hugr(self) -> tys.SimpleType:
         pass
