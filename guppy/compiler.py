@@ -85,8 +85,12 @@ class UndefinedPort(OutPortV):
 
     Raises an `InternalGuppyError` if one tries to access one of its properties.
     """
-    def __init__(self):
-        pass
+    def __init__(self, ty: GuppyType):
+        self._ty = ty
+
+    @property
+    def ty(self) -> GuppyType:
+        return self._ty
 
     @property
     def node(self) -> Node:
@@ -210,7 +214,7 @@ class DFContainer:
 
 
 def merge_variables(dfg1: DFContainer, dfg2: DFContainer,
-                    port_factory: Callable[[GuppyType], OutPortV] = lambda _: UndefinedPort) \
+                    port_factory: Callable[[GuppyType], OutPortV] = UndefinedPort) \
         -> tuple[VarMap, ErrMap]:
     """ Merges the variables occurring in two DFGs/BBs.
 
