@@ -2,6 +2,7 @@ import inspect
 import sys
 from typing import Literal, Union, Annotated
 from pydantic import Field, BaseModel, root_validator, validator
+from pydantic.utils import GetterDict
 
 
 # ---------------------------------------------
@@ -18,7 +19,7 @@ class CustomType(BaseModel):
 # --------------- Container ------------------
 # --------------------------------------------
 
-def valid_linearity(ty: "SimpleType", stated_linearity: bool):
+def valid_linearity(ty: "SimpleType", stated_linearity: bool) -> None:
     if is_linear(ty) != stated_linearity:
         raise ValueError("Inner type linearity does not match outer.")
 
@@ -37,7 +38,7 @@ class Map(BaseModel):
         return key
 
     @root_validator
-    def check_value_linearity(cls, values):
+    def check_value_linearity(cls, values: GetterDict) -> GetterDict:
         valid_linearity(values.get("v"), values.get("l"))
         return values
 
@@ -46,7 +47,7 @@ class MultiContainer(BaseModel):
     l: bool
 
     @root_validator
-    def check_value_linearity(cls, values):
+    def check_value_linearity(cls, values: GetterDict) -> GetterDict:
         valid_linearity(values.get("t"), values.get("l"))
         return values
 
@@ -64,7 +65,7 @@ class AlgebraicContainer(BaseModel):
     l: bool
 
     @root_validator
-    def check_row_linearity(cls, values):
+    def check_row_linearity(cls, values: GetterDict) -> GetterDict:
         row: TypeRow = values.get("row")
         l: bool = values.get("l")
         if any(is_linear(t) for t in row) != l:
