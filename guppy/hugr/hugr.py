@@ -560,7 +560,7 @@ class Hugr:
         exit_nodes: list[Node] = []
         remaining_nodes: list[Node] = []
         indices = itertools.count()  # Hugr indices start from 1
-        raw_index: dict[int, raw.NodeID] = {}
+        raw_index: dict[int, ops.NodeID] = {}
         all_nodes = self.nodes()
         root_node = next(all_nodes)
         for n in all_nodes:
@@ -578,7 +578,7 @@ class Hugr:
                                  iter(exit_nodes)):
             raw_index[n.idx] = next(indices)
 
-        nodes: list[raw.Node] = [(0, ops.Module())] * self._graph.number_of_nodes()
+        nodes: list[ops.OpType] = [ops.Module()] * self._graph.number_of_nodes()
         for n in self.nodes():
             # Ports for constE edges are only present if they are connected
             # is_const = not isinstance(n.op, ops.DataflowOp) and n.num_out_ports == 1 and isinstance(n, VNode)
@@ -587,7 +587,8 @@ class Hugr:
             # Nodes without parent have themselves as parent in the serialised format
             parent = n.parent or n
             n.update_op()
-            nodes[idx] = (raw_index[parent.idx],  n.op)
+            n.op.parent = raw_index[parent.idx]
+            nodes[idx] = n.op
 
         edges: list[raw.Edge] = []
         for src, tgt in self.edges():

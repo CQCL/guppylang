@@ -7,8 +7,10 @@ from pydantic import Field, BaseModel
 from .tys import Signature, TypeRow,  SimpleType, ResourceSet, Graph
 import guppy.hugr.tys as tys
 
+NodeID = int
 
-class BaseOp(ABC, BaseModel):
+class BaseNode(ABC, BaseModel):
+    parent: NodeID = 0
     """ Base class for ops that store their node's input/output types """
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         """ Hook to insert type information from the input and output ports into the op """
@@ -26,11 +28,11 @@ class BaseOp(ABC, BaseModel):
 # -----------------------------------------
 # --------------- OpType ------------------
 # -----------------------------------------
-class BasicBlock(BaseOp):
+class BasicBlock(BaseNode):
     """ A basic block in a control flow graph - parent will be a CFG node. """
     op: Literal["BasicBlock"] = "BasicBlock"
 
-class DummyOp(BaseOp):
+class DummyOp(BaseNode):
     """ Nodes used inside dataflow containers (DFG, Conditional, TailLoop, def,
     BasicBlock). """
     op: Literal["DummyOp"] = "DummyOp"
@@ -46,12 +48,12 @@ class DummyOp(BaseOp):
 # --------------- ModuleOp ------------------
 # -------------------------------------------
 
-class Module(BaseOp):
+class Module(BaseNode):
     """ The root of a module, parent of all other `ModuleOp`s. """
     op: Literal["Module"] = "Module"
 
 
-class Def(BaseOp):
+class Def(BaseNode):
     """ A function definition. Children nodes are the body of the definition.
     """
     op: Literal["Def"] = "Def"
@@ -67,7 +69,7 @@ class Def(BaseOp):
         self.signature = out.signature
 
 
-class Declare(BaseOp):
+class Declare(BaseNode):
     """ External function declaration, linked at runtime. """
     op: Literal["Declare"] = "Declare"
     name: str = "main"
@@ -80,7 +82,7 @@ class Declare(BaseOp):
         assert isinstance(out, Graph)
         self.signature = out.signature
 
-class Const(BaseOp):
+class Const(BaseNode):
     """ A constant value definition. """
     op: Literal["Const"] = "Const"
     value: "ConstValue"
@@ -127,7 +129,7 @@ BasicBlockOp = Annotated[Union[DFB, Exit], Field(discriminator="block")]
 # --------------- CaseOp ------------------
 # -----------------------------------------
 
-class Case(BaseOp):
+class Case(BaseNode):
     """ Case ops - nodes valid inside Conditional nodes. """
     op: Literal["Case"] = "Case"
     signature: Signature = Field(default_factory=Signature.empty)  # The signature of the contained dataflow graph.
@@ -140,7 +142,7 @@ class Case(BaseOp):
 # --------------- DataflowOp ------------------
 # ---------------------------------------------
 
-class DataflowOp(BaseOp):
+class DataflowOp(BaseNode):
     pass
 class Input(DataflowOp):
     """ An input node. The outputs of this node are the inputs to the function. """
@@ -425,7 +427,7 @@ OpType = Annotated[Union[Module,
 # --------------- OpaqueOp ----------------
 # -----------------------------------------
 
-class OpaqueOp(BaseOp):
+class OpaqueOp(BaseNode):
     """ A wrapped CustomOp with fast equality checks. """
     # op: Literal["OpaqueOp"] = "OpaqueOp"
     id: str  # Operation name, cached for fast equality checks.
@@ -436,7 +438,7 @@ class OpaqueOp(BaseOp):
 # --------------- OpDef ----------------
 # --------------------------------------
 
-class OpDef(BaseOp, allow_population_by_field_name=True):
+class OpDef(BaseNode, allow_population_by_field_name=True):
     """ Serializable definition for dynamically loaded operations. """
     name: str  # Unique identifier of the operation.
     description: str  # Human readable description of the operation.
@@ -451,13 +453,13 @@ class OpDef(BaseOp, allow_population_by_field_name=True):
 # --------------- ConstValue ----------------
 # -------------------------------------------
 
-class Int(BaseOp):
+class Int(BaseNode):
     """ An arbitrary length integer constant. """
     op: Literal["Int"] = "Int"
     value: int
 
 
-class Sum(BaseOp):
+class Sum(BaseNode):
     """ An arbitrary length integer constant. """
     op: Literal["Sum"] = "Sum"
     tag: int
@@ -465,13 +467,13 @@ class Sum(BaseOp):
     val: "ConstValue"
 
 
-class Tuple(BaseOp):
+class Tuple(BaseNode):
     """ A tuple of constant values. """
     op: Literal["Tuple"] = "Tuple"
     vals: list["ConstValue"]
 
 
-class Opaque(BaseOp):
+class Opaque(BaseNode):
     """ An opaque constant value. """
     op: Literal["Opaque"] = "Opaque"
     ty: SimpleType

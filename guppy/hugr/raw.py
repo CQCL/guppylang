@@ -3,18 +3,17 @@ from typing import Literal, Optional
 import ormsgpack
 
 from pydantic import BaseModel
-from guppy.hugr.ops import OpType
+from guppy.hugr.ops import NodeID, OpType
 
 
-NodeID = int
-Node = tuple[NodeID,  OpType]  # (parent, optype)
+# Node = tuple[NodeID,  OpType]  # (parent, optype)
 Port = tuple[NodeID, Optional[int]]  # (node, offset)
 Edge = tuple[Port, Port]
 
 
 class RawHugr(BaseModel):
     version: Literal["v0"] = "v0"
-    nodes: list[Node]
+    nodes: list[OpType]
     edges: list[Edge]
 
     def packb(self) -> bytes:
