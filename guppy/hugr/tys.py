@@ -1,7 +1,7 @@
 import inspect
 import sys
 from typing import Literal, Union, Annotated
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, root_validator, validator
 
 
 # ---------------------------------------------
@@ -18,6 +18,11 @@ class CustomType(BaseModel):
 # --------------- Container ------------------
 # --------------------------------------------
 
+def valid_linearity(ty: "SimpleType", stated_linearity: bool):
+    if is_linear(ty) != stated_linearity:
+        raise ValueError("Inner type linearity does not match outer.")
+
+
 class Map(BaseModel):
     """ Hash map from hashable key type to value type """
     t: Literal['Map'] = "Map"
@@ -25,32 +30,54 @@ class Map(BaseModel):
     v: "SimpleType"
     l: bool
 
-class List(BaseModel):
+    @validator("k")
+    def check_valid_key(cls, key: "SimpleType") -> "SimpleType":
+        if not is_linear(key):
+            raise ValueError('Key type cannot be linear.')
+        return key
+
+    @root_validator
+    def check_value_linearity(cls, values):
+        valid_linearity(values.get("v"), values.get("l"))
+        return values
+
+class MultiContainer(BaseModel):
+    ty: "SimpleType"
+    l: bool
+
+    @root_validator
+    def check_value_linearity(cls, values):
+        valid_linearity(values.get("t"), values.get("l"))
+        return values
+
+class List(MultiContainer):
     """ Variable sized list of types """
     t: Literal['List'] = "List"
-    ty: "SimpleType"
-    l: bool
 
-
-class Tuple(BaseModel):
-    """ Product type, known-size tuple over elements of type row """
-    t: Literal['Tuple'] = "Tuple"
-    row: "TypeRow"
-    l: bool
-
-class Sum(BaseModel):
-    """ Sum type, variants are tagged by their position in the type row """
-    t: Literal['Sum'] = "Sum"
-    row: "TypeRow"
-    l: bool
-
-
-class Array(BaseModel):
+class Array(MultiContainer):
     """ Known size array of """
     t: Literal['Array'] = "Array"
-    ty: "SimpleType"
     len: int
-    l:bool 
+
+class AlgebraicContainer(BaseModel):
+    row: "TypeRow"
+    l: bool
+
+    @root_validator
+    def check_row_linearity(cls, values):
+        row: TypeRow = values.get("row")
+        l: bool = values.get("l")
+        if any(is_linear(t) for t in row) != l:
+            raise ValueError("A Sum/Tuple is non-linear if no elements are linear.")
+        return values
+
+class Tuple(AlgebraicContainer):
+    """ Product type, known-size tuple over elements of type row """
+    t: Literal['Tuple'] = "Tuple"
+
+class Sum(AlgebraicContainer):
+    """ Sum type, variants are tagged by their position in the type row """
+    t: Literal['Sum'] = "Sum"
 
 
 
