@@ -1,4 +1,3 @@
-import copy
 import itertools
 import networkx  # type: ignore
 
@@ -520,11 +519,11 @@ class Hugr:
             if isinstance(n, VNode) and isinstance(n.op, ops.DummyOp):
                 name = n.op.name
                 fun_ty = FunctionType(list(n.in_port_types), list(n.out_port_types))
-                decl = self.add_declare(copy.copy(fun_ty), self.root, name)
+                decl = self.add_declare(fun_ty, self.root, name)
                 sig = tys.Signature(input=tys.TypeRow(types=[t.to_hugr() for t in fun_ty.args]),
                                     output=tys.TypeRow(types=[t.to_hugr() for t in fun_ty.returns]))
                 n.op = ops.Dataflow(op=ops.Call(signature=sig))
-                self.add_edge(decl.out_port(0), n.add_in_port(copy.copy(fun_ty)))
+                self.add_edge(decl.out_port(0), n.add_in_port(fun_ty))
         return self
 
     def insert_copies(self) -> "Hugr":
