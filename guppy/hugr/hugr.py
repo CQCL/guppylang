@@ -4,7 +4,7 @@ import networkx  # type: ignore
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from typing import Optional, Iterator, Tuple, Any
-from dataclasses import dataclass
+from dataclasses import field, dataclass
 
 import guppy.hugr.ops as ops
 import guppy.hugr.tys as tys
@@ -13,14 +13,14 @@ from guppy.guppy_types import GuppyType, type_from_python_value, TupleType, Func
 
 
 NodeIdx = int
-PortOffset = Optional[int]
+PortOffset = int
 
 
 @dataclass(frozen=True)
 class Port(ABC):
     """ Base class for ports on nodes. """
     node: "Node"
-    offset: PortOffset
+    offset: Optional[PortOffset]
 
 
 class InPort(Port, ABC):
@@ -37,17 +37,20 @@ class OutPort(Port, ABC):
 class InPortV(InPort):
     """ A typed value input port. """
     ty: GuppyType
+    offset: PortOffset
 
 
 @dataclass(frozen=True)
 class OutPortV(OutPort):
     """ A typed value output port. """
     ty: GuppyType
+    offset: PortOffset
 
-
+@dataclass(frozen=True)
 class InPortCF(InPort):
     """ A control-flow input port. """
-    pass
+    # Control flow inputs are unordered so no port offset is needed
+    offset: None = field(default=None, init=False)
 
 
 class OutPortCF(OutPort):
@@ -84,12 +87,12 @@ class Node(ABC):
         pass
 
     @abstractmethod
-    def in_port(self, offset: PortOffset) -> InPort:
+    def in_port(self, offset: Optional[PortOffset]) -> InPort:
         """ Returns the input port at the given offset. """
         pass
 
     @abstractmethod
-    def out_port(self, offset: PortOffset) -> OutPort:
+    def out_port(self, offset: Optional[PortOffset]) -> OutPort:
         """ Returns the output port at the given offset. """
         pass
 
@@ -140,12 +143,12 @@ class VNode(Node):
         self.out_port_types.append(ty)
         return p
 
-    def in_port(self, offset: PortOffset) -> InPortV:
+    def in_port(self, offset: Optional[PortOffset]) -> InPortV:
         """ Returns the input port at the given offset. """
         assert offset is not None and offset < self.num_in_ports
         return InPortV(self, offset, self.in_port_types[offset])
 
-    def out_port(self, offset: PortOffset) -> OutPortV:
+    def out_port(self, offset: Optional[PortOffset]) -> OutPortV:
         """ Returns the output port at the given offset. """
         assert offset is not None and  offset < self.num_out_ports
         return OutPortV(self, offset, self.out_port_types[offset])
@@ -190,22 +193,17 @@ class CFNode(Node):
         """ The number of output ports on this node. """
         return self._num_out_ports
 
-    def add_in_port(self) -> InPortCF:
-        """ Adds an input port at the end of the node and returns the port. """
-        p = InPortCF(self, None)
-        return p
-
     def add_out_port(self) -> OutPortCF:
         """ Adds an output port at the end of the node and returns the port. """
         p = OutPortCF(self, self.num_out_ports)
         self._num_out_ports += 1
         return p
 
-    def in_port(self, offset: PortOffset) -> InPortCF:
-        """ Returns the input port at the given offset. """
-        return InPortCF(self, None)
+    def in_port(self, offset: Optional[PortOffset]) -> InPortCF:
+        assert offset is None
+        return InPortCF(self)
 
-    def out_port(self, offset: PortOffset) -> OutPortCF:
+    def out_port(self, offset: Optional[PortOffset]) -> OutPortCF:
         """ Returns the output port at the given offset. """
         assert offset is not None
         assert offset < self.num_out_ports
