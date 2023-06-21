@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo() -> bool:
+6:        return 42
+                 ^^
+GuppyTypeError: Return type mismatch: expected `bool`, got `int`

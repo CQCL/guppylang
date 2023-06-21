@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:11
+
+9:     else:
+10:        z = 2
+11:    return z
+              ^
+GuppyError: Variable `z` is not defined on all control-flow paths.

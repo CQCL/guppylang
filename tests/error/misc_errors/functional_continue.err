@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:9
+
+7:    while x:
+8:        if x:
+9:            continue
+              ^^^^^^^^
+GuppyError: Continue is not allowed in a functional statement

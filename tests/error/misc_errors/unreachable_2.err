@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:10
+
+8:     else:
+9:         return 1
+10:    x = 42
+       ^^^^^^
+GuppyError: Unreachable code

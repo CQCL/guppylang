@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:11
+
+9:         pass
+10:    else:
+11:        return -1
+           ^^^^^^^^^
+GuppyError: Return is not allowed in a functional statement

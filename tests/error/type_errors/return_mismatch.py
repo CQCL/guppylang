@@ -2,5 +2,5 @@ from tests.error.util import guppy
 
 
 @guppy
-def foo(x: int) -> int:
-    return x(42)
+def foo() -> bool:
+    return 42

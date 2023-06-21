@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:7
+
+5:    def foo() -> int:
+6:        return 0
+7:        x = 42
+          ^^^^^^
+GuppyError: Unreachable code

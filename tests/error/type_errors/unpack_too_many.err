@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo() -> int:
+6:        a, b = 1, True, 3.0
+          ^^^^^^^^^^^^^^^^^^^
+GuppyTypeError: Too many values to unpack (expected 2, got 3)
