@@ -65,7 +65,7 @@ def test_different_types2(tmp_path):
     validate(foo, tmp_path)
 
 
-def test_different_types2(tmp_path):
+def test_different_types3(tmp_path):
     @guppy
     def foo(x: bool) -> int:
         z = False
