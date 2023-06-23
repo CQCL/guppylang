@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-quantinuum-hugr = { git = "https://github.com/CQCL-DEV/hugr.git" }
+quantinuum-hugr = { git = "https://github.com/CQCL-DEV/hugr.git", rev = "54f7108" }
 rmp-serde = "1.1.1"

@@ -110,15 +110,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 
 [[package]]
-name = "html-escape"
-version = "0.2.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d1ad449764d627e22bfd7cd5e8868264fc9236e07c752972b4080cd351cb476"
-dependencies = [
- "utf8-width",
-]
-
-[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -209,9 +200,9 @@ checksum = "9f746c4065a8fa3fe23974dd82f15431cc8d40779821001404d10d2e79ca7d79"
 
 [[package]]
 name = "portgraph"
-version = "0.3.0"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8abaf1ccce6f73124f54422e11f41204bb686808d3530cbf500d333961c4062c"
+checksum = "f8f60d8dedb1342cec5352feb2fb0c24adda5d2c21642e7d034fd092744c6c86"
 dependencies = [
  "bitvec",
  "serde",
@@ -230,12 +221,11 @@ dependencies = [
 [[package]]
 name = "quantinuum-hugr"
 version = "0.1.0"
-source = "git+https://github.com/CQCL-DEV/hugr.git#e99ebeaefbf5f66e374d58cfb7a9b67ea9bbdff8"
+source = "git+https://github.com/CQCL-DEV/hugr.git?rev=54f7108#54f71089df5dec199a90906e4e124f29228b8114"
 dependencies = [
  "cgmath",
  "derive_more",
  "downcast-rs",
- "html-escape",
  "itertools",
  "num-rational",
  "once_cell",
@@ -430,12 +420,6 @@ name = "unsafe-libyaml"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1865806a559042e51ab5414598446a5871b561d21b6764f2eabb0dd481d880a6"
-
-[[package]]
-name = "utf8-width"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5190c9442dcdaf0ddd50f37420417d219ae5261bbf5db120d0f9bab996c9cba1"
 
 [[package]]
 name = "validator"
