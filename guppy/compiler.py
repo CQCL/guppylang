@@ -911,6 +911,7 @@ class FunctionCompiler(CompilerBase):
         """ Compiles a `FunctionDef` AST node into a Guppy function. """
         self.line_offset = line_offset
         self.stmt_compiler.line_offset = line_offset
+        self.stmt_compiler.functional_stmt_compiler.line_offset = line_offset
         self.global_variables = global_variables
         self.stmt_compiler.global_variables = global_variables
         self.stmt_compiler.expr_compiler.global_variables = global_variables
