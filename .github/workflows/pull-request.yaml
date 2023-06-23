@@ -24,9 +24,12 @@ jobs:
       - name: Build Hugr validator
         uses: PyO3/maturin-action@v1
         with:
-          command: develop
+          command: build
           sccache: 'true'
-          manylinux: auto
+          working-directory: validator
+
+      - name: Install Hugr validator
+        run: pip install validator/target/wheels/*
 
       - name: Install Guppy
         run: pip install -e '.[dev]'
