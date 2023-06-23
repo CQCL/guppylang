@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo() -> int:
+6:        return -True
+                  ^^^^
+GuppyTypeError: Expected expression of type `int` or `float`, but got `True` of type `bool`

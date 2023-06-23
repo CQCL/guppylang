@@ -1,0 +1,41 @@
+name: Pull Request
+
+on: pull_request
+
+jobs:
+  check:
+    name: Check Python
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: Build Hugr validator
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          sccache: 'true'
+          working-directory: validator
+
+      - name: Install Hugr validator
+        run: pip install validator/target/wheels/*
+
+      - name: Install Guppy
+        run: pip install -e '.[dev]'
+
+      - name: Type check with mypy
+        run: mypy guppy
+
+      - name: Run tests
+        run: pytest

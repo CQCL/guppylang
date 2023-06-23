@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "guppy"
 authors = [{name = "Mark Koch", email = "mark.koch@quantinuum.com"}]
 version = "0.1.0"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 dependencies = [
     "graphviz",
     "networkx",
@@ -16,10 +16,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    # "pip-tools", # provides pip-compile
+    "pip-tools", # provides pip-compile
     "build",
     "pytest",
+    "mypy",
+    "maturin>=1.1,<2.0",
 ]
+
+[tool.setuptools]
+py-modules = ["guppy"]
 
 [tool.mypy]
 plugins = [

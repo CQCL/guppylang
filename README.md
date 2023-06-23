@@ -25,7 +25,7 @@ pip install -r requirements.txt
 Install a local development version using:
 
 ```sh
-pip install -e .
+pip install -e '.[dev]'
 ```
 
 ## Usage
@@ -34,6 +34,11 @@ TODO
 
 ## Testing
 
+First, build the PyO3 Hugr validation library using
+```sh
+maturin develop
+```
+Run tests using
 ```sh
 pytest -v
 ```

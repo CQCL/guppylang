@@ -206,7 +206,6 @@ class DFContainer:
             errs = self.errs_on_usage[name_node.id]
             # TODO: Show all errors?
             if len(errs) > 0:
-                assert name_node.id not in self.variables
                 err = errs[0]
                 if err.location is None:
                     err.location = name_node
@@ -477,14 +476,14 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             raise GuppyError(f"Argument passing by keyword is not supported", node.keywords[0])
         exp, act = len(func_ty.args), len(node.args)
         if act < exp:
-            raise GuppyError(f"Not enough arguments passed (expected {exp}, got {act})", node)
+            raise GuppyTypeError(f"Not enough arguments passed (expected {exp}, got {act})", node)
         if exp < act:
-            raise GuppyError(f"Unexpected argument", node.args[exp])
+            raise GuppyTypeError(f"Unexpected argument", node.args[exp])
 
         args = [self.visit(arg) for arg in node.args]
         for i, port in enumerate(args):
             if port.ty != func_ty.args[i]:
-                raise GuppyTypeError(f"Expected argument of type `{func_ty.args[i]}`, got `ty`", node.args[i])
+                raise GuppyTypeError(f"Expected argument of type `{func_ty.args[i]}`, got `{port.ty}`", node.args[i])
 
         if is_direct:
             call = self.graph.add_call(func_port, args)
@@ -493,7 +492,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
 
         # Group outputs into tuple
         returns = [call.out_port(i) for i in range(len(func_ty.returns))]
-        if len(returns) > 1:
+        if len(returns) != 1:
             return self.graph.add_make_tuple(inputs=returns).out_port(0)
         return returns[0]
 
@@ -757,7 +756,7 @@ class FunctionalStatementCompiler(StatementCompiler):
         """ Compiles a list of statements using only functional control-flow """
         for node in nodes:
             if is_functional_annotation(node):
-                raise GuppyError("Statement already contained in a functional block")
+                raise GuppyError("Statement already contained in a functional block", node)
             self.visit(node, dfg, hooks)
 
     def _begin_conditional(self, dfg: DFContainer, cond_port: OutPortV, num_cases: int = 2) \
@@ -893,7 +892,7 @@ class FunctionCompiler(CompilerBase):
         if func_def.args.kwarg is not None:
             raise GuppyError("**kwargs not supported", func_def.args.kwarg)
         if func_def.returns is None:
-            raise GuppyError("Return type must be annotated", func_def)
+            raise GuppyError("Return type must be annotated", func_def)  # TODO: Error location is incorrect
 
         arg_tys = []
         arg_names = []
@@ -912,6 +911,7 @@ class FunctionCompiler(CompilerBase):
         """ Compiles a `FunctionDef` AST node into a Guppy function. """
         self.line_offset = line_offset
         self.stmt_compiler.line_offset = line_offset
+        self.stmt_compiler.functional_stmt_compiler.line_offset = line_offset
         self.global_variables = global_variables
         self.stmt_compiler.global_variables = global_variables
         self.stmt_compiler.expr_compiler.global_variables = global_variables
@@ -922,7 +922,7 @@ class FunctionCompiler(CompilerBase):
         def_input = self.graph.add_input(parent=def_node)
         cfg = self.graph.add_cfg(def_node, inputs=[def_input.add_out_port(ty) for ty in func_ty.args])
         input_block = self.graph.add_block(cfg)
-        input_node = self.graph.add_input(output_tys=func_ty.args, parent=input_block)
+        input_node = self.graph.add_input(output_tys=list(func_ty.args), parent=input_block)
 
         variables: VarMap = {}
         for i, arg in enumerate(args):
@@ -931,12 +931,13 @@ class FunctionCompiler(CompilerBase):
             variables[name] = Variable(name, port, {SourceLoc.from_ast(arg, self.line_offset)})
 
         input_bb = BasicBlock(input_block, variables, {})
-        return_block = self.graph.add_exit(output_tys=func_ty.returns, parent=cfg)
+        return_block = self.graph.add_exit(output_tys=list(func_ty.returns), parent=cfg)
 
         # Define hook that is executed on return
         def return_hook(curr_bb: BasicBlock, node: Optional[ast.Return], row: list[OutPortV]) -> Optional[BasicBlock]:
             tys = [p.ty for p in row]
             if tys != func_ty.returns:
+                assert node is not None
                 raise GuppyTypeError(f"Return type mismatch: expected `{TypeRow(func_ty.returns)}`, "
                                      f"got `{TypeRow(tys)}`", node.value)
             self.stmt_compiler._finish_bb(curr_bb, outputs=row)
@@ -1035,9 +1036,7 @@ class GuppyModule(object):
             if err.location:
                 loc = err.location
                 line = line_offset + loc.lineno
-                module = inspect.getmodule(f)
-                print(f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}", '
-                      f"line {line}, in {module.__name__ if module else '?'}\n", file=sys.stderr)
+                print(f"Guppy compilation failed. Error in file {inspect.getsourcefile(f)}:{line}\n", file=sys.stderr)
                 print(format_source_location(source_lines, loc, line_offset+1), file=sys.stderr)
             else:
                 print(f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}"\n', file=sys.stderr)

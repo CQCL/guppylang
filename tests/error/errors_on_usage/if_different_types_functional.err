@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:11
+
+9:     else:
+10:        y = False
+11:    return y
+              ^
+GuppyError: Variable `y` can refer to different types: `int` (at 8:8) vs `bool` (at 10:8)
