@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo() -> int:
+6:        pass
+          ^^^^
+GuppyError: Expected return statement of type `int`

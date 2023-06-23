@@ -4,17 +4,17 @@ from guppy.compiler import guppy
 from tests.integration.util import validate
 
 
-def test_if_no_else(tmp_path):
+def test_if_no_else():
     @guppy
     def foo(x: bool, y: int) -> int:
         if x:
             y += 1
         return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_if_else(tmp_path):
+def test_if_else():
     @guppy
     def foo(x: bool, y: int) -> int:
         if x:
@@ -23,10 +23,10 @@ def test_if_else(tmp_path):
             y -= 1
         return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_if_elif(tmp_path):
+def test_if_elif():
     @guppy
     def foo(x: bool, y: int) -> int:
         if x:
@@ -35,10 +35,10 @@ def test_if_elif(tmp_path):
             y *= 7
         return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_if_elif_else(tmp_path):
+def test_if_elif_else():
     @guppy
     def foo(x: bool, y: int) -> int:
         if x:
@@ -49,10 +49,10 @@ def test_if_elif_else(tmp_path):
             y = 1337
         return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_if_return(tmp_path):
+def test_if_return():
     @guppy
     def foo(x: bool, y: int) -> int:
         if x:
@@ -60,10 +60,10 @@ def test_if_return(tmp_path):
         y *= 32
         return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_else_return(tmp_path):
+def test_else_return():
     @guppy
     def foo(x: bool, y: int) -> int:
         if x:
@@ -73,10 +73,10 @@ def test_else_return(tmp_path):
             return y
         return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_both_return(tmp_path):
+def test_both_return():
     @guppy
     def foo(x: bool, y: int) -> int:
         if x:
@@ -86,10 +86,10 @@ def test_both_return(tmp_path):
             y /= 4
             return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_nested_return(tmp_path):
+def test_nested_return():
     @guppy
     def foo(x: int, y: int) -> int:
         if x > 5:
@@ -99,10 +99,10 @@ def test_nested_return(tmp_path):
                 return y
         return x
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_return_defined1(tmp_path):
+def test_return_defined1():
     @guppy
     def foo(x: int, y: int) -> int:
         if x > 5:
@@ -111,10 +111,10 @@ def test_return_defined1(tmp_path):
             z = 5
         return z
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_return_defined2(tmp_path):
+def test_return_defined2():
     @guppy
     def foo(x: int) -> int:
         if x > 5:
@@ -123,11 +123,11 @@ def test_return_defined2(tmp_path):
             return x
         return z
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
 @pytest.mark.skip("Known bug")
-def test_break_different_types1(tmp_path):
+def test_break_different_types1():
     @guppy
     def foo(x: int) -> int:
         z = 0
@@ -140,11 +140,11 @@ def test_break_different_types1(tmp_path):
             z += x
         return 0
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
 @pytest.mark.skip("Known bug")
-def test_break_different_types2(tmp_path):
+def test_break_different_types2():
     @guppy
     def foo(x: int) -> int:
         z = 0
@@ -157,11 +157,11 @@ def test_break_different_types2(tmp_path):
             z += x
         return 0
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
 @pytest.mark.skip("Known bug")
-def test_continue_different_types1(tmp_path):
+def test_continue_different_types1():
     @guppy
     def foo(x: int) -> int:
         z = 0
@@ -174,11 +174,11 @@ def test_continue_different_types1(tmp_path):
             z += x
         return z
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
 @pytest.mark.skip("Known bug")
-def test_continue_different_types2(tmp_path):
+def test_continue_different_types2():
     @guppy
     def foo(x: int) -> int:
         z = 0
@@ -191,5 +191,5 @@ def test_continue_different_types2(tmp_path):
             z += x
         return z
 
-    validate(foo, tmp_path)
+    validate(foo)
 

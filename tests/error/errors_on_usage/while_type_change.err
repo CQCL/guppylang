@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:9
+
+7:    while x:
+8:        y = True
+9:    return y
+             ^
+GuppyError: Variable `y` can refer to different types: `int` (at 6:4) vs `bool` (at 8:8)

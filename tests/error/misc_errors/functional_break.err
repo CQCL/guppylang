@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:8
+
+6:    _@functional
+7:    while x:
+8:        break
+          ^^^^^
+GuppyError: Break is not allowed in a functional statement

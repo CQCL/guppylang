@@ -2,53 +2,50 @@ from guppy.compiler import guppy
 from tests.integration.util import validate
 
 
-def test_id(tmp_path):
+def test_id():
     @guppy
     def identity(x: int) -> int:
         return x
 
-    validate(identity, tmp_path)
+    validate(identity)
 
 
-def test_void(tmp_path):
+def test_void():
     @guppy
     def void() -> None:
         return
 
-    validate(void, tmp_path)
+    validate(void)
 
 
-def test_copy(tmp_path):
+def test_copy():
     @guppy
     def copy(x: int) -> (int, int):
         return x, x
 
-    validate(copy, tmp_path)
+    validate(copy)
 
 
-def test_discard(tmp_path):
+def test_discard():
     @guppy
     def discard(x: int) -> None:
         return
 
-    validate(discard, tmp_path)
+    validate(discard)
 
 
-def test_implicit_return(tmp_path):
+def test_implicit_return():
     @guppy
     def ret() -> None:
         pass
 
-    validate(ret, tmp_path)
+    validate(ret)
 
 
-def test_assign(tmp_path):
+def test_assign():
     @guppy
     def foo(x: bool) -> bool:
         y = x
         return y
 
-    validate(foo, tmp_path)
-
-
-
+    validate(foo)
