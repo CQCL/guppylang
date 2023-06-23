@@ -1,9 +1,8 @@
 import inspect
 import sys
-from typing import Union
-from pydantic import Field
-
-from .pydantic_extensions import BaseModel
+from typing import Literal, Union, Annotated
+from pydantic import Field, BaseModel, root_validator, validator
+from pydantic.utils import GetterDict
 
 
 # ---------------------------------------------
@@ -16,113 +15,102 @@ class CustomType(BaseModel):
     params: "TypeRow"
 
 
-# ---------------------------------------------
-# --------------- SimpleType ------------------
-# ---------------------------------------------
-
-class Classic(BaseModel, list=True, tagged=True):
-    """ A type containing classical data. Elements of this type can be copied. """
-    ty: "ClassicType"
-
-
-class Linear(BaseModel, list=True, tagged=True):
-    """ A type containing linear data. Elements of this type must be used exactly once. """
-    ty: "LinearType"
-
-
-SimpleType = Union[Classic, Linear]
-
-
 # --------------------------------------------
 # --------------- Container ------------------
 # --------------------------------------------
 
-class ListClassic(BaseModel, list=True, tagged=True, tag="List"):
-    """ Variable sized list of types """
-    ty: "ClassicType"
+def valid_linearity(ty: "SimpleType", stated_linearity: bool) -> None:
+    if is_linear(ty) != stated_linearity:
+        raise ValueError("Inner type linearity does not match outer.")
 
 
-class ListLinear(BaseModel, list=True, tagged=True, tag="List"):
-    """ Variable sized list of types """
-    ty: "LinearType"
-
-
-class MapClassic(BaseModel, list=True, tagged=True, tag="Map"):
+class Map(BaseModel):
     """ Hash map from hashable key type to value type """
-    key: "ClassicType"
-    value: "ClassicType"
+    t: Literal['Map'] = "Map"
+    k: "SimpleType"
+    v: "SimpleType"
+    l: bool
 
+    @validator("k")
+    def check_valid_key(cls, key: "SimpleType") -> "SimpleType":
+        if not is_linear(key):
+            raise ValueError('Key type cannot be linear.')
+        return key
 
-class MapLinear(BaseModel, list=True, tagged=True, tag="Map"):
-    """ Hash map from hashable key type to value type """
-    key: "ClassicType"
-    value: "LinearType"
+    @root_validator
+    def check_value_linearity(cls, values: GetterDict) -> GetterDict:
+        valid_linearity(values.get("v"), values.get("l"))
+        return values
 
+class MultiContainer(BaseModel):
+    ty: "SimpleType"
+    l: bool
 
-class Tuple(BaseModel, list=True, tagged=True):
+    @root_validator
+    def check_value_linearity(cls, values: GetterDict) -> GetterDict:
+        valid_linearity(values.get("t"), values.get("l"))
+        return values
+
+class List(MultiContainer):
+    """ Variable sized list of types """
+    t: Literal['List'] = "List"
+
+class Array(MultiContainer):
+    """ Known size array of """
+    t: Literal['Array'] = "Array"
+    len: int
+
+class AlgebraicContainer(BaseModel):
+    row: "TypeRow"
+    l: bool
+
+    @root_validator
+    def check_row_linearity(cls, values: GetterDict) -> GetterDict:
+        row: TypeRow = values.get("row")
+        l: bool = values.get("l")
+        if any(is_linear(t) for t in row) != l:
+            raise ValueError("A Sum/Tuple is non-linear if no elements are linear.")
+        return values
+
+class Tuple(AlgebraicContainer):
     """ Product type, known-size tuple over elements of type row """
-    tys: "TypeRow"
+    t: Literal['Tuple'] = "Tuple"
 
-
-class Sum(BaseModel, list=True, tagged=True):
+class Sum(AlgebraicContainer):
     """ Sum type, variants are tagged by their position in the type row """
-    tys: "TypeRow"
+    t: Literal['Sum'] = "Sum"
 
-
-class ArrayClassic(BaseModel, list=True, tagged=True, tag="Array"):
-    """ Known size array of """
-    ty: "ClassicType"
-    size: int
-
-
-class ArrayLinear(BaseModel, list=True, tagged=True, tag="Array"):
-    """ Known size array of """
-    ty: "LinearType"
-    size: int
-
-
-class NewClassicType(BaseModel, list=True, tagged=True, tag="NewType"):
-    """ Named type defined by, but distinct from, ty. """
-    name: str
-    ty: "ClassicType"
-
-
-class NewLinearType(BaseModel, list=True, tagged=True, tag="NewType"):
-    """ Named type defined by, but distinct from, ty. """
-    name: str
-    ty: "LinearType"
-
-
-ContainerC = Union[ListClassic, MapClassic, Tuple, Sum, ArrayClassic, NewClassicType]
-ContainerL = Union[ListLinear, MapLinear, Tuple, Sum, ArrayLinear, NewLinearType]
 
 
 # ----------------------------------------------
 # --------------- ClassicType ------------------
 # ----------------------------------------------
 
-class Variable(BaseModel, list=True, tagged=True):
+class Variable(BaseModel):
     """ A type variable identified by a name. """
+    t: Literal['Var'] = "Var"
     name: str
 
 
-class Int(BaseModel, list=True, tagged=True):
+class Int(BaseModel):
     """ An arbitrary size integer. """
-    size: int
+    t: Literal['I'] = "I"
+    width: int
 
 
-class F64(BaseModel, list=True, tagged=True):
+class F64(BaseModel):
     """ A 64-bit floating point number. """
-    pass
+    t: Literal['F'] = "F"
 
 
-class String(BaseModel, list=True, tagged=True):
+class String(BaseModel):
     """ An arbitrary length string. """
-    pass
+    t: Literal['S'] = "S"
 
 
-class Graph(BaseModel, list=True, tagged=True):
+class Graph(BaseModel):
     """ A graph encoded as a value. It contains a concrete signature and a set of required resources. """
+    t: Literal['G'] = "G"
     resources: "ResourceSet"
     signature: "Signature"
 
@@ -130,52 +118,41 @@ class Graph(BaseModel, list=True, tagged=True):
 ResourceSet = list[str]  # TODO: Set not supported by MessagePack. Is list correct here?
 
 
-class ContainerClassic(BaseModel, list=True, tagged=True, tag="Container"):
-    """ A nested definition containing other classic types. """
-    ty: ContainerC
 
-
-class OpaqueClassic(BaseModel, list=True, tagged=True, tag="Opaque"):
+class Opaque(BaseModel):
     """ An opaque operation that can be downcasted by the extensions that define it. """
+    t: Literal['Opaque'] = "Opaque"
     ty: CustomType
+    linear: bool
 
 
-ClassicType = Union[Variable, Int, F64, String, Graph, ContainerClassic, OpaqueClassic]
 
 
 # ----------------------------------------------
 # --------------- LinearType -------------------
 # ----------------------------------------------
 
-class Qubit(BaseModel, list=True, tagged=True):
+class Qubit(BaseModel):
     """ A qubit. """
-    pass
+    t: Literal['Q'] = "Q"
+    
 
 
-class OpaqueLinear(BaseModel, list=True, tagged=True, tag="Opaque"):
-    """ A linear opaque operation that can be downcasted by the extensions that define it. """
-    ty: CustomType
 
+SimpleType = Annotated[Union[Qubit, Variable, Int, F64, String, Graph, List, Array, Map, Tuple, Sum], Field(discriminator="t")]
 
-class ContainerLinear(BaseModel, list=True, tagged=True, tag="Container"):
-    """ A nested definition containing other linear types. """
-    ty: ContainerL
-
-
-LinearType = Union[Qubit, OpaqueLinear, ContainerLinear]
-
-
+def is_linear(ty: SimpleType) -> bool:
+    if isinstance(ty, Qubit):
+        return True
+    elif isinstance(ty, (List, Tuple, Sum, Array, Map, Opaque)):
+        return ty.l
+    return False
+    
 # -------------------------------------------
 # --------------- TypeRow -------------------
 # -------------------------------------------
 
-class TypeRow(BaseModel):
-    """ List of types, used for function signatures. """
-    types: list[SimpleType]  # The datatypes in the row.
-
-    @classmethod
-    def empty(cls) -> "TypeRow":
-        return TypeRow(types=[])
+TypeRow = list[SimpleType]
 
 
 # -------------------------------------------
@@ -190,11 +167,13 @@ class Signature(BaseModel):
     """
     input: TypeRow  # Value inputs of the function.
     output: TypeRow  # Value outputs of the function.
-    const_input: TypeRow = Field(default_factory=TypeRow.empty)  # Possible constE input (for call / load-constant).
+    const_input: TypeRow = Field(default_factory=list)  # Possible constE input (for call / load-constant).
+    input_resources: ResourceSet = Field(default_factory=list)
+    output_resources: ResourceSet= Field(default_factory=list)
 
     @classmethod
     def empty(cls) -> "Signature":
-        return Signature(input=TypeRow.empty(), output=TypeRow.empty(), const_input=TypeRow.empty())
+        return Signature(input=[], output=[], const_input=[])
 
 
 # Now that all classes are defined, we need to update the ForwardRefs

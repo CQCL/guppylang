@@ -34,7 +34,7 @@ class IntType(GuppyType):
         return "int"
 
     def to_hugr(self) -> tys.SimpleType:
-        return tys.Classic(ty=tys.Int(size=32))  # TODO: Parametrise over size
+        return tys.Int(width=32)  # TODO: Parametrise over size
 
 
 @dataclass(frozen=True)
@@ -43,7 +43,7 @@ class FloatType(GuppyType):
         return "float"
 
     def to_hugr(self) -> tys.SimpleType:
-        return tys.Classic(ty=tys.F64())
+        return tys.F64()
 
 
 @dataclass(frozen=True)
@@ -53,9 +53,9 @@ class BoolType(GuppyType):
 
     def to_hugr(self) -> tys.SimpleType:
         # Hugr bools are encoded as Sum((), ())
-        unit = tys.Classic(ty=tys.ContainerClassic(ty=tys.Tuple(tys=tys.TypeRow(types=[]))))
-        s = tys.Sum(tys=tys.TypeRow(types=[unit, unit]))
-        return tys.Classic(ty=tys.ContainerClassic(ty=s))
+        unit = tys.Tuple(row=[], l=False)
+        s = tys.Sum(row=[unit, unit], l=False)
+        return s
 
 
 @dataclass(frozen=True)
@@ -68,11 +68,11 @@ class FunctionType(GuppyType):
         return f"{TypeRow(self.args)} -> {TypeRow(self.returns)}"
 
     def to_hugr(self) -> tys.SimpleType:
-        ins = tys.TypeRow(types=[t.to_hugr() for t in self.args])
-        outs = tys.TypeRow(types=[t.to_hugr() for t in self.returns])
-        sig = tys.Signature(input=ins, output=outs, const_input=tys.TypeRow(types=[]))
+        ins = [t.to_hugr() for t in self.args]
+        outs = [t.to_hugr() for t in self.returns]
+        sig = tys.Signature(input=ins, output=outs, const_input=[])
         # TODO: Resources
-        return tys.Classic(ty=tys.Graph(resources=[], signature=sig))
+        return tys.Graph(resources=[], signature=sig)
 
 
 @dataclass(frozen=True)
@@ -85,10 +85,7 @@ class TupleType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         ts = [t.to_hugr() for t in self.element_types]
         # As soon as one element is linear, the whole tuple must be linear
-        if any(isinstance(t, tys.Linear) for t in ts):
-            return tys.Linear(ty=tys.ContainerLinear(ty=tys.Tuple(tys=tys.TypeRow(types=ts))))
-        else:
-            return tys.Classic(ty=tys.ContainerClassic(ty=tys.Tuple(tys=tys.TypeRow(types=ts))))
+        return tys.Tuple(row=ts, l=any(tys.is_linear(t) for t in ts))
 
 
 @dataclass(frozen=True)
@@ -101,10 +98,7 @@ class SumType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         ts = [t.to_hugr() for t in self.element_types]
         # As soon as one element is linear, the whole sum type must be linear
-        if any(isinstance(t, tys.Linear) for t in ts):
-            return tys.Linear(ty=tys.ContainerLinear(ty=tys.Sum(tys=tys.TypeRow(types=ts))))
-        else:
-            return tys.Classic(ty=tys.ContainerClassic(ty=tys.Sum(tys=tys.TypeRow(types=ts))))
+        return tys.Sum(row=ts, l=any(tys.is_linear(t) for t in ts))
 
 
 @dataclass(frozen=True)
@@ -113,7 +107,7 @@ class StringType(GuppyType):
         return "str"
 
     def to_hugr(self) -> tys.SimpleType:
-        return tys.Classic(ty=tys.String())
+        return tys.String()
 
 
 @dataclass(frozen=True)
@@ -125,10 +119,7 @@ class ListType(GuppyType):
 
     def to_hugr(self) -> tys.SimpleType:
         t = self.element_type.to_hugr()
-        if isinstance(t, tys.Linear):
-            return tys.Linear(ty=tys.ContainerLinear(ty=tys.ListLinear(ty=t.ty)))
-        else:
-            return tys.Classic(ty=tys.ContainerClassic(ty=tys.ListClassic(ty=t.ty)))
+        return tys.List(ty=t, l=tys.is_linear(t))
 
 
 @dataclass(frozen=True)
@@ -142,11 +133,8 @@ class DictType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         kt = self.key_type.to_hugr()
         vt = self.value_type.to_hugr()
-        assert isinstance(kt, tys.Classic)
-        if isinstance(vt, tys.Linear):
-            return tys.Linear(ty=tys.ContainerLinear(ty=tys.MapLinear(key=kt.ty, value=vt.ty)))
-        else:
-            return tys.Classic(ty=tys.ContainerClassic(ty=tys.MapClassic(key=kt.ty, value=vt.ty)))
+        assert not tys.is_linear(kt)
+        return tys.Map(k=kt, v=vt, l = tys.is_linear(vt))
 
 
 def type_from_python_value(val: Any) -> Optional[GuppyType]:

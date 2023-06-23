@@ -1,24 +1,23 @@
 import inspect
 import sys
 from abc import ABC
-from typing import Union, Optional, Any
-from pydantic import Field
+from typing import Annotated, Literal, Union, Optional, Any
+from pydantic import Field, BaseModel
 
-from .tys import Signature, TypeRow, ClassicType, SimpleType, ResourceSet, Graph, Classic, ContainerClassic, ContainerLinear
+from .tys import Signature, TypeRow,  SimpleType, ResourceSet, Graph
 import guppy.hugr.tys as tys
-from .pydantic_extensions import BaseModel
 
-
-TypeList = list[SimpleType]
-
+NodeID = int
 
 class BaseOp(ABC, BaseModel):
     """ Base class for ops that store their node's input/output types """
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    # Parent node index of node the op belongs to, used only at serialization time
+    parent: NodeID = 0
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         """ Hook to insert type information from the input and output ports into the op """
         pass
 
-    def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
+    def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
         """ Hook to insert type information from a child dataflow graph """
         pass
 
@@ -27,190 +26,134 @@ class BaseOp(ABC, BaseModel):
         return self.__class__.__name__
 
 
-# -----------------------------------------
-# --------------- OpType ------------------
-# -----------------------------------------
-
-class Module(BaseOp, list=True, tagged=True):
-    """ A module region node - parent will be the Root (or the node itself is the Root). """
-    op: "ModuleOp"
-
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
-        self.op.insert_port_types(in_types, out_types)
-
-    def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
-        self.op.insert_child_dfg_signature(inputs, outputs)
-
-    def display_name(self) -> str:
-        return self.op.display_name()
-
-
-class BasicBlock(BaseOp, list=True, tagged=True):
-    """ A basic block in a control flow graph - parent will be a CFG node. """
-    op: "BasicBlockOp"
-
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
-        self.op.insert_port_types(in_types, out_types)
-
-    def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
-        self.op.insert_child_dfg_signature(inputs, outputs)
-
-    def display_name(self) -> str:
-        return self.op.display_name()
-
-
-class Case(BaseOp, list=True, tagged=True):
-    """ A branch in a dataflow graph - parent will be a Conditional node. """
-    op: "CaseOp"
-
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
-        self.op.insert_port_types(in_types, out_types)
-
-    def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
-        self.op.insert_child_dfg_signature(inputs, outputs)
-
-    def display_name(self) -> str:
-        return self.op.display_name()
-
-
-class Dataflow(BaseOp, list=True, tagged=True):
-    """ Nodes used inside dataflow containers (DFG, Conditional, TailLoop, def, BasicBlock). """
-    op: "DataflowOp" = Field(tagged_union=True)
-
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
-        self.op.insert_port_types(in_types, out_types)
-
-    def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
-        self.op.insert_child_dfg_signature(inputs, outputs)
-
-    def display_name(self) -> str:
-        return self.op.display_name()
-
-
-class DummyOp(BaseOp, list=True, tagged=True):
-    """ Nodes used inside dataflow containers (DFG, Conditional, TailLoop, def, BasicBlock). """
+class DummyOp(BaseOp):
+    """ Nodes used inside dataflow containers (DFG, Conditional, TailLoop, def,
+    BasicBlock). """
+    op: Literal["DummyOp"] = "DummyOp"
     name: str
 
     def display_name(self) -> str:
         return f'"{self.name}"'
 
 
-OpType = Union[Module, BasicBlock, Case, Dataflow, DummyOp]
 
+# ----------------------------------------------------------
+# --------------- Module level operations ------------------
+# ----------------------------------------------------------
 
-# -------------------------------------------
-# --------------- ModuleOp ------------------
-# -------------------------------------------
-
-class Root(BaseOp, list=True, tagged=True):
+class Module(BaseOp):
     """ The root of a module, parent of all other `ModuleOp`s. """
-    pass
+    op: Literal["Module"] = "Module"
 
 
-class Def(BaseOp, tagged=True):
-    """ A function definition. Children nodes are the body of the definition. """
+class Def(BaseOp):
+    """ A function definition. Children nodes are the body of the definition.
+    """
+    op: Literal["Def"] = "Def"
+
+    name: str = "main"
     signature: Signature = Field(default_factory=Signature.empty)
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(in_types) == 0
         assert len(out_types) == 1
         out = out_types[0]
-        assert isinstance(out.ty, Graph)
-        self.signature = out.ty.signature
+        assert isinstance(out, Graph)
+        self.signature = out.signature
 
 
-class Declare(BaseOp, tagged=True):
+class Declare(BaseOp):
     """ External function declaration, linked at runtime. """
+    op: Literal["Declare"] = "Declare"
+    name: str = "main"
     signature: Signature = Field(default_factory=Signature.empty)
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(in_types) == 0
         assert len(out_types) == 1
         out = out_types[0]
-        assert isinstance(out.ty, Graph)
-        self.signature = out.ty.signature
+        assert isinstance(out, Graph)
+        self.signature = out.signature
 
-
-class NewType(BaseOp, tagged=True):
-    """ Top level struct type definition. """
-    name: str
-    definition: SimpleType
-
-
-class Const(BaseOp, list=True, tagged=True):
+class Const(BaseOp):
     """ A constant value definition. """
+    op: Literal["Const"] = "Const"
     value: "ConstValue"
 
 
-ModuleOp = Union[Root, Def, Declare, NewType, Const]
 
 
 # -----------------------------------------------
-# --------------- BasicBlockOp ------------------
+# --------------- BasicBlock types ------------------
 # -----------------------------------------------
 
-class Block(BaseOp, tagged=True):
-    """ A CFG basic block node. The signature is that of the internal Dataflow graph. """
-    inputs: TypeRow = Field(default_factory=TypeRow.empty)
-    other_outputs: TypeRow = Field(default_factory=TypeRow.empty)
+
+class BasicBlock(BaseOp):
+    """ A basic block in a control flow graph - parent will be a CFG node. """
+    op: Literal["BasicBlock"] = "BasicBlock"
+
+
+class DFB(BasicBlock):
+    """ A CFG basic block node. The signature is that of the internal Dataflow
+    graph. """
+    block: Literal["DFB"] = "DFB"
+    inputs: TypeRow = Field(default_factory=list)
+    other_outputs: TypeRow = Field(default_factory=list)
     predicate_variants: list[TypeRow] = Field(default_factory=list)
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         # The types will be all None because it's not dataflow, but we only
         # care about the number of outputs. Note that we don't make use of
         # the HUGR feature where the variant data is appended to successor
         # input. Thus, `predicate_variants` will only contain empty rows.
         num_cases = len(out_types)
-        self.predicate_variants = [tys.TypeRow(types=[]) for _ in range(num_cases)]
+        self.predicate_variants = [[] for _ in range(num_cases)]
 
-    def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
-        self.inputs = tys.TypeRow(types=inputs)
-        self.other_outputs = tys.TypeRow(types=outputs[1:])  # Skip branch predicate type
+    def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
+        self.inputs = inputs
+        self.other_outputs = outputs[1:]  # Skip branch predicate type
 
 
-class Exit(BaseOp, tagged=True):
-    """ The single exit node of the CFG, has no children, stores the types of the CFG node output. """
+class Exit(BasicBlock):
+    """ The single exit node of the CFG, has no children, stores the types of
+    the CFG node output. """
+    block: Literal["Exit"] = "Exit"
     cfg_outputs: TypeRow
 
 
-BasicBlockOp = Union[Block, Exit]
-
-
-# -----------------------------------------
-# --------------- CaseOp ------------------
-# -----------------------------------------
-
-class CaseOp(BaseOp):
-    """ Case ops - nodes valid inside Conditional nodes. """
-    signature: Signature = Field(default_factory=Signature.empty)  # The signature of the contained dataflow graph.
-
-    def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
-        self.signature = tys.Signature(input=tys.TypeRow(types=inputs), output=tys.TypeRow(types=outputs))
+BasicBlockOp = Annotated[Union[DFB, Exit], Field(discriminator="block")]
 
 
 # ---------------------------------------------
 # --------------- DataflowOp ------------------
 # ---------------------------------------------
 
-class Input(BaseOp, tagged=True):
+class DataflowOp(BaseOp):
+    pass
+
+class Input(DataflowOp):
     """ An input node. The outputs of this node are the inputs to the function. """
-    types: TypeRow = Field(default_factory=TypeRow.empty)
+    op: Literal["Input"] = "Input"
+    types: TypeRow = Field(default_factory=list)
+    resources: "ResourceSet" = Field(default_factory=list)
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(in_types) == 0
-        self.types = TypeRow(types=out_types)
+        self.types = list(out_types)
 
 
-class Output(BaseOp, tagged=True):
+class Output(DataflowOp):
     """ An output node. The inputs are the outputs of the function. """
-    types: TypeRow = Field(default_factory=TypeRow.empty)
+    op: Literal["Output"] = "Output"
+    types: TypeRow = Field(default_factory=list)
+    resources: "ResourceSet"= Field(default_factory=list)
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(out_types) == 0
-        self.types = TypeRow(types=in_types)
+        self.types = list(in_types)
 
 
-class Call(BaseOp, tagged=True):
+class Call(DataflowOp):
     """
     Call a function directly.
 
@@ -218,117 +161,106 @@ class Call(BaseOp, tagged=True):
     called directly, with a `ConstE<Graph>` edge. The signature of the
     remaining ports matches the function being called.
     """
+    op: Literal["Call"] = "Call"
     signature: Signature = Field(default_factory=Signature.empty)
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         # The constE edge comes after the value inputs
         fun_ty = in_types[-1]
-        assert isinstance(fun_ty.ty, Graph)
-        self.signature = fun_ty.ty.signature
-
-
-class CallIndirect(BaseOp, tagged=True):
-    """ Call a function indirectly. Like call, but the first input is a standard dataflow graph type. """
-    signature: Signature = Field(default_factory=Signature.empty)
-    
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
-        fun_ty = in_types[0]
         assert isinstance(fun_ty, Graph)
-        assert len(fun_ty.signature.input.types) == len(in_types) - 1
-        assert len(fun_ty.signature.output.types) == len(out_types)
         self.signature = fun_ty.signature
 
 
-class LoadConstant(BaseOp, tagged=True):
+class CallIndirect(DataflowOp):
+    """ Call a function indirectly. Like call, but the first input is a standard dataflow graph type. """
+    op: Literal["CallIndirect"] = "CallIndirect"
+    signature: Signature = Field(default_factory=Signature.empty)
+    
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
+        fun_ty = in_types[0]
+        assert isinstance(fun_ty, Graph)
+        assert len(fun_ty.signature.input) == len(in_types) - 1
+        assert len(fun_ty.signature.output) == len(out_types)
+        self.signature = fun_ty.signature
+
+
+class LoadConstant(DataflowOp):
     """ Load a static constant in to the local dataflow graph. """
-    datatype: ClassicType
+    op: Literal["LoadConstant"] = "LoadConstant"
+    datatype: SimpleType
 
 
-class Leaf(BaseOp, tagged=True):
+class LeafOp(DataflowOp):
     """ Simple operation that has only value inputs+outputs and (potentially) StateOrder edges. """
-    op: "LeafOp"
-
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
-        self.op.insert_port_types(in_types, out_types)
-
-    def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
-        self.op.insert_child_dfg_signature(inputs, outputs)
-
-    def display_name(self) -> str:
-        return self.op.display_name()
+    op: Literal["LeafOp"] = "LeafOp"
 
 
-class DFG(BaseOp, tagged=True):
+class DFG(DataflowOp):
     """ A simply nested dataflow graph. """
+    op: Literal["DFG"] = "DFG"
     signature: Signature = Field(default_factory=Signature.empty)
 
-    def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
-        self.signature = Signature(input=TypeRow(types=inputs), output=TypeRow(types=outputs))
-
-
-class ControlFlow(BaseOp, tagged=True):
-    """ Operation related to control flow. """
-    op: "ControlFlowOp"
-
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
-        self.op.insert_port_types(in_types, out_types)
-
-    def insert_child_dfg_signature(self, inputs: TypeList, outputs: TypeList) -> None:
-        self.op.insert_child_dfg_signature(inputs, outputs)
-
-    def display_name(self) -> str:
-        return self.op.display_name()
-
-
-DataflowOp = Union[Input, Output, Call, CallIndirect, LoadConstant, Leaf, DFG, ControlFlow]
+    def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
+        self.signature = Signature(input=list(inputs), output=list(outputs))
 
 
 # ------------------------------------------------
 # --------------- ControlFlowOp ------------------
 # ------------------------------------------------
 
-class Conditional(BaseOp, list=True, tagged=True):
+class Conditional(DataflowOp):
     """ Conditional operation, defined by child `Case` nodes for each branch. """
+    op: Literal["Conditional"] = "Conditional"
     predicate_inputs: list[TypeRow] = Field(default_factory=list)  # The possible rows of the predicate input
-    other_inputs: TypeRow = Field(default_factory=TypeRow.empty)  # Remaining input types
-    outputs: TypeRow = Field(default_factory=TypeRow.empty)  # Output types
+    other_inputs: TypeRow = Field(default_factory=list)  # Remaining input types
+    outputs: TypeRow = Field(default_factory=list)  # Output types
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         # First port is a predicate, i.e. a sum of tuple types. We need to unpack
         # those into a list of type rows
         pred = in_types[0]
-        assert isinstance(pred.ty, ContainerClassic) or isinstance(pred.ty, ContainerLinear)
-        assert isinstance(pred.ty.ty, tys.Sum)
+        assert isinstance(pred, tys.Sum)
         self.predicate_inputs = []
-        for ty in pred.ty.ty.tys.types:
-            assert isinstance(ty.ty, ContainerClassic) or isinstance(ty.ty, ContainerLinear)
-            assert isinstance(ty.ty.ty, tys.Tuple)
-            self.predicate_inputs.append(ty.ty.ty.tys)
-        self.other_inputs = TypeRow(types=in_types[1:])
-        self.outputs = TypeRow(types=out_types)
+        for ty in pred.row:
+            # assert isinstance(ty.ty, ContainerClassic) or isinstance(ty.ty, ContainerLinear)
+            assert isinstance(ty, tys.Tuple)
+            self.predicate_inputs.append(ty.row)
+        self.other_inputs = list(in_types[1:])
+        self.outputs = list(out_types)
 
 
-class TailLoop(BaseOp, list=True, tagged=True):
+class Case(BaseOp):
+    """ Case ops - nodes valid inside Conditional nodes. """
+    op: Literal["Case"] = "Case"
+    signature: Signature = Field(default_factory=Signature.empty)  # The signature of the contained dataflow graph.
+
+    def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
+        self.signature = tys.Signature(input=list(inputs), output=list(outputs))
+
+
+class TailLoop(DataflowOp):
     """ Tail-controlled loop. """
-    just_inputs: TypeRow = Field(default_factory=TypeRow.empty)  # Types that are only input
-    just_outputs: TypeRow = Field(default_factory=TypeRow.empty)  # Types that are only output
-    rest: TypeRow = Field(default_factory=TypeRow.empty)  # Types that are appended to both input and output
+    op: Literal["TailLoop"] = "TailLoop"
+    just_inputs: TypeRow = Field(default_factory=list)  # Types that are only input
+    just_outputs: TypeRow = Field(default_factory=list)  # Types that are only output
+    rest: TypeRow = Field(default_factory=list)  # Types that are appended to both input and output
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert in_types == out_types
-        # self.just_inputs = TypeRow(types=in_types)
-        # self.just_outputs = TypeRow(types=out_types)
-        self.rest = TypeRow(types=in_types)
+        # self.just_inputs = list(in_types)
+        # self.just_outputs = list(out_types)
+        self.rest = list(in_types)
 
 
-class CFG(BaseOp, tagged=True):
+class CFG(DataflowOp):
     """ A dataflow node which is defined by a child CFG. """
-    inputs: TypeRow = Field(default_factory=TypeRow.empty)
-    outputs: TypeRow = Field(default_factory=TypeRow.empty)
+    op: Literal["CFG"] = "CFG"
+    inputs: TypeRow = Field(default_factory=list)
+    outputs: TypeRow = Field(default_factory=list)
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
-        self.inputs = TypeRow(types=in_types)
-        self.outputs = TypeRow(types=out_types)
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
+        self.inputs = list(in_types)
+        self.outputs = list(out_types)
 
 
 ControlFlowOp = Union[Conditional, TailLoop, CFG]
@@ -338,144 +270,153 @@ ControlFlowOp = Union[Conditional, TailLoop, CFG]
 # --------------- LeafOp ------------------
 # -----------------------------------------
 
-class CustomOp(BaseOp, list=True, tagged=True):
+class CustomOp(LeafOp):
     """ A user-defined operation that can be downcasted by the extensions that define it. """
-    op: "OpaqueOp"
+    lop: Literal["CustomOp"] = "CustomOp"
+    custom: "OpaqueOp"
 
     def display_name(self) -> str:
-        return self.op.display_name()
+        return self.custom.display_name()
 
 
-class H(BaseOp, list=True, tagged=True):
+class H(LeafOp):
     """ A Hadamard gate. """
+    lop: Literal["H"] = "H"
     pass
 
 
-class T(BaseOp, list=True, tagged=True):
+class T(LeafOp):
     """ A T gate. """
+    lop: Literal["T"] = "T"
     pass
 
 
-class S(BaseOp, list=True, tagged=True):
+class S(LeafOp):
     """ An S gate. """
+    lop: Literal["S"] = "S"
     pass
 
 
-class X(BaseOp, list=True, tagged=True):
+class X(LeafOp):
     """ A Pauli X gate. """
+    lop: Literal["X"] = "X"
     pass
 
 
-class Y(BaseOp, list=True, tagged=True):
+class Y(LeafOp):
     """ A Pauli Y gate. """
+    lop: Literal["Y"] = "Y"
     pass
 
 
-class Z(BaseOp, list=True, tagged=True):
+class Z(LeafOp):
     """ A Pauli Z gate. """
+    lop: Literal["Z"] = "Z"
     pass
 
 
-class Tadj(BaseOp, list=True, tagged=True):
+class Tadj(LeafOp):
     """ An adjoint T gate. """
+    lop: Literal["Tadj"] = "Tadj"
     pass
 
 
-class Sadj(BaseOp, list=True, tagged=True):
+class Sadj(LeafOp):
     """ An adjoint S gate. """
+    lop: Literal["Sadj"] = "Sadj"
     pass
 
 
-class CX(BaseOp, list=True, tagged=True):
+class CX(LeafOp):
     """ A controlled X gate. """
+    lop: Literal["CX"] = "CX"
     pass
 
 
-class ZZMax(BaseOp, list=True, tagged=True):
+class ZZMax(LeafOp):
     """ A maximally entangling ZZ phase gate. """
+    lop: Literal["ZZMax"] = "ZZMax"
     pass
 
 
-class Reset(BaseOp, list=True, tagged=True):
+class Reset(LeafOp):
     """ A qubit reset operation. """
+    lop: Literal["Reset"] = "Reset"
     pass
 
 
-class Noop(BaseOp, list=True, tagged=True):
+class Noop(LeafOp):
     """ A no-op operation. """
+    lop: Literal["Noop"] = "Noop"
     ty: SimpleType
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(in_types) == 1
         assert len(out_types) == 1
         assert in_types[0] == out_types[0]
         self.ty = in_types[0]
 
 
-class Measure(BaseOp, list=True, tagged=True):
+class Measure(LeafOp):
     """ A qubit measurement operation. """
+    lop: Literal["Measure"] = "Measure"
     pass
 
 
-class RzF64(BaseOp, list=True, tagged=True):
+class RzF64(LeafOp):
     """ A rotation of a qubit about the Pauli Z axis by an input float angle. """
+    lop: Literal["RzF64"] = "RzF64"
     pass
 
 
-class Copy(BaseOp, tagged=True):
-    """ A copy operation for classical data. """
-    # Note that a 0-ary copy acts as an explicit discard. Like any
-    # stateful operation with no dataflow outputs, such a copy should
-    # have a State output connecting it to the Output node.
-    n_copies: int  # The number of copies to make.
-    typ: ClassicType  # The type of the data to copy.
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
-        assert len(in_types) == 1
-        assert isinstance(in_types[0], Classic)
-        # Filter order edges
-        self.n_copies = len(out_types)
-        self.typ = in_types[0].ty
-
-
-class Xor(BaseOp, list=True, tagged=True):
+class Xor(LeafOp):
     """ A bitwise XOR operation. """
+    lop: Literal["Xor"] = "Xor"
     pass
 
 
-class MakeTuple(BaseOp, list=True, tagged=True):
+class MakeTuple(LeafOp):
     """ An operation that packs all its inputs into a tuple. """
-    tys: TypeRow = Field(default_factory=TypeRow.empty)
+    lop: Literal["MakeTuple"] = "MakeTuple"
+    tys: TypeRow = Field(default_factory=list)
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         # If we have a single order edge as input, this is a unit
         if in_types == [None]:
             in_types = []
-        self.tys = TypeRow(types=in_types)
+        self.tys = list(in_types)
 
 
-class UnpackTuple(BaseOp, list=True, tagged=True):
+class UnpackTuple(LeafOp):
     """ An operation that packs all its inputs into a tuple. """
-    tys: TypeRow = Field(default_factory=TypeRow.empty)
+    lop: Literal["UnpackTuple"] = "UnpackTuple"
+    tys: TypeRow = Field(default_factory=list)
 
-    def insert_port_types(self, in_types: TypeList, out_types: TypeList) -> None:
-        self.tys = TypeRow(types=out_types)
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
+        self.tys = list(out_types)
 
 
-class MakeNewType(BaseOp, tagged=True):
+class MakeNewType(LeafOp):
     """ An operation that wraps a value into a new type. """
+    lop: Literal["MakeNewType"] = "MakeNewType"
     name: str  # The new type name.
     typ: SimpleType  # The wrapped type.
 
 
-class Tag(BaseOp, list=True, tagged=True):
+class Tag(LeafOp):
     """ An operation that creates a tagged sum value from one of its variants. """
+    lop: Literal["Tag"] = "Tag"
     tag: int  # The variant to create.
     variants: TypeRow  # The variants of the sum type.
 
 
-LeafOp = Union[CustomOp, H, S, T, X, Y, Z, Tadj, Sadj, CX, ZZMax, Reset, Noop,
-               Measure, RzF64, Copy, Xor, MakeTuple, UnpackTuple, MakeNewType, Tag]
+LeafOpUnion = Annotated[Union[CustomOp, H, S, T, X, Y, Z, Tadj, Sadj, CX, ZZMax, Reset, Noop,
+               Measure, RzF64, Xor, MakeTuple, UnpackTuple, MakeNewType, Tag], Field(discriminator="lop")]
+
+
+OpType = Annotated[Union[Module, 
+               BasicBlock, Case, Module, Def, Declare, Const, DummyOp, BasicBlockOp, Conditional, TailLoop, CFG, Input, Output, Call, CallIndirect, LoadConstant, LeafOpUnion, DFG], Field(discriminator="op")]
 
 
 # -----------------------------------------
@@ -484,6 +425,7 @@ LeafOp = Union[CustomOp, H, S, T, X, Y, Z, Tadj, Sadj, CX, ZZMax, Reset, Noop,
 
 class OpaqueOp(BaseOp):
     """ A wrapped CustomOp with fast equality checks. """
+    # op: Literal["OpaqueOp"] = "OpaqueOp"
     id: str  # Operation name, cached for fast equality checks.
     op: "OpDef"  # The custom operation.
 
@@ -507,25 +449,29 @@ class OpDef(BaseOp, allow_population_by_field_name=True):
 # --------------- ConstValue ----------------
 # -------------------------------------------
 
-class Int(BaseOp, list=True, tagged=True):
+class Int(BaseOp):
     """ An arbitrary length integer constant. """
+    op: Literal["Int"] = "Int"
     value: int
 
 
-class Sum(BaseOp, tagged=True):
+class Sum(BaseOp):
     """ An arbitrary length integer constant. """
+    op: Literal["Sum"] = "Sum"
     tag: int
     variants: TypeRow
     val: "ConstValue"
 
 
-class Tuple(BaseOp, list=True, tagged=True):
+class Tuple(BaseOp):
     """ A tuple of constant values. """
+    op: Literal["Tuple"] = "Tuple"
     vals: list["ConstValue"]
 
 
-class Opaque(BaseOp, list=True, tagged=True):
+class Opaque(BaseOp):
     """ An opaque constant value. """
+    op: Literal["Opaque"] = "Opaque"
     ty: SimpleType
     val: "CustomConst"
 

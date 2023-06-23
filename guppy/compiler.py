@@ -549,7 +549,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
         block = self.graph.add_block(predecessors[0].node.parent)
         errs_on_usage = merge_err_maps(errs_on_usage or {}, *(p.errs_on_usage for p in predecessors))
         for p in predecessors:
-            self.graph.add_edge(p.node.add_out_port(), block.add_in_port())
+            self.graph.add_edge(p.node.add_out_port(), block.in_port(None))
         new_vars = self._add_input(merge_vars, block)
         return BasicBlock(block, new_vars, errs_on_usage)
 
@@ -690,7 +690,7 @@ class StatementCompiler(CompilerBase, AstVisitor[Optional[BasicBlock]]):
         # Define hook that is executed on `continue` and `break`
         def jump_hook(curr_bb: BasicBlock, is_continue: bool) -> Optional[BasicBlock]:
             target_bb = head_bb if is_continue else tail_bb
-            self.graph.add_edge(curr_bb.node.add_out_port(), target_bb.node.add_in_port())
+            self.graph.add_edge(curr_bb.node.add_out_port(), target_bb.node.in_port(None))
             _, errs = merge_variables(bb, curr_bb)
 
             # TODO: If we reassign a global variable with a different type
@@ -941,7 +941,7 @@ class FunctionCompiler(CompilerBase):
                 raise GuppyTypeError(f"Return type mismatch: expected `{TypeRow(func_ty.returns)}`, "
                                      f"got `{TypeRow(tys)}`", node.value)
             self.stmt_compiler._finish_bb(curr_bb, outputs=row)
-            self.graph.add_edge(curr_bb.node.add_out_port(), return_block.add_in_port())
+            self.graph.add_edge(curr_bb.node.add_out_port(), return_block.in_port(None))
             return None
 
         # Compile function body
@@ -997,7 +997,7 @@ class GuppyModule(object):
     def __init__(self, name: str):
         self.name = name
         self.graph = Hugr(name)
-        self.module_node = self.graph.add_root(self.name)
+        self.module_node = self.graph.set_root_name(self.name)
         self.compiler = FunctionCompiler(self.graph)
         self.annotated_funcs = {}
         self.fun_decls = []
