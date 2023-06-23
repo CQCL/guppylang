@@ -2,27 +2,27 @@ from guppy.compiler import guppy
 from tests.integration.util import validate
 
 
-def test_infinite_loop(tmp_path):
+def test_infinite_loop():
     @guppy
     def foo() -> int:
         while True:
             pass
         return 0
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_counting_loop(tmp_path):
+def test_counting_loop():
     @guppy
     def foo(i: int) -> int:
         while i > 0:
             i -= 1
         return 0
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_break(tmp_path):
+def test_break():
     @guppy
     def foo(i: int) -> int:
         while True:
@@ -31,10 +31,10 @@ def test_break(tmp_path):
             i -= 1
         return 0
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_continue(tmp_path):
+def test_continue():
     @guppy
     def foo(i: int) -> int:
         x = 42
@@ -44,10 +44,10 @@ def test_continue(tmp_path):
             x = x + i
         return x
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_return_in_loop(tmp_path):
+def test_return_in_loop():
     @guppy
     def foo(i: int) -> int:
         x = 42
@@ -58,10 +58,10 @@ def test_return_in_loop(tmp_path):
             i -= 1
         return x
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_nested_loop(tmp_path):
+def test_nested_loop():
     @guppy
     def foo(x: int, y: int) -> int:
         p = 0
@@ -74,10 +74,10 @@ def test_nested_loop(tmp_path):
             x -= 1
         return p
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_nested_loop_break_continue(tmp_path):
+def test_nested_loop_break_continue():
     @guppy
     def foo(x: int, y: int) -> int:
         p = 0
@@ -96,4 +96,4 @@ def test_nested_loop_break_continue(tmp_path):
             x -= 1
         return p
 
-    validate(foo, tmp_path)
+    validate(foo)

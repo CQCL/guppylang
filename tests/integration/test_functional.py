@@ -2,7 +2,7 @@ from guppy.compiler import guppy
 from tests.integration.util import validate, functional, _
 
 
-def test_if_no_else(tmp_path):
+def test_if_no_else():
     @guppy
     def foo(x: bool, y: int) -> int:
         _@functional
@@ -10,10 +10,10 @@ def test_if_no_else(tmp_path):
             y += 1
         return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_if_else(tmp_path):
+def test_if_else():
     @guppy
     def foo(x: bool, y: int) -> int:
         _@functional
@@ -23,10 +23,10 @@ def test_if_else(tmp_path):
             y -= 1
         return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_if_elif(tmp_path):
+def test_if_elif():
     @guppy
     def foo(x: bool, y: int) -> int:
         _@functional
@@ -36,10 +36,10 @@ def test_if_elif(tmp_path):
             y *= 7
         return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_if_elif_else(tmp_path):
+def test_if_elif_else():
     @guppy
     def foo(x: bool, y: int) -> int:
         _@functional
@@ -51,30 +51,30 @@ def test_if_elif_else(tmp_path):
             y = 1337
         return y
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_infinite_loop(tmp_path):
+def test_infinite_loop():
     @guppy
     def foo() -> int:
         while True:
             pass
         return 0
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_counting_loop(tmp_path):
+def test_counting_loop():
     @guppy
     def foo(i: int) -> int:
         while i > 0:
             i -= 1
         return 0
 
-    validate(foo, tmp_path)
+    validate(foo)
 
 
-def test_nested_loop(tmp_path):
+def test_nested_loop():
     @guppy
     def foo(x: int, y: int) -> int:
         p = 0
@@ -88,4 +88,4 @@ def test_nested_loop(tmp_path):
             x -= 1
         return p
 
-    validate(foo, tmp_path)
+    validate(foo)

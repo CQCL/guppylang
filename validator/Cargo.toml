@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "validator"
+crate-type = ["cdylib"]
 
 [dependencies]
+pyo3 = "0.19.0"
 quantinuum-hugr = { git = "https://github.com/CQCL-DEV/hugr.git", rev = "54f7108" }
 rmp-serde = "1.1.1"
