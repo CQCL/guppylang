@@ -11,7 +11,7 @@ def test_call():
 
     @module
     def bar() -> int:
-        return bar()
+        return foo()
 
     validate(module.compile(exit_on_error=True))
 
