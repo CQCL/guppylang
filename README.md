@@ -28,6 +28,13 @@ Install a local development version using:
 pip install -e '.[dev]'
 ```
 
+### Git blame
+
+You can configure Git to ignore formatting commits when using `git blame` by running 
+```sh
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ## Usage
 
 TODO
