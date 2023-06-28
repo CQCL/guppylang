@@ -6,10 +6,11 @@ import guppy.hugr.tys as tys
 
 
 class GuppyType(ABC):
-    """ Base class for all Guppy types.
+    """Base class for all Guppy types.
 
     Note that all instances of `GuppyType` subclasses are expected to be immutable.
     """
+
     @abstractmethod
     def to_hugr(self) -> tys.SimpleType:
         pass
@@ -134,11 +135,12 @@ class DictType(GuppyType):
         kt = self.key_type.to_hugr()
         vt = self.value_type.to_hugr()
         assert not tys.is_linear(kt)
-        return tys.Map(k=kt, v=vt, l = tys.is_linear(vt))
+        return tys.Map(k=kt, v=vt, l=tys.is_linear(vt))
 
 
 def type_from_python_value(val: Any) -> Optional[GuppyType]:
-    """ Checks if the given Python value is a valid Guppy value.
+    """Checks if the given Python value is a valid Guppy value.
+
     In that case, the Guppy type of the value is returned.
     """
     if isinstance(val, bool):

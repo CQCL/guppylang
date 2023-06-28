@@ -1,4 +1,5 @@
-""" AST visitor based on ast.NodeVisitor that can pass extra arguments to visit(...). """
+""" AST visitor based on ast.NodeVisitor that can pass extra arguments to
+visit(...). """
 
 import ast
 from typing import Any, TypeVar, Generic
@@ -34,7 +35,7 @@ class AstVisitor(Generic[T]):
 
     def visit(self, node: Any, *args: Any, **kwargs: Any) -> T:
         """Visit a node."""
-        method = 'visit_' + node.__class__.__name__
+        method = "visit_" + node.__class__.__name__
         visitor = getattr(self, method, self.generic_visit)
         return visitor(node, *args, **kwargs)
 

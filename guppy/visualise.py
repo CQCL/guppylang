@@ -128,7 +128,9 @@ def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph) -> None:
     in_ports = [str(i) for i in range(node.num_in_ports)]
     out_ports = [str(i) for i in range(node.num_out_ports)]
     if len(node.meta_data) > 0:
-        data = "<BR/><BR/>" + "<BR/>".join(f"{key}: {value}" for key, value in node.meta_data.items())
+        data = "<BR/><BR/>" + "<BR/>".join(
+            f"{key}: {value}" for key, value in node.meta_data.items()
+        )
     else:
         data = ""
     if len(hugr.children(node)) > 0:
@@ -140,8 +142,12 @@ def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph) -> None:
                 node_label=node.op.display_name(),
                 node_data=data,
                 border_colour=_COLOURS["port_border"],
-                inputs_row=_html_ports(in_ports, _INPUT_PREFIX) if len(in_ports) > 0 else "",
-                outputs_row=_html_ports(out_ports, _OUTPUT_PREFIX) if len(out_ports) > 0 else "",
+                inputs_row=_html_ports(in_ports, _INPUT_PREFIX)
+                if len(in_ports) > 0
+                else "",
+                outputs_row=_html_ports(out_ports, _OUTPUT_PREFIX)
+                if len(out_ports) > 0
+                else "",
             )
             sub.node(f"{node.idx}", shape="plain", label=f"<{html_label}>")
             sub.attr(label="", margin="10", color=_COLOURS["edge"])
@@ -150,9 +156,13 @@ def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph) -> None:
             node_back_color=_COLOURS["node"],
             node_label=node.op.display_name(),
             node_data=data,
-            inputs_row=_html_ports(in_ports, _INPUT_PREFIX) if len(in_ports) > 0 else "",
-            outputs_row=_html_ports(out_ports, _OUTPUT_PREFIX) if len(out_ports) > 0 else "",
-            border_colour=_COLOURS["background"]
+            inputs_row=_html_ports(in_ports, _INPUT_PREFIX)
+            if len(in_ports) > 0
+            else "",
+            outputs_row=_html_ports(out_ports, _OUTPUT_PREFIX)
+            if len(out_ports) > 0
+            else "",
+            border_colour=_COLOURS["background"],
         )
         graph.node(f"{node.idx}", label=f"<{html_label}>", shape="plain")
 
@@ -178,10 +188,15 @@ def hugr_to_graphviz(hugr: Hugr) -> gv.Digraph:
         "fontcolor": "black",
     }
     for src_port, tgt_port in hugr.edges():
-        graph.edge(_out_port_name(src_port), _in_port_name(tgt_port),
-                   label=str(src_port.ty) if isinstance(src_port, OutPortV) else "",
-                   color=_COLOURS["edge"] if isinstance(src_port, OutPortV) else _COLOURS["dark"],
-                   **edge_attr)
+        graph.edge(
+            _out_port_name(src_port),
+            _in_port_name(tgt_port),
+            label=str(src_port.ty) if isinstance(src_port, OutPortV) else "",
+            color=_COLOURS["edge"]
+            if isinstance(src_port, OutPortV)
+            else _COLOURS["dark"],
+            **edge_attr,
+        )
     return graph
 
 
