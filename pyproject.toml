@@ -20,6 +20,7 @@ dev = [
     "build",
     "pytest",
     "mypy",
+    "black",
     "maturin>=1.1,<2.0",
 ]
 
