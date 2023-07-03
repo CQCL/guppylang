@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from guppy.free_names import name_nodes_in_ast
-from guppy.util import Assign, InternalGuppyError, GuppyError
+from guppy.error import Assign, InternalGuppyError, GuppyError
 from guppy.visitor import AstVisitor
 
 

@@ -20,7 +20,7 @@ from guppy.guppy_types import (
     StringType,
 )
 from guppy.hugr.hugr import OutPortV, Hugr, DFContainingNode, Node, BlockNode, CFNode
-from guppy.util import (
+from guppy.error import (
     Assign,
     GuppyError,
     assert_arith_type,
@@ -775,7 +775,7 @@ class FunctionCompiler(CompilerBase):
             else:
                 GuppyError(f"Variable `{x}` is not defined", use_bb.vars.used[x])
 
-        render_cfg(cfg, "cfg")
+        # render_cfg(cfg, "cfg")
 
         def_input = self.graph.add_input(parent=def_node)
         cfg_node = self.graph.add_cfg(
