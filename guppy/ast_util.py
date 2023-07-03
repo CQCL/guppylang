@@ -1,6 +1,3 @@
-""" AST visitor based on ast.NodeVisitor that can pass extra arguments to
-visit(...). """
-
 import ast
 from typing import Any, TypeVar, Generic
 
@@ -42,3 +39,22 @@ class AstVisitor(Generic[T]):
     def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> T:
         """Called if no explicit visitor function exists for a node."""
         raise NotImplementedError(f"visit_{node.__class__.__name__} is not implemented")
+
+
+class NameVisitor(ast.NodeVisitor):
+    """Visitor to collect all `Name` nodes occurring in an AST."""
+
+    names: list[ast.Name]
+
+    def __init__(self) -> None:
+        self.names = []
+
+    def visit_Name(self, node: ast.Name) -> None:
+        self.names.append(node)
+
+
+def name_nodes_in_ast(node: Any) -> list[ast.Name]:
+    """Returns all `Name` nodes occurring in an AST."""
+    v = NameVisitor()
+    v.visit(node)
+    return v.names

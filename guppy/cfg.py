@@ -2,9 +2,8 @@ import ast
 from dataclasses import dataclass, field
 from typing import Optional
 
-from guppy.free_names import name_nodes_in_ast
 from guppy.error import Assign, InternalGuppyError, GuppyError
-from guppy.visitor import AstVisitor
+from guppy.ast_util import AstVisitor, name_nodes_in_ast
 
 
 @dataclass

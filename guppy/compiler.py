@@ -32,7 +32,7 @@ from guppy.error import (
     SourceLoc,
     UndefinedPort,
 )
-from guppy.visitor import AstVisitor
+from guppy.ast_util import AstVisitor
 from guppy.visualise import render_cfg
 
 
