@@ -2,68 +2,12 @@ import ast
 from dataclasses import dataclass, field
 from typing import Optional
 
-from guppy.error import Assign, InternalGuppyError, GuppyError
+from guppy.bb import BB, CompiledBB
+from guppy.compiler_base import Signature, return_var, VarMap
+from guppy.error import InternalGuppyError, GuppyError
 from guppy.ast_util import AstVisitor, name_nodes_in_ast
-
-
-@dataclass
-class VarAnalysis:
-    # Variables that are assigned in the BB
-    assigned: dict[str, Assign] = field(default_factory=dict)
-
-    # The (external) variables used in the BB, i.e. usages of variables that are
-    # assigned in the BB are not included here.
-    used: dict[str, ast.Name] = field(default_factory=dict)
-
-    # Variables that are live before the execution of the BB. We store the BB in which
-    # the use occurs as evidence of liveness
-    live_before: dict[str, "BB"] = field(default_factory=dict)
-
-    # Variables that are definitely assigned before the execution of the BB
-    assigned_before: set[str] = field(default_factory=set)
-
-
-@dataclass(eq=False)  # Disable equality to recover hash from `object`
-class BB:
-    """A basic block in a control flow graph."""
-
-    idx: int
-
-    # AST statements contained in this BB
-    statements: list[ast.stmt] = field(default_factory=list)
-
-    # Predecessor and successor BBs
-    predecessors: list["BB"] = field(default_factory=list)
-    successors: list["BB"] = field(default_factory=list)
-
-    # If the BB has multiple successors, we need a predicate to decide to which one to
-    # jump to
-    branch_pred: Optional[ast.expr] = None
-
-    # Program analysis data
-    vars: VarAnalysis = field(default_factory=VarAnalysis)
-
-
-class FunctionalBB(BB):
-    """A basic block that is compiled via a functional node.
-
-    We turn loops and if-statements that are annotated with `_@functional` into CFGs.
-    This allows us to reuse the liveness and definite assignment analysis code. When
-    compiling the CFG, we turn those functional BBs back into dataflow nodes and attach
-    them to the predecessor BB.
-    """
-
-
-class FunctionalBranchBB(FunctionalBB):
-    """A basic block that does functional branching."""
-
-
-class FunctionalMergeBB(FunctionalBB):
-    """A basic block that merges a functional branch."""
-
-
-class FunctionalLoopBB(FunctionalBB):
-    """A basic block that starts a functional loop."""
+from guppy.guppy_types import GuppyType
+from guppy.hugr.hugr import Node, Hugr
 
 
 @dataclass
@@ -117,26 +61,57 @@ class CFG:
                     succ.vars.assigned_before &= assigned_after
                     queue.add(succ)
 
-    def remove_empty_bbs(self):
-        new_bbs = []
-        for bb in self.bbs:
-            if (
-                len(bb.statements) == 0
-                and bb.branch_pred is None
-                and bb not in (self.entry_bb, self.exit_bb)
-            ):
-                succ = bb.successors[0]
-                succ.predecessors.remove(bb)
-                for pred in bb.predecessors:
-                    pred.successors[pred.successors.index(bb)] = succ
-                    succ.predecessors.append(pred)
+    def compile(
+        self, graph: Hugr, input_sig: Signature, return_tys: list[GuppyType], parent: Node, global_variables: VarMap
+    ) -> None:
+        """Compiles the CFG."""
+
+        compiled: dict[BB, CompiledBB] = {}
+
+        entry_compiled = self.entry_bb.compile(graph, input_sig, return_tys, parent, global_variables)
+        compiled[self.entry_bb] = entry_compiled
+
+        # Visit all control-flow edges in BFS order
+        stack = [
+            (entry_compiled, entry_compiled.output_sigs[i], succ)
+            # Put successors onto stack in reverse order to maintain the original order
+            # when popping
+            for i, succ in reversed(list(enumerate(self.entry_bb.successors)))
+        ]
+        while len(stack) > 0:
+            pred, sig, bb = stack.pop()
+
+            # If the BB was already compiled, we just have to check that the signatures
+            # match.
+            if bb in compiled:
+                assert len(sig) == len(compiled[bb].input_sig)
+                for v1, v2 in zip(sig, compiled[bb].input_sig):
+                    assert v1.name == v2.name
+                    if v1.ty != v2.ty:
+                        f1 = [f"{{{i}}}" for i in range(len(v1.defined_at))]
+                        f2 = [f"{{{len(f1) + i}}}" for i in range(len(v2.defined_at))]
+                        raise GuppyError(
+                            f"Variable `{v1.name}` can refer to different types: "
+                            f"`{v1.ty}` (at {', '.join(f1)}) vs "
+                            f"`{v2.ty}` (at {', '.join(f2)})",
+                            bb.vars.live_before[v1.name].vars.used[v1.name],
+                            list(sorted(v1.defined_at)) + list(sorted(v2.defined_at)),
+                        )
+                graph.add_edge(
+                    pred.node.add_out_port(), compiled[bb].node.in_port(None)
+                )
+
+            # Otherwise, compile the BB and put successors on the stack
             else:
-                new_bbs.append(bb)
-        self.bbs = new_bbs
-
-
-def return_var(n: int) -> str:
-    return f"%ret{n}"
+                bb_compiled = bb.compile(graph, sig, return_tys, parent, global_variables)
+                graph.add_edge(pred.node.add_out_port(), bb_compiled.node.in_port(None))
+                compiled[bb] = bb_compiled
+                stack += [
+                    (bb_compiled, bb_compiled.output_sigs[i], succ)
+                    # Put successors onto stack in reverse order to maintain the
+                    # original order when popping
+                    for i, succ in reversed(list(enumerate(bb.successors)))
+                ]
 
 
 @dataclass(frozen=True)

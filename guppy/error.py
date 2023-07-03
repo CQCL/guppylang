@@ -2,20 +2,9 @@ import ast
 from dataclasses import dataclass, field
 from typing import Optional, Union, Any
 
+from guppy.ast_util import AstNode
 from guppy.guppy_types import GuppyType, IntType, FloatType, BoolType
 from guppy.hugr.hugr import OutPortV, Node
-
-AstNode = Union[
-    ast.AST,
-    ast.operator,
-    ast.expr,
-    ast.arg,
-    ast.stmt,
-    ast.Name,
-    ast.keyword,
-    ast.FunctionDef,
-]
-Assign = Union[ast.Assign, ast.AugAssign]
 
 
 @dataclass(frozen=True)

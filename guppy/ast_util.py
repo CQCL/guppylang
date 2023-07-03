@@ -1,6 +1,18 @@
 import ast
-from typing import Any, TypeVar, Generic
+from typing import Any, TypeVar, Generic, Union
 
+
+AstNode = Union[
+    ast.AST,
+    ast.operator,
+    ast.expr,
+    ast.arg,
+    ast.stmt,
+    ast.Name,
+    ast.keyword,
+    ast.FunctionDef,
+]
+Assign = Union[ast.Assign, ast.AugAssign]
 
 T = TypeVar("T", covariant=True)
 
