@@ -120,7 +120,12 @@ class DFB(BasicBlock):
 
     def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
         self.inputs = inputs
-        self.other_outputs = outputs[1:]  # Skip branch predicate type
+        assert isinstance(outputs[0], tys.Sum)
+        self.predicate_variants = []
+        for variant in outputs[0].row:
+            assert isinstance(variant, tys.Tuple)
+            self.predicate_variants.append(variant.row)
+        self.other_outputs = outputs[1:]
 
 
 class Exit(BasicBlock):

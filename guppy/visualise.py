@@ -1,8 +1,10 @@
 """Visualise HUGR using graphviz."""
+import ast
 
 import graphviz as gv  # type: ignore
 from typing import Iterable
 
+from guppy.cfg import CFG
 from guppy.hugr.hugr import InPort, OutPort, Node, Hugr, OutPortV
 
 # old palettte: https://colorhunt.co/palette/343a407952b3ffc107e1e8eb
@@ -203,3 +205,26 @@ def hugr_to_graphviz(hugr: Hugr) -> gv.Digraph:
 def render_hugr(hugr: Hugr, filename: str, format_st: str = "svg") -> None:
     gv_graph = hugr_to_graphviz(hugr)
     gv_graph.render(filename, format=format_st)
+
+
+def cfg_to_graphviz(cfg: CFG) -> gv.Digraph:
+    graph = gv.Digraph("CFG", strict=False)
+    for bb in cfg.bbs:
+        label = "assigned: " + ", ".join(bb.assigned.keys()) + "\n"
+        label += "used: " + ", ".join(bb.used.keys()) + "\n"
+        label += "ass_before: " + ", ".join(bb.assigned_before) + "\n"
+        label += "live_before: " + ", ".join(bb.live_before.keys()) + "\n"
+        label += "--------\n"
+        label += "\n".join(ast.unparse(s) for s in bb.statements)
+        if bb.branch_pred is not None:
+            label += f"\n{ast.unparse(bb.branch_pred)} ?"
+        graph.node(str(bb.idx), label, shape='rect')
+        for succ in bb.successors:
+            graph.edge(str(bb.idx), str(succ.idx))
+    return graph
+
+
+def render_cfg(cfg: CFG, filename: str, format_st: str = "svg") -> None:
+    gv_graph = cfg_to_graphviz(cfg)
+    gv_graph.render(filename, format=format_st)
+

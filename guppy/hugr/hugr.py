@@ -674,27 +674,23 @@ class Hugr:
         all_nodes = self.nodes()
         root_node = next(all_nodes)
         for n in all_nodes:
-            if isinstance(n.op, ops.DataflowOp) and isinstance(n.op, ops.Input):
+            if isinstance(n.op, ops.Input):
                 input_nodes.append(n)
-            elif isinstance(n.op, ops.DataflowOp) and isinstance(n.op, ops.Output):
+            elif isinstance(n.op, ops.Output):
                 output_nodes.append(n)
-            elif (
-                isinstance(n.op, ops.BasicBlock)
-                and isinstance(n.op, ops.DFB)
-                and n.num_in_ports == 0
-            ):
+            elif isinstance(n.op, ops.DFB) and next(self.in_edges(n.in_port(None)), None) == None:
                 entry_nodes.append(n)
-            elif isinstance(n.op, ops.BasicBlock) and isinstance(n.op, ops.Exit):
-                entry_nodes.append(n)
+            elif isinstance(n.op, ops.Exit):
+                exit_nodes.append(n)
             else:
                 remaining_nodes.append(n)
         for n in itertools.chain(
             iter([root_node]),
             iter(entry_nodes),
+            iter(exit_nodes),
             iter(input_nodes),
             iter(output_nodes),
             iter(remaining_nodes),
-            iter(exit_nodes),
         ):
             raw_index[n.idx] = next(indices)
 

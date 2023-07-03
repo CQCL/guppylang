@@ -78,7 +78,6 @@ def test_different_types3():
     validate(foo)
 
 
-@pytest.mark.skip("Known bug")
 def test_while_change_type():
     @guppy
     def foo() -> None:

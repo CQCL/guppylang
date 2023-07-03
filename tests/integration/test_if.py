@@ -126,7 +126,6 @@ def test_return_defined2():
     validate(foo)
 
 
-@pytest.mark.skip("Known bug")
 def test_break_different_types1():
     @guppy
     def foo(x: int) -> int:
@@ -143,7 +142,6 @@ def test_break_different_types1():
     validate(foo)
 
 
-@pytest.mark.skip("Known bug")
 def test_break_different_types2():
     @guppy
     def foo(x: int) -> int:
