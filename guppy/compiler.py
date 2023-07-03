@@ -481,7 +481,7 @@ class BBCompiler(CompilerBase, AstVisitor[None]):
         for node in bb.statements:
             self.visit(node, dfg)
 
-        outputs = [dfg[x].port for x in bb.successors[0].live_before if x in dfg]
+        outputs = [dfg[x].port for x in bb.successors[0].vars.live_before if x in dfg]
 
         # If the BB branches, we have to compile the branch predicate
         if len(bb.successors) > 1:
@@ -490,13 +490,13 @@ class BBCompiler(CompilerBase, AstVisitor[None]):
             # If the branches use different variables, we have to use the predicate
             # output feature.
             if any(
-                s.live_before.keys() != bb.successors[0].live_before.keys()
+                s.vars.live_before.keys() != bb.successors[0].vars.live_before.keys()
                 for s in bb.successors[1:]
             ):
                 branch_port = self._make_predicate_output(
                     pred=branch_port,
                     output_vars=[
-                        set(succ.live_before.keys()) for succ in bb.successors
+                        set(succ.vars.live_before.keys()) for succ in bb.successors
                     ],
                     dfg=dfg,
                 )
@@ -514,7 +514,7 @@ class BBCompiler(CompilerBase, AstVisitor[None]):
             block,
             bb,
             sig,
-            [[dfg[x] for x in succ.live_before if x in dfg] for succ in bb.successors],
+            [[dfg[x] for x in succ.vars.live_before if x in dfg] for succ in bb.successors],
         )
 
     def visit_Assign(self, node: ast.Assign, dfg: DFContainer) -> None:
@@ -657,7 +657,7 @@ class CFGCompiler(CompilerBase):
                             f"Variable `{v1.name}` can refer to different types: "
                             f"`{v1.ty}` (at {', '.join(f1)}) vs "
                             f"`{v2.ty}` (at {', '.join(f2)})",
-                            bb.live_before[v1.name],
+                            bb.vars.live_before[v1.name],
                             list(sorted(v1.defined_at)) + list(sorted(v2.defined_at)),
                         )
                 self.graph.add_edge(
@@ -758,24 +758,24 @@ class FunctionCompiler(CompilerBase):
 
         # Live variables before the entry BB correspond to usages without prior
         # assignment
-        for x, use_bb in cfg.entry_bb.live_before.items():
+        for x, use_bb in cfg.entry_bb.vars.live_before.items():
             # Functions arguments and global variables are fine
             if x in arg_names or x in self.global_variables:
                 continue
             # The rest results in an error. If the variable is defined on *some* paths,
             # we can give a more informative error message
             if any(
-                x in p.assigned_before or x in p.assigned for p in use_bb.predecessors
+                x in p.vars.assigned_before or x in p.vars.assigned for p in use_bb.predecessors
             ):
                 # TODO: Can we point to the actual path in the message in a nice way?
                 raise GuppyError(
                     f"The variable `{x}` is not defined on all control-flow paths",
-                    use_bb.used[x],
+                    use_bb.vars.used[x],
                 )
             else:
-                GuppyError(f"Variable `{x}` is not defined", use_bb.used[x])
+                GuppyError(f"Variable `{x}` is not defined", use_bb.vars.used[x])
 
-        # render_cfg(cfg, "cfg")
+        render_cfg(cfg, "cfg")
 
         def_input = self.graph.add_input(parent=def_node)
         cfg_node = self.graph.add_cfg(

@@ -210,10 +210,10 @@ def render_hugr(hugr: Hugr, filename: str, format_st: str = "svg") -> None:
 def cfg_to_graphviz(cfg: CFG) -> gv.Digraph:
     graph = gv.Digraph("CFG", strict=False)
     for bb in cfg.bbs:
-        label = "assigned: " + ", ".join(bb.assigned.keys()) + "\n"
-        label += "used: " + ", ".join(bb.used.keys()) + "\n"
-        label += "ass_before: " + ", ".join(bb.assigned_before) + "\n"
-        label += "live_before: " + ", ".join(bb.live_before.keys()) + "\n"
+        label = "assigned: " + ", ".join(bb.vars.assigned.keys()) + "\n"
+        label += "used: " + ", ".join(bb.vars.used.keys()) + "\n"
+        label += "ass_before: " + ", ".join(bb.vars.assigned_before) + "\n"
+        label += "live_before: " + ", ".join(bb.vars.live_before.keys()) + "\n"
         label += "--------\n"
         label += "\n".join(ast.unparse(s) for s in bb.statements)
         if bb.branch_pred is not None:
