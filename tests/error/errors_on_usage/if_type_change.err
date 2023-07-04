@@ -2,6 +2,6 @@ Guppy compilation failed. Error in file $FILE:9
 
 7:    if x:
 8:        y = False
-9:    return y
-             ^
-GuppyError: Variable `y` can refer to different types: `bool` (at 8:8) vs `int` (at 6:4)
+9:    z = y
+          ^
+GuppyError: Variable `y` can refer to different types: `int` (at 6:4) vs `bool` (at 8:8)

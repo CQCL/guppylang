@@ -6,4 +6,5 @@ def foo(x: bool) -> int:
     y = 3
     if x:
         y = False
-    return y
+    z = y
+    return 42
