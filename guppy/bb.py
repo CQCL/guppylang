@@ -120,28 +120,6 @@ class BB:
         )
 
 
-class FunctionalBB(BB):
-    """A basic block that is compiled via a functional node.
-
-    We turn loops and if-statements that are annotated with `_@functional` into CFGs.
-    This allows us to reuse the liveness and definite assignment analysis code. When
-    compiling the CFG, we turn those functional BBs back into dataflow nodes and attach
-    them to the predecessor BB.
-    """
-
-
-class FunctionalBranchBB(FunctionalBB):
-    """A basic block that does functional branching."""
-
-
-class FunctionalMergeBB(FunctionalBB):
-    """A basic block that merges a functional branch."""
-
-
-class FunctionalLoopBB(FunctionalBB):
-    """A basic block that starts a functional loop."""
-
-
 @dataclass
 class CompiledBB:
     node: CFNode

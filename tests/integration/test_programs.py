@@ -23,19 +23,19 @@ def test_factorial():
             return acc
         return factorial3(x - 1, acc * x)
 
-    @guppy
-    def factorial4(x: int) -> int:
-        acc = 1
-        _@functional
-        while x > 0:
-            acc *= x
-            x -= 1
-        return acc
+    # @guppy
+    # def factorial4(x: int) -> int:
+    #     acc = 1
+    #     _@functional
+    #     while x > 0:
+    #         acc *= x
+    #         x -= 1
+    #     return acc
 
     validate(factorial1)
     validate(factorial2)
     validate(factorial3)
-    validate(factorial4)
+    # validate(factorial4)
 
 
 def test_even_odd():

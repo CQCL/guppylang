@@ -158,9 +158,8 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
                 continue
 
             if next_functional:
+                # TODO: This should be an assertion that the Hugr can be un-flattened
                 raise NotImplementedError()
-                assert_no_jumps(node)
-                bb.statements.append(node)
                 next_functional = False
             else:
                 bb_opt = self.visit(node, bb_opt, jumps)
@@ -274,23 +273,3 @@ def is_functional_annotation(stmt: ast.stmt) -> bool:
         ):
             return op.left.id == "_" and op.right.id == "functional"
     return False
-
-
-class JumpDetector(ast.NodeVisitor):
-    def visit_Break(self, node: ast.Break) -> None:
-        raise GuppyError("Break is not allowed in a functional statement", node)
-
-    def visit_Continue(self, node: ast.Continue) -> None:
-        raise GuppyError("Break is not allowed in a functional statement", node)
-
-    def visit_Return(self, node: ast.Return) -> None:
-        raise GuppyError("Break is not allowed in a functional statement", node)
-
-    def visit_Expr(self, node: ast.Expr) -> None:
-        if is_functional_annotation(node):
-            raise GuppyError("Statement already contained in a functional block", node)
-
-
-def assert_no_jumps(node: ast.AST) -> None:
-    d = JumpDetector()
-    d.visit(node)
