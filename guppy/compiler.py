@@ -133,8 +133,10 @@ class FunctionCompiler(CompilerBase):
         arg_names = set(a.arg for a in args)
 
         cfg = self.cfg_builder.build(func_def.body, len(func_ty.returns))
-        cfg.analyze_liveness()
-        cfg.analyze_definite_assignment()
+        cfg.analyze()
+
+        # render_cfg(cfg, "cfg")
+
         # Live variables before the entry BB correspond to usages without prior
         # assignment
         for x, use_bb in cfg.entry_bb.vars.live_before.items():
@@ -143,9 +145,7 @@ class FunctionCompiler(CompilerBase):
                 continue
             # The rest results in an error. If the variable is defined on *some* paths,
             # we can give a more informative error message
-            if any(
-                x in p.vars.assigned_before or x in p.vars.assigned for p in use_bb.predecessors
-            ):
+            if x in use_bb.vars.maybe_assigned_before:
                 # TODO: Can we point to the actual path in the message in a nice way?
                 raise GuppyError(
                     f"Variable `{x}` is not defined on all control-flow paths.",
@@ -153,8 +153,6 @@ class FunctionCompiler(CompilerBase):
                 )
             else:
                 raise GuppyError(f"Variable `{x}` is not defined", use_bb.vars.used[x])
-
-        render_cfg(cfg, "cfg")
 
         def_input = self.graph.add_input(parent=def_node)
         cfg_node = self.graph.add_cfg(

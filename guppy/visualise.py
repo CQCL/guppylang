@@ -212,6 +212,7 @@ def cfg_to_graphviz(cfg: CFG) -> gv.Digraph:
     for bb in cfg.bbs:
         label = "assigned: " + ", ".join(bb.vars.assigned.keys()) + "\n"
         label += "used: " + ", ".join(bb.vars.used.keys()) + "\n"
+        label += "maybe_ass_before: " + ", ".join(bb.vars.maybe_assigned_before) + "\n"
         label += "ass_before: " + ", ".join(bb.vars.assigned_before) + "\n"
         label += "live_before: " + ", ".join(bb.vars.live_before.keys()) + "\n"
         label += "--------\n"

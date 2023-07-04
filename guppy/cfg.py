@@ -61,6 +61,24 @@ class CFG:
                     succ.vars.assigned_before &= assigned_after
                     queue.add(succ)
 
+    def analyze_maybe_assignment(self):
+        for bb in self.bbs:
+            bb.vars.maybe_assigned_before = set()
+        queue = set(self.bbs)
+        while len(queue) > 0:
+            bb = queue.pop()
+            maybe_ass_after = bb.vars.maybe_assigned_before | bb.vars.assigned.keys()
+            for succ in bb.successors:
+                maybe_ass = maybe_ass_after - succ.vars.assigned_before
+                if not set.issubset(maybe_ass, succ.vars.maybe_assigned_before):
+                    succ.vars.maybe_assigned_before |= maybe_ass
+                    queue.add(succ)
+
+    def analyze(self) -> None:
+        self.analyze_liveness()
+        self.analyze_definite_assignment()
+        self.analyze_maybe_assignment()
+
     def compile(
         self, graph: Hugr, input_sig: Signature, return_tys: list[GuppyType], parent: Node, global_variables: VarMap
     ) -> None:

@@ -26,6 +26,10 @@ class VarAnalysis:
     # Variables that are definitely assigned before the execution of the BB
     assigned_before: set[str] = field(default_factory=set)
 
+    # Variables that are possibly assigned before the execution of the BB, i.e. the
+    # variable is defined on some paths, but not all of them.
+    maybe_assigned_before: set[str] = field(default_factory=set)
+
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
 class BB:
