@@ -9,6 +9,9 @@ files = [x for x in path.iterdir() if x.is_file() if x.suffix == ".py" and x.nam
 # TODO: Skip functional tests for now
 files = [f for f in files if "functional" not in f.name]
 
+# Turn paths into strings, otherwise pytest doesn't display the names
+files = [str(f) for f in files]
+
 
 @pytest.mark.parametrize("file", files)
 def test_type_errors(file, capsys):
