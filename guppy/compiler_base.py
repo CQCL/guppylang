@@ -39,9 +39,6 @@ class Variable(RawVariable):
 # A dictionary mapping names to live variables
 VarMap = dict[str, Variable]
 
-# Signature of a basic block
-Signature = list[RawVariable]
-
 
 @dataclass
 class DFContainer:

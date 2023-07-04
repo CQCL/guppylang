@@ -1,9 +1,9 @@
 import ast
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Sequence
 
 from guppy.ast_util import AstNode
-from guppy.compiler_base import Signature, DFContainer, Variable, VarMap
+from guppy.compiler_base import DFContainer, Variable, VarMap, RawVariable
 from guppy.error import assert_bool_type
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import GuppyType, SumType, TupleType
@@ -38,6 +38,15 @@ class VarAnalysis:
     maybe_assigned_before: set[str] = field(default_factory=set)
 
 
+VarRow = Sequence[RawVariable]
+
+
+@dataclass
+class Signature:
+    input_row: VarRow
+    output_rows: Sequence[VarRow]  # One for each successor
+
+
 @dataclass
 class CompiledBB:
     """The result of compiling a basic block.
@@ -47,9 +56,7 @@ class CompiledBB:
     """
     node: CFNode
     bb: "BB"
-    # TODO: Refactor: Turn `Signature` into dataclass with `input` and `outputs`
-    input_sig: Signature
-    output_sigs: list[Signature]  # One for each successor
+    sig: Signature
 
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
@@ -75,7 +82,7 @@ class BB:
     def compile(
         self,
         graph: Hugr,
-        sig: Signature,
+        input_row: VarRow,
         return_tys: list[GuppyType],
         parent: Node,
         global_variables: VarMap,
@@ -88,15 +95,15 @@ class BB:
         # The exit BB is completely empty
         if len(self.successors) == 0:
             block = graph.add_exit(return_tys, parent)
-            return CompiledBB(block, self, sig, [])
+            return CompiledBB(block, self, Signature(input_row, []))
 
         block = graph.add_block(parent)
-        inp = graph.add_input(output_tys=[v.ty for v in sig], parent=block)
+        inp = graph.add_input(output_tys=[v.ty for v in input_row], parent=block)
         dfg = DFContainer(
             block,
             {
                 v.name: Variable(v.name, inp.out_port(i), v.defined_at)
-                for (i, v) in enumerate(sig)
+                for (i, v) in enumerate(input_row)
             },
         )
 
@@ -143,16 +150,9 @@ class BB:
                 ]
 
         graph.add_output(inputs=[branch_port] + outputs, parent=block)
+        output_rows = [[dfg[x] for x in succ.vars.live_before if x in dfg] for succ in self.successors]
 
-        return CompiledBB(
-            block,
-            self,
-            sig,
-            [
-                [dfg[x] for x in succ.vars.live_before if x in dfg]
-                for succ in self.successors
-            ],
-        )
+        return CompiledBB(block, self, Signature(input_row, output_rows))
 
 
 def _make_predicate_output(

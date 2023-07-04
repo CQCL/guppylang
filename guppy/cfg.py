@@ -2,8 +2,8 @@ import ast
 from dataclasses import dataclass, field
 from typing import Optional, NamedTuple
 
-from guppy.bb import BB, CompiledBB
-from guppy.compiler_base import Signature, return_var, VarMap
+from guppy.bb import BB, CompiledBB, VarRow
+from guppy.compiler_base import return_var, VarMap
 from guppy.error import InternalGuppyError, GuppyError
 from guppy.ast_util import AstVisitor, name_nodes_in_ast, line_col
 from guppy.guppy_types import GuppyType
@@ -106,7 +106,7 @@ class CFG:
     def compile(
         self,
         graph: Hugr,
-        input_sig: Signature,
+        input_row: VarRow,
         return_tys: list[GuppyType],
         parent: Node,
         global_variables: VarMap,
@@ -116,25 +116,25 @@ class CFG:
         compiled: dict[BB, CompiledBB] = {}
 
         entry_compiled = self.entry_bb.compile(
-            graph, input_sig, return_tys, parent, global_variables
+            graph, input_row, return_tys, parent, global_variables
         )
         compiled[self.entry_bb] = entry_compiled
 
         # Visit all control-flow edges in BFS order
         stack = [
-            (entry_compiled, entry_compiled.output_sigs[i], succ)
+            (entry_compiled, entry_compiled.sig.output_rows[i], succ)
             # Put successors onto stack in reverse order to maintain the original order
             # when popping
             for i, succ in reversed(list(enumerate(self.entry_bb.successors)))
         ]
         while len(stack) > 0:
-            pred, sig, bb = stack.pop()
+            pred, out_row, bb = stack.pop()
 
             # If the BB was already compiled, we just have to check that the signatures
             # match.
             if bb in compiled:
-                assert len(sig) == len(compiled[bb].input_sig)
-                for v1, v2 in zip(sig, compiled[bb].input_sig):
+                assert len(out_row) == len(compiled[bb].sig.input_row)
+                for v1, v2 in zip(out_row, compiled[bb].sig.input_row):
                     assert v1.name == v2.name
                     if v1.ty != v2.ty:
                         # Sort defined locations by line and column
@@ -159,12 +159,12 @@ class CFG:
             # Otherwise, compile the BB and put successors on the stack
             else:
                 bb_compiled = bb.compile(
-                    graph, sig, return_tys, parent, global_variables
+                    graph, out_row, return_tys, parent, global_variables
                 )
                 graph.add_edge(pred.node.add_out_port(), bb_compiled.node.in_port(None))
                 compiled[bb] = bb_compiled
                 stack += [
-                    (bb_compiled, bb_compiled.output_sigs[i], succ)
+                    (bb_compiled, bb_compiled.sig.output_rows[i], succ)
                     # Put successors onto stack in reverse order to maintain the
                     # original order when popping
                     for i, succ in reversed(list(enumerate(bb.successors)))
