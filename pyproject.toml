@@ -19,7 +19,7 @@ dev = [
     "pip-tools", # provides pip-compile
     "build",
     "pytest",
-    "mypy",
+    "mypy==1.3",
     "black",
     "maturin>=1.1,<2.0",
 ]
