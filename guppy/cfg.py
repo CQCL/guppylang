@@ -5,7 +5,7 @@ from typing import Optional
 from guppy.bb import BB, CompiledBB
 from guppy.compiler_base import Signature, return_var, VarMap
 from guppy.error import InternalGuppyError, GuppyError
-from guppy.ast_util import AstVisitor, name_nodes_in_ast
+from guppy.ast_util import AstVisitor, name_nodes_in_ast, line_col
 from guppy.guppy_types import GuppyType
 from guppy.hugr.hugr import Node, Hugr
 
@@ -88,14 +88,18 @@ class CFG:
                 for v1, v2 in zip(sig, compiled[bb].input_sig):
                     assert v1.name == v2.name
                     if v1.ty != v2.ty:
-                        f1 = [f"{{{i}}}" for i in range(len(v1.defined_at))]
-                        f2 = [f"{{{len(f1) + i}}}" for i in range(len(v2.defined_at))]
+                        # Sort defined locations by line and column
+                        d1 = sorted(v1.defined_at, key=line_col)
+                        d2 = sorted(v2.defined_at, key=line_col)
+                        [(v1, d1), (v2, d2)] = sorted([(v1, d1), (v2, d2)], key=lambda x: line_col(x[1][0]))
+                        f1 = [f"{{{i}}}" for i in range(len(d1))]
+                        f2 = [f"{{{len(f1) + i}}}" for i in range(len(d2))]
                         raise GuppyError(
                             f"Variable `{v1.name}` can refer to different types: "
                             f"`{v1.ty}` (at {', '.join(f1)}) vs "
                             f"`{v2.ty}` (at {', '.join(f2)})",
                             bb.vars.live_before[v1.name].vars.used[v1.name],
-                            list(sorted(v1.defined_at)) + list(sorted(v2.defined_at)),
+                            d1 + d2,
                         )
                 graph.add_edge(
                     pred.node.add_out_port(), compiled[bb].node.in_port(None)

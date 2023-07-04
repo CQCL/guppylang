@@ -70,3 +70,8 @@ def name_nodes_in_ast(node: Any) -> list[ast.Name]:
     v = NameVisitor()
     v.visit(node)
     return v.names
+
+
+def line_col(node: ast.AST) -> tuple[int, int]:
+    """Returns the line and column of an ast node."""
+    return node.lineno, node.col_offset
