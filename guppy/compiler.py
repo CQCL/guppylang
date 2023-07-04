@@ -121,8 +121,6 @@ class FunctionCompiler(CompilerBase):
         cfg = self.cfg_builder.build(func_def.body, len(func_ty.returns))
         cfg.analyze()
 
-        # render_cfg(cfg, "cfg")
-
         # Live variables before the entry BB correspond to usages without prior
         # assignment
         for x, use_bb in cfg.entry_bb.vars.live_before.items():

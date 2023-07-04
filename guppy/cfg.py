@@ -1,6 +1,6 @@
 import ast
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, NamedTuple
 
 from guppy.bb import BB, CompiledBB
 from guppy.compiler_base import Signature, return_var, VarMap
@@ -12,6 +12,8 @@ from guppy.hugr.hugr import Node, Hugr
 
 @dataclass
 class CFG:
+    """A control-flow graph."""
+
     bbs: list[BB] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -19,6 +21,10 @@ class CFG:
         self.exit_bb = self.new_bb()
 
     def new_bb(self, pred: Optional[BB] = None, preds: Optional[list[BB]] = None) -> BB:
+        """Adds a new basic block to the CFG.
+
+        Optionally, a single predecessor or a list of predecessor BBs can be passed.
+        """
         preds = preds if preds is not None else [pred] if pred is not None else []
         bb = BB(len(self.bbs), predecessors=preds)
         self.bbs.append(bb)
@@ -27,10 +33,12 @@ class CFG:
         return bb
 
     def link(self, src_bb: BB, tgt_bb: BB) -> None:
+        """Adds a control-flow edge between two basic blocks."""
         src_bb.successors.append(tgt_bb)
         tgt_bb.predecessors.append(src_bb)
 
-    def analyze_liveness(self) -> None:
+    def _analyze_liveness(self) -> None:
+        """Runs live variable analysis."""
         for bb in self.bbs:
             bb.vars.live_before = dict()
         self.exit_bb.vars.live_before = {
@@ -51,7 +59,8 @@ class CFG:
                     pred.vars.live_before |= live_before
                     queue.add(pred)
 
-    def analyze_definite_assignment(self) -> None:
+    def _analyze_definite_assignment(self) -> None:
+        """Runs definite assignment analysis."""
         all_vars = set.union(
             *(bb.vars.used.keys() | bb.vars.assigned.keys() for bb in self.bbs)
         )
@@ -67,7 +76,15 @@ class CFG:
                     succ.vars.assigned_before &= assigned_after
                     queue.add(succ)
 
-    def analyze_maybe_assignment(self) -> None:
+    def _analyze_maybe_assignment(self) -> None:
+        """Runs maybe assignment analysis.
+
+        This computes the variables that *might* be defined at every program point but
+        are not guaranteed to be assigned. I.e. a variable that is defined on some paths
+        but not on all paths.
+        Note that this pass uses the results from the definite assignment analysis, so
+        it must be run afterward.
+        """
         for bb in self.bbs:
             bb.vars.maybe_assigned_before = set()
         queue = set(self.bbs)
@@ -81,9 +98,10 @@ class CFG:
                     queue.add(succ)
 
     def analyze(self) -> None:
-        self.analyze_liveness()
-        self.analyze_definite_assignment()
-        self.analyze_maybe_assignment()
+        """Runs all program analysis passes."""
+        self._analyze_liveness()
+        self._analyze_definite_assignment()
+        self._analyze_maybe_assignment()
 
     def compile(
         self,
@@ -153,18 +171,26 @@ class CFG:
                 ]
 
 
-@dataclass(frozen=True)
-class Jumps:
+class Jumps(NamedTuple):
+    """Holds jump targets for return, continue, and break during CFG construction."""
     return_bb: BB
     continue_bb: Optional[BB]
     break_bb: Optional[BB]
 
 
 class CFGBuilder(AstVisitor[Optional[BB]]):
+    """Constructs a CFG from ast nodes."""
+
     cfg: CFG
     num_returns: int
 
     def build(self, nodes: list[ast.stmt], num_returns: int) -> CFG:
+        """Builds a CFG from a list of ast nodes.
+
+        We also require the expected number of return ports for the whole CFG. This is
+        needed to translate return statements into assignments of dummy return
+        variables.
+        """
         self.cfg = CFG()
         self.num_returns = num_returns
 

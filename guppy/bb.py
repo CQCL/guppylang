@@ -13,6 +13,12 @@ from guppy.statement import StatementCompiler
 
 @dataclass
 class VarAnalysis:
+    """Stores program analysis results for a basic block.
+
+    This class carries the results of live variable, definite assignment, and maybe
+    assignment analysis.
+    """
+
     # Variables that are assigned in the BB
     assigned: dict[str, AstNode] = field(default_factory=dict)
 
@@ -30,6 +36,20 @@ class VarAnalysis:
     # Variables that are possibly assigned before the execution of the BB, i.e. the
     # variable is defined on some paths, but not all of them.
     maybe_assigned_before: set[str] = field(default_factory=set)
+
+
+@dataclass
+class CompiledBB:
+    """The result of compiling a basic block.
+
+    Besides the corresponding node in the graph, we also store the signature of the
+    basic block with type information.
+    """
+    node: CFNode
+    bb: "BB"
+    # TODO: Refactor: Turn `Signature` into dataclass with `input` and `outputs`
+    input_sig: Signature
+    output_sigs: list[Signature]  # One for each successor
 
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
@@ -133,15 +153,6 @@ class BB:
                 for succ in self.successors
             ],
         )
-
-
-@dataclass
-class CompiledBB:
-    node: CFNode
-    bb: BB
-    # TODO: Refactor: Turn `Signature` into dataclass with `input` and `outputs`
-    input_sig: Signature
-    output_sigs: list[Signature]  # One for each successor
 
 
 def _make_predicate_output(
