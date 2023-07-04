@@ -149,7 +149,9 @@ class FunctionCompiler(CompilerBase):
             RawVariable(x, t, {l})
             for x, t, l in zip(func_ty.arg_names, func_ty.args, args)
         ]
-        cfg.compile(self.graph, input_sig, list(func_ty.returns), cfg_node, global_variables)
+        cfg.compile(
+            self.graph, input_sig, list(func_ty.returns), cfg_node, global_variables
+        )
 
         # Add final output node for the def block
         self.graph.add_output(
@@ -232,7 +234,12 @@ class GuppyModule(object):
         try:
             global_variables = {}
             defs = {}
-            for name, (f, func_ast, source_lines, line_offset) in self.annotated_funcs.items():
+            for name, (
+                f,
+                func_ast,
+                source_lines,
+                line_offset,
+            ) in self.annotated_funcs.items():
                 func_ty = self.compiler.validate_signature(func_ast)
                 def_node = self.graph.add_def(func_ty, self.module_node, func_ast.name)
                 defs[name] = def_node

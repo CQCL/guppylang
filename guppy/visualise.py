@@ -219,7 +219,7 @@ def cfg_to_graphviz(cfg: CFG) -> gv.Digraph:
         label += "\n".join(ast.unparse(s) for s in bb.statements)
         if bb.branch_pred is not None:
             label += f"\n{ast.unparse(bb.branch_pred)} ?"
-        graph.node(str(bb.idx), label, shape='rect')
+        graph.node(str(bb.idx), label, shape="rect")
         for succ in bb.successors:
             graph.edge(str(bb.idx), str(succ.idx))
     return graph
@@ -228,4 +228,3 @@ def cfg_to_graphviz(cfg: CFG) -> gv.Digraph:
 def render_cfg(cfg: CFG, filename: str, format_st: str = "svg") -> None:
     gv_graph = cfg_to_graphviz(cfg)
     gv_graph.render(filename, format=format_st)
-

@@ -33,7 +33,9 @@ class CFG:
     def analyze_liveness(self) -> None:
         for bb in self.bbs:
             bb.vars.live_before = dict()
-        self.exit_bb.vars.live_before = {x: self.exit_bb for x in self.exit_bb.vars.used}
+        self.exit_bb.vars.live_before = {
+            x: self.exit_bb for x in self.exit_bb.vars.used
+        }
         queue = set(self.bbs)
         while len(queue) > 0:
             bb = queue.pop()
@@ -43,12 +45,16 @@ class CFG:
                     for x, b in bb.vars.live_before.items()
                     if x not in pred.vars.assigned.keys()
                 }
-                if not set.issubset(set(live_before.keys()), pred.vars.live_before.keys()):
+                if not set.issubset(
+                    set(live_before.keys()), pred.vars.live_before.keys()
+                ):
                     pred.vars.live_before |= live_before
                     queue.add(pred)
 
     def analyze_definite_assignment(self) -> None:
-        all_vars = set.union(*(bb.vars.used.keys() | bb.vars.assigned.keys() for bb in self.bbs))
+        all_vars = set.union(
+            *(bb.vars.used.keys() | bb.vars.assigned.keys() for bb in self.bbs)
+        )
         for bb in self.bbs:
             bb.vars.assigned_before = all_vars.copy()
         self.entry_bb.vars.assigned_before = set()
@@ -80,13 +86,20 @@ class CFG:
         self.analyze_maybe_assignment()
 
     def compile(
-        self, graph: Hugr, input_sig: Signature, return_tys: list[GuppyType], parent: Node, global_variables: VarMap
+        self,
+        graph: Hugr,
+        input_sig: Signature,
+        return_tys: list[GuppyType],
+        parent: Node,
+        global_variables: VarMap,
     ) -> None:
         """Compiles the CFG."""
 
         compiled: dict[BB, CompiledBB] = {}
 
-        entry_compiled = self.entry_bb.compile(graph, input_sig, return_tys, parent, global_variables)
+        entry_compiled = self.entry_bb.compile(
+            graph, input_sig, return_tys, parent, global_variables
+        )
         compiled[self.entry_bb] = entry_compiled
 
         # Visit all control-flow edges in BFS order
@@ -109,7 +122,9 @@ class CFG:
                         # Sort defined locations by line and column
                         d1 = sorted(v1.defined_at, key=line_col)
                         d2 = sorted(v2.defined_at, key=line_col)
-                        [(v1, d1), (v2, d2)] = sorted([(v1, d1), (v2, d2)], key=lambda x: line_col(x[1][0]))
+                        [(v1, d1), (v2, d2)] = sorted(
+                            [(v1, d1), (v2, d2)], key=lambda x: line_col(x[1][0])
+                        )
                         f1 = [f"{{{i}}}" for i in range(len(d1))]
                         f2 = [f"{{{len(f1) + i}}}" for i in range(len(d2))]
                         raise GuppyError(
@@ -125,7 +140,9 @@ class CFG:
 
             # Otherwise, compile the BB and put successors on the stack
             else:
-                bb_compiled = bb.compile(graph, sig, return_tys, parent, global_variables)
+                bb_compiled = bb.compile(
+                    graph, sig, return_tys, parent, global_variables
+                )
                 graph.add_edge(pred.node.add_out_port(), bb_compiled.node.in_port(None))
                 compiled[bb] = bb_compiled
                 stack += [

@@ -3,10 +3,21 @@ from typing import Any, Iterator
 
 from guppy.ast_util import AstVisitor
 from guppy.compiler_base import CompilerBase, DFContainer, VarMap
-from guppy.error import assert_arith_type, assert_bool_type, assert_int_type, \
-    InternalGuppyError, GuppyTypeError, GuppyError
-from guppy.guppy_types import IntType, FloatType, BoolType, FunctionType, \
-    type_from_python_value
+from guppy.error import (
+    assert_arith_type,
+    assert_bool_type,
+    assert_int_type,
+    InternalGuppyError,
+    GuppyTypeError,
+    GuppyError,
+)
+from guppy.guppy_types import (
+    IntType,
+    FloatType,
+    BoolType,
+    FunctionType,
+    type_from_python_value,
+)
 from guppy.hugr.hugr import OutPortV, Hugr
 
 

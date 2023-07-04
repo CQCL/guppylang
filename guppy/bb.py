@@ -53,7 +53,12 @@ class BB:
     vars: VarAnalysis = field(default_factory=VarAnalysis)
 
     def compile(
-        self, graph: Hugr, sig: Signature, return_tys: list[GuppyType], parent: Node, global_variables: VarMap
+        self,
+        graph: Hugr,
+        sig: Signature,
+        return_tys: list[GuppyType],
+        parent: Node,
+        global_variables: VarMap,
     ) -> "CompiledBB":
         """Compiles this basic block.
 
@@ -81,8 +86,9 @@ class BB:
         # The easy case is if we don't branch. We just output the variables that are
         # live in the successor
         if len(self.successors) == 1:
-            outputs = [dfg[x].port for x in self.successors[0].vars.live_before if
-                       x in dfg]
+            outputs = [
+                dfg[x].port for x in self.successors[0].vars.live_before if x in dfg
+            ]
             # Even if wo don't branch, we still have to add a unit `Sum(())` predicate
             unit = graph.add_make_tuple([], parent=block).out_port(0)
             branch_port = graph.add_tag(
@@ -112,8 +118,9 @@ class BB:
                 )
                 outputs = []
             else:
-                outputs = [dfg[x].port for x in self.successors[0].vars.live_before if
-                           x in dfg]
+                outputs = [
+                    dfg[x].port for x in self.successors[0].vars.live_before if x in dfg
+                ]
 
         graph.add_output(inputs=[branch_port] + outputs, parent=block)
 
@@ -121,8 +128,10 @@ class BB:
             block,
             self,
             sig,
-            [[dfg[x] for x in succ.vars.live_before if x in dfg] for succ in
-             self.successors],
+            [
+                [dfg[x] for x in succ.vars.live_before if x in dfg]
+                for succ in self.successors
+            ],
         )
 
 
