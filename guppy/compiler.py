@@ -245,7 +245,7 @@ class GuppyModule(object):
         try:
             global_variables = {}
             defs = {}
-            for name, (f, func_ast, _, _) in self.annotated_funcs.items():
+            for name, (f, func_ast, source_lines, line_offset) in self.annotated_funcs.items():
                 func_ty = self.compiler.validate_signature(func_ast)
                 def_node = self.graph.add_def(func_ty, self.module_node, func_ast.name)
                 defs[name] = def_node

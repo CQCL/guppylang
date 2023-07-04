@@ -4,6 +4,7 @@ from typing import Optional
 
 from guppy.ast_util import Assign
 from guppy.compiler_base import Signature, DFContainer, Variable, VarMap
+from guppy.error import assert_bool_type
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import GuppyType, SumType, TupleType
 from guppy.hugr.hugr import CFNode, Node, Hugr, OutPortV
@@ -93,6 +94,7 @@ class BB:
             assert self.branch_pred is not None
             expr_compiler = ExpressionCompiler(graph, global_variables)
             branch_port = expr_compiler.compile(self.branch_pred, dfg)
+            assert_bool_type(branch_port.ty, self.branch_pred)
             # If the branches use different variables, we have to use the predicate
             # output feature.
             if any(
