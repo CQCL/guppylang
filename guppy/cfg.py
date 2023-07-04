@@ -14,11 +14,11 @@ from guppy.hugr.hugr import Node, Hugr
 class CFG:
     bbs: list[BB] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.entry_bb = self.new_bb()
         self.exit_bb = self.new_bb()
 
-    def new_bb(self, pred: Optional[BB] = None, preds: Optional[list[BB]] = None):
+    def new_bb(self, pred: Optional[BB] = None, preds: Optional[list[BB]] = None) -> BB:
         preds = preds if preds is not None else [pred] if pred is not None else []
         bb = BB(len(self.bbs), predecessors=preds)
         self.bbs.append(bb)
@@ -26,11 +26,11 @@ class CFG:
             p.successors.append(bb)
         return bb
 
-    def link(self, src_bb: BB, tgt_bb: BB):
+    def link(self, src_bb: BB, tgt_bb: BB) -> None:
         src_bb.successors.append(tgt_bb)
         tgt_bb.predecessors.append(src_bb)
 
-    def analyze_liveness(self):
+    def analyze_liveness(self) -> None:
         for bb in self.bbs:
             bb.vars.live_before = dict()
         self.exit_bb.vars.live_before = {x: self.exit_bb for x in self.exit_bb.vars.used}
@@ -47,7 +47,7 @@ class CFG:
                     pred.vars.live_before |= live_before
                     queue.add(pred)
 
-    def analyze_definite_assignment(self):
+    def analyze_definite_assignment(self) -> None:
         all_vars = set.union(*(bb.vars.used.keys() | bb.vars.assigned.keys() for bb in self.bbs))
         for bb in self.bbs:
             bb.vars.assigned_before = all_vars.copy()
@@ -61,7 +61,7 @@ class CFG:
                     succ.vars.assigned_before &= assigned_after
                     queue.add(succ)
 
-    def analyze_maybe_assignment(self):
+    def analyze_maybe_assignment(self) -> None:
         for bb in self.bbs:
             bb.vars.maybe_assigned_before = set()
         queue = set(self.bbs)

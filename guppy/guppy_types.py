@@ -92,7 +92,7 @@ class SumType(GuppyType):
 
 @dataclass(frozen=True)
 class BoolType(SumType):
-    def __init__(self):
+    def __init__(self) -> None:
         # Hugr bools are encoded as Sum((), ())
         super().__init__([TupleType([]), TupleType([])])
 

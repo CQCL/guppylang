@@ -12,7 +12,6 @@ AstNode = Union[
     ast.keyword,
     ast.FunctionDef,
 ]
-Assign = Union[ast.Assign, ast.AugAssign]
 
 T = TypeVar("T", covariant=True)
 

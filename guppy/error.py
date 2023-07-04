@@ -1,6 +1,6 @@
 import ast
 from dataclasses import dataclass, field
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Sequence
 
 from guppy.ast_util import AstNode
 from guppy.guppy_types import GuppyType, IntType, FloatType, BoolType
@@ -42,7 +42,7 @@ class GuppyError(Exception):
     raw_msg: str
     location: Optional[AstNode] = None
     # The message can also refer to AST locations using format placeholders `{0}`, `{1}`
-    locs_in_msg: list[AstNode] = field(default_factory=list)
+    locs_in_msg: Sequence[AstNode] = field(default_factory=list)
 
     def get_msg(self, line_offset: int) -> str:
         """Returns the message associated with this error.

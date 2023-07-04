@@ -2,7 +2,7 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import Iterator, Optional
 
-from guppy.ast_util import Assign
+from guppy.ast_util import AstNode
 from guppy.guppy_types import GuppyType
 from guppy.hugr.hugr import OutPortV, Hugr, DFContainingNode
 
@@ -16,7 +16,7 @@ class RawVariable:
 
     name: str
     ty: GuppyType
-    defined_at: set[Assign]
+    defined_at: set[AstNode]
 
     def __lt__(self, other: "Variable") -> bool:
         return self.name < other.name
@@ -31,7 +31,7 @@ class Variable(RawVariable):
 
     port: OutPortV
 
-    def __init__(self, name: str, port: OutPortV, defined_at: set[Assign]):
+    def __init__(self, name: str, port: OutPortV, defined_at: set[AstNode]):
         super().__init__(name, port.ty, defined_at)
         object.__setattr__(self, "port", port)
 

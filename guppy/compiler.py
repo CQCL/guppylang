@@ -2,38 +2,24 @@ import ast
 import inspect
 import sys
 import textwrap
-from abc import ABC
 from dataclasses import dataclass
-from typing import Iterator, Optional, Any, Callable, Union
+from typing import Optional, Any, Callable, Union
 
-from guppy.cfg import CFG, BB, return_var, CFGBuilder
+from guppy.cfg import CFGBuilder
 from guppy.compiler_base import CompilerBase, VarMap, RawVariable, Variable
 from guppy.expression import expr_to_row
 from guppy.guppy_types import (
     GuppyType,
-    type_from_python_value,
     IntType,
     FloatType,
     BoolType,
     FunctionType,
     TupleType,
-    SumType,
     TypeRow,
     StringType,
 )
-from guppy.hugr.hugr import OutPortV, Hugr, DFContainingNode, Node, BlockNode, CFNode
-from guppy.error import (
-    GuppyError,
-    assert_arith_type,
-    assert_bool_type,
-    assert_int_type,
-    InternalGuppyError,
-    GuppyTypeError,
-    SourceLoc,
-    UndefinedPort,
-)
-from guppy.ast_util import AstVisitor
-from guppy.visualise import render_cfg
+from guppy.hugr.hugr import Hugr, Node
+from guppy.error import GuppyError, SourceLoc
 
 
 def type_from_ast(node: ast.expr) -> GuppyType:
@@ -158,8 +144,9 @@ class FunctionCompiler(CompilerBase):
         cfg_node = self.graph.add_cfg(
             def_node, inputs=[def_input.add_out_port(ty) for ty in func_ty.args]
         )
+        assert func_ty.arg_names is not None
         input_sig = [
-            RawVariable(x, t, l)
+            RawVariable(x, t, {l})
             for x, t, l in zip(func_ty.arg_names, func_ty.args, args)
         ]
         cfg.compile(self.graph, input_sig, list(func_ty.returns), cfg_node, global_variables)

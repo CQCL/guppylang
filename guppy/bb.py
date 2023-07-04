@@ -2,7 +2,7 @@ import ast
 from dataclasses import dataclass, field
 from typing import Optional
 
-from guppy.ast_util import Assign
+from guppy.ast_util import AstNode
 from guppy.compiler_base import Signature, DFContainer, Variable, VarMap
 from guppy.error import assert_bool_type
 from guppy.expression import ExpressionCompiler
@@ -14,7 +14,7 @@ from guppy.statement import StatementCompiler
 @dataclass
 class VarAnalysis:
     # Variables that are assigned in the BB
-    assigned: dict[str, Assign] = field(default_factory=dict)
+    assigned: dict[str, AstNode] = field(default_factory=dict)
 
     # The (external) variables used in the BB, i.e. usages of variables that are
     # assigned in the BB are not included here.
