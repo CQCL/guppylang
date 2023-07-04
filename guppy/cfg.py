@@ -114,6 +114,7 @@ class CFG:
         """Compiles the CFG."""
 
         compiled: dict[BB, CompiledBB] = {}
+        arg_names = [v.name for v in input_row]
 
         entry_compiled = self.entry_bb.compile(
             graph, input_row, return_tys, parent, global_variables
@@ -158,6 +159,26 @@ class CFG:
 
             # Otherwise, compile the BB and put successors on the stack
             else:
+                # Live variables before the entry BB correspond to usages without prior
+                # assignment
+                for x, use_bb in self.entry_bb.vars.live_before.items():
+                    # Functions arguments and global variables are fine
+                    if x in arg_names or x in global_variables:
+                        continue
+                    # The rest results in an error. If the variable is defined on *some*
+                    # paths, we can give a more informative error message
+                    if x in use_bb.vars.maybe_assigned_before:
+                        # TODO: Can we point to the actual path in the message in a nice
+                        #  way?
+                        raise GuppyError(
+                            f"Variable `{x}` is not defined on all control-flow paths.",
+                            use_bb.vars.used[x],
+                        )
+                    else:
+                        raise GuppyError(
+                            f"Variable `{x}` is not defined", use_bb.vars.used[x]
+                        )
+
                 bb_compiled = bb.compile(
                     graph, out_row, return_tys, parent, global_variables
                 )
@@ -173,6 +194,7 @@ class CFG:
 
 class Jumps(NamedTuple):
     """Holds jump targets for return, continue, and break during CFG construction."""
+
     return_bb: BB
     continue_bb: Optional[BB]
     break_bb: Optional[BB]

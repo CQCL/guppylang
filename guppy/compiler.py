@@ -116,27 +116,9 @@ class FunctionCompiler(CompilerBase):
         self.global_variables = global_variables
         func_ty = self.validate_signature(func_def)
         args = func_def.args.args
-        arg_names = set(a.arg for a in args)
 
         cfg = self.cfg_builder.build(func_def.body, len(func_ty.returns))
         cfg.analyze()
-
-        # Live variables before the entry BB correspond to usages without prior
-        # assignment
-        for x, use_bb in cfg.entry_bb.vars.live_before.items():
-            # Functions arguments and global variables are fine
-            if x in arg_names or x in self.global_variables:
-                continue
-            # The rest results in an error. If the variable is defined on *some* paths,
-            # we can give a more informative error message
-            if x in use_bb.vars.maybe_assigned_before:
-                # TODO: Can we point to the actual path in the message in a nice way?
-                raise GuppyError(
-                    f"Variable `{x}` is not defined on all control-flow paths.",
-                    use_bb.vars.used[x],
-                )
-            else:
-                raise GuppyError(f"Variable `{x}` is not defined", use_bb.vars.used[x])
 
         def_input = self.graph.add_input(parent=def_node)
         cfg_node = self.graph.add_cfg(
