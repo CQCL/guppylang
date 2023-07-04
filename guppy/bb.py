@@ -54,6 +54,7 @@ class CompiledBB:
     Besides the corresponding node in the graph, we also store the signature of the
     basic block with type information.
     """
+
     node: CFNode
     bb: "BB"
     sig: Signature
@@ -150,7 +151,10 @@ class BB:
                 ]
 
         graph.add_output(inputs=[branch_port] + outputs, parent=block)
-        output_rows = [[dfg[x] for x in succ.vars.live_before if x in dfg] for succ in self.successors]
+        output_rows = [
+            [dfg[x] for x in succ.vars.live_before if x in dfg]
+            for succ in self.successors
+        ]
 
         return CompiledBB(block, self, Signature(input_row, output_rows))
 
