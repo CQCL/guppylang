@@ -171,7 +171,7 @@ class BB:
                     dfg=dfg,
                 )
                 output_vars = [
-                    x
+                    dfg[x]
                     # We can look at `successors[0]` here since all successors must have
                     # the same `live_before` linear variables
                     for x in self.successors[0].vars.live_before.keys()
