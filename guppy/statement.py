@@ -73,9 +73,11 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
                 if x in self.dfg:
                     var = self.dfg[x]
                     if var.ty.linear and var.used is None:
-                        raise GuppyError(f"Variable `{x}` with linear type `{var.ty}` "
-                                         "is not used",
-                                         sorted(var.defined_at, key=line_col)[0])
+                        raise GuppyError(
+                            f"Variable `{x}` with linear type `{var.ty}` "
+                            "is not used",
+                            sorted(var.defined_at, key=line_col)[0],
+                        )
                 self.dfg[x] = Variable(x, port, {node})
             # The only other thing we support right now are tuples
             elif isinstance(pattern, ast.Tuple):

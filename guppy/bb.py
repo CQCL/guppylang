@@ -116,18 +116,23 @@ class BB:
             for x in succ.vars.live_before & dfg.variables.keys():
                 var = dfg[x]
                 if var.ty.linear and var.used:
-                    raise GuppyError(f"Variable `{x}` with linear type `{var.ty}` was "
-                                     "already used (at {0})",
-                                     succ.vars.live_before[x].vars.used[x], [var.used])
+                    raise GuppyError(
+                        f"Variable `{x}` with linear type `{var.ty}` was "
+                        "already used (at {0})",
+                        succ.vars.live_before[x].vars.used[x],
+                        [var.used],
+                    )
 
         # On the other hand, unused linear variables *must* be outputted
         for succ in self.successors:
             for x, var in dfg.variables.items():
                 if var.ty.linear and not var.used and x not in succ.vars.live_before:
                     # TODO: We should point to the successor in the error message
-                    raise GuppyError(f"Variable `{x}` with linear type `{var.ty}` is "
-                                     "not used on all control-flow paths",
-                                     sorted(var.defined_at, key=line_col)[0])
+                    raise GuppyError(
+                        f"Variable `{x}` with linear type `{var.ty}` is "
+                        "not used on all control-flow paths",
+                        sorted(var.defined_at, key=line_col)[0],
+                    )
 
         # The easy case is if we don't branch. We just output the variables that are
         # live in the successor
