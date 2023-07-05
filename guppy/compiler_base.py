@@ -30,6 +30,7 @@ class Variable(RawVariable):
     """
 
     port: OutPortV
+    used: Optional[AstNode] = None
 
     def __init__(self, name: str, port: OutPortV, defined_at: set[AstNode]):
         super().__init__(name, port.ty, defined_at)

@@ -12,6 +12,11 @@ class GuppyType(ABC):
     """
 
     @abstractmethod
+    @property
+    def linear(self) -> bool:
+        pass
+
+    @abstractmethod
     def to_hugr(self) -> tys.SimpleType:
         pass
 
@@ -34,6 +39,9 @@ class IntType(GuppyType):
     def __str__(self) -> str:
         return "int"
 
+    def linear(self) -> bool:
+        return False
+
     def to_hugr(self) -> tys.SimpleType:
         return tys.Int(width=32)  # TODO: Parametrise over size
 
@@ -42,6 +50,9 @@ class IntType(GuppyType):
 class FloatType(GuppyType):
     def __str__(self) -> str:
         return "float"
+
+    def linear(self) -> bool:
+        return False
 
     def to_hugr(self) -> tys.SimpleType:
         return tys.F64()
@@ -55,6 +66,9 @@ class FunctionType(GuppyType):
 
     def __str__(self) -> str:
         return f"{TypeRow(self.args)} -> {TypeRow(self.returns)}"
+
+    def linear(self) -> bool:
+        return False
 
     def to_hugr(self) -> tys.SimpleType:
         ins = [t.to_hugr() for t in self.args]
@@ -71,6 +85,9 @@ class TupleType(GuppyType):
     def __str__(self) -> str:
         return f"({', '.join(str(e) for e in self.element_types)})"
 
+    def linear(self) -> bool:
+        return any(t.linear for t in self.element_types)
+
     def to_hugr(self) -> tys.SimpleType:
         ts = [t.to_hugr() for t in self.element_types]
         # As soon as one element is linear, the whole tuple must be linear
@@ -84,6 +101,9 @@ class SumType(GuppyType):
     def __str__(self) -> str:
         return f"Sum({', '.join(str(e) for e in self.element_types)})"
 
+    def linear(self) -> bool:
+        return any(t.linear for t in self.element_types)
+
     def to_hugr(self) -> tys.SimpleType:
         ts = [t.to_hugr() for t in self.element_types]
         # As soon as one element is linear, the whole sum type must be linear
@@ -96,6 +116,9 @@ class BoolType(SumType):
         # Hugr bools are encoded as Sum((), ())
         super().__init__([TupleType([]), TupleType([])])
 
+    def linear(self) -> bool:
+        return False
+
     def __str__(self) -> str:
         return "bool"
 
@@ -105,8 +128,23 @@ class StringType(GuppyType):
     def __str__(self) -> str:
         return "str"
 
+    def linear(self) -> bool:
+        return False
+
     def to_hugr(self) -> tys.SimpleType:
         return tys.String()
+
+
+@dataclass(frozen=True)
+class QubitType(GuppyType):
+    def __str__(self) -> str:
+        return "qubit"
+
+    def linear(self) -> bool:
+        return True
+
+    def to_hugr(self) -> tys.SimpleType:
+        return tys.Qubit()
 
 
 @dataclass(frozen=True)
@@ -115,6 +153,9 @@ class ListType(GuppyType):
 
     def __str__(self) -> str:
         return f"list[{self.element_type}]"
+
+    def linear(self) -> bool:
+        return self.element_type.linear
 
     def to_hugr(self) -> tys.SimpleType:
         t = self.element_type.to_hugr()
@@ -128,6 +169,9 @@ class DictType(GuppyType):
 
     def __str__(self) -> str:
         return f"dict[{self.key_type}, {self.value_type}]"
+
+    def linear(self) -> bool:
+        return self.value_type.linear
 
     def to_hugr(self) -> tys.SimpleType:
         kt = self.key_type.to_hugr()
