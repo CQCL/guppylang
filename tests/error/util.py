@@ -1,11 +1,14 @@
 import importlib.util
 import pathlib
-from typing import Callable, Optional, Any
+from typing import Callable, Optional, Any, TypeVar
 
 import pytest
 
 from guppy.compiler import GuppyModule
 from guppy.hugr.hugr import Hugr
+
+
+qubit = TypeVar("qubit")
 
 
 def guppy(f: Callable[..., Any]) -> Optional[Hugr]:

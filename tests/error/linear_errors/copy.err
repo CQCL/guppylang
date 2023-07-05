@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo(q: qubit) -> tuple[qubit, qubit]:
+6:        return q, q
+                    ^
+GuppyError: Variable `q` with linear type `qubit` was already used (at 6:11)
