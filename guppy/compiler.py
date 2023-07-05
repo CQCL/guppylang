@@ -38,6 +38,12 @@ def type_from_ast(node: ast.expr) -> GuppyType:
             return QubitType()
     elif isinstance(node, ast.Tuple):
         return TupleType([type_from_ast(el) for el in node.elts])
+    elif isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
+        if node.value.id == "tuple":
+            if isinstance(node.slice, ast.Tuple):
+                return TupleType([type_from_ast(e) for e in node.slice.elts])
+            else:
+                return TupleType([type_from_ast(node.slice)])
     # TODO: Remaining cases
     raise GuppyError(f"Invalid type: `{ast.unparse(node)}`", node)
 
@@ -50,7 +56,19 @@ def type_row_from_ast(node: ast.expr) -> TypeRow:
     # The return type `-> None` is represented in the ast as `ast.Constant(value=None)`
     if isinstance(node, ast.Constant) and node.value is None:
         return TypeRow([])
-    return TypeRow([type_from_ast(e) for e in expr_to_row(node)])
+    # Unpack top-level tuple into row
+    if (
+        isinstance(node, ast.Subscript)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "tuple"
+    ):
+        if isinstance(node.slice, ast.Tuple):
+            nodes = node.slice.elts
+        else:
+            nodes = [node.slice]
+    else:
+        nodes = [node]
+    return TypeRow([type_from_ast(e) for e in nodes])
 
 
 @dataclass
