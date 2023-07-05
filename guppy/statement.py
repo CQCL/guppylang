@@ -1,6 +1,6 @@
 import ast
 
-from guppy.ast_util import AstVisitor, AstNode
+from guppy.ast_util import AstVisitor, AstNode, line_col
 from guppy.compiler_base import CompilerBase, DFContainer, Variable, return_var, VarMap
 from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppy.expression import ExpressionCompiler
@@ -74,7 +74,8 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
                     var = self.dfg[x]
                     if var.ty.linear and var.used is None:
                         raise GuppyError(f"Variable `{x}` with linear type `{var.ty}` "
-                                         "is not used", next(*var.defined_at))
+                                         "is not used",
+                                         sorted(var.defined_at, key=line_col)[0])
                 self.dfg[x] = Variable(x, port, {node})
             # The only other thing we support right now are tuples
             elif isinstance(pattern, ast.Tuple):

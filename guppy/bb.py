@@ -2,7 +2,7 @@ import ast
 from dataclasses import dataclass, field
 from typing import Optional, Sequence
 
-from guppy.ast_util import AstNode
+from guppy.ast_util import AstNode, line_col
 from guppy.compiler_base import DFContainer, Variable, VarMap, RawVariable
 from guppy.error import assert_bool_type, GuppyError
 from guppy.expression import ExpressionCompiler
@@ -127,7 +127,7 @@ class BB:
                     # TODO: We should point to the successor in the error message
                     raise GuppyError(f"Variable `{x}` with linear type `{var.ty}` is "
                                      "not used on all control-flow paths",
-                                     next(iter(var.defined_at)))
+                                     sorted(var.defined_at, key=line_col)[0])
 
         # The easy case is if we don't branch. We just output the variables that are
         # live in the successor
