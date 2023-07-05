@@ -16,7 +16,8 @@ from guppy.guppy_types import (
     FunctionType,
     TupleType,
     TypeRow,
-    StringType, QubitType,
+    StringType,
+    QubitType,
 )
 from guppy.hugr.hugr import Hugr, Node
 from guppy.error import GuppyError, SourceLoc
@@ -181,6 +182,10 @@ class GuppyModule(object):
     module_node: Node
     compiler: FunctionCompiler
     # function, AST, source lines, line offset
+    declared_funcs: dict[
+        str, tuple[Callable[..., Any], ast.FunctionDef, list[str], int]
+    ]
+    # function, AST, source lines, line offset
     annotated_funcs: dict[
         str, tuple[Callable[..., Any], ast.FunctionDef, list[str], int]
     ]
@@ -192,14 +197,24 @@ class GuppyModule(object):
         self.module_node = self.graph.set_root_name(self.name)
         self.compiler = FunctionCompiler(self.graph)
         self.annotated_funcs = {}
+        self.declared_funcs = {}
         self.fun_decls = []
 
     def __call__(self, f: Callable[..., Any]) -> None:
+        f, func_ast, source_lines, line_offset = self._parse(f)
+        self.annotated_funcs[func_ast.name] = f, func_ast, source_lines, line_offset
+
+    def declare(self, f: Callable[..., Any]) -> None:
+        f, func_ast, source_lines, line_offset = self._parse(f)
+        self.declared_funcs[func_ast.name] = f, func_ast, source_lines, line_offset
+
+    def _parse(
+        self, f: Callable[..., Any]
+    ) -> tuple[Callable[..., Any], ast.FunctionDef, list[str], int]:
         source_lines, line_offset = inspect.getsourcelines(f)
         line_offset -= 1
         source = "".join(source_lines)  # Lines already have trailing \n's
         source = textwrap.dedent(source)
-
         func_ast = ast.parse(source).body[0]
         if not isinstance(func_ast, ast.FunctionDef):
             raise GuppyError("Only functions can be placed in modules", func_ast)
@@ -209,7 +224,7 @@ class GuppyModule(object):
                 f"(declared at {SourceLoc.from_ast(self.annotated_funcs[func_ast.name][1], line_offset)})",
                 func_ast,
             )
-        self.annotated_funcs[func_ast.name] = f, func_ast, source_lines, line_offset
+        return f, func_ast, source_lines, line_offset
 
     def compile(self, exit_on_error: bool = False) -> Optional[Hugr]:
         """Compiles the module and returns the final Hugr."""
@@ -227,6 +242,23 @@ class GuppyModule(object):
                 defs[name] = def_node
                 global_variables[name] = Variable(
                     name, def_node.out_port(0), {func_ast}
+                )
+            for name, (
+                f,
+                func_ast,
+                source_lines,
+                line_offset,
+            ) in self.declared_funcs.items():
+                func_ty = self.compiler.validate_signature(func_ast)
+                if len(func_ast.body) > 1 or not isinstance(func_ast.body[0], ast.Pass):
+                    raise GuppyError(
+                        "Declared functions may not have a body.", func_ast
+                    )
+                decl_node = self.graph.add_declare(
+                    func_ty, self.module_node, func_ast.name
+                )
+                global_variables[name] = Variable(
+                    name, decl_node.out_port(0), {func_ast}
                 )
             for name, (
                 f,
