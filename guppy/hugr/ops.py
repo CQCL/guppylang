@@ -52,10 +52,10 @@ class Module(BaseOp):
     op: Literal["Module"] = "Module"
 
 
-class Def(BaseOp):
+class FuncDefn(BaseOp):
     """A function definition. Children nodes are the body of the definition."""
 
-    op: Literal["Def"] = "Def"
+    op: Literal["FuncDefn"] = "FuncDefn"
 
     name: str = "main"
     signature: Signature = Field(default_factory=Signature.empty)
@@ -68,10 +68,10 @@ class Def(BaseOp):
         self.signature = out.signature
 
 
-class Declare(BaseOp):
+class FuncDecl(BaseOp):
     """External function declaration, linked at runtime."""
 
-    op: Literal["Declare"] = "Declare"
+    op: Literal["FuncDecl"] = "FuncDecl"
     name: str = "main"
     signature: Signature = Field(default_factory=Signature.empty)
 
@@ -496,8 +496,8 @@ OpType = Annotated[
         BasicBlock,
         Case,
         Module,
-        Def,
-        Declare,
+        FuncDefn,
+        FuncDecl,
         Const,
         DummyOp,
         BasicBlockOp,

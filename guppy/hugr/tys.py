@@ -193,15 +193,15 @@ class Signature(BaseModel):
 
     input: TypeRow  # Value inputs of the function.
     output: TypeRow  # Value outputs of the function.
-    const_input: TypeRow = Field(
+    static_input: TypeRow = Field(
         default_factory=list
-    )  # Possible constE input (for call / load-constant).
+    )  # Possible static input (for call / load-constant).
     input_resources: ResourceSet = Field(default_factory=list)
     output_resources: ResourceSet = Field(default_factory=list)
 
     @classmethod
     def empty(cls) -> "Signature":
-        return Signature(input=[], output=[], const_input=[])
+        return Signature(input=[], output=[], static_input=[])
 
 
 # Now that all classes are defined, we need to update the ForwardRefs in all type
