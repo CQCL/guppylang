@@ -272,7 +272,7 @@ class GuppyModule(object):
                 func_ty = self.compiler.validate_signature(func_ast)
                 if len(func_ast.body) > 1 or not isinstance(func_ast.body[0], ast.Pass):
                     raise GuppyError(
-                        "Declared functions may not have a body.", func_ast
+                        "Declared functions may not have a body.", func_ast.body[0]
                     )
                 decl_node = self.graph.add_declare(
                     func_ty, self.module_node, func_ast.name
