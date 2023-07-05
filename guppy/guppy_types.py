@@ -59,7 +59,7 @@ class FunctionType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         ins = [t.to_hugr() for t in self.args]
         outs = [t.to_hugr() for t in self.returns]
-        sig = tys.Signature(input=ins, output=outs, const_input=[])
+        sig = tys.Signature(input=ins, output=outs, static_input=[])
         # TODO: Resources
         return tys.Graph(resources=[], signature=sig)
 
