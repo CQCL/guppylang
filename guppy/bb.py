@@ -139,7 +139,7 @@ class BB:
                     graph=graph,
                     pred=branch_port,
                     output_vars=[
-                        set(succ.vars.live_before.keys() & dfg.variables.keys())
+                        sorted(set(succ.vars.live_before.keys() & dfg.variables.keys()))
                         for succ in self.successors
                     ],
                     dfg=dfg,
@@ -162,7 +162,7 @@ class BB:
 
 
 def _make_predicate_output(
-    graph: Hugr, pred: OutPortV, output_vars: list[set[str]], dfg: DFContainer
+    graph: Hugr, pred: OutPortV, output_vars: list[list[str]], dfg: DFContainer
 ) -> OutPortV:
     """Selects an output based on a predicate.
 
