@@ -11,8 +11,8 @@ class GuppyType(ABC):
     Note that all instances of `GuppyType` subclasses are expected to be immutable.
     """
 
-    @abstractmethod
     @property
+    @abstractmethod
     def linear(self) -> bool:
         pass
 
@@ -39,6 +39,7 @@ class IntType(GuppyType):
     def __str__(self) -> str:
         return "int"
 
+    @property
     def linear(self) -> bool:
         return False
 
@@ -51,6 +52,7 @@ class FloatType(GuppyType):
     def __str__(self) -> str:
         return "float"
 
+    @property
     def linear(self) -> bool:
         return False
 
@@ -67,6 +69,7 @@ class FunctionType(GuppyType):
     def __str__(self) -> str:
         return f"{TypeRow(self.args)} -> {TypeRow(self.returns)}"
 
+    @property
     def linear(self) -> bool:
         return False
 
@@ -85,6 +88,7 @@ class TupleType(GuppyType):
     def __str__(self) -> str:
         return f"({', '.join(str(e) for e in self.element_types)})"
 
+    @property
     def linear(self) -> bool:
         return any(t.linear for t in self.element_types)
 
@@ -101,6 +105,7 @@ class SumType(GuppyType):
     def __str__(self) -> str:
         return f"Sum({', '.join(str(e) for e in self.element_types)})"
 
+    @property
     def linear(self) -> bool:
         return any(t.linear for t in self.element_types)
 
@@ -116,6 +121,7 @@ class BoolType(SumType):
         # Hugr bools are encoded as Sum((), ())
         super().__init__([TupleType([]), TupleType([])])
 
+    @property
     def linear(self) -> bool:
         return False
 
@@ -128,6 +134,7 @@ class StringType(GuppyType):
     def __str__(self) -> str:
         return "str"
 
+    @property
     def linear(self) -> bool:
         return False
 
@@ -140,6 +147,7 @@ class QubitType(GuppyType):
     def __str__(self) -> str:
         return "qubit"
 
+    @property
     def linear(self) -> bool:
         return True
 
@@ -154,6 +162,7 @@ class ListType(GuppyType):
     def __str__(self) -> str:
         return f"list[{self.element_type}]"
 
+    @property
     def linear(self) -> bool:
         return self.element_type.linear
 
@@ -170,6 +179,7 @@ class DictType(GuppyType):
     def __str__(self) -> str:
         return f"dict[{self.key_type}, {self.value_type}]"
 
+    @property
     def linear(self) -> bool:
         return self.value_type.linear
 

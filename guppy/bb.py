@@ -4,7 +4,7 @@ from typing import Optional, Sequence
 
 from guppy.ast_util import AstNode
 from guppy.compiler_base import DFContainer, Variable, VarMap, RawVariable
-from guppy.error import assert_bool_type
+from guppy.error import assert_bool_type, GuppyError
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import GuppyType, SumType, TupleType
 from guppy.hugr.hugr import CFNode, Node, Hugr, OutPortV
@@ -111,6 +111,24 @@ class BB:
         stmt_compiler = StatementCompiler(graph, global_variables)
         dfg = stmt_compiler.compile_stmts(self.statements, dfg, return_tys)
 
+        # We have to check that used linear variables are not going to be outputted
+        for succ in self.successors:
+            for x in succ.vars.live_before & dfg.variables.keys():
+                var = dfg[x]
+                if var.ty.linear and var.used:
+                    raise GuppyError(f"Variable `{x}` with linear type `{var.ty}` was "
+                                     "already used (at {0})",
+                                     succ.vars.live_before[x].vars.used[x], [var.used])
+
+        # On the other hand, unused linear variables *must* be outputted
+        for succ in self.successors:
+            for x, var in dfg.variables.items():
+                if var.ty.linear and not var.used and x not in succ.vars.live_before:
+                    # TODO: We should point to the successor in the error message
+                    raise GuppyError(f"Variable `{x}` with linear type `{var.ty}` is "
+                                     "not used on all control-flow paths",
+                                     next(iter(var.defined_at)))
+
         # The easy case is if we don't branch. We just output the variables that are
         # live in the successor
         if len(self.successors) == 1:
@@ -135,16 +153,30 @@ class BB:
                 s.vars.live_before.keys() != self.successors[0].vars.live_before.keys()
                 for s in self.successors[1:]
             ):
+                # We put all non-linear variables into the branch predicate and all
+                # linear variables in the normal output (since they are shared between
+                # all successors). This is in line with the definition of `<` on
+                # variables which puts linear variables at the end.
                 branch_port = _make_predicate_output(
                     graph=graph,
                     pred=branch_port,
                     output_vars=[
-                        sorted(succ.vars.live_before.keys() & dfg.variables.keys())
+                        sorted(
+                            x
+                            for x in succ.vars.live_before.keys()
+                            if x in dfg and not dfg[x].ty.linear
+                        )
                         for succ in self.successors
                     ],
                     dfg=dfg,
                 )
-                output_vars = []
+                output_vars = [
+                    x
+                    # We can look at `successors[0]` here since all successors must have
+                    # the same `live_before` linear variables
+                    for x in self.successors[0].vars.live_before.keys()
+                    if x in dfg and dfg[x].ty.linear
+                ]
             else:
                 output_vars = [
                     dfg[x] for x in self.successors[0].vars.live_before if x in dfg

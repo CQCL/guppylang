@@ -16,7 +16,7 @@ from guppy.guppy_types import (
     FunctionType,
     TupleType,
     TypeRow,
-    StringType,
+    StringType, QubitType,
 )
 from guppy.hugr.hugr import Hugr, Node
 from guppy.error import GuppyError, SourceLoc
@@ -33,6 +33,8 @@ def type_from_ast(node: ast.expr) -> GuppyType:
             return BoolType()
         elif node.id == "str":
             return StringType()
+        elif node.id == "qubit":
+            return QubitType()
     elif isinstance(node, ast.Tuple):
         return TupleType([type_from_ast(el) for el in node.elts])
     # TODO: Remaining cases

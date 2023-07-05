@@ -1,13 +1,13 @@
 from abc import ABC
 from dataclasses import dataclass
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Any
 
 from guppy.ast_util import AstNode
 from guppy.guppy_types import GuppyType
 from guppy.hugr.hugr import OutPortV, Hugr, DFContainingNode
 
 
-@dataclass(frozen=True)
+@dataclass
 class RawVariable:
     """Class holding data associated with a variable.
 
@@ -18,11 +18,17 @@ class RawVariable:
     ty: GuppyType
     defined_at: set[AstNode]
 
-    def __lt__(self, other: "Variable") -> bool:
-        return self.name < other.name
+    def __lt__(self, other: Any) -> bool:
+        # We define an ordering on variables that is used to determine in which order
+        # they are outputted from basic blocks. We need to output linear variables at
+        # the end, so we do a lexicographic ordering of linearity and name, exploiting
+        # the fact that `False < True` in Python.
+        if not isinstance(other, Variable):
+            return NotImplemented
+        return (self.ty.linear, self.name) < (other.ty.linear, other.name)
 
 
-@dataclass(frozen=True)
+@dataclass
 class Variable(RawVariable):
     """Represents a concrete variable during compilation.
 
