@@ -1,6 +1,6 @@
 import validator
 from guppy.compiler import GuppyModule
-
+from guppy.visualise import render_hugr
 
 module = GuppyModule("test")
 
@@ -15,5 +15,9 @@ def fac(x: int) -> int:
 
 
 if __name__ == "__main__":
-    hugr = module.compile()
+    hugr = module.compile(True)
+
+    # Render Hugr for debugging into `hugr.svg`
+    render_hugr(hugr, "hugr")
+
     validator.nest_cfg(hugr.serialize())
