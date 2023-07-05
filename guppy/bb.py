@@ -114,8 +114,8 @@ class BB:
         # The easy case is if we don't branch. We just output the variables that are
         # live in the successor
         if len(self.successors) == 1:
-            outputs = [
-                dfg[x].port for x in self.successors[0].vars.live_before if x in dfg
+            output_vars = [
+                dfg[x] for x in self.successors[0].vars.live_before if x in dfg
             ]
             # Even if wo don't branch, we still have to add a unit `Sum(())` predicate
             unit = graph.add_make_tuple([], parent=block).out_port(0)
@@ -144,15 +144,17 @@ class BB:
                     ],
                     dfg=dfg,
                 )
-                outputs = []
+                output_vars = []
             else:
-                outputs = [
-                    dfg[x].port for x in self.successors[0].vars.live_before if x in dfg
+                output_vars = [
+                    dfg[x] for x in self.successors[0].vars.live_before if x in dfg
                 ]
 
-        graph.add_output(inputs=[branch_port] + outputs, parent=block)
+        graph.add_output(
+            inputs=[branch_port] + [v.port for v in sorted(output_vars)], parent=block
+        )
         output_rows = [
-            [dfg[x] for x in succ.vars.live_before if x in dfg]
+            sorted([dfg[x] for x in succ.vars.live_before if x in dfg])
             for succ in self.successors
         ]
 
