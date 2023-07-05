@@ -66,6 +66,8 @@ def type_row_from_ast(node: ast.expr) -> TypeRow:
             nodes = node.slice.elts
         else:
             nodes = [node.slice]
+    elif isinstance(node, ast.Tuple):
+        nodes = node.elts
     else:
         nodes = [node]
     return TypeRow([type_from_ast(e) for e in nodes])
