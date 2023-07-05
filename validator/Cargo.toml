@@ -10,5 +10,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.19.0"
-quantinuum-hugr = { git = "https://github.com/CQCL-DEV/hugr.git", rev = "66c9fc5" }
+quantinuum-hugr = { git = "https://github.com/CQCL-DEV/hugr.git", branch = "new/nest_cfg2" }
 rmp-serde = "1.1.1"

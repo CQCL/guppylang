@@ -411,7 +411,7 @@ dependencies = [
 [[package]]
 name = "quantinuum-hugr"
 version = "0.1.0"
-source = "git+https://github.com/CQCL-DEV/hugr.git?rev=66c9fc5#66c9fc590bbb413e816de02e0032a387a0d9c62e"
+source = "git+https://github.com/CQCL-DEV/hugr.git?branch=new/nest_cfg2#86585941b4be3821855e99f1b93a3fa1a6b10352"
 dependencies = [
  "bitvec",
  "cgmath",
@@ -426,7 +426,6 @@ dependencies = [
  "petgraph",
  "portgraph",
  "serde",
- "serde_json",
  "serde_yaml",
  "smol_str",
  "thiserror",
@@ -524,17 +523,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.18",
-]
-
-[[package]]
-name = "serde_json"
-version = "1.0.99"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46266871c240a00b8f503b877622fe33430b3c7d963bdc0f2adc511e54a1eae3"
-dependencies = [
- "itoa",
- "ryu",
- "serde",
 ]
 
 [[package]]
