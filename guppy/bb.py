@@ -139,7 +139,7 @@ class BB:
                     graph=graph,
                     pred=branch_port,
                     output_vars=[
-                        sorted(set(succ.vars.live_before.keys() & dfg.variables.keys()))
+                        sorted(succ.vars.live_before.keys() & dfg.variables.keys())
                         for succ in self.successors
                     ],
                     dfg=dfg,
