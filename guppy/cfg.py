@@ -1,7 +1,7 @@
 import ast
 import itertools
 from dataclasses import dataclass, field
-from typing import Optional, NamedTuple, Iterator, Union
+from typing import Optional, NamedTuple, Union, Iterator
 
 from guppy.bb import BB, CompiledBB, VarRow
 from guppy.compiler_base import return_var, VarMap
@@ -213,7 +213,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     cfg: CFG
     num_returns: int
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.expr_builder = CFGExprBuilder()
 
     def build(self, nodes: list[ast.stmt], num_returns: int) -> CFG:
@@ -358,7 +358,7 @@ class CFGExprBuilder(ast.NodeTransformer):
 
     cfg: CFG
     bb: BB
-    tmp_vars = Iterator[str]
+    tmp_vars: Iterator[str]
 
     @classmethod
     def _set_location(cls, node: ast.AST, loc: ast.AST) -> ast.AST:
@@ -387,7 +387,6 @@ class CFGExprBuilder(ast.NodeTransformer):
         # node instead of the assign node sine the temporary assign shouldn't be user
         # facing.
         bb.vars.assigned[tmp_name] = value
-        return node
 
     def build(self, node: ast.expr, cfg: CFG, bb: BB) -> tuple[ast.expr, BB]:
         """Builds an expression into a CFG.
@@ -493,7 +492,7 @@ class CFGExprBuilder(ast.NodeTransformer):
         test_bb.vars.update_used(test)
         if_bb, else_bb = self.cfg.new_bb(pred=test_bb), self.cfg.new_bb(pred=test_bb)
         if_expr, if_bb = self.build(node.body, self.cfg, if_bb)
-        else_expr, else_bb = self.build(node.orelese, self.cfg, else_bb)
+        else_expr, else_bb = self.build(node.orelse, self.cfg, else_bb)
 
         # Assign the result to a temporary variable
         tmp = next(self.tmp_vars)
