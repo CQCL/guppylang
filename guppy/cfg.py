@@ -362,7 +362,7 @@ class ExprBuilder(ast.NodeTransformer):
     bb: BB
     tmp_vars: Iterator[str]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.branch_builder = BranchBuilder(self)
         self.tmp_vars = (f"%tmp{i}" for i in itertools.count())
 
@@ -396,8 +396,10 @@ class ExprBuilder(ast.NodeTransformer):
         self.bb = bb
         return self.visit(node), self.bb
 
-    def build_branch(self, node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB):
-        return self.branch_builder.visit(node, cfg, bb, true_bb, false_bb)
+    def build_branch(
+        self, node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
+    ) -> None:
+        self.branch_builder.visit(node, cfg, bb, true_bb, false_bb)
 
     def visit_Name(self, node: ast.Name) -> ast.Name:
         self.bb.vars.update_used(node)
@@ -438,10 +440,13 @@ class ExprBuilder(ast.NodeTransformer):
         # can turn them into regular expressions by assigning True/False to a temporary
         # variable and merging the control-flow
         if BranchBuilder.is_short_circuit_expr(node):
+            assert isinstance(node, ast.expr)
             true_bb, false_bb = self.cfg.new_bb(), self.cfg.new_bb()
             self.build_branch(node, self.cfg, self.bb, true_bb, false_bb)
-            true_const = set_location(ast.Constant(value=True), node)
-            false_const = set_location(ast.Constant(value=False), node)
+            true_const = ast.Constant(value=True)
+            false_const = ast.Constant(value=False)
+            set_location(true_const, node)
+            set_location(false_const, node)
             tmp = next(self.tmp_vars)
             self._tmp_assign(tmp, true_const, true_bb)
             self._tmp_assign(tmp, false_const, false_bb)
@@ -543,9 +548,9 @@ class BranchBuilder(AstVisitor[None]):
         self.visit(node.body, cfg, if_bb, true_bb, false_bb)
         self.visit(node.orelse, cfg, else_bb, true_bb, false_bb)
 
-    def generic_visit(
-        self, node: ast.IfExp, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
-    ) -> None:  # type: ignore
+    def generic_visit(  # type: ignore
+        self, node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
+    ) -> None:
         # We can always fall back to building the node as a regular expression and using
         # the result as a branch predicate
         pred, bb = self.expr_builder.build(node, cfg, bb)
