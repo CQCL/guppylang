@@ -86,3 +86,11 @@ def test_while_change_type():
             x = True
 
     validate(foo)
+
+
+def test_if_expr_different_types():
+    @guppy
+    def foo(x: bool) -> None:
+        5 if x else False
+
+    validate(foo)

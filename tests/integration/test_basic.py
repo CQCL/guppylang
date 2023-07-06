@@ -49,3 +49,12 @@ def test_assign():
         return y
 
     validate(foo)
+
+
+def test_assign_expr():
+    @guppy
+    def foo(x: bool) -> bool:
+        (y := x)
+        return y
+
+    validate(foo)
