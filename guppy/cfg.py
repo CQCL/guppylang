@@ -470,9 +470,8 @@ class BranchBuilder(AstVisitor[None]):
 
         Those expressions *must* be compiled using this builder.
         """
-        return (
-            isinstance(node, ast.BoolOp)
-            or (isinstance(node, ast.Compare) and len(node.comparators) > 1)
+        return isinstance(node, ast.BoolOp) or (
+            isinstance(node, ast.Compare) and len(node.comparators) > 1
         )
 
     def visit_BoolOp(
