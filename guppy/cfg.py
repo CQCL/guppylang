@@ -362,6 +362,7 @@ class CFGExprBuilder(ast.NodeTransformer):
 
     @classmethod
     def _set_location(cls, node: ast.AST, loc: ast.AST) -> ast.AST:
+        """Copy source location from one AST node to the other."""
         node.lineno = loc.lineno
         node.col_offset = loc.col_offset
         node.end_lineno = loc.end_lineno
@@ -370,6 +371,7 @@ class CFGExprBuilder(ast.NodeTransformer):
 
     @classmethod
     def _make_var(cls, name: str, loc: Optional[ast.expr] = None) -> ast.Name:
+        """Creates an `ast.Name` node."""
         node = ast.Name(id=name, ctx=ast.Load)
         if loc is not None:
             cls._set_location(node, loc)
@@ -377,6 +379,7 @@ class CFGExprBuilder(ast.NodeTransformer):
 
     @classmethod
     def _tmp_assign(cls, tmp_name: str, value: ast.expr, bb: BB) -> None:
+        """Adds a temporary variable assignment to a basic block."""
         node = ast.Assign(targets=[cls._make_var(tmp_name, value)], value=value)
         cls._set_location(node, value)
         bb.statements.append(node)
@@ -387,6 +390,11 @@ class CFGExprBuilder(ast.NodeTransformer):
         return node
 
     def build(self, node: ast.expr, cfg: CFG, bb: BB) -> tuple[ast.expr, BB]:
+        """Builds an expression into a CFG.
+
+        The expression may be transformed and new basic blocks may be created (for
+        example for `... if ... else ...` expressions). Returns the new expression and
+        the final basic block in which the expression can be used."""
         self.cfg = cfg
         self.bb = bb
         self.tmp_vars = (f"%tmp{i}" for i in itertools.count())

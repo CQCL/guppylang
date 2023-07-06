@@ -11,7 +11,6 @@ from guppy.hugr.hugr import CFNode, Node, Hugr, OutPortV
 from guppy.statement import StatementCompiler
 
 
-@dataclass
 class VarAnalysis:
     """Stores program analysis data for a basic block.
 
@@ -38,6 +37,9 @@ class VarAnalysis:
     maybe_assigned_before: set[str] = field(default_factory=set)
 
     def update_used(self, expr: ast.expr) -> None:
+        """Marks the variables occurring in an expression as used.
+
+        This method should be called whenever an expression is used in the BB."""
         for name in name_nodes_in_ast(expr):
             # Should point to first use, so also check that the name is not already
             # contained
