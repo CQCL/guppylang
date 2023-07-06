@@ -11,6 +11,7 @@ from guppy.hugr.hugr import CFNode, Node, Hugr, OutPortV
 from guppy.statement import StatementCompiler
 
 
+@dataclass
 class VarAnalysis:
     """Stores program analysis data for a basic block.
 
