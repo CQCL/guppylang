@@ -1,6 +1,7 @@
 import ast
+import itertools
 from dataclasses import dataclass, field
-from typing import Optional, NamedTuple
+from typing import Optional, NamedTuple, Iterator, Union
 
 from guppy.bb import BB, CompiledBB, VarRow
 from guppy.compiler_base import return_var, VarMap
@@ -20,13 +21,18 @@ class CFG:
         self.entry_bb = self.new_bb()
         self.exit_bb = self.new_bb()
 
-    def new_bb(self, pred: Optional[BB] = None, preds: Optional[list[BB]] = None) -> BB:
+    def new_bb(
+        self,
+        pred: Optional[BB] = None,
+        preds: Optional[list[BB]] = None,
+        statements: Optional[list[ast.stmt]] = None,
+    ) -> BB:
         """Adds a new basic block to the CFG.
 
         Optionally, a single predecessor or a list of predecessor BBs can be passed.
         """
         preds = preds if preds is not None else [pred] if pred is not None else []
-        bb = BB(len(self.bbs), predecessors=preds)
+        bb = BB(len(self.bbs), predecessors=preds, statements=statements or [])
         self.bbs.append(bb)
         for p in preds:
             p.successors.append(bb)
@@ -203,8 +209,12 @@ class Jumps(NamedTuple):
 class CFGBuilder(AstVisitor[Optional[BB]]):
     """Constructs a CFG from ast nodes."""
 
+    expr_builder: "CFGExprBuilder"
     cfg: CFG
     num_returns: int
+
+    def __init__(self):
+        self.expr_builder = CFGExprBuilder()
 
     def build(self, nodes: list[ast.stmt], num_returns: int) -> CFG:
         """Builds a CFG from a list of ast nodes.
@@ -252,16 +262,10 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
                 bb_opt = self.visit(node, bb_opt, jumps)
         return bb_opt
 
-    def _update_used(self, bb: BB, expr: ast.expr) -> None:
-        for name in name_nodes_in_ast(expr):
-            # Should point to first use, so also check that the name is not already
-            # contained
-            if name.id not in bb.vars.assigned and name.id not in bb.vars.used:
-                bb.vars.used[name.id] = name
-
     def visit_Assign(self, node: ast.Assign, bb: BB, jumps: Jumps) -> Optional[BB]:
+        node.value, bb = self.expr_builder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
-        self._update_used(bb, node.value)
+        bb.vars.update_used(node.value)
         for t in node.targets:
             for name in name_nodes_in_ast(t):
                 bb.vars.assigned[name.id] = node
@@ -271,15 +275,16 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         self, node: ast.AugAssign, bb: BB, jumps: Jumps
     ) -> Optional[BB]:
         bb.statements.append(node)
-        self._update_used(bb, node.value)
-        self._update_used(bb, node.target)  # The target is also used
+        bb.vars.update_used(node.value)
+        bb.vars.update_used(node.target)  # The target is also used
         for name in name_nodes_in_ast(node.target):
             bb.vars.assigned[name.id] = node
         return bb
 
     def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> Optional[BB]:
+        node.test, bb = self.expr_builder.build(node.test, self.cfg, bb)
         bb.branch_pred = node.test
-        self._update_used(bb, node.test)
+        bb.vars.update_used(node.test)
         if_bb = self.visit_stmts(node.body, self.cfg.new_bb(pred=bb), jumps)
         else_bb = self.visit_stmts(node.orelse, self.cfg.new_bb(pred=bb), jumps)
         # We need to handle different cases depending on whether branches jump (i.e.
@@ -300,9 +305,10 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
     def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
         head_bb = self.cfg.new_bb(pred=bb)
-        body_bb, tail_bb = self.cfg.new_bb(pred=head_bb), self.cfg.new_bb(pred=head_bb)
+        node.test, test_bb = self.expr_builder.build(node.test, self.cfg, head_bb)
         head_bb.branch_pred = node.test
-        self._update_used(head_bb, node.test)
+        bb.vars.update_used(node.test)
+        body_bb, tail_bb = self.cfg.new_bb(pred=test_bb), self.cfg.new_bb(pred=test_bb)
 
         new_jumps = Jumps(
             return_bb=jumps.return_bb, continue_bb=head_bb, break_bb=tail_bb
@@ -334,7 +340,8 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_Return(self, node: ast.Return, bb: BB, jumps: Jumps) -> Optional[BB]:
         self.cfg.link(bb, jumps.return_bb)
         if node.value is not None:
-            self._update_used(bb, node.value)
+            node.value, bb = self.expr_builder.build(node.value, self.cfg, bb)
+            bb.vars.update_used(node.value)
         # In the main `BBCompiler`, we're going to turn return statements into
         # assignments of dummy variables `%ret_xxx`. To make the liveness analysis work,
         # we have to register those variables as being assigned here
@@ -344,6 +351,153 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
     def visit_Pass(self, node: ast.Pass, bb: BB, jumps: Jumps) -> Optional[BB]:
         return bb
+
+
+class CFGExprBuilder(ast.NodeTransformer):
+    """Builds an expression into a basic block."""
+
+    cfg: CFG
+    bb: BB
+    tmp_vars = Iterator[str]
+
+    @classmethod
+    def _set_location(cls, node: ast.AST, loc: ast.AST) -> ast.AST:
+        node.lineno = loc.lineno
+        node.col_offset = loc.col_offset
+        node.end_lineno = loc.end_lineno
+        node.end_col_offset = loc.end_col_offset
+        return node
+
+    @classmethod
+    def _make_var(cls, name: str, loc: Optional[ast.expr] = None) -> ast.Name:
+        node = ast.Name(id=name, ctx=ast.Load)
+        if loc is not None:
+            cls._set_location(node, loc)
+        return node
+
+    @classmethod
+    def _tmp_assign(cls, tmp_name: str, value: ast.expr, bb: BB) -> None:
+        node = ast.Assign(targets=[cls._make_var(tmp_name, value)], value=value)
+        cls._set_location(node, value)
+        bb.statements.append(node)
+        # Mark variable as assigned for analysis later. Note that we point to the value
+        # node instead of the assign node sine the temporary assign shouldn't be user
+        # facing.
+        bb.vars.assigned[tmp_name] = value
+        return node
+
+    def build(self, node: ast.expr, cfg: CFG, bb: BB) -> tuple[ast.expr, BB]:
+        self.cfg = cfg
+        self.bb = bb
+        self.tmp_vars = (f"%tmp{i}" for i in itertools.count())
+        return self.visit(node), self.bb
+
+    def visit_Name(self, node: ast.Name) -> ast.Name:
+        self.bb.vars.update_used(node)
+        return node
+
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> ast.Name:
+        # This is an assignment expression, e.g. `x := 42`. We turn it into an
+        # assignment statement and replace the expression with `x`.
+        if not isinstance(node.target, ast.Name):
+            raise InternalGuppyError(f"Unexpected assign target: {node.target}")
+        assign = ast.Assign(targets=[node.target], value=self.visit(node.value))
+        self._set_location(assign, node)
+        self.bb.statements.append(assign)
+        self.bb.vars.assigned[node.target.id] = node
+        return node.target
+
+    def visit_BoolOp(self, node: ast.BoolOp) -> ast.Name:
+        # Add short-circuit evaluation of boolean expression. If there are more than 2
+        # operators, we turn the flat operator list into a right-nested tree to allow
+        # for recursive processing.
+        assert len(node.values) > 1
+        if len(node.values) > 2:
+            r = ast.BoolOp(
+                op=node.op,
+                values=node.values[1:],
+                lineno=node.values[0].lineno,
+                col_offset=node.values[0].col_offset,
+                end_lineno=node.values[-1].end_lineno,
+                end_col_offset=node.values[-1].end_col_offset,
+            )
+            node.values = [node.values[0], r]
+        [left, right] = node.values
+        left, left_end_bb = self.build(left, self.cfg, self.bb)
+        left_end_bb.branch_pred = left
+        left_end_bb.vars.update_used(left)
+        right_start_bb = self.cfg.new_bb()
+        right, right_end_bb = self.build(right, self.cfg, right_start_bb)
+
+        # Assign the right expression to a temporary variable
+        tmp = next(self.tmp_vars)
+        self._tmp_assign(tmp, right, right_end_bb)
+        right_end_bb.vars.update_used(right)
+
+        # Furthermore, we need a BB that assigns the constant True/False to this
+        # temporary variable
+        const = ast.Constant(value=isinstance(node.op, ast.Or))
+        self._set_location(const, right)  # TODO: Which location is best here?
+        const_bb = self.cfg.new_bb()
+        self._tmp_assign(tmp, const, const_bb)
+
+        # Merge the temporary variables in a new BB
+        merge_bb = self.cfg.new_bb(preds=[right_end_bb, const_bb])
+        self.bb = merge_bb
+
+        # The wiring depends on whether we have `and` or `or`
+        if isinstance(node.op, ast.And):
+            self.cfg.link(left_end_bb, right_start_bb)
+            self.cfg.link(left_end_bb, const_bb)
+        elif isinstance(node.op, ast.Or):
+            self.cfg.link(left_end_bb, const_bb)
+            self.cfg.link(left_end_bb, right_start_bb)
+        else:
+            raise InternalGuppyError(f"Unexpected BoolOp encountered: {node.op}")
+
+        # The final value is stored in the temporary variable
+        return self._make_var(tmp, node)
+
+    def visit_Compare(self, node: ast.Compare) -> Union[ast.Compare, ast.Name]:
+        # Support chained comparisons, e.g. `x <= 5 < y` by compiling to `x <= 5 and
+        # 5 < y`. This way we get short-circuit evaluation for free.
+        if len(node.comparators) > 1:
+            comparators = [node.left] + node.comparators
+            conj = ast.BoolOp(op=ast.And(), values=[])
+            for left, op, right in zip(comparators[:-1], node.ops, comparators[1:]):
+                comp = ast.Compare(
+                    left=left,
+                    ops=[op],
+                    comparators=[right],
+                    lineno=left.lineno,
+                    col_offset=left.col_offset,
+                    end_lineno=right.end_lineno,
+                    end_col_offset=right.end_col_offset,
+                )
+                conj.values.append(comp)
+            self._set_location(conj, node)
+            return self.visit_BoolOp(conj)
+        return node
+
+    def visit_IfExp(self, node: ast.IfExp) -> ast.Name:
+        test, test_bb = self.build(node.test, self.cfg, self.bb)
+        test_bb.branch_pred = test
+        test_bb.vars.update_used(test)
+        if_bb, else_bb = self.cfg.new_bb(pred=test_bb), self.cfg.new_bb(pred=test_bb)
+        if_expr, if_bb = self.build(node.body, self.cfg, if_bb)
+        else_expr, else_bb = self.build(node.orelese, self.cfg, else_bb)
+
+        # Assign the result to a temporary variable
+        tmp = next(self.tmp_vars)
+        self._tmp_assign(tmp, if_expr, if_bb)
+        self._tmp_assign(tmp, else_expr, else_bb)
+
+        # Merge the temporary variables in a new BB
+        merge_bb = self.cfg.new_bb(preds=[if_bb, else_bb])
+        self.bb = merge_bb
+
+        # The final value is stored in the temporary variable
+        return self._make_var(tmp, node)
 
 
 def is_functional_annotation(stmt: ast.stmt) -> bool:

@@ -2,7 +2,7 @@ import ast
 from dataclasses import dataclass, field
 from typing import Optional, Sequence
 
-from guppy.ast_util import AstNode
+from guppy.ast_util import AstNode, name_nodes_in_ast
 from guppy.compiler_base import DFContainer, Variable, VarMap, RawVariable
 from guppy.error import assert_bool_type
 from guppy.expression import ExpressionCompiler
@@ -13,7 +13,7 @@ from guppy.statement import StatementCompiler
 
 @dataclass
 class VarAnalysis:
-    """Stores program analysis results for a basic block.
+    """Stores program analysis data for a basic block.
 
     This class carries the results of live variable, definite assignment, and maybe
     assignment analysis.
@@ -36,6 +36,13 @@ class VarAnalysis:
     # Variables that are possibly assigned before the execution of the BB, i.e. the
     # variable is defined on some paths, but not all of them.
     maybe_assigned_before: set[str] = field(default_factory=set)
+
+    def update_used(self, expr: ast.expr) -> None:
+        for name in name_nodes_in_ast(expr):
+            # Should point to first use, so also check that the name is not already
+            # contained
+            if name.id not in self.assigned and name.id not in self.used:
+                self.used[name.id] = name
 
 
 VarRow = Sequence[RawVariable]
