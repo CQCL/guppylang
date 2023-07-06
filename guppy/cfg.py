@@ -1,7 +1,7 @@
 import ast
 import itertools
 from dataclasses import dataclass, field
-from typing import Optional, NamedTuple, Union, Iterator
+from typing import Optional, NamedTuple, Iterator, Any
 
 from guppy.bb import BB, CompiledBB, VarRow
 from guppy.compiler_base import return_var, VarMap
@@ -281,6 +281,10 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
             bb.vars.assigned[name.id] = node
         return bb
 
+    def visit_Expr(self, node: ast.Expr, bb: BB, jumps: Jumps) -> Optional[BB]:
+        _, bb = self.expr_builder.build(node.value, self.cfg, bb)
+        return bb
+
     def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> Optional[BB]:
         node.test, bb = self.expr_builder.build(node.test, self.cfg, bb)
         bb.branch_pred = node.test
@@ -338,10 +342,10 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         return None
 
     def visit_Return(self, node: ast.Return, bb: BB, jumps: Jumps) -> Optional[BB]:
-        self.cfg.link(bb, jumps.return_bb)
         if node.value is not None:
             node.value, bb = self.expr_builder.build(node.value, self.cfg, bb)
             bb.vars.update_used(node.value)
+        self.cfg.link(bb, jumps.return_bb)
         # In the main `BBCompiler`, we're going to turn return statements into
         # assignments of dummy variables `%ret_xxx`. To make the liveness analysis work,
         # we have to register those variables as being assigned here
@@ -359,6 +363,9 @@ class CFGExprBuilder(ast.NodeTransformer):
     cfg: CFG
     bb: BB
     tmp_vars: Iterator[str]
+
+    def __init__(self):
+        self.tmp_vars = (f"%tmp{i}" for i in itertools.count())
 
     @classmethod
     def _set_location(cls, node: ast.AST, loc: ast.AST) -> ast.AST:
@@ -386,6 +393,7 @@ class CFGExprBuilder(ast.NodeTransformer):
         # Mark variable as assigned for analysis later. Note that we point to the value
         # node instead of the assign node sine the temporary assign shouldn't be user
         # facing.
+        bb.vars.update_used(value)
         bb.vars.assigned[tmp_name] = value
 
     def build(self, node: ast.expr, cfg: CFG, bb: BB) -> tuple[ast.expr, BB]:
@@ -396,7 +404,6 @@ class CFGExprBuilder(ast.NodeTransformer):
         the final basic block in which the expression can be used."""
         self.cfg = cfg
         self.bb = bb
-        self.tmp_vars = (f"%tmp{i}" for i in itertools.count())
         return self.visit(node), self.bb
 
     def visit_Name(self, node: ast.Name) -> ast.Name:
@@ -465,7 +472,7 @@ class CFGExprBuilder(ast.NodeTransformer):
         # The final value is stored in the temporary variable
         return self._make_var(tmp, node)
 
-    def visit_Compare(self, node: ast.Compare) -> Union[ast.Compare, ast.Name]:
+    def visit_Compare(self, node: ast.Compare) -> Any:
         # Support chained comparisons, e.g. `x <= 5 < y` by compiling to `x <= 5 and
         # 5 < y`. This way we get short-circuit evaluation for free.
         if len(node.comparators) > 1:
@@ -484,7 +491,7 @@ class CFGExprBuilder(ast.NodeTransformer):
                 conj.values.append(comp)
             self._set_location(conj, node)
             return self.visit_BoolOp(conj)
-        return node
+        return super().generic_visit(node)
 
     def visit_IfExp(self, node: ast.IfExp) -> ast.Name:
         test, test_bb = self.build(node.test, self.cfg, self.bb)
