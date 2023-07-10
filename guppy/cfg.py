@@ -152,8 +152,15 @@ class CFG:
                         )
                         f1 = [f"{{{i}}}" for i in range(len(d1))]
                         f2 = [f"{{{len(f1) + i}}}" for i in range(len(d2))]
+                        # We shouldn't mention temporary variables (starting with `%`)
+                        # in error messages:
+                        ident = (
+                            "Expression"
+                            if v1.name.startswith("%")
+                            else f"Variable `{v1.name}`"
+                        )
                         raise GuppyError(
-                            f"Variable `{v1.name}` can refer to different types: "
+                            f"{ident} can refer to different types: "
                             f"`{v1.ty}` (at {', '.join(f1)}) vs "
                             f"`{v2.ty}` (at {', '.join(f2)})",
                             bb.vars.live_before[v1.name].vars.used[v1.name],

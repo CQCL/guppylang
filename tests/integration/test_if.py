@@ -117,6 +117,16 @@ def test_if_expr_reassign_cond():
     validate(foo)
 
 
+def test_if_expr_double_type_change():
+    @guppy
+    def foo(x: bool) -> int:
+        y = 4
+        (y := 1) if (y := x) else (y := 6)
+        return y
+
+    validate(foo)
+
+
 def test_if_return():
     @guppy
     def foo(x: bool, y: int) -> int:

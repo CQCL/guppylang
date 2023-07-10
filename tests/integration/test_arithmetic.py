@@ -63,3 +63,23 @@ def test_shortcircuit_assign2():
         return False
 
     validate(foo)
+
+
+def test_shortcircuit_assign3():
+    @guppy
+    def foo(x: bool, y: int) -> bool:
+        if (z := x) or y > 0:
+            return z
+        return z
+
+    validate(foo)
+
+
+def test_shortcircuit_assign4():
+    @guppy
+    def foo(x: bool, y: int) -> bool:
+        if y > 0 or (z := x):
+            return False
+        return z
+
+    validate(foo)
