@@ -102,6 +102,20 @@ def test_measure():
     validate(module.compile(True))
 
 
+def test_return_call():
+    module = GuppyModule("test")
+
+    @module.declare
+    def op(q: qubit) -> qubit:
+        pass
+
+    @module
+    def test(q: qubit) -> qubit:
+        return op(q)
+
+    validate(module.compile(True))
+
+
 def test_while():
     module = GuppyModule("test")
 
