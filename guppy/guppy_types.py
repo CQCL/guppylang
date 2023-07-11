@@ -176,6 +176,9 @@ class DictType(GuppyType):
     key_type: GuppyType
     value_type: GuppyType
 
+    def __post_init__(self):
+        assert not self.key_type.linear
+
     def __str__(self) -> str:
         return f"dict[{self.key_type}, {self.value_type}]"
 
