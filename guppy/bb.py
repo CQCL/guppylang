@@ -41,7 +41,7 @@ class VarAnalysis:
 VarRow = Sequence[RawVariable]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Signature:
     input_row: VarRow
     output_rows: Sequence[VarRow]  # One for each successor
