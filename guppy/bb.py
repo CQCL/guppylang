@@ -4,7 +4,7 @@ from typing import Optional, Sequence
 
 from guppy.ast_util import AstNode
 from guppy.compiler_base import DFContainer, Variable, VarMap, RawVariable
-from guppy.error import assert_bool_type
+from guppy.error import assert_bool_type, UndefinedPort
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import GuppyType, SumType, TupleType
 from guppy.hugr.hugr import CFNode, Node, Hugr, OutPortV
@@ -112,10 +112,10 @@ class BB:
 
         # The easy case is if we don't branch. We just output the variables that are
         # live in the successor
+        output_vars = sorted(
+            dfg[x] for x in self.successors[0].vars.live_before if x in dfg
+        )
         if len(self.successors) == 1:
-            output_vars = [
-                dfg[x] for x in self.successors[0].vars.live_before if x in dfg
-            ]
             # Even if wo don't branch, we still have to add a unit `Sum(())` predicate
             unit = graph.add_make_tuple([], parent=block).out_port(0)
             branch_port = graph.add_tag(
@@ -144,13 +144,9 @@ class BB:
                     dfg=dfg,
                 )
                 output_vars = []
-            else:
-                output_vars = [
-                    dfg[x] for x in self.successors[0].vars.live_before if x in dfg
-                ]
 
         graph.add_output(
-            inputs=[branch_port] + [v.port for v in sorted(output_vars)], parent=block
+            inputs=[branch_port] + [v.port for v in output_vars], parent=block
         )
         output_rows = [
             sorted([dfg[x] for x in succ.vars.live_before if x in dfg])
