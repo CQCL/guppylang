@@ -12,7 +12,7 @@ from guppy.hugr.hugr import Node, Hugr
 
 @dataclass
 class CFG:
-    """A control-flow graph."""
+    """A control-flow graph of basic blocks."""
 
     bbs: list[BB] = field(default_factory=list)
 
@@ -20,12 +20,12 @@ class CFG:
         self.entry_bb = self.new_bb()
         self.exit_bb = self.new_bb()
 
-    def new_bb(self, pred: Optional[BB] = None, preds: Optional[list[BB]] = None) -> BB:
+    def new_bb(self, preds: Optional[list[BB]] = None) -> BB:
         """Adds a new basic block to the CFG.
 
         Optionally, a single predecessor or a list of predecessor BBs can be passed.
         """
-        preds = preds if preds is not None else [pred] if pred is not None else []
+        preds = preds or []
         bb = BB(len(self.bbs), predecessors=preds)
         self.bbs.append(bb)
         for p in preds:
@@ -280,8 +280,8 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> Optional[BB]:
         bb.branch_pred = node.test
         self._update_used(bb, node.test)
-        if_bb = self.visit_stmts(node.body, self.cfg.new_bb(pred=bb), jumps)
-        else_bb = self.visit_stmts(node.orelse, self.cfg.new_bb(pred=bb), jumps)
+        if_bb = self.visit_stmts(node.body, self.cfg.new_bb(preds=[bb]), jumps)
+        else_bb = self.visit_stmts(node.orelse, self.cfg.new_bb(preds=[bb]), jumps)
         # We need to handle different cases depending on whether branches jump (i.e.
         # return, continue, or break)
         if if_bb is None and else_bb is None:
@@ -299,8 +299,9 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
             return self.cfg.new_bb(preds=[if_bb, else_bb])
 
     def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
-        head_bb = self.cfg.new_bb(pred=bb)
-        body_bb, tail_bb = self.cfg.new_bb(pred=head_bb), self.cfg.new_bb(pred=head_bb)
+        head_bb = self.cfg.new_bb(preds=[bb])
+        body_bb = self.cfg.new_bb(preds=[head_bb])
+        tail_bb = self.cfg.new_bb(preds=[head_bb])
         head_bb.branch_pred = node.test
         self._update_used(head_bb, node.test)
 

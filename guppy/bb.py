@@ -33,15 +33,14 @@ class VarAnalysis:
     # Variables that are definitely assigned before the execution of the BB
     assigned_before: set[str] = field(default_factory=set)
 
-    # Variables that are possibly assigned before the execution of the BB, i.e. the
-    # variable is defined on some paths, but not all of them.
+    # Variables that are assigned on some paths to this BB, but not others
     maybe_assigned_before: set[str] = field(default_factory=set)
 
 
 VarRow = Sequence[RawVariable]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Signature:
     input_row: VarRow
     output_rows: Sequence[VarRow]  # One for each successor
@@ -136,10 +135,10 @@ class BB:
 
         # The easy case is if we don't branch. We just output the variables that are
         # live in the successor
+        output_vars = sorted(
+            dfg[x] for x in self.successors[0].vars.live_before if x in dfg
+        )
         if len(self.successors) == 1:
-            output_vars = [
-                dfg[x] for x in self.successors[0].vars.live_before if x in dfg
-            ]
             # Even if wo don't branch, we still have to add a unit `Sum(())` predicate
             unit = graph.add_make_tuple([], parent=block).out_port(0)
             branch_port = graph.add_tag(
@@ -182,13 +181,9 @@ class BB:
                     for x in self.successors[0].vars.live_before.keys()
                     if x in dfg and dfg[x].ty.linear
                 ]
-            else:
-                output_vars = [
-                    dfg[x] for x in self.successors[0].vars.live_before if x in dfg
-                ]
 
         graph.add_output(
-            inputs=[branch_port] + [v.port for v in sorted(output_vars)], parent=block
+            inputs=[branch_port] + [v.port for v in output_vars], parent=block
         )
         output_rows = [
             sorted([dfg[x] for x in succ.vars.live_before if x in dfg])
