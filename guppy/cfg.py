@@ -12,7 +12,7 @@ from guppy.hugr.hugr import Node, Hugr
 
 @dataclass
 class CFG:
-    """A control-flow graph."""
+    """A control-flow graph of basic blocks."""
 
     bbs: list[BB] = field(default_factory=list)
 
