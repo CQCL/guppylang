@@ -284,11 +284,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         else_bb = self.visit_stmts(node.orelse, self.cfg.new_bb(preds=[bb]), jumps)
         # We need to handle different cases depending on whether branches jump (i.e.
         # return, continue, or break)
-        if if_bb is None and else_bb is None:
-            # Both jump: This means the whole if-statement jumps, so we don't have to do
-            # anything
-            return None
-        elif if_bb is None:
+        if if_bb is None:
             # If branch jumps: We continue in the BB of the else branch
             return else_bb
         elif else_bb is None:
