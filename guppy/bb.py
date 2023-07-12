@@ -33,8 +33,7 @@ class VarAnalysis:
     # Variables that are definitely assigned before the execution of the BB
     assigned_before: set[str] = field(default_factory=set)
 
-    # Variables that are possibly assigned before the execution of the BB, i.e. the
-    # variable is defined on some paths, but not all of them.
+    # Variables that are assigned on some paths to this BB, but not others
     maybe_assigned_before: set[str] = field(default_factory=set)
 
 
