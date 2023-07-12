@@ -90,11 +90,11 @@ class CFG:
         queue = set(self.bbs)
         while len(queue) > 0:
             bb = queue.pop()
-            maybe_ass_after = bb.vars.maybe_assigned_before | bb.vars.assigned.keys()
+            maybe_ass = bb.vars.maybe_assigned_before | bb.vars.assigned.keys()
             for succ in bb.successors:
-                maybe_ass = maybe_ass_after - succ.vars.assigned_before
-                if not set.issubset(maybe_ass, succ.vars.maybe_assigned_before):
-                    succ.vars.maybe_assigned_before |= maybe_ass
+                maybe_ass_before = maybe_ass - succ.vars.assigned_before
+                if not set.issubset(maybe_ass_before, succ.vars.maybe_assigned_before):
+                    succ.vars.maybe_assigned_before |= maybe_ass_before
                     queue.add(succ)
 
     def analyze(self) -> None:
