@@ -176,7 +176,7 @@ class DictType(GuppyType):
     key_type: GuppyType
     value_type: GuppyType
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         assert not self.key_type.linear
 
     def __str__(self) -> str:
