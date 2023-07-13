@@ -2,10 +2,14 @@
 import ast
 
 import graphviz as gv  # type: ignore
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
 
-from guppy.cfg import CFG
+from guppy.analysis import LivenessDomain, DefAssignmentDomain, MaybeAssignmentDomain
+from guppy.bb import BB
 from guppy.hugr.hugr import InPort, OutPort, Node, Hugr, OutPortV
+
+if TYPE_CHECKING:
+    from guppy.cfg import CFG
 
 # old palettte: https://colorhunt.co/palette/343a407952b3ffc107e1e8eb
 # _COLOURS = {
@@ -207,14 +211,19 @@ def render_hugr(hugr: Hugr, filename: str, format_st: str = "svg") -> None:
     gv_graph.render(filename, format=format_st)
 
 
-def cfg_to_graphviz(cfg: CFG) -> gv.Digraph:
+def cfg_to_graphviz(
+    cfg: "CFG",
+    live_before: dict[BB, LivenessDomain],
+    ass_before: dict[BB, DefAssignmentDomain],
+    maybe_ass_before: dict[BB, MaybeAssignmentDomain],
+) -> gv.Digraph:
     graph = gv.Digraph("CFG", strict=False)
     for bb in cfg.bbs:
         label = "assigned: " + ", ".join(bb.vars.assigned.keys()) + "\n"
         label += "used: " + ", ".join(bb.vars.used.keys()) + "\n"
-        label += "maybe_ass_before: " + ", ".join(bb.vars.maybe_assigned_before) + "\n"
-        label += "ass_before: " + ", ".join(bb.vars.assigned_before) + "\n"
-        label += "live_before: " + ", ".join(bb.vars.live_before.keys()) + "\n"
+        label += "maybe_ass_before: " + ", ".join(maybe_ass_before[bb]) + "\n"
+        label += "ass_before: " + ", ".join(ass_before[bb]) + "\n"
+        label += "live_before: " + ", ".join(live_before[bb].keys()) + "\n"
         label += "--------\n"
         label += "\n".join(ast.unparse(s) for s in bb.statements)
         if bb.branch_pred is not None:
@@ -225,6 +234,13 @@ def cfg_to_graphviz(cfg: CFG) -> gv.Digraph:
     return graph
 
 
-def render_cfg(cfg: CFG, filename: str, format_st: str = "svg") -> None:
-    gv_graph = cfg_to_graphviz(cfg)
+def render_cfg(
+    cfg: "CFG",
+    live_before: dict[BB, LivenessDomain],
+    ass_before: dict[BB, DefAssignmentDomain],
+    maybe_ass_before: dict[BB, MaybeAssignmentDomain],
+    filename: str,
+    format_st: str = "svg",
+) -> None:
+    gv_graph = cfg_to_graphviz(cfg, live_before, ass_before, maybe_ass_before)
     gv_graph.render(filename, format=format_st)

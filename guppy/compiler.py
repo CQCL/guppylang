@@ -141,7 +141,6 @@ class FunctionCompiler(CompilerBase):
         args = func_def.args.args
 
         cfg = self.cfg_builder.build(func_def.body, len(func_ty.returns))
-        cfg.analyze()
 
         def_input = self.graph.add_input(parent=def_node)
         cfg_node = self.graph.add_cfg(

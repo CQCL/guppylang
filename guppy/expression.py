@@ -72,7 +72,10 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
                 )
             var.used = node
             return var.port
-        raise GuppyError(f"Variable `{x}` is not defined", node)
+        raise InternalGuppyError(
+            f"Variable `{x}` is not defined in ExpressionCompiler. This should have "
+            f"been caught by program analysis!"
+        )
 
     def visit_JoinedString(self, node: ast.JoinedStr) -> OutPortV:
         raise GuppyError("Guppy does not support formatted strings", node)
