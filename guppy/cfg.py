@@ -1,29 +1,52 @@
 import ast
 import itertools
-from dataclasses import dataclass, field
-from typing import Optional, NamedTuple, Iterator, Any
+from dataclasses import dataclass
+from typing import Optional, NamedTuple, Iterator
 
-from guppy.bb import BB, CompiledBB, VarRow
-from guppy.compiler_base import return_var, VarMap
-from guppy.error import InternalGuppyError, GuppyError
-from guppy.ast_util import AstVisitor, name_nodes_in_ast, line_col, set_location
-from guppy.guppy_types import GuppyType
-from guppy.hugr.hugr import Node, Hugr
+from guppy.analysis import (
+    LivenessDomain,
+    LivenessAnalysis,
+    AssignmentAnalysis,
+    DefAssignmentDomain,
+    MaybeAssignmentDomain,
+)
+from guppy.bb import BB, VarRow, Signature
+from guppy.compiler_base import VarMap, DFContainer, Variable
+from guppy.error import InternalGuppyError, GuppyError, assert_bool_type
+from guppy.ast_util import AstVisitor, line_col, set_location
+from guppy.expression import ExpressionCompiler
+from guppy.guppy_types import GuppyType, TupleType, SumType
+from guppy.hugr.hugr import Node, Hugr, CFNode, OutPortV
+from guppy.statement import StatementCompiler
 
 
 @dataclass
+class CompiledBB:
+    """The result of compiling a basic block.
+
+    Besides the corresponding node in the graph, we also store the signature of the
+    basic block with type information.
+    """
+
+    node: CFNode
+    bb: "BB"
+    sig: Signature
+
+
 class CFG:
-    """A control-flow graph."""
+    """A control-flow graph of basic blocks."""
 
-    bbs: list[BB] = field(default_factory=list)
+    bbs: list[BB]
+    entry_bb: BB
+    exit_bb: BB
 
-    def __post_init__(self) -> None:
+    def __init__(self) -> None:
+        self.bbs = []
         self.entry_bb = self.new_bb()
         self.exit_bb = self.new_bb()
 
     def new_bb(
         self,
-        pred: Optional[BB] = None,
         preds: Optional[list[BB]] = None,
         statements: Optional[list[ast.stmt]] = None,
     ) -> BB:
@@ -31,7 +54,7 @@ class CFG:
 
         Optionally, a single predecessor or a list of predecessor BBs can be passed.
         """
-        preds = preds if preds is not None else [pred] if pred is not None else []
+        preds = preds or []
         bb = BB(len(self.bbs), predecessors=preds, statements=statements or [])
         self.bbs.append(bb)
         for p in preds:
@@ -43,72 +66,6 @@ class CFG:
         src_bb.successors.append(tgt_bb)
         tgt_bb.predecessors.append(src_bb)
 
-    def _analyze_liveness(self) -> None:
-        """Runs live variable analysis."""
-        for bb in self.bbs:
-            bb.vars.live_before = dict()
-        self.exit_bb.vars.live_before = {
-            x: self.exit_bb for x in self.exit_bb.vars.used
-        }
-        queue = set(self.bbs)
-        while len(queue) > 0:
-            bb = queue.pop()
-            for pred in bb.predecessors:
-                live_before = {x: pred for x in pred.vars.used} | {
-                    x: b
-                    for x, b in bb.vars.live_before.items()
-                    if x not in pred.vars.assigned.keys()
-                }
-                if not set.issubset(
-                    set(live_before.keys()), pred.vars.live_before.keys()
-                ):
-                    pred.vars.live_before |= live_before
-                    queue.add(pred)
-
-    def _analyze_definite_assignment(self) -> None:
-        """Runs definite assignment analysis."""
-        all_vars = set.union(
-            *(bb.vars.used.keys() | bb.vars.assigned.keys() for bb in self.bbs)
-        )
-        for bb in self.bbs:
-            bb.vars.assigned_before = all_vars.copy()
-        self.entry_bb.vars.assigned_before = set()
-        queue = set(self.bbs)
-        while len(queue) > 0:
-            bb = queue.pop()
-            assigned_after = bb.vars.assigned_before | bb.vars.assigned.keys()
-            for succ in bb.successors:
-                if not set.issubset(succ.vars.assigned_before, assigned_after):
-                    succ.vars.assigned_before &= assigned_after
-                    queue.add(succ)
-
-    def _analyze_maybe_assignment(self) -> None:
-        """Runs maybe assignment analysis.
-
-        This computes the variables that *might* be defined at every program point but
-        are not guaranteed to be assigned. I.e. a variable that is defined on some paths
-        but not on all paths.
-        Note that this pass uses the results from the definite assignment analysis, so
-        it must be run afterward.
-        """
-        for bb in self.bbs:
-            bb.vars.maybe_assigned_before = set()
-        queue = set(self.bbs)
-        while len(queue) > 0:
-            bb = queue.pop()
-            maybe_ass_after = bb.vars.maybe_assigned_before | bb.vars.assigned.keys()
-            for succ in bb.successors:
-                maybe_ass = maybe_ass_after - succ.vars.assigned_before
-                if not set.issubset(maybe_ass, succ.vars.maybe_assigned_before):
-                    succ.vars.maybe_assigned_before |= maybe_ass
-                    queue.add(succ)
-
-    def analyze(self) -> None:
-        """Runs all program analysis passes."""
-        self._analyze_liveness()
-        self._analyze_definite_assignment()
-        self._analyze_maybe_assignment()
-
     def compile(
         self,
         graph: Hugr,
@@ -119,15 +76,33 @@ class CFG:
     ) -> None:
         """Compiles the CFG."""
 
-        compiled: dict[BB, CompiledBB] = {}
-        arg_names = [v.name for v in input_row]
+        # First, we need to run program analysis
+        for bb in self.bbs:
+            bb.compute_variable_stats(len(return_tys))
+        live_before = LivenessAnalysis().run(self.bbs)
+        ass_before, maybe_ass_before = AssignmentAnalysis(self.bbs).run_(self.bbs)
 
-        entry_compiled = self.entry_bb.compile(
-            graph, input_row, return_tys, parent, global_variables
+        # Additionally, we can mark function arguments as definitely assigned
+        args = {v.name for v in input_row}
+        for bb in self.bbs:
+            ass_before[bb] |= args
+
+        # We start by compiling the entry BB
+        compiled: dict[BB, CompiledBB] = {}
+        entry_compiled = self.compile_bb(
+            self.entry_bb,
+            input_row,
+            live_before,
+            ass_before,
+            maybe_ass_before,
+            return_tys,
+            graph,
+            parent,
+            global_variables,
         )
         compiled[self.entry_bb] = entry_compiled
 
-        # Visit all control-flow edges in BFS order
+        # Visit all control-flow edges in DFS order
         stack = [
             (entry_compiled, entry_compiled.sig.output_rows[i], succ)
             # Put successors onto stack in reverse order to maintain the original order
@@ -163,7 +138,7 @@ class CFG:
                             f"{ident} can refer to different types: "
                             f"`{v1.ty}` (at {', '.join(f1)}) vs "
                             f"`{v2.ty}` (at {', '.join(f2)})",
-                            bb.vars.live_before[v1.name].vars.used[v1.name],
+                            live_before[bb][v1.name].vars.used[v1.name],
                             d1 + d2,
                         )
                 graph.add_edge(
@@ -172,28 +147,16 @@ class CFG:
 
             # Otherwise, compile the BB and put successors on the stack
             else:
-                # Live variables before the entry BB correspond to usages without prior
-                # assignment
-                for x, use_bb in self.entry_bb.vars.live_before.items():
-                    # Functions arguments and global variables are fine
-                    if x in arg_names or x in global_variables:
-                        continue
-                    # The rest results in an error. If the variable is defined on *some*
-                    # paths, we can give a more informative error message
-                    if x in use_bb.vars.maybe_assigned_before:
-                        # TODO: Can we point to the actual path in the message in a nice
-                        #  way?
-                        raise GuppyError(
-                            f"Variable `{x}` is not defined on all control-flow paths.",
-                            use_bb.vars.used[x],
-                        )
-                    else:
-                        raise GuppyError(
-                            f"Variable `{x}` is not defined", use_bb.vars.used[x]
-                        )
-
-                bb_compiled = bb.compile(
-                    graph, out_row, return_tys, parent, global_variables
+                bb_compiled = self.compile_bb(
+                    bb,
+                    out_row,
+                    live_before,
+                    ass_before,
+                    maybe_ass_before,
+                    return_tys,
+                    graph,
+                    parent,
+                    global_variables,
                 )
                 graph.add_edge(pred.node.add_out_port(), bb_compiled.node.in_port(None))
                 compiled[bb] = bb_compiled
@@ -203,6 +166,124 @@ class CFG:
                     # original order when popping
                     for i, succ in reversed(list(enumerate(bb.successors)))
                 ]
+
+    def compile_bb(
+        self,
+        bb: BB,
+        input_row: VarRow,
+        live_before: dict[BB, LivenessDomain],
+        ass_before: dict[BB, DefAssignmentDomain],
+        maybe_ass_before: dict[BB, MaybeAssignmentDomain],
+        return_tys: list[GuppyType],
+        graph: Hugr,
+        parent: Node,
+        global_variables: VarMap,
+    ) -> CompiledBB:
+        """Compiles a single basic block."""
+        for x, use_bb in live_before[bb].items():
+            if x in ass_before[bb] or x in global_variables:
+                continue
+            # The rest results in an error. If the variable is defined on *some*
+            # paths, we can give a more informative error message
+            if x in maybe_ass_before[use_bb]:
+                # TODO: Can we point to the actual path in the message in a nice
+                #  way?
+                raise GuppyError(
+                    f"Variable `{x}` is not defined on all control-flow paths.",
+                    use_bb.vars.used[x],
+                )
+            else:
+                raise GuppyError(f"Variable `{x}` is not defined", use_bb.vars.used[x])
+
+        # The exit BB is completely empty
+        if len(bb.successors) == 0:
+            block = graph.add_exit(return_tys, parent)
+            return CompiledBB(block, bb, Signature(input_row, []))
+
+        block = graph.add_block(parent)
+        inp = graph.add_input(output_tys=[v.ty for v in input_row], parent=block)
+        dfg = DFContainer(
+            block,
+            {
+                v.name: Variable(v.name, inp.out_port(i), v.defined_at)
+                for (i, v) in enumerate(input_row)
+            },
+        )
+
+        stmt_compiler = StatementCompiler(graph, global_variables)
+        dfg = stmt_compiler.compile_stmts(bb.statements, dfg, return_tys)
+
+        # The easy case is if we don't branch. We just output the variables that are
+        # live in the successor
+        output_vars = sorted(dfg[x] for x in live_before[bb.successors[0]] if x in dfg)
+        if len(bb.successors) == 1:
+            # Even if wo don't branch, we still have to add a unit `Sum(())` predicate
+            unit = graph.add_make_tuple([], parent=block).out_port(0)
+            branch_port = graph.add_tag(
+                variants=[TupleType([])], tag=0, inp=unit, parent=block
+            ).out_port(0)
+
+        # If we branch, we have to compile the branch predicate
+        else:
+            assert bb.branch_pred is not None
+            expr_compiler = ExpressionCompiler(graph, global_variables)
+            branch_port = expr_compiler.compile(bb.branch_pred, dfg)
+            assert_bool_type(branch_port.ty, bb.branch_pred)
+            # If the branches use different variables, we have to use the predicate
+            # output feature.
+            if any(
+                live_before[s].keys() != live_before[bb.successors[0]].keys()
+                for s in bb.successors[1:]
+            ):
+                branch_port = self._make_predicate_output(
+                    graph=graph,
+                    pred=branch_port,
+                    output_vars=[
+                        sorted(live_before[succ].keys() & dfg.variables.keys())
+                        for succ in bb.successors
+                    ],
+                    dfg=dfg,
+                )
+                output_vars = []
+
+        graph.add_output(
+            inputs=[branch_port] + [v.port for v in output_vars], parent=block
+        )
+        output_rows = [
+            sorted([dfg[x] for x in live_before[succ] if x in dfg])
+            for succ in bb.successors
+        ]
+
+        return CompiledBB(block, bb, Signature(input_row, output_rows))
+
+    @staticmethod
+    def _make_predicate_output(
+        graph: Hugr, pred: OutPortV, output_vars: list[list[str]], dfg: DFContainer
+    ) -> OutPortV:
+        """Selects an output based on a predicate.
+
+        Given `pred: Sum((), (), ...)` and output variable sets `#s1, #s2, ...`,
+        constructs a predicate value of type `Sum(Tuple(#s1), Tuple(#s2), ...)`.
+        """
+        assert isinstance(pred.ty, SumType) and len(pred.ty.element_types) == len(
+            output_vars
+        )
+        tuples = [
+            graph.add_make_tuple(
+                inputs=[dfg[x].port for x in sorted(vs) if x in dfg], parent=dfg.node
+            ).out_port(0)
+            for vs in output_vars
+        ]
+        tys = [t.ty for t in tuples]
+        conditional = graph.add_conditional(
+            cond_input=pred, inputs=tuples, parent=dfg.node
+        )
+        for i, ty in enumerate(tys):
+            case = graph.add_case(conditional)
+            inp = graph.add_input(output_tys=tys, parent=case).out_port(i)
+            tag = graph.add_tag(variants=tys, tag=i, inp=inp, parent=case).out_port(0)
+            graph.add_output(inputs=[tag], parent=case)
+        return conditional.add_out_port(SumType([t.ty for t in tuples]))
 
 
 class Jumps(NamedTuple):
@@ -244,11 +325,6 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
                 raise GuppyError("Expected return statement", nodes[-1])
             self.cfg.link(final_bb, self.cfg.exit_bb)
 
-        # In the main `BBCompiler`, we're going to turn return statements into
-        # assignments of dummy variables `%ret_xxx`. To make the liveness analysis work,
-        # we have to register those variables as being used in the exit BB
-        self.cfg.exit_bb.vars.used = {return_var(i): None for i in range(num_returns)}  # type: ignore
-
         return self.cfg
 
     def visit_stmts(self, nodes: list[ast.stmt], bb: BB, jumps: Jumps) -> Optional[BB]:
@@ -272,20 +348,13 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_Assign(self, node: ast.Assign, bb: BB, jumps: Jumps) -> Optional[BB]:
         node.value, bb = self.expr_builder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
-        bb.vars.update_used(node.value)
-        for t in node.targets:
-            for name in name_nodes_in_ast(t):
-                bb.vars.assigned[name.id] = node
         return bb
 
     def visit_AugAssign(
         self, node: ast.AugAssign, bb: BB, jumps: Jumps
     ) -> Optional[BB]:
+        node.value, bb = self.expr_builder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
-        bb.vars.update_used(node.value)
-        bb.vars.update_used(node.target)  # The target is also used
-        for name in name_nodes_in_ast(node.target):
-            bb.vars.assigned[name.id] = node
         return bb
 
     def visit_Expr(self, node: ast.Expr, bb: BB, jumps: Jumps) -> Optional[BB]:
@@ -299,11 +368,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         else_bb = self.visit_stmts(node.orelse, else_bb, jumps)
         # We need to handle different cases depending on whether branches jump (i.e.
         # return, continue, or break)
-        if if_bb is None and else_bb is None:
-            # Both jump: This means the whole if-statement jumps, so we don't have to do
-            # anything
-            return None
-        elif if_bb is None:
+        if if_bb is None:
             # If branch jumps: We continue in the BB of the else branch
             return else_bb
         elif else_bb is None:
@@ -314,7 +379,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
             return self.cfg.new_bb(preds=[if_bb, else_bb])
 
     def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
-        head_bb = self.cfg.new_bb(pred=bb)
+        head_bb = self.cfg.new_bb(preds=[bb])
         body_bb, tail_bb = self.cfg.new_bb(), self.cfg.new_bb()
         self.expr_builder.build_branch(node.test, self.cfg, head_bb, body_bb, tail_bb)
 
@@ -348,16 +413,17 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_Return(self, node: ast.Return, bb: BB, jumps: Jumps) -> Optional[BB]:
         if node.value is not None:
             node.value, bb = self.expr_builder.build(node.value, self.cfg, bb)
-            bb.vars.update_used(node.value)
         self.cfg.link(bb, jumps.return_bb)
-        # In the main `BBCompiler`, we're going to turn return statements into
-        # assignments of dummy variables `%ret_xxx`. To make the liveness analysis work,
-        # we have to register those variables as being assigned here
-        bb.vars.assigned |= {return_var(i): node for i in range(self.num_returns)}
         bb.statements.append(node)
         return None
 
     def visit_Pass(self, node: ast.Pass, bb: BB, jumps: Jumps) -> Optional[BB]:
+        return bb
+
+    def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> Optional[BB]:  # type: ignore
+        # All other statements are blindly added to the BB
+        assert isinstance(node, ast.stmt)
+        bb.statements.append(node)
         return bb
 
 
@@ -387,11 +453,6 @@ class ExprBuilder(ast.NodeTransformer):
         node = ast.Assign(targets=[cls._make_var(tmp_name, value)], value=value)
         set_location(node, value)
         bb.statements.append(node)
-        # Mark variable as assigned for analysis later. Note that we point to the value
-        # node instead of the assign node sine the temporary assign shouldn't be user
-        # facing.
-        bb.vars.update_used(value)
-        bb.vars.assigned[tmp_name] = value
 
     def build(self, node: ast.expr, cfg: CFG, bb: BB) -> tuple[ast.expr, BB]:
         """Builds an expression into a CFG.
@@ -409,7 +470,6 @@ class ExprBuilder(ast.NodeTransformer):
         self.branch_builder.visit(node, cfg, bb, true_bb, false_bb)
 
     def visit_Name(self, node: ast.Name) -> ast.Name:
-        self.bb.vars.update_used(node)
         return node
 
     def visit_NamedExpr(self, node: ast.NamedExpr) -> ast.Name:
@@ -420,7 +480,6 @@ class ExprBuilder(ast.NodeTransformer):
         assign = ast.Assign(targets=[node.target], value=self.visit(node.value))
         set_location(assign, node)
         self.bb.statements.append(assign)
-        self.bb.vars.assigned[node.target.id] = node
         return node.target
 
     def visit_IfExp(self, node: ast.IfExp) -> ast.Name:
@@ -562,7 +621,6 @@ class BranchBuilder(AstVisitor[None]):
         # the result as a branch predicate
         pred, bb = self.expr_builder.build(node, cfg, bb)
         bb.branch_pred = pred
-        bb.vars.update_used(pred)
         cfg.link(bb, true_bb)
         cfg.link(bb, false_bb)
 
