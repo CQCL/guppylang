@@ -2,17 +2,12 @@ import ast
 from dataclasses import dataclass, field
 from typing import Optional, Sequence
 
-from guppy.ast_util import AstNode
-from guppy.compiler_base import DFContainer, Variable, VarMap, RawVariable
-from guppy.error import assert_bool_type, UndefinedPort
-from guppy.expression import ExpressionCompiler
-from guppy.guppy_types import GuppyType, SumType, TupleType
-from guppy.hugr.hugr import CFNode, Node, Hugr, OutPortV
-from guppy.statement import StatementCompiler
+from guppy.ast_util import AstNode, name_nodes_in_ast
+from guppy.compiler_base import RawVariable, return_var
 
 
 @dataclass
-class VarAnalysis:
+class VariableStats:
     """Stores program analysis results for a basic block.
 
     This class carries the results of live variable, definite assignment, and maybe
@@ -26,15 +21,16 @@ class VarAnalysis:
     # assigned in the BB are not included here.
     used: dict[str, ast.Name] = field(default_factory=dict)
 
-    # Variables that are live before the execution of the BB. We store the BB in which
-    # the use occurs as evidence of liveness
-    live_before: dict[str, "BB"] = field(default_factory=dict)
+    def update_used(self, node: ast.AST) -> None:
+        """Marks the variables occurring in a statement as used.
 
-    # Variables that are definitely assigned before the execution of the BB
-    assigned_before: set[str] = field(default_factory=set)
-
-    # Variables that are assigned on some paths to this BB, but not others
-    maybe_assigned_before: set[str] = field(default_factory=set)
+        This method should be called whenever an expression is used in the BB.
+        """
+        for name in name_nodes_in_ast(node):
+            # Should point to first use, so also check that the name is not already
+            # contained
+            if name.id not in self.assigned and name.id not in self.used:
+                self.used[name.id] = name
 
 
 VarRow = Sequence[RawVariable]
@@ -42,21 +38,13 @@ VarRow = Sequence[RawVariable]
 
 @dataclass(frozen=True)
 class Signature:
-    input_row: VarRow
-    output_rows: Sequence[VarRow]  # One for each successor
+    """The signature of a basic block.
 
-
-@dataclass
-class CompiledBB:
-    """The result of compiling a basic block.
-
-    Besides the corresponding node in the graph, we also store the signature of the
-    basic block with type information.
+    Stores the inout/output variables with their types.
     """
 
-    node: CFNode
-    bb: "BB"
-    sig: Signature
+    input_row: VarRow
+    output_rows: Sequence[VarRow]  # One for each successor
 
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
@@ -77,107 +65,63 @@ class BB:
     branch_pred: Optional[ast.expr] = None
 
     # Program analysis data
-    vars: VarAnalysis = field(default_factory=VarAnalysis)
+    vars: VariableStats = field(default_factory=VariableStats)
 
-    def compile(
-        self,
-        graph: Hugr,
-        input_row: VarRow,
-        return_tys: list[GuppyType],
-        parent: Node,
-        global_variables: VarMap,
-    ) -> "CompiledBB":
-        """Compiles this basic block.
+    def compute_variable_stats(self, num_returns: int) -> None:
+        """Determines which variables are assigned/used in this BB.
 
-        Note that liveness and definite assignment analysis must be performed before
-        this compile function is called.
+        This also requires the expected number of returns of the whole CFG in order to
+        process `return` statements.
         """
-        # The exit BB is completely empty
+        self.vars = VariableStats()
+
+        visitor = VariableVisitor(self, num_returns)
+        for s in self.statements:
+            visitor.visit(s)
+        if self.branch_pred is not None:
+            self.vars.update_used(self.branch_pred)
+
+        # In the `StatementCompiler`, we're going to turn return statements into
+        # assignments of dummy variables `%ret_xxx`. Thus, we have to register those
+        # variables as being used in the exit BB
         if len(self.successors) == 0:
-            block = graph.add_exit(return_tys, parent)
-            return CompiledBB(block, self, Signature(input_row, []))
-
-        block = graph.add_block(parent)
-        inp = graph.add_input(output_tys=[v.ty for v in input_row], parent=block)
-        dfg = DFContainer(
-            block,
-            {
-                v.name: Variable(v.name, inp.out_port(i), v.defined_at)
-                for (i, v) in enumerate(input_row)
-            },
-        )
-
-        stmt_compiler = StatementCompiler(graph, global_variables)
-        dfg = stmt_compiler.compile_stmts(self.statements, dfg, return_tys)
-
-        # The easy case is if we don't branch. We just output the variables that are
-        # live in the successor
-        output_vars = sorted(
-            dfg[x] for x in self.successors[0].vars.live_before if x in dfg
-        )
-        if len(self.successors) == 1:
-            # Even if wo don't branch, we still have to add a unit `Sum(())` predicate
-            unit = graph.add_make_tuple([], parent=block).out_port(0)
-            branch_port = graph.add_tag(
-                variants=[TupleType([])], tag=0, inp=unit, parent=block
-            ).out_port(0)
-
-        # If we branch, we have to compile the branch predicate
-        else:
-            assert self.branch_pred is not None
-            expr_compiler = ExpressionCompiler(graph, global_variables)
-            branch_port = expr_compiler.compile(self.branch_pred, dfg)
-            assert_bool_type(branch_port.ty, self.branch_pred)
-            # If the branches use different variables, we have to use the predicate
-            # output feature.
-            if any(
-                s.vars.live_before.keys() != self.successors[0].vars.live_before.keys()
-                for s in self.successors[1:]
-            ):
-                branch_port = _make_predicate_output(
-                    graph=graph,
-                    pred=branch_port,
-                    output_vars=[
-                        sorted(succ.vars.live_before.keys() & dfg.variables.keys())
-                        for succ in self.successors
-                    ],
-                    dfg=dfg,
-                )
-                output_vars = []
-
-        graph.add_output(
-            inputs=[branch_port] + [v.port for v in output_vars], parent=block
-        )
-        output_rows = [
-            sorted([dfg[x] for x in succ.vars.live_before if x in dfg])
-            for succ in self.successors
-        ]
-
-        return CompiledBB(block, self, Signature(input_row, output_rows))
+            self.vars.used |= {
+                return_var(i): ast.Name(return_var(i), ast.Load)
+                for i in range(num_returns)
+            }
 
 
-def _make_predicate_output(
-    graph: Hugr, pred: OutPortV, output_vars: list[list[str]], dfg: DFContainer
-) -> OutPortV:
-    """Selects an output based on a predicate.
+class VariableVisitor(ast.NodeVisitor):
+    """Visitor that computes used and assigned variables in a BB."""
 
-    Given `pred: Sum((), (), ...)` and output variable sets `#s1, #s2, ...`,
-    constructs a predicate value of type `Sum(Tuple(#s1), Tuple(#s2), ...)`.
-    """
-    assert isinstance(pred.ty, SumType) and len(pred.ty.element_types) == len(
-        output_vars
-    )
-    tuples = [
-        graph.add_make_tuple(
-            inputs=[dfg[x].port for x in sorted(vs) if x in dfg], parent=dfg.node
-        ).out_port(0)
-        for vs in output_vars
-    ]
-    tys = [t.ty for t in tuples]
-    conditional = graph.add_conditional(cond_input=pred, inputs=tuples, parent=dfg.node)
-    for i, ty in enumerate(tys):
-        case = graph.add_case(conditional)
-        inp = graph.add_input(output_tys=tys, parent=case).out_port(i)
-        tag = graph.add_tag(variants=tys, tag=i, inp=inp, parent=case).out_port(0)
-        graph.add_output(inputs=[tag], parent=case)
-    return conditional.add_out_port(SumType([t.ty for t in tuples]))
+    bb: BB
+    num_returns: int
+
+    def __init__(self, bb: BB, num_returns: int):
+        self.bb = bb
+        self.num_returns = num_returns
+
+    def visit_Assign(self, node: ast.Assign) -> None:
+        self.bb.vars.update_used(node.value)
+        for t in node.targets:
+            for name in name_nodes_in_ast(t):
+                self.bb.vars.assigned[name.id] = node
+
+    def visit_AugAssign(self, node: ast.AugAssign) -> None:
+        self.bb.vars.update_used(node.value)
+        self.bb.vars.update_used(node.target)  # The target is also used
+        for name in name_nodes_in_ast(node.target):
+            self.bb.vars.assigned[name.id] = node
+
+    def visit_Return(self, node: ast.Return) -> None:
+        if node.value is not None:
+            self.bb.vars.update_used(node.value)
+
+        # In the `StatementCompiler`, we're going to turn return statements into
+        # assignments of dummy variables `%ret_xxx`. To make the liveness analysis work,
+        # we have to register those variables as being assigned here
+        self.bb.vars.assigned |= {return_var(i): node for i in range(self.num_returns)}
+        return None
+
+    def generic_visit(self, node: ast.AST) -> None:
+        self.bb.vars.update_used(node)
