@@ -92,7 +92,7 @@ class CFG:
 
         # We start by compiling the entry BB
         compiled: dict[BB, CompiledBB] = {}
-        entry_compiled = self.compile_bb(
+        entry_compiled = self._compile_bb(
             self.entry_bb,
             input_row,
             return_tys,
@@ -140,7 +140,7 @@ class CFG:
 
             # Otherwise, compile the BB and put successors on the stack
             else:
-                bb_compiled = self.compile_bb(
+                bb_compiled = self._compile_bb(
                     bb,
                     out_row,
                     return_tys,
@@ -157,7 +157,7 @@ class CFG:
                     for i, succ in reversed(list(enumerate(bb.successors)))
                 ]
 
-    def compile_bb(
+    def _compile_bb(
         self,
         bb: BB,
         input_row: VarRow,
