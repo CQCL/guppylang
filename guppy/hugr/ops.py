@@ -493,7 +493,6 @@ LeafOpUnion = Annotated[
 OpType = Annotated[
     Union[
         Module,
-        BasicBlock,
         Case,
         Module,
         FuncDefn,
@@ -534,7 +533,7 @@ class OpaqueOp(BaseOp):
 # --------------------------------------
 
 
-class OpDef(BaseOp, allow_population_by_field_name=True):
+class OpDef(BaseOp, populate_by_name=True):
     """Serializable definition for dynamically loaded operations."""
 
     name: str  # Unique identifier of the operation.
@@ -597,4 +596,4 @@ classes = inspect.getmembers(
 )
 for _, c in classes:
     if issubclass(c, BaseModel):
-        c.update_forward_refs()
+        c.model_rebuild()

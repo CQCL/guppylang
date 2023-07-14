@@ -1,8 +1,7 @@
 import inspect
 import sys
 from typing import Literal, Union, Annotated
-from pydantic import Field, BaseModel, root_validator, validator
-from pydantic.utils import GetterDict
+from pydantic import Field, BaseModel, field_validator, model_validator
 
 
 # ---------------------------------------------
@@ -36,26 +35,26 @@ class Map(BaseModel):
     v: "SimpleType"
     l: bool
 
-    @validator("k")
+    @field_validator("k")
     def check_valid_key(cls, key: "SimpleType") -> "SimpleType":
         if not is_linear(key):
             raise ValueError("Key type cannot be linear.")
         return key
 
-    @root_validator
-    def check_value_linearity(cls, values: GetterDict) -> GetterDict:
-        valid_linearity(values.get("v"), values.get("l"))
-        return values
+    @model_validator(mode="after")
+    def check_value_linearity(self) -> "Map":
+        valid_linearity(self.v, self.l)
+        return self
 
 
 class MultiContainer(BaseModel):
     ty: "SimpleType"
     l: bool
 
-    @root_validator
-    def check_value_linearity(cls, values: GetterDict) -> GetterDict:
-        valid_linearity(values.get("t"), values.get("l"))
-        return values
+    @model_validator(mode="after")
+    def check_value_linearity(self) -> "MultiContainer":
+        valid_linearity(self.v, self.l)
+        return self
 
 
 class List(MultiContainer):
@@ -75,13 +74,11 @@ class AlgebraicContainer(BaseModel):
     row: "TypeRow"
     l: bool
 
-    @root_validator
-    def check_row_linearity(cls, values: GetterDict) -> GetterDict:
-        row: TypeRow = values.get("row")
-        l: bool = values.get("l")
-        if any(is_linear(t) for t in row) != l:
+    @model_validator(mode="after")
+    def check_row_linearity(self) -> "AlgebraicContainer":
+        if any(is_linear(t) for t in self.row) != self.l:
             raise ValueError("A Sum/Tuple is non-linear if no elements are linear.")
-        return values
+        return self
 
 
 class Tuple(AlgebraicContainer):
@@ -212,4 +209,4 @@ classes = inspect.getmembers(
 )
 for _, c in classes:
     if issubclass(c, BaseModel):
-        c.update_forward_refs()
+        c.model_rebuild()
