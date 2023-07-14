@@ -41,20 +41,22 @@ class Map(BaseModel):
             raise ValueError("Key type cannot be linear.")
         return key
 
-    @model_validator(mode="after")
+    # This doesn't work with mypy yet: https://github.com/python/mypy/issues/15620
+    @model_validator(mode="after")  # type: ignore
     def check_value_linearity(self) -> "Map":
         valid_linearity(self.v, self.l)
-        return self
+        return self  # type: ignore
 
 
 class MultiContainer(BaseModel):
     ty: "SimpleType"
     l: bool
 
-    @model_validator(mode="after")
+    # This doesn't work with mypy yet: https://github.com/python/mypy/issues/15620
+    @model_validator(mode="after")  # type: ignore
     def check_value_linearity(self) -> "MultiContainer":
-        valid_linearity(self.v, self.l)
-        return self
+        valid_linearity(self.ty, self.l)
+        return self  # type: ignore
 
 
 class List(MultiContainer):
@@ -74,11 +76,12 @@ class AlgebraicContainer(BaseModel):
     row: "TypeRow"
     l: bool
 
-    @model_validator(mode="after")
+    # This doesn't work with mypy yet: https://github.com/python/mypy/issues/15620
+    @model_validator(mode="after")  # type: ignore
     def check_row_linearity(self) -> "AlgebraicContainer":
         if any(is_linear(t) for t in self.row) != self.l:
             raise ValueError("A Sum/Tuple is non-linear if no elements are linear.")
-        return self
+        return self  # type: ignore
 
 
 class Tuple(AlgebraicContainer):
