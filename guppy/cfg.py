@@ -93,12 +93,7 @@ class CFG:
         # We start by compiling the entry BB
         compiled: dict[BB, CompiledBB] = {}
         entry_compiled = self._compile_bb(
-            self.entry_bb,
-            input_row,
-            return_tys,
-            graph,
-            parent,
-            global_variables,
+            self.entry_bb, input_row, return_tys, graph, parent, global_variables
         )
         compiled[self.entry_bb] = entry_compiled
 
@@ -115,25 +110,7 @@ class CFG:
             # If the BB was already compiled, we just have to check that the signatures
             # match.
             if bb in compiled:
-                assert len(out_row) == len(compiled[bb].sig.input_row)
-                for v1, v2 in zip(out_row, compiled[bb].sig.input_row):
-                    assert v1.name == v2.name
-                    if v1.ty != v2.ty:
-                        # Sort defined locations by line and column
-                        d1 = sorted(v1.defined_at, key=line_col)
-                        d2 = sorted(v2.defined_at, key=line_col)
-                        [(v1, d1), (v2, d2)] = sorted(
-                            [(v1, d1), (v2, d2)], key=lambda x: line_col(x[1][0])
-                        )
-                        f1 = [f"{{{i}}}" for i in range(len(d1))]
-                        f2 = [f"{{{len(f1) + i}}}" for i in range(len(d2))]
-                        raise GuppyError(
-                            f"Variable `{v1.name}` can refer to different types: "
-                            f"`{v1.ty}` (at {', '.join(f1)}) vs "
-                            f"`{v2.ty}` (at {', '.join(f2)})",
-                            self.live_before[bb][v1.name].vars.used[v1.name],
-                            d1 + d2,
-                        )
+                self._assert_rows_match(out_row, compiled[bb].sig.input_row, bb)
                 graph.add_edge(
                     pred.node.add_out_port(), compiled[bb].node.in_port(None)
                 )
@@ -141,12 +118,7 @@ class CFG:
             # Otherwise, compile the BB and put successors on the stack
             else:
                 bb_compiled = self._compile_bb(
-                    bb,
-                    out_row,
-                    return_tys,
-                    graph,
-                    parent,
-                    global_variables,
+                    bb, out_row, return_tys, graph, parent, global_variables
                 )
                 graph.add_edge(pred.node.add_out_port(), bb_compiled.node.in_port(None))
                 compiled[bb] = bb_compiled
@@ -244,6 +216,27 @@ class CFG:
         ]
 
         return CompiledBB(block, bb, Signature(input_row, output_rows))
+
+    def _assert_rows_match(self, row1: VarRow, row2: VarRow, bb: BB) -> None:
+        """Checks that the types of two rows match up.
+
+        Otherwise, an error is thrown, alerting the user that a variable has different
+        types on different control-flow paths.
+        """
+        assert len(row1) == len(row2)
+        for v1, v2 in zip(row1, row2):
+            assert v1.name == v2.name
+            if v1.ty != v2.ty:
+                # In the error message, we want to mention the variable that was first
+                # defined at the start.
+                if line_col(v2.defined_at) < line_col(v1.defined_at):
+                    v1, v2 = v2, v1
+                raise GuppyError(
+                    f"Variable `{v1.name}` can refer to different types: "
+                    f"`{v1.ty}` (at {{}}) vs `{v2.ty}` (at {{}})",
+                    self.live_before[bb][v1.name].vars.used[v1.name],
+                    [v1.defined_at, v2.defined_at],
+                )
 
     @staticmethod
     def _make_predicate_output(
