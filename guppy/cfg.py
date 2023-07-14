@@ -39,10 +39,17 @@ class CFG:
     entry_bb: BB
     exit_bb: BB
 
+    live_before: dict[BB, LivenessDomain]
+    ass_before: dict[BB, DefAssignmentDomain]
+    maybe_ass_before: dict[BB, MaybeAssignmentDomain]
+
     def __init__(self) -> None:
         self.bbs = []
         self.entry_bb = self.new_bb()
         self.exit_bb = self.new_bb()
+        self.live_before = {}
+        self.ass_before = {}
+        self.maybe_ass_before = {}
 
     def new_bb(self, preds: Optional[list[BB]] = None) -> BB:
         """Adds a new basic block to the CFG.
@@ -74,22 +81,20 @@ class CFG:
         # First, we need to run program analysis
         for bb in self.bbs:
             bb.compute_variable_stats(len(return_tys))
-        live_before = LivenessAnalysis().run(self.bbs)
-        ass_before, maybe_ass_before = AssignmentAnalysis(self.bbs).run_(self.bbs)
+        liveness_ana, assignment_ana = LivenessAnalysis(), AssignmentAnalysis(self.bbs)
+        self.live_before = liveness_ana.run(self.bbs)
+        self.ass_before, self.maybe_ass_before = assignment_ana.run_(self.bbs)
 
         # Additionally, we can mark function arguments as definitely assigned
         args = {v.name for v in input_row}
         for bb in self.bbs:
-            ass_before[bb] |= args
+            self.ass_before[bb] |= args
 
         # We start by compiling the entry BB
         compiled: dict[BB, CompiledBB] = {}
         entry_compiled = self.compile_bb(
             self.entry_bb,
             input_row,
-            live_before,
-            ass_before,
-            maybe_ass_before,
             return_tys,
             graph,
             parent,
@@ -126,7 +131,7 @@ class CFG:
                             f"Variable `{v1.name}` can refer to different types: "
                             f"`{v1.ty}` (at {', '.join(f1)}) vs "
                             f"`{v2.ty}` (at {', '.join(f2)})",
-                            live_before[bb][v1.name].vars.used[v1.name],
+                            self.live_before[bb][v1.name].vars.used[v1.name],
                             d1 + d2,
                         )
                 graph.add_edge(
@@ -138,9 +143,6 @@ class CFG:
                 bb_compiled = self.compile_bb(
                     bb,
                     out_row,
-                    live_before,
-                    ass_before,
-                    maybe_ass_before,
                     return_tys,
                     graph,
                     parent,
@@ -159,21 +161,18 @@ class CFG:
         self,
         bb: BB,
         input_row: VarRow,
-        live_before: dict[BB, LivenessDomain],
-        ass_before: dict[BB, DefAssignmentDomain],
-        maybe_ass_before: dict[BB, MaybeAssignmentDomain],
         return_tys: list[GuppyType],
         graph: Hugr,
         parent: Node,
         global_variables: VarMap,
     ) -> CompiledBB:
         """Compiles a single basic block."""
-        for x, use_bb in live_before[bb].items():
-            if x in ass_before[bb] or x in global_variables:
+        for x, use_bb in self.live_before[bb].items():
+            if x in self.ass_before[bb] or x in global_variables:
                 continue
             # The rest results in an error. If the variable is defined on *some*
             # paths, we can give a more informative error message
-            if x in maybe_ass_before[use_bb]:
+            if x in self.maybe_ass_before[use_bb]:
                 # TODO: Can we point to the actual path in the message in a nice
                 #  way?
                 raise GuppyError(
@@ -203,7 +202,9 @@ class CFG:
 
         # The easy case is if we don't branch. We just output the variables that are
         # live in the successor
-        output_vars = sorted(dfg[x] for x in live_before[bb.successors[0]] if x in dfg)
+        output_vars = sorted(
+            dfg[x] for x in self.live_before[bb.successors[0]] if x in dfg
+        )
         if len(bb.successors) == 1:
             # Even if wo don't branch, we still have to add a unit `Sum(())` predicate
             unit = graph.add_make_tuple([], parent=block).out_port(0)
@@ -220,14 +221,14 @@ class CFG:
             # If the branches use different variables, we have to use the predicate
             # output feature.
             if any(
-                live_before[s].keys() != live_before[bb.successors[0]].keys()
+                self.live_before[s].keys() != self.live_before[bb.successors[0]].keys()
                 for s in bb.successors[1:]
             ):
                 branch_port = self._make_predicate_output(
                     graph=graph,
                     pred=branch_port,
                     output_vars=[
-                        sorted(live_before[succ].keys() & dfg.variables.keys())
+                        sorted(self.live_before[succ].keys() & dfg.variables.keys())
                         for succ in bb.successors
                     ],
                     dfg=dfg,
@@ -238,7 +239,7 @@ class CFG:
             inputs=[branch_port] + [v.port for v in output_vars], parent=block
         )
         output_rows = [
-            sorted([dfg[x] for x in live_before[succ] if x in dfg])
+            sorted([dfg[x] for x in self.live_before[succ] if x in dfg])
             for succ in bb.successors
         ]
 
