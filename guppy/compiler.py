@@ -148,7 +148,7 @@ class FunctionCompiler(CompilerBase):
         )
         assert func_ty.arg_names is not None
         input_sig = [
-            RawVariable(x, t, {l})
+            RawVariable(x, t, l)
             for x, t, l in zip(func_ty.arg_names, func_ty.args, args)
         ]
         cfg.compile(
@@ -259,9 +259,7 @@ class GuppyModule(object):
                 func_ty = self.compiler.validate_signature(func_ast)
                 def_node = self.graph.add_def(func_ty, self.module_node, func_ast.name)
                 defs[name] = def_node
-                global_variables[name] = Variable(
-                    name, def_node.out_port(0), {func_ast}
-                )
+                global_variables[name] = Variable(name, def_node.out_port(0), func_ast)
             for name, (
                 f,
                 func_ast,
@@ -276,9 +274,7 @@ class GuppyModule(object):
                 decl_node = self.graph.add_declare(
                     func_ty, self.module_node, func_ast.name
                 )
-                global_variables[name] = Variable(
-                    name, decl_node.out_port(0), {func_ast}
-                )
+                global_variables[name] = Variable(name, decl_node.out_port(0), func_ast)
             for name, (
                 f,
                 func_ast,

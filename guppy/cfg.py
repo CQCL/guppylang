@@ -1,4 +1,5 @@
 import ast
+import collections
 from dataclasses import dataclass, field
 from typing import Optional, NamedTuple
 
@@ -39,10 +40,17 @@ class CFG:
     entry_bb: BB
     exit_bb: BB
 
+    live_before: dict[BB, LivenessDomain]
+    ass_before: dict[BB, DefAssignmentDomain]
+    maybe_ass_before: dict[BB, MaybeAssignmentDomain]
+
     def __init__(self) -> None:
         self.bbs = []
         self.entry_bb = self.new_bb()
         self.exit_bb = self.new_bb()
+        self.live_before = {}
+        self.ass_before = {}
+        self.maybe_ass_before = {}
 
     def new_bb(self, preds: Optional[list[BB]] = None) -> BB:
         """Adds a new basic block to the CFG.
@@ -74,106 +82,64 @@ class CFG:
         # First, we need to run program analysis
         for bb in self.bbs:
             bb.compute_variable_stats(len(return_tys))
-        live_before = LivenessAnalysis().run(self.bbs)
-        ass_before, maybe_ass_before = AssignmentAnalysis(self.bbs).run_(self.bbs)
+        liveness_ana, assignment_ana = LivenessAnalysis(), AssignmentAnalysis(self.bbs)
+        self.live_before = liveness_ana.run(self.bbs)
+        self.ass_before, self.maybe_ass_before = assignment_ana.run_(self.bbs)
 
         # Additionally, we can mark function arguments as definitely assigned
         args = {v.name for v in input_row}
         for bb in self.bbs:
-            ass_before[bb] |= args
+            self.ass_before[bb] |= args
 
         # We start by compiling the entry BB
-        compiled: dict[BB, CompiledBB] = {}
-        entry_compiled = self.compile_bb(
-            self.entry_bb,
-            input_row,
-            live_before,
-            ass_before,
-            maybe_ass_before,
-            return_tys,
-            graph,
-            parent,
-            global_variables,
+        entry_compiled = self._compile_bb(
+            self.entry_bb, input_row, return_tys, graph, parent, global_variables
         )
-        compiled[self.entry_bb] = entry_compiled
+        compiled = {self.entry_bb: entry_compiled}
 
-        # Visit all control-flow edges in DFS order
-        stack = [
-            (entry_compiled, entry_compiled.sig.output_rows[i], succ)
-            # Put successors onto stack in reverse order to maintain the original order
-            # when popping
-            for i, succ in reversed(list(enumerate(self.entry_bb.successors)))
-        ]
-        while len(stack) > 0:
-            pred, out_row, bb = stack.pop()
+        # Visit all control-flow edges in BFS order
+        queue = collections.deque(
+            (entry_compiled, i, succ) for i, succ in enumerate(self.entry_bb.successors)
+        )
+        while len(queue) > 0:
+            pred, num_output, bb = queue.popleft()
+            out_row = pred.sig.output_rows[num_output]
 
-            # If the BB was already compiled, we just have to check that the signatures
-            # match.
             if bb in compiled:
-                assert len(out_row) == len(compiled[bb].sig.input_row)
-                for v1, v2 in zip(out_row, compiled[bb].sig.input_row):
-                    assert v1.name == v2.name
-                    if v1.ty != v2.ty:
-                        # Sort defined locations by line and column
-                        d1 = sorted(v1.defined_at, key=line_col)
-                        d2 = sorted(v2.defined_at, key=line_col)
-                        [(v1, d1), (v2, d2)] = sorted(
-                            [(v1, d1), (v2, d2)], key=lambda x: line_col(x[1][0])
-                        )
-                        f1 = [f"{{{i}}}" for i in range(len(d1))]
-                        f2 = [f"{{{len(f1) + i}}}" for i in range(len(d2))]
-                        raise GuppyError(
-                            f"Variable `{v1.name}` can refer to different types: "
-                            f"`{v1.ty}` (at {', '.join(f1)}) vs "
-                            f"`{v2.ty}` (at {', '.join(f2)})",
-                            live_before[bb][v1.name].vars.used[v1.name],
-                            d1 + d2,
-                        )
-                graph.add_edge(
-                    pred.node.add_out_port(), compiled[bb].node.in_port(None)
-                )
-
-            # Otherwise, compile the BB and put successors on the stack
+                # If the BB was already compiled, we just have to check that the
+                # signatures match.
+                self._assert_rows_match(out_row, compiled[bb].sig.input_row, bb)
             else:
-                bb_compiled = self.compile_bb(
-                    bb,
-                    out_row,
-                    live_before,
-                    ass_before,
-                    maybe_ass_before,
-                    return_tys,
-                    graph,
-                    parent,
-                    global_variables,
+                # Otherwise, compile the BB and enqueue its successors
+                compiled_bb = self._compile_bb(
+                    bb, out_row, return_tys, graph, parent, global_variables
                 )
-                graph.add_edge(pred.node.add_out_port(), bb_compiled.node.in_port(None))
-                compiled[bb] = bb_compiled
-                stack += [
-                    (bb_compiled, bb_compiled.sig.output_rows[i], succ)
-                    # Put successors onto stack in reverse order to maintain the
-                    # original order when popping
-                    for i, succ in reversed(list(enumerate(bb.successors)))
+                queue += [
+                    (compiled_bb, i, succ) for i, succ in enumerate(bb.successors)
                 ]
+                compiled[bb] = compiled_bb
 
-    def compile_bb(
+            graph.add_edge(
+                pred.node.out_port(num_output), compiled[bb].node.in_port(None)
+            )
+
+    def _compile_bb(
         self,
         bb: BB,
         input_row: VarRow,
-        live_before: dict[BB, LivenessDomain],
-        ass_before: dict[BB, DefAssignmentDomain],
-        maybe_ass_before: dict[BB, MaybeAssignmentDomain],
         return_tys: list[GuppyType],
         graph: Hugr,
         parent: Node,
         global_variables: VarMap,
     ) -> CompiledBB:
         """Compiles a single basic block."""
-        for x, use_bb in live_before[bb].items():
-            if x in ass_before[bb] or x in global_variables:
+        for x, use_bb in self.live_before[bb].items():
+            if x in self.ass_before[bb] or x in global_variables:
                 continue
+
             # The rest results in an error. If the variable is defined on *some*
             # paths, we can give a more informative error message
-            if x in maybe_ass_before[use_bb]:
+            if x in self.maybe_ass_before[use_bb]:
                 # TODO: Can we point to the actual path in the message in a nice
                 #  way?
                 raise GuppyError(
@@ -188,7 +154,7 @@ class CFG:
             block = graph.add_exit(return_tys, parent)
             return CompiledBB(block, bb, Signature(input_row, []))
 
-        block = graph.add_block(parent)
+        block = graph.add_block(parent, num_sucessors=len(bb.successors))
         inp = graph.add_input(output_tys=[v.ty for v in input_row], parent=block)
         dfg = DFContainer(
             block,
@@ -203,30 +169,32 @@ class CFG:
 
         # We have to check that used linear variables are not going to be outputted
         for succ in bb.successors:
-            for x in live_before[succ] & dfg.variables.keys():
+            for x in self.live_before[succ] & dfg.variables.keys():
                 var = dfg[x]
                 if var.ty.linear and var.used:
                     raise GuppyError(
                         f"Variable `{x}` with linear type `{var.ty}` was "
                         "already used (at {0})",
-                        live_before[succ][x].vars.used[x],
+                        self.live_before[succ][x].vars.used[x],
                         [var.used],
                     )
 
         # On the other hand, unused linear variables *must* be outputted
         for succ in bb.successors:
             for x, var in dfg.variables.items():
-                if var.ty.linear and not var.used and x not in live_before[succ]:
+                if var.ty.linear and not var.used and x not in self.live_before[succ]:
                     # TODO: We should point to the successor in the error message
                     raise GuppyError(
                         f"Variable `{x}` with linear type `{var.ty}` is "
                         "not used on all control-flow paths",
-                        sorted(var.defined_at, key=line_col)[0],
+                        var.defined_at,
                     )
 
         # The easy case is if we don't branch. We just output the variables that are
         # live in the successor
-        output_vars = sorted(dfg[x] for x in live_before[bb.successors[0]] if x in dfg)
+        output_vars = sorted(
+            dfg[x] for x in self.live_before[bb.successors[0]] if x in dfg
+        )
         if len(bb.successors) == 1:
             # Even if wo don't branch, we still have to add a unit `Sum(())` predicate
             unit = graph.add_make_tuple([], parent=block).out_port(0)
@@ -243,7 +211,7 @@ class CFG:
             # If the branches use different variables, we have to use the predicate
             # output feature.
             if any(
-                live_before[s].keys() != live_before[bb.successors[0]].keys()
+                self.live_before[s].keys() != self.live_before[bb.successors[0]].keys()
                 for s in bb.successors[1:]
             ):
                 # We put all non-linear variables into the branch predicate and all
@@ -256,7 +224,7 @@ class CFG:
                     output_vars=[
                         sorted(
                             x
-                            for x in live_before[succ]
+                            for x in self.live_before[succ]
                             if x in dfg and not dfg[x].ty.linear
                         )
                         for succ in bb.successors
@@ -267,7 +235,7 @@ class CFG:
                     dfg[x]
                     # We can look at `successors[0]` here since all successors must have
                     # the same `live_before` linear variables
-                    for x in live_before[bb.successors[0]]
+                    for x in self.live_before[bb.successors[0]]
                     if x in dfg and dfg[x].ty.linear
                 )
 
@@ -275,11 +243,32 @@ class CFG:
             inputs=[branch_port] + [v.port for v in output_vars], parent=block
         )
         output_rows = [
-            sorted([dfg[x] for x in live_before[succ] if x in dfg])
+            sorted([dfg[x] for x in self.live_before[succ] if x in dfg])
             for succ in bb.successors
         ]
 
         return CompiledBB(block, bb, Signature(input_row, output_rows))
+
+    def _assert_rows_match(self, row1: VarRow, row2: VarRow, bb: BB) -> None:
+        """Checks that the types of two rows match up.
+
+        Otherwise, an error is thrown, alerting the user that a variable has different
+        types on different control-flow paths.
+        """
+        assert len(row1) == len(row2)
+        for v1, v2 in zip(row1, row2):
+            assert v1.name == v2.name
+            if v1.ty != v2.ty:
+                # In the error message, we want to mention the variable that was first
+                # defined at the start.
+                if line_col(v2.defined_at) < line_col(v1.defined_at):
+                    v1, v2 = v2, v1
+                raise GuppyError(
+                    f"Variable `{v1.name}` can refer to different types: "
+                    f"`{v1.ty}` (at {{}}) vs `{v2.ty}` (at {{}})",
+                    self.live_before[bb][v1.name].vars.used[v1.name],
+                    [v1.defined_at, v2.defined_at],
+                )
 
     @staticmethod
     def _make_predicate_output(

@@ -76,9 +76,9 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
                         raise GuppyError(
                             f"Variable `{x}` with linear type `{var.ty}` "
                             "is not used",
-                            sorted(var.defined_at, key=line_col)[0],
+                            var.defined_at,
                         )
-                self.dfg[x] = Variable(x, port, {node})
+                self.dfg[x] = Variable(x, port, node)
             # The only other thing we support right now are tuples
             elif isinstance(pattern, ast.Tuple):
                 if len(ports) == 1 and isinstance(ports[0].ty, TupleType):
@@ -143,7 +143,7 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
         # `return e0, e1, e2` is turned into `%ret0 = e0; %ret1 = e1; %ret2 = e2`.
         for i, port in enumerate(row):
             name = return_var(i)
-            self.dfg[name] = Variable(name, port, set())
+            self.dfg[name] = Variable(name, port, node)
 
     def visit_If(self, node: ast.If) -> None:
         raise InternalGuppyError("Control-flow statement should not be present here.")
