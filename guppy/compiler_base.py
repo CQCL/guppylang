@@ -11,12 +11,12 @@ from guppy.hugr.hugr import OutPortV, Hugr, DFContainingNode
 class RawVariable:
     """Class holding data associated with a variable.
 
-    Besides the name and type, we also store a set of assign statements where the
-    variable was defined."""
+    Besides the name and type, we also store an AST node where the variable was defined.
+    """
 
     name: str
     ty: GuppyType
-    defined_at: set[AstNode]
+    defined_at: AstNode
 
     def __lt__(self, other: "Variable") -> bool:
         return self.name < other.name
@@ -31,7 +31,7 @@ class Variable(RawVariable):
 
     port: OutPortV
 
-    def __init__(self, name: str, port: OutPortV, defined_at: set[AstNode]):
+    def __init__(self, name: str, port: OutPortV, defined_at: AstNode):
         super().__init__(name, port.ty, defined_at)
         object.__setattr__(self, "port", port)
 
