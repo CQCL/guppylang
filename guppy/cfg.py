@@ -1,4 +1,5 @@
 import ast
+import collections
 from dataclasses import dataclass, field
 from typing import Optional, NamedTuple
 
@@ -91,43 +92,36 @@ class CFG:
             self.ass_before[bb] |= args
 
         # We start by compiling the entry BB
-        compiled: dict[BB, CompiledBB] = {}
         entry_compiled = self._compile_bb(
             self.entry_bb, input_row, return_tys, graph, parent, global_variables
         )
-        compiled[self.entry_bb] = entry_compiled
+        compiled = {self.entry_bb: entry_compiled}
 
-        # Visit all control-flow edges in DFS order
-        stack = [
-            (entry_compiled, entry_compiled.sig.output_rows[i], succ)
-            # Put successors onto stack in reverse order to maintain the original order
-            # when popping
-            for i, succ in reversed(list(enumerate(self.entry_bb.successors)))
-        ]
-        while len(stack) > 0:
-            pred, out_row, bb = stack.pop()
+        # Visit all control-flow edges in BFS order
+        queue = collections.deque(
+            (entry_compiled, i, succ) for i, succ in enumerate(self.entry_bb.successors)
+        )
+        while len(queue) > 0:
+            pred, num_output, bb = queue.popleft()
+            out_row = pred.sig.output_rows[num_output]
 
-            # If the BB was already compiled, we just have to check that the signatures
-            # match.
             if bb in compiled:
+                # If the BB was already compiled, we just have to check that the
+                # signatures match.
                 self._assert_rows_match(out_row, compiled[bb].sig.input_row, bb)
-                graph.add_edge(
-                    pred.node.add_out_port(), compiled[bb].node.in_port(None)
-                )
-
-            # Otherwise, compile the BB and put successors on the stack
             else:
-                bb_compiled = self._compile_bb(
+                # Otherwise, compile the BB and enqueue its successors
+                compiled_bb = self._compile_bb(
                     bb, out_row, return_tys, graph, parent, global_variables
                 )
-                graph.add_edge(pred.node.add_out_port(), bb_compiled.node.in_port(None))
-                compiled[bb] = bb_compiled
-                stack += [
-                    (bb_compiled, bb_compiled.sig.output_rows[i], succ)
-                    # Put successors onto stack in reverse order to maintain the
-                    # original order when popping
-                    for i, succ in reversed(list(enumerate(bb.successors)))
+                queue += [
+                    (compiled_bb, i, succ) for i, succ in enumerate(bb.successors)
                 ]
+                compiled[bb] = compiled_bb
+
+            graph.add_edge(
+                pred.node.out_port(num_output), compiled[bb].node.in_port(None)
+            )
 
     def _compile_bb(
         self,
@@ -142,6 +136,7 @@ class CFG:
         for x, use_bb in self.live_before[bb].items():
             if x in self.ass_before[bb] or x in global_variables:
                 continue
+
             # The rest results in an error. If the variable is defined on *some*
             # paths, we can give a more informative error message
             if x in self.maybe_ass_before[use_bb]:
@@ -159,7 +154,7 @@ class CFG:
             block = graph.add_exit(return_tys, parent)
             return CompiledBB(block, bb, Signature(input_row, []))
 
-        block = graph.add_block(parent)
+        block = graph.add_block(parent, num_sucessors=len(bb.successors))
         inp = graph.add_input(output_tys=[v.ty for v in input_row], parent=block)
         dfg = DFContainer(
             block,
