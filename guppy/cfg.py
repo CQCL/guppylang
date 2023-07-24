@@ -190,7 +190,7 @@ class CFG:
                 self.live_before[r].keys() != self.live_before[first].keys()
                 for r in rest
             ):
-                branch_port = self._make_predicate_output(
+                branch_port = self._choose_vars_for_pred(
                     graph=graph,
                     pred=branch_port,
                     output_vars=[
@@ -233,7 +233,7 @@ class CFG:
                 )
 
     @staticmethod
-    def _make_predicate_output(
+    def _choose_vars_for_pred(
         graph: Hugr, pred: OutPortV, output_vars: list[list[str]], dfg: DFContainer
     ) -> OutPortV:
         """Selects an output based on a predicate.
@@ -241,9 +241,8 @@ class CFG:
         Given `pred: Sum((), (), ...)` and output variable sets `#s1, #s2, ...`,
         constructs a predicate value of type `Sum(Tuple(#s1), Tuple(#s2), ...)`.
         """
-        assert isinstance(pred.ty, SumType) and len(pred.ty.element_types) == len(
-            output_vars
-        )
+        assert isinstance(pred.ty, SumType)
+        assert len(pred.ty.element_types) == len(output_vars)
         tuples = [
             graph.add_make_tuple(
                 inputs=[dfg[x].port for x in sorted(vs) if x in dfg], parent=dfg.node
@@ -259,7 +258,7 @@ class CFG:
             inp = graph.add_input(output_tys=tys, parent=case).out_port(i)
             tag = graph.add_tag(variants=tys, tag=i, inp=inp, parent=case).out_port(0)
             graph.add_output(inputs=[tag], parent=case)
-        return conditional.add_out_port(SumType([t.ty for t in tuples]))
+        return conditional.add_out_port(SumType(tys))
 
 
 class Jumps(NamedTuple):
