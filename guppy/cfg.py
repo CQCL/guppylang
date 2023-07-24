@@ -81,8 +81,7 @@ class CFG:
             bb.compute_variable_stats(len(return_tys))
         self.live_before = LivenessAnalysis().run(self.bbs)
         self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
-            self.bbs,
-            {v.name for v in input_row}
+            self.bbs, {v.name for v in input_row}
         ).run_unpacked(self.bbs)
 
         # Additionally, we can mark function arguments as definitely assigned
@@ -184,11 +183,12 @@ class CFG:
             expr_compiler = ExpressionCompiler(graph, global_variables)
             branch_port = expr_compiler.compile(bb.branch_pred, dfg)
             assert_bool_type(branch_port.ty, bb.branch_pred)
-            # If the branches use different variables, we have to use the predicate
-            # output feature.
+            first, *rest = bb.successors
+            # If the branches use different variables, we have to use output a Sum-type
+            # predicate
             if any(
-                self.live_before[s].keys() != self.live_before[bb.successors[0]].keys()
-                for s in bb.successors[1:]
+                self.live_before[r].keys() != self.live_before[first].keys()
+                for r in rest
             ):
                 branch_port = self._make_predicate_output(
                     graph=graph,
