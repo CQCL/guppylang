@@ -510,16 +510,20 @@ class BranchBuilder(AstVisitor[None]):
     handles short-circuit evaluation etc.
     """
 
+    cfg: CFG
+
+    def __init__(self, cfg: CFG):
+        """Creates a new `BranchBuilder`."""
+        self.cfg = cfg
+
     @staticmethod
     def build(node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB) -> None:
         """Builds an expression and branches to `true_bb` or `false_bb`, depending on
         the truth value of the expression."""
-        builder = BranchBuilder()
-        builder.visit(node, cfg, bb, true_bb, false_bb)
+        builder = BranchBuilder(cfg)
+        builder.visit(node, bb, true_bb, false_bb)
 
-    def visit_BoolOp(
-        self, node: ast.BoolOp, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
-    ) -> None:
+    def visit_BoolOp(self, node: ast.BoolOp, bb: BB, true_bb: BB, false_bb: BB) -> None:
         # Add short-circuit evaluation of boolean expression. If there are more than 2
         # operators, we turn the flat operator list into a right-nested tree to allow
         # for recursive processing.
@@ -536,25 +540,25 @@ class BranchBuilder(AstVisitor[None]):
             node.values = [node.values[0], r]
         [left, right] = node.values
 
-        extra_bb = cfg.new_bb()
+        extra_bb = self.cfg.new_bb()
         assert type(node.op) in [ast.And, ast.Or]
         if isinstance(node.op, ast.And):
-            self.visit(left, cfg, bb, extra_bb, false_bb)
+            self.visit(left, bb, extra_bb, false_bb)
         elif isinstance(node.op, ast.Or):
-            self.visit(left, cfg, bb, true_bb, extra_bb)
-        self.visit(right, cfg, extra_bb, true_bb, false_bb)
+            self.visit(left, bb, true_bb, extra_bb)
+        self.visit(right, extra_bb, true_bb, false_bb)
 
     def visit_UnaryOp(
-        self, node: ast.UnaryOp, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
+        self, node: ast.UnaryOp, bb: BB, true_bb: BB, false_bb: BB
     ) -> None:
         # For `not` operator, we can just switch `true_bb` and `false_bb`
         if isinstance(node.op, ast.Not):
-            self.visit(node.operand, cfg, bb, false_bb, true_bb)
+            self.visit(node.operand, bb, false_bb, true_bb)
         else:
-            self.generic_visit(node, cfg, bb, true_bb, false_bb)
+            self.generic_visit(node, bb, true_bb, false_bb)
 
     def visit_Compare(
-        self, node: ast.Compare, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
+        self, node: ast.Compare, bb: BB, true_bb: BB, false_bb: BB
     ) -> None:
         # Support chained comparisons, e.g. `x <= 5 < y` by compiling to `x <= 5 and
         # 5 < y`. This way we get short-circuit evaluation for free.
@@ -574,27 +578,23 @@ class BranchBuilder(AstVisitor[None]):
             ]
             conj = ast.BoolOp(op=ast.And(), values=values)
             set_location(conj, node)
-            self.visit_BoolOp(conj, cfg, bb, true_bb, false_bb)
+            self.visit_BoolOp(conj, bb, true_bb, false_bb)
         else:
-            self.generic_visit(node, cfg, bb, true_bb, false_bb)
+            self.generic_visit(node, bb, true_bb, false_bb)
 
-    def visit_IfExp(
-        self, node: ast.IfExp, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
-    ) -> None:
-        then_bb, else_bb = cfg.new_bb(), cfg.new_bb()
-        self.visit(node.test, cfg, bb, then_bb, else_bb)
-        self.visit(node.body, cfg, then_bb, true_bb, false_bb)
-        self.visit(node.orelse, cfg, else_bb, true_bb, false_bb)
+    def visit_IfExp(self, node: ast.IfExp, bb: BB, true_bb: BB, false_bb: BB) -> None:
+        then_bb, else_bb = self.cfg.new_bb(), self.cfg.new_bb()
+        self.visit(node.test, bb, then_bb, else_bb)
+        self.visit(node.body, then_bb, true_bb, false_bb)
+        self.visit(node.orelse, else_bb, true_bb, false_bb)
 
-    def generic_visit(  # type: ignore
-        self, node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
-    ) -> None:
+    def generic_visit(self, node: ast.expr, bb: BB, true_bb: BB, false_bb: BB) -> None:  # type: ignore
         # We can always fall back to building the node as a regular expression and using
         # the result as a branch predicate
-        pred, bb = ExprBuilder.build(node, cfg, bb)
+        pred, bb = ExprBuilder.build(node, self.cfg, bb)
         bb.branch_pred = pred
-        cfg.link(bb, true_bb)
-        cfg.link(bb, false_bb)
+        self.cfg.link(bb, true_bb)
+        self.cfg.link(bb, false_bb)
 
 
 def is_functional_annotation(stmt: ast.stmt) -> bool:
