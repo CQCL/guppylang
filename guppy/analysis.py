@@ -59,7 +59,7 @@ class ForwardAnalysis(Analysis[T], ABC, Generic[T]):
             val_after = self.apply_bb(vals_before[bb], bb)
             if not self.eq(val_after, vals_after[bb]):
                 vals_after[bb] = val_after
-                queue |= set(bb.successors)
+                queue.update(bb.successors)
         return vals_before
 
 
@@ -84,7 +84,7 @@ class BackwardAnalysis(Analysis[T], ABC, Generic[T]):
             val_before = self.apply_bb(val_after, bb)
             if not self.eq(vals_before[bb], val_before):
                 vals_before[bb] = val_before
-                queue |= set(bb.predecessors)
+                queue.update(bb.predecessors)
         return vals_before
 
 
