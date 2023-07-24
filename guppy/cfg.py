@@ -96,7 +96,8 @@ class CFG:
         )
         compiled = {self.entry_bb: entry_compiled}
 
-        # Visit all control-flow edges in BFS order
+        # Visit all control-flow edges in BFS order. We can't just do a normal loop over
+        # all BBs since the input types for a BB are computed by compiling a predecessor
         queue = collections.deque(
             (entry_compiled, i, succ) for i, succ in enumerate(self.entry_bb.successors)
         )
