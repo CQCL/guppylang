@@ -565,9 +565,8 @@ class BranchBuilder(AstVisitor[None]):
         # 5 < y`. This way we get short-circuit evaluation for free.
         if len(node.comparators) > 1:
             comparators = [node.left] + node.comparators
-            conj = ast.BoolOp(op=ast.And(), values=[])
-            for left, op, right in zip(comparators[:-1], node.ops, comparators[1:]):
-                comp = ast.Compare(
+            values = [
+                ast.Compare(
                     left=left,
                     ops=[op],
                     comparators=[right],
@@ -576,7 +575,9 @@ class BranchBuilder(AstVisitor[None]):
                     end_lineno=right.end_lineno,
                     end_col_offset=right.end_col_offset,
                 )
-                conj.values.append(comp)
+                for left, op, right in zip(comparators[:-1], node.ops, comparators[1:])
+            ]
+            conj = ast.BoolOp(op=ast.And(), values=values)
             set_location(conj, node)
             self.visit_BoolOp(conj, cfg, bb, true_bb, false_bb)
         else:
