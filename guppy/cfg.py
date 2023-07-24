@@ -8,7 +8,7 @@ from guppy.analysis import (
     LivenessAnalysis,
     AssignmentAnalysis,
     DefAssignmentDomain,
-    MaybeAssignmentDomain,
+    MaybeAssignmentDomain, Result,
 )
 from guppy.bb import BB, VarRow, Signature
 from guppy.compiler_base import VarMap, DFContainer, Variable
@@ -40,9 +40,9 @@ class CFG:
     entry_bb: BB
     exit_bb: BB
 
-    live_before: dict[BB, LivenessDomain]
-    ass_before: dict[BB, DefAssignmentDomain]
-    maybe_ass_before: dict[BB, MaybeAssignmentDomain]
+    live_before: Result[LivenessDomain]
+    ass_before: Result[DefAssignmentDomain]
+    maybe_ass_before: Result[MaybeAssignmentDomain]
 
     def __init__(self) -> None:
         self.bbs = []
