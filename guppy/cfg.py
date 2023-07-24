@@ -8,7 +8,8 @@ from guppy.analysis import (
     LivenessAnalysis,
     AssignmentAnalysis,
     DefAssignmentDomain,
-    MaybeAssignmentDomain, Result,
+    MaybeAssignmentDomain,
+    Result,
 )
 from guppy.bb import BB, VarRow, Signature
 from guppy.compiler_base import VarMap, DFContainer, Variable
@@ -78,9 +79,10 @@ class CFG:
         # First, we need to run program analysis
         for bb in self.bbs:
             bb.compute_variable_stats(len(return_tys))
-        liveness_ana, assignment_ana = LivenessAnalysis(), AssignmentAnalysis(self.bbs)
-        self.live_before = liveness_ana.run(self.bbs)
-        self.ass_before, self.maybe_ass_before = assignment_ana.run_unpacked(self.bbs)
+        self.live_before = LivenessAnalysis().run(self.bbs)
+        self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
+            self.bbs
+        ).run_unpacked(self.bbs)
 
         # Additionally, we can mark function arguments as definitely assigned
         args = {v.name for v in input_row}
