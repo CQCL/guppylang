@@ -50,8 +50,8 @@ class ForwardAnalysis(Analysis[T], ABC, Generic[T]):
 
         Returns a mapping from basic blocks to lattice values at the start of each BB.
         """
-        vals_before = {bb: self.initial() for bb in bbs}
-        vals_after = {bb: self.apply_bb(vals_before[bb], bb) for bb in bbs}
+        vals_before = {bb: self.initial() for bb in bbs}  # return value
+        vals_after = {bb: self.apply_bb(vals_before[bb], bb) for bb in bbs}  # cache
         queue = set(bbs)
         while len(queue) > 0:
             bb = queue.pop()
