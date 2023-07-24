@@ -50,8 +50,8 @@ class ForwardAnalysis(Analysis[T], ABC, Generic[T]):
 
         Returns a mapping from basic blocks to lattice values at the start of each BB.
         """
-        vals_before = {bb: self.initial() for bb in bbs}
-        vals_after = {bb: self.apply_bb(vals_before[bb], bb) for bb in bbs}
+        vals_before = {bb: self.initial() for bb in bbs}  # return value
+        vals_after = {bb: self.apply_bb(vals_before[bb], bb) for bb in bbs}  # cache
         queue = set(bbs)
         while len(queue) > 0:
             bb = queue.pop()
@@ -59,7 +59,7 @@ class ForwardAnalysis(Analysis[T], ABC, Generic[T]):
             val_after = self.apply_bb(vals_before[bb], bb)
             if not self.eq(val_after, vals_after[bb]):
                 vals_after[bb] = val_after
-                queue |= set(bb.successors)
+                queue.update(bb.successors)
         return vals_before
 
 
@@ -84,22 +84,20 @@ class BackwardAnalysis(Analysis[T], ABC, Generic[T]):
             val_before = self.apply_bb(val_after, bb)
             if not self.eq(vals_before[bb], val_before):
                 vals_before[bb] = val_before
-                queue |= set(bb.predecessors)
+                queue.update(bb.predecessors)
         return vals_before
 
 
-# For live variable analysis, we also store the BB in which the use occurs as evidence
-# of liveness. Hence, the analysis runs over the lattice of mappings from variable names
-# to BBs containing a use.
+# For live variable analysis, we also store a BB in which a use occurs as evidence of
+# liveness.
 LivenessDomain = dict[str, BB]
 
 
 class LivenessAnalysis(BackwardAnalysis[LivenessDomain]):
     """Live variable analysis pass.
 
-    Computes the variables that are live before the execution of each BB. We store the
-    BB in which the use occurs as evidence of liveness. Hence, the analysis runs over
-    the lattice of mappings from variable names to BBs containing a use.
+    Computes the variables that are live before the execution of each BB. The analysis
+    runs over the lattice of mappings from variable names to BBs containing a use.
     """
 
     def eq(self, live1: LivenessDomain, live2: LivenessDomain) -> bool:
@@ -125,8 +123,8 @@ class LivenessAnalysis(BackwardAnalysis[LivenessDomain]):
 # Set of variables that are definitely assigned at the start of a BB
 DefAssignmentDomain = set[str]
 
-# Set of variables that are assigned on some paths to a BB. Definitely assigned
-# variables are a subset of this
+# Set of variables that are assigned on (at least) some paths to a BB. Definitely
+# assigned variables are a subset of this
 MaybeAssignmentDomain = set[str]
 
 # For assignment analysis, we do definite- and maybe-assignment in one pass
@@ -136,24 +134,34 @@ AssignmentDomain = tuple[DefAssignmentDomain, MaybeAssignmentDomain]
 class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
     """Assigned variable analysis pass.
 
-    Computes the set of variable that ere definitely assigned at the start of a BB.
-    Additionally, we compute the set of variables that are assigned on some paths
-    to a BB (this is a subset of the definitely assigned variables).
+    Computes the set of variable that are definitely assigned at the start of a BB.
+    Additionally, we compute the set of variables that are assigned on (at least) some
+    paths to a BB (the definitely assigned variables are a subset of this).
     """
 
     all_vars: set[str]
+    ass_before_entry: set[str]
 
-    def __init__(self, bbs: Iterable[BB]):
-        self.all_vars = set.union(
-            *(bb.vars.assigned.keys() | bb.vars.used.keys() for bb in bbs)
+    def __init__(self, bbs: Iterable[BB], ass_before_entry: set[str]):
+        """Constructs an `AssignmentAnalysis` pass for a CFG.
+
+        Also takes a set variables that are definitely assigned before the entry of the
+        CFG (for example function arguments).
+        """
+        self.ass_before_entry = ass_before_entry
+        self.all_vars = (
+            set.union(*(set(bb.vars.assigned.keys()) for bb in bbs)) | ass_before_entry
         )
 
     def initial(self) -> AssignmentDomain:
-        return self.all_vars.copy(), set()
+        return self.all_vars, self.ass_before_entry
 
     def join(self, *ts: AssignmentDomain) -> AssignmentDomain:
+        # We always include the variables that are definitely assigned before the entry,
+        # even if the join is empty
         if len(ts) == 0:
-            return set(), set()
+            return self.ass_before_entry, self.ass_before_entry
+
         def_ass = set.intersection(*(def_ass for def_ass, _ in ts))
         maybe_ass = set.union(*(maybe_ass for _, maybe_ass in ts))
         return def_ass, maybe_ass
@@ -165,7 +173,7 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
             maybe_ass_before | bb.vars.assigned.keys(),
         )
 
-    def run_(
+    def run_unpacked(
         self, bbs: Iterable[BB]
     ) -> tuple[Result[DefAssignmentDomain], Result[MaybeAssignmentDomain]]:
         """Runs the analysis and unpacks the definite- and maybe-assignment results."""
