@@ -8,11 +8,7 @@ from guppy.compiler_base import RawVariable, return_var
 
 @dataclass
 class VariableStats:
-    """Stores program analysis results for a basic block.
-
-    This class carries the results of live variable, definite assignment, and maybe
-    assignment analysis.
-    """
+    """Stores variable usage information for a basic block."""
 
     # Variables that are assigned in the BB
     assigned: dict[str, AstNode] = field(default_factory=dict)
@@ -69,7 +65,7 @@ class BB:
 
     @property
     def vars(self) -> VariableStats:
-        """Returns information about the assigned/used variables in this BB.
+        """Returns variable usage information for this BB.
 
         Note that `compute_variable_stats` must be called before this property can be
         accessed.
