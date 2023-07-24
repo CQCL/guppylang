@@ -407,10 +407,9 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         return bb
 
     def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> Optional[BB]:  # type: ignore
-        # All other statements are blindly added to the BB
-        assert isinstance(node, ast.stmt)
-        bb.statements.append(node)
-        return bb
+        # When adding support for new statements, we have to remember to use the
+        # ExprBuilder to transform all included expressions!
+        raise GuppyError("Statement is not supported", node)
 
 
 class ExprBuilder(ast.NodeTransformer):
