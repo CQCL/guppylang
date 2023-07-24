@@ -168,8 +168,7 @@ class CFG:
                             use_bb.vars.used[x],
                         )
                     raise GuppyError(
-                        f"Variable `{x}` is not defined",
-                        use_bb.vars.used[x]
+                        f"Variable `{x}` is not defined", use_bb.vars.used[x]
                     )
 
         # Finally, we have to add the block output. The easy case is if we don't branch:
