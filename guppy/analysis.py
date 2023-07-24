@@ -89,17 +89,15 @@ class BackwardAnalysis(Analysis[T], ABC, Generic[T]):
 
 
 # For live variable analysis, we also store a BB in which a use occurs as evidence of
-# liveness. Hence, the analysis runs over the lattice of mappings from variable names
-# to BBs containing a use.
+# liveness.
 LivenessDomain = dict[str, BB]
 
 
 class LivenessAnalysis(BackwardAnalysis[LivenessDomain]):
     """Live variable analysis pass.
 
-    Computes the variables that are live before the execution of each BB. We store the
-    BB in which the use occurs as evidence of liveness. Hence, the analysis runs over
-    the lattice of mappings from variable names to BBs containing a use.
+    Computes the variables that are live before the execution of each BB. The analysis
+    runs over the lattice of mappings from variable names to BBs containing a use.
     """
 
     def eq(self, live1: LivenessDomain, live2: LivenessDomain) -> bool:
