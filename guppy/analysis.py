@@ -140,16 +140,28 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
     """
 
     all_vars: set[str]
+    ass_before_entry: set[str]
 
-    def __init__(self, bbs: Iterable[BB]):
-        self.all_vars = set.union(*(set(bb.vars.assigned.keys()) for bb in bbs))
+    def __init__(self, bbs: Iterable[BB], ass_before_entry: set[str]):
+        """Constructs an `AssignmentAnalysis` pass for a CFG.
+
+        Also takes a set variables that are definitely assigned before the entry of the
+        CFG (for example function arguments).
+        """
+        self.ass_before_entry = ass_before_entry
+        self.all_vars = (
+            set.union(*(set(bb.vars.assigned.keys()) for bb in bbs)) | ass_before_entry
+        )
 
     def initial(self) -> AssignmentDomain:
-        return self.all_vars, set()
+        return self.all_vars, self.ass_before_entry
 
     def join(self, *ts: AssignmentDomain) -> AssignmentDomain:
+        # We always include the variables that are definitely assigned before the entry,
+        # even if the join is empty
         if len(ts) == 0:
-            return set(), set()
+            return self.ass_before_entry, self.ass_before_entry
+
         def_ass = set.intersection(*(def_ass for def_ass, _ in ts))
         maybe_ass = set.union(*(maybe_ass for _, maybe_ass in ts))
         return def_ass, maybe_ass

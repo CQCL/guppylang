@@ -81,13 +81,14 @@ class CFG:
             bb.compute_variable_stats(len(return_tys))
         self.live_before = LivenessAnalysis().run(self.bbs)
         self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
-            self.bbs
+            self.bbs,
+            {v.name for v in input_row}
         ).run_unpacked(self.bbs)
 
         # Additionally, we can mark function arguments as definitely assigned
-        args = {v.name for v in input_row}
-        for bb in self.bbs:
-            self.ass_before[bb] |= args
+        # args = {v.name for v in input_row}
+        # for bb in self.bbs:
+        #     self.ass_before[bb] |= args
 
         # We start by compiling the entry BB
         entry_compiled = self._compile_bb(
