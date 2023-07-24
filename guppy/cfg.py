@@ -132,27 +132,20 @@ class CFG:
         global_variables: VarMap,
     ) -> CompiledBB:
         """Compiles a single basic block."""
-        for x, use_bb in self.live_before[bb].items():
-            if x in self.ass_before[bb] or x in global_variables:
-                continue
-
-            # The rest results in an error. If the variable is defined on *some*
-            # paths, we can give a more informative error message
-            if x in self.maybe_ass_before[use_bb]:
-                # TODO: Can we point to the actual path in the message in a nice
-                #  way?
-                raise GuppyError(
-                    f"Variable `{x}` is not defined on all control-flow paths.",
-                    use_bb.vars.used[x],
-                )
-            else:
-                raise GuppyError(f"Variable `{x}` is not defined", use_bb.vars.used[x])
 
         # The exit BB is completely empty
         if len(bb.successors) == 0:
             block = graph.add_exit(return_tys, parent)
             return CompiledBB(block, bb, Signature(input_row, []))
 
+        # For the entry BB we have to separately check that all used variables are
+        # defined. For all other BBs, this will be checked when compiling a predecessor.
+        if len(bb.predecessors) == 0:
+            for x, use in bb.vars.used.items():
+                if x not in self.ass_before[bb] and x not in global_variables:
+                    raise GuppyError(f"Variable `{x}` is not defined", use)
+
+        # Compile the basic block
         block = graph.add_block(parent, num_sucessors=len(bb.successors))
         inp = graph.add_input(output_tys=[v.ty for v in input_row], parent=block)
         dfg = DFContainer(
@@ -162,12 +155,30 @@ class CFG:
                 for (i, v) in enumerate(input_row)
             },
         )
-
         stmt_compiler = StatementCompiler(graph, global_variables)
         dfg = stmt_compiler.compile_stmts(bb.statements, dfg, return_tys)
 
-        # The easy case is if we don't branch. We just output the variables that are
-        # live in the successor
+        # Check that we have all variables that are requested by the successors
+        for succ in bb.successors:
+            for x, use_bb in self.live_before[succ].items():
+                if x not in dfg and x not in global_variables:
+                    # If the variable is defined on *some* paths, we can give a more
+                    # informative error message
+                    if x in self.maybe_ass_before[use_bb]:
+                        # TODO: This should be "Variable x is not defined when coming
+                        #  from {bb}". But for this we need a way to associate BBs with
+                        #  source locations.
+                        raise GuppyError(
+                            f"Variable `{x}` is not defined on all control-flow paths.",
+                            use_bb.vars.used[x],
+                        )
+                    raise GuppyError(
+                        f"Variable `{x}` is not defined",
+                        use_bb.vars.used[x]
+                    )
+
+        # Finally, we have to add the block output. The easy case is if we don't branch:
+        # We just output the variables that are live in the successor
         output_vars = sorted(
             dfg[x] for x in self.live_before[bb.successors[0]] if x in dfg
         )
