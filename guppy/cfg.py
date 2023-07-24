@@ -1,6 +1,7 @@
 import ast
 import collections
 import itertools
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Optional, NamedTuple, Iterator
 
@@ -283,12 +284,8 @@ class Jumps(NamedTuple):
 class CFGBuilder(AstVisitor[Optional[BB]]):
     """Constructs a CFG from ast nodes."""
 
-    expr_builder: "ExprBuilder"
     cfg: CFG
     num_returns: int
-
-    def __init__(self) -> None:
-        self.expr_builder = ExprBuilder()
 
     def build(self, nodes: list[ast.stmt], num_returns: int) -> CFG:
         """Builds a CFG from a list of ast nodes.
@@ -332,24 +329,24 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         return bb_opt
 
     def visit_Assign(self, node: ast.Assign, bb: BB, jumps: Jumps) -> Optional[BB]:
-        node.value, bb = self.expr_builder.build(node.value, self.cfg, bb)
+        node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
         return bb
 
     def visit_AugAssign(
         self, node: ast.AugAssign, bb: BB, jumps: Jumps
     ) -> Optional[BB]:
-        node.value, bb = self.expr_builder.build(node.value, self.cfg, bb)
+        node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
         return bb
 
     def visit_Expr(self, node: ast.Expr, bb: BB, jumps: Jumps) -> Optional[BB]:
-        _, bb = self.expr_builder.build(node.value, self.cfg, bb)
+        _, bb = ExprBuilder.build(node.value, self.cfg, bb)
         return bb
 
     def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> Optional[BB]:
         then_bb, else_bb = self.cfg.new_bb(), self.cfg.new_bb()
-        self.expr_builder.build_branch(node.test, self.cfg, bb, then_bb, else_bb)
+        BranchBuilder.build(node.test, self.cfg, bb, then_bb, else_bb)
         then_bb = self.visit_stmts(node.body, then_bb, jumps)
         else_bb = self.visit_stmts(node.orelse, else_bb, jumps)
         # We need to handle different cases depending on whether branches jump (i.e.
@@ -367,7 +364,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
         head_bb = self.cfg.new_bb(bb)
         body_bb, tail_bb = self.cfg.new_bb(), self.cfg.new_bb()
-        self.expr_builder.build_branch(node.test, self.cfg, head_bb, body_bb, tail_bb)
+        BranchBuilder.build(node.test, self.cfg, head_bb, body_bb, tail_bb)
 
         new_jumps = Jumps(
             return_bb=jumps.return_bb, continue_bb=head_bb, break_bb=tail_bb
@@ -398,7 +395,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
     def visit_Return(self, node: ast.Return, bb: BB, jumps: Jumps) -> Optional[BB]:
         if node.value is not None:
-            node.value, bb = self.expr_builder.build(node.value, self.cfg, bb)
+            node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
         self.cfg.link(bb, jumps.return_bb)
         bb.statements.append(node)
         return None
@@ -412,17 +409,30 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         raise GuppyError("Statement is not supported", node)
 
 
+# In order to build expressions, need an endless stream of unique temporary variables
+# to store intermediate results
+tmp_vars: Iterator[str] = (f"%tmp{i}" for i in itertools.count())
+
+
 class ExprBuilder(ast.NodeTransformer):
     """Builds an expression into a basic block."""
 
-    branch_builder: "BranchBuilder"
     cfg: CFG
     bb: BB
-    tmp_vars: Iterator[str]
 
-    def __init__(self) -> None:
-        self.branch_builder = BranchBuilder(self)
-        self.tmp_vars = (f"%tmp{i}" for i in itertools.count())
+    def __init__(self, cfg: CFG, start_bb: BB) -> None:
+        self.cfg = cfg
+        self.bb = start_bb
+
+    @staticmethod
+    def build(node: ast.expr, cfg: CFG, bb: BB) -> tuple[ast.expr, BB]:
+        """Builds an expression into a CFG.
+
+        The expression may be transformed and new basic blocks may be created (for
+        example for `... if ... else ...` expressions). Returns the new expression and
+        the final basic block in which the expression can be used."""
+        builder = ExprBuilder(cfg, bb)
+        return builder.visit(node), builder.bb
 
     @classmethod
     def _make_var(cls, name: str, loc: Optional[ast.expr] = None) -> ast.Name:
@@ -439,21 +449,6 @@ class ExprBuilder(ast.NodeTransformer):
         set_location(node, value)
         bb.statements.append(node)
 
-    def build(self, node: ast.expr, cfg: CFG, bb: BB) -> tuple[ast.expr, BB]:
-        """Builds an expression into a CFG.
-
-        The expression may be transformed and new basic blocks may be created (for
-        example for `... if ... else ...` expressions). Returns the new expression and
-        the final basic block in which the expression can be used."""
-        self.cfg = cfg
-        self.bb = bb
-        return self.visit(node), self.bb
-
-    def build_branch(
-        self, node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
-    ) -> None:
-        self.branch_builder.visit(node, cfg, bb, true_bb, false_bb)
-
     def visit_Name(self, node: ast.Name) -> ast.Name:
         return node
 
@@ -469,13 +464,13 @@ class ExprBuilder(ast.NodeTransformer):
 
     def visit_IfExp(self, node: ast.IfExp) -> ast.Name:
         if_bb, else_bb = self.cfg.new_bb(), self.cfg.new_bb()
-        self.build_branch(node.test, self.cfg, self.bb, if_bb, else_bb)
+        BranchBuilder.build(node.test, self.cfg, self.bb, if_bb, else_bb)
 
         if_expr, if_bb = self.build(node.body, self.cfg, if_bb)
         else_expr, else_bb = self.build(node.orelse, self.cfg, else_bb)
 
         # Assign the result to a temporary variable
-        tmp = next(self.tmp_vars)
+        tmp = next(tmp_vars)
         self._tmp_assign(tmp, if_expr, if_bb)
         self._tmp_assign(tmp, else_expr, else_bb)
 
@@ -493,12 +488,12 @@ class ExprBuilder(ast.NodeTransformer):
         if is_short_circuit_expr(node):
             assert isinstance(node, ast.expr)
             true_bb, false_bb = self.cfg.new_bb(), self.cfg.new_bb()
-            self.build_branch(node, self.cfg, self.bb, true_bb, false_bb)
+            BranchBuilder.build(node, self.cfg, self.bb, true_bb, false_bb)
             true_const = ast.Constant(value=True)
             false_const = ast.Constant(value=False)
             set_location(true_const, node)
             set_location(false_const, node)
-            tmp = next(self.tmp_vars)
+            tmp = next(tmp_vars)
             self._tmp_assign(tmp, true_const, true_bb)
             self._tmp_assign(tmp, false_const, false_bb)
             merge_bb = self.cfg.new_bb(true_bb, false_bb)
@@ -515,10 +510,12 @@ class BranchBuilder(AstVisitor[None]):
     handles short-circuit evaluation etc.
     """
 
-    expr_builder: ExprBuilder
-
-    def __init__(self, expr_builder: ExprBuilder) -> None:
-        self.expr_builder = expr_builder
+    @staticmethod
+    def build(node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB) -> None:
+        """Builds an expression and branches to `true_bb` or `false_bb`, depending on
+        the truth value of the expression."""
+        builder = BranchBuilder()
+        builder.visit(node, cfg, bb, true_bb, false_bb)
 
     def visit_BoolOp(
         self, node: ast.BoolOp, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
@@ -594,7 +591,7 @@ class BranchBuilder(AstVisitor[None]):
     ) -> None:
         # We can always fall back to building the node as a regular expression and using
         # the result as a branch predicate
-        pred, bb = self.expr_builder.build(node, cfg, bb)
+        pred, bb = ExprBuilder.build(node, cfg, bb)
         bb.branch_pred = pred
         cfg.link(bb, true_bb)
         cfg.link(bb, false_bb)
