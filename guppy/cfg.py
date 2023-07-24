@@ -178,9 +178,8 @@ class CFG:
             branch_port = graph.add_tag(
                 variants=[TupleType([])], tag=0, inp=unit, parent=block
             ).out_port(0)
-
-        # If we branch, we have to compile the branch predicate
         else:
+            # If we branch, we have to compile the branch predicate
             assert bb.branch_pred is not None
             expr_compiler = ExpressionCompiler(graph, global_variables)
             branch_port = expr_compiler.compile(bb.branch_pred, dfg)
