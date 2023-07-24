@@ -348,21 +348,21 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         return bb
 
     def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> Optional[BB]:
-        if_bb, else_bb = self.cfg.new_bb(), self.cfg.new_bb()
-        self.expr_builder.build_branch(node.test, self.cfg, bb, if_bb, else_bb)
-        if_bb = self.visit_stmts(node.body, if_bb, jumps)
+        then_bb, else_bb = self.cfg.new_bb(), self.cfg.new_bb()
+        self.expr_builder.build_branch(node.test, self.cfg, bb, then_bb, else_bb)
+        then_bb = self.visit_stmts(node.body, then_bb, jumps)
         else_bb = self.visit_stmts(node.orelse, else_bb, jumps)
         # We need to handle different cases depending on whether branches jump (i.e.
         # return, continue, or break)
-        if if_bb is None:
+        if then_bb is None:
             # If branch jumps: We continue in the BB of the else branch
             return else_bb
         elif else_bb is None:
             # Else branch jumps: We continue in the BB of the if branch
-            return if_bb
+            return then_bb
         else:
             # No branch jumps: We have to merge the control flow
-            return self.cfg.new_bb(if_bb, else_bb)
+            return self.cfg.new_bb(then_bb, else_bb)
 
     def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
         head_bb = self.cfg.new_bb(bb)
@@ -584,9 +584,9 @@ class BranchBuilder(AstVisitor[None]):
     def visit_IfExp(
         self, node: ast.IfExp, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
     ) -> None:
-        if_bb, else_bb = cfg.new_bb(), cfg.new_bb()
-        self.visit(node.test, cfg, bb, if_bb, else_bb)
-        self.visit(node.body, cfg, if_bb, true_bb, false_bb)
+        then_bb, else_bb = cfg.new_bb(), cfg.new_bb()
+        self.visit(node.test, cfg, bb, then_bb, else_bb)
+        self.visit(node.body, cfg, then_bb, true_bb, false_bb)
         self.visit(node.orelse, cfg, else_bb, true_bb, false_bb)
 
     def generic_visit(  # type: ignore
