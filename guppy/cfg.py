@@ -491,7 +491,7 @@ class ExprBuilder(ast.NodeTransformer):
         # Short-circuit expressions must be built using the `BranchBuilder`. However, we
         # can turn them into regular expressions by assigning True/False to a temporary
         # variable and merging the control-flow
-        if BranchBuilder.is_short_circuit_expr(node):
+        if is_short_circuit_expr(node):
             assert isinstance(node, ast.expr)
             true_bb, false_bb = self.cfg.new_bb(), self.cfg.new_bb()
             self.build_branch(node, self.cfg, self.bb, true_bb, false_bb)
@@ -520,16 +520,6 @@ class BranchBuilder(AstVisitor[None]):
 
     def __init__(self, expr_builder: ExprBuilder) -> None:
         self.expr_builder = expr_builder
-
-    @staticmethod
-    def is_short_circuit_expr(node: ast.AST) -> bool:
-        """Checks if an expression uses short-circuiting.
-
-        Those expressions *must* be compiled using this builder.
-        """
-        return isinstance(node, ast.BoolOp) or (
-            isinstance(node, ast.Compare) and len(node.comparators) > 1
-        )
 
     def visit_BoolOp(
         self, node: ast.BoolOp, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB
@@ -625,3 +615,13 @@ def is_functional_annotation(stmt: ast.stmt) -> bool:
         ):
             return op.left.id == "_" and op.right.id == "functional"
     return False
+
+
+def is_short_circuit_expr(node: ast.AST) -> bool:
+    """Checks if an expression uses short-circuiting.
+
+    Those expressions *must* be compiled using the `BranchBuilder`.
+    """
+    return isinstance(node, ast.BoolOp) or (
+        isinstance(node, ast.Compare) and len(node.comparators) > 1
+    )
