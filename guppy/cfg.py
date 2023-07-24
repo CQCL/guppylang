@@ -29,7 +29,7 @@ class CompiledBB:
     """
 
     node: CFNode
-    bb: "BB"
+    bb: BB
     sig: Signature
 
 
