@@ -88,8 +88,8 @@ class BackwardAnalysis(Analysis[T], ABC, Generic[T]):
         return vals_before
 
 
-# For live variable analysis, we also store the BB in which the use occurs as evidence
-# of liveness. Hence, the analysis runs over the lattice of mappings from variable names
+# For live variable analysis, we also store a BB in which a use occurs as evidence of
+# liveness. Hence, the analysis runs over the lattice of mappings from variable names
 # to BBs containing a use.
 LivenessDomain = dict[str, BB]
 
