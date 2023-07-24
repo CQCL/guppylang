@@ -84,11 +84,6 @@ class CFG:
             self.bbs, {v.name for v in input_row}
         ).run_unpacked(self.bbs)
 
-        # Additionally, we can mark function arguments as definitely assigned
-        # args = {v.name for v in input_row}
-        # for bb in self.bbs:
-        #     self.ass_before[bb] |= args
-
         # We start by compiling the entry BB
         entry_compiled = self._compile_bb(
             self.entry_bb, input_row, return_tys, graph, parent, global_variables
