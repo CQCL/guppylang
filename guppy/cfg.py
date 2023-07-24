@@ -107,7 +107,7 @@ class CFG:
             if bb in compiled:
                 # If the BB was already compiled, we just have to check that the
                 # signatures match.
-                self._assert_rows_match(out_row, compiled[bb].sig.input_row, bb)
+                self._check_rows_match(out_row, compiled[bb].sig.input_row, bb)
             else:
                 # Otherwise, compile the BB and enqueue its successors
                 compiled_bb = self._compile_bb(
@@ -211,7 +211,7 @@ class CFG:
 
         return CompiledBB(block, bb, Signature(input_row, output_rows))
 
-    def _assert_rows_match(self, row1: VarRow, row2: VarRow, bb: BB) -> None:
+    def _check_rows_match(self, row1: VarRow, row2: VarRow, bb: BB) -> None:
         """Checks that the types of two rows match up.
 
         Otherwise, an error is thrown, alerting the user that a variable has different
