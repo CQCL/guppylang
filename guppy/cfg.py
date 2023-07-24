@@ -52,13 +52,9 @@ class CFG:
         self.ass_before = {}
         self.maybe_ass_before = {}
 
-    def new_bb(self, preds: Optional[list[BB]] = None) -> BB:
-        """Adds a new basic block to the CFG.
-
-        Optionally, a single predecessor or a list of predecessor BBs can be passed.
-        """
-        preds = preds or []
-        bb = BB(len(self.bbs), predecessors=preds)
+    def new_bb(self, *preds: BB) -> BB:
+        """Adds a new basic block to the CFG."""
+        bb = BB(len(self.bbs), predecessors=list(preds))
         self.bbs.append(bb)
         for p in preds:
             p.successors.append(bb)
@@ -320,8 +316,8 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
     def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> Optional[BB]:
         bb.branch_pred = node.test
-        if_bb = self.visit_stmts(node.body, self.cfg.new_bb(preds=[bb]), jumps)
-        else_bb = self.visit_stmts(node.orelse, self.cfg.new_bb(preds=[bb]), jumps)
+        if_bb = self.visit_stmts(node.body, self.cfg.new_bb(bb), jumps)
+        else_bb = self.visit_stmts(node.orelse, self.cfg.new_bb(bb), jumps)
         # We need to handle different cases depending on whether branches jump (i.e.
         # return, continue, or break)
         if if_bb is None:
@@ -332,12 +328,12 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
             return if_bb
         else:
             # No branch jumps: We have to merge the control flow
-            return self.cfg.new_bb(preds=[if_bb, else_bb])
+            return self.cfg.new_bb(if_bb, else_bb)
 
     def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
-        head_bb = self.cfg.new_bb(preds=[bb])
-        body_bb = self.cfg.new_bb(preds=[head_bb])
-        tail_bb = self.cfg.new_bb(preds=[head_bb])
+        head_bb = self.cfg.new_bb(bb)
+        body_bb = self.cfg.new_bb(head_bb)
+        tail_bb = self.cfg.new_bb(head_bb)
         head_bb.branch_pred = node.test
 
         new_jumps = Jumps(
