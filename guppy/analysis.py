@@ -123,8 +123,8 @@ class LivenessAnalysis(BackwardAnalysis[LivenessDomain]):
 # Set of variables that are definitely assigned at the start of a BB
 DefAssignmentDomain = set[str]
 
-# Set of variables that are assigned on some paths to a BB. Definitely assigned
-# variables are a subset of this
+# Set of variables that are assigned on (at least) some paths to a BB. Definitely
+# assigned variables are a subset of this
 MaybeAssignmentDomain = set[str]
 
 # For assignment analysis, we do definite- and maybe-assignment in one pass
