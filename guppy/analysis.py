@@ -145,7 +145,7 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
         self.all_vars = set.union(*(set(bb.vars.assigned.keys()) for bb in bbs))
 
     def initial(self) -> AssignmentDomain:
-        return self.all_vars.copy(), set()
+        return self.all_vars, set()
 
     def join(self, *ts: AssignmentDomain) -> AssignmentDomain:
         if len(ts) == 0:
