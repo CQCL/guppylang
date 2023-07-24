@@ -540,12 +540,11 @@ class BranchBuilder(AstVisitor[None]):
         [left, right] = node.values
 
         extra_bb = cfg.new_bb()
+        assert type(node.op) in [ast.And, ast.Or]
         if isinstance(node.op, ast.And):
             self.visit(left, cfg, bb, extra_bb, false_bb)
         elif isinstance(node.op, ast.Or):
             self.visit(left, cfg, bb, true_bb, extra_bb)
-        else:
-            raise InternalGuppyError(f"Unexpected BoolOp encountered: {node.op}")
         self.visit(right, cfg, extra_bb, true_bb, false_bb)
 
     def visit_UnaryOp(
