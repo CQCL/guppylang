@@ -142,9 +142,7 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
     all_vars: set[str]
 
     def __init__(self, bbs: Iterable[BB]):
-        self.all_vars = set.union(
-            *(bb.vars.assigned.keys() | bb.vars.used.keys() for bb in bbs)
-        )
+        self.all_vars = set.union(*(set(bb.vars.assigned.keys()) for bb in bbs))
 
     def initial(self) -> AssignmentDomain:
         return self.all_vars.copy(), set()
