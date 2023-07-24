@@ -8,11 +8,7 @@ from guppy.compiler_base import RawVariable, return_var
 
 @dataclass
 class VariableStats:
-    """Stores program analysis results for a basic block.
-
-    This class carries the results of live variable, definite assignment, and maybe
-    assignment analysis.
-    """
+    """Stores variable usage information for a basic block."""
 
     # Variables that are assigned in the BB
     assigned: dict[str, AstNode] = field(default_factory=dict)
@@ -64,8 +60,18 @@ class BB:
     # jump to
     branch_pred: Optional[ast.expr] = None
 
-    # Program analysis data
-    vars: VariableStats = field(default_factory=VariableStats)
+    # Information about assigned/used variables in the BB
+    _vars: Optional[VariableStats] = None
+
+    @property
+    def vars(self) -> VariableStats:
+        """Returns variable usage information for this BB.
+
+        Note that `compute_variable_stats` must be called before this property can be
+        accessed.
+        """
+        assert self._vars is not None
+        return self._vars
 
     def compute_variable_stats(self, num_returns: int) -> None:
         """Determines which variables are assigned/used in this BB.
@@ -73,19 +79,19 @@ class BB:
         This also requires the expected number of returns of the whole CFG in order to
         process `return` statements.
         """
-        self.vars = VariableStats()
-
         visitor = VariableVisitor(self, num_returns)
         for s in self.statements:
             visitor.visit(s)
+        self._vars = visitor.stats
+
         if self.branch_pred is not None:
-            self.vars.update_used(self.branch_pred)
+            self._vars.update_used(self.branch_pred)
 
         # In the `StatementCompiler`, we're going to turn return statements into
         # assignments of dummy variables `%ret_xxx`. Thus, we have to register those
         # variables as being used in the exit BB
         if len(self.successors) == 0:
-            self.vars.used |= {
+            self._vars.used |= {
                 return_var(i): ast.Name(return_var(i), ast.Load)
                 for i in range(num_returns)
             }
@@ -95,33 +101,35 @@ class VariableVisitor(ast.NodeVisitor):
     """Visitor that computes used and assigned variables in a BB."""
 
     bb: BB
+    stats: VariableStats
     num_returns: int
 
     def __init__(self, bb: BB, num_returns: int):
         self.bb = bb
         self.num_returns = num_returns
+        self.stats = VariableStats()
 
     def visit_Assign(self, node: ast.Assign) -> None:
-        self.bb.vars.update_used(node.value)
+        self.stats.update_used(node.value)
         for t in node.targets:
             for name in name_nodes_in_ast(t):
-                self.bb.vars.assigned[name.id] = node
+                self.stats.assigned[name.id] = node
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
-        self.bb.vars.update_used(node.value)
-        self.bb.vars.update_used(node.target)  # The target is also used
+        self.stats.update_used(node.value)
+        self.stats.update_used(node.target)  # The target is also used
         for name in name_nodes_in_ast(node.target):
-            self.bb.vars.assigned[name.id] = node
+            self.stats.assigned[name.id] = node
 
     def visit_Return(self, node: ast.Return) -> None:
         if node.value is not None:
-            self.bb.vars.update_used(node.value)
+            self.stats.update_used(node.value)
 
         # In the `StatementCompiler`, we're going to turn return statements into
         # assignments of dummy variables `%ret_xxx`. To make the liveness analysis work,
         # we have to register those variables as being assigned here
-        self.bb.vars.assigned |= {return_var(i): node for i in range(self.num_returns)}
+        self.stats.assigned |= {return_var(i): node for i in range(self.num_returns)}
         return None
 
     def generic_visit(self, node: ast.AST) -> None:
-        self.bb.vars.update_used(node)
+        self.stats.update_used(node)
