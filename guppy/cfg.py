@@ -84,7 +84,7 @@ class CFG:
             bb.compute_variable_stats(len(return_tys))
         liveness_ana, assignment_ana = LivenessAnalysis(), AssignmentAnalysis(self.bbs)
         self.live_before = liveness_ana.run(self.bbs)
-        self.ass_before, self.maybe_ass_before = assignment_ana.run_(self.bbs)
+        self.ass_before, self.maybe_ass_before = assignment_ana.run_unpacked(self.bbs)
 
         # Additionally, we can mark function arguments as definitely assigned
         args = {v.name for v in input_row}

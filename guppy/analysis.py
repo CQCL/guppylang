@@ -161,7 +161,7 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
             maybe_ass_before | bb.vars.assigned.keys(),
         )
 
-    def run_(
+    def run_unpacked(
         self, bbs: Iterable[BB]
     ) -> tuple[Result[DefAssignmentDomain], Result[MaybeAssignmentDomain]]:
         """Runs the analysis and unpacks the definite- and maybe-assignment results."""
