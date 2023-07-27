@@ -141,7 +141,7 @@ class CFG:
                     raise GuppyError(f"Variable `{x}` is not defined", use)
 
         # Compile the basic block
-        block = graph.add_block(parent, num_sucessors=len(bb.successors))
+        block = graph.add_block(parent, num_successors=len(bb.successors))
         inp = graph.add_input(output_tys=[v.ty for v in input_row], parent=block)
         dfg = DFContainer(
             block,
