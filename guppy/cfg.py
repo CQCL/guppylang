@@ -177,7 +177,7 @@ class CFG:
             dfg[x] for x in self.live_before[bb.successors[0]] if x in dfg
         )
         if len(bb.successors) == 1:
-            # Even if wo don't branch, we still have to add a unit `Sum(())` predicate
+            # Even if we don't branch, we still have to add a `Sum(())` predicate
             unit = graph.add_make_tuple([], parent=block).out_port(0)
             branch_port = graph.add_tag(
                 variants=[TupleType([])], tag=0, inp=unit, parent=block
@@ -189,7 +189,7 @@ class CFG:
             branch_port = expr_compiler.compile(bb.branch_pred, dfg)
             assert_bool_type(branch_port.ty, bb.branch_pred)
             first, *rest = bb.successors
-            # If the branches use different variables, we have to use output a Sum-type
+            # If the branches use different variables, we have to output a Sum-type
             # predicate
             if any(
                 self.live_before[r].keys() != self.live_before[first].keys()

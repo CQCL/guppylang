@@ -408,13 +408,13 @@ class Hugr:
             parent.output_child = node
         return node
 
-    def add_block(self, parent: Optional[Node], num_sucessors: int = 0) -> BlockNode:
+    def add_block(self, parent: Optional[Node], num_successors: int = 0) -> BlockNode:
         """Adds a `Block` node to the graph."""
         node = BlockNode(
             idx=self._graph.number_of_nodes(), op=ops.DFB(), parent=parent, meta_data={}
         )
         self._insert_node(node)
-        for _ in range(num_sucessors):
+        for _ in range(num_successors):
             node.add_out_port()
         return node
 
