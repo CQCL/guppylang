@@ -168,6 +168,7 @@ class VariableVisitor(ast.NodeVisitor):
         # In order to compute the used external variables in a nested function
         # definition, we have to run live variable analysis first
         from guppy.analysis import LivenessAnalysis
+
         for bb in node.cfg.bbs:
             bb.compute_variable_stats(len(node.ty.returns))
         live = LivenessAnalysis().run(node.cfg.bbs)
