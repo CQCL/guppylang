@@ -130,6 +130,14 @@ def _out_port_name(p: OutPort) -> str:
     return f"{p.node.idx}:{_OUTPUT_PREFIX}{p.offset}"
 
 
+def _in_order_name(n: Node) -> str:
+    return f"{n.idx}:{_INPUT_PREFIX}None"
+
+
+def _out_order_name(n: Node) -> str:
+    return f"{n.idx}:{_OUTPUT_PREFIX}None"
+
+
 def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph) -> None:
     in_ports = [str(i) for i in range(node.num_in_ports)]
     out_ports = [str(i) for i in range(node.num_out_ports)]
@@ -201,6 +209,14 @@ def hugr_to_graphviz(hugr: Hugr) -> gv.Digraph:
             color=_COLOURS["edge"]
             if isinstance(src_port, OutPortV)
             else _COLOURS["dark"],
+            **edge_attr,
+        )
+    for src, tgt in hugr.order_edges():
+        graph.edge(
+            _out_order_name(src),
+            _in_order_name(tgt),
+            label="",
+            color=_COLOURS["dark"],
             **edge_attr,
         )
     return graph

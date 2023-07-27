@@ -488,6 +488,18 @@ class Hugr:
             ops.Tag(tag=tag, variants=types), None, [SumType(variants)], parent, [inp]
         )
 
+    def add_load_constant(
+        self, const_port: OutPortV, parent: Optional[Node] = None
+    ) -> VNode:
+        """Adds a `LoadConstant` node to the graph."""
+        return self._add_node(
+            ops.LoadConstant(datatype=const_port.ty.to_hugr()),
+            None,
+            [const_port.ty],
+            parent,
+            [const_port],
+        )
+
     def add_call(
         self, def_port: OutPortV, args: list[OutPortV], parent: Optional[Node] = None
     ) -> VNode:
@@ -498,16 +510,34 @@ class Hugr:
         )
 
     def add_indirect_call(
-        self, def_port: OutPortV, args: list[OutPortV], parent: Optional[Node] = None
+        self, fun_port: OutPortV, args: list[OutPortV], parent: Optional[Node] = None
     ) -> VNode:
         """Adds an `IndirectCall` node to the graph."""
-        assert isinstance(def_port.ty, FunctionType)
+        assert isinstance(fun_port.ty, FunctionType)
         return self._add_node(
             ops.CallIndirect(),
             None,
-            list(def_port.ty.returns),
+            list(fun_port.ty.returns),
             parent,
-            args + [def_port],
+            [fun_port] + args,
+        )
+
+    def add_partial(
+        self, def_port: OutPortV, args: list[OutPortV], parent: Optional[Node] = None
+    ) -> VNode:
+        """Adds a `Partial` evaluation node to the graph."""
+        assert isinstance(def_port.ty, FunctionType)
+        assert len(def_port.ty.args) >= len(args)
+        assert [p.ty for p in args] == def_port.ty.args[: len(args)]
+        new_ty = FunctionType(
+            def_port.ty.args[len(args) :],
+            def_port.ty.returns,
+            def_port.ty.arg_names[len(args) :]
+            if def_port.ty.arg_names is not None
+            else None,
+        )
+        return self._add_node(
+            ops.DummyOp(name="partial"), None, [new_ty], parent, args + [def_port]
         )
 
     def add_def(
@@ -626,11 +656,7 @@ class Hugr:
                 name = n.op.name
                 fun_ty = FunctionType(list(n.in_port_types), list(n.out_port_types))
                 decl = self.add_declare(fun_ty, self.root, name)
-                sig = tys.Signature(
-                    input=[t.to_hugr() for t in fun_ty.args],
-                    output=[t.to_hugr() for t in fun_ty.returns],
-                )
-                n.op = ops.Call(signature=sig)
+                n.op = ops.Call()
                 self.add_edge(decl.out_port(0), n.add_in_port(fun_ty))
         return self
 
@@ -644,16 +670,24 @@ class Hugr:
             if isinstance(n.op, ops.DataflowOp) and isinstance(
                 n.parent, DFContainingNode
             ):
-                if n.num_in_ports == 0 and not isinstance(n.op, ops.Input):
+                if all(
+                    next(self.in_edges(p), None) is None for p in n.in_ports
+                ) and not isinstance(n.op, ops.Input):
                     assert n.parent.input_child is not None
                     self.add_order_edge(n.parent.input_child, n)
-                if n.num_out_ports == 0 and not isinstance(n.op, ops.Output):
+                if all(
+                    next(self.out_edges(p), None) is None for p in n.out_ports
+                ) and not isinstance(n.op, ops.Output):
                     assert n.parent.output_child is not None
                     self.add_order_edge(n, n.parent.output_child)
                 # Special case: Call ops for functions without any arguments are
                 # only connected to the top-level def/declare and also need an
                 # order edge
                 if isinstance(n.op, ops.Call) and n.num_in_ports == 1:
+                    assert n.parent.input_child is not None
+                    self.add_order_edge(n.parent.input_child, n)
+                # Special case: Load constant ops always need an order edge
+                elif isinstance(n.op, ops.LoadConstant):
                     assert n.parent.input_child is not None
                     self.add_order_edge(n.parent.input_child, n)
         return self
