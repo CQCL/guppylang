@@ -22,8 +22,7 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
     return_tys: list[GuppyType]
 
     def __init__(self, graph: Hugr, global_variables: VarMap):
-        self.graph = graph
-        self.global_variables = global_variables
+        super().__init__(graph, global_variables)
         self.expr_compiler = ExpressionCompiler(graph, global_variables)
 
     def compile_stmts(

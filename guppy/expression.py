@@ -31,10 +31,6 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
 
     dfg: DFContainer
 
-    def __init__(self, graph: Hugr, global_variables: VarMap):
-        self.graph = graph
-        self.global_variables = global_variables
-
     def compile(self, expr: ast.expr, dfg: DFContainer) -> OutPortV:
         """Compiles an expression and returns a single port holding the output value."""
         self.dfg = dfg
