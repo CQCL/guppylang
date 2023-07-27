@@ -141,16 +141,25 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
 
     all_vars: set[str]
     ass_before_entry: set[str]
+    maybe_ass_before_entry: set[str]
 
-    def __init__(self, bbs: Iterable[BB], ass_before_entry: set[str]):
+    def __init__(
+        self,
+        bbs: Iterable[BB],
+        ass_before_entry: set[str],
+        maybe_ass_before_entry: set[str],
+    ) -> None:
         """Constructs an `AssignmentAnalysis` pass for a CFG.
 
         Also takes a set variables that are definitely assigned before the entry of the
         CFG (for example function arguments).
         """
+        assert ass_before_entry.issubset(maybe_ass_before_entry)
         self.ass_before_entry = ass_before_entry
+        self.maybe_ass_before_entry = maybe_ass_before_entry
         self.all_vars = (
-            set.union(*(set(bb.vars.assigned.keys()) for bb in bbs)) | ass_before_entry
+            set.union(*(set(bb.vars.assigned.keys()) for bb in bbs))
+            | maybe_ass_before_entry
         )
 
     def initial(self) -> AssignmentDomain:

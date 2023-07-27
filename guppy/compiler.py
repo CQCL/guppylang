@@ -5,140 +5,11 @@ import textwrap
 from dataclasses import dataclass
 from typing import Optional, Any, Callable, Union
 
-from guppy.cfg import CFGBuilder
-from guppy.compiler_base import CompilerBase, VarMap, RawVariable, Variable
-from guppy.expression import expr_to_row
-from guppy.guppy_types import (
-    GuppyType,
-    IntType,
-    FloatType,
-    BoolType,
-    FunctionType,
-    TupleType,
-    TypeRow,
-    StringType,
-)
+from guppy.compiler_base import Variable
+from guppy.function import FunctionCompiler
+from guppy.guppy_types import FunctionType
 from guppy.hugr.hugr import Hugr, Node
 from guppy.error import GuppyError, SourceLoc
-
-
-def type_from_ast(node: ast.expr) -> GuppyType:
-    """Turns an AST expression into a Guppy type."""
-    if isinstance(node, ast.Name):
-        if node.id == "int":
-            return IntType()
-        elif node.id == "float":
-            return FloatType()
-        elif node.id == "bool":
-            return BoolType()
-        elif node.id == "str":
-            return StringType()
-    elif isinstance(node, ast.Tuple):
-        return TupleType([type_from_ast(el) for el in node.elts])
-    # TODO: Remaining cases
-    raise GuppyError(f"Invalid type: `{ast.unparse(node)}`", node)
-
-
-def type_row_from_ast(node: ast.expr) -> TypeRow:
-    """Turns an AST expression into a Guppy type row.
-
-    This is needed to interpret the return type annotation of functions.
-    """
-    # The return type `-> None` is represented in the ast as `ast.Constant(value=None)`
-    if isinstance(node, ast.Constant) and node.value is None:
-        return TypeRow([])
-    return TypeRow([type_from_ast(e) for e in expr_to_row(node)])
-
-
-@dataclass
-class GuppyFunction:
-    """Class holding all information associated with a Function during compilation."""
-
-    name: str
-    module: "GuppyModule"
-    def_node: Node
-    ty: FunctionType
-    ast: ast.FunctionDef
-
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        # The `@guppy` annotator returns a `GuppyFunction`. If the user tries to call
-        # it, we can give a nice error message:
-        raise GuppyError("Guppy functions can only be called inside of Guppy functions")
-
-
-class FunctionCompiler(CompilerBase):
-    cfg_builder: CFGBuilder
-
-    def __init__(self, graph: Hugr):
-        self.graph = graph
-        self.cfg_builder = CFGBuilder()
-
-    @staticmethod
-    def validate_signature(func_def: ast.FunctionDef) -> FunctionType:
-        """Checks the signature of a function definition and returns the corresponding
-        Guppy type."""
-        if len(func_def.args.posonlyargs) != 0:
-            raise GuppyError(
-                "Positional-only parameters not supported", func_def.args.posonlyargs[0]
-            )
-        if len(func_def.args.kwonlyargs) != 0:
-            raise GuppyError(
-                "Keyword-only parameters not supported", func_def.args.kwonlyargs[0]
-            )
-        if func_def.args.vararg is not None:
-            raise GuppyError("*args not supported", func_def.args.vararg)
-        if func_def.args.kwarg is not None:
-            raise GuppyError("**kwargs not supported", func_def.args.kwarg)
-        if func_def.returns is None:
-            raise GuppyError(
-                "Return type must be annotated", func_def
-            )  # TODO: Error location is incorrect
-
-        arg_tys = []
-        arg_names = []
-        for i, arg in enumerate(func_def.args.args):
-            if arg.annotation is None:
-                raise GuppyError("Argument type must be annotated", arg)
-            ty = type_from_ast(arg.annotation)
-            arg_tys.append(ty)
-            arg_names.append(arg.arg)
-
-        ret_type_row = type_row_from_ast(func_def.returns)
-        return FunctionType(arg_tys, ret_type_row.tys, arg_names)
-
-    def compile(
-        self,
-        module: "GuppyModule",
-        func_def: ast.FunctionDef,
-        def_node: Node,
-        global_variables: VarMap,
-    ) -> GuppyFunction:
-        self.global_variables = global_variables
-        func_ty = self.validate_signature(func_def)
-        args = func_def.args.args
-
-        cfg = self.cfg_builder.build(func_def.body, len(func_ty.returns))
-
-        def_input = self.graph.add_input(parent=def_node)
-        cfg_node = self.graph.add_cfg(
-            def_node, inputs=[def_input.add_out_port(ty) for ty in func_ty.args]
-        )
-        assert func_ty.arg_names is not None
-        input_sig = [
-            RawVariable(x, t, l)
-            for x, t, l in zip(func_ty.arg_names, func_ty.args, args)
-        ]
-        cfg.compile(
-            self.graph, input_sig, list(func_ty.returns), cfg_node, global_variables
-        )
-
-        # Add final output node for the def block
-        self.graph.add_output(
-            inputs=[cfg_node.add_out_port(ty) for ty in func_ty.returns],
-            parent=def_node,
-        )
-
-        return GuppyFunction(func_def.name, module, def_node, func_ty, func_def)
 
 
 def format_source_location(
@@ -166,6 +37,30 @@ def format_source_location(
     return res
 
 
+@dataclass
+class RawFunction:
+    pyfun: Callable[..., Any]
+    ast: ast.FunctionDef
+    source_lines: list[str]
+    line_offset: int
+
+
+@dataclass
+class GuppyFunction:
+    """Class holding all information associated with a Function during compilation."""
+
+    name: str
+    module: "GuppyModule"
+    def_node: Node
+    ty: FunctionType
+    ast: ast.FunctionDef
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        # The `@guppy` annotator returns a `GuppyFunction`. If the user tries to call
+        # it, we can give a nice error message:
+        raise GuppyError("Guppy functions can only be called inside of Guppy functions")
+
+
 class GuppyModule(object):
     """A Guppy module backed by a Hugr graph.
 
@@ -177,10 +72,7 @@ class GuppyModule(object):
     graph: Hugr
     module_node: Node
     compiler: FunctionCompiler
-    # function, AST, source lines, line offset
-    annotated_funcs: dict[
-        str, tuple[Callable[..., Any], ast.FunctionDef, list[str], int]
-    ]
+    annotated_funcs: dict[str, RawFunction]
     fun_decls: list[GuppyFunction]
 
     def __init__(self, name: str):
@@ -203,56 +95,52 @@ class GuppyModule(object):
         if func_ast.name in self.annotated_funcs:
             raise GuppyError(
                 f"Module `{self.name}` already contains a function named `{func_ast.name}` "
-                f"(declared at {SourceLoc.from_ast(self.annotated_funcs[func_ast.name][1], line_offset)})",
+                f"(declared at {SourceLoc.from_ast(self.annotated_funcs[func_ast.name].ast, line_offset)})",
                 func_ast,
             )
-        self.annotated_funcs[func_ast.name] = f, func_ast, source_lines, line_offset
+        self.annotated_funcs[func_ast.name] = RawFunction(
+            f, func_ast, source_lines, line_offset
+        )
 
     def compile(self, exit_on_error: bool = False) -> Optional[Hugr]:
         """Compiles the module and returns the final Hugr."""
         try:
             global_variables = {}
             defs = {}
-            for name, (
-                f,
-                func_ast,
-                source_lines,
-                line_offset,
-            ) in self.annotated_funcs.items():
-                func_ty = self.compiler.validate_signature(func_ast)
-                def_node = self.graph.add_def(func_ty, self.module_node, func_ast.name)
+            for name, f in self.annotated_funcs.items():
+                func_ty = self.compiler.validate_signature(f.ast)
+                def_node = self.graph.add_def(func_ty, self.module_node, f.ast.name)
                 defs[name] = def_node
-                global_variables[name] = Variable(name, def_node.out_port(0), func_ast)
-            for name, (
-                f,
-                func_ast,
-                source_lines,
-                line_offset,
-            ) in self.annotated_funcs.items():
-                func = self.compiler.compile(
-                    self, func_ast, defs[name], global_variables
+                global_variables[name] = Variable(name, def_node.out_port(0), f.ast)
+            for name, f in self.annotated_funcs.items():
+                port = self.compiler.compile_global(f.ast, defs[name], global_variables)
+                assert isinstance(port.ty, FunctionType)
+                self.fun_decls.append(
+                    GuppyFunction(name, self, port.node, port.ty, f.ast)
                 )
-                self.fun_decls.append(func)
             return self.graph
         except GuppyError as err:
             if err.location:
                 loc = err.location
-                line = line_offset + loc.lineno
+                line = f.line_offset + loc.lineno
                 print(
-                    f"Guppy compilation failed. Error in file {inspect.getsourcefile(f)}:{line}\n",
+                    "Guppy compilation failed. "
+                    f"Error in file {inspect.getsourcefile(f.pyfun)}:{line}\n",
                     file=sys.stderr,
                 )
                 print(
-                    format_source_location(source_lines, loc, line_offset + 1),
+                    format_source_location(f.source_lines, loc, f.line_offset + 1),
                     file=sys.stderr,
                 )
             else:
                 print(
-                    f'Guppy compilation failed. Error in file "{inspect.getsourcefile(f)}"\n',
+                    "Guppy compilation failed. "
+                    f"Error in file {inspect.getsourcefile(f.pyfun)}\n",
                     file=sys.stderr,
                 )
             print(
-                f"{err.__class__.__name__}: {err.get_msg(line_offset)}", file=sys.stderr
+                f"{err.__class__.__name__}: {err.get_msg(f.line_offset)}",
+                file=sys.stderr,
             )
             if exit_on_error:
                 sys.exit(1)

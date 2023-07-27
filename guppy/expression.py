@@ -1,5 +1,5 @@
 import ast
-from typing import Any, Iterator
+from typing import Any
 
 from guppy.ast_util import AstVisitor
 from guppy.compiler_base import CompilerBase, DFContainer, VarMap
@@ -18,6 +18,7 @@ from guppy.guppy_types import (
     FunctionType,
     type_from_python_value,
 )
+from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV, Hugr
 
 
@@ -217,23 +218,10 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         raise GuppyError(f"Binary operator `{ast.unparse(op)}` is not supported", op)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
-        # We need to figure out if this is a direct or indirect call
-        f = node.func
-        if (
-            isinstance(f, ast.Name)
-            and f.id in self.global_variables
-            and f.id not in self.dfg
-        ):
-            is_direct = True
-            var = self.global_variables[f.id]
-            func_port = var.port
-        else:
-            is_direct = False
-            func_port = self.visit(f)
-
+        func_port = self.visit(node.func)
         func_ty = func_port.ty
         if not isinstance(func_ty, FunctionType):
-            raise GuppyTypeError(f"Expected function type, got `{func_ty}`", f)
+            raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
         if len(node.keywords) > 0:
             # TODO: Implement this
             raise GuppyError(
@@ -255,6 +243,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
                     node.args[i],
                 )
 
+        is_direct = type(func_port.node.op) in (ops.FuncDecl, ops.FuncDefn)
         if is_direct:
             call = self.graph.add_call(func_port, args)
         else:

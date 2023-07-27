@@ -1,7 +1,15 @@
 import ast
+from typing import Sequence
 
 from guppy.ast_util import AstVisitor, AstNode
-from guppy.compiler_base import CompilerBase, DFContainer, Variable, return_var, VarMap
+from guppy.bb import BB, NestedFunctionDef
+from guppy.compiler_base import (
+    CompilerBase,
+    DFContainer,
+    Variable,
+    return_var,
+    VarMap,
+)
 from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import TupleType, TypeRow, GuppyType
@@ -18,6 +26,7 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
 
     expr_compiler: ExpressionCompiler
 
+    bb: BB
     dfg: DFContainer
     return_tys: list[GuppyType]
 
@@ -27,13 +36,18 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
         self.expr_compiler = ExpressionCompiler(graph, global_variables)
 
     def compile_stmts(
-        self, stmts: list[ast.stmt], dfg: DFContainer, return_tys: list[GuppyType]
+        self,
+        stmts: Sequence[ast.stmt],
+        bb: BB,
+        dfg: DFContainer,
+        return_tys: list[GuppyType],
     ) -> DFContainer:
         """Compiles a list of basic statements into a dataflow node.
 
         Note that the `dfg` is mutated in-place. After compilation, the DFG will also
         contain all variables that are assigned in the given list of statements.
         """
+        self.bb = bb
         self.dfg = dfg
         self.return_tys = return_tys
         for s in stmts:
@@ -134,6 +148,14 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
         for i, port in enumerate(row):
             name = return_var(i)
             self.dfg[name] = Variable(name, port, node)
+
+    def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> None:
+        from guppy.function import FunctionCompiler
+
+        port = FunctionCompiler(self.graph).compile_local(
+            node, self.dfg, self.bb, self.global_variables
+        )
+        self.dfg[node.name] = Variable(node.name, port, node)
 
     def visit_If(self, node: ast.If) -> None:
         raise InternalGuppyError("Control-flow statement should not be present here.")
