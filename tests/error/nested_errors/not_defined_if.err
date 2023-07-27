@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:9
+
+7:        def bar() -> int:
+8:            return 0
+9:    return bar()
+             ^^^
+GuppyError: Variable `bar` is not defined on all control-flow paths.

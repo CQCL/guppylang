@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:9
+
+7:    
+8:    def bar() -> None:
+9:        y += 2
+          ^^^^^^
+GuppyError: Variable `y` defined in an outer scope (at 6:4) may not be assigned to

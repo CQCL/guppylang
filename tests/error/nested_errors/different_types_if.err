@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:13
+
+11:            return False
+12:    
+13:    return bar()
+              ^^^
+GuppyError: Variable `bar` can refer to different types: `None -> int` (at 7:8) vs `None -> bool` (at 10:8)
