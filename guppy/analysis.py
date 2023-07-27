@@ -102,7 +102,7 @@ class LivenessAnalysis(BackwardAnalysis[LivenessDomain]):
 
     def eq(self, live1: LivenessDomain, live2: LivenessDomain) -> bool:
         # Only check that both contain the same variables. We don't care about the BB
-        # in which the use occurs, we just need a random one.
+        # in which the use occurs, we just need any one, to report to the user.
         return live1.keys() == live2.keys()
 
     def initial(self) -> LivenessDomain:
