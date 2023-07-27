@@ -339,23 +339,21 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
     def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
         head_bb = self.cfg.new_bb(bb)
-        body_bb = self.cfg.new_bb(head_bb)
+        body_end_bb = self.cfg.new_bb(head_bb)
         tail_bb = self.cfg.new_bb(head_bb)
         head_bb.branch_pred = node.test
 
         new_jumps = Jumps(
             return_bb=jumps.return_bb, continue_bb=head_bb, break_bb=tail_bb
         )
-        body_bb = self.visit_stmts(node.body, body_bb, new_jumps)
+        body_end_bb = self.visit_stmts(node.body, body_end_bb, new_jumps)
 
-        if body_bb is None:
-            # This happens if the loop body always returns. We continue with tail_bb
-            # nonetheless since the loop condition could be false for the first
-            # iteration, so it's not a guaranteed return
-            return tail_bb
+        # Go back to the head (but only the body doesn't do its jumping)
+        if body_end_bb is not None:
+            self.cfg.link(body_end_bb, head_bb)
 
-        # Otherwise, jump back to the head and continue compilation in the tail.
-        self.cfg.link(body_bb, head_bb)
+        # Continue compilation in the tail. This should even happen if the body does
+        # its own jumps since the body is not guaranteed to execute
         return tail_bb
 
     def visit_Continue(self, node: ast.Continue, bb: BB, jumps: Jumps) -> Optional[BB]:
