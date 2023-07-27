@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:7
+
+5:    def foo() -> int:
+6:        def bar() -> int:
+7:            return x
+                     ^
+GuppyError: Variable `x` is not defined
