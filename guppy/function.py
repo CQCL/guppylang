@@ -199,6 +199,18 @@ def type_from_ast(node: ast.expr) -> GuppyType:
             return StringType()
     elif isinstance(node, ast.Tuple):
         return TupleType([type_from_ast(el) for el in node.elts])
+    elif (
+        isinstance(node, ast.Subscript)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "Callable"
+        and isinstance(node.slice, ast.Tuple)
+        and len(node.slice.elts) == 2
+    ):
+        [args, ret] = node.slice.elts
+        if isinstance(args, ast.List):
+            return FunctionType(
+                [type_from_ast(a) for a in args.elts], type_row_from_ast(ret).tys
+            )
     # TODO: Remaining cases
     raise GuppyError(f"Invalid type: `{ast.unparse(node)}`", node)
 
