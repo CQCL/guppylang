@@ -61,7 +61,9 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         if x in self.dfg:
             return self.dfg.get_var(x).port
         elif x in self.global_variables:
-            load = self.graph.add_load_constant(self.global_variables[x].port, self.dfg.node)
+            load = self.graph.add_load_constant(
+                self.global_variables[x].port, self.dfg.node
+            )
             return load.out_port(0)
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in ExpressionCompiler. This should have "

@@ -145,7 +145,8 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
 
     def __init__(
         self,
-        bbs: Iterable[BB], ass_before_entry: set[str],
+        bbs: Iterable[BB],
+        ass_before_entry: set[str],
         maybe_ass_before_entry: set[str],
     ) -> None:
         """Constructs an `AssignmentAnalysis` pass for a CFG.

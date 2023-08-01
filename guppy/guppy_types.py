@@ -53,7 +53,7 @@ class FunctionType(GuppyType):
     returns: Sequence[GuppyType]
     arg_names: Optional[Sequence[str]] = field(
         default=None,
-        compare=False  # Argument names are not taken into account for type equality
+        compare=False,  # Argument names are not taken into account for type equality
     )
 
     def __str__(self) -> str:
