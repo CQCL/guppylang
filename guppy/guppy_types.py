@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Any, Sequence
 
 import guppy.hugr.tys as tys
@@ -51,7 +51,10 @@ class FloatType(GuppyType):
 class FunctionType(GuppyType):
     args: Sequence[GuppyType]
     returns: Sequence[GuppyType]
-    arg_names: Optional[Sequence[str]] = None
+    arg_names: Optional[Sequence[str]] = field(
+        default=None,
+        compare=False  # Argument names are not taken into account for type equality
+    )
 
     def __str__(self) -> str:
         return f"{TypeRow(self.args)} -> {TypeRow(self.returns)}"
