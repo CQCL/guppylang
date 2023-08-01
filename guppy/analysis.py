@@ -139,18 +139,24 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
     paths to a BB (the definitely assigned variables are a subset of this).
     """
 
+    all_vars: set[str]
     ass_before_entry: set[str]
 
-    def __init__(self, ass_before_entry: set[str]):
+    def __init__(self, bbs: Iterable[BB], ass_before_entry: set[str]):
         """Constructs an `AssignmentAnalysis` pass for a CFG.
 
         Also takes a set variables that are definitely assigned before the entry of the
         CFG (for example function arguments).
         """
         self.ass_before_entry = ass_before_entry
+        self.all_vars = (
+            set.union(*(set(bb.vars.assigned.keys()) for bb in bbs)) | ass_before_entry
+        )
 
     def initial(self) -> AssignmentDomain:
-        return self.ass_before_entry, self.ass_before_entry
+        # Note that definite assignment must start with `all_vars` instead of only
+        # `ass_before_entry` since we want to compute the *least* fixpoint.
+        return self.all_vars, self.ass_before_entry
 
     def join(self, *ts: AssignmentDomain) -> AssignmentDomain:
         # We always include the variables that are definitely assigned before the entry,

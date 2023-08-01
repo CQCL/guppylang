@@ -81,7 +81,7 @@ class CFG:
             bb.compute_variable_stats(len(return_tys))
         self.live_before = LivenessAnalysis().run(self.bbs)
         self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
-            {v.name for v in input_row}
+            self.bbs, {v.name for v in input_row}
         ).run_unpacked(self.bbs)
 
         # We start by compiling the entry BB
