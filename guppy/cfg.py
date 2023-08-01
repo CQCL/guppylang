@@ -339,14 +339,14 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
     def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
         head_bb = self.cfg.new_bb(bb)
-        body_end_bb = self.cfg.new_bb(head_bb)
+        body_bb = self.cfg.new_bb(head_bb)
         tail_bb = self.cfg.new_bb(head_bb)
         head_bb.branch_pred = node.test
 
         new_jumps = Jumps(
             return_bb=jumps.return_bb, continue_bb=head_bb, break_bb=tail_bb
         )
-        body_end_bb = self.visit_stmts(node.body, body_end_bb, new_jumps)
+        body_end_bb = self.visit_stmts(node.body, body_bb, new_jumps)
 
         # Go back to the head (but only the body doesn't do its jumping)
         if body_end_bb is not None:
