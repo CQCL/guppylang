@@ -155,7 +155,7 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
 
     def initial(self) -> AssignmentDomain:
         # Note that definite assignment must start with `all_vars` instead of only
-        # `ass_before_entry` since we want to compute the *least* fixpoint.
+        # `ass_before_entry` since we want to compute the *greatest* fixpoint.
         return self.all_vars, self.ass_before_entry
 
     def join(self, *ts: AssignmentDomain) -> AssignmentDomain:
