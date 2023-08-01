@@ -69,8 +69,8 @@ class GuppyFunction:
 class FunctionCompiler(CompilerBase):
     cfg_builder: CFGBuilder
 
-    def __init__(self, graph: Hugr):
-        self.graph = graph
+    def __init__(self, graph: Hugr, global_variables: VarMap):
+        super().__init__(graph, global_variables)
         self.cfg_builder = CFGBuilder()
 
     @staticmethod
@@ -111,10 +111,8 @@ class FunctionCompiler(CompilerBase):
         module: "GuppyModule",
         func_def: ast.FunctionDef,
         def_node: Node,
-        global_variables: VarMap,
     ) -> GuppyFunction:
-        self.global_variables = global_variables
-        func_ty = self.validate_signature(func_def)
+        func_ty = FunctionCompiler.validate_signature(func_def)
         args = func_def.args.args
 
         cfg = self.cfg_builder.build(func_def.body, len(func_ty.returns))
@@ -129,7 +127,11 @@ class FunctionCompiler(CompilerBase):
             for x, t, l in zip(func_ty.arg_names, func_ty.args, args)
         ]
         cfg.compile(
-            self.graph, input_sig, list(func_ty.returns), cfg_node, global_variables
+            self.graph,
+            input_sig,
+            list(func_ty.returns),
+            cfg_node,
+            self.global_variables,
         )
 
         # Add final output node for the def block
@@ -176,7 +178,6 @@ class GuppyModule(object):
     name: str
     graph: Hugr
     module_node: Node
-    compiler: FunctionCompiler
     # function, AST, source lines, line offset
     annotated_funcs: dict[
         str, tuple[Callable[..., Any], ast.FunctionDef, list[str], int]
@@ -187,7 +188,6 @@ class GuppyModule(object):
         self.name = name
         self.graph = Hugr(name)
         self.module_node = self.graph.set_root_name(self.name)
-        self.compiler = FunctionCompiler(self.graph)
         self.annotated_funcs = {}
         self.fun_decls = []
 
@@ -219,7 +219,7 @@ class GuppyModule(object):
                 source_lines,
                 line_offset,
             ) in self.annotated_funcs.items():
-                func_ty = self.compiler.validate_signature(func_ast)
+                func_ty = FunctionCompiler.validate_signature(func_ast)
                 def_node = self.graph.add_def(func_ty, self.module_node, func_ast.name)
                 defs[name] = def_node
                 global_variables[name] = Variable(name, def_node.out_port(0), func_ast)
@@ -229,8 +229,8 @@ class GuppyModule(object):
                 source_lines,
                 line_offset,
             ) in self.annotated_funcs.items():
-                func = self.compiler.compile(
-                    self, func_ast, defs[name], global_variables
+                func = FunctionCompiler(self.graph, global_variables).compile(
+                    self, func_ast, defs[name]
                 )
                 self.fun_decls.append(func)
             return self.graph

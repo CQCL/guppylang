@@ -9,11 +9,10 @@ from guppy.hugr.hugr import OutPortV, Hugr
 
 
 class StatementCompiler(CompilerBase, AstVisitor[None]):
-    """A compiler for basic statements occurring in a basic block.
+    """A compiler for non-control-flow statements occurring in a basic block.
 
     Control-flow statements like loops or if-statements are not handled by this
     compiler. They should be turned into a CFG made up of multiple simple basic blocks.
-    For now, this compiler only handles assignments and returns.
     """
 
     expr_compiler: ExpressionCompiler
@@ -22,8 +21,7 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
     return_tys: list[GuppyType]
 
     def __init__(self, graph: Hugr, global_variables: VarMap):
-        self.graph = graph
-        self.global_variables = global_variables
+        super().__init__(graph, global_variables)
         self.expr_compiler = ExpressionCompiler(graph, global_variables)
 
     def compile_stmts(
