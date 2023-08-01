@@ -58,9 +58,11 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
 
     def visit_Name(self, node: ast.Name) -> OutPortV:
         x = node.id
-        if x in self.dfg or x in self.global_variables:
-            var = self.dfg.get_var(x) or self.global_variables[x]
-            return var.port
+        if x in self.dfg:
+            return self.dfg.get_var(x).port
+        elif x in self.global_variables:
+            load = self.graph.add_load_constant(self.global_variables[x].port, self.dfg.node)
+            return load.out_port(0)
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in ExpressionCompiler. This should have "
             f"been caught by program analysis!"
@@ -214,7 +216,20 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         raise GuppyError(f"Binary operator `{ast.unparse(op)}` is not supported", op)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
-        func_port = self.visit(node.func)
+        # We need to figure out if this is a direct or indirect call
+        f = node.func
+        if (
+            isinstance(f, ast.Name)
+            and f.id in self.global_variables
+            and f.id not in self.dfg
+        ):
+            is_direct = True
+            var = self.global_variables[f.id]
+            func_port = var.port
+        else:
+            is_direct = False
+            func_port = self.visit(f)
+
         func_ty = func_port.ty
         if not isinstance(func_ty, FunctionType):
             raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
@@ -239,7 +254,6 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
                     node.args[i],
                 )
 
-        is_direct = type(func_port.node.op) in (ops.FuncDecl, ops.FuncDefn)
         if is_direct:
             call = self.graph.add_call(func_port, args)
         else:
