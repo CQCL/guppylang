@@ -59,7 +59,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
     def visit_Name(self, node: ast.Name) -> OutPortV:
         x = node.id
         if x in self.dfg:
-            return self.dfg.get_var(x).port
+            return self.dfg[x].port
         elif x in self.global_variables:
             load = self.graph.add_load_constant(
                 self.global_variables[x].port, self.dfg.node
