@@ -21,8 +21,8 @@ from guppy.hugr.hugr import Hugr, OutPortV, DFContainingVNode
 class FunctionCompiler(CompilerBase):
     cfg_builder: CFGBuilder
 
-    def __init__(self, graph: Hugr):
-        self.graph = graph
+    def __init__(self, graph: Hugr, global_variables: VarMap):
+        super().__init__(graph, global_variables)
         self.cfg_builder = CFGBuilder()
 
     @staticmethod

@@ -227,6 +227,10 @@ def render_hugr(hugr: Hugr, filename: str, format_st: str = "svg") -> None:
     gv_graph.render(filename, format=format_st)
 
 
+def commas(*args: str) -> str:
+    return ", ".join(args)
+
+
 def cfg_to_graphviz(
     cfg: "CFG",
     live_before: dict[BB, LivenessDomain],
@@ -235,13 +239,16 @@ def cfg_to_graphviz(
 ) -> gv.Digraph:
     graph = gv.Digraph("CFG", strict=False)
     for bb in cfg.bbs:
-        label = "assigned: " + ", ".join(bb.vars.assigned.keys()) + "\n"
-        label += "used: " + ", ".join(bb.vars.used.keys()) + "\n"
-        label += "maybe_ass_before: " + ", ".join(maybe_ass_before[bb]) + "\n"
-        label += "ass_before: " + ", ".join(ass_before[bb]) + "\n"
-        label += "live_before: " + ", ".join(live_before[bb].keys()) + "\n"
-        label += "--------\n"
-        label += "\n".join(ast.unparse(s) for s in bb.statements)
+        label = f"""
+assigned: {commas(*bb.vars.assigned)}
+used: {commas(*bb.vars.used)}
+maybe_ass_before: {commas(*maybe_ass_before[bb])}
+ass_before: {commas(*ass_before[bb])}
+live_before: {commas(*live_before[bb])}
+--------
+""" + "\n".join(
+            ast.unparse(s) for s in bb.statements
+        )
         if bb.branch_pred is not None:
             label += f"\n{ast.unparse(bb.branch_pred)} ?"
         graph.node(str(bb.idx), label, shape="rect")

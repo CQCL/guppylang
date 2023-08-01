@@ -77,7 +77,7 @@ class CFG:
             bb.compute_variable_stats(num_returns)
         self.live_before = LivenessAnalysis().run(self.bbs)
         self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
-            self.bbs, def_ass_before, maybe_ass_before
+            def_ass_before, maybe_ass_before
         ).run_unpacked(self.bbs)
 
     def compile(
@@ -151,7 +151,7 @@ class CFG:
                     raise GuppyError(f"Variable `{x}` is not defined", use)
 
         # Compile the basic block
-        block = graph.add_block(parent, num_sucessors=len(bb.successors))
+        block = graph.add_block(parent, num_successors=len(bb.successors))
         inp = graph.add_input(output_tys=[v.ty for v in input_row], parent=block)
         dfg = DFContainer(
             block,
@@ -187,7 +187,7 @@ class CFG:
             dfg[x] for x in self.live_before[bb.successors[0]] if x in dfg
         )
         if len(bb.successors) == 1:
-            # Even if wo don't branch, we still have to add a unit `Sum(())` predicate
+            # Even if we don't branch, we still have to add a `Sum(())` predicate
             unit = graph.add_make_tuple([], parent=block).out_port(0)
             branch_port = graph.add_tag(
                 variants=[TupleType([])], tag=0, inp=unit, parent=block
@@ -199,7 +199,7 @@ class CFG:
             branch_port = expr_compiler.compile(bb.branch_pred, dfg)
             assert_bool_type(branch_port.ty, bb.branch_pred)
             first, *rest = bb.successors
-            # If the branches use different variables, we have to use output a Sum-type
+            # If the branches use different variables, we have to output a Sum-type
             # predicate
             if any(
                 self.live_before[r].keys() != self.live_before[first].keys()
@@ -377,16 +377,14 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         new_jumps = Jumps(
             return_bb=jumps.return_bb, continue_bb=head_bb, break_bb=tail_bb
         )
-        body_bb = self.visit_stmts(node.body, body_bb, new_jumps)
+        body_end_bb = self.visit_stmts(node.body, body_bb, new_jumps)
 
-        if body_bb is None:
-            # This happens if the loop body always returns. We continue with tail_bb
-            # nonetheless since the loop condition could be false for the first
-            # iteration, so it's not a guaranteed return
-            return tail_bb
+        # Go back to the head (but only the body doesn't do its jumping)
+        if body_end_bb is not None:
+            self.cfg.link(body_end_bb, head_bb)
 
-        # Otherwise, jump back to the head and continue compilation in the tail.
-        self.cfg.link(body_bb, head_bb)
+        # Continue compilation in the tail. This should even happen if the body does
+        # its own jumps since the body is not guaranteed to execute
         return tail_bb
 
     def visit_Continue(self, node: ast.Continue, bb: BB, jumps: Jumps) -> Optional[BB]:

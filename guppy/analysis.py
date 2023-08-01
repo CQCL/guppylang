@@ -102,7 +102,7 @@ class LivenessAnalysis(BackwardAnalysis[LivenessDomain]):
 
     def eq(self, live1: LivenessDomain, live2: LivenessDomain) -> bool:
         # Only check that both contain the same variables. We don't care about the BB
-        # in which the use occurs, we just need a random one.
+        # in which the use occurs, we just need any one, to report to the user.
         return live1.keys() == live2.keys()
 
     def initial(self) -> LivenessDomain:
@@ -139,13 +139,11 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
     paths to a BB (the definitely assigned variables are a subset of this).
     """
 
-    all_vars: set[str]
     ass_before_entry: set[str]
     maybe_ass_before_entry: set[str]
 
     def __init__(
         self,
-        bbs: Iterable[BB],
         ass_before_entry: set[str],
         maybe_ass_before_entry: set[str],
     ) -> None:
@@ -157,13 +155,9 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
         assert ass_before_entry.issubset(maybe_ass_before_entry)
         self.ass_before_entry = ass_before_entry
         self.maybe_ass_before_entry = maybe_ass_before_entry
-        self.all_vars = (
-            set.union(*(set(bb.vars.assigned.keys()) for bb in bbs))
-            | maybe_ass_before_entry
-        )
 
     def initial(self) -> AssignmentDomain:
-        return self.all_vars, self.ass_before_entry
+        return self.ass_before_entry, self.ass_before_entry
 
     def join(self, *ts: AssignmentDomain) -> AssignmentDomain:
         # We always include the variables that are definitely assigned before the entry,

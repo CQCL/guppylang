@@ -79,7 +79,6 @@ class GuppyModule(object):
         self.name = name
         self.graph = Hugr(name)
         self.module_node = self.graph.set_root_name(self.name)
-        self.compiler = FunctionCompiler(self.graph)
         self.annotated_funcs = {}
         self.fun_decls = []
 
@@ -108,12 +107,14 @@ class GuppyModule(object):
             global_variables = {}
             defs = {}
             for name, f in self.annotated_funcs.items():
-                func_ty = self.compiler.validate_signature(f.ast)
+                func_ty = FunctionCompiler.validate_signature(f.ast)
                 def_node = self.graph.add_def(func_ty, self.module_node, f.ast.name)
                 defs[name] = def_node
                 global_variables[name] = Variable(name, def_node.out_port(0), f.ast)
             for name, f in self.annotated_funcs.items():
-                port = self.compiler.compile_global(f.ast, defs[name], global_variables)
+                port = FunctionCompiler(self.graph, global_variables).compile_global(
+                    f.ast, defs[name], global_variables
+                )
                 assert isinstance(port.ty, FunctionType)
                 self.fun_decls.append(
                     GuppyFunction(name, self, port.node, port.ty, f.ast)

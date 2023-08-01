@@ -80,6 +80,10 @@ class CompilerBase(ABC):
     graph: Hugr
     global_variables: VarMap
 
+    def __init__(self, graph: Hugr, global_variables: VarMap) -> None:
+        self.graph = graph
+        self.global_variables = global_variables
+
 
 def return_var(n: int) -> str:
     """Name of the dummy variable for the n-th return value of a function.
