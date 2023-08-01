@@ -77,7 +77,7 @@ class CFG:
             bb.compute_variable_stats(num_returns)
         self.live_before = LivenessAnalysis().run(self.bbs)
         self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
-            def_ass_before, maybe_ass_before
+            self.bbs, def_ass_before, maybe_ass_before
         ).run_unpacked(self.bbs)
 
     def compile(
