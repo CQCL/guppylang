@@ -1,9 +1,15 @@
 """Visualise HUGR using graphviz."""
+import ast
 
 import graphviz as gv  # type: ignore
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
 
+from guppy.analysis import LivenessDomain, DefAssignmentDomain, MaybeAssignmentDomain
+from guppy.bb import BB
 from guppy.hugr.hugr import InPort, OutPort, Node, Hugr, OutPortV
+
+if TYPE_CHECKING:
+    from guppy.cfg import CFG
 
 # old palettte: https://colorhunt.co/palette/343a407952b3ffc107e1e8eb
 # _COLOURS = {
@@ -202,4 +208,46 @@ def hugr_to_graphviz(hugr: Hugr) -> gv.Digraph:
 
 def render_hugr(hugr: Hugr, filename: str, format_st: str = "svg") -> None:
     gv_graph = hugr_to_graphviz(hugr)
+    gv_graph.render(filename, format=format_st)
+
+
+def commas(*args: str) -> str:
+    return ", ".join(args)
+
+
+def cfg_to_graphviz(
+    cfg: "CFG",
+    live_before: dict[BB, LivenessDomain],
+    ass_before: dict[BB, DefAssignmentDomain],
+    maybe_ass_before: dict[BB, MaybeAssignmentDomain],
+) -> gv.Digraph:
+    graph = gv.Digraph("CFG", strict=False)
+    for bb in cfg.bbs:
+        label = f"""
+assigned: {commas(*bb.vars.assigned)}
+used: {commas(*bb.vars.used)}
+maybe_ass_before: {commas(*maybe_ass_before[bb])}
+ass_before: {commas(*ass_before[bb])}
+live_before: {commas(*live_before[bb])}
+--------
+""" + "\n".join(
+            ast.unparse(s) for s in bb.statements
+        )
+        if bb.branch_pred is not None:
+            label += f"\n{ast.unparse(bb.branch_pred)} ?"
+        graph.node(str(bb.idx), label, shape="rect")
+        for succ in bb.successors:
+            graph.edge(str(bb.idx), str(succ.idx))
+    return graph
+
+
+def render_cfg(
+    cfg: "CFG",
+    live_before: dict[BB, LivenessDomain],
+    ass_before: dict[BB, DefAssignmentDomain],
+    maybe_ass_before: dict[BB, MaybeAssignmentDomain],
+    filename: str,
+    format_st: str = "svg",
+) -> None:
+    gv_graph = cfg_to_graphviz(cfg, live_before, ass_before, maybe_ass_before)
     gv_graph.render(filename, format=format_st)

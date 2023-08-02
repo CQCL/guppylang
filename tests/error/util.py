@@ -1,4 +1,5 @@
 import importlib.util
+import pathlib
 from typing import Callable, Optional, Any
 
 import pytest
@@ -15,6 +16,7 @@ def guppy(f: Callable[..., Any]) -> Optional[Hugr]:
 
 
 def run_error_test(file, capsys):
+    file = pathlib.Path(file)
     spec = importlib.util.spec_from_file_location("test_module", file)
     py_module = importlib.util.module_from_spec(spec)
 

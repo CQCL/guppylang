@@ -408,12 +408,14 @@ class Hugr:
             parent.output_child = node
         return node
 
-    def add_block(self, parent: Optional[Node]) -> BlockNode:
+    def add_block(self, parent: Optional[Node], num_successors: int = 0) -> BlockNode:
         """Adds a `Block` node to the graph."""
         node = BlockNode(
             idx=self._graph.number_of_nodes(), op=ops.DFB(), parent=parent, meta_data={}
         )
         self._insert_node(node)
+        for _ in range(num_successors):
+            node.add_out_port()
         return node
 
     def add_exit(self, output_tys: TypeList, parent: Node) -> CFNode:
@@ -674,27 +676,26 @@ class Hugr:
         all_nodes = self.nodes()
         root_node = next(all_nodes)
         for n in all_nodes:
-            if isinstance(n.op, ops.DataflowOp) and isinstance(n.op, ops.Input):
+            if isinstance(n.op, ops.Input):
                 input_nodes.append(n)
-            elif isinstance(n.op, ops.DataflowOp) and isinstance(n.op, ops.Output):
+            elif isinstance(n.op, ops.Output):
                 output_nodes.append(n)
             elif (
-                isinstance(n.op, ops.BasicBlock)
-                and isinstance(n.op, ops.DFB)
-                and n.num_in_ports == 0
+                isinstance(n.op, ops.DFB)
+                and next(self.in_edges(n.in_port(None)), None) == None
             ):
                 entry_nodes.append(n)
-            elif isinstance(n.op, ops.BasicBlock) and isinstance(n.op, ops.Exit):
-                entry_nodes.append(n)
+            elif isinstance(n.op, ops.Exit):
+                exit_nodes.append(n)
             else:
                 remaining_nodes.append(n)
         for n in itertools.chain(
             iter([root_node]),
             iter(entry_nodes),
+            iter(exit_nodes),
             iter(input_nodes),
             iter(output_nodes),
             iter(remaining_nodes),
-            iter(exit_nodes),
         ):
             raw_index[n.idx] = next(indices)
 

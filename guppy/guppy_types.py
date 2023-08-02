@@ -48,18 +48,6 @@ class FloatType(GuppyType):
 
 
 @dataclass(frozen=True)
-class BoolType(GuppyType):
-    def __str__(self) -> str:
-        return "bool"
-
-    def to_hugr(self) -> tys.SimpleType:
-        # Hugr bools are encoded as Sum((), ())
-        unit = tys.Tuple(row=[], l=False)
-        s = tys.Sum(row=[unit, unit], l=False)
-        return s
-
-
-@dataclass(frozen=True)
 class FunctionType(GuppyType):
     args: Sequence[GuppyType]
     returns: Sequence[GuppyType]
@@ -100,6 +88,16 @@ class SumType(GuppyType):
         ts = [t.to_hugr() for t in self.element_types]
         # As soon as one element is linear, the whole sum type must be linear
         return tys.Sum(row=ts, l=any(tys.is_linear(t) for t in ts))
+
+
+@dataclass(frozen=True)
+class BoolType(SumType):
+    def __init__(self) -> None:
+        # Hugr bools are encoded as Sum((), ())
+        super().__init__([TupleType([]), TupleType([])])
+
+    def __str__(self) -> str:
+        return "bool"
 
 
 @dataclass(frozen=True)
