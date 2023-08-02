@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:9
+
+7:    @module.declare
+8:    def foo(x: int) -> int:
+9:        return x
+          ^^^^^^^^
+GuppyError: Declared functions may not have a body.

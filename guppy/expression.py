@@ -59,6 +59,14 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         x = node.id
         if x in self.dfg or x in self.global_variables:
             var = self.dfg.get_var(x) or self.global_variables[x]
+            if var.ty.linear and var.used is not None:
+                raise GuppyError(
+                    f"Variable `{x}` with linear type `{var.ty}` was "
+                    "already used (at {0})",
+                    node,
+                    [var.used],
+                )
+            var.used = node
             return var.port
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in ExpressionCompiler. This should have "
