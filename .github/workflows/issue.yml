@@ -1,0 +1,35 @@
+name: New issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  jira_task:
+    name: Create Jira issue
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Login
+      uses: atlassian/gajira-login@v3.0.1
+      env:
+        JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+        JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+        JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+    - name: Create Bug
+      uses: atlassian/gajira-create@v3.0.1
+      if: "contains(github.event.issue.labels.*.name, 'bug')"
+      with:
+        project: TKET
+        issuetype: Bug
+        summary: « [guppy] ${{ github.event.issue.title }}»
+        description: ${{ github.event.issue.html_url }}
+        fields: '{"labels": ["guppy"]}'
+    - name: Create Task
+      uses: atlassian/gajira-create@v3.0.1
+      if: "! contains(github.event.issue.labels.*.name, 'bug')"
+      with:
+        project: TKET
+        issuetype: Task
+        summary: « [guppy] ${{ github.event.issue.title }}»
+        description: ${{ github.event.issue.html_url }}
+        fields: '{"labels": ["guppy"]}'

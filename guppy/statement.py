@@ -1,7 +1,7 @@
 import ast
 from typing import Sequence
 
-from guppy.ast_util import AstVisitor, AstNode
+from guppy.ast_util import AstVisitor, AstNode, line_col
 from guppy.bb import BB, NestedFunctionDef
 from guppy.compiler_base import (
     CompilerBase,
@@ -80,7 +80,17 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
                         inputs=ports, parent=self.dfg.node
                     ).out_port(0)
                 )
-                self.dfg[pattern.id] = Variable(pattern.id, port, node)
+                # Check if we override an unused linear variable
+                x = pattern.id
+                if x in self.dfg:
+                    var = self.dfg[x]
+                    if var.ty.linear and var.used is None:
+                        raise GuppyError(
+                            f"Variable `{x}` with linear type `{var.ty}` "
+                            "is not used",
+                            var.defined_at,
+                        )
+                self.dfg[x] = Variable(x, port, node)
             # The only other thing we support right now are tuples
             elif isinstance(pattern, ast.Tuple):
                 if len(ports) == 1 and isinstance(ports[0].ty, TupleType):

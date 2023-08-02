@@ -163,9 +163,9 @@ class CFG:
         stmt_compiler = StatementCompiler(graph, global_variables)
         dfg = stmt_compiler.compile_stmts(bb.statements, bb, dfg, return_tys)
 
-        # Check that we have all variables that are requested by the successors
         for succ in bb.successors:
             for x, use_bb in self.live_before[succ].items():
+                # Check that the variable requested by the successor are defined
                 if x not in dfg and x not in global_variables:
                     # If the variable is defined on *some* paths, we can give a more
                     # informative error message
@@ -179,6 +179,29 @@ class CFG:
                         )
                     raise GuppyError(
                         f"Variable `{x}` is not defined", use_bb.vars.used[x]
+                    )
+
+                # We have to check that used linear variables are not being outputted
+                if x in dfg:
+                    var = dfg[x]
+                    if var.ty.linear and var.used:
+                        raise GuppyError(
+                            f"Variable `{x}` with linear type `{var.ty}` was "
+                            "already used (at {0})",
+                            self.live_before[succ][x].vars.used[x],
+                            [var.used],
+                        )
+
+            # On the other hand, unused linear variables *must* be outputted
+            for x, var in dfg.variables.items():
+                if var.ty.linear and not var.used and x not in self.live_before[succ]:
+                    # TODO: This should be "Variable x with linear type ty is not
+                    #  used in {bb}". But for this we need a way to associate BBs with
+                    #  source locations.
+                    raise GuppyError(
+                        f"Variable `{x}` with linear type `{var.ty}` is "
+                        "not used on all control-flow paths",
+                        var.defined_at,
                     )
 
         # Finally, we have to add the block output. The easy case is if we don't branch:
@@ -205,16 +228,30 @@ class CFG:
                 self.live_before[r].keys() != self.live_before[first].keys()
                 for r in rest
             ):
+                # We put all non-linear variables into the branch predicate and all
+                # linear variables in the normal output (since they are shared between
+                # all successors). This is in line with the definition of `<` on
+                # variables which puts linear variables at the end.
                 branch_port = self._choose_vars_for_pred(
                     graph=graph,
                     pred=branch_port,
                     output_vars=[
-                        sorted(self.live_before[succ].keys() & dfg.variables.keys())
+                        sorted(
+                            x
+                            for x in self.live_before[succ]
+                            if x in dfg and not dfg[x].ty.linear
+                        )
                         for succ in bb.successors
                     ],
                     dfg=dfg,
                 )
-                output_vars = []
+                output_vars = sorted(
+                    dfg[x]
+                    # We can look at `successors[0]` here since all successors must have
+                    # the same `live_before` linear variables
+                    for x in self.live_before[bb.successors[0]]
+                    if x in dfg and dfg[x].ty.linear
+                )
 
         graph.add_output(
             inputs=[branch_port] + [v.port for v in output_vars], parent=block

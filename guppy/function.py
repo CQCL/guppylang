@@ -13,7 +13,7 @@ from guppy.guppy_types import (
     BoolType,
     StringType,
     TupleType,
-    TypeRow,
+    TypeRow, QubitType,
 )
 from guppy.hugr.hugr import Hugr, OutPortV, DFContainingVNode
 
@@ -197,8 +197,15 @@ def type_from_ast(node: ast.expr) -> GuppyType:
             return BoolType()
         elif node.id == "str":
             return StringType()
+        elif node.id == "qubit":
+            return QubitType()
     elif isinstance(node, ast.Tuple):
         return TupleType([type_from_ast(el) for el in node.elts])
+    elif isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id == "tuple":
+        if isinstance(node.slice, ast.Tuple):
+            return TupleType([type_from_ast(e) for e in node.slice.elts])
+        else:
+            return TupleType([type_from_ast(node.slice)])
     elif (
         isinstance(node, ast.Subscript)
         and isinstance(node.value, ast.Name)
@@ -223,4 +230,8 @@ def type_row_from_ast(node: ast.expr) -> TypeRow:
     # The return type `-> None` is represented in the ast as `ast.Constant(value=None)`
     if isinstance(node, ast.Constant) and node.value is None:
         return TypeRow([])
-    return TypeRow([type_from_ast(e) for e in expr_to_row(node)])
+    ty = type_from_ast(node)
+    if isinstance(ty, TupleType):
+        return TypeRow(ty.element_types)
+    else:
+        return TypeRow([ty])

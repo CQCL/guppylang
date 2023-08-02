@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:20
+
+18:    @module
+19:    def foo(b: bool) -> bool:
+20:        q = new_qubit()
+           ^^^^^^^^^^^^^^^
+GuppyError: Variable `q` with linear type `qubit` is not used on all control-flow paths

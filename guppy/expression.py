@@ -59,6 +59,15 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
     def visit_Name(self, node: ast.Name) -> OutPortV:
         x = node.id
         if x in self.dfg:
+            var = self.dfg[x]
+            if var.ty.linear and var.used is not None:
+                raise GuppyError(
+                    f"Variable `{x}` with linear type `{var.ty}` was "
+                    "already used (at {0})",
+                    node,
+                    [var.used],
+                )
+            var.used = node
             return self.dfg[x].port
         elif x in self.global_variables:
             load = self.graph.add_load_constant(
