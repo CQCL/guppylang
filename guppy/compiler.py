@@ -17,6 +17,7 @@ from guppy.guppy_types import (
     TupleType,
     TypeRow,
     StringType,
+    QubitType,
 )
 from guppy.hugr.hugr import Hugr, Node
 from guppy.error import GuppyError, SourceLoc
@@ -33,8 +34,16 @@ def type_from_ast(node: ast.expr) -> GuppyType:
             return BoolType()
         elif node.id == "str":
             return StringType()
+        elif node.id == "qubit":
+            return QubitType()
     elif isinstance(node, ast.Tuple):
         return TupleType([type_from_ast(el) for el in node.elts])
+    elif isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
+        if node.value.id == "tuple":
+            if isinstance(node.slice, ast.Tuple):
+                return TupleType([type_from_ast(e) for e in node.slice.elts])
+            else:
+                return TupleType([type_from_ast(node.slice)])
     # TODO: Remaining cases
     raise GuppyError(f"Invalid type: `{ast.unparse(node)}`", node)
 
@@ -47,7 +56,21 @@ def type_row_from_ast(node: ast.expr) -> TypeRow:
     # The return type `-> None` is represented in the ast as `ast.Constant(value=None)`
     if isinstance(node, ast.Constant) and node.value is None:
         return TypeRow([])
-    return TypeRow([type_from_ast(e) for e in expr_to_row(node)])
+    # Unpack top-level tuple into row
+    if (
+        isinstance(node, ast.Subscript)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "tuple"
+    ):
+        if isinstance(node.slice, ast.Tuple):
+            nodes = node.slice.elts
+        else:
+            nodes = [node.slice]
+    elif isinstance(node, ast.Tuple):
+        nodes = node.elts
+    else:
+        nodes = [node]
+    return TypeRow([type_from_ast(e) for e in nodes])
 
 
 @dataclass
@@ -178,6 +201,11 @@ class GuppyModule(object):
     name: str
     graph: Hugr
     module_node: Node
+    compiler: FunctionCompiler
+    # function, AST, source lines, line offset
+    declared_funcs: dict[
+        str, tuple[Callable[..., Any], ast.FunctionDef, list[str], int]
+    ]
     # function, AST, source lines, line offset
     annotated_funcs: dict[
         str, tuple[Callable[..., Any], ast.FunctionDef, list[str], int]
@@ -189,14 +217,24 @@ class GuppyModule(object):
         self.graph = Hugr(name)
         self.module_node = self.graph.set_root_name(self.name)
         self.annotated_funcs = {}
+        self.declared_funcs = {}
         self.fun_decls = []
 
     def __call__(self, f: Callable[..., Any]) -> None:
+        f, func_ast, source_lines, line_offset = self._parse(f)
+        self.annotated_funcs[func_ast.name] = f, func_ast, source_lines, line_offset
+
+    def declare(self, f: Callable[..., Any]) -> None:
+        f, func_ast, source_lines, line_offset = self._parse(f)
+        self.declared_funcs[func_ast.name] = f, func_ast, source_lines, line_offset
+
+    def _parse(
+        self, f: Callable[..., Any]
+    ) -> tuple[Callable[..., Any], ast.FunctionDef, list[str], int]:
         source_lines, line_offset = inspect.getsourcelines(f)
         line_offset -= 1
         source = "".join(source_lines)  # Lines already have trailing \n's
         source = textwrap.dedent(source)
-
         func_ast = ast.parse(source).body[0]
         if not isinstance(func_ast, ast.FunctionDef):
             raise GuppyError("Only functions can be placed in modules", func_ast)
@@ -206,7 +244,7 @@ class GuppyModule(object):
                 f"(declared at {SourceLoc.from_ast(self.annotated_funcs[func_ast.name][1], line_offset)})",
                 func_ast,
             )
-        self.annotated_funcs[func_ast.name] = f, func_ast, source_lines, line_offset
+        return f, func_ast, source_lines, line_offset
 
     def compile(self, exit_on_error: bool = False) -> Optional[Hugr]:
         """Compiles the module and returns the final Hugr."""
@@ -223,6 +261,21 @@ class GuppyModule(object):
                 def_node = self.graph.add_def(func_ty, self.module_node, func_ast.name)
                 defs[name] = def_node
                 global_variables[name] = Variable(name, def_node.out_port(0), func_ast)
+            for name, (
+                f,
+                func_ast,
+                source_lines,
+                line_offset,
+            ) in self.declared_funcs.items():
+                func_ty = FunctionCompiler.validate_signature(func_ast)
+                if len(func_ast.body) > 1 or not isinstance(func_ast.body[0], ast.Pass):
+                    raise GuppyError(
+                        "Declared functions may not have a body.", func_ast.body[0]
+                    )
+                decl_node = self.graph.add_declare(
+                    func_ty, self.module_node, func_ast.name
+                )
+                global_variables[name] = Variable(name, decl_node.out_port(0), func_ast)
             for name, (
                 f,
                 func_ast,
