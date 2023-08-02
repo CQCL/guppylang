@@ -13,7 +13,8 @@ from guppy.guppy_types import (
     BoolType,
     StringType,
     TupleType,
-    TypeRow, QubitType,
+    TypeRow,
+    QubitType,
 )
 from guppy.hugr.hugr import Hugr, OutPortV, DFContainingVNode
 
@@ -201,7 +202,11 @@ def type_from_ast(node: ast.expr) -> GuppyType:
             return QubitType()
     elif isinstance(node, ast.Tuple):
         return TupleType([type_from_ast(el) for el in node.elts])
-    elif isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id == "tuple":
+    elif (
+        isinstance(node, ast.Subscript)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "tuple"
+    ):
         if isinstance(node.slice, ast.Tuple):
             return TupleType([type_from_ast(e) for e in node.slice.elts])
         else:
