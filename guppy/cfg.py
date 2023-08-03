@@ -380,7 +380,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
     def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> Optional[BB]:
         then_bb, else_bb = self.cfg.new_bb(), self.cfg.new_bb()
-        BranchBuilder.build(node.test, self.cfg, bb, then_bb, else_bb)
+        BranchBuilder.add_branch(node.test, self.cfg, bb, then_bb, else_bb)
         then_bb = self.visit_stmts(node.body, then_bb, jumps)
         else_bb = self.visit_stmts(node.orelse, else_bb, jumps)
         # We need to handle different cases depending on whether branches jump (i.e.
@@ -398,7 +398,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
         head_bb = self.cfg.new_bb(bb)
         body_bb, tail_bb = self.cfg.new_bb(), self.cfg.new_bb()
-        BranchBuilder.build(node.test, self.cfg, head_bb, body_bb, tail_bb)
+        BranchBuilder.add_branch(node.test, self.cfg, head_bb, body_bb, tail_bb)
 
         new_jumps = Jumps(
             return_bb=jumps.return_bb, continue_bb=head_bb, break_bb=tail_bb
@@ -494,7 +494,7 @@ class ExprBuilder(ast.NodeTransformer):
 
     def visit_IfExp(self, node: ast.IfExp) -> ast.Name:
         if_bb, else_bb = self.cfg.new_bb(), self.cfg.new_bb()
-        BranchBuilder.build(node.test, self.cfg, self.bb, if_bb, else_bb)
+        BranchBuilder.add_branch(node.test, self.cfg, self.bb, if_bb, else_bb)
 
         if_expr, if_bb = self.build(node.body, self.cfg, if_bb)
         else_expr, else_bb = self.build(node.orelse, self.cfg, else_bb)
@@ -518,7 +518,7 @@ class ExprBuilder(ast.NodeTransformer):
         if is_short_circuit_expr(node):
             assert isinstance(node, ast.expr)
             true_bb, false_bb = self.cfg.new_bb(), self.cfg.new_bb()
-            BranchBuilder.build(node, self.cfg, self.bb, true_bb, false_bb)
+            BranchBuilder.add_branch(node, self.cfg, self.bb, true_bb, false_bb)
             true_const = ast.Constant(value=True)
             false_const = ast.Constant(value=False)
             set_location_from(true_const, node)
@@ -547,7 +547,7 @@ class BranchBuilder(AstVisitor[None]):
         self.cfg = cfg
 
     @staticmethod
-    def build(node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB) -> None:
+    def add_branch(node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB) -> None:
         """Builds an expression and branches to `true_bb` or `false_bb`, depending on
         the truth value of the expression."""
         builder = BranchBuilder(cfg)
