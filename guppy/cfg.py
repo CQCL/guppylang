@@ -16,7 +16,7 @@ from guppy.analysis import (
 from guppy.bb import BB, VarRow, Signature
 from guppy.compiler_base import VarMap, DFContainer, Variable
 from guppy.error import InternalGuppyError, GuppyError, assert_bool_type
-from guppy.ast_util import AstVisitor, line_col, set_location
+from guppy.ast_util import AstVisitor, line_col, set_location_from
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import GuppyType, TupleType, SumType
 from guppy.hugr.hugr import Node, Hugr, CFNode, OutPortV
@@ -482,14 +482,14 @@ class ExprBuilder(ast.NodeTransformer):
         """Creates an `ast.Name` node."""
         node = ast.Name(id=name, ctx=ast.Load)
         if loc is not None:
-            set_location(node, loc)
+            set_location_from(node, loc)
         return node
 
     @classmethod
     def _tmp_assign(cls, tmp_name: str, value: ast.expr, bb: BB) -> None:
         """Adds a temporary variable assignment to a basic block."""
         node = ast.Assign(targets=[cls._make_var(tmp_name, value)], value=value)
-        set_location(node, value)
+        set_location_from(node, value)
         bb.statements.append(node)
 
     def visit_Name(self, node: ast.Name) -> ast.Name:
@@ -501,7 +501,7 @@ class ExprBuilder(ast.NodeTransformer):
         if not isinstance(node.target, ast.Name):
             raise InternalGuppyError(f"Unexpected assign target: {node.target}")
         assign = ast.Assign(targets=[node.target], value=self.visit(node.value))
-        set_location(assign, node)
+        set_location_from(assign, node)
         self.bb.statements.append(assign)
         return node.target
 
@@ -534,8 +534,8 @@ class ExprBuilder(ast.NodeTransformer):
             BranchBuilder.build(node, self.cfg, self.bb, true_bb, false_bb)
             true_const = ast.Constant(value=True)
             false_const = ast.Constant(value=False)
-            set_location(true_const, node)
-            set_location(false_const, node)
+            set_location_from(true_const, node)
+            set_location_from(false_const, node)
             tmp = next(tmp_vars)
             self._tmp_assign(tmp, true_const, true_bb)
             self._tmp_assign(tmp, false_const, false_bb)
@@ -620,7 +620,7 @@ class BranchBuilder(AstVisitor[None]):
                 for left, op, right in zip(comparators[:-1], node.ops, comparators[1:])
             ]
             conj = ast.BoolOp(op=ast.And(), values=values)
-            set_location(conj, node)
+            set_location_from(conj, node)
             self.visit_BoolOp(conj, bb, true_bb, false_bb)
         else:
             self.generic_visit(node, bb, true_bb, false_bb)
