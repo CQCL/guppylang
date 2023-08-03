@@ -13,27 +13,14 @@ from guppy.analysis import (
     MaybeAssignmentDomain,
     Result,
 )
-from guppy.bb import BB, VarRow, Signature
+from guppy.bb import BB, VarRow, Signature, CompiledBB
 from guppy.compiler_base import VarMap, DFContainer, Variable
 from guppy.error import InternalGuppyError, GuppyError, assert_bool_type
 from guppy.ast_util import AstVisitor, line_col, set_location_from
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import GuppyType, TupleType, SumType
-from guppy.hugr.hugr import Node, Hugr, CFNode, OutPortV
+from guppy.hugr.hugr import Node, Hugr, OutPortV
 from guppy.statement import StatementCompiler
-
-
-@dataclass
-class CompiledBB:
-    """The result of compiling a basic block.
-
-    Besides the corresponding node in the graph, we also store the signature of the
-    basic block with type information.
-    """
-
-    node: CFNode
-    bb: BB
-    sig: Signature
 
 
 class CFG:

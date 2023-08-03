@@ -44,7 +44,7 @@ class Signature:
     output_rows: Sequence[VarRow]  # One for each successor
 
 
-@dataclass
+@dataclass(frozen=True)
 class CompiledBB:
     """The result of compiling a basic block.
 
