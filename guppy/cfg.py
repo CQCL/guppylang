@@ -387,6 +387,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         return self._build_node_value(node, bb)
 
     def visit_Expr(self, node: ast.Expr, bb: BB, jumps: Jumps) -> Optional[BB]:
+        # This is an expression statement where the value is discarded
         _, bb = ExprBuilder.build(node.value, self.cfg, bb)
         return bb
 
