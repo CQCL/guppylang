@@ -3,7 +3,7 @@ import collections
 import itertools
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Optional, NamedTuple, Iterator
+from typing import Optional, NamedTuple, Iterator, Union
 
 from guppy.analysis import (
     LivenessDomain,
@@ -365,17 +365,26 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
                 bb_opt = self.visit(node, bb_opt, jumps)
         return bb_opt
 
-    def visit_Assign(self, node: ast.Assign, bb: BB, jumps: Jumps) -> Optional[BB]:
-        node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
+    def _build_node_value(
+        self, node: Union[ast.Assign, ast.AugAssign, ast.Return], bb: BB
+    ) -> BB:
+        """Utility method for building a node containing a `value` expression.
+
+        Builds the expression and mutates `node.value` to point to the built expression.
+        Returns the BB in which the expression is available and adds the node to it.
+        """
+        if node.value is not None:
+            node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
         return bb
+
+    def visit_Assign(self, node: ast.Assign, bb: BB, jumps: Jumps) -> Optional[BB]:
+        return self._build_node_value(node, bb)
 
     def visit_AugAssign(
         self, node: ast.AugAssign, bb: BB, jumps: Jumps
     ) -> Optional[BB]:
-        node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
-        bb.statements.append(node)
-        return bb
+        return self._build_node_value(node, bb)
 
     def visit_Expr(self, node: ast.Expr, bb: BB, jumps: Jumps) -> Optional[BB]:
         _, bb = ExprBuilder.build(node.value, self.cfg, bb)
@@ -429,10 +438,8 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         return None
 
     def visit_Return(self, node: ast.Return, bb: BB, jumps: Jumps) -> Optional[BB]:
-        if node.value is not None:
-            node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
+        bb = self._build_node_value(node, bb)
         self.cfg.link(bb, jumps.return_bb)
-        bb.statements.append(node)
         return None
 
     def visit_Pass(self, node: ast.Pass, bb: BB, jumps: Jumps) -> Optional[BB]:
