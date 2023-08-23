@@ -1,5 +1,6 @@
 import ast
 
+from guppy.ast_util import return_nodes_in_ast
 from guppy.bb import BB, NestedFunctionDef
 from guppy.cfg import CFGBuilder
 from guppy.compiler_base import CompilerBase, VarMap, RawVariable, DFContainer, Variable
@@ -43,9 +44,13 @@ class FunctionCompiler(CompilerBase):
         if func_def.args.kwarg is not None:
             raise GuppyError("**kwargs not supported", func_def.args.kwarg)
         if func_def.returns is None:
-            raise GuppyError(
-                "Return type must be annotated", func_def
-            )  # TODO: Error location is incorrect
+            # TODO: Error location is incorrect
+            if all(r.value is None for r in return_nodes_in_ast(func_def)):
+                raise GuppyError(
+                    "Return type must be annotated. Try adding a `-> None` annotation.",
+                    func_def
+                )
+            raise GuppyError("Return type must be annotated", func_def)
 
         arg_tys = []
         arg_names = []

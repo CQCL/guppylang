@@ -71,6 +71,25 @@ def name_nodes_in_ast(node: Any) -> list[ast.Name]:
     return v.names
 
 
+class ReturnVisitor(ast.NodeVisitor):
+    """Visitor to collect all `Return` nodes occurring in an AST."""
+
+    returns: list[ast.Return]
+
+    def __init__(self) -> None:
+        self.returns = []
+
+    def visit_Return(self, node: ast.Return) -> None:
+        self.returns.append(node)
+
+
+def return_nodes_in_ast(node: Any) -> list[ast.Return]:
+    """Returns all `Return` nodes occurring in an AST."""
+    v = ReturnVisitor()
+    v.visit(node)
+    return v.returns
+
+
 def line_col(node: ast.AST) -> tuple[int, int]:
     """Returns the line and column of an ast node."""
     return node.lineno, node.col_offset
