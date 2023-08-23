@@ -181,8 +181,8 @@ class VariableVisitor(ast.NodeVisitor):
             | set(a.arg for a in node.args.args)
         )
         self.stats.used |= {
-            x: live[node.cfg.entry_bb][x].vars.used[x]
-            for x in live[node.cfg.entry_bb]
+            x: using_bb.vars.used[x]
+            for x, using_bb in live[node.cfg.entry_bb].items()
             if x not in assigned_before_in_bb
         }
 
