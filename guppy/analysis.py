@@ -164,7 +164,7 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
     def initial(self) -> AssignmentDomain:
         # Note that definite assignment must start with `all_vars` instead of only
         # `ass_before_entry` since we want to compute the *greatest* fixpoint.
-        return self.all_vars, self.ass_before_entry
+        return self.all_vars, self.maybe_ass_before_entry
 
     def join(self, *ts: AssignmentDomain) -> AssignmentDomain:
         # We always include the variables that are definitely assigned before the entry,
