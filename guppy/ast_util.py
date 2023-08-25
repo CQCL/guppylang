@@ -95,10 +95,9 @@ def line_col(node: ast.AST) -> tuple[int, int]:
     return node.lineno, node.col_offset
 
 
-def set_location(node: ast.AST, loc: ast.AST) -> ast.AST:
+def set_location_from(node: ast.AST, loc: ast.AST) -> None:
     """Copy source location from one AST node to the other."""
     node.lineno = loc.lineno
     node.col_offset = loc.col_offset
     node.end_lineno = loc.end_lineno
     node.end_col_offset = loc.end_col_offset
-    return node

@@ -3,7 +3,7 @@ import collections
 import itertools
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Optional, NamedTuple, Iterator
+from typing import Optional, NamedTuple, Iterator, Union
 
 from guppy.analysis import (
     LivenessDomain,
@@ -13,27 +13,14 @@ from guppy.analysis import (
     MaybeAssignmentDomain,
     Result,
 )
-from guppy.bb import BB, VarRow, Signature, NestedFunctionDef, BBStatement
+from guppy.bb import BB, VarRow, Signature, CompiledBB, NestedFunctionDef, BBStatement
 from guppy.compiler_base import VarMap, DFContainer, Variable
 from guppy.error import InternalGuppyError, GuppyError, assert_bool_type
-from guppy.ast_util import AstVisitor, line_col, set_location
+from guppy.ast_util import AstVisitor, line_col, set_location_from
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import GuppyType, TupleType, SumType
-from guppy.hugr.hugr import Node, Hugr, CFNode, OutPortV
+from guppy.hugr.hugr import Node, Hugr, OutPortV
 from guppy.statement import StatementCompiler
-
-
-@dataclass
-class CompiledBB:
-    """The result of compiling a basic block.
-
-    Besides the corresponding node in the graph, we also store the signature of the
-    basic block with type information.
-    """
-
-    node: CFNode
-    bb: BB
-    sig: Signature
 
 
 class CFG:
@@ -375,25 +362,35 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
                 bb_opt = self.visit(node, bb_opt, jumps)
         return bb_opt
 
-    def visit_Assign(self, node: ast.Assign, bb: BB, jumps: Jumps) -> Optional[BB]:
-        node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
+    def _build_node_value(
+        self, node: Union[ast.Assign, ast.AugAssign, ast.Return], bb: BB
+    ) -> BB:
+        """Utility method for building a node containing a `value` expression.
+
+        Builds the expression and mutates `node.value` to point to the built expression.
+        Returns the BB in which the expression is available and adds the node to it.
+        """
+        if node.value is not None:
+            node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
         return bb
+
+    def visit_Assign(self, node: ast.Assign, bb: BB, jumps: Jumps) -> Optional[BB]:
+        return self._build_node_value(node, bb)
 
     def visit_AugAssign(
         self, node: ast.AugAssign, bb: BB, jumps: Jumps
     ) -> Optional[BB]:
-        node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
-        bb.statements.append(node)
-        return bb
+        return self._build_node_value(node, bb)
 
     def visit_Expr(self, node: ast.Expr, bb: BB, jumps: Jumps) -> Optional[BB]:
+        # This is an expression statement where the value is discarded
         _, bb = ExprBuilder.build(node.value, self.cfg, bb)
         return bb
 
     def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> Optional[BB]:
         then_bb, else_bb = self.cfg.new_bb(), self.cfg.new_bb()
-        BranchBuilder.build(node.test, self.cfg, bb, then_bb, else_bb)
+        BranchBuilder.add_branch(node.test, self.cfg, bb, then_bb, else_bb)
         then_bb = self.visit_stmts(node.body, then_bb, jumps)
         else_bb = self.visit_stmts(node.orelse, else_bb, jumps)
         # We need to handle different cases depending on whether branches jump (i.e.
@@ -411,7 +408,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
         head_bb = self.cfg.new_bb(bb)
         body_bb, tail_bb = self.cfg.new_bb(), self.cfg.new_bb()
-        BranchBuilder.build(node.test, self.cfg, head_bb, body_bb, tail_bb)
+        BranchBuilder.add_branch(node.test, self.cfg, head_bb, body_bb, tail_bb)
 
         new_jumps = Jumps(
             return_bb=jumps.return_bb, continue_bb=head_bb, break_bb=tail_bb
@@ -439,10 +436,8 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         return None
 
     def visit_Return(self, node: ast.Return, bb: BB, jumps: Jumps) -> Optional[BB]:
-        if node.value is not None:
-            node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
+        bb = self._build_node_value(node, bb)
         self.cfg.link(bb, jumps.return_bb)
-        bb.statements.append(node)
         return None
 
     def visit_Pass(self, node: ast.Pass, bb: BB, jumps: Jumps) -> Optional[BB]:
@@ -466,7 +461,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
             returns=node.returns,
             type_comment=node.type_comment,
         )
-        set_location(new_node, node)
+        set_location_from(new_node, node)
         bb.statements.append(new_node)
         return bb
 
@@ -506,14 +501,14 @@ class ExprBuilder(ast.NodeTransformer):
         """Creates an `ast.Name` node."""
         node = ast.Name(id=name, ctx=ast.Load)
         if loc is not None:
-            set_location(node, loc)
+            set_location_from(node, loc)
         return node
 
     @classmethod
     def _tmp_assign(cls, tmp_name: str, value: ast.expr, bb: BB) -> None:
         """Adds a temporary variable assignment to a basic block."""
         node = ast.Assign(targets=[cls._make_var(tmp_name, value)], value=value)
-        set_location(node, value)
+        set_location_from(node, value)
         bb.statements.append(node)
 
     def visit_Name(self, node: ast.Name) -> ast.Name:
@@ -525,13 +520,13 @@ class ExprBuilder(ast.NodeTransformer):
         if not isinstance(node.target, ast.Name):
             raise InternalGuppyError(f"Unexpected assign target: {node.target}")
         assign = ast.Assign(targets=[node.target], value=self.visit(node.value))
-        set_location(assign, node)
+        set_location_from(assign, node)
         self.bb.statements.append(assign)
         return node.target
 
     def visit_IfExp(self, node: ast.IfExp) -> ast.Name:
         if_bb, else_bb = self.cfg.new_bb(), self.cfg.new_bb()
-        BranchBuilder.build(node.test, self.cfg, self.bb, if_bb, else_bb)
+        BranchBuilder.add_branch(node.test, self.cfg, self.bb, if_bb, else_bb)
 
         if_expr, if_bb = self.build(node.body, self.cfg, if_bb)
         else_expr, else_bb = self.build(node.orelse, self.cfg, else_bb)
@@ -555,11 +550,11 @@ class ExprBuilder(ast.NodeTransformer):
         if is_short_circuit_expr(node):
             assert isinstance(node, ast.expr)
             true_bb, false_bb = self.cfg.new_bb(), self.cfg.new_bb()
-            BranchBuilder.build(node, self.cfg, self.bb, true_bb, false_bb)
+            BranchBuilder.add_branch(node, self.cfg, self.bb, true_bb, false_bb)
             true_const = ast.Constant(value=True)
             false_const = ast.Constant(value=False)
-            set_location(true_const, node)
-            set_location(false_const, node)
+            set_location_from(true_const, node)
+            set_location_from(false_const, node)
             tmp = next(tmp_vars)
             self._tmp_assign(tmp, true_const, true_bb)
             self._tmp_assign(tmp, false_const, false_bb)
@@ -584,7 +579,7 @@ class BranchBuilder(AstVisitor[None]):
         self.cfg = cfg
 
     @staticmethod
-    def build(node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB) -> None:
+    def add_branch(node: ast.expr, cfg: CFG, bb: BB, true_bb: BB, false_bb: BB) -> None:
         """Builds an expression and branches to `true_bb` or `false_bb`, depending on
         the truth value of the expression."""
         builder = BranchBuilder(cfg)
@@ -644,7 +639,7 @@ class BranchBuilder(AstVisitor[None]):
                 for left, op, right in zip(comparators[:-1], node.ops, comparators[1:])
             ]
             conj = ast.BoolOp(op=ast.And(), values=values)
-            set_location(conj, node)
+            set_location_from(conj, node)
             self.visit_BoolOp(conj, bb, true_bb, false_bb)
         else:
             self.generic_visit(node, bb, true_bb, false_bb)
