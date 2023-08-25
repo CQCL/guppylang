@@ -48,7 +48,7 @@ class FunctionCompiler(CompilerBase):
             if all(r.value is None for r in return_nodes_in_ast(func_def)):
                 raise GuppyError(
                     "Return type must be annotated. Try adding a `-> None` annotation.",
-                    func_def
+                    func_def,
                 )
             raise GuppyError("Return type must be annotated", func_def)
 
