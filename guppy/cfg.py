@@ -163,6 +163,13 @@ class CFG:
         stmt_compiler = StatementCompiler(graph, global_variables)
         dfg = stmt_compiler.compile_stmts(bb.statements, bb, dfg, return_tys)
 
+        # If we branch, we also have to compile the branch predicate
+        if len(bb.successors) > 1:
+            assert bb.branch_pred is not None
+            expr_compiler = ExpressionCompiler(graph, global_variables)
+            branch_port = expr_compiler.compile(bb.branch_pred, dfg)
+            assert_bool_type(branch_port.ty, bb.branch_pred)
+
         for succ in bb.successors:
             for x, use_bb in self.live_before[succ].items():
                 # Check that the variable requested by the successor are defined
@@ -216,14 +223,9 @@ class CFG:
                 variants=[TupleType([])], tag=0, inp=unit, parent=block
             ).out_port(0)
         else:
-            # If we branch, we have to compile the branch predicate
-            assert bb.branch_pred is not None
-            expr_compiler = ExpressionCompiler(graph, global_variables)
-            branch_port = expr_compiler.compile(bb.branch_pred, dfg)
-            assert_bool_type(branch_port.ty, bb.branch_pred)
+            # If we branch and the branches use different variables, we have to output a
+            # Sum-type predicate
             first, *rest = bb.successors
-            # If the branches use different variables, we have to output a Sum-type
-            # predicate
             if any(
                 self.live_before[r].keys() != self.live_before[first].keys()
                 for r in rest
