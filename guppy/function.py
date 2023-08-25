@@ -126,6 +126,18 @@ class FunctionCompiler(CompilerBase):
             if x not in func_ty.arg_names and x in dfg
         ]
 
+        # Captured variables may not be linear
+        for v in captured:
+            if v.ty.linear:
+                x = v.name
+                using_bb = cfg.live_before[cfg.entry_bb][x]
+                raise GuppyError(
+                    f"Variable `{x}` with linear type `{v.ty}` may not be used here "
+                    f"because it was defined in an outer scope (at {{0}})",
+                    using_bb.vars.used[x],
+                    [v.defined_at],
+                )
+
         # Captured variables may never be assigned to
         for bb in cfg.bbs:
             for v in captured:
