@@ -4,12 +4,16 @@ import ast
 import graphviz as gv  # type: ignore
 from typing import Iterable, TYPE_CHECKING
 
-from guppy.analysis import LivenessDomain, DefAssignmentDomain, MaybeAssignmentDomain
-from guppy.bb import BB
+from guppy.cfg.analysis import (
+    LivenessDomain,
+    DefAssignmentDomain,
+    MaybeAssignmentDomain,
+)
+from guppy.cfg.bb import BB
 from guppy.hugr.hugr import InPort, OutPort, Node, Hugr, OutPortV
 
 if TYPE_CHECKING:
-    from guppy.cfg import CFG
+    from guppy.cfg.cfg import CFG
 
 # old palettte: https://colorhunt.co/palette/343a407952b3ffc107e1e8eb
 # _COLOURS = {
