@@ -5,7 +5,7 @@ from guppy.hugr.hugr import Hugr
 
 
 def validate(hugr: Hugr):
-    assert validator.validate(hugr.serialize()), "Validation failed:"
+    validator.validate(hugr.serialize())
 
 
 class Decorator:

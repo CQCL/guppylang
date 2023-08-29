@@ -73,9 +73,9 @@ checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
 name = "delegate"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d358e0ec5c59a5e1603b933def447096886121660fc680dc1e64a0753981fe3c"
+checksum = "0ee5df75c70b95bd3aacc8e2fd098797692fb1d54121019c4de481e42f04c8a1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -327,9 +327,9 @@ dependencies = [
 
 [[package]]
 name = "portgraph"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66e5b9434b3738e1a5abd7880909d8e3e4faf621aa26ff22a30d14a4561e29ce"
+checksum = "6a3c679569bff588a2df17852572353597b1848ead7e8b7fd93e4db065df50df"
 dependencies = [
  "bitvec",
  "context-iterators",
@@ -411,11 +411,12 @@ dependencies = [
 [[package]]
 name = "quantinuum-hugr"
 version = "0.1.0"
-source = "git+https://github.com/CQCL-DEV/hugr.git?rev=66c9fc5#66c9fc590bbb413e816de02e0032a387a0d9c62e"
+source = "git+https://github.com/CQCL-DEV/hugr.git?rev=550df7fc98950e035c7191f39aec0ed8335973e2#550df7fc98950e035c7191f39aec0ed8335973e2"
 dependencies = [
  "bitvec",
  "cgmath",
  "context-iterators",
+ "delegate",
  "derive_more",
  "downcast-rs",
  "enum_dispatch",

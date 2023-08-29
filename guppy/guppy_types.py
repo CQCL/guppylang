@@ -57,7 +57,8 @@ class FloatType(GuppyType):
         return False
 
     def to_hugr(self) -> tys.SimpleType:
-        return tys.F64()
+        # TODO: Use float type
+        return tys.Int(width=32)
 
 
 @dataclass(frozen=True)
@@ -79,9 +80,8 @@ class FunctionType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         ins = [t.to_hugr() for t in self.args]
         outs = [t.to_hugr() for t in self.returns]
-        sig = tys.Signature(input=ins, output=outs, static_input=[])
         # TODO: Resources
-        return tys.Graph(resources=[], signature=sig)
+        return tys.FunctionType(input=ins, output=outs, extension_reqs=[])
 
 
 @dataclass(frozen=True)
@@ -97,8 +97,7 @@ class TupleType(GuppyType):
 
     def to_hugr(self) -> tys.SimpleType:
         ts = [t.to_hugr() for t in self.element_types]
-        # As soon as one element is linear, the whole tuple must be linear
-        return tys.Tuple(row=ts, l=any(tys.is_linear(t) for t in ts))
+        return tys.Tuple(inner=ts)
 
 
 @dataclass(frozen=True)
@@ -113,9 +112,12 @@ class SumType(GuppyType):
         return any(t.linear for t in self.element_types)
 
     def to_hugr(self) -> tys.SimpleType:
-        ts = [t.to_hugr() for t in self.element_types]
-        # As soon as one element is linear, the whole sum type must be linear
-        return tys.Sum(row=ts, l=any(tys.is_linear(t) for t in ts))
+        if all(
+            isinstance(e, TupleType) and len(e.element_types) == 0
+            for e in self.element_types
+        ):
+            return tys.SimpleSum(size=len(self.element_types))
+        return tys.GeneralSum(row=[t.to_hugr() for t in self.element_types])
 
 
 @dataclass(frozen=True)
@@ -171,29 +173,7 @@ class ListType(GuppyType):
 
     def to_hugr(self) -> tys.SimpleType:
         t = self.element_type.to_hugr()
-        return tys.List(ty=t, l=tys.is_linear(t))
-
-
-@dataclass(frozen=True)
-class DictType(GuppyType):
-    key_type: GuppyType
-    value_type: GuppyType
-
-    def __post_init__(self) -> None:
-        assert not self.key_type.linear
-
-    def __str__(self) -> str:
-        return f"dict[{self.key_type}, {self.value_type}]"
-
-    @property
-    def linear(self) -> bool:
-        return self.value_type.linear
-
-    def to_hugr(self) -> tys.SimpleType:
-        kt = self.key_type.to_hugr()
-        vt = self.value_type.to_hugr()
-        assert not tys.is_linear(kt)
-        return tys.Map(k=kt, v=vt, l=tys.is_linear(vt))
+        return tys.List(ty=t)
 
 
 def type_from_python_value(val: Any) -> Optional[GuppyType]:
