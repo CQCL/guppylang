@@ -1,8 +1,8 @@
 import inspect
 import sys
+from abc import ABC
 from typing import Literal, Union, Annotated
-from pydantic import Field, BaseModel, root_validator, validator
-from pydantic.utils import GetterDict
+from pydantic import Field, BaseModel
 
 
 # ---------------------------------------------
@@ -23,39 +23,8 @@ class CustomType(BaseModel):
 # --------------------------------------------
 
 
-def valid_linearity(ty: "SimpleType", stated_linearity: bool) -> None:
-    if is_linear(ty) != stated_linearity:
-        raise ValueError("Inner type linearity does not match outer.")
-
-
-class Map(BaseModel):
-    """Hash map from hashable key type to value type"""
-
-    t: Literal["Map"] = "Map"
-    k: "SimpleType"
-    v: "SimpleType"
-    l: bool
-
-    @validator("k")
-    def check_valid_key(cls, key: "SimpleType") -> "SimpleType":
-        if not is_linear(key):
-            raise ValueError("Key type cannot be linear.")
-        return key
-
-    @root_validator
-    def check_value_linearity(cls, values: GetterDict) -> GetterDict:
-        valid_linearity(values.get("v"), values.get("l"))
-        return values
-
-
 class MultiContainer(BaseModel):
     ty: "SimpleType"
-    l: bool
-
-    @root_validator
-    def check_value_linearity(cls, values: GetterDict) -> GetterDict:
-        valid_linearity(values.get("t"), values.get("l"))
-        return values
 
 
 class List(MultiContainer):
@@ -71,29 +40,31 @@ class Array(MultiContainer):
     len: int
 
 
-class AlgebraicContainer(BaseModel):
-    row: "TypeRow"
-    l: bool
-
-    @root_validator
-    def check_row_linearity(cls, values: GetterDict) -> GetterDict:
-        row: TypeRow = values.get("row")
-        l: bool = values.get("l")
-        if any(is_linear(t) for t in row) != l:
-            raise ValueError("A Sum/Tuple is non-linear if no elements are linear.")
-        return values
-
-
-class Tuple(AlgebraicContainer):
+class Tuple(BaseModel):
     """Product type, known-size tuple over elements of type row"""
 
     t: Literal["Tuple"] = "Tuple"
+    inner: "TypeRow"
 
 
-class Sum(AlgebraicContainer):
+class Sum(ABC, BaseModel):
     """Sum type, variants are tagged by their position in the type row"""
 
     t: Literal["Sum"] = "Sum"
+
+
+class SimpleSum(Sum):
+    """Simple predicate where all variants are empty tuples"""
+
+    s: Literal["Simple"] = "Simple"
+    size: int
+
+
+class GeneralSum(Sum):
+    """General sum type that explicitly stores the types of the variants"""
+
+    s: Literal["General"] = "General"
+    row: "TypeRow"
 
 
 # ----------------------------------------------
@@ -127,16 +98,25 @@ class String(BaseModel):
     t: Literal["S"] = "S"
 
 
-class Graph(BaseModel):
+class FunctionType(BaseModel):
     """A graph encoded as a value. It contains a concrete signature and a set of
     required resources."""
 
     t: Literal["G"] = "G"
-    resources: "ResourceSet"
-    signature: "Signature"
+    input: "TypeRow"  # Value inputs of the function.
+    output: "TypeRow"  # Value outputs of the function.
+    # The extension requirements which are added by the operation
+    extension_reqs: "ExtensionSet"
+
+    @classmethod
+    def empty(cls) -> "FunctionType":
+        return FunctionType(input=[], output=[], extension_reqs=[])
 
 
-ResourceSet = list[str]  # TODO: Set not supported by MessagePack. Is list correct here?
+ExtensionId = str
+ExtensionSet = list[
+    ExtensionId
+]  # TODO: Set not supported by MessagePack. Is list correct here?
 
 
 class Opaque(BaseModel):
@@ -159,17 +139,9 @@ class Qubit(BaseModel):
 
 
 SimpleType = Annotated[
-    Union[Qubit, Variable, Int, F64, String, Graph, List, Array, Map, Tuple, Sum],
+    Union[Qubit, Variable, Int, F64, String, FunctionType, List, Array, Tuple, Sum],
     Field(discriminator="t"),
 ]
-
-
-def is_linear(ty: SimpleType) -> bool:
-    if isinstance(ty, Qubit):
-        return True
-    elif isinstance(ty, (List, Tuple, Sum, Array, Map, Opaque)):
-        return ty.l
-    return False
 
 
 # -------------------------------------------
@@ -191,17 +163,10 @@ class Signature(BaseModel):
     (value) of a call (constant).
     """
 
-    input: TypeRow  # Value inputs of the function.
-    output: TypeRow  # Value outputs of the function.
-    static_input: TypeRow = Field(
-        default_factory=list
-    )  # Possible static input (for call / load-constant).
-    input_resources: ResourceSet = Field(default_factory=list)
-    output_resources: ResourceSet = Field(default_factory=list)
+    signature: "FunctionType"  # The underlying signature
 
-    @classmethod
-    def empty(cls) -> "Signature":
-        return Signature(input=[], output=[], static_input=[])
+    # The extensions which are associated with all the inputs and carried through
+    input_extensions: ExtensionSet
 
 
 # Now that all classes are defined, we need to update the ForwardRefs in all type

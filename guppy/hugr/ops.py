@@ -4,7 +4,7 @@ from abc import ABC
 from typing import Annotated, Literal, Union, Optional, Any
 from pydantic import Field, BaseModel
 
-from .tys import Signature, TypeRow, SimpleType, ResourceSet, Graph
+from .tys import Signature, TypeRow, SimpleType, FunctionType, ExtensionSet
 import guppy.hugr.tys as tys
 
 NodeID = int
@@ -15,6 +15,7 @@ class BaseOp(ABC, BaseModel):
 
     # Parent node index of node the op belongs to, used only at serialization time
     parent: NodeID = 0
+    input_extensions: ExtensionSet = Field(default_factory=list)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         """Hook to insert type information from the input and output ports into the
@@ -58,14 +59,14 @@ class FuncDefn(BaseOp):
     op: Literal["FuncDefn"] = "FuncDefn"
 
     name: str = "main"
-    signature: Signature = Field(default_factory=Signature.empty)
+    signature: FunctionType = Field(default_factory=FunctionType.empty)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(in_types) == 0
         assert len(out_types) == 1
         out = out_types[0]
-        assert isinstance(out, Graph)
-        self.signature = out.signature
+        assert isinstance(out, FunctionType)
+        self.signature = out  # TODO: Extensions
 
 
 class FuncDecl(BaseOp):
@@ -73,14 +74,14 @@ class FuncDecl(BaseOp):
 
     op: Literal["FuncDecl"] = "FuncDecl"
     name: str = "main"
-    signature: Signature = Field(default_factory=Signature.empty)
+    signature: FunctionType = Field(default_factory=FunctionType.empty)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(in_types) == 0
         assert len(out_types) == 1
         out = out_types[0]
-        assert isinstance(out, Graph)
-        self.signature = out.signature
+        assert isinstance(out, FunctionType)
+        self.signature = out
 
 
 class Const(BaseOp):
@@ -120,11 +121,16 @@ class DFB(BasicBlock):
 
     def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
         self.inputs = inputs
-        assert isinstance(outputs[0], tys.Sum)
-        self.predicate_variants = []
-        for variant in outputs[0].row:
-            assert isinstance(variant, tys.Tuple)
-            self.predicate_variants.append(variant.row)
+        pred = outputs[0]
+        assert isinstance(pred, tys.Sum)
+        if isinstance(pred, tys.SimpleSum):
+            self.predicate_variants = [[] for _ in range(pred.size)]
+        else:
+            assert isinstance(pred, tys.GeneralSum)
+            self.predicate_variants = []
+            for variant in pred.row:
+                assert isinstance(variant, tys.Tuple)
+                self.predicate_variants.append(variant.inner)
         self.other_outputs = outputs[1:]
 
 
@@ -153,7 +159,6 @@ class Input(DataflowOp):
 
     op: Literal["Input"] = "Input"
     types: TypeRow = Field(default_factory=list)
-    resources: "ResourceSet" = Field(default_factory=list)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(in_types) == 0
@@ -165,7 +170,6 @@ class Output(DataflowOp):
 
     op: Literal["Output"] = "Output"
     types: TypeRow = Field(default_factory=list)
-    resources: "ResourceSet" = Field(default_factory=list)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(out_types) == 0
@@ -182,13 +186,13 @@ class Call(DataflowOp):
     """
 
     op: Literal["Call"] = "Call"
-    signature: Signature = Field(default_factory=Signature.empty)
+    signature: FunctionType = Field(default_factory=FunctionType.empty)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         # The constE edge comes after the value inputs
         fun_ty = in_types[-1]
-        assert isinstance(fun_ty, Graph)
-        self.signature = fun_ty.signature
+        assert isinstance(fun_ty, FunctionType)
+        self.signature = fun_ty
 
 
 class CallIndirect(DataflowOp):
@@ -197,14 +201,14 @@ class CallIndirect(DataflowOp):
     Like call, but the first input is a standard dataflow graph type."""
 
     op: Literal["CallIndirect"] = "CallIndirect"
-    signature: Signature = Field(default_factory=Signature.empty)
+    signature: FunctionType = Field(default_factory=FunctionType.empty)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         fun_ty = in_types[0]
-        assert isinstance(fun_ty, Graph)
-        assert len(fun_ty.signature.input) == len(in_types) - 1
-        assert len(fun_ty.signature.output) == len(out_types)
-        self.signature = fun_ty.signature
+        assert isinstance(fun_ty, FunctionType)
+        assert len(fun_ty.input) == len(in_types) - 1
+        assert len(fun_ty.output) == len(out_types)
+        self.signature = fun_ty
 
 
 class LoadConstant(DataflowOp):
@@ -225,10 +229,12 @@ class DFG(DataflowOp):
     """A simply nested dataflow graph."""
 
     op: Literal["DFG"] = "DFG"
-    signature: Signature = Field(default_factory=Signature.empty)
+    signature: FunctionType = Field(default_factory=FunctionType.empty)
 
     def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
-        self.signature = Signature(input=list(inputs), output=list(outputs))
+        self.signature = FunctionType(
+            input=list(inputs), output=list(outputs), extension_reqs=[]
+        )
 
 
 # ------------------------------------------------
@@ -250,11 +256,14 @@ class Conditional(DataflowOp):
         # First port is a predicate, i.e. a sum of tuple types. We need to unpack
         # those into a list of type rows
         pred = in_types[0]
-        assert isinstance(pred, tys.Sum)
-        self.predicate_inputs = []
-        for ty in pred.row:
-            assert isinstance(ty, tys.Tuple)
-            self.predicate_inputs.append(ty.row)
+        if isinstance(pred, tys.SimpleSum):
+            self.predicate_inputs = [[] for _ in range(pred.size)]
+        else:
+            assert isinstance(pred, tys.GeneralSum)
+            self.predicate_inputs = []
+            for ty in pred.row:
+                assert isinstance(ty, tys.Tuple)
+                self.predicate_inputs.append(ty.inner)
         self.other_inputs = list(in_types[1:])
         self.outputs = list(out_types)
 
@@ -263,12 +272,13 @@ class Case(BaseOp):
     """Case ops - nodes valid inside Conditional nodes."""
 
     op: Literal["Case"] = "Case"
-    signature: Signature = Field(
-        default_factory=Signature.empty
-    )  # The signature of the contained dataflow graph.
+    # The signature of the contained dataflow graph.
+    signature: FunctionType = Field(default_factory=FunctionType.empty)
 
     def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
-        self.signature = tys.Signature(input=list(inputs), output=list(outputs))
+        self.signature = tys.FunctionType(
+            input=list(inputs), output=list(outputs), extension_reqs=[]
+        )
 
 
 class TailLoop(DataflowOp):
@@ -550,7 +560,7 @@ class OpDef(BaseOp, allow_population_by_field_name=True):
     def_: Optional[str] = Field(
         ..., alias="def"
     )  # (YAML?)-encoded definition of the operation.
-    resource_reqs: ResourceSet  # Resources required to execute this operation.
+    extension_reqs: ExtensionSet  # Resources required to execute this operation.
 
 
 # -------------------------------------------

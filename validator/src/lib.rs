@@ -2,11 +2,11 @@ use pyo3::prelude::*;
 use hugr;
 
 #[pyfunction]
-fn validate(hugr: Vec<u8>) -> PyResult<bool> {
+fn validate(hugr: Vec<u8>) -> PyResult<()> {
     let hg: hugr::Hugr = rmp_serde::from_slice(&hugr).unwrap();
-    let res = hg.validate();
+    hg.validate().unwrap();
 
-    Ok(res.is_ok())
+    Ok(())
 }
 
 #[pymodule]
