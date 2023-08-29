@@ -8,7 +8,7 @@ from guppy.guppy_types import FunctionType
 from guppy.hugr.hugr import CFNode
 
 if TYPE_CHECKING:
-    from guppy.cfg import CFG
+    from guppy.cfg.cfg import CFG
 
 
 @dataclass
@@ -167,7 +167,7 @@ class VariableVisitor(ast.NodeVisitor):
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> None:
         # In order to compute the used external variables in a nested function
         # definition, we have to run live variable analysis first
-        from guppy.analysis import LivenessAnalysis
+        from guppy.cfg.analysis import LivenessAnalysis
 
         for bb in node.cfg.bbs:
             bb.compute_variable_stats(len(node.ty.returns))

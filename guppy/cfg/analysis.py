@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TypeVar, Generic, Iterable
 
-from guppy.bb import BB
+from guppy.cfg.bb import BB
 
 
 # Type variable for the lattice domain

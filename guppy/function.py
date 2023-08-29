@@ -1,11 +1,10 @@
 import ast
 
 from guppy.ast_util import return_nodes_in_ast
-from guppy.bb import BB, NestedFunctionDef
-from guppy.cfg import CFGBuilder
+from guppy.cfg.bb import BB, NestedFunctionDef
+from guppy.cfg.builder import CFGBuilder
 from guppy.compiler_base import CompilerBase, VarMap, RawVariable, DFContainer, Variable
 from guppy.error import GuppyError
-from guppy.expression import expr_to_row
 from guppy.guppy_types import (
     FunctionType,
     GuppyType,

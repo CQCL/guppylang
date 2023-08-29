@@ -1,8 +1,8 @@
 import ast
 from typing import Sequence
 
-from guppy.ast_util import AstVisitor, AstNode, line_col
-from guppy.bb import BB, NestedFunctionDef
+from guppy.ast_util import AstVisitor, AstNode
+from guppy.cfg.bb import BB, NestedFunctionDef
 from guppy.compiler_base import (
     CompilerBase,
     DFContainer,
