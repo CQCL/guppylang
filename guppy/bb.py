@@ -4,6 +4,7 @@ from typing import Optional, Sequence
 
 from guppy.ast_util import AstNode, name_nodes_in_ast
 from guppy.compiler_base import RawVariable, return_var
+from guppy.hugr.hugr import CFNode
 
 
 @dataclass
@@ -41,6 +42,19 @@ class Signature:
 
     input_row: VarRow
     output_rows: Sequence[VarRow]  # One for each successor
+
+
+@dataclass(frozen=True)
+class CompiledBB:
+    """The result of compiling a basic block.
+
+    Besides the corresponding node in the graph, we also store the signature of the
+    basic block with type information.
+    """
+
+    node: CFNode
+    bb: "BB"
+    sig: Signature
 
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`

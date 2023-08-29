@@ -43,3 +43,43 @@ def test_arith_big():
         return b
 
     validate(arith)
+
+
+def test_shortcircuit_assign1():
+    @guppy
+    def foo(x: bool, y: int) -> bool:
+        if (z := x) and y > 0:
+            return z
+        return not z
+
+    validate(foo)
+
+
+def test_shortcircuit_assign2():
+    @guppy
+    def foo(x: bool, y: int) -> bool:
+        if y > 0 and (z := x):
+            return z
+        return False
+
+    validate(foo)
+
+
+def test_shortcircuit_assign3():
+    @guppy
+    def foo(x: bool, y: int) -> bool:
+        if (z := x) or y > 0:
+            return z
+        return z
+
+    validate(foo)
+
+
+def test_shortcircuit_assign4():
+    @guppy
+    def foo(x: bool, y: int) -> bool:
+        if y > 0 or (z := x):
+            return False
+        return z
+
+    validate(foo)

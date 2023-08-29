@@ -52,6 +52,81 @@ def test_if_elif_else():
     validate(foo)
 
 
+def test_if_expr():
+    @guppy
+    def foo(x: bool, y: int) -> int:
+        return y+1 if x else 42
+
+    validate(foo)
+
+
+def test_if_expr_nested():
+    @guppy
+    def foo(x: bool, y: int) -> int:
+        a = y + 1 if x else y * y if 0 < y <= 10 else 42
+        b = a if a < 5 or (not x and -7 >= a > 42) else -a
+        return a if a > b else b
+
+    validate(foo)
+
+
+def test_if_expr_tuple():
+    @guppy
+    def foo(x: bool, y: int) -> (int, int, int):
+        t = (y + 1 if x else 42), 8, (y * 2 if x else 64)
+        return t
+
+    validate(foo)
+
+
+def test_if_expr_assign_both():
+    @guppy
+    def foo(x: bool) -> int:
+        (z := 5) if x else (z := 42)
+        return z
+
+    validate(foo)
+
+
+def test_if_expr_assign_cond():
+    @guppy
+    def foo(x: bool) -> bool:
+        return z if (z := x) else False
+
+    validate(foo)
+
+
+def test_if_expr_reassign():
+    @guppy
+    def foo(x: bool) -> int:
+        y = 5
+        (y := 1) if x else 6
+        6 if x else (y := 2)
+        (y := 3) if x else (y := 4)
+        return y
+
+    validate(foo)
+
+
+def test_if_expr_reassign_cond():
+    @guppy
+    def foo(x: bool) -> int:
+        y = 5
+        return y if (y := 42) > 5 else 64 if x else y
+
+    validate(foo)
+
+
+def test_if_expr_double_type_change():
+    @guppy
+    def foo(x: bool) -> int:
+        y = 4
+        (y := 1) if (y := x) else (y := 6)
+        return y
+
+    validate(foo)
+
+
 def test_if_return():
     @guppy
     def foo(x: bool, y: int) -> int:

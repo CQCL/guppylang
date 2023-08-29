@@ -183,68 +183,42 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             raise GuppyError(f"Binary operator `{node.op}` is not supported", node.op)
 
     def visit_Compare(self, node: ast.Compare) -> OutPortV:
-        # Support chained comparisons, e.g. `x <= 5 < y` by compiling to
-        # `and(x <= 5, 5 < y)`
-        def compile_comparisons() -> Iterator[OutPortV]:
-            left_expr = node.left
-            left = self.visit(left_expr)
-            for right_expr, op in zip(node.comparators, node.ops):
-                right = self.visit(right_expr)
-                if isinstance(op, ast.Eq) or isinstance(op, ast.Is):
-                    # TODO: How is equality defined? What can the operators be?
-                    yield self.graph.add_arith(
-                        "eq", inputs=[left, right], out_ty=BoolType()
-                    ).out_port(0)
-                elif isinstance(op, ast.NotEq) or isinstance(op, ast.IsNot):
-                    yield self.graph.add_arith(
-                        "neq", inputs=[left, right], out_ty=BoolType()
-                    ).out_port(0)
-                elif isinstance(op, ast.Lt):
-                    yield self.binary_arith_op(
-                        left, left_expr, right, right_expr, "ilt", "flt", True
-                    )
-                elif isinstance(op, ast.LtE):
-                    yield self.binary_arith_op(
-                        left, left_expr, right, right_expr, "ileq", "fleq", True
-                    )
-                elif isinstance(op, ast.Gt):
-                    yield self.binary_arith_op(
-                        left, left_expr, right, right_expr, "igt", "fgt", True
-                    )
-                elif isinstance(op, ast.GtE):
-                    yield self.binary_arith_op(
-                        left, left_expr, right, right_expr, "igeg", "fgeg", True
-                    )
-                else:
-                    # Remaining cases are `in`, and `not in`.
-                    # TODO: We want to support this once collections are added
-                    raise GuppyError(
-                        f"Binary operator `{ast.unparse(op)}` is not supported", op
-                    )
-                left = right
-                left_expr = right_expr
+        if len(node.comparators) != 1 or len(node.ops) != 1:
+            raise InternalGuppyError(
+                "BB contains chained comparison. Should have been removed during CFG "
+                "construction."
+            )
+        left_expr, [op], [right_expr] = node.left, node.ops, node.comparators
 
-        acc, *rest = list(compile_comparisons())
-        for port in rest:
-            acc = self.graph.add_arith(
-                "and", inputs=[acc, port], out_ty=BoolType()
+        left, right = self.visit(left_expr), self.visit(right_expr)
+        if isinstance(op, ast.Eq) or isinstance(op, ast.Is):
+            # TODO: How is equality defined? What can the operators be?
+            return self.graph.add_arith(
+                "eq", inputs=[left, right], out_ty=BoolType()
             ).out_port(0)
-        return acc
-
-    def visit_BoolOp(self, node: ast.BoolOp) -> OutPortV:
-        if isinstance(node.op, ast.And):
-            func = "and"
-        elif isinstance(node.op, ast.Or):
-            func = "or"
-        else:
-            raise InternalGuppyError(f"Unexpected BoolOp encountered: {node.op}")
-        operands = [self.visit(operand) for operand in node.values]
-        acc = operands[0]
-        for operand in operands[1:]:
-            acc = self.graph.add_arith(
-                func, inputs=[acc, operand], out_ty=BoolType()
+        elif isinstance(op, ast.NotEq) or isinstance(op, ast.IsNot):
+            return self.graph.add_arith(
+                "neq", inputs=[left, right], out_ty=BoolType()
             ).out_port(0)
-        return acc
+        elif isinstance(op, ast.Lt):
+            return self.binary_arith_op(
+                left, left_expr, right, right_expr, "ilt", "flt", True
+            )
+        elif isinstance(op, ast.LtE):
+            return self.binary_arith_op(
+                left, left_expr, right, right_expr, "ileq", "fleq", True
+            )
+        elif isinstance(op, ast.Gt):
+            return self.binary_arith_op(
+                left, left_expr, right, right_expr, "igt", "fgt", True
+            )
+        elif isinstance(op, ast.GtE):
+            return self.binary_arith_op(
+                left, left_expr, right, right_expr, "igeg", "fgeg", True
+            )
+        # Remaining cases are `in`, and `not in`.
+        # TODO: We want to support this once collections are added
+        raise GuppyError(f"Binary operator `{ast.unparse(op)}` is not supported", op)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         # We need to figure out if this is a direct or indirect call
@@ -295,3 +269,21 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         if len(returns) != 1:
             return self.graph.add_make_tuple(inputs=returns).out_port(0)
         return returns[0]
+
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> OutPortV:
+        raise InternalGuppyError(
+            "BB contains `NamedExpr`. Should have been removed during CFG"
+            f"construction: `{ast.unparse(node)}`"
+        )
+
+    def visit_BoolOp(self, node: ast.BoolOp) -> OutPortV:
+        raise InternalGuppyError(
+            "BB contains `BoolOp`. Should have been removed during CFG construction: "
+            f"`{ast.unparse(node)}`"
+        )
+
+    def visit_IfExp(self, node: ast.IfExp) -> OutPortV:
+        raise InternalGuppyError(
+            "BB contains `IfExp`. Should have been removed during CFG construction: "
+            f"`{ast.unparse(node)}`"
+        )

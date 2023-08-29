@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:7
+
+5:    def foo(x: bool, y: int) -> int:
+6:        if x or (z := y + 1):
+7:            return z
+                     ^
+GuppyError: Variable `z` is not defined on all control-flow paths.
