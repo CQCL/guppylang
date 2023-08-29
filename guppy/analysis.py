@@ -141,14 +141,22 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
 
     all_vars: set[str]
     ass_before_entry: set[str]
+    maybe_ass_before_entry: set[str]
 
-    def __init__(self, bbs: Iterable[BB], ass_before_entry: set[str]):
+    def __init__(
+        self,
+        bbs: Iterable[BB],
+        ass_before_entry: set[str],
+        maybe_ass_before_entry: set[str],
+    ) -> None:
         """Constructs an `AssignmentAnalysis` pass for a CFG.
 
         Also takes a set variables that are definitely assigned before the entry of the
         CFG (for example function arguments).
         """
+        assert ass_before_entry.issubset(maybe_ass_before_entry)
         self.ass_before_entry = ass_before_entry
+        self.maybe_ass_before_entry = maybe_ass_before_entry
         self.all_vars = (
             set.union(*(set(bb.vars.assigned.keys()) for bb in bbs)) | ass_before_entry
         )
@@ -156,7 +164,7 @@ class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain]):
     def initial(self) -> AssignmentDomain:
         # Note that definite assignment must start with `all_vars` instead of only
         # `ass_before_entry` since we want to compute the *greatest* fixpoint.
-        return self.all_vars, self.ass_before_entry
+        return self.all_vars, self.maybe_ass_before_entry
 
     def join(self, *ts: AssignmentDomain) -> AssignmentDomain:
         # We always include the variables that are definitely assigned before the entry,

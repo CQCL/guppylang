@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:11
+
+9:         return x > 0
+10:    
+11:    return bar
+              ^^^
+GuppyTypeError: Return type mismatch: expected `int -> int`, got `int -> bool`

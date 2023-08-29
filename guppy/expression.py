@@ -1,5 +1,5 @@
 import ast
-from typing import Any, Iterator
+from typing import Any
 
 from guppy.ast_util import AstVisitor
 from guppy.compiler_base import CompilerBase, DFContainer, VarMap
@@ -18,6 +18,7 @@ from guppy.guppy_types import (
     FunctionType,
     type_from_python_value,
 )
+from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV, Hugr
 
 
@@ -57,8 +58,8 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
 
     def visit_Name(self, node: ast.Name) -> OutPortV:
         x = node.id
-        if x in self.dfg or x in self.global_variables:
-            var = self.dfg.get_var(x) or self.global_variables[x]
+        if x in self.dfg:
+            var = self.dfg[x]
             if var.ty.linear and var.used is not None:
                 raise GuppyError(
                     f"Variable `{x}` with linear type `{var.ty}` was "
@@ -67,7 +68,12 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
                     [var.used],
                 )
             var.used = node
-            return var.port
+            return self.dfg[x].port
+        elif x in self.global_variables:
+            load = self.graph.add_load_constant(
+                self.global_variables[x].port, self.dfg.node
+            )
+            return load.out_port(0)
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in ExpressionCompiler. This should have "
             f"been caught by program analysis!"
@@ -237,7 +243,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
 
         func_ty = func_port.ty
         if not isinstance(func_ty, FunctionType):
-            raise GuppyTypeError(f"Expected function type, got `{func_ty}`", f)
+            raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
         if len(node.keywords) > 0:
             # TODO: Implement this
             raise GuppyError(

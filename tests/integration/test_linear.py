@@ -192,3 +192,36 @@ def test_while_reset():
                 break
             i -= 1
         return b
+
+
+def test_rus():
+    module = GuppyModule("test")
+
+    @module.declare
+    def measure(q: qubit) -> bool:
+        pass
+
+    @module.declare
+    def qalloc() -> qubit:
+        pass
+
+    @module.declare
+    def t(q: qubit) -> qubit:
+        pass
+
+    @module.declare
+    def h(q: qubit) -> qubit:
+        pass
+
+    @module.declare
+    def cnot(q1: qubit, q2: qubit) -> tuple[qubit, qubit]:
+        pass
+
+    @module
+    def repeat_until_success(q: qubit) -> qubit:
+        while True:
+            aux, q = cnot(t(h(qalloc())), q)
+            aux, q = cnot(h(aux), q)
+            if measure(h(t(aux))):
+                break
+        return q

@@ -1,10 +1,14 @@
 import ast
 from dataclasses import dataclass, field
-from typing import Optional, Sequence
+from typing import Optional, Sequence, TYPE_CHECKING, Union, Any
 
 from guppy.ast_util import AstNode, name_nodes_in_ast
 from guppy.compiler_base import RawVariable, return_var
+from guppy.guppy_types import FunctionType
 from guppy.hugr.hugr import CFNode
+
+if TYPE_CHECKING:
+    from guppy.cfg import CFG
 
 
 @dataclass
@@ -57,14 +61,30 @@ class CompiledBB:
     sig: Signature
 
 
+class NestedFunctionDef(ast.FunctionDef):
+    cfg: "CFG"
+    ty: FunctionType
+
+    def __init__(self, cfg: "CFG", ty: FunctionType, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.cfg = cfg
+        self.ty = ty
+
+
+BBStatement = Union[ast.Assign, ast.AugAssign, ast.Return, NestedFunctionDef]
+
+
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
 class BB:
     """A basic block in a control flow graph."""
 
     idx: int
 
+    # Pointer to the CFG that contains this node
+    cfg: "CFG"
+
     # AST statements contained in this BB
-    statements: list[ast.stmt] = field(default_factory=list)
+    statements: list[BBStatement] = field(default_factory=list)
 
     # Predecessor and successor BBs
     predecessors: list["BB"] = field(default_factory=list)
@@ -143,7 +163,31 @@ class VariableVisitor(ast.NodeVisitor):
         # assignments of dummy variables `%ret_xxx`. To make the liveness analysis work,
         # we have to register those variables as being assigned here
         self.stats.assigned |= {return_var(i): node for i in range(self.num_returns)}
-        return None
+
+    def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> None:
+        # In order to compute the used external variables in a nested function
+        # definition, we have to run live variable analysis first
+        from guppy.analysis import LivenessAnalysis
+
+        for bb in node.cfg.bbs:
+            bb.compute_variable_stats(len(node.ty.returns))
+        live = LivenessAnalysis().run(node.cfg.bbs)
+
+        # Only store used *external* variables: things defined in the current BB, as
+        # well as the function name and argument names should not be included
+        assigned_before_in_bb = (
+            self.stats.assigned.keys()
+            | {node.name}
+            | set(a.arg for a in node.args.args)
+        )
+        self.stats.used |= {
+            x: using_bb.vars.used[x]
+            for x, using_bb in live[node.cfg.entry_bb].items()
+            if x not in assigned_before_in_bb
+        }
+
+        # The name of the function is now assigned
+        self.stats.assigned[node.name] = node
 
     def generic_visit(self, node: ast.AST) -> None:
         self.stats.update_used(node)

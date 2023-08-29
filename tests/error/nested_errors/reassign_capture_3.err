@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:11
+
+9:     
+10:    def baz() -> None:
+11:        y += 2
+           ^^^^^^
+GuppyError: Variable `y` defined in an outer scope (at 6:4) may not be assigned to

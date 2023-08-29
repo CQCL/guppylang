@@ -13,7 +13,7 @@ from guppy.analysis import (
     MaybeAssignmentDomain,
     Result,
 )
-from guppy.bb import BB, VarRow, Signature, CompiledBB
+from guppy.bb import BB, VarRow, Signature, CompiledBB, NestedFunctionDef, BBStatement
 from guppy.compiler_base import VarMap, DFContainer, Variable
 from guppy.error import InternalGuppyError, GuppyError, assert_bool_type
 from guppy.ast_util import AstVisitor, line_col, set_location_from
@@ -42,9 +42,11 @@ class CFG:
         self.ass_before = {}
         self.maybe_ass_before = {}
 
-    def new_bb(self, *preds: BB, statements: Optional[list[ast.stmt]] = None) -> BB:
+    def new_bb(self, *preds: BB, statements: Optional[list[BBStatement]] = None) -> BB:
         """Adds a new basic block to the CFG."""
-        bb = BB(len(self.bbs), predecessors=list(preds), statements=statements or [])
+        bb = BB(
+            len(self.bbs), self, predecessors=list(preds), statements=statements or []
+        )
         self.bbs.append(bb)
         for p in preds:
             p.successors.append(bb)
@@ -54,6 +56,16 @@ class CFG:
         """Adds a control-flow edge between two basic blocks."""
         src_bb.successors.append(tgt_bb)
         tgt_bb.predecessors.append(src_bb)
+
+    def analyze(
+        self, num_returns: int, def_ass_before: set[str], maybe_ass_before: set[str]
+    ) -> None:
+        for bb in self.bbs:
+            bb.compute_variable_stats(num_returns)
+        self.live_before = LivenessAnalysis().run(self.bbs)
+        self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
+            self.bbs, def_ass_before, maybe_ass_before
+        ).run_unpacked(self.bbs)
 
     def compile(
         self,
@@ -66,12 +78,8 @@ class CFG:
         """Compiles the CFG."""
 
         # First, we need to run program analysis
-        for bb in self.bbs:
-            bb.compute_variable_stats(len(return_tys))
-        self.live_before = LivenessAnalysis().run(self.bbs)
-        self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
-            self.bbs, {v.name for v in input_row}
-        ).run_unpacked(self.bbs)
+        ass_before = {v.name for v in input_row}
+        self.analyze(len(return_tys), ass_before, ass_before)
 
         # We start by compiling the entry BB
         entry_compiled = self._compile_bb(
@@ -140,7 +148,14 @@ class CFG:
             },
         )
         stmt_compiler = StatementCompiler(graph, global_variables)
-        dfg = stmt_compiler.compile_stmts(bb.statements, dfg, return_tys)
+        dfg = stmt_compiler.compile_stmts(bb.statements, bb, dfg, return_tys)
+
+        # If we branch, we also have to compile the branch predicate
+        if len(bb.successors) > 1:
+            assert bb.branch_pred is not None
+            expr_compiler = ExpressionCompiler(graph, global_variables)
+            branch_port = expr_compiler.compile(bb.branch_pred, dfg)
+            assert_bool_type(branch_port.ty, bb.branch_pred)
 
         for succ in bb.successors:
             for x, use_bb in self.live_before[succ].items():
@@ -195,14 +210,9 @@ class CFG:
                 variants=[TupleType([])], tag=0, inp=unit, parent=block
             ).out_port(0)
         else:
-            # If we branch, we have to compile the branch predicate
-            assert bb.branch_pred is not None
-            expr_compiler = ExpressionCompiler(graph, global_variables)
-            branch_port = expr_compiler.compile(bb.branch_pred, dfg)
-            assert_bool_type(branch_port.ty, bb.branch_pred)
+            # If we branch and the branches use different variables, we have to output a
+            # Sum-type predicate
             first, *rest = bb.successors
-            # If the branches use different variables, we have to output a Sum-type
-            # predicate
             if any(
                 self.live_before[r].keys() != self.live_before[first].keys()
                 for r in rest
@@ -431,6 +441,28 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         return None
 
     def visit_Pass(self, node: ast.Pass, bb: BB, jumps: Jumps) -> Optional[BB]:
+        return bb
+
+    def visit_FunctionDef(
+        self, node: ast.FunctionDef, bb: BB, jumps: Jumps
+    ) -> Optional[BB]:
+        from guppy.function import FunctionCompiler
+
+        func_ty = FunctionCompiler.validate_signature(node)
+        cfg = CFGBuilder().build(node.body, len(func_ty.returns))
+
+        new_node = NestedFunctionDef(
+            cfg,
+            func_ty,
+            name=node.name,
+            args=node.args,
+            body=node.body,
+            decorator_list=node.decorator_list,
+            returns=node.returns,
+            type_comment=node.type_comment,
+        )
+        set_location_from(new_node, node)
+        bb.statements.append(new_node)
         return bb
 
     def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> Optional[BB]:  # type: ignore
