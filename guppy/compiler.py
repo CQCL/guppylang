@@ -69,9 +69,11 @@ class GuppyModule(object):
         # Load all prelude extensions
         import guppy.prelude.builtin
         import guppy.prelude.boolean
+        import guppy.prelude.float
         import guppy.prelude.integer
         self.load(guppy.prelude.builtin)
         self.load(guppy.prelude.boolean)
+        self.load(guppy.prelude.float)
         self.load(guppy.prelude.integer)
 
     def __call__(self, f: Callable[..., Any]) -> Callable[..., Any]:
