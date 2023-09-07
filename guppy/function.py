@@ -25,14 +25,14 @@ class DefinedFunction(GlobalFunction):
 
     def __init__(self, name: str, port: OutPortV, defined_at: ast.FunctionDef):
         assert isinstance(port.ty, FunctionType)
-        super().__init__(name, port.ty, defined_at, self.CallCompiler())
+        super().__init__(name, port.ty, defined_at, self.DefCallCompiler())
         self.port = port
 
     def load(self, graph: Hugr, parent: DFContainingNode, globals: Globals, node: AstNode) -> OutPortV:
         """Loads the function as a value into a local dataflow graph."""
         return graph.add_load_constant(self.port, parent).out_port(0)
 
-    class CallCompiler(CallCompiler):
+    class DefCallCompiler(CallCompiler):
         """Compiler for calls to defined functions."""
 
         func: "DefinedFunction"

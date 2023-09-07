@@ -223,7 +223,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
                 raise GuppyTypeError(f"Expected function type, got `{func_ty}`", func)
 
             args = [self.visit(arg) for arg in node.args]
-            type_check_call(func_ty, [p.ty for p in args], node)
+            type_check_call(func_ty, args, node)
             call = self.graph.add_indirect_call(func_port, args)
             returns = [call.out_port(i) for i in range(len(func_ty.returns))]
 
