@@ -16,7 +16,7 @@ class FloatOpCompiler(OpCompiler):
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         args = [
-            self.graph.add_custom_op(
+            self.graph.add_node(
                 ops.CustomOp(extension="arithmetic.conversions", op_name="convert_s"),
                 inputs=[arg],
                 parent=self.parent,
@@ -137,7 +137,7 @@ def __mod__(self: float, other: float) -> int:
 
 
 @extension.func(FloatOpCompiler("fmul"), instance=FloatType)
-def __mul__(self: float, other: float) -> int:
+def __mul__(self: float, other: float) -> float:
     ...
 
 

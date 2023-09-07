@@ -548,17 +548,6 @@ class Hugr:
             ops.FuncDecl(), [], [fun_ty], parent, None, meta_data={"name": name}
         )
 
-    def add_custom_op(
-        self,
-        op: ops.CustomOp,
-        input_types: Optional[TypeList] = None,
-        output_types: Optional[TypeList] = None,
-        parent: Optional[Node] = None,
-        inputs: Optional[list[OutPortV]] = None,
-    ) -> DFContainingVNode:
-        """Adds a `OpaqueOp` node to the graph."""
-        return self._add_dfg_node(op, input_types, output_types, parent, inputs)
-
     def add_edge(self, src_port: OutPort, tgt_port: InPort) -> None:
         """Adds an edge between two ports."""
         if isinstance(src_port, OutPortV) or isinstance(tgt_port, InPortV):
