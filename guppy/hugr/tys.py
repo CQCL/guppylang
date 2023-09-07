@@ -1,21 +1,53 @@
 import inspect
 import sys
 from abc import ABC
-from typing import Literal, Union, Annotated
+from enum import Enum
+from typing import Literal, Union, Annotated, Optional
 from pydantic import Field, BaseModel
 
 
-# ---------------------------------------------
-# --------------- CustomType ------------------
-# ---------------------------------------------
+ExtensionId = str
+ExtensionSet = list[  # TODO: Set not supported by MessagePack. Is list correct here?
+    ExtensionId
+]
 
 
-class CustomType(BaseModel):
-    """An opaque type element. Contains an unique identifier and a reference to its
-    definition."""
+# ------------------------------------------
+# --------------- TypeArg ------------------
+# ------------------------------------------
 
-    id: str  # Unique identifier of the opaque type.
-    params: "TypeRow"
+
+class CustomTypeArg(BaseModel):
+    typ: None  # TODO
+    value: str
+
+
+class TypeArg(BaseModel):
+    tya: Literal["Type"] = "Type"
+    ty: "SimpleType"
+
+
+class BoundedNatArg(BaseModel):
+    tya: Literal["BoundedNat"] = "BoundedNat"
+    n: int
+
+
+class OpaqueArg(BaseModel):
+    tya: Literal["Opaque"] = "Opaque"
+    arg: CustomTypeArg
+
+
+class SequenceArg(BaseModel):
+    tya: Literal["Sequence"] = "Sequence"
+    args: list["TypeArgUnion"]
+
+
+class ExtensionsArg(BaseModel):
+    tya: Literal["Extensions"] = "Extensions"
+    es: ExtensionSet
+
+
+TypeArgUnion = Annotated[Union[TypeArg, BoundedNatArg, OpaqueArg, SequenceArg, ExtensionsArg], Field(discriminator="tya")]
 
 
 # --------------------------------------------
@@ -106,25 +138,27 @@ class FunctionType(BaseModel):
     input: "TypeRow"  # Value inputs of the function.
     output: "TypeRow"  # Value outputs of the function.
     # The extension requirements which are added by the operation
-    extension_reqs: "ExtensionSet"
+    extension_reqs: "ExtensionSet" = Field(default_factory=list)
 
     @classmethod
     def empty(cls) -> "FunctionType":
         return FunctionType(input=[], output=[], extension_reqs=[])
 
 
-ExtensionId = str
-ExtensionSet = list[
-    ExtensionId
-]  # TODO: Set not supported by MessagePack. Is list correct here?
+class TypeBound(Enum):
+    Eq = "E"
+    Copyable = "C"
+    Any = "A"
 
 
 class Opaque(BaseModel):
     """An opaque operation that can be downcasted by the extensions that define it."""
 
     t: Literal["Opaque"] = "Opaque"
-    ty: CustomType
-    linear: bool
+    extension: ExtensionId
+    id: str  # Unique identifier of the opaque type.
+    args: list[TypeArgUnion]
+    bound: TypeBound
 
 
 # ----------------------------------------------
@@ -139,7 +173,7 @@ class Qubit(BaseModel):
 
 
 SimpleType = Annotated[
-    Union[Qubit, Variable, Int, F64, String, FunctionType, List, Array, Tuple, Sum],
+    Union[Qubit, Variable, Int, F64, String, FunctionType, List, Array, Tuple, Sum, Opaque],
     Field(discriminator="t"),
 ]
 

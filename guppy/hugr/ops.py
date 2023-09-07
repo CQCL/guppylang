@@ -4,8 +4,9 @@ from abc import ABC
 from typing import Annotated, Literal, Union, Optional, Any
 from pydantic import Field, BaseModel
 
-from .tys import Signature, TypeRow, SimpleType, FunctionType, ExtensionSet
+from .tys import TypeRow, SimpleType, FunctionType, ExtensionId, ExtensionSet
 import guppy.hugr.tys as tys
+from .val import Value
 
 NodeID = int
 
@@ -88,7 +89,8 @@ class Const(BaseOp):
     """A constant value definition."""
 
     op: Literal["Const"] = "Const"
-    value: "ConstValue"
+    value: Value
+    typ: SimpleType
 
 
 # -----------------------------------------------
@@ -322,10 +324,17 @@ class CustomOp(LeafOp):
     it."""
 
     lop: Literal["CustomOp"] = "CustomOp"
-    custom: "OpaqueOp"
+    extension: ExtensionId
+    op_name: str
+    signature: Optional[tys.FunctionType] = None
+    description: str = ""
+    args: list[tys.TypeArgUnion] = Field(default_factory=list)
+
+    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
+        self.signature = tys.FunctionType(input=list(in_types), output=list(out_types))
 
     def display_name(self) -> str:
-        return self.custom.display_name()
+        return f"{self.extension}::{self.op_name}"
 
 
 class H(LeafOp):
@@ -531,19 +540,6 @@ OpType = Annotated[
 ]
 
 
-# -----------------------------------------
-# --------------- OpaqueOp ----------------
-# -----------------------------------------
-
-
-class OpaqueOp(BaseOp):
-    """A wrapped CustomOp with fast equality checks."""
-
-    # op: Literal["OpaqueOp"] = "OpaqueOp"
-    id: str  # Operation name, cached for fast equality checks.
-    op: "OpDef"  # The custom operation.
-
-
 # --------------------------------------
 # --------------- OpDef ----------------
 # --------------------------------------
@@ -561,47 +557,6 @@ class OpDef(BaseOp, allow_population_by_field_name=True):
         ..., alias="def"
     )  # (YAML?)-encoded definition of the operation.
     extension_reqs: ExtensionSet  # Resources required to execute this operation.
-
-
-# -------------------------------------------
-# --------------- ConstValue ----------------
-# -------------------------------------------
-
-
-class Int(BaseOp):
-    """An arbitrary length integer constant."""
-
-    op: Literal["Int"] = "Int"
-    value: int
-
-
-class Sum(BaseOp):
-    """An arbitrary length integer constant."""
-
-    op: Literal["Sum"] = "Sum"
-    tag: int
-    variants: TypeRow
-    val: "ConstValue"
-
-
-class Tuple(BaseOp):
-    """A tuple of constant values."""
-
-    op: Literal["Tuple"] = "Tuple"
-    vals: list["ConstValue"]
-
-
-class Opaque(BaseOp):
-    """An opaque constant value."""
-
-    op: Literal["Opaque"] = "Opaque"
-    ty: SimpleType
-    val: "CustomConst"
-
-
-CustomConst = Any  # TODO
-
-ConstValue = Union[Int, Sum, Tuple, Opaque]
 
 
 # Now that all classes are defined, we need to update the ForwardRefs in all type

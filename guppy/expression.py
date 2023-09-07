@@ -1,25 +1,47 @@
 import ast
-from typing import Any
+from typing import Any, Optional
 
-from guppy.ast_util import AstVisitor
-from guppy.compiler_base import CompilerBase, DFContainer, VarMap
-from guppy.error import (
-    assert_arith_type,
-    assert_bool_type,
-    assert_int_type,
-    InternalGuppyError,
-    GuppyTypeError,
-    GuppyError,
+from guppy.ast_util import AstVisitor, AstNode
+from guppy.compiler_base import (
+    CompilerBase,
+    DFContainer,
+    GlobalFunction,
+    GlobalVariable,
 )
-from guppy.guppy_types import (
-    IntType,
-    FloatType,
-    BoolType,
-    FunctionType,
-    type_from_python_value,
-)
-from guppy.hugr import ops
-from guppy.hugr.hugr import OutPortV, Hugr
+from guppy.error import InternalGuppyError, GuppyTypeError, GuppyError
+from guppy.guppy_types import FunctionType, GuppyType
+from guppy.hugr.hugr import OutPortV
+
+
+# Mapping from unary AST op to dunder method and display name
+unary_table: dict[type[AstNode], tuple[str, str]] = {
+    ast.UAdd: ("__pos__", "+"),
+    ast.USub: ("__neg__", "-"),
+    ast.Invert: ("__invert__", "~"),
+}
+
+# Mapping from binary AST op to left dunder method, right dunder method and display name
+binary_table: dict[type[AstNode], tuple[str, str, str]] = {
+    ast.Add: ("__add__", "__radd__", "+"),
+    ast.Sub: ("__sub__", "__rsub__", "-"),
+    ast.Mult: ("__mul__", "__rmul__", "*"),
+    ast.Div: ("__truediv__", "__rtruediv__", "/"),
+    ast.FloorDiv: ("__floordiv__", "__rfloordiv__", "//"),
+    ast.Mod: ("__mod__", "__rmod__", "%"),
+    ast.Pow: ("__pow__", "__rpow__", "**"),
+    ast.LShift: ("__lshift__", "__rlshift__", "<<"),
+    ast.RShift: ("__rshift__", "__rrshift__", ">>"),
+    ast.BitOr: ("__or__", "__ror__", "||"),
+    ast.BitXor: ("__xor__", "__rxor__", "^"),
+    ast.BitAnd: ("__and__", "__rand__", "&&"),
+    ast.MatMult: ("__matmul__", "__rmatmul__", "@"),
+    ast.Eq: ("__eq__", "__eq__", "=="),
+    ast.NotEq: ("__neq__", "__neq__", "!="),
+    ast.Lt: ("__lt__", "__gt__", "<"),
+    ast.LtE: ("__le__", "__ge__", "<="),
+    ast.Gt: ("__gt__", "__lt__", ">"),
+    ast.GtE: ("__ge__", "__le__", ">="),
+}
 
 
 def expr_to_row(expr: ast.expr) -> list[ast.expr]:
@@ -48,13 +70,25 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         """
         return [self.compile(e, dfg) for e in expr_to_row(expr)]
 
+    def _is_global_var(self, x: str) -> Optional[GlobalVariable]:
+        """Returns `True` if the argument references a global variable."""
+        if x in self.globals.values and x not in self.dfg:
+            return self.globals.values[x]
+        return None
+
     def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
         raise GuppyError("Expression not supported", node)
 
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
-        if type_from_python_value(node.value) is None:
+        from guppy.prelude.builtin import IntType, BoolType, int_value, bool_value
+        v = node.value
+        if isinstance(v, bool):
+            const = self.graph.add_constant(bool_value(v), BoolType()).out_port(0)
+        elif isinstance(v, int):
+            const = self.graph.add_constant(int_value(v), IntType()).out_port(0)
+        else:
             raise GuppyError("Unsupported constant expression", node)
-        return self.graph.add_constant(node.value).out_port(0)
+        return self.graph.add_load_constant(const).out_port(0)
 
     def visit_Name(self, node: ast.Name) -> OutPortV:
         x = node.id
@@ -69,11 +103,8 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
                 )
             var.used = node
             return self.dfg[x].port
-        elif x in self.global_variables:
-            load = self.graph.add_load_constant(
-                self.global_variables[x].port, self.dfg.node
-            )
-            return load.out_port(0)
+        elif x in self.globals.values:
+            return self.globals.values[x].load(self.graph, self.dfg.node, self.globals, node)
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in ExpressionCompiler. This should have "
             f"been caught by program analysis!"
@@ -97,96 +128,64 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         raise NotImplementedError()
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> OutPortV:
-        port = self.visit(node.operand)
-        ty = port.ty
-        if isinstance(node.op, ast.UAdd):
-            assert_arith_type(ty, node.operand)
-            return port  # Unary plus is a noop
-        elif isinstance(node.op, ast.USub):
-            assert_arith_type(ty, node.operand)
-            func = "ineg" if isinstance(ty, IntType) else "fneg"
-            return self.graph.add_arith(func, inputs=[port], out_ty=ty).out_port(0)
-        elif isinstance(node.op, ast.Not):
-            assert_bool_type(ty, node.operand)
-            return self.graph.add_arith("not", inputs=[port], out_ty=ty).out_port(0)
-        elif isinstance(node.op, ast.Invert):
-            # The unary invert operator `~` is defined as `~x = -(x + 1)` and only valid
-            # for integer types.
-            # See https://docs.python.org/3/reference/expressions.html#unary-arithmetic-and-bitwise-operations
-            # TODO: Do we want to follow the Python definition or have a custom HUGR op?
-            assert_int_type(ty, node.operand)
-            one = self.graph.add_constant(1)
-            inc = self.graph.add_arith(
-                "iadd", inputs=[port, one.out_port(0)], out_ty=ty
-            )
-            inv = self.graph.add_arith("ineg", inputs=[inc.out_port(0)], out_ty=ty)
-            return inv.out_port(0)
-        else:
+        if isinstance(node.op, ast.Not):
             raise InternalGuppyError(
-                f"Unexpected unary operator encountered: {node.op}"
+                "BB contains unary `Not` op. Should have been removed during CFG "
+                f"construction: `{ast.unparse(node)}`"
             )
 
-    def binary_arith_op(
-        self,
-        left: OutPortV,
-        left_expr: ast.expr,
-        right: OutPortV,
-        right_expr: ast.expr,
-        int_func: str,
-        float_func: str,
-        bool_out: bool,
+        # Compile by calling out to instance dunder methods
+        arg = self.visit(node.operand)
+        op, display_name = unary_table[node.op.__class__]
+        func = self.globals.get_instance_func(arg.ty, op)
+        if func is None:
+            raise GuppyTypeError(
+                f"Unary operator `{display_name}` not defined on argument of type "
+                f" `{arg.ty}`",
+                node.operand
+            )
+        [res] = func.compile_call([arg], self.dfg.node, self.graph, self.globals, node)
+        return res
+
+    def _compile_binary(
+        self, left_expr: AstNode, right_expr: AstNode, op: AstNode, node: AstNode
     ) -> OutPortV:
-        """Helper function for compiling binary arithmetic operations."""
-        assert_arith_type(left.ty, left_expr)
-        assert_arith_type(right.ty, right_expr)
-        # Automatic coercion from `int` to `float` if one of the operands is `float`
-        is_float = isinstance(left.ty, FloatType) or isinstance(right.ty, FloatType)
-        if is_float:
-            if isinstance(left.ty, IntType):
-                left = self.graph.add_arith(
-                    "int_to_float", inputs=[left], out_ty=FloatType()
-                ).out_port(0)
-            if isinstance(right.ty, IntType):
-                right = self.graph.add_arith(
-                    "int_to_float", inputs=[right], out_ty=IntType()
-                ).out_port(0)
-        return_ty = (
-            BoolType() if bool_out else left.ty
-        )  # At this point we have `left.ty == right.ty`
-        node = self.graph.add_arith(
-            float_func if is_float else int_func, inputs=[left, right], out_ty=return_ty
+        """Helper method to compile binary operators by calling out to dunder methods.
+
+        For example, first try calling `__add__` on the left operand. If that fails, try
+        `__radd__` on the right operand.
+        """
+        if op.__class__ not in binary_table:
+            raise GuppyError("This binary operation is not supported by Guppy.")
+        lop, rop, display_name = binary_table[op.__class__]
+        left, right = self.visit(left_expr), self.visit(right_expr)
+
+        if func := self.globals.get_instance_func(left.ty, lop):
+            try:
+                [ret] = func.compile_call(
+                    [left, right], self.dfg.node, self.graph, self.globals, node
+                )
+                return ret
+            except GuppyError:
+                pass
+
+        if func := self.globals.get_instance_func(right.ty, lop):
+            try:
+                [ret] = func.compile_call(
+                    [left, right], self.dfg.node, self.graph, self.globals, node
+                )
+                return ret
+            except GuppyError:
+                pass
+
+        raise GuppyTypeError(
+            f"Binary operator `{display_name}` not defined for arguments of type "
+            f"`{left.ty}` and `{right.ty}`",
+            node
         )
-        return node.out_port(0)
 
     def visit_BinOp(self, node: ast.BinOp) -> OutPortV:
-        left = self.visit(node.left)
-        right = self.visit(node.right)
-        if isinstance(node.op, ast.Add):
-            return self.binary_arith_op(
-                left, node.left, right, node.right, "iadd", "fadd", False
-            )
-        elif isinstance(node.op, ast.Sub):
-            return self.binary_arith_op(
-                left, node.left, right, node.right, "isub", "fsub", False
-            )
-        elif isinstance(node.op, ast.Mult):
-            return self.binary_arith_op(
-                left, node.left, right, node.right, "imul", "fmul", False
-            )
-        elif isinstance(node.op, ast.Div):
-            return self.binary_arith_op(
-                left, node.left, right, node.right, "idiv", "fdiv", False
-            )
-        elif isinstance(node.op, ast.Mod):
-            return self.binary_arith_op(
-                left, node.left, right, node.right, "imod", "fmod", False
-            )
-        elif isinstance(node.op, ast.Pow):
-            return self.binary_arith_op(
-                left, node.left, right, node.right, "ipow", "fpow", False
-            )
-        else:
-            raise GuppyError(f"Binary operator `{node.op}` is not supported", node.op)
+        return self._compile_binary(node.left, node.right, node.op, node)
 
     def visit_Compare(self, node: ast.Compare) -> OutPortV:
         if len(node.comparators) != 1 or len(node.ops) != 1:
@@ -195,83 +194,40 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
                 "construction."
             )
         left_expr, [op], [right_expr] = node.left, node.ops, node.comparators
-
-        left, right = self.visit(left_expr), self.visit(right_expr)
-        if isinstance(op, ast.Eq) or isinstance(op, ast.Is):
-            # TODO: How is equality defined? What can the operators be?
-            return self.graph.add_arith(
-                "eq", inputs=[left, right], out_ty=BoolType()
-            ).out_port(0)
-        elif isinstance(op, ast.NotEq) or isinstance(op, ast.IsNot):
-            return self.graph.add_arith(
-                "neq", inputs=[left, right], out_ty=BoolType()
-            ).out_port(0)
-        elif isinstance(op, ast.Lt):
-            return self.binary_arith_op(
-                left, left_expr, right, right_expr, "ilt", "flt", True
-            )
-        elif isinstance(op, ast.LtE):
-            return self.binary_arith_op(
-                left, left_expr, right, right_expr, "ileq", "fleq", True
-            )
-        elif isinstance(op, ast.Gt):
-            return self.binary_arith_op(
-                left, left_expr, right, right_expr, "igt", "fgt", True
-            )
-        elif isinstance(op, ast.GtE):
-            return self.binary_arith_op(
-                left, left_expr, right, right_expr, "igeg", "fgeg", True
-            )
-        # Remaining cases are `in`, and `not in`.
-        # TODO: We want to support this once collections are added
-        raise GuppyError(f"Binary operator `{ast.unparse(op)}` is not supported", op)
+        return self._compile_binary(left_expr, right_expr, op, node)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
-        # We need to figure out if this is a direct or indirect call
-        f = node.func
-        if (
-            isinstance(f, ast.Name)
-            and f.id in self.global_variables
-            and f.id not in self.dfg
-        ):
-            is_direct = True
-            var = self.global_variables[f.id]
-            func_port = var.port
-        else:
-            is_direct = False
-            func_port = self.visit(f)
-
-        func_ty = func_port.ty
-        if not isinstance(func_ty, FunctionType):
-            raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
+        func = node.func
         if len(node.keywords) > 0:
-            # TODO: Implement this
             raise GuppyError(
                 f"Argument passing by keyword is not supported", node.keywords[0]
             )
-        exp, act = len(func_ty.args), len(node.args)
-        if act < exp:
-            raise GuppyTypeError(
-                f"Not enough arguments passed (expected {exp}, got {act})", node
+
+        # Special case for calls of global module-level functions. This also handles
+        # calls of extension functions.
+        if (
+            isinstance(func, ast.Name)
+            and (f := self._is_global_var(func.id))
+            and isinstance(f, GlobalFunction)
+        ):
+            args = [self.visit(arg) for arg in node.args]
+            returns = f.compile_call(
+                args, self.dfg.node, self.graph, self.globals, node
             )
-        if exp < act:
-            raise GuppyTypeError(f"Unexpected argument", node.args[exp])
 
-        args = [self.visit(arg) for arg in node.args]
-        for i, port in enumerate(args):
-            if port.ty != func_ty.args[i]:
-                raise GuppyTypeError(
-                    f"Expected argument of type `{func_ty.args[i]}`, got `{port.ty}`",
-                    node.args[i],
-                )
-
-        if is_direct:
-            call = self.graph.add_call(func_port, args)
+        # Otherwise, compile the function like any other expression
         else:
+            func_port = self.visit(func)
+            func_ty = func_port.ty
+            if not isinstance(func_ty, FunctionType):
+                raise GuppyTypeError(f"Expected function type, got `{func_ty}`", func)
+
+            args = [self.visit(arg) for arg in node.args]
+            type_check_call(func_ty, [p.ty for p in args], node)
             call = self.graph.add_indirect_call(func_port, args)
+            returns = [call.out_port(i) for i in range(len(func_ty.returns))]
 
         # Group outputs into tuple
-        returns = [call.out_port(i) for i in range(len(func_ty.returns))]
         if len(returns) != 1:
             return self.graph.add_make_tuple(inputs=returns).out_port(0)
         return returns[0]
@@ -293,3 +249,30 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             "BB contains `IfExp`. Should have been removed during CFG construction: "
             f"`{ast.unparse(node)}`"
         )
+
+
+def check_num_args(exp: int, act: int, node: AstNode) -> None:
+    """Checks that the correct number of arguments have been passed to a function."""
+    if act < exp:
+        raise GuppyTypeError(
+            f"Not enough arguments passed (expected {exp}, got {act})", node
+        )
+    if exp < act:
+        if isinstance(node, ast.Call):
+            raise GuppyTypeError(f"Unexpected argument", node.args[exp])
+        raise GuppyTypeError(
+            f"Too many arguments passed (expected {exp}, got {act})", node
+        )
+
+
+def type_check_call(
+    func_ty: FunctionType, args: list[OutPortV], node: AstNode
+) -> None:
+    """Type-checks the arguments for a function call."""
+    check_num_args(len(func_ty.args), len(args), node)
+    for i, port in enumerate(args):
+        if port.ty != func_ty.args[i]:
+            raise GuppyTypeError(
+                f"Expected argument of type `{func_ty.args[i]}`, got `{port.ty}`",
+                node.args[i] if isinstance(node, ast.Call) else node,
+            )

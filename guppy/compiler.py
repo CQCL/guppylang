@@ -1,14 +1,16 @@
 import ast
+import functools
 import inspect
 import sys
 import textwrap
 from dataclasses import dataclass
+from types import ModuleType
 from typing import Optional, Any, Callable, Union
 
-from guppy.compiler_base import Variable
-from guppy.function import FunctionCompiler
-from guppy.guppy_types import FunctionType
-from guppy.hugr.hugr import Hugr, Node
+from guppy.compiler_base import Globals
+from guppy.extension import GuppyExtension
+from guppy.function import FunctionDefCompiler, DefinedFunction
+from guppy.hugr.hugr import Hugr
 from guppy.error import GuppyError, SourceLoc
 
 
@@ -45,22 +47,6 @@ class RawFunction:
     line_offset: int
 
 
-@dataclass
-class GuppyFunction:
-    """Class holding all information associated with a Function during compilation."""
-
-    name: str
-    module: "GuppyModule"
-    def_node: Node
-    ty: FunctionType
-    ast: ast.FunctionDef
-
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        # The `@guppy` annotator returns a `GuppyFunction`. If the user tries to call
-        # it, we can give a nice error message:
-        raise GuppyError("Guppy functions can only be called inside of Guppy functions")
-
-
 class GuppyModule(object):
     """A Guppy module backed by a Hugr graph.
 
@@ -69,28 +55,49 @@ class GuppyModule(object):
     """
 
     name: str
-    graph: Hugr
-    module_node: Node
-    compiler: FunctionCompiler
-    annotated_funcs: dict[str, RawFunction]
-    declared_funcs: dict[str, RawFunction]
-    fun_decls: list[GuppyFunction]
+    globals: Globals
+
+    _func_defs: dict[str, RawFunction]
+    _func_decls: dict[str, RawFunction]
 
     def __init__(self, name: str):
         self.name = name
-        self.graph = Hugr(name)
-        self.module_node = self.graph.set_root_name(self.name)
-        self.annotated_funcs = {}
-        self.declared_funcs = {}
-        self.fun_decls = []
+        self.globals = Globals.default()
+        self._func_defs = {}
+        self._func_decls = {}
 
-    def __call__(self, f: Callable[..., Any]) -> None:
+        # Load all prelude extensions
+        import guppy.prelude.builtin
+        import guppy.prelude.boolean
+        import guppy.prelude.integer
+        self.load(guppy.prelude.builtin)
+        self.load(guppy.prelude.boolean)
+        self.load(guppy.prelude.integer)
+
+    def __call__(self, f: Callable[..., Any]) -> Callable[..., Any]:
         func = self._parse(f)
-        self.annotated_funcs[func.ast.name] = func
+        self._func_defs[func.ast.name] = func
+
+        @functools.wraps(f)
+        def dummy(*args: Any, **kwargs: Any) -> Any:
+            raise GuppyError("Guppy functions can only be called in a Guppy context")
+
+        return dummy
 
     def declare(self, f: Callable[..., Any]) -> None:
+        """Decorator to add a function declaration to the module."""
         func = self._parse(f)
-        self.declared_funcs[func.ast.name] = func
+        self._func_decls[func.ast.name] = func
+
+    def load(self, m: ModuleType) -> None:
+        """Loads a Guppy extension from a python module.
+
+        This function must be called for names from the extension to become available in
+        the Guppy.
+        """
+        for ext in m.__dict__.values():
+            if isinstance(ext, GuppyExtension):
+                ext.add_to_globals(self.globals)
 
     def _parse(self, f: Callable[..., Any]) -> RawFunction:
         source_lines, line_offset = inspect.getsourcelines(f)
@@ -100,43 +107,47 @@ class GuppyModule(object):
         func_ast = ast.parse(source).body[0]
         if not isinstance(func_ast, ast.FunctionDef):
             raise GuppyError("Only functions can be placed in modules", func_ast)
-        if func_ast.name in self.annotated_funcs:
+        if func_ast.name in self._func_defs:
             raise GuppyError(
                 f"Module `{self.name}` already contains a function named `{func_ast.name}` "
-                f"(declared at {SourceLoc.from_ast(self.annotated_funcs[func_ast.name].ast, line_offset)})",
+                f"(declared at {SourceLoc.from_ast(self._func_defs[func_ast.name].ast, line_offset)})",
                 func_ast,
             )
         return RawFunction(f, func_ast, source_lines, line_offset)
 
     def compile(self, exit_on_error: bool = False) -> Optional[Hugr]:
         """Compiles the module and returns the final Hugr."""
+        graph = Hugr(self.name)
+        module_node = graph.set_root_name(self.name)
         try:
-            global_variables = {}
+            # Generate nodes for all function definition and declarations and add them
+            # to the globals
             defs = {}
-            for name, f in self.annotated_funcs.items():
-                func_ty = FunctionCompiler.validate_signature(f.ast)
-                def_node = self.graph.add_def(func_ty, self.module_node, f.ast.name)
+            for name, f in self._func_defs.items():
+                func_ty = FunctionDefCompiler.validate_signature(f.ast, self.globals)
+                def_node = graph.add_def(func_ty, module_node, f.ast.name)
                 defs[name] = def_node
-                global_variables[name] = Variable(name, def_node.out_port(0), f.ast)
-            for name, f in self.declared_funcs.items():
-                func_ty = FunctionCompiler.validate_signature(f.ast)
+                self.globals.values[name] = DefinedFunction(
+                    name, def_node.out_port(0), f.ast
+                )
+            for name, f in self._func_decls.items():
+                func_ty = FunctionDefCompiler.validate_signature(f.ast, self.globals)
                 if len(f.ast.body) > 1 or not isinstance(f.ast.body[0], ast.Pass):
                     raise GuppyError(
                         "Function declarations may not have a body.", f.ast.body[0]
                     )
-                decl_node = self.graph.add_declare(
-                    func_ty, self.module_node, f.ast.name
+                decl_node = graph.add_declare(func_ty, module_node, f.ast.name)
+                self.globals.values[name] = DefinedFunction(
+                    name, decl_node.out_port(0), f.ast
                 )
-                global_variables[name] = Variable(name, decl_node.out_port(0), f.ast)
-            for name, f in self.annotated_funcs.items():
-                port = FunctionCompiler(self.graph, global_variables).compile_global(
-                    f.ast, defs[name], global_variables
+
+            # Now compile functions definitions
+            for name, f in self._func_defs.items():
+                FunctionDefCompiler(graph, self.globals).compile_global(
+                    f.ast, defs[name]
                 )
-                assert isinstance(port.ty, FunctionType)
-                self.fun_decls.append(
-                    GuppyFunction(name, self, port.node, port.ty, f.ast)
-                )
-            return self.graph
+            return graph
+
         except GuppyError as err:
             if err.location:
                 loc = err.location
