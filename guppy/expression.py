@@ -11,7 +11,7 @@ from guppy.compiler_base import (
 from guppy.error import InternalGuppyError, GuppyTypeError, GuppyError
 from guppy.guppy_types import FunctionType, GuppyType
 from guppy.hugr.hugr import OutPortV
-
+from guppy.prelude.builtin import float_value, FloatType
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[AstNode], tuple[str, str]] = {
@@ -86,6 +86,8 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             const = self.graph.add_constant(bool_value(v), BoolType()).out_port(0)
         elif isinstance(v, int):
             const = self.graph.add_constant(int_value(v), IntType()).out_port(0)
+        elif isinstance(v, float):
+            const = self.graph.add_constant(float_value(v), FloatType()).out_port(0)
         else:
             raise GuppyError("Unsupported constant expression", node)
         return self.graph.add_load_constant(const).out_port(0)

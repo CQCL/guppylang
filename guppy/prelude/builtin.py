@@ -81,8 +81,18 @@ class ConstIntS(BaseModel):
     value: int
 
 
+class ConstF64(BaseModel):
+    """Hugr representation of signed integers in the arithmetic extension."""
+    c: Literal["ConstF64"] = "ConstF64"
+    value: float
+
+
 def int_value(i: int) -> val.Value:
     return val.Prim(val=val.ExtensionVal(c=(ConstIntS(log_width=INT_WIDTH, value=i),)))
+
+
+def float_value(f: float) -> val.Value:
+    return val.Prim(val=val.ExtensionVal(c=(ConstF64(value=f),)))
 
 
 class IdCompiler(CallCompiler):
