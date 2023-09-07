@@ -411,7 +411,7 @@ dependencies = [
 [[package]]
 name = "quantinuum-hugr"
 version = "0.1.0"
-source = "git+https://github.com/CQCL-DEV/hugr.git?rev=014a9575ed1b99f5585549b08f7dbad0acc6d586#014a9575ed1b99f5585549b08f7dbad0acc6d586"
+source = "git+https://github.com/CQCL-DEV/hugr.git?rev=5a97a635069b4285ad05bd8a2caf808145860cc7#5a97a635069b4285ad05bd8a2caf808145860cc7"
 dependencies = [
  "bitvec",
  "cgmath",

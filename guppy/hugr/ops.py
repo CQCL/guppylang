@@ -112,6 +112,7 @@ class DFB(BasicBlock):
     inputs: TypeRow = Field(default_factory=list)
     other_outputs: TypeRow = Field(default_factory=list)
     predicate_variants: list[TypeRow] = Field(default_factory=list)
+    extension_delta: ExtensionSet = Field(default_factory=list)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         # The types will be all None because it's not dataflow, but we only care about
@@ -305,6 +306,7 @@ class CFG(DataflowOp):
     op: Literal["CFG"] = "CFG"
     inputs: TypeRow = Field(default_factory=list)
     outputs: TypeRow = Field(default_factory=list)
+    extension_delta: ExtensionSet = Field(default_factory=list)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         self.inputs = list(in_types)
