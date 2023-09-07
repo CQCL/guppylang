@@ -9,9 +9,8 @@ from guppy.compiler_base import (
     GlobalVariable,
 )
 from guppy.error import InternalGuppyError, GuppyTypeError, GuppyError
-from guppy.guppy_types import FunctionType, GuppyType
+from guppy.guppy_types import FunctionType
 from guppy.hugr.hugr import OutPortV
-from guppy.prelude.builtin import float_value, FloatType
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[AstNode], tuple[str, str]] = {
@@ -80,7 +79,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         raise GuppyError("Expression not supported", node)
 
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
-        from guppy.prelude.builtin import IntType, BoolType, int_value, bool_value
+        from guppy.prelude.builtin import IntType, BoolType, FloatType, int_value, bool_value, float_value
         v = node.value
         if isinstance(v, bool):
             const = self.graph.add_constant(bool_value(v), BoolType()).out_port(0)
