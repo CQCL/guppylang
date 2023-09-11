@@ -8,9 +8,6 @@ from guppy.compiler import GuppyModule
 from guppy.hugr.hugr import Hugr
 
 
-qubit = TypeVar("qubit")
-
-
 def guppy(f: Callable[..., Any]) -> Optional[Hugr]:
     """ Decorator to compile functions outside of modules for testing. """
     module = GuppyModule("module")
