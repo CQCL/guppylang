@@ -232,6 +232,7 @@ class GuppyExtension:
         marked as linear and an alias can be provided to be used in place of the class
         name.
         """
+
         def decorator(cls: type) -> type:
             self.new_type(alias or cls.__name__, hugr_repr, linear)
             return cls  # TODO: Return class or new_type ??
