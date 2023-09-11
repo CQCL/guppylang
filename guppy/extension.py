@@ -296,6 +296,19 @@ class OpCompiler(CallCompiler):
         return [leaf.add_out_port(ty) for ty in func_ty.returns]
 
 
+class NoopCompiler(CallCompiler):
+    type_check: bool
+
+    def __init__(self, type_check: bool = True):
+        self.type_check = type_check
+
+    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+        if self.type_check:
+            func_ty = self.func.ty
+            type_check_call(func_ty, args, self.node)
+        return args
+
+
 class Reversed(CallCompiler):
     cc: CallCompiler
 

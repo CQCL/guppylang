@@ -8,7 +8,8 @@ from guppy.guppy_types import FunctionType
 from guppy.hugr.hugr import OutPortV
 from guppy.prelude import builtin
 from guppy.prelude.builtin import IntType, INT_WIDTH, FloatType
-from guppy.extension import GuppyExtension, OpCompiler, Reversed, NotImplementedCompiler
+from guppy.extension import GuppyExtension, OpCompiler, Reversed, \
+    NotImplementedCompiler, NoopCompiler
 from guppy.hugr import ops, tys
 
 
@@ -75,7 +76,7 @@ def __float__(self: int) -> float:
     ...
 
 
-@extension.func(OpCompiler(ops.Noop(ty=IntType().to_hugr())), instance=IntType)
+@extension.func(NoopCompiler(), instance=IntType)
 def __floor__(self: int, other: int) -> int:
     ...
 
@@ -95,7 +96,7 @@ def __gt__(self: int, other: int) -> bool:
     ...
 
 
-@extension.func(OpCompiler(ops.Noop(ty=IntType().to_hugr())), instance=IntType)
+@extension.func(NoopCompiler(), instance=IntType)
 def __int__(self: int) -> int:
     ...
 
@@ -145,7 +146,7 @@ def __or__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(OpCompiler(ops.Noop(ty=IntType().to_hugr())), instance=IntType)
+@extension.func(NoopCompiler(), instance=IntType)
 def __pos__(self: int) -> int:
     ...
 
@@ -195,7 +196,7 @@ def __ror__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(OpCompiler(ops.Noop(ty=IntType().to_hugr())), instance=IntType)
+@extension.func(NoopCompiler(), instance=IntType)
 def __round__(self: int) -> int:
     ...
 
@@ -240,7 +241,7 @@ def __truediv__(self: int, other: int) -> float:
     ...
 
 
-@extension.func(OpCompiler(ops.Noop(ty=IntType().to_hugr())), instance=IntType)
+@extension.func(NoopCompiler(), instance=IntType)
 def __trunc__(self: int, other: int) -> int:
     ...
 
