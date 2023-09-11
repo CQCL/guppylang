@@ -40,7 +40,7 @@ class Sum(BaseModel):
 
     For any Sum type where this value meets the type of the variant indicated by the tag
     """
-    v: Literal["Tuple"] = "Tuple"
+    v: Literal["Sum"] = "Sum"
     tag: int
     value: "Value"
 

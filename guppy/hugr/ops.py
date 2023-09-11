@@ -254,6 +254,8 @@ class Conditional(DataflowOp):
     )  # The possible rows of the predicate input
     other_inputs: TypeRow = Field(default_factory=list)  # Remaining input types
     outputs: TypeRow = Field(default_factory=list)  # Output types
+    # Extensions used to produce the outputs
+    extension_delta: ExtensionSet = Field(default_factory=list)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         # First port is a predicate, i.e. a sum of tuple types. We need to unpack
