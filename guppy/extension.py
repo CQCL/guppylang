@@ -292,7 +292,7 @@ class OpCompiler(CallCompiler):
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         func_ty = self.signature or self.func.ty
         type_check_call(func_ty, args, self.node)
-        leaf = self.graph.add_node(self.op, inputs=args, parent=self.parent)
+        leaf = self.graph.add_node(self.op.copy(), inputs=args, parent=self.parent)
         return [leaf.add_out_port(ty) for ty in func_ty.returns]
 
 
