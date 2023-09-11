@@ -43,8 +43,8 @@ class ModCompiler(CallCompiler):
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         # We have: mod(x, y) = x - (x // y) * y
         [div] = __floordiv__.compile_call(args, self.parent, self.graph, self.globals, self.node)
-        [mul] = __mul__.compile_call([div], self.parent, self.graph, self.globals, self.node)
-        [sub] = __sub__.compile_call([mul], self.parent, self.graph, self.globals, self.node)
+        [mul] = __mul__.compile_call([div, args[1]], self.parent, self.graph, self.globals, self.node)
+        [sub] = __sub__.compile_call([args[0], mul], self.parent, self.graph, self.globals, self.node)
         return [sub]
 
 
@@ -102,7 +102,7 @@ def __floor__(self: float) -> float:
 
 
 @extension.func(FloordivCompiler(), instance=FloatType)
-def __floordiv__(self: float) -> float:
+def __floordiv__(self: float, other: float) -> float:
     ...
 
 
@@ -132,7 +132,7 @@ def __lt__(self: float, other: float) -> bool:
 
 
 @extension.func(ModCompiler(), instance=FloatType)
-def __mod__(self: float, other: float) -> int:
+def __mod__(self: float, other: float) -> float:
     ...
 
 
@@ -171,7 +171,7 @@ def __rdivmod__(self: float, other: float) -> float:
     ...
 
 
-@extension.func(ModCompiler(), instance=FloatType)
+@extension.func(Reversed(ModCompiler()), instance=FloatType)
 def __rmod__(self: float, other: float) -> float:
     ...
 
