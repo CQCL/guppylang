@@ -3,7 +3,7 @@
 # mypy: disable-error-code=empty-body
 
 from guppy.prelude import builtin
-from guppy.prelude.builtin import IntType, FloatType
+from guppy.prelude.builtin import IntType, FloatType, float_value
 from guppy.compiler_base import CallCompiler
 from guppy.extension import GuppyExtension, OpCompiler, Reversed, \
     NotImplementedCompiler, NoopCompiler
@@ -26,6 +26,16 @@ class FloatOpCompiler(OpCompiler):
             for arg in args
         ]
         return super().compile(args)
+
+
+class BoolCompiler(CallCompiler):
+    """Compiler for the `__bool__` method."""
+
+    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+        # We have: bool(x) = (x != 0.0)
+        zero_const = self.graph.add_constant(float_value(0.0), FloatType(), self.parent)
+        zero = self.graph.add_load_constant(zero_const.out_port(0), self.parent)
+        return __ne__.compile_call([args[0], zero.out_port(0)], self.parent, self.graph, self.globals, self.node)
 
 
 class FloordivCompiler(CallCompiler):
@@ -72,7 +82,7 @@ def __add__(self: float, other: float) -> float:
     ...
 
 
-@extension.func(NotImplementedCompiler(), instance=FloatType)  # TODO
+@extension.func(BoolCompiler(), instance=FloatType)
 def __bool__(self: int) -> bool:
     ...
 
