@@ -14,19 +14,15 @@ class QuantumOpCompiler(OpCompiler):
         super().__init__(ops.CustomOp(extension=ext, op_name=op_name, args=[]))
 
 
+_hugr_qubit = tys.Opaque(extension="prelude", id="qubit", args=[], bound=TypeBound.Any)
+
+
 extension = GuppyExtension("quantum", dependencies=[builtin])
 
 
-Qubit: type[GuppyType] = extension.new_type(
-    name="Qubit",
-    hugr_repr=tys.Opaque(
-        extension="prelude",
-        id="qubit",
-        args=[],
-        bound=TypeBound.Any,
-    ),
-    linear=True,
-)
+@extension.type(_hugr_qubit, linear=False)
+class Qubit:
+    pass
 
 
 @extension.func(QuantumOpCompiler("H"))
