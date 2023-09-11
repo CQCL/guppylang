@@ -147,6 +147,19 @@ class Globals(NamedTuple):
         """Looks up an instance function with a given name for a type"""
         return self.instance_funcs.get((ty.name, name), None)
 
+    def __or__(self, other: "Globals") -> "Globals":
+        return Globals(
+            self.values | other.values,
+            self.types | other.types,
+            self.instance_funcs | other.instance_funcs,
+        )
+
+    def __ior__(self, other: "Globals") -> "Globals":
+        self.values.update(other.values)
+        self.types.update(other.types)
+        self.instance_funcs.update(other.instance_funcs)
+        return self
+
 
 class CompilerBase(ABC):
     """Base class for the Guppy compiler."""

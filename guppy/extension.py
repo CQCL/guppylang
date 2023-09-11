@@ -12,7 +12,6 @@ from guppy.compiler_base import (
     TypeName,
     Globals,
     CallCompiler,
-    ValueName,
 )
 from guppy.error import GuppyError, InternalGuppyError
 from guppy.expression import type_check_call
@@ -125,11 +124,14 @@ class GuppyExtension:
     """
 
     name: str
-    types: dict[TypeName, type[GuppyType]]
-    funcs: dict[ValueName, "ExtensionFunction"]
-    instance_funcs: dict[tuple[TypeName, ValueName], "ExtensionFunction"]
+    globals: Globals
 
-    _globals: Globals
+    # Globals for this extension including core types and all dependencies
+    _all_globals: Globals
+
+    # Mapping from Python class names to names in the Guppy type system. Most of the
+    # time this will be an identity mapping, except for cases where the type declaration
+    # specifies an alias
     _type_alias_map: dict[str, TypeName]
 
     def __init__(self, name: str, dependencies: Sequence[ModuleType]) -> None:
@@ -140,10 +142,8 @@ class GuppyExtension:
         """
 
         self.name = name
-        self.types = {}
-        self.funcs = {}
-        self.instance_funcs = {}
-        self._globals = Globals.default()
+        self.globals = Globals({}, {}, {})
+        self._all_globals = Globals.default()
         self._type_alias_map = {}
 
         for module in dependencies:
@@ -158,24 +158,19 @@ class GuppyExtension:
                     self,
                 )
             for ext in exts:
-                ext.add_to_globals(self._globals)
-
-    def add_to_globals(self, globals: Globals) -> None:
-        globals.types.update(self.types)
-        globals.values.update(self.funcs)
-        globals.instance_funcs.update(self.instance_funcs)
+                self._all_globals |= ext.globals
 
     def register_type(self, name: str, ty: type[GuppyType]) -> None:
-        self.types[name] = ty
-        self._globals.types[name] = ty
+        self.globals.types[name] = ty
+        self._all_globals.types[name] = ty
 
     def register_func(self, name: str, func: "ExtensionFunction") -> None:
-        self.funcs[name] = func
+        self.globals.values[name] = func
 
     def register_instance_func(
         self, ty: type[GuppyType], name: str, func: "ExtensionFunction"
     ) -> None:
-        self.instance_funcs[ty.name, name] = func
+        self.globals.instance_funcs[ty.name, name] = func
 
     def new_type(
         self, name: str, hugr_repr: tys.SimpleType, linear: bool = False
@@ -261,7 +256,7 @@ class GuppyExtension:
             qualname = f.__qualname__.split(".")
             inst: Optional[type[GuppyType]]
             if len(qualname) == 2 and qualname[0] in self._type_alias_map:
-                inst = self.types[self._type_alias_map[qualname[0]]]
+                inst = self.globals.types[self._type_alias_map[qualname[0]]]
             else:
                 inst = instance
 
@@ -290,7 +285,9 @@ class GuppyExtension:
         ):
             return func_ast, None
 
-        return func_ast, FunctionDefCompiler.validate_signature(func_ast, self._globals)
+        return func_ast, FunctionDefCompiler.validate_signature(
+            func_ast, self._all_globals
+        )
 
 
 class OpCompiler(CallCompiler):

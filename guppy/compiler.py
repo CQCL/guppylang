@@ -101,7 +101,7 @@ class GuppyModule(object):
         """
         for ext in m.__dict__.values():
             if isinstance(ext, GuppyExtension):
-                ext.add_to_globals(self.globals)
+                self.globals |= ext.globals
 
     def _parse(self, f: Callable[..., Any]) -> RawFunction:
         source_lines, line_offset = inspect.getsourcelines(f)
