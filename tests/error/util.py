@@ -5,7 +5,10 @@ from typing import Callable, Optional, Any, TypeVar
 import pytest
 
 from guppy.compiler import GuppyModule
+from guppy.extension import GuppyExtension
+from guppy.hugr import tys
 from guppy.hugr.hugr import Hugr
+from guppy.hugr.tys import TypeBound
 
 
 def guppy(f: Callable[..., Any]) -> Optional[Hugr]:
@@ -30,3 +33,7 @@ def run_error_test(file, capsys):
 
     exp_err = exp_err.replace("$FILE", str(file))
     assert err == exp_err
+
+
+ext = GuppyExtension("test", [])
+NonBool = ext.new_type("NonBool", tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable))

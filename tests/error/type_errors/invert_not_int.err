@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:6
 5:    def foo() -> int:
 6:        return ~True
                   ^^^^
-GuppyTypeError: Expected expression of type `int`, but got `True` of type `bool`
+GuppyTypeError: Unary operator `~` not defined for argument of type  `bool`

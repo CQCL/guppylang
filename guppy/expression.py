@@ -141,7 +141,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         func = self.globals.get_instance_func(arg.ty, op)
         if func is None:
             raise GuppyTypeError(
-                f"Unary operator `{display_name}` not defined on argument of type "
+                f"Unary operator `{display_name}` not defined for argument of type "
                 f" `{arg.ty}`",
                 node.operand
             )
