@@ -338,7 +338,7 @@ class CustomOp(LeafOp):
         self.signature = tys.FunctionType(input=list(in_types), output=list(out_types))
 
     def display_name(self) -> str:
-        return f"{self.extension}::{self.op_name}"
+        return self.op_name
 
 
 class H(LeafOp):
