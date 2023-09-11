@@ -52,7 +52,7 @@ class ExtensionFunction(GlobalFunction):
 
         This will place a `FunctionDef` node into the Hugr module if one for this
         function doesn't already exist and loads it into the DFG. This operation will
-        fail of the extension function is marked as not supporting higher-order usage.
+        fail if the extension function is marked as not supporting higher-order usage.
         """
         if not self.higher_order:
             raise GuppyError(
@@ -102,7 +102,7 @@ class UntypedExtensionFunction(ExtensionFunction):
 
     def __init__(
         self, name: str, defined_at: Optional[AstNode], call_compiler: CallCompiler
-    ):
+    ) -> None:
         self.name = name
         self.defined_at = defined_at
         self.higher_order = False
@@ -124,6 +124,8 @@ class GuppyExtension:
     """
 
     name: str
+
+    # Globals for all new names defined by this extension
     globals: Globals
 
     # Globals for this extension including core types and all dependencies
@@ -138,7 +140,7 @@ class GuppyExtension:
         """Creates a new empty Guppy extension.
 
         If the extension uses types from other extensions (for example the `builtin.py`
-        extensions from the prelude), they have to passed as dependencies.
+        extensions from the prelude), they have to be passed as dependencies.
         """
 
         self.name = name
@@ -161,20 +163,29 @@ class GuppyExtension:
                 self._all_globals |= ext.globals
 
     def register_type(self, name: str, ty: type[GuppyType]) -> None:
+        """Registers an existing `GuppyType` subclass with this extension."""
         self.globals.types[name] = ty
         self._all_globals.types[name] = ty
 
     def register_func(self, name: str, func: "ExtensionFunction") -> None:
+        """Registers an existing `ExtensionFunction` with this extension."""
         self.globals.values[name] = func
 
     def register_instance_func(
         self, ty: type[GuppyType], name: str, func: "ExtensionFunction"
     ) -> None:
+        """Registers an existing function as an instance function for the type with the
+        given name."""
         self.globals.instance_funcs[ty.name, name] = func
 
     def new_type(
         self, name: str, hugr_repr: tys.SimpleType, linear: bool = False
     ) -> type[GuppyType]:
+        """Creates a new type.
+
+        Requires the static Hugr translation of the type. Additionally, the type can be
+        marked as linear.
+        """
         _name = name
 
         class NewType(GuppyType):
@@ -184,6 +195,11 @@ class GuppyExtension:
             def build(
                 *args: GuppyType, node: Union[ast.Name, ast.Subscript]
             ) -> "GuppyType":
+                # At the moment, extension types don't support type arguments.
+                if len(args) > 0:
+                    raise GuppyError(
+                        f"Type `{name}` does not accept type parameters.", node
+                    )
                 return NewType()
 
             @property
@@ -210,6 +226,12 @@ class GuppyExtension:
         alias: Optional[str] = None,
         linear: bool = False,
     ) -> Callable[[type], type]:
+        """Class decorator to annotate a new Guppy type.
+
+        Requires the static Hugr translation of the type. Additionally, the type can be
+        marked as linear and an alias can be provided to be used in place of the class
+        name.
+        """
         def decorator(cls: type) -> type:
             self.new_type(alias or cls.__name__, hugr_repr, linear)
             return cls  # TODO: Return class or new_type ??
@@ -224,6 +246,12 @@ class GuppyExtension:
         higher_order: bool = True,
         instance: Optional[builtins.type[GuppyType]] = None,
     ) -> ExtensionFunction:
+        """Creates a new extension function.
+
+        Passing a `GuppyType` with `instance=...` marks the function as an instance
+        function for the given type. A type signature may be omitted if higher-order
+        usage of the function is disabled.
+        """
         func: ExtensionFunction
         if signature is None:
             if higher_order:
@@ -250,6 +278,14 @@ class GuppyExtension:
         higher_order: bool = True,
         instance: Optional[builtins.type[GuppyType]] = None,
     ) -> Callable[[Callable[..., Any]], ExtensionFunction]:
+        """Decorator to annotate a new extension function.
+
+        Passing a `GuppyType` with `instance=...` marks the function as an instance
+        function for the given type. The type signature is extracted from the Python
+        type annotations on the function. They may only be omitted if higher-order
+        usage of the function is disabled.
+        """
+
         def decorator(f: Callable[..., Any]) -> ExtensionFunction:
             # Check if f was defined in a class. In that case, the qualified name of f
             # would be `ContainingClass.func_name`.
@@ -269,6 +305,11 @@ class GuppyExtension:
     def _parse_decl(
         self, f: Callable[..., Any]
     ) -> tuple[ast.FunctionDef, Optional[FunctionType]]:
+        """Helper method to parse a function into an AST.
+
+        Also returns the function type extracted from the type annotations if they are
+        provided.
+        """
         source = textwrap.dedent(inspect.getsource(f))
         func_ast = ast.parse(source).body[0]
         if not isinstance(func_ast, ast.FunctionDef):
@@ -291,6 +332,12 @@ class GuppyExtension:
 
 
 class OpCompiler(CallCompiler):
+    """Compiler for calls that can be implemented via a single Hugr op.
+
+    Performs type checking against the signature of the function and inserts the
+    specified op into the graph.
+    """
+
     op: ops.OpType
     signature: Optional[FunctionType] = None
 
@@ -306,6 +353,12 @@ class OpCompiler(CallCompiler):
 
 
 class NoopCompiler(CallCompiler):
+    """Compiler for calls that are no-ops.
+
+    Compiles a call by directly returning the arguments. Type checking can be disabled
+    by passing `type_check=False`.
+    """
+
     type_check: bool
 
     def __init__(self, type_check: bool = True):
@@ -319,6 +372,11 @@ class NoopCompiler(CallCompiler):
 
 
 class Reversed(CallCompiler):
+    """Call compiler that reverses the arguments and calls out to a different compiler.
+
+    Useful to implement the right-hand version of arithmetic functions, e.g. `__radd__`.
+    """
+
     cc: CallCompiler
 
     def __init__(self, cc: CallCompiler):
@@ -333,5 +391,11 @@ class Reversed(CallCompiler):
 
 
 class NotImplementedCompiler(CallCompiler):
+    """Call compiler that raises an error when the function is called.
+
+    Should be used to inform users that a function that would normally be available in
+    Python is not yet implemented in Guppy.
+    """
+
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         raise GuppyError("Operation is not yet implemented", self.node)

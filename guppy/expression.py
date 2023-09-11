@@ -70,7 +70,10 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         return [self.compile(e, dfg) for e in expr_to_row(expr)]
 
     def _is_global_var(self, x: str) -> Optional[GlobalVariable]:
-        """Returns `True` if the argument references a global variable."""
+        """Checks if the argument references a global variable.
+
+        Returns the variable if it exists, otherwise `None`.
+        """
         if x in self.globals.values and x not in self.dfg:
             return self.globals.values[x]
         return None
