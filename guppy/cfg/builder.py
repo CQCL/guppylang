@@ -386,4 +386,4 @@ def is_short_circuit_expr(node: ast.AST) -> bool:
     """
     return isinstance(node, ast.BoolOp) or (
         isinstance(node, ast.Compare) and len(node.comparators) > 1
-    )
+    ) or (isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not))
