@@ -38,7 +38,7 @@ def test_float_coercion():
 def test_arith_big():
     @guppy
     def arith(x: int, y: float, z: int) -> bool:
-        a = x ** y + 3 * z
+        a = x // y + 3 * z
         b = -8 >= a > 5 or (x * y == 0 and a % 3 < x)
         return b
 
