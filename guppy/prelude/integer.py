@@ -82,7 +82,7 @@ def __floor__(self: int, other: int) -> int:
 
 
 @extension.func(IntOpCompiler("idiv_s"), instance=IntType)
-def __floordiv__(self: int) -> int:
+def __floordiv__(self: int, other: int) -> int:
     ...
 
 
