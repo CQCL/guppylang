@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from types import ModuleType
 from typing import Optional, Any, Callable, Union
 
+from guppy.ast_util import is_empty_body
 from guppy.compiler_base import Globals
 from guppy.extension import GuppyExtension
 from guppy.function import FunctionDefCompiler, DefinedFunction
@@ -134,7 +135,7 @@ class GuppyModule(object):
                 )
             for name, f in self._func_decls.items():
                 func_ty = FunctionDefCompiler.validate_signature(f.ast, self.globals)
-                if len(f.ast.body) > 1 or not isinstance(f.ast.body[0], ast.Pass):
+                if not is_empty_body(f.ast):
                     raise GuppyError(
                         "Function declarations may not have a body.", f.ast.body[0]
                     )

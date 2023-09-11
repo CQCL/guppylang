@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Optional, Callable, Any, Union, Sequence
 
-from guppy.ast_util import AstNode
+from guppy.ast_util import AstNode, is_empty_body
 from guppy.compiler_base import GlobalFunction, TypeName, Globals, CallCompiler, \
     ValueName
 from guppy.error import GuppyError, InternalGuppyError
@@ -267,14 +267,10 @@ class GuppyExtension:
             raise ExtensionDefinitionError(
                 "Only functions may be annotated using `@extension`", self
             )
-        if len(func_ast.body) > 0:
-            b = func_ast.body[0]
-            is_pass = isinstance(b, ast.Ellipsis)
-            is_ellipsis = isinstance(b, ast.Expr) and isinstance(b.value, ast.Ellipsis)
-            if len(func_ast.body) > 1 or not (is_pass or is_ellipsis):
-                raise ExtensionDefinitionError(
-                    "Body of declared extension functions must be empty", self
-                )
+        if not is_empty_body(func_ast):
+            raise ExtensionDefinitionError(
+                "Body of declared extension functions must be empty", self
+            )
         # Return None if annotations are missing
         if not func_ast.returns or not all(arg.annotation for arg in func_ast.args.args):
             return func_ast, None
