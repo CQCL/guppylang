@@ -363,7 +363,9 @@ class Hugr:
         self.root.meta_data["name"] = name
         return self.root
 
-    def add_constant(self, value: val.Value, ty: GuppyType, parent: Optional[Node] = None) -> VNode:
+    def add_constant(
+        self, value: val.Value, ty: GuppyType, parent: Optional[Node] = None
+    ) -> VNode:
         """Adds a constant node holding a given value to the graph."""
         return self.add_node(
             ops.Const(value=value, typ=ty.to_hugr()), [], [ty], parent, None

@@ -384,6 +384,8 @@ def is_short_circuit_expr(node: ast.AST) -> bool:
 
     Those expressions *must* be compiled using the `BranchBuilder`.
     """
-    return isinstance(node, ast.BoolOp) or (
-        isinstance(node, ast.Compare) and len(node.comparators) > 1
-    ) or (isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not))
+    return (
+        isinstance(node, ast.BoolOp)
+        or (isinstance(node, ast.Compare) and len(node.comparators) > 1)
+        or (isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not))
+    )

@@ -79,7 +79,15 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         raise GuppyError("Expression not supported", node)
 
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
-        from guppy.prelude.builtin import IntType, BoolType, FloatType, int_value, bool_value, float_value
+        from guppy.prelude.builtin import (
+            IntType,
+            BoolType,
+            FloatType,
+            int_value,
+            bool_value,
+            float_value,
+        )
+
         v = node.value
         if isinstance(v, bool):
             const = self.graph.add_constant(bool_value(v), BoolType()).out_port(0)
@@ -105,7 +113,9 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             var.used = node
             return self.dfg[x].port
         elif x in self.globals.values:
-            return self.globals.values[x].load(self.graph, self.dfg.node, self.globals, node)
+            return self.globals.values[x].load(
+                self.graph, self.dfg.node, self.globals, node
+            )
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in ExpressionCompiler. This should have "
             f"been caught by program analysis!"
@@ -143,7 +153,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             raise GuppyTypeError(
                 f"Unary operator `{display_name}` not defined for argument of type "
                 f" `{arg.ty}`",
-                node.operand
+                node.operand,
             )
         [res] = func.compile_call([arg], self.dfg.node, self.graph, self.globals, node)
         return res
@@ -182,7 +192,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         raise GuppyTypeError(
             f"Binary operator `{display_name}` not defined for arguments of type "
             f"`{left.ty}` and `{right.ty}`",
-            node
+            node,
         )
 
     def visit_BinOp(self, node: ast.BinOp) -> OutPortV:
@@ -266,9 +276,7 @@ def check_num_args(exp: int, act: int, node: AstNode) -> None:
         )
 
 
-def type_check_call(
-    func_ty: FunctionType, args: list[OutPortV], node: AstNode
-) -> None:
+def type_check_call(func_ty: FunctionType, args: list[OutPortV], node: AstNode) -> None:
     """Type-checks the arguments for a function call."""
     check_num_args(len(func_ty.args), len(args), node)
     for i, port in enumerate(args):

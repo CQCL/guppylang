@@ -5,8 +5,13 @@
 from guppy.prelude import builtin
 from guppy.prelude.builtin import IntType, FloatType, float_value
 from guppy.compiler_base import CallCompiler
-from guppy.extension import GuppyExtension, OpCompiler, Reversed, \
-    NotImplementedCompiler, NoopCompiler
+from guppy.extension import (
+    GuppyExtension,
+    OpCompiler,
+    Reversed,
+    NotImplementedCompiler,
+    NoopCompiler,
+)
 from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV
 
@@ -22,7 +27,8 @@ class FloatOpCompiler(OpCompiler):
                 inputs=[arg],
                 parent=self.parent,
             ).add_out_port(FloatType())
-            if isinstance(arg.ty, IntType) else arg
+            if isinstance(arg.ty, IntType)
+            else arg
             for arg in args
         ]
         return super().compile(args)
@@ -35,7 +41,13 @@ class BoolCompiler(CallCompiler):
         # We have: bool(x) = (x != 0.0)
         zero_const = self.graph.add_constant(float_value(0.0), FloatType(), self.parent)
         zero = self.graph.add_load_constant(zero_const.out_port(0), self.parent)
-        return __ne__.compile_call([args[0], zero.out_port(0)], self.parent, self.graph, self.globals, self.node)
+        return __ne__.compile_call(
+            [args[0], zero.out_port(0)],
+            self.parent,
+            self.graph,
+            self.globals,
+            self.node,
+        )
 
 
 class FloordivCompiler(CallCompiler):
@@ -43,8 +55,12 @@ class FloordivCompiler(CallCompiler):
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         # We have: floordiv(x, y) = floor(truediv(x, y))
-        [div] = __truediv__.compile_call(args, self.parent, self.graph, self.globals, self.node)
-        [floor] = __floor__.compile_call([div], self.parent, self.graph, self.globals, self.node)
+        [div] = __truediv__.compile_call(
+            args, self.parent, self.graph, self.globals, self.node
+        )
+        [floor] = __floor__.compile_call(
+            [div], self.parent, self.graph, self.globals, self.node
+        )
         return [floor]
 
 
@@ -53,9 +69,15 @@ class ModCompiler(CallCompiler):
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         # We have: mod(x, y) = x - (x // y) * y
-        [div] = __floordiv__.compile_call(args, self.parent, self.graph, self.globals, self.node)
-        [mul] = __mul__.compile_call([div, args[1]], self.parent, self.graph, self.globals, self.node)
-        [sub] = __sub__.compile_call([args[0], mul], self.parent, self.graph, self.globals, self.node)
+        [div] = __floordiv__.compile_call(
+            args, self.parent, self.graph, self.globals, self.node
+        )
+        [mul] = __mul__.compile_call(
+            [div, args[1]], self.parent, self.graph, self.globals, self.node
+        )
+        [sub] = __sub__.compile_call(
+            [args[0], mul], self.parent, self.graph, self.globals, self.node
+        )
         return [sub]
 
 
@@ -64,8 +86,12 @@ class DivmodCompiler(CallCompiler):
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         # We have: divmod(x, y) = (div(x, y), mod(x, y))
-        [div] = __truediv__.compile_call(args, self.parent, self.graph, self.globals, self.node)
-        [mod] = __mod__.compile_call(args, self.parent, self.graph, self.globals, self.node)
+        [div] = __truediv__.compile_call(
+            args, self.parent, self.graph, self.globals, self.node
+        )
+        [mod] = __mod__.compile_call(
+            args, self.parent, self.graph, self.globals, self.node
+        )
         return [self.graph.add_make_tuple([div, mod], self.parent).out_port(0)]
 
 
@@ -127,7 +153,9 @@ def __gt__(self: float, other: float) -> bool:
     ...
 
 
-@extension.func(FloatOpCompiler("trunc_s", "arithmetic.conversions"), instance=FloatType)
+@extension.func(
+    FloatOpCompiler("trunc_s", "arithmetic.conversions"), instance=FloatType
+)
 def __int__(self: float, other: float) -> int:
     ...
 
@@ -222,8 +250,8 @@ def __truediv__(self: float, other: float) -> float:
     ...
 
 
-@extension.func(FloatOpCompiler("trunc_s", "arithmetic.conversions"), instance=FloatType)
+@extension.func(
+    FloatOpCompiler("trunc_s", "arithmetic.conversions"), instance=FloatType
+)
 def __trunc__(self: float, other: float) -> int:
     ...
-
-

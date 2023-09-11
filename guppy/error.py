@@ -51,7 +51,10 @@ class GuppyError(Exception):
         A line offset is needed to translate AST locations mentioned in the message into
         source locations in the actual file."""
         return self.raw_msg.format(
-            *(SourceLoc.from_ast(l, line_offset) if l is not None else "???" for l in self.locs_in_msg)
+            *(
+                SourceLoc.from_ast(l, line_offset) if l is not None else "???"
+                for l in self.locs_in_msg
+            )
         )
 
 

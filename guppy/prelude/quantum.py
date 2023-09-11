@@ -42,4 +42,3 @@ def cx(control: Qubit, target: Qubit) -> tuple[Qubit, Qubit]:
 @extension.func(QuantumOpCompiler("Measure"))
 def measure(q: Qubit) -> tuple[Qubit, bool]:
     ...
-

@@ -7,8 +7,13 @@ from types import ModuleType
 from typing import Optional, Callable, Any, Union, Sequence
 
 from guppy.ast_util import AstNode, is_empty_body
-from guppy.compiler_base import GlobalFunction, TypeName, Globals, CallCompiler, \
-    ValueName
+from guppy.compiler_base import (
+    GlobalFunction,
+    TypeName,
+    Globals,
+    CallCompiler,
+    ValueName,
+)
 from guppy.error import GuppyError, InternalGuppyError
 from guppy.expression import type_check_call
 from guppy.function import FunctionDefCompiler
@@ -41,7 +46,9 @@ class ExtensionFunction(GlobalFunction):
 
     _defined: dict[Node, DFContainingVNode] = field(default_factory=dict, init=False)
 
-    def load(self, graph: Hugr, parent: DFContainingNode, globals: Globals, node: AstNode) -> OutPortV:
+    def load(
+        self, graph: Hugr, parent: DFContainingNode, globals: Globals, node: AstNode
+    ) -> OutPortV:
         """Loads the extension function as a value into a local dataflow graph.
 
         This will place a `FunctionDef` node into the Hugr module if one for this
@@ -94,7 +101,9 @@ class UntypedExtensionFunction(ExtensionFunction):
     As a result, functions like this cannot be used in a higher-order context.
     """
 
-    def __init__(self, name: str, defined_at: Optional[AstNode], call_compiler: CallCompiler):
+    def __init__(
+        self, name: str, defined_at: Optional[AstNode], call_compiler: CallCompiler
+    ):
         self.name = name
         self.defined_at = defined_at
         self.higher_order = False
@@ -138,7 +147,11 @@ class GuppyExtension:
         self._type_alias_map = {}
 
         for module in dependencies:
-            exts = [obj for obj in module.__dict__.values() if isinstance(obj, GuppyExtension)]
+            exts = [
+                obj
+                for obj in module.__dict__.values()
+                if isinstance(obj, GuppyExtension)
+            ]
             if len(exts) == 0:
                 raise ExtensionDefinitionError(
                     f"Dependency module `{module.__name__}` does not contain a Guppy extension",
@@ -272,7 +285,9 @@ class GuppyExtension:
                 "Body of declared extension functions must be empty", self
             )
         # Return None if annotations are missing
-        if not func_ast.returns or not all(arg.annotation for arg in func_ast.args.args):
+        if not func_ast.returns or not all(
+            arg.annotation for arg in func_ast.args.args
+        ):
             return func_ast, None
 
         return func_ast, FunctionDefCompiler.validate_signature(func_ast, self._globals)

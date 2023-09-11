@@ -156,6 +156,7 @@ def type_from_ast(node: AstNode, globals: "Globals") -> GuppyType:
                 type_row_from_ast(ret, globals).tys,
             )
     from guppy.error import GuppyError
+
     raise GuppyError("Not a valid Guppy type", node)
 
 
@@ -172,4 +173,3 @@ def type_row_from_ast(node: ast.expr, globals: "Globals") -> TypeRow:
         return TypeRow(ty.element_types)
     else:
         return TypeRow([ty])
-

@@ -72,6 +72,7 @@ class GuppyModule(object):
         import guppy.prelude.boolean
         import guppy.prelude.float
         import guppy.prelude.integer
+
         self.load(guppy.prelude.builtin)
         self.load(guppy.prelude.boolean)
         self.load(guppy.prelude.float)

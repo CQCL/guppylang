@@ -8,14 +8,23 @@ from guppy.guppy_types import FunctionType
 from guppy.hugr.hugr import OutPortV
 from guppy.prelude import builtin
 from guppy.prelude.builtin import IntType, INT_WIDTH, FloatType
-from guppy.extension import GuppyExtension, OpCompiler, Reversed, \
-    NotImplementedCompiler, NoopCompiler
+from guppy.extension import (
+    GuppyExtension,
+    OpCompiler,
+    Reversed,
+    NotImplementedCompiler,
+    NoopCompiler,
+)
 from guppy.hugr import ops, tys
 
 
 class IntOpCompiler(OpCompiler):
     def __init__(self, op_name: str, ext: str = "arithmetic.int"):
-        super().__init__(ops.CustomOp(extension=ext, op_name=op_name, args=[tys.BoundedNatArg(n=INT_WIDTH)]))
+        super().__init__(
+            ops.CustomOp(
+                extension=ext, op_name=op_name, args=[tys.BoundedNatArg(n=INT_WIDTH)]
+            )
+        )
 
 
 class TruedivCompiler(CallCompiler):
@@ -26,17 +35,26 @@ class TruedivCompiler(CallCompiler):
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         # Compile `truediv` using float arithmetic
         import guppy.prelude.float
+
         type_check_call(self.signature, args, self.node)
         [left, right] = args
-        [left] = __float__.compile_call([left], self.parent, self.graph, self.globals, self.node)
-        [right] = __float__.compile_call([right], self.parent, self.graph, self.globals, self.node)
-        return guppy.prelude.float.__truediv__.compile_call([left, right], self.parent, self.graph, self.globals, self.node)
+        [left] = __float__.compile_call(
+            [left], self.parent, self.graph, self.globals, self.node
+        )
+        [right] = __float__.compile_call(
+            [right], self.parent, self.graph, self.globals, self.node
+        )
+        return guppy.prelude.float.__truediv__.compile_call(
+            [left, right], self.parent, self.graph, self.globals, self.node
+        )
 
 
 extension = GuppyExtension("integer", dependencies=[builtin])
 
 
-@extension.func(IntOpCompiler("iabs"), instance=IntType)  # TODO: Maybe wrong?? (signed vs unsigned!)
+@extension.func(
+    IntOpCompiler("iabs"), instance=IntType
+)  # TODO: Maybe wrong?? (signed vs unsigned!)
 def __abs__(self: int) -> int:
     ...
 
@@ -111,7 +129,9 @@ def __le__(self: int, other: int) -> bool:
     ...
 
 
-@extension.func(IntOpCompiler("ishl"), instance=IntType)  # TODO: broken (RHS is unsigned)
+@extension.func(
+    IntOpCompiler("ishl"), instance=IntType
+)  # TODO: broken (RHS is unsigned)
 def __lshift__(self: int, other: int) -> int:
     ...
 
@@ -176,7 +196,9 @@ def __rfloordiv__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(Reversed(IntOpCompiler("ishl")), instance=IntType)  # TODO: broken (RHS is unsigned)
+@extension.func(
+    Reversed(IntOpCompiler("ishl")), instance=IntType
+)  # TODO: broken (RHS is unsigned)
 def __rlshift__(self: int, other: int) -> int:
     ...
 
@@ -206,17 +228,23 @@ def __rpow__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(Reversed(IntOpCompiler("ishr")), instance=IntType)  # TODO: broken (RHS is unsigned)
+@extension.func(
+    Reversed(IntOpCompiler("ishr")), instance=IntType
+)  # TODO: broken (RHS is unsigned)
 def __rrshift__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(Reversed(IntOpCompiler("ishr")), instance=IntType)  # TODO: broken (RHS is unsigned)
+@extension.func(
+    Reversed(IntOpCompiler("ishr")), instance=IntType
+)  # TODO: broken (RHS is unsigned)
 def __rshift__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(Reversed(IntOpCompiler("isub")), instance=IntType)  # TODO: broken (RHS is unsigned)
+@extension.func(
+    Reversed(IntOpCompiler("isub")), instance=IntType
+)  # TODO: broken (RHS is unsigned)
 def __rsub__(self: int, other: int) -> int:
     ...
 
@@ -249,5 +277,3 @@ def __trunc__(self: int, other: int) -> int:
 @extension.func(IntOpCompiler("ixor"), instance=IntType)
 def __xor__(self: int, other: int) -> int:
     ...
-
-

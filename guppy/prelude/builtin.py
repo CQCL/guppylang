@@ -76,6 +76,7 @@ FloatType: type[GuppyType] = extension.new_type(
 
 class ConstIntS(BaseModel):
     """Hugr representation of signed integers in the arithmetic extension."""
+
     c: Literal["ConstIntS"] = "ConstIntS"
     log_width: int
     value: int
@@ -83,6 +84,7 @@ class ConstIntS(BaseModel):
 
 class ConstF64(BaseModel):
     """Hugr representation of signed integers in the arithmetic extension."""
+
     c: Literal["ConstF64"] = "ConstF64"
     value: float
 
@@ -110,7 +112,10 @@ class CallableCompiler(CallCompiler):
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         check_num_args(1, len(args), self.node)
         [arg] = args
-        is_callable = isinstance(arg.ty, FunctionType) or self.globals.get_instance_func(arg.ty, "__call__") is not None
+        is_callable = (
+            isinstance(arg.ty, FunctionType)
+            or self.globals.get_instance_func(arg.ty, "__call__") is not None
+        )
         const = self.graph.add_constant(bool_value(is_callable), BoolType()).out_port(0)
         return [self.graph.add_load_constant(const).out_port(0)]
 
@@ -141,13 +146,11 @@ class BuiltinCompiler(CallCompiler):
 extension.new_func("abs", BuiltinCompiler("abs", "__abs__"), higher_order=False)
 extension.new_func("bool", BuiltinCompiler("bool", "__bool__"), higher_order=False)
 extension.new_func("callable", CallableCompiler(), higher_order=False)
-extension.new_func("divmod", BuiltinCompiler("divmod", "__divmod__"), higher_order=False)
+extension.new_func(
+    "divmod", BuiltinCompiler("divmod", "__divmod__"), higher_order=False
+)
 extension.new_func("float", BuiltinCompiler("float", "__float__"), higher_order=False)
 extension.new_func("id", IdCompiler(), higher_order=False)
 extension.new_func("int", BuiltinCompiler("int", "__int__"), higher_order=False)
 extension.new_func("len", BuiltinCompiler("len", "__len__"), higher_order=False)
 extension.new_func("round", BuiltinCompiler("round", "__round__"), higher_order=False)
-
-
-
-

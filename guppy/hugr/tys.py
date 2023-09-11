@@ -47,7 +47,10 @@ class ExtensionsArg(BaseModel):
     es: ExtensionSet
 
 
-TypeArgUnion = Annotated[Union[TypeArg, BoundedNatArg, OpaqueArg, SequenceArg, ExtensionsArg], Field(discriminator="tya")]
+TypeArgUnion = Annotated[
+    Union[TypeArg, BoundedNatArg, OpaqueArg, SequenceArg, ExtensionsArg],
+    Field(discriminator="tya"),
+]
 
 
 # --------------------------------------------
@@ -173,7 +176,9 @@ class Qubit(BaseModel):
 
 
 SimpleType = Annotated[
-    Union[Qubit, Variable, Int, F64, String, FunctionType, List, Array, Tuple, Sum, Opaque],
+    Union[
+        Qubit, Variable, Int, F64, String, FunctionType, List, Array, Tuple, Sum, Opaque
+    ],
     Field(discriminator="t"),
 ]
 

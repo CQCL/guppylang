@@ -103,7 +103,14 @@ class GlobalFunction(GlobalVariable, ABC):
     ty: FunctionType
     call_compiler: "CallCompiler"
 
-    def compile_call(self, args: list[OutPortV], parent: DFContainingNode, graph: Hugr, globals: "Globals", node: AstNode) -> list[OutPortV]:
+    def compile_call(
+        self,
+        args: list[OutPortV],
+        parent: DFContainingNode,
+        graph: Hugr,
+        globals: "Globals",
+        node: AstNode,
+    ) -> list[OutPortV]:
         """Utility method that invokes the local `CallCompiler` to compile a function
         call"""
         cc = self.call_compiler
@@ -121,6 +128,7 @@ class Globals(NamedTuple):
     Separately stores names that are bound to values (i.e. module-level functions or
     constants), to types, or to instance functions belonging to types.
     """
+
     values: dict[ValueName, GlobalVariable]
     types: dict[TypeName, type[GuppyType]]
     instance_funcs: dict[tuple[TypeName, ValueName], GlobalFunction]
@@ -131,7 +139,7 @@ class Globals(NamedTuple):
         tys: dict[str, type[GuppyType]] = {
             FunctionType.name: FunctionType,
             TupleType.name: TupleType,
-            SumType.name: SumType
+            SumType.name: SumType,
         }
         return Globals({}, tys, {})
 
@@ -153,6 +161,7 @@ class CompilerBase(ABC):
 
 class CallCompiler(ABC):
     """Abstract base class for function call compilers."""
+
     graph: Hugr
     globals: Globals
     func: GlobalFunction

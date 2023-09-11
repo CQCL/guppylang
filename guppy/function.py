@@ -9,12 +9,19 @@ from guppy.compiler_base import (
     RawVariable,
     DFContainer,
     Globals,
-    GlobalFunction, CallCompiler,
+    GlobalFunction,
+    CallCompiler,
 )
 from guppy.error import GuppyError, GuppyTypeError
 from guppy.expression import type_check_call
-from guppy.guppy_types import FunctionType, GuppyType, \
-    TupleType, TypeRow, type_row_from_ast, type_from_ast
+from guppy.guppy_types import (
+    FunctionType,
+    GuppyType,
+    TupleType,
+    TypeRow,
+    type_row_from_ast,
+    type_from_ast,
+)
 from guppy.hugr.hugr import Hugr, OutPortV, DFContainingVNode, DFContainingNode
 
 
@@ -28,7 +35,9 @@ class DefinedFunction(GlobalFunction):
         super().__init__(name, port.ty, defined_at, self.DefCallCompiler())
         self.port = port
 
-    def load(self, graph: Hugr, parent: DFContainingNode, globals: Globals, node: AstNode) -> OutPortV:
+    def load(
+        self, graph: Hugr, parent: DFContainingNode, globals: Globals, node: AstNode
+    ) -> OutPortV:
         """Loads the function as a value into a local dataflow graph."""
         return graph.add_load_constant(self.port, parent).out_port(0)
 
@@ -233,4 +242,3 @@ class FunctionDefCompiler(CompilerBase):
             port = loaded.out_port(0)
 
         return DefinedFunction(func_def.name, port, func_def)
-

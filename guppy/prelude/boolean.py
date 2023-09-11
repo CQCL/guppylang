@@ -29,4 +29,3 @@ def __bool__(self: bool) -> bool:
 @ext.func(BoolOpCompiler("Or"), instance=BoolType)
 def __or__(self: bool, other: bool) -> bool:
     ...
-

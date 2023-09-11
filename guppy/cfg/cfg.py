@@ -164,7 +164,7 @@ class CFG:
             if func is None:
                 raise GuppyTypeError(
                     f"Expression of type `{port.ty}` cannot be interpreted as a `bool`",
-                    bb.branch_pred
+                    bb.branch_pred,
                 )
             [branch_port] = func.compile_call(
                 [port], dfg.node, graph, globals, bb.branch_pred
@@ -277,7 +277,11 @@ class CFG:
             if v1.ty != v2.ty:
                 # In the error message, we want to mention the variable that was first
                 # defined at the start.
-                if v1.defined_at and v2.defined_at and line_col(v2.defined_at) < line_col(v1.defined_at):
+                if (
+                    v1.defined_at
+                    and v2.defined_at
+                    and line_col(v2.defined_at) < line_col(v1.defined_at)
+                ):
                     v1, v2 = v2, v1
                 # We shouldn't mention temporary variables (starting with `%`)
                 # in error messages:
