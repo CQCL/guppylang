@@ -20,7 +20,7 @@ _hugr_qubit = tys.Opaque(extension="prelude", id="qubit", args=[], bound=TypeBou
 extension = GuppyExtension("quantum", dependencies=[builtin])
 
 
-@extension.type(_hugr_qubit, linear=False)
+@extension.type(_hugr_qubit, linear=True)
 class Qubit:
     pass
 
