@@ -1,7 +1,17 @@
-from tests.error.util import guppy, qubit
+import guppy.prelude.quantum
+
+from guppy.compiler import GuppyModule
+from guppy.hugr.tys import Qubit
 
 
-@guppy
-def foo(q: qubit) -> int:
+module = GuppyModule("test")
+module.load(guppy.prelude.quantum)
+
+
+@module
+def foo(q: Qubit) -> int:
     x = q
     return 42
+
+
+module.compile(True)
