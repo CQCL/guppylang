@@ -322,4 +322,4 @@ class Reversed(CallCompiler):
 
 class NotImplementedCompiler(CallCompiler):
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        raise GuppyError("Operation is not yet implemented")
+        raise GuppyError("Operation is not yet implemented", self.node)
