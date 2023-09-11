@@ -154,6 +154,7 @@ class GuppyExtension:
 
     def register_type(self, name: str, ty: type[GuppyType]) -> None:
         self.types[name] = ty
+        self._globals.types[name] = ty
 
     def register_func(self, name: str, func: "ExtensionFunction") -> None:
         self.funcs[name] = func
