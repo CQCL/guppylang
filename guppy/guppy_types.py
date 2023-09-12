@@ -135,7 +135,7 @@ def _lookup_type(node: AstNode, globals: "Globals") -> Optional[type[GuppyType]]
 
 def type_from_ast(node: AstNode, globals: "Globals") -> GuppyType:
     """Turns an AST expression into a Guppy type."""
-    if isinstance(node, ast.Name) and (ty := _lookup_type(node, globals)):
+    if ty := _lookup_type(node, globals):
         return ty.build(node=node)
     if isinstance(node, ast.Subscript) and (ty := _lookup_type(node.value, globals)):
         args = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
