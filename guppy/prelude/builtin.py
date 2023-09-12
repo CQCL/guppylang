@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from guppy.compiler_base import CallCompiler
 from guppy.error import GuppyError, GuppyTypeError
 from guppy.expression import check_num_args
-from guppy.extension import GuppyExtension
+from guppy.extension import GuppyExtension, NotImplementedCompiler
 from guppy.guppy_types import SumType, TupleType, GuppyType, FunctionType
 from guppy.hugr import tys, val
 from guppy.hugr.hugr import OutPortV
@@ -47,10 +47,6 @@ class BoolType(SumType):
 extension.register_type("bool", BoolType)
 
 
-def bool_value(b: bool) -> val.Value:
-    return val.Sum(tag=int(b), value=val.Tuple(vs=[]))
-
-
 INT_WIDTH = 6  # 2^6 = 64 bit
 
 IntType: type[GuppyType] = extension.new_type(
@@ -73,6 +69,16 @@ FloatType: type[GuppyType] = extension.new_type(
     ),
 )
 
+StringType: type[GuppyType] = extension.new_type(
+    name="str",
+    hugr_repr=tys.Opaque(
+        extension="TODO",  # String hugr extension doesn't exist yet
+        id="string",
+        args=[],
+        bound=TypeBound.Copyable,
+    ),
+)
+
 
 class ConstIntS(BaseModel):
     """Hugr representation of signed integers in the arithmetic extension."""
@@ -87,6 +93,10 @@ class ConstF64(BaseModel):
 
     c: Literal["ConstF64"] = "ConstF64"
     value: float
+
+
+def bool_value(b: bool) -> val.Value:
+    return val.Sum(tag=int(b), value=val.Tuple(vs=[]))
 
 
 def int_value(i: int) -> val.Value:
@@ -121,21 +131,21 @@ class CallableCompiler(CallCompiler):
 
 
 class BuiltinCompiler(CallCompiler):
-    name: str
     dunder_name: str
+    num_args: int
 
-    def __init__(self, name: str, dunder_name: str):
-        self.name = name
+    def __init__(self, dunder_name: str, num_args: int = 1):
         self.dunder_name = dunder_name
+        self.num_args = num_args
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        check_num_args(1, len(args), self.node)
+        check_num_args(self.num_args, len(args), self.node)
         [arg] = args
         func = self.globals.get_instance_func(arg.ty, self.dunder_name)
         if func is None:
             raise GuppyTypeError(
-                f"Builtin function `{self.name}` is not defined for argument of type "
-                "`{arg.ty}`",
+                f"Builtin function `{self.func.name}` is not defined for argument of "
+                "type `{arg.ty}`",
                 self.node.args[0] if isinstance(self.node, ast.Call) else self.node,
             )
         return func.compile_call(args, self.parent, self.graph, self.globals, self.node)
@@ -143,14 +153,78 @@ class BuiltinCompiler(CallCompiler):
 
 # TODO: dict, list, max, min, pow, sum, tuple
 
-extension.new_func("abs", BuiltinCompiler("abs", "__abs__"), higher_order=False)
-extension.new_func("bool", BuiltinCompiler("bool", "__bool__"), higher_order=False)
+extension.new_func("abs", BuiltinCompiler("__abs__"), higher_order=False)
+extension.new_func("bool", BuiltinCompiler("__bool__"), higher_order=False)
 extension.new_func("callable", CallableCompiler(), higher_order=False)
-extension.new_func(
-    "divmod", BuiltinCompiler("divmod", "__divmod__"), higher_order=False
-)
-extension.new_func("float", BuiltinCompiler("float", "__float__"), higher_order=False)
+extension.new_func("divmod", BuiltinCompiler("__divmod__"), higher_order=False)
+extension.new_func("float", BuiltinCompiler("__float__"), higher_order=False)
 extension.new_func("id", IdCompiler(), higher_order=False)
-extension.new_func("int", BuiltinCompiler("int", "__int__"), higher_order=False)
-extension.new_func("len", BuiltinCompiler("len", "__len__"), higher_order=False)
-extension.new_func("round", BuiltinCompiler("round", "__round__"), higher_order=False)
+extension.new_func("int", BuiltinCompiler("__int__"), higher_order=False)
+extension.new_func("len", BuiltinCompiler("__len__"), higher_order=False)
+extension.new_func("pow", BuiltinCompiler("__pow__", num_args=2), higher_order=False)
+extension.new_func("repr", BuiltinCompiler("__repr__"), higher_order=False)
+extension.new_func("round", BuiltinCompiler("__round__"), higher_order=False)
+extension.new_func("str", BuiltinCompiler("__str__"), higher_order=False)
+
+
+# Python builtins that are not supported yet
+extension.new_func("aiter", NotImplementedCompiler(), higher_order=False)
+extension.new_func("all", NotImplementedCompiler(), higher_order=False)
+extension.new_func("anext", NotImplementedCompiler(), higher_order=False)
+extension.new_func("any", NotImplementedCompiler(), higher_order=False)
+extension.new_func("ascii", NotImplementedCompiler(), higher_order=False)
+extension.new_func("aiter", NotImplementedCompiler(), higher_order=False)
+extension.new_func("bin", NotImplementedCompiler(), higher_order=False)
+extension.new_func("breakpoint", NotImplementedCompiler(), higher_order=False)
+extension.new_func("bytearray", NotImplementedCompiler(), higher_order=False)
+extension.new_func("bytes", NotImplementedCompiler(), higher_order=False)
+extension.new_func("chr", NotImplementedCompiler(), higher_order=False)
+extension.new_func("classmethod", NotImplementedCompiler(), higher_order=False)
+extension.new_func("compile", NotImplementedCompiler(), higher_order=False)
+extension.new_func("complex", NotImplementedCompiler(), higher_order=False)
+extension.new_func("delattr", NotImplementedCompiler(), higher_order=False)
+extension.new_func("dict", NotImplementedCompiler(), higher_order=False)
+extension.new_func("dir", NotImplementedCompiler(), higher_order=False)
+extension.new_func("enumerate", NotImplementedCompiler(), higher_order=False)
+extension.new_func("eval", NotImplementedCompiler(), higher_order=False)
+extension.new_func("exec", NotImplementedCompiler(), higher_order=False)
+extension.new_func("filter", NotImplementedCompiler(), higher_order=False)
+extension.new_func("format", NotImplementedCompiler(), higher_order=False)
+extension.new_func("frozenset", NotImplementedCompiler(), higher_order=False)
+extension.new_func("getattr", NotImplementedCompiler(), higher_order=False)
+extension.new_func("globals", NotImplementedCompiler(), higher_order=False)
+extension.new_func("hasattr", NotImplementedCompiler(), higher_order=False)
+extension.new_func("hash", NotImplementedCompiler(), higher_order=False)
+extension.new_func("help", NotImplementedCompiler(), higher_order=False)
+extension.new_func("hex", NotImplementedCompiler(), higher_order=False)
+extension.new_func("input", NotImplementedCompiler(), higher_order=False)
+extension.new_func("isinstance", NotImplementedCompiler(), higher_order=False)
+extension.new_func("issubclass", NotImplementedCompiler(), higher_order=False)
+extension.new_func("iter", NotImplementedCompiler(), higher_order=False)
+extension.new_func("list", NotImplementedCompiler(), higher_order=False)
+extension.new_func("locals", NotImplementedCompiler(), higher_order=False)
+extension.new_func("map", NotImplementedCompiler(), higher_order=False)
+extension.new_func("max", NotImplementedCompiler(), higher_order=False)
+extension.new_func("memoryview", NotImplementedCompiler(), higher_order=False)
+extension.new_func("min", NotImplementedCompiler(), higher_order=False)
+extension.new_func("next", NotImplementedCompiler(), higher_order=False)
+extension.new_func("object", NotImplementedCompiler(), higher_order=False)
+extension.new_func("oct", NotImplementedCompiler(), higher_order=False)
+extension.new_func("open", NotImplementedCompiler(), higher_order=False)
+extension.new_func("ord", NotImplementedCompiler(), higher_order=False)
+extension.new_func("print", NotImplementedCompiler(), higher_order=False)
+extension.new_func("property", NotImplementedCompiler(), higher_order=False)
+extension.new_func("range", NotImplementedCompiler(), higher_order=False)
+extension.new_func("reversed", NotImplementedCompiler(), higher_order=False)
+extension.new_func("set", NotImplementedCompiler(), higher_order=False)
+extension.new_func("setattr", NotImplementedCompiler(), higher_order=False)
+extension.new_func("slice", NotImplementedCompiler(), higher_order=False)
+extension.new_func("sorted", NotImplementedCompiler(), higher_order=False)
+extension.new_func("staticmethod", NotImplementedCompiler(), higher_order=False)
+extension.new_func("sum", NotImplementedCompiler(), higher_order=False)
+extension.new_func("super", NotImplementedCompiler(), higher_order=False)
+extension.new_func("tuple", NotImplementedCompiler(), higher_order=False)
+extension.new_func("type", NotImplementedCompiler(), higher_order=False)
+extension.new_func("vars", NotImplementedCompiler(), higher_order=False)
+extension.new_func("zip", NotImplementedCompiler(), higher_order=False)
+extension.new_func("__import__", NotImplementedCompiler(), higher_order=False)

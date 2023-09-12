@@ -240,6 +240,11 @@ def __rtruediv__(self: float, other: float) -> float:
     ...
 
 
+@extension.func(NotImplementedCompiler(), instance=FloatType)
+def __str__(self: int) -> str:
+    ...
+
+
 @extension.func(FloatOpCompiler("fsub"), instance=FloatType)
 def __sub__(self: float, other: float) -> int:
     ...

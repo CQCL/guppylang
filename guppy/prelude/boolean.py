@@ -4,7 +4,12 @@
 
 from guppy.prelude import builtin
 from guppy.prelude.builtin import BoolType
-from guppy.extension import GuppyExtension, OpCompiler, NoopCompiler
+from guppy.extension import (
+    GuppyExtension,
+    OpCompiler,
+    NoopCompiler,
+    NotImplementedCompiler,
+)
 from guppy.hugr import ops
 
 
@@ -28,4 +33,9 @@ def __bool__(self: bool) -> bool:
 
 @ext.func(BoolOpCompiler("Or"), instance=BoolType)
 def __or__(self: bool, other: bool) -> bool:
+    ...
+
+
+@ext.func(NotImplementedCompiler(), instance=BoolType)
+def __str__(self: int) -> str:
     ...

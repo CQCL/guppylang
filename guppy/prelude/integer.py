@@ -259,6 +259,11 @@ def __rxor__(self: int, other: int) -> int:
     ...
 
 
+@extension.func(NotImplementedCompiler(), instance=IntType)
+def __str__(self: int) -> str:
+    ...
+
+
 @extension.func(IntOpCompiler("sub"), instance=IntType)
 def __sub__(self: int, other: int) -> int:
     ...
