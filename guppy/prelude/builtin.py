@@ -2,8 +2,9 @@
 
 Instance methods for builtin types are defined in their own files
 """
+
 import ast
-from typing import Union, Literal
+from typing import Union, Literal, Any
 
 from pydantic import BaseModel
 
@@ -42,6 +43,9 @@ class BoolType(SumType):
 
     def __str__(self) -> str:
         return "bool"
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, BoolType)
 
 
 extension.register_type("bool", BoolType)
@@ -89,21 +93,24 @@ class ConstIntS(BaseModel):
 
 
 class ConstF64(BaseModel):
-    """Hugr representation of signed integers in the arithmetic extension."""
+    """Hugr representation of floats in the arithmetic extension."""
 
     c: Literal["ConstF64"] = "ConstF64"
     value: float
 
 
 def bool_value(b: bool) -> val.Value:
+    """Returns the Hugr representation of a boolean value."""
     return val.Sum(tag=int(b), value=val.Tuple(vs=[]))
 
 
 def int_value(i: int) -> val.Value:
+    """Returns the Hugr representation of an integer value."""
     return val.Prim(val=val.ExtensionVal(c=(ConstIntS(log_width=INT_WIDTH, value=i),)))
 
 
 def float_value(f: float) -> val.Value:
+    """Returns the Hugr representation of a float value."""
     return val.Prim(val=val.ExtensionVal(c=(ConstF64(value=f),)))
 
 
@@ -131,6 +138,8 @@ class CallableCompiler(CallCompiler):
 
 
 class BuiltinCompiler(CallCompiler):
+    """Call compiler for builtin functions that call out to dunder instance methods"""
+
     dunder_name: str
     num_args: int
 
@@ -150,8 +159,6 @@ class BuiltinCompiler(CallCompiler):
             )
         return func.compile_call(args, self.parent, self.graph, self.globals, self.node)
 
-
-# TODO: dict, list, max, min, pow, sum, tuple
 
 extension.new_func("abs", BuiltinCompiler("__abs__"), higher_order=False)
 extension.new_func("bool", BuiltinCompiler("__bool__"), higher_order=False)

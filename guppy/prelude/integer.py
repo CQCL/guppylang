@@ -19,6 +19,8 @@ from guppy.hugr import ops, tys
 
 
 class IntOpCompiler(OpCompiler):
+    """Compiler for calls that can be implemented via a single Hugr integer op"""
+
     def __init__(self, op_name: str, ext: str = "arithmetic.int"):
         super().__init__(
             ops.CustomOp(
@@ -52,9 +54,8 @@ class TruedivCompiler(CallCompiler):
 extension = GuppyExtension("integer", dependencies=[builtin])
 
 
-@extension.func(
-    IntOpCompiler("iabs"), instance=IntType
-)  # TODO: Maybe wrong?? (signed vs unsigned!)
+# TODO: Maybe wrong?? (signed vs unsigned!)
+@extension.func(IntOpCompiler("iabs"), instance=IntType)
 def __abs__(self: int) -> int:
     ...
 
@@ -259,7 +260,7 @@ def __rxor__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(NotImplementedCompiler(), instance=IntType)
+@extension.func(NotImplementedCompiler(), instance=IntType)  # TODO
 def __str__(self: int) -> str:
     ...
 

@@ -17,6 +17,8 @@ from guppy.hugr.hugr import OutPortV
 
 
 class FloatOpCompiler(OpCompiler):
+    """Compiler for calls that can be implemented via a single Hugr float op"""
+
     def __init__(self, op_name: str, extension: str = "arithmetic.float"):
         super().__init__(ops.CustomOp(extension=extension, op_name=op_name, args=[]))
 
@@ -220,7 +222,7 @@ def __rmul__(self: float, other: float) -> float:
     ...
 
 
-@extension.func(NotImplementedCompiler(), instance=IntType)  # TODO
+@extension.func(NotImplementedCompiler(), instance=FloatType)  # TODO
 def __round__(self: float) -> float:
     ...
 
@@ -240,7 +242,7 @@ def __rtruediv__(self: float, other: float) -> float:
     ...
 
 
-@extension.func(NotImplementedCompiler(), instance=FloatType)
+@extension.func(NotImplementedCompiler(), instance=FloatType)  # TODO
 def __str__(self: int) -> str:
     ...
 

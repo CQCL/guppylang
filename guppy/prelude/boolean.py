@@ -18,7 +18,7 @@ class BoolOpCompiler(OpCompiler):
         super().__init__(ops.CustomOp(extension="logic", op_name=op_name, args=[]))
 
 
-ext = GuppyExtension("logic", [builtin])
+ext = GuppyExtension("boolean", [builtin])
 
 
 @ext.func(BoolOpCompiler("And"), instance=BoolType)
@@ -36,6 +36,6 @@ def __or__(self: bool, other: bool) -> bool:
     ...
 
 
-@ext.func(NotImplementedCompiler(), instance=BoolType)
+@ext.func(NotImplementedCompiler(), instance=BoolType)  # TODO
 def __str__(self: int) -> str:
     ...
