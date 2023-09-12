@@ -131,11 +131,6 @@ class GuppyExtension:
     # Globals for this extension including core types and all dependencies
     _all_globals: Globals
 
-    # Mapping from Python class names to names in the Guppy type system. Most of the
-    # time this will be an identity mapping, except for cases where the type declaration
-    # specifies an alias
-    _type_alias_map: dict[str, TypeName]
-
     def __init__(self, name: str, dependencies: Sequence[ModuleType]) -> None:
         """Creates a new empty Guppy extension.
 
@@ -146,7 +141,6 @@ class GuppyExtension:
         self.name = name
         self.globals = Globals({}, {}, {})
         self._all_globals = Globals.default()
-        self._type_alias_map = {}
 
         for module in dependencies:
             exts = [
@@ -215,7 +209,6 @@ class GuppyExtension:
             def __str__(self) -> str:
                 return name
 
-        self._type_alias_map[NewType.__name__] = name
         NewType.__name__ = NewType.__qualname__ = name
         self.register_type(name, NewType)
         return NewType
@@ -288,18 +281,9 @@ class GuppyExtension:
         """
 
         def decorator(f: Callable[..., Any]) -> ExtensionFunction:
-            # Check if f was defined in a class. In that case, the qualified name of f
-            # would be `ContainingClass.func_name`.
-            qualname = f.__qualname__.split(".")
-            inst: Optional[type[GuppyType]]
-            if len(qualname) == 2 and qualname[0] in self._type_alias_map:
-                inst = self.globals.types[self._type_alias_map[qualname[0]]]
-            else:
-                inst = instance
-
             func_ast, ty = self._parse_decl(f)
             name = alias or func_ast.name
-            return self.new_func(name, call_compiler, ty, higher_order, inst)
+            return self.new_func(name, call_compiler, ty, higher_order, instance)
 
         return decorator
 
