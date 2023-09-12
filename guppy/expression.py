@@ -231,15 +231,18 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
 
         # Otherwise, compile the function like any other expression
         else:
-            func_port = self.visit(func)
-            func_ty = func_port.ty
-            if not isinstance(func_ty, FunctionType):
-                raise GuppyTypeError(f"Expected function type, got `{func_ty}`", func)
-
+            port = self.visit(func)
             args = [self.visit(arg) for arg in node.args]
-            type_check_call(func_ty, args, node)
-            call = self.graph.add_indirect_call(func_port, args)
-            returns = [call.out_port(i) for i in range(len(func_ty.returns))]
+            if isinstance(port.ty, FunctionType):
+                type_check_call(port.ty, args, node)
+                call = self.graph.add_indirect_call(port, args)
+                returns = [call.out_port(i) for i in range(len(port.ty.returns))]
+            elif f := self.globals.get_instance_func(port.ty, "__call__"):
+                returns = f.compile_call(
+                    args, self.dfg.node, self.graph, self.globals, node
+                )
+            else:
+                raise GuppyTypeError(f"Expected function type, got `{port.ty}`", func)
 
         # Group outputs into tuple
         if len(returns) != 1:
