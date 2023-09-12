@@ -371,17 +371,6 @@ class Hugr:
             ops.Const(value=value, typ=ty.to_hugr()), [], [ty], parent, None
         )
 
-    def add_arith(
-        self,
-        name: str,
-        inputs: list[OutPortV],
-        out_ty: GuppyType,
-        parent: Optional[Node] = None,
-    ) -> VNode:
-        """Adds a node for an arithmetic operation."""
-        # TODO Work with arithmetic resource
-        return self.add_node(ops.DummyOp(name=name), None, [out_ty], parent, inputs)
-
     def add_input(
         self, output_tys: Optional[TypeList] = None, parent: Optional[Node] = None
     ) -> VNode:
