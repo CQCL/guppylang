@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Any, Sequence, Mapping, TYPE_CHECKING, Union
 
 import guppy.hugr.tys as tys
-from guppy.ast_util import AstNode
+from guppy.ast_util import AstNode, set_location_from
 
 if TYPE_CHECKING:
     from guppy.compiler_base import Globals
@@ -135,8 +135,12 @@ def _lookup_type(node: AstNode, globals: "Globals") -> Optional[type[GuppyType]]
 
 def type_from_ast(node: AstNode, globals: "Globals") -> GuppyType:
     """Turns an AST expression into a Guppy type."""
-    if ty := _lookup_type(node, globals):
+    if isinstance(node, ast.Name) and (ty := _lookup_type(node, globals)):
         return ty.build(node=node)
+    if isinstance(node, ast.Constant) and (ty := _lookup_type(node, globals)):
+        name = ast.Name(id=node.value)
+        set_location_from(name, node)
+        return ty.build(node=name)
     if isinstance(node, ast.Subscript) and (ty := _lookup_type(node.value, globals)):
         args = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
         return ty.build(*(type_from_ast(a, globals) for a in args), node=node)
