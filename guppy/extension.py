@@ -227,8 +227,7 @@ class GuppyExtension:
         """
 
         def decorator(cls: type) -> type:
-            self.new_type(alias or cls.__name__, hugr_repr, linear)
-            return cls  # TODO: Return class or new_type ??
+            return self.new_type(alias or cls.__name__, hugr_repr, linear)
 
         return decorator
 
