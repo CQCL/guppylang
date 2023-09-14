@@ -11,6 +11,7 @@ from guppy.extension import (
     NotImplementedCompiler,
 )
 from guppy.hugr import ops
+from guppy.prelude.integer import IntOpCompiler
 
 
 class BoolOpCompiler(OpCompiler):
@@ -28,6 +29,11 @@ def __and__(self: bool, other: bool) -> bool:
 
 @ext.func(NoopCompiler(), instance=BoolType)
 def __bool__(self: bool) -> bool:
+    ...
+
+
+@ext.func(IntOpCompiler("ifrombool"), instance=BoolType)
+def __int__(self: bool) -> int:
     ...
 
 
