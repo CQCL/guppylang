@@ -41,13 +41,13 @@ class TruedivCompiler(CallCompiler):
         type_check_call(self.signature, args, self.node)
         [left, right] = args
         [left] = __float__.compile_call(
-            [left], self.parent, self.graph, self.globals, self.node
+            [left], self.dfg, self.graph, self.globals, self.node
         )
         [right] = __float__.compile_call(
-            [right], self.parent, self.graph, self.globals, self.node
+            [right], self.dfg, self.graph, self.globals, self.node
         )
         return guppy.prelude.float.__truediv__.compile_call(
-            [left, right], self.parent, self.graph, self.globals, self.node
+            [left, right], self.dfg, self.graph, self.globals, self.node
         )
 
 

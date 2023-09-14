@@ -157,7 +157,7 @@ class BuiltinCompiler(CallCompiler):
                 "type `{arg.ty}`",
                 self.node.args[0] if isinstance(self.node, ast.Call) else self.node,
             )
-        return func.compile_call(args, self.parent, self.graph, self.globals, self.node)
+        return func.compile_call(args, self.dfg, self.graph, self.globals, self.node)
 
 
 extension.new_func("abs", BuiltinCompiler("__abs__"), higher_order=False)

@@ -12,6 +12,7 @@ from guppy.compiler_base import (
     TypeName,
     Globals,
     CallCompiler,
+    DFContainer,
 )
 from guppy.error import GuppyError, InternalGuppyError
 from guppy.expression import type_check_call
@@ -77,7 +78,7 @@ class ExtensionFunction(GlobalFunction):
             inp = graph.add_input(list(self.ty.args), parent=def_node)
             returns = self.compile_call(
                 [inp.out_port(i) for i in range(len(self.ty.args))],
-                def_node,
+                DFContainer(def_node, {}),
                 graph,
                 globals,
                 node,
@@ -367,10 +368,7 @@ class Reversed(CallCompiler):
         self.cc = cc
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        self.cc.parent = self.parent
-        self.cc.graph = self.graph
-        self.cc.globals = self.globals
-        self.cc.node = self.node
+        self.cc.setup(self.dfg, self.graph, self.globals, self.func, self.node)
         return self.cc.compile(list(reversed(args)))
 
 

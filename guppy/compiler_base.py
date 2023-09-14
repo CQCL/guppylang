@@ -1,3 +1,4 @@
+import ast
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterator, Optional, Any, NamedTuple, Union
@@ -106,20 +107,28 @@ class GlobalFunction(GlobalVariable, ABC):
     def compile_call(
         self,
         args: list[OutPortV],
-        parent: DFContainingNode,
+        dfg: DFContainer,
         graph: Hugr,
         globals: "Globals",
         node: AstNode,
     ) -> list[OutPortV]:
         """Utility method that invokes the local `CallCompiler` to compile a function
         call"""
-        cc = self.call_compiler
-        cc.parent = parent
-        cc.graph = graph
-        cc.globals = globals
-        cc.node = node
-        cc.func = self
-        return cc.compile(args)
+        self.call_compiler.setup(dfg, graph, globals, self, node)
+        return self.call_compiler.compile(args)
+
+    def compile_call_raw(
+        self,
+        args: list[ast.expr],
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: "Globals",
+        node: AstNode,
+    ) -> list[OutPortV]:
+        """Utility method that invokes the local `CallCompiler` to compile a function
+        call with raw argument AST nodes"""
+        self.call_compiler.setup(dfg, graph, globals, self, node)
+        return self.call_compiler.compile_raw(args)
 
 
 class Globals(NamedTuple):
@@ -175,10 +184,10 @@ class CompilerBase(ABC):
 class CallCompiler(ABC):
     """Abstract base class for function call compilers."""
 
+    dfg: DFContainer
     graph: Hugr
     globals: Globals
     func: GlobalFunction
-    parent: DFContainingNode
     node: AstNode
 
     @abstractmethod
@@ -188,6 +197,40 @@ class CallCompiler(ABC):
         Returns a row of output ports that are returned by the function.
         """
         ...
+
+    def compile_raw(self, args: list[ast.expr]) -> list[OutPortV]:
+        """Compiles a function call with raw argument AST nodes.
+
+        The default implementation invokes the `ExpressionCompiler` to first compile the
+        arguments and then calls out to `compile`.
+        """
+        from guppy.expression import ExpressionCompiler
+
+        expr_compiler = ExpressionCompiler(self.graph, self.globals)
+        return self.compile([expr_compiler.compile(a, self.dfg) for a in args])
+
+    @property
+    def parent(self) -> DFContainingNode:
+        """The parent node of the current dataflow graph"""
+        return self.dfg.node
+
+    def setup(
+        self,
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: "Globals",
+        func: GlobalFunction,
+        node: AstNode,
+    ) -> None:
+        """Initialises the parameters of the call compiler.
+
+        Must be called before trying to compile.
+        """
+        self.dfg = dfg
+        self.graph = graph
+        self.globals = globals
+        self.func = func
+        self.node = node
 
 
 def return_var(n: int) -> str:

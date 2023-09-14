@@ -167,7 +167,7 @@ class CFG:
                     bb.branch_pred,
                 )
             [branch_port] = func.compile_call(
-                [port], dfg.node, graph, globals, bb.branch_pred
+                [port], dfg, graph, globals, bb.branch_pred
             )
 
         for succ in bb.successors:

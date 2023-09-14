@@ -44,11 +44,7 @@ class BoolCompiler(CallCompiler):
         zero_const = self.graph.add_constant(float_value(0.0), FloatType(), self.parent)
         zero = self.graph.add_load_constant(zero_const.out_port(0), self.parent)
         return __ne__.compile_call(
-            [args[0], zero.out_port(0)],
-            self.parent,
-            self.graph,
-            self.globals,
-            self.node,
+            [args[0], zero.out_port(0)], self.dfg, self.graph, self.globals, self.node
         )
 
 
@@ -58,10 +54,10 @@ class FloordivCompiler(CallCompiler):
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         # We have: floordiv(x, y) = floor(truediv(x, y))
         [div] = __truediv__.compile_call(
-            args, self.parent, self.graph, self.globals, self.node
+            args, self.dfg, self.graph, self.globals, self.node
         )
         [floor] = __floor__.compile_call(
-            [div], self.parent, self.graph, self.globals, self.node
+            [div], self.dfg, self.graph, self.globals, self.node
         )
         return [floor]
 
@@ -72,13 +68,13 @@ class ModCompiler(CallCompiler):
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         # We have: mod(x, y) = x - (x // y) * y
         [div] = __floordiv__.compile_call(
-            args, self.parent, self.graph, self.globals, self.node
+            args, self.dfg, self.graph, self.globals, self.node
         )
         [mul] = __mul__.compile_call(
-            [div, args[1]], self.parent, self.graph, self.globals, self.node
+            [div, args[1]], self.dfg, self.graph, self.globals, self.node
         )
         [sub] = __sub__.compile_call(
-            [args[0], mul], self.parent, self.graph, self.globals, self.node
+            [args[0], mul], self.dfg, self.graph, self.globals, self.node
         )
         return [sub]
 
@@ -89,10 +85,10 @@ class DivmodCompiler(CallCompiler):
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         # We have: divmod(x, y) = (div(x, y), mod(x, y))
         [div] = __truediv__.compile_call(
-            args, self.parent, self.graph, self.globals, self.node
+            args, self.dfg, self.graph, self.globals, self.node
         )
         [mod] = __mod__.compile_call(
-            args, self.parent, self.graph, self.globals, self.node
+            args, self.dfg, self.graph, self.globals, self.node
         )
         return [self.graph.add_make_tuple([div, mod], self.parent).out_port(0)]
 

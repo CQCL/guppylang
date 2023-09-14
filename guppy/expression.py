@@ -158,7 +158,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
                 f" `{arg.ty}`",
                 node.operand,
             )
-        [res] = func.compile_call([arg], self.dfg.node, self.graph, self.globals, node)
+        [res] = func.compile_call([arg], self.dfg, self.graph, self.globals, node)
         return res
 
     def _compile_binary(
@@ -177,7 +177,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         if func := self.globals.get_instance_func(left.ty, lop):
             try:
                 [ret] = func.compile_call(
-                    [left, right], self.dfg.node, self.graph, self.globals, node
+                    [left, right], self.dfg, self.graph, self.globals, node
                 )
                 return ret
             except GuppyError:
@@ -186,7 +186,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         if func := self.globals.get_instance_func(right.ty, lop):
             try:
                 [ret] = func.compile_call(
-                    [left, right], self.dfg.node, self.graph, self.globals, node
+                    [left, right], self.dfg, self.graph, self.globals, node
                 )
                 return ret
             except GuppyError:
@@ -225,9 +225,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             and isinstance(f, GlobalFunction)
         ):
             args = [self.visit(arg) for arg in node.args]
-            returns = f.compile_call(
-                args, self.dfg.node, self.graph, self.globals, node
-            )
+            returns = f.compile_call(args, self.dfg, self.graph, self.globals, node)
 
         # Otherwise, compile the function like any other expression
         else:
@@ -238,9 +236,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
                 call = self.graph.add_indirect_call(port, args)
                 returns = [call.out_port(i) for i in range(len(port.ty.returns))]
             elif f := self.globals.get_instance_func(port.ty, "__call__"):
-                returns = f.compile_call(
-                    args, self.dfg.node, self.graph, self.globals, node
-                )
+                returns = f.compile_call(args, self.dfg, self.graph, self.globals, node)
             else:
                 raise GuppyTypeError(f"Expected function type, got `{port.ty}`", func)
 
