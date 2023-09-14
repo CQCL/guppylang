@@ -224,8 +224,9 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             and (f := self._is_global_var(func.id))
             and isinstance(f, GlobalFunction)
         ):
-            args = [self.visit(arg) for arg in node.args]
-            returns = f.compile_call(args, self.dfg, self.graph, self.globals, node)
+            returns = f.compile_call_raw(
+                node.args, self.dfg, self.graph, self.globals, node
+            )
 
         # Otherwise, compile the function like any other expression
         else:
