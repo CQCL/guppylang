@@ -9,7 +9,8 @@ from guppy.compiler_base import (
     GlobalVariable,
 )
 from guppy.error import InternalGuppyError, GuppyTypeError, GuppyError
-from guppy.guppy_types import FunctionType
+from guppy.guppy_types import FunctionType, GuppyType
+from guppy.hugr import val
 from guppy.hugr.hugr import OutPortV
 
 # Mapping from unary AST op to dunder method and display name
@@ -82,25 +83,10 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         raise GuppyError("Expression not supported", node)
 
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
-        from guppy.prelude.builtin import (
-            IntType,
-            BoolType,
-            FloatType,
-            int_value,
-            bool_value,
-            float_value,
-        )
-
-        v = node.value
-        if isinstance(v, bool):
-            const = self.graph.add_constant(bool_value(v), BoolType()).out_port(0)
-        elif isinstance(v, int):
-            const = self.graph.add_constant(int_value(v), IntType()).out_port(0)
-        elif isinstance(v, float):
-            const = self.graph.add_constant(float_value(v), FloatType()).out_port(0)
-        else:
-            raise GuppyError("Unsupported constant expression", node)
-        return self.graph.add_load_constant(const).out_port(0)
+        if val_ty := python_value_to_hugr(node.value):
+            const = self.graph.add_constant(*val_ty).out_port(0)
+            return self.graph.add_load_constant(const).out_port(0)
+        raise GuppyError("Unsupported constant expression", node)
 
     def visit_Name(self, node: ast.Name) -> OutPortV:
         x = node.id
@@ -288,3 +274,26 @@ def type_check_call(func_ty: FunctionType, args: list[OutPortV], node: AstNode) 
                 f"Expected argument of type `{func_ty.args[i]}`, got `{port.ty}`",
                 node.args[i] if isinstance(node, ast.Call) else node,
             )
+
+
+def python_value_to_hugr(v: Any) -> Optional[tuple[val.Value, GuppyType]]:
+    """Turns a Python value into a Hugr value together with its type.
+
+    Returns None if the Python value cannot be represented in Guppy.
+    """
+    from guppy.prelude.builtin import (
+        IntType,
+        BoolType,
+        FloatType,
+        int_value,
+        bool_value,
+        float_value,
+    )
+
+    if isinstance(v, bool):
+        return bool_value(v), BoolType()
+    elif isinstance(v, int):
+        return int_value(v), IntType()
+    elif isinstance(v, float):
+        return float_value(v), FloatType()
+    return None
