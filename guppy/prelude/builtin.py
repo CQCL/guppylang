@@ -114,15 +114,6 @@ def float_value(f: float) -> val.Value:
     return val.Prim(val=val.ExtensionVal(c=(ConstF64(value=f),)))
 
 
-class IdCompiler(CallCompiler):
-    """Call compiler for the builtin `id` function"""
-
-    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        check_num_args(1, len(args), self.node)
-        [arg] = args
-        return [arg]
-
-
 class CallableCompiler(CallCompiler):
     """Call compiler for the builtin `callable` function"""
 
@@ -165,7 +156,6 @@ extension.new_func("bool", BuiltinCompiler("__bool__"), higher_order=False)
 extension.new_func("callable", CallableCompiler(), higher_order=False)
 extension.new_func("divmod", BuiltinCompiler("__divmod__"), higher_order=False)
 extension.new_func("float", BuiltinCompiler("__float__"), higher_order=False)
-extension.new_func("id", IdCompiler(), higher_order=False)
 extension.new_func("int", BuiltinCompiler("__int__"), higher_order=False)
 extension.new_func("len", BuiltinCompiler("__len__"), higher_order=False)
 extension.new_func("pow", BuiltinCompiler("__pow__", num_args=2), higher_order=False)
@@ -204,6 +194,7 @@ extension.new_func("hasattr", NotImplementedCompiler(), higher_order=False)
 extension.new_func("hash", NotImplementedCompiler(), higher_order=False)
 extension.new_func("help", NotImplementedCompiler(), higher_order=False)
 extension.new_func("hex", NotImplementedCompiler(), higher_order=False)
+extension.new_func("id", NotImplementedCompiler(), higher_order=False)
 extension.new_func("input", NotImplementedCompiler(), higher_order=False)
 extension.new_func("isinstance", NotImplementedCompiler(), higher_order=False)
 extension.new_func("issubclass", NotImplementedCompiler(), higher_order=False)
