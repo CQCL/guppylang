@@ -1,11 +1,9 @@
 from dataclasses import dataclass, field
-from typing import Optional, Any, Sequence, TYPE_CHECKING
+from typing import Optional, Any, Sequence
 
 from guppy.ast_util import AstNode
+from guppy.guppy_types import GuppyType
 from guppy.hugr.hugr import OutPortV, Node
-
-if TYPE_CHECKING:
-    from guppy.guppy_types import GuppyType
 
 
 @dataclass(frozen=True)
@@ -76,11 +74,11 @@ class UndefinedPort(OutPortV):
     Raises an `InternalGuppyError` if one tries to access one of its properties.
     """
 
-    def __init__(self, ty: "GuppyType"):
+    def __init__(self, ty: GuppyType):
         self._ty = ty
 
     @property
-    def ty(self) -> "GuppyType":
+    def ty(self) -> GuppyType:
         return self._ty
 
     @property
