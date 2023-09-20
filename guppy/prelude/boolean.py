@@ -7,7 +7,7 @@ from guppy.prelude.builtin import BoolType
 from guppy.extension import (
     GuppyExtension,
     OpCompiler,
-    NoopCompiler,
+    IdOpCompiler,
     NotImplementedCompiler,
 )
 from guppy.hugr import ops
@@ -27,7 +27,7 @@ def __and__(self: bool, other: bool) -> bool:
     ...
 
 
-@ext.func(NoopCompiler(), instance=BoolType)
+@ext.func(IdOpCompiler(), instance=BoolType)
 def __bool__(self: bool) -> bool:
     ...
 

@@ -10,7 +10,7 @@ from guppy.extension import (
     OpCompiler,
     Reversed,
     NotImplementedCompiler,
-    NoopCompiler,
+    IdOpCompiler,
 )
 from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV
@@ -126,7 +126,7 @@ def __eq__(self: float, other: float) -> bool:
     ...
 
 
-@extension.func(NoopCompiler(), instance=FloatType)
+@extension.func(IdOpCompiler(), instance=FloatType)
 def __float__(self: float) -> float:
     ...
 
@@ -188,7 +188,7 @@ def __neg__(self: float, other: float) -> float:
     ...
 
 
-@extension.func(NoopCompiler(), instance=FloatType)
+@extension.func(IdOpCompiler(), instance=FloatType)
 def __pos__(self: int) -> int:
     ...
 

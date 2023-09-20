@@ -337,7 +337,7 @@ class OpCompiler(CallCompiler):
         return [leaf.add_out_port(ty) for ty in func_ty.returns]
 
 
-class NoopCompiler(CallCompiler):
+class IdOpCompiler(CallCompiler):
     """Compiler for calls that are no-ops.
 
     Compiles a call by directly returning the arguments. Type checking can be disabled

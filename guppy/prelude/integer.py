@@ -13,7 +13,7 @@ from guppy.extension import (
     OpCompiler,
     Reversed,
     NotImplementedCompiler,
-    NoopCompiler,
+    IdOpCompiler,
 )
 from guppy.hugr import ops, tys
 
@@ -95,7 +95,7 @@ def __float__(self: int) -> float:
     ...
 
 
-@extension.func(NoopCompiler(), instance=IntType)
+@extension.func(IdOpCompiler(), instance=IntType)
 def __floor__(self: int, other: int) -> int:
     ...
 
@@ -115,7 +115,7 @@ def __gt__(self: int, other: int) -> bool:
     ...
 
 
-@extension.func(NoopCompiler(), instance=IntType)
+@extension.func(IdOpCompiler(), instance=IntType)
 def __int__(self: int) -> int:
     ...
 
@@ -167,7 +167,7 @@ def __or__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(NoopCompiler(), instance=IntType)
+@extension.func(IdOpCompiler(), instance=IntType)
 def __pos__(self: int) -> int:
     ...
 
@@ -219,7 +219,7 @@ def __ror__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(NoopCompiler(), instance=IntType)
+@extension.func(IdOpCompiler(), instance=IntType)
 def __round__(self: int) -> int:
     ...
 
@@ -275,7 +275,7 @@ def __truediv__(self: int, other: int) -> float:
     ...
 
 
-@extension.func(NoopCompiler(), instance=IntType)
+@extension.func(IdOpCompiler(), instance=IntType)
 def __trunc__(self: int, other: int) -> int:
     ...
 
