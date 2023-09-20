@@ -10,7 +10,7 @@ from guppy.compiler_base import (
 )
 from guppy.error import InternalGuppyError, GuppyTypeError, GuppyError
 from guppy.guppy_types import FunctionType, GuppyType
-from guppy.hugr import val
+from guppy.hugr import val, ops
 from guppy.hugr.hugr import OutPortV
 
 # Mapping from unary AST op to dunder method and display name
@@ -128,14 +128,25 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         raise NotImplementedError()
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> OutPortV:
-        if isinstance(node.op, ast.Not):
-            raise InternalGuppyError(
-                "BB contains unary `Not` op. Should have been removed during CFG "
-                f"construction: `{ast.unparse(node)}`"
-            )
-
-        # Compile by calling out to instance dunder methods
         arg = self.visit(node.operand)
+
+        # Special case for the `not` operation since it is not implemented via a dunder
+        # method or control-flow
+        if isinstance(node.op, ast.Not):
+            from guppy.prelude.builtin import BoolType
+
+            func = self.globals.get_instance_func(arg.ty, "__bool__")
+            if func is None:
+                raise GuppyTypeError(
+                    f"Expression of type `{arg.ty}` cannot be interpreted as a `bool`",
+                    node.operand,
+                )
+            [arg] = func.compile_call([arg], self.dfg, self.graph, self.globals, node)
+            return self.graph.add_node(
+                ops.CustomOp(extension="logic", op_name="Not", args=[]), inputs=[arg]
+            ).add_out_port(BoolType())
+
+        # Compile all other unary expressions by calling out to instance dunder methods
         op, display_name = unary_table[node.op.__class__]
         func = self.globals.get_instance_func(arg.ty, op)
         if func is None:
