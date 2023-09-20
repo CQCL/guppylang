@@ -3,6 +3,7 @@ from guppy.prelude.quantum import Qubit
 from tests.integration.util import validate
 
 import guppy.prelude.quantum as quantum
+from guppy.prelude.quantum import h, cx
 
 
 def test_id():
@@ -59,15 +60,11 @@ def test_if():
     def new() -> Qubit:
         pass
 
-    @module.declare
-    def op(x: Qubit) -> Qubit:
-        pass
-
     @module
     def test(b: bool) -> Qubit:
         if b:
             a = new()
-            q = op(a)
+            q = h(a)
         else:
             q = new()
         return q
@@ -83,15 +80,11 @@ def test_if_return():
     def new() -> Qubit:
         pass
 
-    @module.declare
-    def op(x: Qubit) -> Qubit:
-        pass
-
     @module
     def test(b: bool) -> Qubit:
         if b:
             q = new()
-            return op(q)
+            return h(q)
         else:
             q = new()
         return q
@@ -134,15 +127,11 @@ def test_while():
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module.declare
-    def op(q: Qubit) -> Qubit:
-        pass
-
     @module
     def test(q: Qubit, i: int) -> Qubit:
         while i > 0:
             i -= 1
-            q = op(q)
+            q = h(q)
         return q
 
     validate(module.compile(True))
@@ -152,15 +141,11 @@ def test_while_break():
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module.declare
-    def op(q: Qubit) -> Qubit:
-        pass
-
     @module
     def test(q: Qubit, i: int) -> Qubit:
         while i > 0:
             i -= 1
-            q = op(q)
+            q = h(q)
             if i < 5:
                 break
         return q
@@ -172,17 +157,13 @@ def test_while_continue():
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module.declare
-    def op(q: Qubit) -> Qubit:
-        pass
-
     @module
     def test(q: Qubit, i: int) -> Qubit:
         while i > 0:
             i -= 1
             if i % 3 == 0:
                 continue
-            q = op(q)
+            q = h(q)
         return q
 
     validate(module.compile(True))
@@ -228,19 +209,11 @@ def test_rus():
     def t(q: Qubit) -> Qubit:
         pass
 
-    @module.declare
-    def h(q: Qubit) -> Qubit:
-        pass
-
-    @module.declare
-    def cnot(q1: Qubit, q2: Qubit) -> tuple[Qubit, Qubit]:
-        pass
-
     @module
     def repeat_until_success(q: Qubit) -> Qubit:
         while True:
-            aux, q = cnot(t(h(qalloc())), q)
-            aux, q = cnot(h(aux), q)
+            aux, q = cx(t(h(qalloc())), q)
+            aux, q = cx(h(aux), q)
             if measure(h(t(aux))):
                 break
         return q
