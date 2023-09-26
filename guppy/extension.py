@@ -42,7 +42,7 @@ class ExtensionFunction(GlobalFunction):
     """
 
     call_compiler: CallCompiler
-    higher_order: bool = True
+    higher_order_value: bool = True
 
     _defined: dict[Node, DFContainingVNode] = field(default_factory=dict, init=False)
 
@@ -55,7 +55,7 @@ class ExtensionFunction(GlobalFunction):
         function doesn't already exist and loads it into the DFG. This operation will
         fail if the extension function is marked as not supporting higher-order usage.
         """
-        if not self.higher_order:
+        if not self.higher_order_value:
             raise GuppyError(
                 "This function does not support usage in a higher-order context",
                 node,
@@ -237,7 +237,7 @@ class GuppyExtension:
         name: str,
         call_compiler: CallCompiler,
         signature: Optional[FunctionType] = None,
-        higher_order: bool = True,
+        higher_order_value: bool = True,
         instance: Optional[builtins.type[GuppyType]] = None,
     ) -> ExtensionFunction:
         """Creates a new extension function.
@@ -248,7 +248,7 @@ class GuppyExtension:
         """
         func: ExtensionFunction
         if signature is None:
-            if higher_order:
+            if higher_order_value:
                 raise ExtensionDefinitionError(
                     "Signature may only be omitted if `higher_order=False` is set",
                     self,
@@ -256,7 +256,11 @@ class GuppyExtension:
             func = UntypedExtensionFunction(name, None, call_compiler)  # TODO: Location
         else:
             func = ExtensionFunction(
-                name, signature, None, call_compiler, higher_order  # TODO: Location
+                name,
+                signature,
+                None,
+                call_compiler,
+                higher_order_value,  # TODO: Location
             )
         if instance is not None:
             self.register_instance_func(instance, name, func)
@@ -269,7 +273,7 @@ class GuppyExtension:
         self,
         call_compiler: CallCompiler,
         alias: Optional[str] = None,
-        higher_order: bool = True,
+        higher_order_value: bool = True,
         instance: Optional[builtins.type[GuppyType]] = None,
     ) -> Callable[[Callable[..., Any]], ExtensionFunction]:
         """Decorator to annotate a new extension function.
@@ -283,7 +287,7 @@ class GuppyExtension:
         def decorator(f: Callable[..., Any]) -> ExtensionFunction:
             func_ast, ty = self._parse_decl(f)
             name = alias or func_ast.name
-            return self.new_func(name, call_compiler, ty, higher_order, instance)
+            return self.new_func(name, call_compiler, ty, higher_order_value, instance)
 
         return decorator
 
