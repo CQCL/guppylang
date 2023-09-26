@@ -15,6 +15,7 @@ tmp_vars: Iterator[str] = (f"%tmp{i}" for i in itertools.count())
 
 
 def is_tmp_var(x: str) -> bool:
+    """Checks if a name corresponds to a temporary variable."""
     return x.startswith("%tmp")
 
 
