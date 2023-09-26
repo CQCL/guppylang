@@ -71,7 +71,7 @@ class NestedFunctionDef(ast.FunctionDef):
         self.ty = ty
 
 
-BBStatement = Union[ast.Assign, ast.AugAssign, ast.Return, NestedFunctionDef]
+BBStatement = Union[ast.Assign, ast.AugAssign, ast.Expr, ast.Return, NestedFunctionDef]
 
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
