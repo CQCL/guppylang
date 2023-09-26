@@ -110,3 +110,19 @@ def set_location_from(node: ast.AST, loc: ast.AST) -> None:
     node.col_offset = loc.col_offset
     node.end_lineno = loc.end_lineno
     node.end_col_offset = loc.end_col_offset
+
+
+def is_empty_body(func_ast: ast.FunctionDef) -> bool:
+    """Returns `True` if the body of a function definition is empty.
+
+    This is the case if the body only contains a single `pass` statement or an ellipsis
+    `...` expression.
+    """
+    if len(func_ast.body) == 0:
+        return True
+    if len(func_ast.body) > 1:
+        return False
+    [n] = func_ast.body
+    return isinstance(n, ast.Pass) or (
+        isinstance(n, ast.Expr) and isinstance(n.value, ast.Ellipsis)
+    )

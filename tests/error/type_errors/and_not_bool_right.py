@@ -1,6 +1,15 @@
-from tests.error.util import guppy
+import tests.error.util
+
+from guppy.compiler import GuppyModule
+from tests.error.util import NonBool
+
+module = GuppyModule("test")
+module.load(tests.error.util)
 
 
-@guppy
-def foo(x: bool) -> bool:
-    return x and "xx"
+@module
+def foo(x: bool, y: NonBool) -> bool:
+    return x and y
+
+
+module.compile(True)

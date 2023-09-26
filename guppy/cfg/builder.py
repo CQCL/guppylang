@@ -5,6 +5,7 @@ from typing import Optional, Iterator, Union, NamedTuple
 from guppy.ast_util import set_location_from, AstVisitor
 from guppy.cfg.bb import BB, NestedFunctionDef
 from guppy.cfg.cfg import CFG
+from guppy.compiler_base import Globals
 from guppy.error import GuppyError, InternalGuppyError
 
 
@@ -26,8 +27,9 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
     cfg: CFG
     num_returns: int
+    globals: Globals
 
-    def build(self, nodes: list[ast.stmt], num_returns: int) -> CFG:
+    def build(self, nodes: list[ast.stmt], num_returns: int, globals: Globals) -> CFG:
         """Builds a CFG from a list of ast nodes.
 
         We also require the expected number of return ports for the whole CFG. This is
@@ -36,6 +38,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         """
         self.cfg = CFG()
         self.num_returns = num_returns
+        self.globals = globals
 
         final_bb = self.visit_stmts(
             nodes, self.cfg.entry_bb, Jumps(self.cfg.exit_bb, None, None)
@@ -152,10 +155,10 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_FunctionDef(
         self, node: ast.FunctionDef, bb: BB, jumps: Jumps
     ) -> Optional[BB]:
-        from guppy.function import FunctionCompiler
+        from guppy.function import FunctionDefCompiler
 
-        func_ty = FunctionCompiler.validate_signature(node)
-        cfg = CFGBuilder().build(node.body, len(func_ty.returns))
+        func_ty = FunctionDefCompiler.validate_signature(node, self.globals)
+        cfg = CFGBuilder().build(node.body, len(func_ty.returns), self.globals)
 
         new_node = NestedFunctionDef(
             cfg,

@@ -3,5 +3,5 @@ Guppy compilation failed. Error in file $FILE:6
 4:    @guppy
 5:    def foo(x: int) -> int:
 6:        return x + True
-                     ^^^^
-GuppyTypeError: Expected expression of type `int` or `float`, but got `True` of type `bool`
+                 ^^^^^^^^
+GuppyTypeError: Binary operator `+` not defined for arguments of type `int` and `bool`

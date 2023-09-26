@@ -1,9 +1,8 @@
-import ast
 from dataclasses import dataclass, field
-from typing import Optional, Union, Any, Sequence
+from typing import Optional, Any, Sequence
 
 from guppy.ast_util import AstNode
-from guppy.guppy_types import GuppyType, IntType, FloatType, BoolType
+from guppy.guppy_types import GuppyType
 from guppy.hugr.hugr import OutPortV, Node
 
 
@@ -42,7 +41,7 @@ class GuppyError(Exception):
     raw_msg: str
     location: Optional[AstNode] = None
     # The message can also refer to AST locations using format placeholders `{0}`, `{1}`
-    locs_in_msg: Sequence[AstNode] = field(default_factory=list)
+    locs_in_msg: Sequence[Optional[AstNode]] = field(default_factory=list)
 
     def get_msg(self, line_offset: int) -> str:
         """Returns the message associated with this error.
@@ -50,7 +49,10 @@ class GuppyError(Exception):
         A line offset is needed to translate AST locations mentioned in the message into
         source locations in the actual file."""
         return self.raw_msg.format(
-            *(SourceLoc.from_ast(l, line_offset) for l in self.locs_in_msg)
+            *(
+                SourceLoc.from_ast(l, line_offset) if l is not None else "???"
+                for l in self.locs_in_msg
+            )
         )
 
 
@@ -64,37 +66,6 @@ class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
 
     pass
-
-
-def assert_arith_type(ty: GuppyType, node: ast.expr) -> None:
-    """Check that a given type is arithmetic, i.e. an integer or float,
-    or raise a type error otherwise."""
-    if not isinstance(ty, IntType) and not isinstance(ty, FloatType):
-        raise GuppyTypeError(
-            f"Expected expression of type `int` or `float`, "
-            f"but got `{ast.unparse(node)}` of type `{ty}`",
-            node,
-        )
-
-
-def assert_int_type(ty: GuppyType, node: ast.expr) -> None:
-    """Check that a given type is integer or raise a type error otherwise."""
-    if not isinstance(ty, IntType):
-        raise GuppyTypeError(
-            f"Expected expression of type `int`, "
-            f"but got `{ast.unparse(node)}` of type `{ty}`",
-            node,
-        )
-
-
-def assert_bool_type(ty: GuppyType, node: ast.expr) -> None:
-    """Check that a given type is boolean or raise a type error otherwise."""
-    if not isinstance(ty, BoolType):
-        raise GuppyTypeError(
-            f"Expected expression of type `bool`, "
-            f"but got `{ast.unparse(node)}` of type `{ty}`",
-            node,
-        )
 
 
 class UndefinedPort(OutPortV):

@@ -8,7 +8,7 @@ from guppy.compiler_base import (
     DFContainer,
     Variable,
     return_var,
-    VarMap,
+    Globals,
 )
 from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppy.expression import ExpressionCompiler
@@ -29,9 +29,9 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
     dfg: DFContainer
     return_tys: list[GuppyType]
 
-    def __init__(self, graph: Hugr, global_variables: VarMap):
-        super().__init__(graph, global_variables)
-        self.expr_compiler = ExpressionCompiler(graph, global_variables)
+    def __init__(self, graph: Hugr, globals: Globals):
+        super().__init__(graph, globals)
+        self.expr_compiler = ExpressionCompiler(graph, globals)
 
     def compile_stmts(
         self,
@@ -158,12 +158,12 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
             self.dfg[name] = Variable(name, port, node)
 
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> None:
-        from guppy.function import FunctionCompiler
+        from guppy.function import FunctionDefCompiler
 
-        port = FunctionCompiler(self.graph, self.global_variables).compile_local(
-            node, self.dfg, self.bb, self.global_variables
+        func = FunctionDefCompiler(self.graph, self.globals).compile_local(
+            node, self.dfg, self.bb
         )
-        self.dfg[node.name] = Variable(node.name, port, node)
+        self.dfg[node.name] = Variable(node.name, func.port, node)
 
     def visit_If(self, node: ast.If) -> None:
         raise InternalGuppyError("Control-flow statement should not be present here.")

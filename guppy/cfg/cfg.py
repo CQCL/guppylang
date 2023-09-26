@@ -19,8 +19,8 @@ from guppy.cfg.bb import (
     NestedFunctionDef,
     BBStatement,
 )
-from guppy.compiler_base import VarMap, DFContainer, Variable
-from guppy.error import InternalGuppyError, GuppyError, assert_bool_type
+from guppy.compiler_base import VarMap, DFContainer, Variable, Globals
+from guppy.error import InternalGuppyError, GuppyError, GuppyTypeError
 from guppy.ast_util import AstVisitor, line_col, set_location_from
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import GuppyType, TupleType, SumType
@@ -78,7 +78,7 @@ class CFG:
         input_row: VarRow,
         return_tys: list[GuppyType],
         parent: Node,
-        global_variables: VarMap,
+        globals: Globals,
     ) -> None:
         """Compiles the CFG."""
 
@@ -88,7 +88,7 @@ class CFG:
 
         # We start by compiling the entry BB
         entry_compiled = self._compile_bb(
-            self.entry_bb, input_row, return_tys, graph, parent, global_variables
+            self.entry_bb, input_row, return_tys, graph, parent, globals
         )
         compiled = {self.entry_bb: entry_compiled}
 
@@ -108,7 +108,7 @@ class CFG:
             else:
                 # Otherwise, compile the BB and enqueue its successors
                 compiled_bb = self._compile_bb(
-                    bb, out_row, return_tys, graph, parent, global_variables
+                    bb, out_row, return_tys, graph, parent, globals
                 )
                 queue += [
                     (compiled_bb, i, succ) for i, succ in enumerate(bb.successors)
@@ -126,7 +126,7 @@ class CFG:
         return_tys: list[GuppyType],
         graph: Hugr,
         parent: Node,
-        global_variables: VarMap,
+        globals: Globals,
     ) -> CompiledBB:
         """Compiles a single basic block."""
 
@@ -139,7 +139,7 @@ class CFG:
         # defined. For all other BBs, this will be checked when compiling a predecessor.
         if len(bb.predecessors) == 0:
             for x, use in bb.vars.used.items():
-                if x not in self.ass_before[bb] and x not in global_variables:
+                if x not in self.ass_before[bb] and x not in globals.values:
                     raise GuppyError(f"Variable `{x}` is not defined", use)
 
         # Compile the basic block
@@ -152,20 +152,28 @@ class CFG:
                 for (i, v) in enumerate(input_row)
             },
         )
-        stmt_compiler = StatementCompiler(graph, global_variables)
+        stmt_compiler = StatementCompiler(graph, globals)
         dfg = stmt_compiler.compile_stmts(bb.statements, bb, dfg, return_tys)
 
         # If we branch, we also have to compile the branch predicate
         if len(bb.successors) > 1:
             assert bb.branch_pred is not None
-            expr_compiler = ExpressionCompiler(graph, global_variables)
-            branch_port = expr_compiler.compile(bb.branch_pred, dfg)
-            assert_bool_type(branch_port.ty, bb.branch_pred)
+            expr_compiler = ExpressionCompiler(graph, globals)
+            port = expr_compiler.compile(bb.branch_pred, dfg)
+            func = globals.get_instance_func(port.ty, "__bool__")
+            if func is None:
+                raise GuppyTypeError(
+                    f"Expression of type `{port.ty}` cannot be interpreted as a `bool`",
+                    bb.branch_pred,
+                )
+            [branch_port] = func.compile_call(
+                [port], dfg, graph, globals, bb.branch_pred
+            )
 
         for succ in bb.successors:
             for x, use_bb in self.live_before[succ].items():
                 # Check that the variable requested by the successor are defined
-                if x not in dfg and x not in global_variables:
+                if x not in dfg and x not in globals.values:
                     # If the variable is defined on *some* paths, we can give a more
                     # informative error message
                     if x in self.maybe_ass_before[use_bb]:
@@ -269,7 +277,11 @@ class CFG:
             if v1.ty != v2.ty:
                 # In the error message, we want to mention the variable that was first
                 # defined at the start.
-                if line_col(v2.defined_at) < line_col(v1.defined_at):
+                if (
+                    v1.defined_at
+                    and v2.defined_at
+                    and line_col(v2.defined_at) < line_col(v1.defined_at)
+                ):
                     v1, v2 = v2, v1
                 # We shouldn't mention temporary variables (starting with `%`)
                 # in error messages:

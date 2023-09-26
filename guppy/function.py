@@ -1,33 +1,67 @@
 import ast
+from typing import Optional
 
-from guppy.ast_util import return_nodes_in_ast
+from guppy.ast_util import return_nodes_in_ast, AstNode
 from guppy.cfg.bb import BB, NestedFunctionDef
 from guppy.cfg.builder import CFGBuilder
-from guppy.compiler_base import CompilerBase, VarMap, RawVariable, DFContainer, Variable
-from guppy.error import GuppyError
+from guppy.compiler_base import (
+    CompilerBase,
+    RawVariable,
+    DFContainer,
+    Globals,
+    GlobalFunction,
+    CallCompiler,
+)
+from guppy.error import GuppyError, GuppyTypeError
+from guppy.expression import type_check_call
 from guppy.guppy_types import (
     FunctionType,
     GuppyType,
-    IntType,
-    FloatType,
-    BoolType,
-    StringType,
     TupleType,
     TypeRow,
-    QubitType,
+    type_row_from_ast,
+    type_from_ast,
 )
-from guppy.hugr.hugr import Hugr, OutPortV, DFContainingVNode
+from guppy.hugr.hugr import Hugr, OutPortV, DFContainingVNode, DFContainingNode
 
 
-class FunctionCompiler(CompilerBase):
+class DefinedFunction(GlobalFunction):
+    ty: FunctionType
+    defined_at: ast.FunctionDef
+    port: OutPortV
+
+    def __init__(self, name: str, port: OutPortV, defined_at: ast.FunctionDef):
+        assert isinstance(port.ty, FunctionType)
+        super().__init__(name, port.ty, defined_at, self.DefCallCompiler())
+        self.port = port
+
+    def load(
+        self, graph: Hugr, parent: DFContainingNode, globals: Globals, node: AstNode
+    ) -> OutPortV:
+        """Loads the function as a value into a local dataflow graph."""
+        return graph.add_load_constant(self.port, parent).out_port(0)
+
+    class DefCallCompiler(CallCompiler):
+        """Compiler for calls to defined functions."""
+
+        func: "DefinedFunction"
+
+        def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+            # Defined functions can be called using a regular direct call op
+            type_check_call(self.func.ty, args, self.node)
+            call = self.graph.add_call(self.func.port, args, self.parent)
+            return [call.out_port(i) for i in range(len(self.func.ty.returns))]
+
+
+class FunctionDefCompiler(CompilerBase):
     cfg_builder: CFGBuilder
 
-    def __init__(self, graph: Hugr, global_variables: VarMap):
-        super().__init__(graph, global_variables)
+    def __init__(self, graph: Hugr, globals: Globals):
+        super().__init__(graph, globals)
         self.cfg_builder = CFGBuilder()
 
     @staticmethod
-    def validate_signature(func_def: ast.FunctionDef) -> FunctionType:
+    def validate_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType:
         """Checks the signature of a function definition and returns the corresponding
         Guppy type."""
         if len(func_def.args.posonlyargs) != 0:
@@ -56,25 +90,23 @@ class FunctionCompiler(CompilerBase):
         for i, arg in enumerate(func_def.args.args):
             if arg.annotation is None:
                 raise GuppyError("Argument type must be annotated", arg)
-            ty = type_from_ast(arg.annotation)
+            ty = type_from_ast(arg.annotation, globals)
             arg_tys.append(ty)
             arg_names.append(arg.arg)
 
-        ret_type_row = type_row_from_ast(func_def.returns)
+        ret_type_row = type_row_from_ast(func_def.returns, globals)
         return FunctionType(arg_tys, ret_type_row.tys, arg_names)
 
     def compile_global(
         self,
         func_def: ast.FunctionDef,
         def_node: DFContainingVNode,
-        global_variables: VarMap,
-    ) -> OutPortV:
+    ) -> DefinedFunction:
         """Compiles a top-level function definition."""
-        self.global_variables = global_variables
-        func_ty = self.validate_signature(func_def)
+        func_ty = self.validate_signature(func_def, self.globals)
         args = func_def.args.args
 
-        cfg = self.cfg_builder.build(func_def.body, len(func_ty.returns))
+        cfg = self.cfg_builder.build(func_def.body, len(func_ty.returns), self.globals)
 
         def_input = self.graph.add_input(parent=def_node)
         cfg_node = self.graph.add_cfg(
@@ -86,7 +118,11 @@ class FunctionCompiler(CompilerBase):
             for x, t, l in zip(func_ty.arg_names, func_ty.args, args)
         ]
         cfg.compile(
-            self.graph, input_sig, list(func_ty.returns), cfg_node, global_variables
+            self.graph,
+            input_sig,
+            list(func_ty.returns),
+            cfg_node,
+            self.globals,
         )
 
         # Add final output node for the def block
@@ -95,18 +131,16 @@ class FunctionCompiler(CompilerBase):
             parent=def_node,
         )
 
-        return def_node.out_port(0)
+        return DefinedFunction(func_def.name, def_node.out_port(0), func_def)
 
     def compile_local(
         self,
         func_def: NestedFunctionDef,
         dfg: DFContainer,
         bb: BB,
-        global_variables: VarMap,
-    ) -> OutPortV:
+    ) -> DefinedFunction:
         """Compiles a local (nested) function definition."""
-        self.global_variables = global_variables
-        func_ty = self.validate_signature(func_def)
+        func_ty = self.validate_signature(func_def, self.globals)
         args = func_def.args.args
         assert func_ty.arg_names is not None
 
@@ -174,16 +208,20 @@ class FunctionCompiler(CompilerBase):
             )
             input_ports += [partial.out_port(0)]
             input_row += [RawVariable(func_def.name, func_ty, func_def)]
+            global_values = self.globals.values
         # Otherwise, we can treat the function like a normal global variable
         else:
-            global_variables = global_variables | {
-                func_def.name: Variable(func_def.name, def_node.out_port(0), func_def)
+            global_values = self.globals.values | {
+                func_def.name: DefinedFunction(
+                    func_def.name, def_node.out_port(0), func_def
+                )
             }
+        globals = Globals(
+            global_values, self.globals.types, self.globals.instance_funcs
+        )
 
         cfg_node = self.graph.add_cfg(def_node, inputs=input_ports)
-        cfg.compile(
-            self.graph, input_row, list(func_ty.returns), cfg_node, global_variables
-        )
+        cfg.compile(self.graph, input_row, list(func_ty.returns), cfg_node, globals)
 
         # Add final output node for the def block
         self.graph.add_output(
@@ -199,60 +237,8 @@ class FunctionCompiler(CompilerBase):
             partial = self.graph.add_partial(
                 loaded.out_port(0), args=[v.port for v in captured], parent=dfg.node
             )
-            return partial.out_port(0)
-        return loaded.out_port(0)
-
-
-def type_from_ast(node: ast.expr) -> GuppyType:
-    """Turns an AST expression into a Guppy type."""
-    if isinstance(node, ast.Name):
-        if node.id == "int":
-            return IntType()
-        elif node.id == "float":
-            return FloatType()
-        elif node.id == "bool":
-            return BoolType()
-        elif node.id == "str":
-            return StringType()
-        elif node.id == "qubit":
-            return QubitType()
-    elif isinstance(node, ast.Tuple):
-        return TupleType([type_from_ast(el) for el in node.elts])
-    elif (
-        isinstance(node, ast.Subscript)
-        and isinstance(node.value, ast.Name)
-        and node.value.id == "tuple"
-    ):
-        if isinstance(node.slice, ast.Tuple):
-            return TupleType([type_from_ast(e) for e in node.slice.elts])
+            port = partial.out_port(0)
         else:
-            return TupleType([type_from_ast(node.slice)])
-    elif (
-        isinstance(node, ast.Subscript)
-        and isinstance(node.value, ast.Name)
-        and node.value.id == "Callable"
-        and isinstance(node.slice, ast.Tuple)
-        and len(node.slice.elts) == 2
-    ):
-        [args, ret] = node.slice.elts
-        if isinstance(args, ast.List):
-            return FunctionType(
-                [type_from_ast(a) for a in args.elts], type_row_from_ast(ret).tys
-            )
-    # TODO: Remaining cases
-    raise GuppyError(f"Invalid type: `{ast.unparse(node)}`", node)
+            port = loaded.out_port(0)
 
-
-def type_row_from_ast(node: ast.expr) -> TypeRow:
-    """Turns an AST expression into a Guppy type row.
-
-    This is needed to interpret the return type annotation of functions.
-    """
-    # The return type `-> None` is represented in the ast as `ast.Constant(value=None)`
-    if isinstance(node, ast.Constant) and node.value is None:
-        return TypeRow([])
-    ty = type_from_ast(node)
-    if isinstance(ty, TupleType):
-        return TypeRow(ty.element_types)
-    else:
-        return TypeRow([ty])
+        return DefinedFunction(func_def.name, port, func_def)

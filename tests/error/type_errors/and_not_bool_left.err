@@ -1,7 +1,7 @@
-Guppy compilation failed. Error in file $FILE:6
+Guppy compilation failed. Error in file $FILE:12
 
-4:    @guppy
-5:    def foo(x: bool) -> bool:
-6:        return "xx" and x
-                 ^^^^
-GuppyTypeError: Expected expression of type `bool`, but got `'xx'` of type `str`
+10:    @module
+11:    def foo(x: NonBool, y: bool) -> bool:
+12:        return x and y
+                  ^
+GuppyTypeError: Expression of type `NonBool` cannot be interpreted as a `bool`

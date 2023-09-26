@@ -144,7 +144,7 @@ def test_else_return():
         if x:
             y += 3
         else:
-            y /= 4
+            y //= 4
             return y
         return y
 
@@ -158,7 +158,7 @@ def test_both_return():
             y += 3
             return y
         else:
-            y /= 4
+            y //= 4
             return y
 
     validate(foo)

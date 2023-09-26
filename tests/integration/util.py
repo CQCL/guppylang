@@ -16,5 +16,3 @@ class Decorator:
 # Dummy names to import to avoid errors for `_@functional` pseudo-decorator:
 functional = Decorator()
 _ = Decorator()
-
-qubit = TypeVar("qubit")

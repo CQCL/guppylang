@@ -1,10 +1,15 @@
-from abc import ABC
+import ast
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterator, Optional, Any
+from typing import Iterator, Optional, Any, NamedTuple, Union
 
 from guppy.ast_util import AstNode
-from guppy.guppy_types import GuppyType
+from guppy.guppy_types import GuppyType, FunctionType, TupleType, SumType
 from guppy.hugr.hugr import OutPortV, Hugr, DFContainingNode
+
+
+ValueName = str
+TypeName = str
 
 
 @dataclass
@@ -14,9 +19,9 @@ class RawVariable:
     Besides the name and type, we also store an AST node where the variable was defined.
     """
 
-    name: str
+    name: ValueName
     ty: GuppyType
-    defined_at: AstNode
+    defined_at: Optional[AstNode]
 
     def __lt__(self, other: Any) -> bool:
         # We define an ordering on variables that is used to determine in which order
@@ -38,13 +43,13 @@ class Variable(RawVariable):
     port: OutPortV
     used: Optional[AstNode] = None
 
-    def __init__(self, name: str, port: OutPortV, defined_at: AstNode):
+    def __init__(self, name: str, port: OutPortV, defined_at: Optional[AstNode]):
         super().__init__(name, port.ty, defined_at)
         object.__setattr__(self, "port", port)
 
 
 # A dictionary mapping names to live variables
-VarMap = dict[str, Variable]
+VarMap = dict[ValueName, Variable]
 
 
 @dataclass
@@ -81,15 +86,151 @@ class DFContainer:
         return self.variables.get(name, None)
 
 
+@dataclass
+class GlobalVariable(ABC, RawVariable):
+    """Represents a global module-level variable."""
+
+    @abstractmethod
+    def load(
+        self, graph: Hugr, parent: DFContainingNode, globals: "Globals", node: AstNode
+    ) -> OutPortV:
+        """Loads the global variable as a value into a local dataflow graph."""
+
+
+@dataclass
+class GlobalFunction(GlobalVariable, ABC):
+    """Represents a global module-level function."""
+
+    ty: FunctionType
+    call_compiler: "CallCompiler"
+
+    def compile_call(
+        self,
+        args: list[OutPortV],
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: "Globals",
+        node: AstNode,
+    ) -> list[OutPortV]:
+        """Utility method that invokes the local `CallCompiler` to compile a function
+        call"""
+        self.call_compiler.setup(dfg, graph, globals, self, node)
+        return self.call_compiler.compile(args)
+
+    def compile_call_raw(
+        self,
+        args: list[ast.expr],
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: "Globals",
+        node: AstNode,
+    ) -> list[OutPortV]:
+        """Utility method that invokes the local `CallCompiler` to compile a function
+        call with raw argument AST nodes"""
+        self.call_compiler.setup(dfg, graph, globals, self, node)
+        return self.call_compiler.compile_raw(args)
+
+
+class Globals(NamedTuple):
+    """Collection of names that are available on module-level.
+
+    Separately stores names that are bound to values (i.e. module-level functions or
+    constants), to types, or to instance functions belonging to types.
+    """
+
+    values: dict[ValueName, GlobalVariable]
+    types: dict[TypeName, type[GuppyType]]
+    instance_funcs: dict[tuple[TypeName, ValueName], GlobalFunction]
+
+    @staticmethod
+    def default() -> "Globals":
+        """Generates a `Globals` instance that is populated with all core types"""
+        tys: dict[str, type[GuppyType]] = {
+            FunctionType.name: FunctionType,
+            TupleType.name: TupleType,
+            SumType.name: SumType,
+        }
+        return Globals({}, tys, {})
+
+    def get_instance_func(self, ty: GuppyType, name: str) -> Optional[GlobalFunction]:
+        """Looks up an instance function with a given name for a type"""
+        return self.instance_funcs.get((ty.name, name), None)
+
+    def __or__(self, other: "Globals") -> "Globals":
+        return Globals(
+            self.values | other.values,
+            self.types | other.types,
+            self.instance_funcs | other.instance_funcs,
+        )
+
+    def __ior__(self, other: "Globals") -> "Globals":
+        self.values.update(other.values)
+        self.types.update(other.types)
+        self.instance_funcs.update(other.instance_funcs)
+        return self
+
+
 class CompilerBase(ABC):
     """Base class for the Guppy compiler."""
 
     graph: Hugr
-    global_variables: VarMap
+    globals: Globals
 
-    def __init__(self, graph: Hugr, global_variables: VarMap) -> None:
+    def __init__(self, graph: Hugr, globals: Globals) -> None:
         self.graph = graph
-        self.global_variables = global_variables
+        self.globals = globals
+
+
+class CallCompiler(ABC):
+    """Abstract base class for function call compilers."""
+
+    dfg: DFContainer
+    graph: Hugr
+    globals: Globals
+    func: GlobalFunction
+    node: AstNode
+
+    @abstractmethod
+    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+        """Compiles a function call with the given argument ports.
+
+        Returns a row of output ports that are returned by the function.
+        """
+        ...
+
+    def compile_raw(self, args: list[ast.expr]) -> list[OutPortV]:
+        """Compiles a function call with raw argument AST nodes.
+
+        The default implementation invokes the `ExpressionCompiler` to first compile the
+        arguments and then calls out to `compile`.
+        """
+        from guppy.expression import ExpressionCompiler
+
+        expr_compiler = ExpressionCompiler(self.graph, self.globals)
+        return self.compile([expr_compiler.compile(a, self.dfg) for a in args])
+
+    @property
+    def parent(self) -> DFContainingNode:
+        """The parent node of the current dataflow graph"""
+        return self.dfg.node
+
+    def setup(
+        self,
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: "Globals",
+        func: GlobalFunction,
+        node: AstNode,
+    ) -> None:
+        """Initialises the parameters of the call compiler.
+
+        Must be called before trying to compile.
+        """
+        self.dfg = dfg
+        self.graph = graph
+        self.globals = globals
+        self.func = func
+        self.node = node
 
 
 def return_var(n: int) -> str:

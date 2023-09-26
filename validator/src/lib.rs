@@ -1,11 +1,26 @@
 use pyo3::prelude::*;
 use hugr;
+use hugr::extension::{ExtensionRegistry, PRELUDE};
+use hugr::std_extensions::arithmetic::{int_ops, int_types, float_ops, float_types};
+use hugr::std_extensions::logic;
+use lazy_static::lazy_static;
+
+
+lazy_static! {
+    pub static ref REGISTRY: ExtensionRegistry = [
+        PRELUDE.to_owned(),
+        logic::EXTENSION.to_owned(),
+        int_types::extension(),
+        int_ops::extension(),
+        float_types::extension(),
+        float_ops::extension()
+    ].into();
+}
 
 #[pyfunction]
 fn validate(hugr: Vec<u8>) -> PyResult<()> {
     let hg: hugr::Hugr = rmp_serde::from_slice(&hugr).unwrap();
-    hg.validate().unwrap();
-
+    hg.validate(&REGISTRY).unwrap();
     Ok(())
 }
 

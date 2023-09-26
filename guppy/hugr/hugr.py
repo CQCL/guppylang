@@ -7,16 +7,14 @@ from typing import Optional, Iterator, Tuple, Any
 from dataclasses import field, dataclass
 
 import guppy.hugr.ops as ops
-import guppy.hugr.tys as tys
 import guppy.hugr.raw as raw
 from guppy.guppy_types import (
     GuppyType,
-    type_from_python_value,
     TupleType,
     FunctionType,
     SumType,
 )
-
+from guppy.hugr import val
 
 NodeIdx = int
 PortOffset = int
@@ -290,7 +288,7 @@ class Hugr:
         self._default_parent = None
         self._graph = networkx.MultiDiGraph()
         self._children = {-1: []}
-        self.root = self._add_node(
+        self.root = self.add_node(
             op=ops.Module(), meta_data={"name": name}, parent=None
         )
 
@@ -311,7 +309,7 @@ class Hugr:
             for i, port in enumerate(inputs):
                 self.add_edge(port, node.in_port(i))
 
-    def _add_node(
+    def add_node(
         self,
         op: ops.OpType,
         input_types: Optional[TypeList] = None,
@@ -365,33 +363,20 @@ class Hugr:
         self.root.meta_data["name"] = name
         return self.root
 
-    def add_constant(self, value: object, parent: Optional[Node] = None) -> VNode:
-        """Adds a constant node holding a given value to the graph."""
-        # TODO Update this once we have a better constant spec
-        ty = type_from_python_value(value)
-        if ty is None:
-            raise ValueError(f"Invalid constant value: {value}")
-        return self._add_node(
-            ops.DummyOp(name=f"Constant: {value}"), [], [ty], parent, None
-        )
-
-    def add_arith(
-        self,
-        name: str,
-        inputs: list[OutPortV],
-        out_ty: GuppyType,
-        parent: Optional[Node] = None,
+    def add_constant(
+        self, value: val.Value, ty: GuppyType, parent: Optional[Node] = None
     ) -> VNode:
-        """Adds a node for an arithmetic operation."""
-        # TODO Work with arithmetic resource
-        return self._add_node(ops.DummyOp(name=name), None, [out_ty], parent, inputs)
+        """Adds a constant node holding a given value to the graph."""
+        return self.add_node(
+            ops.Const(value=value, typ=ty.to_hugr()), [], [ty], parent, None
+        )
 
     def add_input(
         self, output_tys: Optional[TypeList] = None, parent: Optional[Node] = None
     ) -> VNode:
         """Adds an `Input` node to the graph."""
         parent = parent or self._default_parent
-        node = self._add_node(ops.Input(), [], output_tys, parent)
+        node = self.add_node(ops.Input(), [], output_tys, parent)
         if isinstance(parent, DFContainingNode):
             parent.input_child = node
         return node
@@ -403,7 +388,7 @@ class Hugr:
         parent: Optional[Node] = None,
     ) -> VNode:
         """Adds an `Output` node to the graph."""
-        node = self._add_node(ops.Output(), input_tys, [], parent, inputs)
+        node = self.add_node(ops.Output(), input_tys, [], parent, inputs)
         if isinstance(parent, DFContainingNode):
             parent.output_child = node
         return node
@@ -440,7 +425,7 @@ class Hugr:
 
     def add_cfg(self, parent: Node, inputs: list[OutPortV]) -> VNode:
         """Adds a nested control-flow `CFG` node to the graph."""
-        return self._add_node(ops.CFG(), [], [], parent, inputs)
+        return self.add_node(ops.CFG(), [], [], parent, inputs)
 
     def add_conditional(
         self,
@@ -450,7 +435,7 @@ class Hugr:
     ) -> VNode:
         """Adds a `Conditional` node to the graph."""
         inputs = [cond_input] + inputs
-        return self._add_node(ops.Conditional(), None, None, parent, inputs)
+        return self.add_node(ops.Conditional(), None, None, parent, inputs)
 
     def add_tail_loop(
         self, inputs: list[OutPortV], parent: Optional[Node] = None
@@ -463,14 +448,14 @@ class Hugr:
     ) -> VNode:
         """Adds a `MakeTuple` node to the graph."""
         ty = TupleType([port.ty for port in inputs])
-        return self._add_node(ops.MakeTuple(), None, [ty], parent, inputs)
+        return self.add_node(ops.MakeTuple(), None, [ty], parent, inputs)
 
     def add_unpack_tuple(
         self, input_tuple: OutPortV, parent: Optional[Node] = None
     ) -> VNode:
         """Adds an `UnpackTuple` node to the graph."""
         assert isinstance(input_tuple.ty, TupleType)
-        return self._add_node(
+        return self.add_node(
             ops.UnpackTuple(),
             None,
             list(input_tuple.ty.element_types),
@@ -484,7 +469,7 @@ class Hugr:
         """Adds a `Tag` node to the graph."""
         types = [ty.to_hugr() for ty in variants]
         assert inp.ty == variants[tag]
-        return self._add_node(
+        return self.add_node(
             ops.Tag(tag=tag, variants=types), None, [SumType(variants)], parent, [inp]
         )
 
@@ -492,7 +477,7 @@ class Hugr:
         self, const_port: OutPortV, parent: Optional[Node] = None
     ) -> VNode:
         """Adds a `LoadConstant` node to the graph."""
-        return self._add_node(
+        return self.add_node(
             ops.LoadConstant(datatype=const_port.ty.to_hugr()),
             None,
             [const_port.ty],
@@ -505,7 +490,7 @@ class Hugr:
     ) -> VNode:
         """Adds a `Call` node to the graph."""
         assert isinstance(def_port.ty, FunctionType)
-        return self._add_node(
+        return self.add_node(
             ops.Call(), None, list(def_port.ty.returns), parent, args + [def_port]
         )
 
@@ -514,7 +499,7 @@ class Hugr:
     ) -> VNode:
         """Adds an `IndirectCall` node to the graph."""
         assert isinstance(fun_port.ty, FunctionType)
-        return self._add_node(
+        return self.add_node(
             ops.CallIndirect(),
             None,
             list(fun_port.ty.returns),
@@ -536,7 +521,7 @@ class Hugr:
             if def_port.ty.arg_names is not None
             else None,
         )
-        return self._add_node(
+        return self.add_node(
             ops.DummyOp(name="partial"), None, [new_ty], parent, args + [def_port]
         )
 
@@ -550,7 +535,7 @@ class Hugr:
 
     def add_declare(self, fun_ty: FunctionType, parent: Node, name: str) -> VNode:
         """Adds a `Declare` node to the graph."""
-        return self._add_node(
+        return self.add_node(
             ops.FuncDecl(), [], [fun_ty], parent, None, meta_data={"name": name}
         )
 

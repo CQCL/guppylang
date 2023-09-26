@@ -1,18 +1,21 @@
+import guppy.prelude.quantum
+
 from guppy.compiler import GuppyModule
-from tests.error.util import guppy, qubit
+from guppy.hugr.tys import Qubit
 
 
 module = GuppyModule("test")
+module.load(guppy.prelude.quantum)
 
 
 @module.declare
-def new_qubit() -> qubit:
-    pass
+def new_qubit() -> Qubit:
+    ...
 
 
 @module.declare
-def measure() -> bool:
-    pass
+def measure(q: Qubit) -> bool:
+    ...
 
 
 @module
