@@ -131,6 +131,9 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
         )
         self.visit_Assign(assign)
 
+    def visit_Expr(self, node: ast.Expr) -> None:
+        self.expr_compiler.compile_row(node.value, self.dfg)
+
     def visit_Return(self, node: ast.Return) -> None:
         if node.value is None:
             row = []

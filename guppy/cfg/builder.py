@@ -14,6 +14,11 @@ from guppy.error import GuppyError, InternalGuppyError
 tmp_vars: Iterator[str] = (f"%tmp{i}" for i in itertools.count())
 
 
+def is_tmp_var(x: str) -> bool:
+    """Checks if a name corresponds to a temporary variable."""
+    return x.startswith("%tmp")
+
+
 class Jumps(NamedTuple):
     """Holds jump targets for return, continue, and break during CFG construction."""
 
@@ -72,7 +77,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         return bb_opt
 
     def _build_node_value(
-        self, node: Union[ast.Assign, ast.AugAssign, ast.Return], bb: BB
+        self, node: Union[ast.Assign, ast.AugAssign, ast.Return, ast.Expr], bb: BB
     ) -> BB:
         """Utility method for building a node containing a `value` expression.
 
@@ -94,7 +99,13 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
     def visit_Expr(self, node: ast.Expr, bb: BB, jumps: Jumps) -> Optional[BB]:
         # This is an expression statement where the value is discarded
-        _, bb = ExprBuilder.build(node.value, self.cfg, bb)
+        node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
+        # We don't add it to the BB if it's just a temporary variable. This will be the
+        # case if it's a branching expression, e.g. `42 if cond else False`. In that
+        # example the type mismatch is actually fine since the result is never used. To
+        # achieve this behaviour we must not add the temporary result variable to the BB
+        if not isinstance(node.value, ast.Name) or not is_tmp_var(node.value.id):
+            bb.statements.append(node)
         return bb
 
     def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> Optional[BB]:
