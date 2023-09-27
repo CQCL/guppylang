@@ -1,10 +1,9 @@
 from typing import Callable
 
 from guppy.compiler import guppy, GuppyModule
-from tests.integration.util import validate
 
 
-def test_basic():
+def test_basic(validate):
     module = GuppyModule("test")
 
     @module
@@ -18,7 +17,7 @@ def test_basic():
     validate(module.compile())
 
 
-def test_call_1():
+def test_call_1(validate):
     module = GuppyModule("test")
 
     @module
@@ -36,7 +35,7 @@ def test_call_1():
     validate(module.compile())
 
 
-def test_call_2():
+def test_call_2(validate):
     module = GuppyModule("test")
 
     @module
@@ -54,7 +53,7 @@ def test_call_2():
     validate(module.compile())
 
 
-def test_nested():
+def test_nested(validate):
     @guppy
     def foo(x: int) -> Callable[[int], bool]:
         def bar(y: int) -> bool:
@@ -65,7 +64,7 @@ def test_nested():
     validate(foo)
 
 
-def test_curry():
+def test_curry(validate):
     module = GuppyModule("curry")
 
     @module
@@ -78,7 +77,7 @@ def test_curry():
 
     @module
     def uncurry(f: Callable[[int], Callable[[int], bool]]) -> Callable[[int, int], bool]:
-        def g(x: int, y: int):
+        def g(x: int, y: int) -> bool:
             return f(x)(y)
         return g
 
@@ -94,8 +93,9 @@ def test_curry():
         uncurried(x, y)
         curry(uncurry(curry(gt)))(y)(x)
 
+    validate(module.compile())
 
-def test_y_combinator():
+def test_y_combinator(validate):
     module = GuppyModule("fib")
 
     @module

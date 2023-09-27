@@ -1,8 +1,7 @@
 from guppy.compiler import guppy, GuppyModule
-from tests.integration.util import validate
 
 
-def test_call():
+def test_call(validate):
     module = GuppyModule("module")
 
     @module
@@ -16,7 +15,7 @@ def test_call():
     validate(module.compile(exit_on_error=True))
 
 
-def test_call_back(tmp_path):
+def test_call_back(validate):
     module = GuppyModule("module")
 
     @module
@@ -30,7 +29,7 @@ def test_call_back(tmp_path):
     validate(module.compile(exit_on_error=True))
 
 
-def test_recursion():
+def test_recursion(validate):
     @guppy
     def main(x: int) -> int:
         return main(x)
@@ -38,7 +37,7 @@ def test_recursion():
     validate(main)
 
 
-def test_mutual_recursion():
+def test_mutual_recursion(validate):
     module = GuppyModule("module")
 
     @module

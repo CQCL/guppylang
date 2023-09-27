@@ -4,9 +4,6 @@ import validator
 from guppy.hugr.hugr import Hugr
 
 
-def validate(hugr: Hugr):
-    validate_bytes(hugr.serialize())
-
 def validate_bytes(hugr: bytes):
     validator.validate(hugr)
 

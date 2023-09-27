@@ -1,12 +1,11 @@
 import pytest
 
 from guppy.compiler import guppy
-from tests.integration.util import validate
 
 """ All sorts of weird stuff is allowed when variables are not used. """
 
 
-def test_not_always_defined1():
+def test_not_always_defined1(validate):
     @guppy
     def foo(x: bool) -> int:
         if x:
@@ -16,7 +15,7 @@ def test_not_always_defined1():
     validate(foo)
 
 
-def test_not_always_defined2():
+def test_not_always_defined2(validate):
     @guppy
     def foo(x: bool) -> int:
         if x:
@@ -28,7 +27,7 @@ def test_not_always_defined2():
     validate(foo)
 
 
-def test_not_always_defined3():
+def test_not_always_defined3(validate):
     @guppy
     def foo(x: bool) -> int:
         if x:
@@ -40,7 +39,7 @@ def test_not_always_defined3():
     validate(foo)
 
 
-def test_different_types1():
+def test_different_types1(validate):
     @guppy
     def foo(x: bool) -> int:
         if x:
@@ -52,20 +51,7 @@ def test_different_types1():
     validate(foo)
 
 
-def test_different_types2():
-    @guppy
-    def foo(x: bool) -> int:
-        z = False
-        if x:
-            z = True
-        else:
-            z = 5
-        return 4
-
-    validate(foo)
-
-
-def test_different_types3():
+def test_different_types2(validate):
     @guppy
     def foo(x: bool) -> int:
         z = False
@@ -78,7 +64,20 @@ def test_different_types3():
     validate(foo)
 
 
-def test_while_change_type():
+def test_different_types3(validate):
+    @guppy
+    def foo(x: bool) -> int:
+        z = False
+        if x:
+            z = True
+        else:
+            z = 5
+        return 4
+
+    validate(foo)
+
+
+def test_while_change_type(validate):
     @guppy
     def foo() -> None:
         x = 42
@@ -88,7 +87,7 @@ def test_while_change_type():
     validate(foo)
 
 
-def test_if_expr_different_types():
+def test_if_expr_different_types(validate):
     @guppy
     def foo(x: bool) -> None:
         5 if x else False

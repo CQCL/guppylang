@@ -1,8 +1,7 @@
 from guppy.compiler import guppy
-from tests.integration.util import validate
 
 
-def test_arith_basic():
+def test_arith_basic(validate):
     @guppy
     def add(x: int, y: int) -> int:
         return x + y
@@ -10,7 +9,7 @@ def test_arith_basic():
     validate(add)
 
 
-def test_constant():
+def test_constant(validate):
     @guppy
     def const() -> float:
         return 42.0
@@ -18,7 +17,7 @@ def test_constant():
     validate(const)
 
 
-def test_ann_assign():
+def test_ann_assign(validate):
     @guppy
     def add(x: int) -> int:
         x += 1
@@ -27,7 +26,7 @@ def test_ann_assign():
     validate(add)
 
 
-def test_float_coercion():
+def test_float_coercion(validate):
     @guppy
     def coerce(x: int, y: float) -> float:
         return x * y
@@ -35,7 +34,7 @@ def test_float_coercion():
     validate(coerce)
 
 
-def test_arith_big():
+def test_arith_big(validate):
     @guppy
     def arith(x: int, y: float, z: int) -> bool:
         a = x // y + 3 * z
@@ -45,7 +44,7 @@ def test_arith_big():
     validate(arith)
 
 
-def test_shortcircuit_assign1():
+def test_shortcircuit_assign1(validate):
     @guppy
     def foo(x: bool, y: int) -> bool:
         if (z := x) and y > 0:
@@ -55,7 +54,7 @@ def test_shortcircuit_assign1():
     validate(foo)
 
 
-def test_shortcircuit_assign2():
+def test_shortcircuit_assign2(validate):
     @guppy
     def foo(x: bool, y: int) -> bool:
         if y > 0 and (z := x):
@@ -65,7 +64,7 @@ def test_shortcircuit_assign2():
     validate(foo)
 
 
-def test_shortcircuit_assign3():
+def test_shortcircuit_assign3(validate):
     @guppy
     def foo(x: bool, y: int) -> bool:
         if (z := x) or y > 0:
@@ -75,7 +74,7 @@ def test_shortcircuit_assign3():
     validate(foo)
 
 
-def test_shortcircuit_assign4():
+def test_shortcircuit_assign4(validate):
     @guppy
     def foo(x: bool, y: int) -> bool:
         if y > 0 or (z := x):

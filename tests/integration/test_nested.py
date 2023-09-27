@@ -1,8 +1,7 @@
 from guppy.compiler import guppy
-from tests.integration.util import validate
 
 
-def test_basic():
+def test_basic(validate):
     @guppy
     def foo(x: int) -> int:
         def bar(y: int) -> int:
@@ -12,7 +11,7 @@ def test_basic():
     validate(foo)
 
 
-def test_call_twice():
+def test_call_twice(validate):
     @guppy
     def foo(x: int) -> int:
         def bar(y: int) -> int:
@@ -25,7 +24,7 @@ def test_call_twice():
     validate(foo)
 
 
-def test_redefine():
+def test_redefine(validate):
     @guppy
     def foo(x: int) -> int:
         def bar(y: int) -> int:
@@ -42,7 +41,7 @@ def test_redefine():
     validate(foo)
 
 
-def test_define_twice():
+def test_define_twice(validate):
     @guppy
     def foo(x: int) -> int:
         if x == 0:
@@ -56,7 +55,7 @@ def test_define_twice():
     validate(foo)
 
 
-def test_nested_deep():
+def test_nested_deep(validate):
     @guppy
     def foo(x: int) -> int:
         def bar(y: int) -> int:
@@ -68,7 +67,7 @@ def test_nested_deep():
     validate(foo)
 
 
-def test_recurse():
+def test_recurse(validate):
     @guppy
     def foo(x: int) -> int:
         def bar(y: int) -> int:
@@ -80,7 +79,7 @@ def test_recurse():
     validate(foo)
 
 
-def test_capture_arg():
+def test_capture_arg(validate):
     @guppy
     def foo(x: int) -> int:
         def bar() -> int:
@@ -90,7 +89,7 @@ def test_capture_arg():
     validate(foo)
 
 
-def test_capture_assigned():
+def test_capture_assigned(validate):
     @guppy
     def foo(x: int) -> int:
         y = x + 1
@@ -102,7 +101,7 @@ def test_capture_assigned():
     validate(foo)
 
 
-def test_capture_multiple():
+def test_capture_multiple(validate):
     @guppy
     def foo(x: int) -> int:
         if x > 5:
@@ -119,7 +118,7 @@ def test_capture_multiple():
     validate(foo)
 
 
-def test_capture_cfg():
+def test_capture_cfg(validate):
     @guppy
     def foo(x: int) -> int:
         a = x + 4
@@ -134,7 +133,7 @@ def test_capture_cfg():
     validate(foo)
 
 
-def test_capture_deep():
+def test_capture_deep(validate):
     @guppy
     def foo(x: int) -> int:
         a = x * 2
@@ -153,7 +152,7 @@ def test_capture_deep():
     validate(foo)
 
 
-def test_capture_recurse():
+def test_capture_recurse(validate):
     @guppy
     def foo(x: int) -> int:
         def bar(y: int, z: int) -> int:
@@ -165,7 +164,7 @@ def test_capture_recurse():
     validate(foo)
 
 
-def test_capture_recurse_nested():
+def test_capture_recurse_nested(validate):
     @guppy
     def foo(x: int) -> int:
         def bar(y: int, z: int) -> int:
@@ -184,7 +183,7 @@ def test_capture_recurse_nested():
     validate(foo)
 
 
-def test_capture_while():
+def test_capture_while(validate):
     @guppy
     def foo(x: int) -> int:
         a = 0
