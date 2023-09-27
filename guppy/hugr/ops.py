@@ -306,13 +306,12 @@ class CFG(DataflowOp):
     """A dataflow node which is defined by a child CFG."""
 
     op: Literal["CFG"] = "CFG"
-    inputs: TypeRow = Field(default_factory=list)
-    outputs: TypeRow = Field(default_factory=list)
-    extension_delta: ExtensionSet = Field(default_factory=list)
+    signature: FunctionType = Field(default_factory=FunctionType.empty)
 
-    def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
-        self.inputs = list(in_types)
-        self.outputs = list(out_types)
+    def insert_port_types(self, inputs: TypeRow, outputs: TypeRow) -> None:
+        self.signature = FunctionType(
+            input=list(inputs), output=list(outputs), extension_reqs=[]
+        )
 
 
 ControlFlowOp = Union[Conditional, TailLoop, CFG]
