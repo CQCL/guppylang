@@ -121,6 +121,28 @@ class SumType(GuppyType):
         return tys.GeneralSum(row=[t.to_hugr() for t in self.element_types])
 
 
+@dataclass(frozen=True)
+class ArrayType(GuppyType):
+    element_type: GuppyType
+    len: int
+
+    @staticmethod
+    def build(*args: GuppyType, node: Union[ast.Name, ast.Subscript]) -> GuppyType:
+        # Array types cannot be parsed and constructed using `build` since they cannot
+        # be written by the user
+        raise NotImplementedError()
+
+    def __str__(self) -> str:
+        return f"{self.element_type}[{self.len}]"
+
+    @property
+    def linear(self) -> bool:
+        return self.element_type.linear and self.len > 0
+
+    def to_hugr(self) -> tys.SimpleType:
+        return tys.Array(inner=self.element_type.to_hugr(), len=self.len)
+
+
 def _lookup_type(node: AstNode, globals: "Globals") -> Optional[type[GuppyType]]:
     if isinstance(node, ast.Name) and node.id in globals.types:
         return globals.types[node.id]
