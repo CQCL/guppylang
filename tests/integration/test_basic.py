@@ -1,8 +1,7 @@
 from guppy.compiler import guppy
-from tests.integration.util import validate
 
 
-def test_id():
+def test_id(validate):
     @guppy
     def identity(x: int) -> int:
         return x
@@ -10,7 +9,7 @@ def test_id():
     validate(identity)
 
 
-def test_void():
+def test_void(validate):
     @guppy
     def void() -> None:
         return
@@ -18,7 +17,7 @@ def test_void():
     validate(void)
 
 
-def test_copy():
+def test_copy(validate):
     @guppy
     def copy(x: int) -> (int, int):
         return x, x
@@ -26,7 +25,7 @@ def test_copy():
     validate(copy)
 
 
-def test_discard():
+def test_discard(validate):
     @guppy
     def discard(x: int) -> None:
         return
@@ -34,7 +33,7 @@ def test_discard():
     validate(discard)
 
 
-def test_implicit_return():
+def test_implicit_return(validate):
     @guppy
     def ret() -> None:
         pass
@@ -42,7 +41,7 @@ def test_implicit_return():
     validate(ret)
 
 
-def test_assign():
+def test_assign(validate):
     @guppy
     def foo(x: bool) -> bool:
         y = x
@@ -51,7 +50,7 @@ def test_assign():
     validate(foo)
 
 
-def test_assign_expr():
+def test_assign_expr(validate):
     @guppy
     def foo(x: bool) -> bool:
         (y := x)

@@ -50,6 +50,14 @@ Run tests using
 pytest -v
 ```
 
+Integration test cases can be exported to a directory using
+
+```sh
+pytest --export-test-cases=guppy-exports
+
+```
+which will create a directory `./guppy-exports` populated with hugr modules serialised in msgpack.
+
 ## Packaging
 
 ```sh
