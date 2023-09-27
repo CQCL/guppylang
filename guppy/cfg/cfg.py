@@ -227,7 +227,8 @@ class CFG:
             # Sum-type predicate
             first, *rest = bb.successors
             if any(
-                self.live_before[r].keys() != self.live_before[first].keys()
+                self.live_before[r].keys() & dfg.variables.keys()
+                != self.live_before[first].keys() & dfg.variables.keys()
                 for r in rest
             ):
                 # We put all non-linear variables into the branch predicate and all
