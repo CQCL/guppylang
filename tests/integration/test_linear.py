@@ -1,12 +1,11 @@
 from guppy.compiler import guppy, GuppyModule
 from guppy.prelude.quantum import Qubit
-from tests.integration.util import validate
 
 import guppy.prelude.quantum as quantum
 from guppy.prelude.quantum import h, cx
 
 
-def test_id():
+def test_id(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -17,7 +16,7 @@ def test_id():
     validate(module.compile(True))
 
 
-def test_assign():
+def test_assign(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -30,7 +29,7 @@ def test_assign():
     validate(module.compile(True))
 
 
-def test_interleave():
+def test_interleave(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -52,7 +51,7 @@ def test_interleave():
     validate(module.compile(True))
 
 
-def test_if():
+def test_if(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -72,7 +71,7 @@ def test_if():
     validate(module.compile(True))
 
 
-def test_if_return():
+def test_if_return(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -92,7 +91,7 @@ def test_if_return():
     validate(module.compile(True))
 
 
-def test_measure():
+def test_measure(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -108,7 +107,7 @@ def test_measure():
     validate(module.compile(True))
 
 
-def test_return_call():
+def test_return_call(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -123,7 +122,7 @@ def test_return_call():
     validate(module.compile(True))
 
 
-def test_while():
+def test_while(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -137,7 +136,7 @@ def test_while():
     validate(module.compile(True))
 
 
-def test_while_break():
+def test_while_break(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -153,7 +152,7 @@ def test_while_break():
     validate(module.compile(True))
 
 
-def test_while_continue():
+def test_while_continue(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -169,7 +168,7 @@ def test_while_continue():
     validate(module.compile(True))
 
 
-def test_while_reset():
+def test_while_reset(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
@@ -193,7 +192,7 @@ def test_while_reset():
         return b
 
 
-def test_rus():
+def test_rus(validate):
     module = GuppyModule("test")
     module.load(quantum)
 

@@ -1,8 +1,7 @@
 from guppy.compiler import guppy
-from tests.integration.util import validate
 
 
-def test_infinite_loop():
+def test_infinite_loop(validate):
     @guppy
     def foo() -> int:
         while True:
@@ -12,7 +11,7 @@ def test_infinite_loop():
     validate(foo)
 
 
-def test_counting_loop():
+def test_counting_loop(validate):
     @guppy
     def foo(i: int) -> int:
         while i > 0:
@@ -22,7 +21,7 @@ def test_counting_loop():
     validate(foo)
 
 
-def test_break():
+def test_break(validate):
     @guppy
     def foo(i: int) -> int:
         while True:
@@ -34,7 +33,7 @@ def test_break():
     validate(foo)
 
 
-def test_continue():
+def test_continue(validate):
     @guppy
     def foo(i: int) -> int:
         x = 42
@@ -47,7 +46,7 @@ def test_continue():
     validate(foo)
 
 
-def test_return_in_loop():
+def test_return_in_loop(validate):
     @guppy
     def foo(i: int) -> int:
         x = 42
@@ -61,7 +60,7 @@ def test_return_in_loop():
     validate(foo)
 
 
-def test_nested_loop():
+def test_nested_loop(validate):
     @guppy
     def foo(x: int, y: int) -> int:
         p = 0
@@ -77,7 +76,7 @@ def test_nested_loop():
     validate(foo)
 
 
-def test_nested_loop_break_continue():
+def test_nested_loop_break_continue(validate):
     @guppy
     def foo(x: int, y: int) -> int:
         p = 0

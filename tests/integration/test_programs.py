@@ -1,8 +1,8 @@
 from guppy.compiler import guppy, GuppyModule
-from tests.integration.util import validate, functional, _
+from tests.integration.util import functional, _
 
 
-def test_factorial():
+def test_factorial(validate):
     @guppy
     def factorial1(x: int) -> int:
         acc = 1
@@ -32,13 +32,13 @@ def test_factorial():
     #         x -= 1
     #     return acc
 
-    validate(factorial1)
-    validate(factorial2)
-    validate(factorial3)
+    validate(factorial1, name="factorial1")
+    validate(factorial2, name="factorial2")
+    validate(factorial3, name="factorial3")
     # validate(factorial4)
 
 
-def test_even_odd():
+def test_even_odd(validate):
     module = GuppyModule("module")
 
     @module
