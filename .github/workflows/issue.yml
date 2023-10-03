@@ -15,21 +15,55 @@ jobs:
         JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
         JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
         JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+    - name: Parse the priority label into a Jira priority
+      id: set_priority_var
+      env:
+        LABELS: ${{ join(github.event.issue.labels.*.name, ' ') }}
+      run: |
+        MY_RESULT=""
+        for label in $LABELS
+        do
+          case $label in
+            P-low)
+              MY_RESULT=Low
+              break;;
+            P-medium)
+              MY_RESULT=Medium
+              break;;
+            P-high)
+              MY_RESULT=High
+              break;;
+            P-critical)
+              MY_RESULT=Highest
+              break;;
+          esac
+        done
+        if [ ! -z $MY_RESULT ]
+        then
+            MY_RESULT=", \"priority\": { \"name\": \"$MY_RESULT\" }"
+        fi
+        echo "JIRA_PRIORITY_FIELD=$MY_RESULT" >> $GITHUB_OUTPUT
+
     - name: Create Bug
       uses: atlassian/gajira-create@v3.0.1
-      if: "contains(github.event.issue.labels.*.name, 'bug')"
+      if: ${{ contains(github.event.issue.labels.*.name, 'bug') }}
+      env:
+        JIRA_PRIORITY_FIELD: ${{ steps.set_priority_var.outputs.JIRA_PRIORITY_FIELD }}
       with:
         project: TKET
         issuetype: Bug
         summary: « [guppy] ${{ github.event.issue.title }}»
         description: ${{ github.event.issue.html_url }}
-        fields: '{"labels": ["guppy"]}'
+        fields: '{ "labels": ["guppy"] ${{ env.JIRA_PRIORITY_FIELD }} }'
+
     - name: Create Task
       uses: atlassian/gajira-create@v3.0.1
-      if: "! contains(github.event.issue.labels.*.name, 'bug')"
+      if: ${{ ! contains(github.event.issue.labels.*.name, 'bug') }}
+      env:
+        JIRA_PRIORITY_FIELD: ${{ steps.set_priority_var.outputs.JIRA_PRIORITY_FIELD }}
       with:
         project: TKET
         issuetype: Task
         summary: « [guppy] ${{ github.event.issue.title }}»
         description: ${{ github.event.issue.html_url }}
-        fields: '{"labels": ["guppy"]}'
+        fields: '{ "labels": ["guppy"] ${{ env.JIRA_PRIORITY_FIELD }} }'
