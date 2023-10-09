@@ -35,6 +35,31 @@ def cx(control: Qubit, target: Qubit) -> tuple[Qubit, Qubit]:
     ...
 
 
+@extension.func(QuantumOpCompiler("RzF64"))
+def rz(q: Qubit, angle: float) -> Qubit:
+    ...
+
+
 @extension.func(QuantumOpCompiler("Measure"))
 def measure(q: Qubit) -> tuple[Qubit, bool]:
+    ...
+
+
+@extension.func(QuantumOpCompiler("T"))
+def t(q: Qubit) -> Qubit:
+    ...
+
+
+@extension.func(QuantumOpCompiler("Tdg"))
+def tdg(q: Qubit) -> Qubit:
+    ...
+
+
+@extension.func(QuantumOpCompiler("Z"))
+def z(q: Qubit) -> Qubit:
+    ...
+
+
+@extension.func(QuantumOpCompiler("X"))
+def x(q: Qubit) -> Qubit:
     ...
