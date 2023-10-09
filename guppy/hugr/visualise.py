@@ -127,11 +127,19 @@ def _html_ports(ports: Iterable[str], id_prefix: str) -> str:
 
 
 def _in_port_name(p: InPort) -> str:
-    return f"{p.node.idx}:{_INPUT_PREFIX}{p.offset}"
+    return (
+        f"{p.node.idx}:{_INPUT_PREFIX}{p.offset}"
+        if p.offset is not None
+        else str(p.node.idx)
+    )
 
 
 def _out_port_name(p: OutPort) -> str:
-    return f"{p.node.idx}:{_OUTPUT_PREFIX}{p.offset}"
+    return (
+        f"{p.node.idx}:{_OUTPUT_PREFIX}{p.offset}"
+        if p.offset is not None
+        else str(p.node.idx)
+    )
 
 
 def _in_order_name(n: Node) -> str:
