@@ -33,9 +33,7 @@ def format_source_location(
     ]
     longest = max(len(ln) for ln in line_numbers)
     prefixes = [ln + " " * (longest - len(ln) + indent) for ln in line_numbers]
-    res = ""
-    for prefix, line in zip(prefixes, s[:-1]):
-        res += prefix + line + "\n"
+    res = "".join(prefix + line + "\n" for prefix, line in zip(prefixes, s[:-1]))
     res += (longest + indent) * " " + s[-1]
     return res
 
