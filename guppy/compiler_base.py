@@ -27,9 +27,12 @@ class RawVariable:
         # We define an ordering on variables that is used to determine in which order
         # they are outputted from basic blocks. We need to output linear variables at
         # the end, so we do a lexicographic ordering of linearity and name, exploiting
-        # the fact that `False < True` in Python.
+        # the fact that `False < True` in Python. The only exception are return vars
+        # which must be outputted in order.
         if not isinstance(other, Variable):
             return NotImplemented
+        if is_return_var(self.name) and is_return_var(other.name):
+            return self.name < other.name
         return (self.ty.linear, self.name) < (other.ty.linear, other.name)
 
 
@@ -241,3 +244,8 @@ def return_var(n: int) -> str:
     e1 ; %ret2 = e2`. This way, we can reuse our existing mechanism for passing of live
     variables between basic blocks."""
     return f"%ret{n}"
+
+
+def is_return_var(x: str) -> bool:
+    """Checks whether the given name is a dummy return variable."""
+    return x.startswith("%ret")
