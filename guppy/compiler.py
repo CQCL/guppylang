@@ -91,15 +91,18 @@ class GuppyModule(object):
         func = self._parse(f)
         self._func_decls[func.ast.name] = func
 
-    def load(self, m: ModuleType) -> None:
+    def load(self, m: Union[ModuleType, GuppyExtension]) -> None:
         """Loads a Guppy extension from a python module.
 
         This function must be called for names from the extension to become available in
         the Guppy.
         """
-        for ext in m.__dict__.values():
-            if isinstance(ext, GuppyExtension):
-                self.globals |= ext.globals
+        if isinstance(m, GuppyExtension):
+            self.globals |= m.globals
+        else:
+            for ext in m.__dict__.values():
+                if isinstance(ext, GuppyExtension):
+                    self.globals |= ext.globals
 
     def _parse(self, f: Callable[..., Any]) -> RawFunction:
         source_lines, line_offset = inspect.getsourcelines(f)
