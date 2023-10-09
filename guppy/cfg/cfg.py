@@ -19,11 +19,12 @@ from guppy.cfg.bb import (
     NestedFunctionDef,
     BBStatement,
 )
-from guppy.compiler_base import VarMap, DFContainer, Variable, Globals
+from guppy.compiler_base import VarMap, DFContainer, Variable, Globals, RawVariable
 from guppy.error import InternalGuppyError, GuppyError, GuppyTypeError
 from guppy.ast_util import AstVisitor, line_col, set_location_from
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import GuppyType, TupleType, SumType
+from guppy.hugr import ops
 from guppy.hugr.hugr import Node, Hugr, OutPortV
 from guppy.statement import StatementCompiler
 
@@ -256,13 +257,26 @@ class CFG:
                     if x in dfg and dfg[x].ty.linear
                 )
 
-        graph.add_output(
+        out = graph.add_output(
             inputs=[branch_port] + [v.port for v in output_vars], parent=block
         )
         output_rows = [
             sorted([dfg[x] for x in self.live_before[succ] if x in dfg])
             for succ in bb.successors
         ]
+
+        # TODO: This is just a temporary workaround to make the qubit reference
+        #  prototype work
+        if "%mem" in dfg:
+            mem = dfg["%mem"]
+            if len(bb.successors) != 1 or len(bb.successors[0].successors) > 0:
+                graph.add_edge(mem.port, out.add_in_port(mem.ty))
+                for i, succ in enumerate(bb.successors):
+                    output_rows[i].append(mem)
+            else:
+                graph.add_node(
+                    ops.DummyOp(name="discard"), inputs=[mem.port], parent=dfg.node
+                )
 
         return CompiledBB(block, bb, Signature(input_row, output_rows))
 

@@ -68,10 +68,11 @@ class List(MultiContainer):
     t: Literal["List"] = "List"
 
 
-class Array(MultiContainer):
+class Array(BaseModel):
     """Known size array of"""
 
     t: Literal["Array"] = "Array"
+    inner: "SimpleType"
     len: int
 
 
