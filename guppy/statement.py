@@ -1,7 +1,7 @@
 import ast
 from typing import Sequence
 
-from guppy.ast_util import AstVisitor, AstNode
+from guppy.ast_util import AstVisitor, AstNode, set_location_from
 from guppy.cfg.bb import BB, NestedFunctionDef
 from guppy.compiler_base import (
     CompilerBase,
@@ -121,14 +121,10 @@ class StatementCompiler(CompilerBase, AstVisitor[None]):
         raise NotImplementedError()
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
-        # TODO: Set all source location attributes
         bin_op = ast.BinOp(left=node.target, op=node.op, right=node.value)
-        assign = ast.Assign(
-            targets=[node.target],
-            value=bin_op,
-            lineno=node.lineno,
-            col_offset=node.col_offset,
-        )
+        set_location_from(bin_op, node)
+        assign = ast.Assign(targets=[node.target], value=bin_op)
+        set_location_from(assign, node)
         self.visit_Assign(assign)
 
     def visit_Expr(self, node: ast.Expr) -> None:
