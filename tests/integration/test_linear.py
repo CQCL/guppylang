@@ -29,6 +29,18 @@ def test_assign(validate):
     validate(module.compile(True))
 
 
+def test_linear_return_order(validate):
+    # See https://github.com/CQCL-DEV/guppy/issues/35
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @module
+    def test(q: Qubit) -> tuple[Qubit, bool]:
+        return measure(q)
+
+    validate(module.compile(True))
+
+
 def test_interleave(validate):
     module = GuppyModule("test")
     module.load(quantum)

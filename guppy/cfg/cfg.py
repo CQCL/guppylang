@@ -19,7 +19,7 @@ from guppy.cfg.bb import (
     NestedFunctionDef,
     BBStatement,
 )
-from guppy.compiler_base import VarMap, DFContainer, Variable, Globals
+from guppy.compiler_base import VarMap, DFContainer, Variable, Globals, is_return_var
 from guppy.error import InternalGuppyError, GuppyError, GuppyTypeError
 from guppy.ast_util import AstVisitor, line_col, set_location_from
 from guppy.expression import ExpressionCompiler
@@ -234,7 +234,8 @@ class CFG:
                 # We put all non-linear variables into the branch predicate and all
                 # linear variables in the normal output (since they are shared between
                 # all successors). This is in line with the definition of `<` on
-                # variables which puts linear variables at the end.
+                # variables which puts linear variables at the end. The only exception
+                # are return vars which must be outputted in order.
                 branch_port = self._choose_vars_for_pred(
                     graph=graph,
                     pred=branch_port,
@@ -242,7 +243,7 @@ class CFG:
                         sorted(
                             x
                             for x in self.live_before[succ]
-                            if x in dfg and not dfg[x].ty.linear
+                            if x in dfg and (not dfg[x].ty.linear or is_return_var(x))
                         )
                         for succ in bb.successors
                     ],
@@ -253,7 +254,7 @@ class CFG:
                     # We can look at `successors[0]` here since all successors must have
                     # the same `live_before` linear variables
                     for x in self.live_before[bb.successors[0]]
-                    if x in dfg and dfg[x].ty.linear
+                    if x in dfg and dfg[x].ty.linear and not is_return_var(x)
                 )
 
         graph.add_output(
