@@ -6,11 +6,11 @@ from guppy.compiler import guppy, GuppyModule
 def test_basic(validate):
     module = GuppyModule("test")
 
-    @module
+    @guppy(module)
     def bar(x: int) -> bool:
         return x > 0
 
-    @module
+    @guppy(module)
     def foo() -> Callable[[int], bool]:
         return bar
 
@@ -20,15 +20,15 @@ def test_basic(validate):
 def test_call_1(validate):
     module = GuppyModule("test")
 
-    @module
+    @guppy(module)
     def bar() -> bool:
         return False
 
-    @module
+    @guppy(module)
     def foo() -> Callable[[], bool]:
         return bar
 
-    @module
+    @guppy(module)
     def baz() -> bool:
         return foo()()
 
@@ -38,15 +38,15 @@ def test_call_1(validate):
 def test_call_2(validate):
     module = GuppyModule("test")
 
-    @module
+    @guppy(module)
     def bar(x: int) -> Callable[[int], None]:
         return bar(x - 1)
 
-    @module
+    @guppy(module)
     def foo() -> Callable[[int], Callable[[int], None]]:
         return bar
 
-    @module
+    @guppy(module)
     def baz(y: int) -> None:
         return foo()(y)(y)
 
@@ -67,7 +67,7 @@ def test_nested(validate):
 def test_curry(validate):
     module = GuppyModule("curry")
 
-    @module
+    @guppy(module)
     def curry(f: Callable[[int, int], bool]) -> Callable[[int], Callable[[int], bool]]:
         def g(x: int) -> Callable[[int], bool]:
             def h(y: int) -> bool:
@@ -75,17 +75,17 @@ def test_curry(validate):
             return h
         return g
 
-    @module
+    @guppy(module)
     def uncurry(f: Callable[[int], Callable[[int], bool]]) -> Callable[[int, int], bool]:
         def g(x: int, y: int) -> bool:
             return f(x)(y)
         return g
 
-    @module
+    @guppy(module)
     def gt(x: int, y: int) -> bool:
         return x > y
 
-    @module
+    @guppy(module)
     def main(x: int, y: int) -> None:
         curried = curry(gt)
         curried(x)(y)
@@ -95,23 +95,24 @@ def test_curry(validate):
 
     validate(module.compile())
 
+
 def test_y_combinator(validate):
     module = GuppyModule("fib")
 
-    @module
+    @guppy(module)
     def fac_(f: Callable[[int], int], n: int) -> int:
         if n == 0:
             return 1
         return n * f(n - 1)
 
-    @module
+    @guppy(module)
     def Y(f: Callable[[Callable[[int], int], int], int]) -> Callable[[int], int]:
         def y(x: int) -> int:
             return f(Y(f), x)
 
         return y
 
-    @module
+    @guppy(module)
     def fac(x: int) -> int:
         return Y(fac_)(x)
 

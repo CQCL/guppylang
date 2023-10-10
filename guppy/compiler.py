@@ -111,20 +111,17 @@ class GuppyModule(object):
         self.load(guppy.prelude.float)
         self.load(guppy.prelude.integer)
 
-    def __call__(self, f: Callable[..., Any]) -> Callable[..., Any]:
+    def register_func(self, f: Callable[..., Any]) -> None:
+        """Registers a Python function as belonging to this Guppy module.
+
+        This can be used for both function definitions and declarations. To mark a
+        declaration, the body of the function may only contain an ellipsis expression.
+        """
         func = self._parse(f)
-        self._func_defs[func.ast.name] = func
-
-        @functools.wraps(f)
-        def dummy(*args: Any, **kwargs: Any) -> Any:
-            raise GuppyError("Guppy functions can only be called in a Guppy context")
-
-        return dummy
-
-    def declare(self, f: Callable[..., Any]) -> None:
-        """Decorator to add a function declaration to the module."""
-        func = self._parse(f)
-        self._func_decls[func.ast.name] = func
+        if is_empty_body(func.ast):
+            self._func_decls[func.ast.name] = func
+        else:
+            self._func_defs[func.ast.name] = func
 
     def load(self, m: Union[ModuleType, GuppyExtension]) -> None:
         """Loads a Guppy extension from a python module.
@@ -215,8 +212,30 @@ class GuppyModule(object):
             return None
 
 
-def guppy(f: Callable[..., Any]) -> Optional[Hugr]:
-    """Decorator to compile functions outside of modules for testing."""
-    module = GuppyModule("module")
-    module(f)
-    return module.compile(exit_on_error=False)
+def guppy(
+    arg: Union[Callable[..., Any], GuppyModule]
+) -> Union[Optional[Hugr], Callable[[Callable[..., Any]], Callable[..., Any]]]:
+    """Decorator to annotate Python functions as Guppy code.
+
+    Optionally, the `GuppyModule` in which the function should be placed can be passed
+    to the decorator.
+    """
+    if isinstance(arg, GuppyModule):
+
+        def dec(f: Callable[..., Any]) -> Callable[..., Any]:
+            assert isinstance(arg, GuppyModule)
+            arg.register_func(f)
+
+            @functools.wraps(f)
+            def dummy(*args: Any, **kwargs: Any) -> Any:
+                raise GuppyError(
+                    "Guppy functions can only be called in a Guppy context"
+                )
+
+            return dummy
+
+        return dec
+    else:
+        module = GuppyModule("module")
+        module.register_func(arg)
+        return module.compile(exit_on_error=False)
