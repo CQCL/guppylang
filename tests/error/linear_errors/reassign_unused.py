@@ -1,19 +1,19 @@
-import guppy.prelude.quantum
+import guppy.prelude.quantum as quantum
 
-from guppy.compiler import GuppyModule
+from guppy.compiler import GuppyModule, guppy
 from guppy.hugr.tys import Qubit
 
 
 module = GuppyModule("test")
-module.load(guppy.prelude.quantum)
+module.load(quantum)
 
 
-@module.declare
+@guppy(module)
 def new_qubit() -> Qubit:
-    pass
+    ...
 
 
-@module
+@guppy(module)
 def foo(q: Qubit) -> Qubit:
     q = new_qubit()
     return q

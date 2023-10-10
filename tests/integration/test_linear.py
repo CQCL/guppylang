@@ -9,7 +9,7 @@ def test_id(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module
+    @guppy(module)
     def test(q: Qubit) -> Qubit:
         return q
 
@@ -20,7 +20,7 @@ def test_assign(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module
+    @guppy(module)
     def test(q: Qubit) -> Qubit:
         r = q
         s = r
@@ -34,7 +34,7 @@ def test_linear_return_order(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module
+    @guppy(module)
     def test(q: Qubit) -> tuple[Qubit, bool]:
         return measure(q)
 
@@ -45,15 +45,15 @@ def test_interleave(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module.declare
+    @guppy(module)
     def f(q1: Qubit, q2: Qubit) -> tuple[Qubit, Qubit]:
-        pass
+        ...
 
-    @module.declare
+    @guppy(module)
     def g(q1: Qubit, q2: Qubit) -> tuple[Qubit, Qubit]:
-        pass
+        ...
 
-    @module
+    @guppy(module)
     def test(a: Qubit, b: Qubit, c: Qubit, d: Qubit) -> tuple[Qubit, Qubit, Qubit, Qubit]:
         a, b = f(a, b)
         c, d = f(c, d)
@@ -67,11 +67,11 @@ def test_if(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module.declare
+    @guppy(module)
     def new() -> Qubit:
-        pass
+        ...
 
-    @module
+    @guppy(module)
     def test(b: bool) -> Qubit:
         if b:
             a = new()
@@ -87,11 +87,11 @@ def test_if_return(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module.declare
+    @guppy(module)
     def new() -> Qubit:
-        pass
+        ...
 
-    @module
+    @guppy(module)
     def test(b: bool) -> Qubit:
         if b:
             q = new()
@@ -107,11 +107,11 @@ def test_measure(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module.declare
+    @guppy(module)
     def measure(q: Qubit) -> bool:
-        pass
+        ...
 
-    @module
+    @guppy(module)
     def test(q: Qubit, x: int) -> int:
         b = measure(q)
         return x
@@ -123,11 +123,11 @@ def test_return_call(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module.declare
+    @guppy(module)
     def op(q: Qubit) -> Qubit:
-        pass
+        ...
 
-    @module
+    @guppy(module)
     def test(q: Qubit) -> Qubit:
         return op(q)
 
@@ -138,7 +138,7 @@ def test_while(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module
+    @guppy(module)
     def test(q: Qubit, i: int) -> Qubit:
         while i > 0:
             i -= 1
@@ -152,7 +152,7 @@ def test_while_break(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module
+    @guppy(module)
     def test(q: Qubit, i: int) -> Qubit:
         while i > 0:
             i -= 1
@@ -168,7 +168,7 @@ def test_while_continue(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module
+    @guppy(module)
     def test(q: Qubit, i: int) -> Qubit:
         while i > 0:
             i -= 1
@@ -184,15 +184,15 @@ def test_while_reset(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module.declare
+    @guppy(module)
     def new_qubit() -> Qubit:
-        pass
+        ...
 
-    @module.declare
+    @guppy(module)
     def measure() -> bool:
-        pass
+        ...
 
-    @module
+    @guppy(module)
     def foo(i: bool) -> bool:
         b = False
         while True:
@@ -208,19 +208,19 @@ def test_rus(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @module.declare
+    @guppy(module)
     def measure(q: Qubit) -> bool:
-        pass
+        ...
 
-    @module.declare
+    @guppy(module)
     def qalloc() -> Qubit:
-        pass
+        ...
 
-    @module.declare
+    @guppy(module)
     def t(q: Qubit) -> Qubit:
-        pass
+        ...
 
-    @module
+    @guppy(module)
     def repeat_until_success(q: Qubit) -> Qubit:
         while True:
             aux, q = cx(t(h(qalloc())), q)

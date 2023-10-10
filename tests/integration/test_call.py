@@ -4,11 +4,11 @@ from guppy.compiler import guppy, GuppyModule
 def test_call(validate):
     module = GuppyModule("module")
 
-    @module
+    @guppy(module)
     def foo() -> int:
         return 42
 
-    @module
+    @guppy(module)
     def bar() -> int:
         return foo()
 
@@ -18,11 +18,11 @@ def test_call(validate):
 def test_call_back(validate):
     module = GuppyModule("module")
 
-    @module
+    @guppy(module)
     def foo(x: int) -> int:
         return bar(x)
 
-    @module
+    @guppy(module)
     def bar(x: int) -> int:
         return x
 
@@ -40,11 +40,11 @@ def test_recursion(validate):
 def test_mutual_recursion(validate):
     module = GuppyModule("module")
 
-    @module
+    @guppy(module)
     def foo(x: int) -> int:
         return bar(x)
 
-    @module
+    @guppy(module)
     def bar(x: int) -> int:
         return foo(x)
 

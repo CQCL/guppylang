@@ -14,7 +14,7 @@ from guppy.hugr.tys import TypeBound
 def guppy(f: Callable[..., Any]) -> Optional[Hugr]:
     """ Decorator to compile functions outside of modules for testing. """
     module = GuppyModule("module")
-    module(f)
+    module.register_func(f)
     return module.compile(exit_on_error=True)
 
 
