@@ -123,6 +123,4 @@ def is_empty_body(func_ast: ast.FunctionDef) -> bool:
     if len(func_ast.body) > 1:
         return False
     [n] = func_ast.body
-    return isinstance(n, ast.Pass) or (
-        isinstance(n, ast.Expr) and isinstance(n.value, ast.Ellipsis)
-    )
+    return isinstance(n, ast.Expr) and isinstance(n.value, ast.Ellipsis)

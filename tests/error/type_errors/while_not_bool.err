@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:12
 
-10:    @module
+10:    @guppy(module)
 11:    def foo(x: NonBool) -> int:
 12:        while x:
                  ^

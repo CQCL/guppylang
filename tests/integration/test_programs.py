@@ -41,13 +41,13 @@ def test_factorial(validate):
 def test_even_odd(validate):
     module = GuppyModule("module")
 
-    @module
+    @guppy(module)
     def is_even(x: int) -> bool:
         if x == 0:
             return True
         return is_odd(x - 1)
 
-    @module
+    @guppy(module)
     def is_odd(x: int) -> bool:
         if x == 0:
             return False

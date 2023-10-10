@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:13
 
-11:    @module
+11:    @guppy(module)
 12:    def foo(q: Qubit) -> int:
 13:        x = q
            ^^^^^
