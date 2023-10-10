@@ -38,12 +38,47 @@ def format_source_location(
     return res
 
 
+def get_python_vars() -> dict[str, Any]:
+    """Looks up all active variables from the call-site.
+
+    Walks up the call stack until we have left the compiler module.
+    """
+    # Note that this approach will yield unintended results if the user doesn't invoke
+    # the decorator directly. For example:
+    #
+    #       def my_dec(f):
+    #           some_local = ...
+    #           return guppy(f)
+    #
+    #       @my_dec
+    #       def guppy_func(x: int) -> int:
+    #           ....
+    #
+    # Here, we would reach the scope of `my_dec` and `some_local` would be available
+    # in the Guppy code.
+    # TODO: Is there a better way to obtain the variables in scope? Note that we
+    #  could do `inspect.getclosurevars(f)` but it will fail if `f` has recursive
+    #  calls. A custom solution based on `f.__code__.co_freevars` and
+    #  `f.__closure__` would only work for CPython.
+    frame = inspect.currentframe()
+    if frame is None:
+        return {}
+    while frame.f_back is not None and frame.f_globals["__name__"] == __name__:
+        frame = frame.f_back
+    py_scope = frame.f_globals | frame.f_locals
+    # Explicitly delete frame to avoid reference cycle.
+    # See https://docs.python.org/3/library/inspect.html#the-interpreter-stack
+    del frame
+    return py_scope
+
+
 @dataclass
 class RawFunction:
     pyfun: Callable[..., Any]
     ast: ast.FunctionDef
     source_lines: list[str]
     line_offset: int
+    python_vals: dict[str, Any]
 
 
 class GuppyModule(object):
@@ -118,7 +153,7 @@ class GuppyModule(object):
                 f"(declared at {SourceLoc.from_ast(self._func_defs[func_ast.name].ast, line_offset)})",
                 func_ast,
             )
-        return RawFunction(f, func_ast, source_lines, line_offset)
+        return RawFunction(f, func_ast, source_lines, line_offset, get_python_vars())
 
     def compile(self, exit_on_error: bool = False) -> Optional[Hugr]:
         """Compiles the module and returns the final Hugr."""
@@ -148,9 +183,8 @@ class GuppyModule(object):
 
             # Now compile functions definitions
             for name, f in self._func_defs.items():
-                FunctionDefCompiler(graph, self.globals).compile_global(
-                    f.ast, defs[name]
-                )
+                globs = self.globals | Globals({}, {}, {}, f.python_vals)
+                FunctionDefCompiler(graph, globs).compile_global(f.ast, defs[name])
             return graph
 
         except GuppyError as err:

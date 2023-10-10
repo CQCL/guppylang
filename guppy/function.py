@@ -217,7 +217,10 @@ class FunctionDefCompiler(CompilerBase):
                 )
             }
         globals = Globals(
-            global_values, self.globals.types, self.globals.instance_funcs
+            global_values,
+            self.globals.types,
+            self.globals.instance_funcs,
+            self.globals.python_vals,
         )
 
         cfg_node = self.graph.add_cfg(def_node, inputs=input_ports)

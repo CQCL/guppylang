@@ -140,7 +140,7 @@ class GuppyExtension:
         """
 
         self.name = name
-        self.globals = Globals({}, {}, {})
+        self.globals = Globals({}, {}, {}, {})
         self._all_globals = Globals.default()
 
         for module in dependencies:

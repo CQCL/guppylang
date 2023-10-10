@@ -3,7 +3,7 @@ import itertools
 from typing import Optional, Iterator, Union, NamedTuple
 
 from guppy.ast_util import set_location_from, AstVisitor
-from guppy.cfg.bb import BB, NestedFunctionDef
+from guppy.cfg.bb import BB, NestedFunctionDef, PyExpression
 from guppy.cfg.cfg import CFG
 from guppy.compiler_base import Globals
 from guppy.error import GuppyError, InternalGuppyError
@@ -257,6 +257,20 @@ class ExprBuilder(ast.NodeTransformer):
 
         # The final value is stored in the temporary variable
         return self._make_var(tmp, node)
+
+    def visit_Call(self, node: ast.Call) -> ast.AST:
+        # Catch compile-time Python expression `py(...)`
+        if isinstance(node.func, ast.Name) and node.func.id == "py":
+            if len(node.args) != 1:
+                msg = "requires an" if len(node.args) == 0 else "takes only one"
+                raise GuppyError(
+                    f"Compile-time Python expression {msg} argument",
+                    node,
+                )
+            expr = PyExpression(node.args[0])
+            set_location_from(expr, node)
+            return expr
+        return node
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
         # Short-circuit expressions must be built using the `BranchBuilder`. However, we

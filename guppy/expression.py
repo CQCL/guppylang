@@ -1,15 +1,19 @@
 import ast
+import traceback
+from dataclasses import dataclass
 from typing import Any, Optional
 
-from guppy.ast_util import AstVisitor, AstNode
+from guppy.ast_util import AstVisitor, AstNode, name_nodes_in_ast
+from guppy.cfg.bb import PyExpression
 from guppy.compiler_base import (
     CompilerBase,
     DFContainer,
     GlobalFunction,
     GlobalVariable,
+    Globals,
 )
 from guppy.error import InternalGuppyError, GuppyTypeError, GuppyError
-from guppy.guppy_types import FunctionType, GuppyType
+from guppy.guppy_types import FunctionType, GuppyType, TupleType
 from guppy.hugr import val, ops
 from guppy.hugr.hugr import OutPortV
 
@@ -243,6 +247,37 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
             return self.graph.add_make_tuple(inputs=returns).out_port(0)
         return returns[0]
 
+    def visit_PyExpression(self, node: PyExpression) -> OutPortV:
+        try:
+            python_val = eval(
+                ast.unparse(node.content),
+                None,
+                DummyEvalDict(self.globals, self.dfg, node.content),
+            )
+        except DummyEvalDict.GuppyVarUsedError as e:
+            raise GuppyError(
+                f"Guppy variable `{e.var}` cannot be accessed in a compile-time "
+                "evaluated `py(...)` expression",
+                e.node or node,
+            )
+        except Exception as e:
+            # Remove the top frame pointing to the `eval` call from the stack trace
+            tb = e.__traceback__.tb_next if e.__traceback__ else None
+            raise GuppyError(
+                f"Error occurred while evaluating Python expression:\n\n"
+                + "".join(traceback.format_exception(type(e), e, tb)),
+                node,
+            )
+
+        if val_ty := python_value_to_hugr(python_val):
+            const = self.graph.add_constant(*val_ty).out_port(0)
+            return self.graph.add_load_constant(const).out_port(0)
+
+        raise GuppyError(
+            f"Python expression of type `{type(python_val)}` is not supported by Guppy",
+            node,
+        )
+
     def visit_NamedExpr(self, node: ast.NamedExpr) -> OutPortV:
         raise InternalGuppyError(
             "BB contains `NamedExpr`. Should have been removed during CFG"
@@ -307,4 +342,56 @@ def python_value_to_hugr(v: Any) -> Optional[tuple[val.Value, GuppyType]]:
         return int_value(v), IntType()
     elif isinstance(v, float):
         return float_value(v), FloatType()
+    elif isinstance(v, tuple):
+        vs, tys = [], []
+        for elem in v:
+            res = python_value_to_hugr(elem)
+            if res is None:
+                return None
+            vs.append(res[0])
+            tys.append(res[1])
+        return val.Tuple(vs=vs), TupleType(tys)
     return None
+
+
+class DummyEvalDict(dict[str, Any]):
+    """A custom dict that can be passed to `eval` to give better error messages.
+
+    This class is used to implement the `py(...)` expression. If the user tries to
+    access a Guppy variable in the Python context, we give an informative error message.
+    """
+
+    globals: Globals
+    dfg: DFContainer
+    node: ast.expr
+
+    @dataclass
+    class GuppyVarUsedError(BaseException):
+        """Error that is raised when the user tries to access a Guppy variable."""
+
+        var: str
+        node: Optional[ast.Name]
+
+    def __init__(self, globals: Globals, dfg: DFContainer, node: ast.expr):
+        super().__init__(**globals.python_vals)
+        self.globals = globals
+        self.dfg = dfg
+        self.node = node
+
+    def _check_item(self, key: str) -> None:
+        # Catch the user trying to access Guppy variables
+        if key in self.dfg:
+            # Find the name node in the AST where the usage occurs
+            n = next((n for n in name_nodes_in_ast(self.node) if n.id == key), None)
+            raise self.GuppyVarUsedError(key, n)
+
+    def __getitem__(self, key: str) -> Any:
+        self._check_item(key)
+        return super().__getitem__(key)
+
+    def __delitem__(self, key: str) -> None:
+        self._check_item(key)
+        super().__delitem__(key)
+
+    def __contains__(self, key: object) -> bool:
+        return (isinstance(key, str) and key in self.dfg) or super().__contains__(key)

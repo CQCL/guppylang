@@ -22,17 +22,6 @@ class VariableStats:
     # assigned in the BB are not included here.
     used: dict[str, ast.Name] = field(default_factory=dict)
 
-    def update_used(self, node: ast.AST) -> None:
-        """Marks the variables occurring in a statement as used.
-
-        This method should be called whenever an expression is used in the BB.
-        """
-        for name in name_nodes_in_ast(node):
-            # Should point to first use, so also check that the name is not already
-            # contained
-            if name.id not in self.assigned and name.id not in self.used:
-                self.used[name.id] = name
-
 
 VarRow = Sequence[RawVariable]
 
@@ -69,6 +58,14 @@ class NestedFunctionDef(ast.FunctionDef):
         super().__init__(*args, **kwargs)
         self.cfg = cfg
         self.ty = ty
+
+
+class PyExpression(ast.expr):
+    content: ast.expr
+
+    def __init__(self, content: ast.expr, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.content = content
 
 
 BBStatement = Union[ast.Assign, ast.AugAssign, ast.Expr, ast.Return, NestedFunctionDef]
@@ -116,10 +113,10 @@ class BB:
         visitor = VariableVisitor(self, num_returns)
         for s in self.statements:
             visitor.visit(s)
-        self._vars = visitor.stats
 
         if self.branch_pred is not None:
-            self._vars.update_used(self.branch_pred)
+            visitor.visit(self.branch_pred)
+        self._vars = visitor.stats
 
         # In the `StatementCompiler`, we're going to turn return statements into
         # assignments of dummy variables `%ret_xxx`. Thus, we have to register those
@@ -143,21 +140,32 @@ class VariableVisitor(ast.NodeVisitor):
         self.num_returns = num_returns
         self.stats = VariableStats()
 
+    def visit_Name(self, node: ast.Name) -> None:
+        # Should point to first use, so also check that the name is not already
+        # contained
+        if node.id not in self.stats.assigned and node.id not in self.stats.used:
+            self.stats.used[node.id] = node
+
     def visit_Assign(self, node: ast.Assign) -> None:
-        self.stats.update_used(node.value)
+        self.visit(node.value)
         for t in node.targets:
             for name in name_nodes_in_ast(t):
                 self.stats.assigned[name.id] = node
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
-        self.stats.update_used(node.value)
-        self.stats.update_used(node.target)  # The target is also used
+        self.visit(node.value)
+        self.visit(node.target)  # The target is also used
         for name in name_nodes_in_ast(node.target):
             self.stats.assigned[name.id] = node
 
+    def visit_PyExpression(self, node: PyExpression) -> None:
+        # Don't descend into `py(...)` expressions. Variables used in there refer to the
+        # Python scope and must not be tracked by the BB.
+        pass
+
     def visit_Return(self, node: ast.Return) -> None:
         if node.value is not None:
-            self.stats.update_used(node.value)
+            self.visit(node.value)
 
         # In the `StatementCompiler`, we're going to turn return statements into
         # assignments of dummy variables `%ret_xxx`. To make the liveness analysis work,
@@ -188,6 +196,3 @@ class VariableVisitor(ast.NodeVisitor):
 
         # The name of the function is now assigned
         self.stats.assigned[node.name] = node
-
-    def generic_visit(self, node: ast.AST) -> None:
-        self.stats.update_used(node)

@@ -144,6 +144,7 @@ class Globals(NamedTuple):
     values: dict[ValueName, GlobalVariable]
     types: dict[TypeName, type[GuppyType]]
     instance_funcs: dict[tuple[TypeName, ValueName], GlobalFunction]
+    python_vals: dict[str, Any]
 
     @staticmethod
     def default() -> "Globals":
@@ -153,7 +154,7 @@ class Globals(NamedTuple):
             TupleType.name: TupleType,
             SumType.name: SumType,
         }
-        return Globals({}, tys, {})
+        return Globals({}, tys, {}, {})
 
     def get_instance_func(self, ty: GuppyType, name: str) -> Optional[GlobalFunction]:
         """Looks up an instance function with a given name for a type"""
@@ -164,12 +165,14 @@ class Globals(NamedTuple):
             self.values | other.values,
             self.types | other.types,
             self.instance_funcs | other.instance_funcs,
+            self.python_vals | other.python_vals,
         )
 
     def __ior__(self, other: "Globals") -> "Globals":
         self.values.update(other.values)
         self.types.update(other.types)
         self.instance_funcs.update(other.instance_funcs)
+        self.python_vals.update(other.python_vals)
         return self
 
 
