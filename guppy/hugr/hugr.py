@@ -529,15 +529,11 @@ class Hugr:
         self, fun_ty: FunctionType, parent: Optional[Node], name: str
     ) -> DFContainingVNode:
         """Adds a `Def` node to the graph."""
-        return self._add_dfg_node(
-            ops.FuncDefn(), [], [fun_ty], parent, None, meta_data={"name": name}
-        )
+        return self._add_dfg_node(ops.FuncDefn(name=name), [], [fun_ty], parent, None)
 
     def add_declare(self, fun_ty: FunctionType, parent: Node, name: str) -> VNode:
         """Adds a `Declare` node to the graph."""
-        return self.add_node(
-            ops.FuncDecl(), [], [fun_ty], parent, None, meta_data={"name": name}
-        )
+        return self.add_node(ops.FuncDecl(name=name), [], [fun_ty], parent, None)
 
     def add_edge(self, src_port: OutPort, tgt_port: InPort) -> None:
         """Adds an edge between two ports."""

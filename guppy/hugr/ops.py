@@ -59,7 +59,7 @@ class FuncDefn(BaseOp):
 
     op: Literal["FuncDefn"] = "FuncDefn"
 
-    name: str = "main"
+    name: str
     signature: FunctionType = Field(default_factory=FunctionType.empty)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
@@ -74,7 +74,7 @@ class FuncDecl(BaseOp):
     """External function declaration, linked at runtime."""
 
     op: Literal["FuncDecl"] = "FuncDecl"
-    name: str = "main"
+    name: str
     signature: FunctionType = Field(default_factory=FunctionType.empty)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
