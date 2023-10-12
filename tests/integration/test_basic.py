@@ -1,4 +1,5 @@
 from guppy.compiler import guppy
+from guppy.hugr import ops
 
 
 def test_id(validate):
@@ -57,3 +58,21 @@ def test_assign_expr(validate):
         return y
 
     validate(foo)
+
+
+def test_func_def_name():
+    @guppy
+    def func_name() -> None:
+        return
+
+    [def_op] = [n.op for n in func_name.nodes() if isinstance(n.op, ops.FuncDefn)]
+    assert def_op.name == "func_name"
+
+
+def test_func_decl_name():
+    @guppy
+    def func_name() -> None:
+        ...
+
+    [def_op] = [n.op for n in func_name.nodes() if isinstance(n.op, ops.FuncDecl)]
+    assert def_op.name == "func_name"
