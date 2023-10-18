@@ -45,6 +45,9 @@ First, build the PyO3 Hugr validation library using
 ```sh
 maturin develop
 ```
+
+from the `validator` directory.
+
 Run tests using
 ```sh
 pytest -v
