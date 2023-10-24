@@ -2,7 +2,6 @@
 
 # mypy: disable-error-code=empty-body
 
-from guppy.guppy_types import GuppyType
 from guppy.hugr.tys import TypeBound
 from guppy.prelude import builtin
 from guppy.extension import GuppyExtension, OpCompiler
@@ -10,14 +9,14 @@ from guppy.hugr import ops, tys
 
 
 class QuantumOpCompiler(OpCompiler):
-    def __init__(self, op_name: str, ext: str = "quantum"):
+    def __init__(self, op_name: str, ext: str = "quantum.tket2"):
         super().__init__(ops.CustomOp(extension=ext, op_name=op_name, args=[]))
 
 
 _hugr_qubit = tys.Opaque(extension="prelude", id="qubit", args=[], bound=TypeBound.Any)
 
 
-extension = GuppyExtension("quantum", dependencies=[builtin])
+extension = GuppyExtension("quantum.tket2", dependencies=[builtin])
 
 
 @extension.type(_hugr_qubit, linear=True)
