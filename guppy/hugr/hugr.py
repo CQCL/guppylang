@@ -260,14 +260,6 @@ class DFContainingVNode(VNode, DFContainingNode):
 class BlockNode(DFContainingNode, CFNode):
     """A `Block` node representing a basic block."""
 
-    def update_op(self) -> None:
-        # Insert the number of outputs into the op type. Note that we don't  make use of
-        # the HUGR feature where the variant data is appended to successor input. Thus,
-        # `predicate_variants` will only contain empty rows.
-        assert isinstance(self.op, ops.DFB)
-        self.op.predicate_variants = [[] for _ in range(self.num_out_ports)]
-        super().update_op()
-
 
 OrderEdge = tuple["Node", "Node"]
 ORDER_EDGE_KEY = (-1, -1)
