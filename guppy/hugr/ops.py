@@ -111,7 +111,7 @@ class DFB(BasicBlock):
     block: Literal["DFB"] = "DFB"
     inputs: TypeRow = Field(default_factory=list)
     other_outputs: TypeRow = Field(default_factory=list)
-    predicate_variants: list[TypeRow] = Field(default_factory=list)
+    tuple_sum_rows: list[TypeRow] = Field(default_factory=list)
     extension_delta: ExtensionSet = Field(default_factory=list)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
@@ -120,20 +120,20 @@ class DFB(BasicBlock):
         # the variant data is appended to successor input. Thus, `predicate_variants`
         # will only contain empty rows.
         num_cases = len(out_types)
-        self.predicate_variants = [[] for _ in range(num_cases)]
+        self.tuple_sum_rows = [[] for _ in range(num_cases)]
 
     def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
         self.inputs = inputs
         pred = outputs[0]
         assert isinstance(pred, tys.Sum)
-        if isinstance(pred, tys.SimpleSum):
-            self.predicate_variants = [[] for _ in range(pred.size)]
+        if isinstance(pred, tys.UnitSum):
+            self.tuple_sum_rows = [[] for _ in range(pred.size)]
         else:
             assert isinstance(pred, tys.GeneralSum)
-            self.predicate_variants = []
+            self.tuple_sum_rows = []
             for variant in pred.row:
                 assert isinstance(variant, tys.Tuple)
-                self.predicate_variants.append(variant.inner)
+                self.tuple_sum_rows.append(variant.inner)
         self.other_outputs = outputs[1:]
 
 
@@ -249,7 +249,7 @@ class Conditional(DataflowOp):
     """Conditional operation, defined by child `Case` nodes for each branch."""
 
     op: Literal["Conditional"] = "Conditional"
-    predicate_inputs: list[TypeRow] = Field(
+    tuple_sum_rows: list[TypeRow] = Field(
         default_factory=list
     )  # The possible rows of the predicate input
     other_inputs: TypeRow = Field(default_factory=list)  # Remaining input types
@@ -261,14 +261,14 @@ class Conditional(DataflowOp):
         # First port is a predicate, i.e. a sum of tuple types. We need to unpack
         # those into a list of type rows
         pred = in_types[0]
-        if isinstance(pred, tys.SimpleSum):
-            self.predicate_inputs = [[] for _ in range(pred.size)]
+        if isinstance(pred, tys.UnitSum):
+            self.tuple_sum_rows = [[] for _ in range(pred.size)]
         else:
             assert isinstance(pred, tys.GeneralSum)
-            self.predicate_inputs = []
+            self.tuple_sum_rows = []
             for ty in pred.row:
                 assert isinstance(ty, tys.Tuple)
-                self.predicate_inputs.append(ty.inner)
+                self.tuple_sum_rows.append(ty.inner)
         self.other_inputs = list(in_types[1:])
         self.outputs = list(out_types)
 

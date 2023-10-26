@@ -107,7 +107,7 @@ def __add__(self: float, other: float) -> float:
 
 
 @extension.func(BoolCompiler(), instance=FloatType)
-def __bool__(self: int) -> bool:
+def __bool__(self: float) -> bool:
     ...
 
 
@@ -189,7 +189,7 @@ def __neg__(self: float, other: float) -> float:
 
 
 @extension.func(IdOpCompiler(), instance=FloatType)
-def __pos__(self: int) -> int:
+def __pos__(self: float) -> float:
     ...
 
 
@@ -229,7 +229,7 @@ def __rpow__(self: float, other: float) -> float:
 
 
 @extension.func(Reversed(FloatOpCompiler("fsub")), instance=FloatType)
-def __rsub__(self: float, other: float) -> int:
+def __rsub__(self: float, other: float) -> float:
     ...
 
 
@@ -239,12 +239,12 @@ def __rtruediv__(self: float, other: float) -> float:
 
 
 @extension.func(NotImplementedCompiler(), instance=FloatType)  # TODO
-def __str__(self: int) -> str:
+def __str__(self: float) -> str:
     ...
 
 
 @extension.func(FloatOpCompiler("fsub"), instance=FloatType)
-def __sub__(self: float, other: float) -> int:
+def __sub__(self: float, other: float) -> float:
     ...
 
 

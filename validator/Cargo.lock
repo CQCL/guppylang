@@ -342,9 +342,9 @@ dependencies = [
 
 [[package]]
 name = "portgraph"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a43d4305ffda6115602c98ef7ba4610e8ee16539def2bc284db6e7216c00d1e"
+checksum = "8be897a76c32073a098999883efd53f5520c188e77192136ce2628ecedf74386"
 dependencies = [
  "bitvec",
  "context-iterators",
@@ -426,7 +426,7 @@ dependencies = [
 [[package]]
 name = "quantinuum-hugr"
 version = "0.1.0"
-source = "git+https://github.com/CQCL-DEV/hugr.git?rev=ab79fac2ad34bad3c0234af1626559570c48d397#ab79fac2ad34bad3c0234af1626559570c48d397"
+source = "git+https://github.com/CQCL-DEV/hugr.git?rev=46d50176c3bb7589ef8349a31d6801d45c3313b9#46d50176c3bb7589ef8349a31d6801d45c3313b9"
 dependencies = [
  "bitvec",
  "cgmath",

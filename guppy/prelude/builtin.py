@@ -59,7 +59,7 @@ IntType: type[GuppyType] = extension.new_type(
         extension="arithmetic.int.types",
         id="int",
         args=[tys.BoundedNatArg(n=INT_WIDTH)],
-        bound=TypeBound.Copyable,
+        bound=TypeBound.Eq,
     ),
 )
 
@@ -79,7 +79,7 @@ StringType: type[GuppyType] = extension.new_type(
         extension="TODO",  # String hugr extension doesn't exist yet
         id="string",
         args=[],
-        bound=TypeBound.Copyable,
+        bound=TypeBound.Eq,
     ),
 )
 
