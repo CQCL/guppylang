@@ -83,7 +83,7 @@ def __ceil__(self: int) -> int:
 
 
 @extension.func(
-    OpCompiler(ops.DummyOp(name="idivmod_s_panicing")), instance=IntType  # TODO
+    OpCompiler(ops.DummyOp(name="idivmod_s_panic")), instance=IntType  # TODO
 )
 def __divmod__(self: int, other: int) -> tuple[int, int]:
     ...
@@ -104,9 +104,7 @@ def __floor__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(
-    OpCompiler(ops.DummyOp(name="idiv_s_panicing")), instance=IntType  # TODO
-)
+@extension.func(OpCompiler(ops.DummyOp(name="idiv_s_panic")), instance=IntType)  # TODO
 def __floordiv__(self: int, other: int) -> int:
     ...
 
@@ -148,7 +146,7 @@ def __lt__(self: int, other: int) -> bool:
     ...
 
 
-@extension.func(OpCompiler(ops.DummyOp(name="imod_s")), instance=IntType)  # TODO
+@extension.func(OpCompiler(ops.DummyOp(name="imod_s_panic")), instance=IntType)  # TODO
 def __mod__(self: int, other: int) -> int:
     ...
 
@@ -194,14 +192,14 @@ def __rand__(self: int, other: int) -> int:
 
 
 @extension.func(
-    Reversed(OpCompiler(ops.DummyOp(name="idivmod_s"))), instance=IntType  # TODO
+    Reversed(OpCompiler(ops.DummyOp(name="idivmod_s_panic"))), instance=IntType  # TODO
 )
 def __rdivmod__(self: int, other: int) -> int:
     ...
 
 
 @extension.func(
-    Reversed(OpCompiler(ops.DummyOp(name="idiv_s"))), instance=IntType  # TODO
+    Reversed(OpCompiler(ops.DummyOp(name="idiv_s_panic"))), instance=IntType  # TODO
 )
 def __rfloordiv__(self: int, other: int) -> int:
     ...
