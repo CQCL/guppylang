@@ -88,10 +88,10 @@ class Sum(ABC, BaseModel):
     t: Literal["Sum"] = "Sum"
 
 
-class SimpleSum(Sum):
+class UnitSum(Sum):
     """Simple predicate where all variants are empty tuples"""
 
-    s: Literal["Simple"] = "Simple"
+    s: Literal["Unit"] = "Unit"
     size: int
 
 

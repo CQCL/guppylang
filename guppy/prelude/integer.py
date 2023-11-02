@@ -21,10 +21,12 @@ from guppy.hugr import ops, tys
 class IntOpCompiler(OpCompiler):
     """Compiler for calls that can be implemented via a single Hugr integer op"""
 
-    def __init__(self, op_name: str, ext: str = "arithmetic.int"):
+    def __init__(self, op_name: str, ext: str = "arithmetic.int", num_params: int = 1):
         super().__init__(
             ops.CustomOp(
-                extension=ext, op_name=op_name, args=[tys.BoundedNatArg(n=INT_WIDTH)]
+                extension=ext,
+                op_name=op_name,
+                args=num_params * [tys.BoundedNatArg(n=INT_WIDTH)],
             )
         )
 
@@ -80,7 +82,9 @@ def __ceil__(self: int) -> int:
     ...
 
 
-@extension.func(IntOpCompiler("idivmod_s"), instance=IntType)
+@extension.func(
+    OpCompiler(ops.DummyOp(name="idivmod_s_panic")), instance=IntType  # TODO
+)
 def __divmod__(self: int, other: int) -> tuple[int, int]:
     ...
 
@@ -100,7 +104,7 @@ def __floor__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(IntOpCompiler("idiv_s"), instance=IntType)
+@extension.func(OpCompiler(ops.DummyOp(name="idiv_s_panic")), instance=IntType)  # TODO
 def __floordiv__(self: int, other: int) -> int:
     ...
 
@@ -131,7 +135,7 @@ def __le__(self: int, other: int) -> bool:
 
 
 @extension.func(
-    IntOpCompiler("ishl"), instance=IntType
+    IntOpCompiler("ishl", num_params=2), instance=IntType
 )  # TODO: broken (RHS is unsigned)
 def __lshift__(self: int, other: int) -> int:
     ...
@@ -142,7 +146,7 @@ def __lt__(self: int, other: int) -> bool:
     ...
 
 
-@extension.func(IntOpCompiler("imod_s"), instance=IntType)
+@extension.func(OpCompiler(ops.DummyOp(name="imod_s_panic")), instance=IntType)  # TODO
 def __mod__(self: int, other: int) -> int:
     ...
 
@@ -187,24 +191,28 @@ def __rand__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(Reversed(IntOpCompiler("idivmod_s")), instance=IntType)
+@extension.func(
+    Reversed(OpCompiler(ops.DummyOp(name="idivmod_s_panic"))), instance=IntType  # TODO
+)
 def __rdivmod__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(Reversed(IntOpCompiler("idiv_s")), instance=IntType)
+@extension.func(
+    Reversed(OpCompiler(ops.DummyOp(name="idiv_s_panic"))), instance=IntType  # TODO
+)
 def __rfloordiv__(self: int, other: int) -> int:
     ...
 
 
 @extension.func(
-    Reversed(IntOpCompiler("ishl")), instance=IntType
+    Reversed(IntOpCompiler("ishl", num_params=2)), instance=IntType
 )  # TODO: broken (RHS is unsigned)
 def __rlshift__(self: int, other: int) -> int:
     ...
 
 
-@extension.func(Reversed(IntOpCompiler("imod_s")), instance=IntType)
+@extension.func(Reversed(IntOpCompiler("imod_s", num_params=2)), instance=IntType)
 def __rmod__(self: int, other: int) -> int:
     ...
 
@@ -230,14 +238,14 @@ def __rpow__(self: int, other: int) -> int:
 
 
 @extension.func(
-    Reversed(IntOpCompiler("ishr")), instance=IntType
+    Reversed(IntOpCompiler("ishr", num_params=2)), instance=IntType
 )  # TODO: broken (RHS is unsigned)
 def __rrshift__(self: int, other: int) -> int:
     ...
 
 
 @extension.func(
-    Reversed(IntOpCompiler("ishr")), instance=IntType
+    Reversed(IntOpCompiler("ishr", num_params=2)), instance=IntType
 )  # TODO: broken (RHS is unsigned)
 def __rshift__(self: int, other: int) -> int:
     ...
@@ -265,7 +273,7 @@ def __str__(self: int) -> str:
     ...
 
 
-@extension.func(IntOpCompiler("sub"), instance=IntType)
+@extension.func(IntOpCompiler("isub"), instance=IntType)
 def __sub__(self: int, other: int) -> int:
     ...
 

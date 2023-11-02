@@ -117,7 +117,7 @@ class SumType(GuppyType):
             isinstance(e, TupleType) and len(e.element_types) == 0
             for e in self.element_types
         ):
-            return tys.SimpleSum(size=len(self.element_types))
+            return tys.UnitSum(size=len(self.element_types))
         return tys.GeneralSum(row=[t.to_hugr() for t in self.element_types])
 
 

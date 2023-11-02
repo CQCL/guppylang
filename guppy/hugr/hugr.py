@@ -260,14 +260,6 @@ class DFContainingVNode(VNode, DFContainingNode):
 class BlockNode(DFContainingNode, CFNode):
     """A `Block` node representing a basic block."""
 
-    def update_op(self) -> None:
-        # Insert the number of outputs into the op type. Note that we don't  make use of
-        # the HUGR feature where the variant data is appended to successor input. Thus,
-        # `predicate_variants` will only contain empty rows.
-        assert isinstance(self.op, ops.DFB)
-        self.op.predicate_variants = [[] for _ in range(self.num_out_ports)]
-        super().update_op()
-
 
 OrderEdge = tuple["Node", "Node"]
 ORDER_EDGE_KEY = (-1, -1)
@@ -632,10 +624,16 @@ class Hugr:
         """Replaces dummy ops with external function calls."""
         if self.root is None:
             raise ValueError("Dummy node removal requires a module root node")
+        used_names: dict[str, int] = {}
         for n in list(self.nodes()):
             if isinstance(n, VNode) and isinstance(n.op, ops.DummyOp):
                 name = n.op.name
                 fun_ty = FunctionType(list(n.in_port_types), list(n.out_port_types))
+                if name in used_names:
+                    used_names[name] += 1
+                    name = f"{name}${used_names[name]}"
+                else:
+                    used_names[name] = 0
                 decl = self.add_declare(fun_ty, self.root, name)
                 n.op = ops.Call()
                 self.add_edge(decl.out_port(0), n.add_in_port(fun_ty))
