@@ -12,8 +12,11 @@ from guppy.prelude.quantum import h, cx, measure, rz
 from pecos.engines.hybrid_engine import HybridEngine
 from pecos.simulators.quantum_simulator import QuantumSimulator
 
-HUGR2PHIR = Path("../tket2proto/target/debug/hugr2phir")
-PHIR_CLI = Path("../phir/.devenv/state/venv/bin/phir-cli")
+VALIDATE_PHIR = True
+
+HUGR2PHIR = Path("../../tket2proto/target/debug/hugr2phir")
+
+PHIR_CLI = Path("../../phir/.devenv/state/venv/bin/phir-cli")
 
 module = GuppyModule("test")
 module.load(quantum)
@@ -47,14 +50,13 @@ with NamedTemporaryFile("wb", suffix="hugr") as h_file, NamedTemporaryFile(
     subprocess.run(
         [str(c) for c in (HUGR2PHIR, h_file.name, "-o", ph_file.name)]
     ).check_returncode()
-    subprocess.run([str(c) for c in (PHIR_CLI, ph_file.name)]).check_returncode()
+    if VALIDATE_PHIR:
+        subprocess.run([str(c) for c in (PHIR_CLI, ph_file.name)]).check_returncode()
 
     phir_json = json.load(ph_file)
-# with open("../PECOS/tests/integration/phir/example1_no_wasm.json") as j:
-#     phir_json = json.load(j)
+
 print(phir_json)
 res = HybridEngine(qsim=QuantumSimulator(backend="state-vector")).run(
     program=phir_json, shots=10
 )
 print(convert_bitstrings(res))
-# TODO simulate with pecos
