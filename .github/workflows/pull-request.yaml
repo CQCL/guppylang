@@ -38,10 +38,16 @@ jobs:
         run: mypy guppy
 
       - name: Check formatting with ruff
-        run: ruff format --check guppy
+        uses: chartboost/ruff-action@v1
+        with:
+          src: "./guppy"
+          args: format --check
 
       - name: Lint with ruff
-        run: ruff check guppy
+        uses: chartboost/ruff-action@v1
+        with:
+          src: "./guppy"
+          args: check
 
       - name: Run tests
         run: pytest
