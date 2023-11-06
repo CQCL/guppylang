@@ -37,8 +37,17 @@ jobs:
       - name: Type check with mypy
         run: mypy guppy
 
-      - name: Check formatting with black
-        run: black --check guppy
+      - name: Check formatting with ruff
+        uses: chartboost/ruff-action@v1
+        with:
+          src: "./guppy"
+          args: format --check
+
+      - name: Lint with ruff
+        uses: chartboost/ruff-action@v1
+        with:
+          src: "./guppy"
+          args: check
 
       - name: Run tests
         run: pytest

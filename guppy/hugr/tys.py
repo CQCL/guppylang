@@ -2,7 +2,7 @@ import inspect
 import sys
 from abc import ABC
 from enum import Enum
-from typing import Literal, Union, Annotated, Optional
+from typing import Literal, Union, Annotated
 from pydantic import Field, BaseModel
 
 

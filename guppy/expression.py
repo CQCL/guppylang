@@ -211,7 +211,7 @@ class ExpressionCompiler(CompilerBase, AstVisitor[OutPortV]):
         func = node.func
         if len(node.keywords) > 0:
             raise GuppyError(
-                f"Argument passing by keyword is not supported", node.keywords[0]
+                "Argument passing by keyword is not supported", node.keywords[0]
             )
 
         # Special case for calls of global module-level functions. This also handles
@@ -270,7 +270,7 @@ def check_num_args(exp: int, act: int, node: AstNode) -> None:
         )
     if exp < act:
         if isinstance(node, ast.Call):
-            raise GuppyTypeError(f"Unexpected argument", node.args[exp])
+            raise GuppyTypeError("Unexpected argument", node.args[exp])
         raise GuppyTypeError(
             f"Too many arguments passed (expected {exp}, got {act})", node
         )

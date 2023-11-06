@@ -1,7 +1,7 @@
 import ast
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, Any, Sequence, Mapping, TYPE_CHECKING, Union
+from typing import Optional, Sequence, TYPE_CHECKING, Union
 
 import guppy.hugr.tys as tys
 from guppy.ast_util import AstNode, set_location_from

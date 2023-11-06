@@ -50,8 +50,8 @@ class GuppyError(Exception):
         source locations in the actual file."""
         return self.raw_msg.format(
             *(
-                SourceLoc.from_ast(l, line_offset) if l is not None else "???"
-                for l in self.locs_in_msg
+                SourceLoc.from_ast(loc, line_offset) if loc is not None else "???"
+                for loc in self.locs_in_msg
             )
         )
 
