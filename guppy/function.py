@@ -1,5 +1,4 @@
 import ast
-from typing import Optional
 
 from guppy.ast_util import return_nodes_in_ast, AstNode
 from guppy.cfg.bb import BB, NestedFunctionDef
@@ -12,13 +11,10 @@ from guppy.compiler_base import (
     GlobalFunction,
     CallCompiler,
 )
-from guppy.error import GuppyError, GuppyTypeError
+from guppy.error import GuppyError
 from guppy.expression import type_check_call
 from guppy.guppy_types import (
     FunctionType,
-    GuppyType,
-    TupleType,
-    TypeRow,
     type_row_from_ast,
     type_from_ast,
 )
@@ -114,8 +110,8 @@ class FunctionDefCompiler(CompilerBase):
         )
         assert func_ty.arg_names is not None
         input_sig = [
-            RawVariable(x, t, l)
-            for x, t, l in zip(func_ty.arg_names, func_ty.args, args)
+            RawVariable(x, ty, loc)
+            for x, ty, loc in zip(func_ty.arg_names, func_ty.args, args)
         ]
         cfg.compile(
             self.graph,
@@ -194,8 +190,8 @@ class FunctionDefCompiler(CompilerBase):
         def_input = self.graph.add_input(parent=def_node)
         input_ports = [def_input.add_out_port(ty) for ty in closure_ty.args]
         input_row = captured + [
-            RawVariable(x, t, l)
-            for x, t, l in zip(func_ty.arg_names, func_ty.args, args)
+            RawVariable(x, ty, loc)
+            for x, ty, loc in zip(func_ty.arg_names, func_ty.args, args)
         ]
 
         # If we have captured variables and the body contains a recursive occurrence of

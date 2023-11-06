@@ -40,5 +40,8 @@ jobs:
       - name: Check formatting with black
         run: black --check guppy
 
+      - name: Lint with ruff
+        run: ruff check guppy
+
       - name: Run tests
         run: pytest

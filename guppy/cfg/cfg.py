@@ -1,7 +1,5 @@
-import ast
 import collections
-import itertools
-from typing import Optional, NamedTuple, Iterator, Union
+from typing import Optional
 
 from guppy.cfg.analysis import (
     LivenessDomain,
@@ -16,12 +14,11 @@ from guppy.cfg.bb import (
     VarRow,
     Signature,
     CompiledBB,
-    NestedFunctionDef,
     BBStatement,
 )
-from guppy.compiler_base import VarMap, DFContainer, Variable, Globals, is_return_var
-from guppy.error import InternalGuppyError, GuppyError, GuppyTypeError
-from guppy.ast_util import AstVisitor, line_col, set_location_from
+from guppy.compiler_base import DFContainer, Variable, Globals, is_return_var
+from guppy.error import GuppyError, GuppyTypeError
+from guppy.ast_util import line_col
 from guppy.expression import ExpressionCompiler
 from guppy.guppy_types import GuppyType, TupleType, SumType
 from guppy.hugr.hugr import Node, Hugr, OutPortV

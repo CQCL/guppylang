@@ -695,7 +695,7 @@ class Hugr:
                 output_nodes.append(n)
             elif (
                 isinstance(n.op, ops.DFB)
-                and next(self.in_edges(n.in_port(None)), None) == None
+                and next(self.in_edges(n.in_port(None)), None) is None
             ):
                 entry_nodes.append(n)
             elif isinstance(n.op, ops.Exit):

@@ -21,6 +21,7 @@ dev = [
     "pytest",
     "mypy==1.3.0",
     "black",
+    "ruff",
     "maturin>=1.1,<2.0",
 ]
 

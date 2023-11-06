@@ -9,7 +9,6 @@ from typing import Optional, Callable, Any, Union, Sequence
 from guppy.ast_util import AstNode, is_empty_body
 from guppy.compiler_base import (
     GlobalFunction,
-    TypeName,
     Globals,
     CallCompiler,
     DFContainer,

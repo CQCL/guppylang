@@ -1,7 +1,7 @@
 import ast
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterator, Optional, Any, NamedTuple, Union
+from typing import Iterator, Optional, Any, NamedTuple
 
 from guppy.ast_util import AstNode
 from guppy.guppy_types import GuppyType, FunctionType, TupleType, SumType
