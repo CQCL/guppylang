@@ -10,6 +10,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.19.0"
-quantinuum-hugr = { git = "https://github.com/CQCL-DEV/hugr.git", rev = "46d50176c3bb7589ef8349a31d6801d45c3313b9" }
+quantinuum-hugr = { git = "https://github.com/CQCL-DEV/hugr.git", rev = "1a07cd9aca60aa75257bdb297d7442d9529765fb" }
 rmp-serde = "1.1.1"
 lazy_static = "1.4.0"
