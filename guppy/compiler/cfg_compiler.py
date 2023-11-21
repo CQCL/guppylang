@@ -3,15 +3,22 @@ from typing import Sequence
 
 from guppy.checker.cfg_checker import CheckedBB, VarRow, CheckedCFG, Signature
 from guppy.checker.core import Variable
-from guppy.compiler.core import CompiledGlobals, is_return_var, DFContainer, return_var, \
-    PortVariable
+from guppy.compiler.core import (
+    CompiledGlobals,
+    is_return_var,
+    DFContainer,
+    return_var,
+    PortVariable,
+)
 from guppy.compiler.expr_compiler import ExprCompiler
 from guppy.compiler.stmt_compiler import StmtCompiler
 from guppy.guppy_types import TupleType, SumType, type_to_row
 from guppy.hugr.hugr import Hugr, Node, CFNode, OutPortV
 
 
-def compile_cfg(cfg: CheckedCFG, graph: Hugr, parent: Node, globals: CompiledGlobals) -> None:
+def compile_cfg(
+    cfg: CheckedCFG, graph: Hugr, parent: Node, globals: CompiledGlobals
+) -> None:
     """Compiles a CFG to Hugr."""
     insert_return_vars(cfg)
 
@@ -23,7 +30,9 @@ def compile_cfg(cfg: CheckedCFG, graph: Hugr, parent: Node, globals: CompiledGlo
             graph.add_edge(blocks[bb].add_out_port(), blocks[succ].in_port(None))
 
 
-def compile_bb(bb: CheckedBB, graph: Hugr, parent: Node, globals: CompiledGlobals) -> CFNode:
+def compile_bb(
+    bb: CheckedBB, graph: Hugr, parent: Node, globals: CompiledGlobals
+) -> CFNode:
     """Compiles a single basic block to Hugr."""
     inputs = sort_vars(bb.sig.input_row)
 
@@ -100,7 +109,10 @@ def insert_return_vars(cfg: CheckedCFG) -> None:
     `%ret0`, `%ret1`, etc. We update the exit BB signature to make sure they are
     correctly outputted.
     """
-    return_vars = [Variable(return_var(i), ty, None, None) for i, ty in enumerate(type_to_row(cfg.output_ty))]
+    return_vars = [
+        Variable(return_var(i), ty, None, None)
+        for i, ty in enumerate(type_to_row(cfg.output_ty))
+    ]
     # Before patching, the exit BB shouldn't take any inputs
     assert len(cfg.exit_bb.sig.input_row) == 0
     cfg.exit_bb.sig = Signature(return_vars, cfg.exit_bb.sig.output_rows)
@@ -123,14 +135,13 @@ def choose_vars_for_pred(
     assert len(pred.ty.element_types) == len(output_vars)
     tuples = [
         graph.add_make_tuple(
-            inputs=[dfg[v.name].port for v in sort_vars(vs) if v.name in dfg], parent=dfg.node
+            inputs=[dfg[v.name].port for v in sort_vars(vs) if v.name in dfg],
+            parent=dfg.node,
         ).out_port(0)
         for vs in output_vars
     ]
     tys = [t.ty for t in tuples]
-    conditional = graph.add_conditional(
-        cond_input=pred, inputs=tuples, parent=dfg.node
-    )
+    conditional = graph.add_conditional(cond_input=pred, inputs=tuples, parent=dfg.node)
     for i, ty in enumerate(tys):
         case = graph.add_case(conditional)
         inp = graph.add_input(output_tys=tys, parent=case).out_port(i)
@@ -158,4 +169,3 @@ def sort_vars(row: VarRow) -> list[Variable]:
     This determines the order in which they are outputted from a BB.
     """
     return sorted(row, key=functools.cmp_to_key(compare_var))
-

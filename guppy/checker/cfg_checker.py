@@ -49,7 +49,9 @@ class CheckedCFG(BaseCFG[CheckedBB]):
         self.output_ty = output_ty
 
 
-def check_cfg(cfg: CFG, inputs: VarRow, return_ty: GuppyType, globals: Globals) -> CheckedCFG:
+def check_cfg(
+    cfg: CFG, inputs: VarRow, return_ty: GuppyType, globals: Globals
+) -> CheckedCFG:
     """Type checks a control-flow graph.
 
     Annotates the basic blocks with input and output type signatures and removes
@@ -61,18 +63,24 @@ def check_cfg(cfg: CFG, inputs: VarRow, return_ty: GuppyType, globals: Globals) 
 
     # We start by compiling the entry BB
     checked_cfg = CheckedCFG([v.ty for v in inputs], return_ty)
-    checked_cfg.entry_bb = check_bb(cfg.entry_bb, checked_cfg, inputs, return_ty, globals)
+    checked_cfg.entry_bb = check_bb(
+        cfg.entry_bb, checked_cfg, inputs, return_ty, globals
+    )
     compiled = {cfg.entry_bb: checked_cfg.entry_bb}
 
     # Visit all control-flow edges in BFS order. We can't just do a normal loop over
     # all BBs since the input types for a BB are computed by checking a predecessor.
     # We do BFS instead of DFS to get a better error ordering.
     queue = collections.deque(
-        (checked_cfg.entry_bb, i, succ) for i, succ in enumerate(cfg.entry_bb.successors)
+        (checked_cfg.entry_bb, i, succ)
+        for i, succ in enumerate(cfg.entry_bb.successors)
     )
     while len(queue) > 0:
         pred, num_output, bb = queue.popleft()
-        input_row = [Variable(v.name, v.ty, v.defined_at, None) for v in pred.sig.output_rows[num_output]]
+        input_row = [
+            Variable(v.name, v.ty, v.defined_at, None)
+            for v in pred.sig.output_rows[num_output]
+        ]
 
         if bb in compiled:
             # If the BB was already compiled, we just have to check that the signatures
@@ -81,9 +89,7 @@ def check_cfg(cfg: CFG, inputs: VarRow, return_ty: GuppyType, globals: Globals) 
         else:
             # Otherwise, check the BB and enqueue its successors
             checked_bb = check_bb(bb, checked_cfg, input_row, return_ty, globals)
-            queue += [
-                (checked_bb, i, succ) for i, succ in enumerate(bb.successors)
-            ]
+            queue += [(checked_bb, i, succ) for i, succ in enumerate(bb.successors)]
             compiled[bb] = checked_bb
 
         # Link up BBs in the checked CFG
@@ -94,11 +100,19 @@ def check_cfg(cfg: CFG, inputs: VarRow, return_ty: GuppyType, globals: Globals) 
     checked_cfg.exit_bb = compiled[cfg.exit_bb]  # TODO: Fails if exit is unreachable
     checked_cfg.live_before = {compiled[bb]: cfg.live_before[bb] for bb in cfg.bbs}
     checked_cfg.ass_before = {compiled[bb]: cfg.ass_before[bb] for bb in cfg.bbs}
-    checked_cfg.maybe_ass_before = {compiled[bb]: cfg.maybe_ass_before[bb] for bb in cfg.bbs}
+    checked_cfg.maybe_ass_before = {
+        compiled[bb]: cfg.maybe_ass_before[bb] for bb in cfg.bbs
+    }
     return checked_cfg
 
 
-def check_bb(bb: BB, checked_cfg: CheckedCFG, inputs: VarRow, return_ty: GuppyType, globals: Globals) -> CheckedBB:
+def check_bb(
+    bb: BB,
+    checked_cfg: CheckedCFG,
+    inputs: VarRow,
+    return_ty: GuppyType,
+    globals: Globals,
+) -> CheckedBB:
     cfg = bb.cfg
 
     # For the entry BB we have to separately check that all used variables are
@@ -132,9 +146,7 @@ def check_bb(bb: BB, checked_cfg: CheckedCFG, inputs: VarRow, return_ty: GuppyTy
                         f"Variable `{x}` is not defined on all control-flow paths.",
                         use_bb.vars.used[x],
                     )
-                raise GuppyError(
-                    f"Variable `{x}` is not defined", use_bb.vars.used[x]
-                )
+                raise GuppyError(f"Variable `{x}` is not defined", use_bb.vars.used[x])
 
             # We have to check that used linear variables are not being outputted
             if x in ctx.locals:
@@ -166,7 +178,9 @@ def check_bb(bb: BB, checked_cfg: CheckedCFG, inputs: VarRow, return_ty: GuppyTy
     ]
 
     # Also prepare the successor list so we can fill it in later
-    checked_bb = CheckedBB(bb.idx, checked_cfg, checked_stmts, sig=Signature(inputs, outputs))
+    checked_bb = CheckedBB(
+        bb.idx, checked_cfg, checked_stmts, sig=Signature(inputs, outputs)
+    )
     checked_bb.successors = [None] * len(bb.successors)  # type: ignore
     checked_bb.branch_pred = bb.branch_pred
     return checked_bb
@@ -193,9 +207,7 @@ def check_rows_match(row1: VarRow, row2: VarRow, bb: BB) -> None:
                 v1, v2 = v2, v1
             # We shouldn't mention temporary variables (starting with `%`)
             # in error messages:
-            ident = (
-                "Expression" if v1.name.startswith("%") else f"Variable `{v1.name}`"
-            )
+            ident = "Expression" if v1.name.startswith("%") else f"Variable `{v1.name}`"
             raise GuppyError(
                 f"{ident} can refer to different types: "
                 f"`{v1.ty}` (at {{}}) vs `{v2.ty}` (at {{}})",

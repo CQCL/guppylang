@@ -16,7 +16,11 @@ def quantum_op(op_name: str) -> ops.OpType:
     return ops.CustomOp(extension="quantum.tket2", op_name=op_name, args=[])
 
 
-@guppy.type(quantum, tys.Opaque(extension="prelude", id="qubit", args=[], bound=TypeBound.Any), linear=True)
+@guppy.type(
+    quantum,
+    tys.Opaque(extension="prelude", id="qubit", args=[], bound=TypeBound.Any),
+    linear=True,
+)
 class Qubit:
     pass
 

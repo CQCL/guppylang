@@ -52,7 +52,12 @@ class ExprChecker(AstVisitor[ast.expr]):
         self.ctx = ctx
         self._kind = "expression"
 
-    def _fail(self, expected: GuppyType, actual: Union[ast.expr, GuppyType], loc: Optional[AstNode] = None) -> NoReturn:
+    def _fail(
+        self,
+        expected: GuppyType,
+        actual: Union[ast.expr, GuppyType],
+        loc: Optional[AstNode] = None,
+    ) -> NoReturn:
         """Raises a type error indicating that the type doesn't match."""
         if not isinstance(actual, GuppyType):
             loc = loc or actual
@@ -62,7 +67,9 @@ class ExprChecker(AstVisitor[ast.expr]):
             f"Expected {self._kind} of type `{expected}`, got `{actual}`", loc
         )
 
-    def check(self, expr: ast.expr, ty: GuppyType, kind: str = "expression") -> ast.expr:
+    def check(
+        self, expr: ast.expr, ty: GuppyType, kind: str = "expression"
+    ) -> ast.expr:
         """Checks an expression against a type.
 
         Returns a new desugared expression with type annotations.
@@ -108,7 +115,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         node, ty = self.visit(node)
         return with_type(ty, node), ty
 
-    def _check(self, expr: ast.expr, ty: GuppyType, kind: str = "expression") -> ast.expr:
+    def _check(
+        self, expr: ast.expr, ty: GuppyType, kind: str = "expression"
+    ) -> ast.expr:
         """Checks an expression against a given type"""
         return ExprChecker(self.ctx).check(expr, ty, kind)
 
@@ -218,7 +227,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         node.func, ty = self.synthesize(node.func)
 
         # First handle direct calls of user-defined functions and extension functions
-        if isinstance(node.func, GlobalName) and isinstance(node.func.value, CallableVariable):
+        if isinstance(node.func, GlobalName) and isinstance(
+            node.func.value, CallableVariable
+        ):
             return node.func.value.synthesize_call(node.args, node, self.ctx)
 
         # Otherwise, it must be a function as a higher-order value
@@ -263,7 +274,9 @@ def check_num_args(exp: int, act: int, node: AstNode) -> None:
         )
 
 
-def synthesize_call(func_ty: FunctionType, args: list[ast.expr], node: AstNode, ctx: Context) -> tuple[list[ast.expr], GuppyType]:
+def synthesize_call(
+    func_ty: FunctionType, args: list[ast.expr], node: AstNode, ctx: Context
+) -> tuple[list[ast.expr], GuppyType]:
     """Synthesizes the return type of a function call"""
     check_num_args(len(func_ty.args), len(args), node)
     for i, arg in enumerate(args):
@@ -271,7 +284,13 @@ def synthesize_call(func_ty: FunctionType, args: list[ast.expr], node: AstNode, 
     return args, func_ty.returns
 
 
-def check_call(func_ty: FunctionType, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context) -> list[ast.expr]:
+def check_call(
+    func_ty: FunctionType,
+    args: list[ast.expr],
+    ty: GuppyType,
+    node: AstNode,
+    ctx: Context,
+) -> list[ast.expr]:
     """Checks the return type of a function call against a given type"""
     args, return_ty = synthesize_call(func_ty, args, node, ctx)
     if return_ty != ty:
@@ -281,7 +300,9 @@ def check_call(func_ty: FunctionType, args: list[ast.expr], ty: GuppyType, node:
     return args
 
 
-def to_bool(node: ast.expr, node_ty: GuppyType, ctx: Context) -> tuple[ast.expr, GuppyType]:
+def to_bool(
+    node: ast.expr, node_ty: GuppyType, ctx: Context
+) -> tuple[ast.expr, GuppyType]:
     """Tries to turn a node into a bool"""
     if isinstance(node_ty, BoolType):
         return node, node_ty
@@ -299,12 +320,14 @@ def to_bool(node: ast.expr, node_ty: GuppyType, ctx: Context) -> tuple[ast.expr,
     if not isinstance(return_ty, BoolType):
         raise GuppyTypeError(
             f"`__bool__` on type `{node_ty}` returns `{return_ty}` instead of `bool`",
-            node
+            node,
         )
     return call, return_ty
 
 
-def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Optional[GuppyType]:
+def python_value_to_guppy_type(
+    v: Any, node: ast.expr, globals: Globals
+) -> Optional[GuppyType]:
     """Turns a primitive Python value into a Guppy type.
 
     Returns `None` if the Python value cannot be represented in Guppy.
@@ -316,4 +339,3 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Opti
     if isinstance(v, float):
         return globals.types["float"].build(node=node)
     return None
-

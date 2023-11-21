@@ -25,7 +25,9 @@ class BaseCFG(Generic[T]):
     ass_before: Result[DefAssignmentDomain]
     maybe_ass_before: Result[MaybeAssignmentDomain]
 
-    def __init__(self, bbs: list[T], entry_bb: Optional[T] = None, exit_bb: Optional[T] = None):
+    def __init__(
+        self, bbs: list[T], entry_bb: Optional[T] = None, exit_bb: Optional[T] = None
+    ):
         self.bbs = bbs
         if entry_bb:
             self.entry_bb = entry_bb

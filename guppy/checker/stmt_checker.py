@@ -11,7 +11,6 @@ from guppy.nodes import NestedFunctionDef
 
 
 class StmtChecker(AstVisitor[BBStatement]):
-
     ctx: Context
     bb: BB
     return_ty: GuppyType
@@ -27,7 +26,9 @@ class StmtChecker(AstVisitor[BBStatement]):
     def _synth_expr(self, node: ast.expr) -> tuple[ast.expr, GuppyType]:
         return ExprSynthesizer(self.ctx).synthesize(node)
 
-    def _check_expr(self, node: ast.expr, ty: GuppyType, kind: str = "expression") -> ast.expr:
+    def _check_expr(
+        self, node: ast.expr, ty: GuppyType, kind: str = "expression"
+    ) -> ast.expr:
         return ExprChecker(self.ctx).check(node, ty, kind)
 
     def _check_assign(self, lhs: ast.expr, ty: GuppyType, node: ast.stmt) -> None:
@@ -74,14 +75,18 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.stmt:
         if node.value is None:
-            raise GuppyError("Variable declaration is not supported. Assignment is required", node)
+            raise GuppyError(
+                "Variable declaration is not supported. Assignment is required", node
+            )
         ty = type_from_ast(node.annotation, self.ctx.globals)
         node.value = self._check_expr(node.value, ty)
         self._check_assign(node.target, ty, node)
         return node
 
     def visit_AugAssign(self, node: ast.AugAssign) -> ast.stmt:
-        bin_op = with_loc(node, ast.BinOp(left=node.target, op=node.op, right=node.value))
+        bin_op = with_loc(
+            node, ast.BinOp(left=node.target, op=node.op, right=node.value)
+        )
         assign = with_loc(node, ast.Assign(targets=[node.target], value=bin_op))
         return self.visit_Assign(assign)
 
@@ -103,7 +108,9 @@ class StmtChecker(AstVisitor[BBStatement]):
         from guppy.checker.func_checker import check_nested_func_def
 
         func_def = check_nested_func_def(node, self.bb, self.ctx)
-        self.ctx.locals[func_def.name] = Variable(func_def.name, func_def.ty, func_def, None)
+        self.ctx.locals[func_def.name] = Variable(
+            func_def.name, func_def.ty, func_def, None
+        )
         return func_def
 
     def visit_If(self, node: ast.If) -> None:

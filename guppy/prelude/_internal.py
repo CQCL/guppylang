@@ -6,8 +6,12 @@ from pydantic import BaseModel
 from guppy.ast_util import with_type, AstNode, with_loc, get_type
 from guppy.checker.core import Context, CallableVariable
 from guppy.checker.expr_checker import ExprSynthesizer, check_num_args
-from guppy.custom import CustomCallChecker, DefaultCallChecker, CustomFunction, \
-    CustomCallCompiler
+from guppy.custom import (
+    CustomCallChecker,
+    DefaultCallChecker,
+    CustomFunction,
+    CustomCallCompiler,
+)
 from guppy.error import GuppyTypeError
 from guppy.guppy_types import GuppyType, type_to_row, FunctionType, BoolType
 from guppy.hugr import ops, tys, val
@@ -69,7 +73,9 @@ def logic_op(op_name: str, args: Optional[list[tys.TypeArgUnion]] = None) -> ops
     return ops.CustomOp(extension="logic", op_name=op_name, args=args or [])
 
 
-def int_op(op_name: str, ext: str = "arithmetic.int", num_params: int = 1) -> ops.OpType:
+def int_op(
+    op_name: str, ext: str = "arithmetic.int", num_params: int = 1
+) -> ops.OpType:
     """Utility method to create Hugr integer arithmetic ops."""
     return ops.CustomOp(
         extension=ext,
@@ -92,8 +98,12 @@ class CoercingChecker(DefaultCallChecker):
         for i in range(len(args)):
             args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
             if isinstance(ty, self.ctx.globals.types["int"]):
-                call = with_loc(self.node, GlobalCall(func=Int.__float__, args=[args[i]]))
-                args[i] = with_type(self.ctx.globals.types["float"].build(node=self.node), call)
+                call = with_loc(
+                    self.node, GlobalCall(func=Int.__float__, args=[args[i]])
+                )
+                args[i] = with_type(
+                    self.ctx.globals.types["float"].build(node=self.node), call
+                )
         return super().synthesize(args)
 
 
@@ -148,7 +158,9 @@ class DunderChecker(CustomCallChecker):
         self.dunder_name = dunder_name
         self.num_args = num_args
 
-    def _get_func(self, args: list[ast.expr]) -> tuple[list[ast.expr], CallableVariable]:
+    def _get_func(
+        self, args: list[ast.expr]
+    ) -> tuple[list[ast.expr], CallableVariable]:
         check_num_args(self.num_args, len(args), self.node)
         fst, *rest = args
         fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
@@ -193,9 +205,15 @@ class IntTruedivCompiler(CustomCallCompiler):
 
         # Compile `truediv` using float arithmetic
         [left, right] = args
-        [left] = Int.__float__.compile_call([left], self.dfg, self.graph, self.globals, self.node)
-        [right] = Int.__float__.compile_call([right], self.dfg, self.graph, self.globals, self.node)
-        return Float.__truediv__.compile_call([left, right], self.dfg, self.graph, self.globals, self.node)
+        [left] = Int.__float__.compile_call(
+            [left], self.dfg, self.graph, self.globals, self.node
+        )
+        [right] = Int.__float__.compile_call(
+            [right], self.dfg, self.graph, self.globals, self.node
+        )
+        return Float.__truediv__.compile_call(
+            [left, right], self.dfg, self.graph, self.globals, self.node
+        )
 
 
 class FloatBoolCompiler(CustomCallCompiler):
@@ -205,7 +223,9 @@ class FloatBoolCompiler(CustomCallCompiler):
         from .builtins import Float
 
         # We have: bool(x) = (x != 0.0)
-        zero_const = self.graph.add_constant(float_value(0.0), get_type(self.node), self.dfg.node)
+        zero_const = self.graph.add_constant(
+            float_value(0.0), get_type(self.node), self.dfg.node
+        )
         zero = self.graph.add_load_constant(zero_const.out_port(0), self.dfg.node)
         return Float.__ne__.compile_call(
             [args[0], zero.out_port(0)], self.dfg, self.graph, self.globals, self.node

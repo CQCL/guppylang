@@ -14,9 +14,7 @@ if TYPE_CHECKING:
 class LocalName(ast.expr):
     id: str
 
-    _fields = (
-        'id',
-    )
+    _fields = ("id",)
 
 
 class GlobalName(ast.expr):
@@ -24,8 +22,8 @@ class GlobalName(ast.expr):
     value: "Variable"
 
     _fields = (
-        'id',
-        'value',
+        "id",
+        "value",
     )
 
 
@@ -34,8 +32,8 @@ class LocalCall(ast.expr):
     args: list[ast.expr]
 
     _fields = (
-        'func',
-        'args',
+        "func",
+        "args",
     )
 
 
@@ -46,8 +44,8 @@ class GlobalCall(ast.expr):
     # Later: Inferred type args
 
     _fields = (
-        'func',
-        'args',
+        "func",
+        "args",
     )
 
 
@@ -66,7 +64,14 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
     ty: FunctionType
     captured: Mapping[str, "Variable"]
 
-    def __init__(self, cfg: "CheckedCFG", ty: FunctionType, captured: Mapping[str, "Variable"], *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        cfg: "CheckedCFG",
+        ty: FunctionType,
+        captured: Mapping[str, "Variable"],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.cfg = cfg
         self.ty = ty

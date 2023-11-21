@@ -4,8 +4,14 @@ from dataclasses import dataclass
 from typing import NamedTuple, Optional, Union
 
 from guppy.ast_util import AstNode
-from guppy.guppy_types import GuppyType, FunctionType, TupleType, SumType, NoneType, \
-    BoolType
+from guppy.guppy_types import (
+    GuppyType,
+    FunctionType,
+    TupleType,
+    SumType,
+    NoneType,
+    BoolType,
+)
 
 
 @dataclass
@@ -25,11 +31,15 @@ class CallableVariable(ABC, Variable):
     ty: FunctionType
 
     @abstractmethod
-    def check_call(self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: "Context") -> ast.expr:
+    def check_call(
+        self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: "Context"
+    ) -> ast.expr:
         """Checks the return type of a function call against a given type."""
 
     @abstractmethod
-    def synthesize_call(self, args: list[ast.expr], node: AstNode, ctx: "Context") -> tuple[ast.expr, GuppyType]:
+    def synthesize_call(
+        self, args: list[ast.expr], node: AstNode, ctx: "Context"
+    ) -> tuple[ast.expr, GuppyType]:
         """Synthesizes the return type of a function call."""
 
 

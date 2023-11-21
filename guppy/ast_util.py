@@ -118,7 +118,9 @@ def set_location_from(node: ast.AST, loc: ast.AST) -> None:
     annotate_location(node, source, file, line_offset)
 
 
-def annotate_location(node: ast.AST, source: str, file: str, line_offset: int, recurse: bool = True) -> None:
+def annotate_location(
+    node: ast.AST, source: str, file: str, line_offset: int, recurse: bool = True
+) -> None:
     setattr(node, "line_offset", line_offset)
     setattr(node, "file", file)
     setattr(node, "source", source)

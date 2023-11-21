@@ -8,8 +8,12 @@ from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
 from guppy.compiler.expr_compiler import ExprCompiler
-from guppy.error import GuppyError, InternalGuppyError, UnknownFunctionType, \
-    GuppyTypeError
+from guppy.error import (
+    GuppyError,
+    InternalGuppyError,
+    UnknownFunctionType,
+    GuppyTypeError,
+)
 from guppy.guppy_types import GuppyType, FunctionType, type_to_row, TupleType
 from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV, Hugr, Node, DFContainingVNode
@@ -31,7 +35,15 @@ class CustomFunction(CompiledFunction):
     _ty: Optional[FunctionType] = None
     _defined: dict[Node, DFContainingVNode] = {}
 
-    def __init__(self, name: str, defined_at: Optional[ast.FunctionDef], compiler: "CustomCallCompiler", checker: "CustomCallChecker", higher_order_value: bool = True, ty: Optional[FunctionType] = None):
+    def __init__(
+        self,
+        name: str,
+        defined_at: Optional[ast.FunctionDef],
+        compiler: "CustomCallCompiler",
+        checker: "CustomCallChecker",
+        higher_order_value: bool = True,
+        ty: Optional[FunctionType] = None,
+    ):
         self.name = name
         self.defined_at = defined_at
         self.higher_order_value = higher_order_value
@@ -73,11 +85,15 @@ class CustomFunction(CompiledFunction):
             if self.call_checker is None or self.higher_order_value:
                 raise err
 
-    def check_call(self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context) -> ast.expr:
+    def check_call(
+        self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context
+    ) -> ast.expr:
         self.call_checker._setup(ctx, node, self)
         return with_type(ty, with_loc(node, self.call_checker.check(args, ty)))
 
-    def synthesize_call(self, args: list[ast.expr], node: AstNode, ctx: "Context") -> tuple[ast.expr, GuppyType]:
+    def synthesize_call(
+        self, args: list[ast.expr], node: AstNode, ctx: "Context"
+    ) -> tuple[ast.expr, GuppyType]:
         self.call_checker._setup(ctx, node, self)
         new_node, ty = self.call_checker.synthesize(args)
         return with_type(ty, with_loc(node, new_node)), ty
@@ -93,7 +109,9 @@ class CustomFunction(CompiledFunction):
         self.call_compiler._setup(dfg, graph, globals, node)
         return self.call_compiler.compile(args)
 
-    def load(self, dfg: "DFContainer", graph: Hugr, globals: CompiledGlobals, node: AstNode) -> OutPortV:
+    def load(
+        self, dfg: "DFContainer", graph: Hugr, globals: CompiledGlobals, node: AstNode
+    ) -> OutPortV:
         """Loads the custom function as a value into a local dataflow graph.
 
         This will place a `FunctionDef` node into the Hugr module if one for this
@@ -175,7 +193,9 @@ class CustomCallCompiler(ABC):
     globals: CompiledGlobals
     node: AstNode
 
-    def _setup(self, dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode) -> None:
+    def _setup(
+        self, dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode
+    ) -> None:
         self.dfg = dfg
         self.graph = graph
         self.globals = globals
@@ -226,6 +246,5 @@ class OpCompiler(CustomCallCompiler):
 
 
 class NoopCompiler(CustomCallCompiler):
-
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         return args

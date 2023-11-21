@@ -17,7 +17,13 @@ class PortVariable(Variable):
 
     port: OutPortV
 
-    def __init__(self, name: str, port: OutPortV, defined_at: Optional[AstNode], used: Optional[AstNode] = None):
+    def __init__(
+        self,
+        name: str,
+        port: OutPortV,
+        defined_at: Optional[AstNode],
+        used: Optional[AstNode] = None,
+    ) -> None:
         super().__init__(name, port.ty, defined_at, used)
         object.__setattr__(self, "port", port)
 
@@ -26,7 +32,9 @@ class CompiledVariable(ABC, Variable):
     """Abstract base class for compiled global module-level variables."""
 
     @abstractmethod
-    def load(self, dfg: "DFContainer", graph: Hugr, globals: "CompiledGlobals", node: AstNode) -> OutPortV:
+    def load(
+        self, dfg: "DFContainer", graph: Hugr, globals: "CompiledGlobals", node: AstNode
+    ) -> OutPortV:
         """Loads the variable as a value into a local dataflow graph."""
 
 

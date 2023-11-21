@@ -61,6 +61,7 @@ class GuppyModule:
         # Import builtin module
         if import_builtins:
             import guppy.prelude.builtins as builtins
+
             self.load(builtins)
 
     def load(self, m: Union[ModuleType, "GuppyModule"]) -> None:
@@ -72,7 +73,9 @@ class GuppyModule:
                 m.compile()
 
             # For now, we can only import custom functions
-            if any(not isinstance(v, CustomFunction) for v in m._compiled_globals.values()):
+            if any(
+                not isinstance(v, CustomFunction) for v in m._compiled_globals.values()
+            ):
                 raise GuppyError(
                     "Importing modules with defined functions is not supported yet"
                 )
@@ -84,14 +87,18 @@ class GuppyModule:
                 if isinstance(val, GuppyModule):
                     self.load(val)
 
-    def register_func_def(self, f: PyFunc, instance: Optional[type[GuppyType]] = None) -> None:
+    def register_func_def(
+        self, f: PyFunc, instance: Optional[type[GuppyType]] = None
+    ) -> None:
         """Registers a Python function definition as belonging to this Guppy module."""
         self._check_not_yet_compiled()
         func_ast = parse_py_func(f)
         if self._instance_func_buffer is not None:
             self._instance_func_buffer[func_ast.name] = f
         else:
-            name = qualified_name(instance, func_ast.name) if instance else func_ast.name
+            name = (
+                qualified_name(instance, func_ast.name) if instance else func_ast.name
+            )
             self._check_name_available(name, func_ast)
             self._func_defs[name] = func_ast
 
@@ -102,7 +109,9 @@ class GuppyModule:
         self._check_name_available(func_ast.name, func_ast)
         self._func_decls[func_ast.name] = func_ast
 
-    def register_custom_func(self, func: CustomFunction, instance: Optional[type[GuppyType]] = None) -> None:
+    def register_custom_func(
+        self, func: CustomFunction, instance: Optional[type[GuppyType]] = None
+    ) -> None:
         """Registers a custom function as belonging to this Guppy module."""
         self._check_not_yet_compiled()
         if self._instance_func_buffer is not None:
@@ -153,7 +162,10 @@ class GuppyModule:
         self._globals.values.update(defined_funcs)
 
         # Type check function definitions
-        checked = {x: check_global_func_def(f, self._imported_globals | self._globals) for x, f in defined_funcs.items()}
+        checked = {
+            x: check_global_func_def(f, self._imported_globals | self._globals)
+            for x, f in defined_funcs.items()
+        }
 
         # Add declared functions to the graph
         graph = Hugr(self.name)
@@ -163,14 +175,23 @@ class GuppyModule:
 
         # Prepare `FunctionDef` nodes for all function definitions
         def_nodes = {x: graph.add_def(f.ty, module_node, x) for x, f in checked.items()}
-        self._compiled_globals |= self._custom_funcs | declared_funcs | {
-            x: CompiledFunctionDef(x, f.ty, f.defined_at, None, def_nodes[x])
-            for x, f in checked.items()
-        }
+        self._compiled_globals |= (
+            self._custom_funcs
+            | declared_funcs
+            | {
+                x: CompiledFunctionDef(x, f.ty, f.defined_at, None, def_nodes[x])
+                for x, f in checked.items()
+            }
+        )
 
         # Compile function definitions to Hugr
         for x, f in checked.items():
-            compile_global_func_def(f, def_nodes[x], graph, self._imported_compiled_globals | self._compiled_globals)
+            compile_global_func_def(
+                f,
+                def_nodes[x],
+                graph,
+                self._imported_compiled_globals | self._compiled_globals,
+            )
 
         self._compiled = True
         return graph

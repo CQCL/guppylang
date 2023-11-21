@@ -176,4 +176,3 @@ def pretty_errors(f: FuncT) -> FuncT:
             return None
 
     return cast(FuncT, wrapped)
-

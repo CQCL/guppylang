@@ -3,8 +3,14 @@ from dataclasses import dataclass
 from typing import Optional, Union, Callable, Any
 
 from guppy.ast_util import AstNode, has_empty_body
-from guppy.custom import CustomFunction, OpCompiler, DefaultCallChecker, \
-    CustomCallCompiler, CustomCallChecker, DefaultCallCompiler
+from guppy.custom import (
+    CustomFunction,
+    OpCompiler,
+    DefaultCallChecker,
+    CustomCallCompiler,
+    CustomCallChecker,
+    DefaultCallCompiler,
+)
 from guppy.error import GuppyError, pretty_errors
 from guppy.guppy_types import GuppyType
 from guppy.hugr import tys, ops
@@ -29,13 +35,16 @@ class _Guppy:
         self._module = module
 
     @pretty_errors
-    def __call__(self, arg: Union[PyFunc, GuppyModule]) -> Union[Optional[Hugr], FuncDecorator]:
+    def __call__(
+        self, arg: Union[PyFunc, GuppyModule]
+    ) -> Union[Optional[Hugr], FuncDecorator]:
         """Decorator to annotate Python functions as Guppy code.
 
         Optionally, the `GuppyModule` in which the function should be placed can be passed
         to the decorator.
         """
         if isinstance(arg, GuppyModule):
+
             def dec(f: Callable[..., Any]) -> Callable[..., Any]:
                 assert isinstance(arg, GuppyModule)
                 arg.register_func_def(f)
@@ -66,7 +75,13 @@ class _Guppy:
         return dec
 
     @pretty_errors
-    def type(self, module: GuppyModule, hugr_ty: tys.SimpleType, name: str = "", linear: bool = False) -> ClassDecorator:
+    def type(
+        self,
+        module: GuppyModule,
+        hugr_ty: tys.SimpleType,
+        name: str = "",
+        linear: bool = False,
+    ) -> ClassDecorator:
         """Decorator to annotate a class definitions as Guppy types.
 
         Requires the static Hugr translation of the type. Additionally, the type can be
@@ -111,7 +126,14 @@ class _Guppy:
         return dec
 
     @pretty_errors
-    def custom(self, module: GuppyModule, compiler: Optional[CustomCallCompiler] = None, checker: Optional[CustomCallChecker] = None, higher_order_value: bool = True, name: str = "") -> CustomFuncDecorator:
+    def custom(
+        self,
+        module: GuppyModule,
+        compiler: Optional[CustomCallCompiler] = None,
+        checker: Optional[CustomCallChecker] = None,
+        higher_order_value: bool = True,
+        name: str = "",
+    ) -> CustomFuncDecorator:
         """Decorator to add custom typing or compilation behaviour to function decls.
 
         Optionally, usage of the function as a higher-order value can be disabled. In
@@ -124,22 +146,36 @@ class _Guppy:
             if not has_empty_body(func_ast):
                 raise GuppyError(
                     "Body of custom function declaration must be empty",
-                    func_ast.body[0]
+                    func_ast.body[0],
                 )
             call_checker = checker or DefaultCallChecker()
-            func = CustomFunction(name or func_ast.name, func_ast, compiler or DefaultCallCompiler(), call_checker, higher_order_value)
+            func = CustomFunction(
+                name or func_ast.name,
+                func_ast,
+                compiler or DefaultCallCompiler(),
+                call_checker,
+                higher_order_value,
+            )
             call_checker.func = func
             module.register_custom_func(func)
             return func
 
         return dec
 
-    def hugr_op(self, module: GuppyModule, op: ops.OpType, checker: Optional[CustomCallChecker] = None, higher_order_value: bool = True, name: str = "") -> CustomFuncDecorator:
+    def hugr_op(
+        self,
+        module: GuppyModule,
+        op: ops.OpType,
+        checker: Optional[CustomCallChecker] = None,
+        higher_order_value: bool = True,
+        name: str = "",
+    ) -> CustomFuncDecorator:
         """Decorator to annotate function declarations as HUGR ops."""
         return self.custom(module, OpCompiler(op), checker, higher_order_value, name)
 
     def declare(self, module: GuppyModule) -> FuncDecorator:
         """Decorator to declare functions"""
+
         def dec(f: Callable[..., Any]) -> Callable[..., Any]:
             module.register_func_decl(f)
 
@@ -152,8 +188,6 @@ class _Guppy:
             return dummy
 
         return dec
-
-
 
 
 guppy = _Guppy()

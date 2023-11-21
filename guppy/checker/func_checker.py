@@ -15,20 +15,27 @@ from guppy.nodes import GlobalCall, CheckedNestedFunctionDef, NestedFunctionDef
 @dataclass
 class DefinedFunction(CallableVariable):
     """A user-defined function"""
+
     ty: FunctionType
     defined_at: ast.FunctionDef
 
     @staticmethod
-    def from_ast(func_def: ast.FunctionDef, name: str, globals: Globals) -> "DefinedFunction":
+    def from_ast(
+        func_def: ast.FunctionDef, name: str, globals: Globals
+    ) -> "DefinedFunction":
         ty = check_signature(func_def, globals)
         return DefinedFunction(name, ty, func_def, None)
 
-    def check_call(self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context) -> GlobalCall:
+    def check_call(
+        self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context
+    ) -> GlobalCall:
         # Use default implementation from the expression checker
         args = check_call(self.ty, args, ty, node, ctx)
         return GlobalCall(func=self, args=args)
 
-    def synthesize_call(self, args: list[ast.expr], node: AstNode, ctx: Context) -> tuple[GlobalCall, GuppyType]:
+    def synthesize_call(
+        self, args: list[ast.expr], node: AstNode, ctx: Context
+    ) -> tuple[GlobalCall, GuppyType]:
         # Use default implementation from the expression checker
         args, ty = synthesize_call(self.ty, args, node, ctx)
         return GlobalCall(func=self, args=args), ty
@@ -57,7 +64,9 @@ def check_global_func_def(func: DefinedFunction, globals: Globals) -> CheckedFun
     return CheckedFunction(func_def.name, func.ty, func_def, None, cfg)
 
 
-def check_nested_func_def(func_def: NestedFunctionDef, bb: BB, ctx: Context) -> CheckedNestedFunctionDef:
+def check_nested_func_def(
+    func_def: NestedFunctionDef, bb: BB, ctx: Context
+) -> CheckedNestedFunctionDef:
     """Type checks a local (nested) function definition."""
     func_ty = check_signature(func_def, ctx.globals)
     assert func_ty.arg_names is not None
@@ -102,7 +111,10 @@ def check_nested_func_def(func_def: NestedFunctionDef, bb: BB, ctx: Context) -> 
                 )
 
     # Construct inputs for checking the body CFG
-    inputs = list(captured.values()) + [Variable(x, ty, func_def.args.args[i], None) for i, (x, ty) in enumerate(zip(func_ty.arg_names, func_ty.args))]
+    inputs = list(captured.values()) + [
+        Variable(x, ty, func_def.args.args[i], None)
+        for i, (x, ty) in enumerate(zip(func_ty.arg_names, func_ty.args))
+    ]
     globals = ctx.globals
 
     # Check if the body contains a recursive occurrence of the function name

@@ -3,8 +3,13 @@ from typing import Sequence
 
 from guppy.ast_util import AstVisitor
 from guppy.checker.cfg_checker import CheckedBB
-from guppy.compiler.core import CompilerBase, DFContainer, CompiledGlobals, \
-    PortVariable, return_var
+from guppy.compiler.core import (
+    CompilerBase,
+    DFContainer,
+    CompiledGlobals,
+    PortVariable,
+    return_var,
+)
 from guppy.compiler.expr_compiler import ExprCompiler
 from guppy.error import InternalGuppyError
 from guppy.guppy_types import TupleType
@@ -86,6 +91,6 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
     def visit_CheckedNestedFunctionDef(self, node: CheckedNestedFunctionDef) -> None:
         from guppy.compiler.func_compiler import compile_local_func_def
 
-        self.dfg[node.name] = compile_local_func_def(node, self.dfg, self.graph, self.globals)
-
-
+        self.dfg[node.name] = compile_local_func_def(
+            node, self.dfg, self.graph, self.globals
+        )

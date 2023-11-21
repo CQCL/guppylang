@@ -20,18 +20,26 @@ class DeclaredFunction(CompiledFunction):
     node: Optional[VNode] = None
 
     @staticmethod
-    def from_ast(func_def: ast.FunctionDef, name: str, globals: Globals) -> "DeclaredFunction":
+    def from_ast(
+        func_def: ast.FunctionDef, name: str, globals: Globals
+    ) -> "DeclaredFunction":
         ty = check_signature(func_def, globals)
         if not has_empty_body(func_def):
-            raise GuppyError("Body of function declaration must be empty", func_def.body[0])
+            raise GuppyError(
+                "Body of function declaration must be empty", func_def.body[0]
+            )
         return DeclaredFunction(name, ty, func_def, None)
 
-    def check_call(self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context) -> GlobalCall:
+    def check_call(
+        self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context
+    ) -> GlobalCall:
         # Use default implementation from the expression checker
         args = check_call(self.ty, args, ty, node, ctx)
         return GlobalCall(func=self, args=args)
 
-    def synthesize_call(self, args: list[ast.expr], node: AstNode, ctx: Context) -> tuple[GlobalCall, GuppyType]:
+    def synthesize_call(
+        self, args: list[ast.expr], node: AstNode, ctx: Context
+    ) -> tuple[GlobalCall, GuppyType]:
         # Use default implementation from the expression checker
         args, ty = synthesize_call(self.ty, args, node, ctx)
         return GlobalCall(func=self, args=args), ty
@@ -39,11 +47,20 @@ class DeclaredFunction(CompiledFunction):
     def add_to_graph(self, graph: Hugr, parent: Node) -> None:
         self.node = graph.add_declare(self.ty, parent, self.name)
 
-    def load(self, dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode) -> OutPortV:
+    def load(
+        self, dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode
+    ) -> OutPortV:
         assert self.node is not None
         return graph.add_load_constant(self.node.out_port(0), dfg.node).out_port(0)
 
-    def compile_call(self, args: list[OutPortV], dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode) -> list[OutPortV]:
+    def compile_call(
+        self,
+        args: list[OutPortV],
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: CompiledGlobals,
+        node: AstNode,
+    ) -> list[OutPortV]:
         assert self.node is not None
         call = graph.add_call(self.node.out_port(0), args, dfg.node)
         return [call.out_port(i) for i in range(len(type_to_row(self.ty.returns)))]

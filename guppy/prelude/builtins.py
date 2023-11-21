@@ -7,10 +7,23 @@ from guppy.decorator import guppy
 from guppy.guppy_types import BoolType
 from guppy.hugr import tys
 from guppy.module import GuppyModule
-from guppy.prelude._internal import logic_op, int_op, hugr_int_type, hugr_float_type, \
-    float_op, CoercingChecker, ReversingChecker, IntTruedivCompiler, FloatBoolCompiler, \
-    FloatDivmodCompiler, FloatFloordivCompiler, FloatModCompiler, \
-    NotImplementedCompiler, DunderChecker, CallableChecker
+from guppy.prelude._internal import (
+    logic_op,
+    int_op,
+    hugr_int_type,
+    hugr_float_type,
+    float_op,
+    CoercingChecker,
+    ReversingChecker,
+    IntTruedivCompiler,
+    FloatBoolCompiler,
+    FloatDivmodCompiler,
+    FloatFloordivCompiler,
+    FloatModCompiler,
+    NotImplementedCompiler,
+    DunderChecker,
+    CallableChecker,
+)
 
 
 builtins = GuppyModule("builtins", import_builtins=False)
@@ -18,7 +31,6 @@ builtins = GuppyModule("builtins", import_builtins=False)
 
 @guppy.extend_type(builtins, BoolType)
 class Bool:
-
     @guppy.hugr_op(builtins, logic_op("And", [tys.BoundedNatArg(n=2)]))
     def __and__(self: bool, other: bool) -> bool:
         ...
@@ -38,7 +50,6 @@ class Bool:
 
 @guppy.type(builtins, hugr_int_type, name="int")
 class Int:
-
     @guppy.hugr_op(builtins, int_op("iabs"))  # TODO: Maybe wrong? (signed vs unsigned!)
     def __abs__(self: int) -> int:
         ...
@@ -131,7 +142,9 @@ class Int:
     def __pos__(self: int) -> int:
         ...
 
-    @guppy.custom(builtins, NotImplementedCompiler("ipow"), DefaultCallChecker())  # TODO
+    @guppy.custom(
+        builtins, NotImplementedCompiler("ipow"), DefaultCallChecker()
+    )  # TODO
     def __pow__(self: int, other: int) -> int:
         ...
 
@@ -143,19 +156,29 @@ class Int:
     def __rand__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(builtins, int_op("idivmod_s", num_params=2), ReversingChecker(DefaultCallChecker()))
+    @guppy.hugr_op(
+        builtins,
+        int_op("idivmod_s", num_params=2),
+        ReversingChecker(DefaultCallChecker()),
+    )
     def __rdivmod__(self: int, other: int) -> tuple[int, int]:
         ...
 
-    @guppy.hugr_op(builtins, int_op("idiv_s", num_params=2), ReversingChecker(DefaultCallChecker()))
+    @guppy.hugr_op(
+        builtins, int_op("idiv_s", num_params=2), ReversingChecker(DefaultCallChecker())
+    )
     def __rfloordiv__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(builtins, int_op("ishl", num_params=2), ReversingChecker(DefaultCallChecker()))  # TODO: RHS is unsigned
+    @guppy.hugr_op(
+        builtins, int_op("ishl", num_params=2), ReversingChecker(DefaultCallChecker())
+    )  # TODO: RHS is unsigned
     def __rlshift__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(builtins, int_op("imod_s", num_params=2), ReversingChecker(DefaultCallChecker()))
+    @guppy.hugr_op(
+        builtins, int_op("imod_s", num_params=2), ReversingChecker(DefaultCallChecker())
+    )
     def __rmod__(self: int, other: int) -> int:
         ...
 
@@ -171,11 +194,15 @@ class Int:
     def __round__(self: int) -> int:
         ...
 
-    @guppy.custom(builtins, NotImplementedCompiler("ipow"), ReversingChecker(DefaultCallChecker()))  # TODO
+    @guppy.custom(
+        builtins, NotImplementedCompiler("ipow"), ReversingChecker(DefaultCallChecker())
+    )  # TODO
     def __rpow__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(builtins, int_op("ishr", num_params=2), ReversingChecker(DefaultCallChecker()))  # TODO: RHS is unsigned
+    @guppy.hugr_op(
+        builtins, int_op("ishr", num_params=2), ReversingChecker(DefaultCallChecker())
+    )  # TODO: RHS is unsigned
     def __rrshift__(self: int, other: int) -> int:
         ...
 
@@ -187,7 +214,9 @@ class Int:
     def __rsub__(self: int, other: int) -> int:
         ...
 
-    @guppy.custom(builtins, IntTruedivCompiler(), ReversingChecker(DefaultCallChecker()))
+    @guppy.custom(
+        builtins, IntTruedivCompiler(), ReversingChecker(DefaultCallChecker())
+    )
     def __rtruediv__(self: int, other: int) -> float:
         ...
 
@@ -214,7 +243,6 @@ class Int:
 
 @guppy.type(builtins, hugr_float_type, name="float")
 class Float:
-
     @guppy.hugr_op(builtins, float_op("fabs"), CoercingChecker())
     def __abs__(self: float) -> float:
         ...
@@ -259,7 +287,9 @@ class Float:
     def __gt__(self: float, other: float) -> bool:
         ...
 
-    @guppy.hugr_op(builtins, float_op("trunc_s", "arithmetic.conversions"), CoercingChecker())
+    @guppy.hugr_op(
+        builtins, float_op("trunc_s", "arithmetic.conversions"), CoercingChecker()
+    )
     def __int__(self: float) -> int:
         ...
 
@@ -303,7 +333,9 @@ class Float:
     def __rdivmod__(self: float, other: float) -> tuple[float, float]:
         ...
 
-    @guppy.custom(builtins, FloatFloordivCompiler(), ReversingChecker(CoercingChecker()))
+    @guppy.custom(
+        builtins, FloatFloordivCompiler(), ReversingChecker(CoercingChecker())
+    )
     def __rfloordiv__(self: float, other: float) -> float:
         ...
 
@@ -315,11 +347,15 @@ class Float:
     def __rmul__(self: float, other: float) -> float:
         ...
 
-    @guppy.custom(builtins, NotImplementedCompiler("fround"), ReversingChecker(CoercingChecker()))  # TODO
+    @guppy.custom(
+        builtins, NotImplementedCompiler("fround"), ReversingChecker(CoercingChecker())
+    )  # TODO
     def __round__(self: float) -> float:
         ...
 
-    @guppy.custom(builtins, NotImplementedCompiler("fpow"), ReversingChecker(CoercingChecker()))  # TODO
+    @guppy.custom(
+        builtins, NotImplementedCompiler("fpow"), ReversingChecker(CoercingChecker())
+    )  # TODO
     def __rpow__(self: float, other: float) -> float:
         ...
 
@@ -339,7 +375,9 @@ class Float:
     def __truediv__(self: float, other: float) -> float:
         ...
 
-    @guppy.hugr_op(builtins, float_op("trunc_s", "arithmetic.conversions"), CoercingChecker())
+    @guppy.hugr_op(
+        builtins, float_op("trunc_s", "arithmetic.conversions"), CoercingChecker()
+    )
     def __trunc__(self: float) -> float:
         ...
 
@@ -349,7 +387,9 @@ def abs(x):
     ...
 
 
-@guppy.custom(builtins, name="bool", checker=DunderChecker("__bool__"), higher_order_value=False)
+@guppy.custom(
+    builtins, name="bool", checker=DunderChecker("__bool__"), higher_order_value=False
+)
 def _bool(x):
     ...
 
@@ -359,22 +399,30 @@ def callable(x):
     ...
 
 
-@guppy.custom(builtins, checker=DunderChecker("__divmod__", num_args=2), higher_order_value=False)
+@guppy.custom(
+    builtins, checker=DunderChecker("__divmod__", num_args=2), higher_order_value=False
+)
 def divmod(x, y):
     ...
 
 
-@guppy.custom(builtins, name="float", checker=DunderChecker("__float__"), higher_order_value=False)
+@guppy.custom(
+    builtins, name="float", checker=DunderChecker("__float__"), higher_order_value=False
+)
 def _float(x, y):
     ...
 
 
-@guppy.custom(builtins, name="int", checker=DunderChecker("__int__"), higher_order_value=False)
+@guppy.custom(
+    builtins, name="int", checker=DunderChecker("__int__"), higher_order_value=False
+)
 def _int(x):
     ...
 
 
-@guppy.custom(builtins, checker=DunderChecker("__pow__", num_args=2), higher_order_value=False)
+@guppy.custom(
+    builtins, checker=DunderChecker("__pow__", num_args=2), higher_order_value=False
+)
 def pow(x, y):
     ...
 
@@ -382,4 +430,3 @@ def pow(x, y):
 @guppy.custom(builtins, checker=DunderChecker("__round__"), higher_order_value=False)
 def round(x):
     ...
-
