@@ -3,11 +3,12 @@ import itertools
 from typing import Optional, Iterator, Union, NamedTuple
 
 from guppy.ast_util import set_location_from, AstVisitor
-from guppy.cfg.bb import BB, NestedFunctionDef
+from guppy.cfg.bb import BB
 from guppy.cfg.cfg import CFG
-from guppy.compiler_base import Globals
+from guppy.checker.core import Globals
 from guppy.error import GuppyError, InternalGuppyError
-
+from guppy.guppy_types import NoneType
+from guppy.nodes import NestedFunctionDef
 
 # In order to build expressions, need an endless stream of unique temporary variables
 # to store intermediate results
@@ -31,10 +32,9 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     """Constructs a CFG from ast nodes."""
 
     cfg: CFG
-    num_returns: int
     globals: Globals
 
-    def build(self, nodes: list[ast.stmt], num_returns: int, globals: Globals) -> CFG:
+    def build(self, nodes: list[ast.stmt], returns_none: bool, globals: Globals) -> CFG:
         """Builds a CFG from a list of ast nodes.
 
         We also require the expected number of return ports for the whole CFG. This is
@@ -42,7 +42,6 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         variables.
         """
         self.cfg = CFG()
-        self.num_returns = num_returns
         self.globals = globals
 
         final_bb = self.visit_stmts(
@@ -52,7 +51,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         # If we're still in a basic block after compiling the whole body, we have to add
         # an implicit void return
         if final_bb is not None:
-            if num_returns > 0:
+            if not returns_none:
                 raise GuppyError("Expected return statement", nodes[-1])
             self.cfg.link(final_bb, self.cfg.exit_bb)
 
@@ -166,10 +165,11 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_FunctionDef(
         self, node: ast.FunctionDef, bb: BB, jumps: Jumps
     ) -> Optional[BB]:
-        from guppy.function import FunctionDefCompiler
+        from guppy.checker.func_checker import check_signature
 
-        func_ty = FunctionDefCompiler.validate_signature(node, self.globals)
-        cfg = CFGBuilder().build(node.body, len(func_ty.returns), self.globals)
+        func_ty = check_signature(node, self.globals)
+        returns_none = isinstance(func_ty.returns, NoneType)
+        cfg = CFGBuilder().build(node.body, returns_none, self.globals)
 
         new_node = NestedFunctionDef(
             cfg,
