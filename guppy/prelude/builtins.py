@@ -4,7 +4,7 @@
 
 from guppy.custom import NoopCompiler, DefaultCallChecker
 from guppy.decorator import guppy
-from guppy.guppy_types import BoolType
+from guppy.types import BoolType
 from guppy.hugr import tys
 from guppy.module import GuppyModule
 from guppy.prelude._internal import (

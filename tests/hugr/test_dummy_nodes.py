@@ -1,4 +1,4 @@
-from guppy.guppy_types import FunctionType, BoolType, TupleType
+from guppy.types import FunctionType, BoolType, TupleType
 from guppy.hugr import ops
 from guppy.hugr.hugr import Hugr
 

@@ -8,7 +8,7 @@ from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
 from guppy.error import GuppyError
-from guppy.guppy_types import type_to_row, GuppyType
+from guppy.types import type_to_row, GuppyType
 from guppy.hugr.hugr import VNode, Hugr, Node, OutPortV
 from guppy.nodes import GlobalCall
 

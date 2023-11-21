@@ -12,7 +12,7 @@ from guppy.custom import (
     DefaultCallCompiler,
 )
 from guppy.error import GuppyError, pretty_errors
-from guppy.guppy_types import GuppyType
+from guppy.types import GuppyType
 from guppy.hugr import tys, ops
 from guppy.hugr.hugr import Hugr
 from guppy.module import GuppyModule, PyFunc, parse_py_func

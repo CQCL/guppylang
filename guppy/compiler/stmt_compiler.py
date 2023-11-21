@@ -12,7 +12,7 @@ from guppy.compiler.core import (
 )
 from guppy.compiler.expr_compiler import ExprCompiler
 from guppy.error import InternalGuppyError
-from guppy.guppy_types import TupleType
+from guppy.types import TupleType
 from guppy.hugr.hugr import Hugr, OutPortV
 from guppy.nodes import CheckedNestedFunctionDef
 

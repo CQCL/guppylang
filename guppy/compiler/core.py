@@ -4,7 +4,7 @@ from typing import Optional, Iterator
 
 from guppy.ast_util import AstNode
 from guppy.checker.core import Variable, CallableVariable
-from guppy.guppy_types import FunctionType
+from guppy.types import FunctionType
 from guppy.hugr.hugr import OutPortV, DFContainingNode, Hugr
 
 

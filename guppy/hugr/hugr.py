@@ -8,7 +8,7 @@ from dataclasses import field, dataclass
 
 import guppy.hugr.ops as ops
 import guppy.hugr.raw as raw
-from guppy.guppy_types import (
+from guppy.types import (
     GuppyType,
     TupleType,
     FunctionType,

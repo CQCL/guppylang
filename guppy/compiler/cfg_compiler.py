@@ -12,7 +12,7 @@ from guppy.compiler.core import (
 )
 from guppy.compiler.expr_compiler import ExprCompiler
 from guppy.compiler.stmt_compiler import StmtCompiler
-from guppy.guppy_types import TupleType, SumType, type_to_row
+from guppy.types import TupleType, SumType, type_to_row
 from guppy.hugr.hugr import Hugr, Node, CFNode, OutPortV
 
 

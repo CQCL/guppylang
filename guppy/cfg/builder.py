@@ -7,7 +7,7 @@ from guppy.cfg.bb import BB
 from guppy.cfg.cfg import CFG
 from guppy.checker.core import Globals
 from guppy.error import GuppyError, InternalGuppyError
-from guppy.guppy_types import NoneType
+from guppy.types import NoneType
 from guppy.nodes import NestedFunctionDef
 
 # In order to build expressions, need an endless stream of unique temporary variables
