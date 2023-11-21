@@ -1,4 +1,5 @@
-from guppy.compiler import guppy, GuppyModule
+from guppy.decorator import guppy
+from guppy.module import GuppyModule
 from tests.integration.util import functional, _
 
 
@@ -53,4 +54,4 @@ def test_even_odd(validate):
             return False
         return is_even(x - 1)
 
-    validate(module.compile(exit_on_error=True))
+    validate(module.compile())

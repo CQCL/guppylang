@@ -1,6 +1,6 @@
 import pytest
 
-from guppy.compiler import guppy
+from guppy.decorator import guppy
 from tests.integration.util import functional, _
 
 

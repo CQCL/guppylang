@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:6
 5:    def foo() -> bool:
 6:        return 42
                  ^^
-GuppyTypeError: Return type mismatch: expected `bool`, got `int`
+GuppyTypeError: Expected return value of type `bool`, got `int`

@@ -1,6 +1,7 @@
 from typing import Callable
 
-from guppy.compiler import guppy, GuppyModule
+from guppy.decorator import guppy
+from guppy.module import GuppyModule
 
 
 def test_basic(validate):

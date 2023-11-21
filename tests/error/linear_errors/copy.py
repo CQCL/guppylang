@@ -1,6 +1,6 @@
 import guppy.prelude.quantum as quantum
-
-from guppy.compiler import GuppyModule, guppy
+from guppy.decorator import guppy
+from guppy.module import GuppyModule
 from guppy.hugr.tys import Qubit
 
 
@@ -13,4 +13,4 @@ def foo(q: Qubit) -> tuple[Qubit, Qubit]:
     return q, q
 
 
-module.compile(True)
+module.compile()

@@ -1,6 +1,6 @@
 import pytest
 
-from guppy.compiler import guppy
+from guppy.decorator import guppy
 
 """ All sorts of weird stuff is allowed when variables are not used. """
 

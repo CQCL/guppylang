@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:11
 10:    
 11:    return bar(foo)
                   ^^^
-GuppyTypeError: Expected argument of type `None -> int`, got `int -> int`
+GuppyTypeError: Expected argument of type `() -> int`, got `int -> int`
