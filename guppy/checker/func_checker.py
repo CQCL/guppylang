@@ -1,6 +1,5 @@
 import ast
-from dataclasses import dataclass, field
-from typing import Mapping
+from dataclasses import dataclass
 
 from guppy.ast_util import return_nodes_in_ast, AstNode, with_loc
 from guppy.cfg.bb import BB
@@ -9,10 +8,8 @@ from guppy.checker.core import Variable, Globals, Context, CallableVariable
 from guppy.checker.cfg_checker import check_cfg, CheckedCFG
 from guppy.checker.expr_checker import synthesize_call, check_call
 from guppy.error import GuppyError
-from guppy.guppy_types import FunctionType, type_from_ast, NoneType, GuppyType, \
-    type_to_row
-from guppy.nodes import GlobalCall, CheckedNestedFunctionDef, LocalName, \
-    NestedFunctionDef
+from guppy.guppy_types import FunctionType, type_from_ast, NoneType, GuppyType
+from guppy.nodes import GlobalCall, CheckedNestedFunctionDef, NestedFunctionDef
 
 
 @dataclass

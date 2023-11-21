@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Optional, Iterator, NamedTuple
+from typing import Optional, Iterator
 
 from guppy.ast_util import AstNode
 from guppy.checker.core import Variable, CallableVariable

@@ -1,13 +1,10 @@
 import ast
-from ast import NodeTransformer
 from typing import Optional, Union, NoReturn, Any
 
-from guppy.ast_util import AstVisitor, with_loc, AstNode, with_type, get_type, \
-    get_type_opt
+from guppy.ast_util import AstVisitor, with_loc, AstNode, with_type, get_type_opt
 from guppy.checker.core import Context, CallableVariable, Globals
 from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppy.guppy_types import GuppyType, TupleType, FunctionType, BoolType
-from guppy.hugr import val
 from guppy.nodes import LocalName, GlobalName, LocalCall
 
 # Mapping from unary AST op to dunder method and display name

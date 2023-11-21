@@ -1,10 +1,8 @@
-import ast
 import functools
 from dataclasses import dataclass
 from typing import Optional, Union, Callable, Any
 
 from guppy.ast_util import AstNode, has_empty_body
-from guppy.checker.func_checker import check_signature
 from guppy.custom import CustomFunction, OpCompiler, DefaultCallChecker, \
     CustomCallCompiler, CustomCallChecker, DefaultCallCompiler
 from guppy.error import GuppyError, pretty_errors

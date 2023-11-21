@@ -1,13 +1,13 @@
 import ast
 from typing import Sequence
 
-from guppy.ast_util import AstVisitor, get_type
+from guppy.ast_util import AstVisitor
 from guppy.checker.cfg_checker import CheckedBB
 from guppy.compiler.core import CompilerBase, DFContainer, CompiledGlobals, \
     PortVariable, return_var
 from guppy.compiler.expr_compiler import ExprCompiler
 from guppy.error import InternalGuppyError
-from guppy.guppy_types import GuppyType, NoneType, TupleType
+from guppy.guppy_types import TupleType
 from guppy.hugr.hugr import Hugr, OutPortV
 from guppy.nodes import CheckedNestedFunctionDef
 

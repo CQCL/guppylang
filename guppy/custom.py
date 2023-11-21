@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from guppy.ast_util import AstNode, get_type, with_type, with_loc
-from guppy.checker.core import CallableVariable, Context, Globals
+from guppy.checker.core import Context, Globals
 from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals

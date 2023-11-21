@@ -1,12 +1,11 @@
 import ast
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import NamedTuple, Optional, Union
 
 from guppy.ast_util import AstNode
 from guppy.guppy_types import GuppyType, FunctionType, TupleType, SumType, NoneType, \
     BoolType
-from guppy.nodes import GlobalCall
 
 
 @dataclass

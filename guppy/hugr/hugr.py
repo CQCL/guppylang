@@ -3,7 +3,7 @@ import networkx  # type: ignore
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import Optional, Iterator, Tuple, Any, Union
+from typing import Optional, Iterator, Tuple, Any
 from dataclasses import field, dataclass
 
 import guppy.hugr.ops as ops
@@ -14,7 +14,7 @@ from guppy.guppy_types import (
     FunctionType,
     SumType, type_to_row, row_to_type,
 )
-from guppy.hugr import val, tys
+from guppy.hugr import val
 
 NodeIdx = int
 PortOffset = int

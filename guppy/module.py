@@ -8,13 +8,13 @@ from typing import Callable, Any, Optional, Union
 from guppy.ast_util import annotate_location, AstNode
 from guppy.checker.core import Globals, qualified_name
 from guppy.checker.func_checker import DefinedFunction, check_global_func_def
-from guppy.compiler.core import CompiledGlobals, CompiledFunction, DFContainer
+from guppy.compiler.core import CompiledGlobals
 from guppy.compiler.func_compiler import compile_global_func_def, CompiledFunctionDef
 from guppy.custom import CustomFunction
 from guppy.declared import DeclaredFunction
 from guppy.error import GuppyError, pretty_errors
-from guppy.guppy_types import GuppyType, type_to_row
-from guppy.hugr.hugr import Hugr, Node, VNode, OutPortV
+from guppy.guppy_types import GuppyType
+from guppy.hugr.hugr import Hugr
 
 PyFunc = Callable[..., Any]
 

@@ -1,7 +1,7 @@
 import ast
 from typing import Sequence
 
-from guppy.ast_util import set_location_from, with_loc, AstVisitor
+from guppy.ast_util import with_loc, AstVisitor
 from guppy.cfg.bb import BB, BBStatement
 from guppy.checker.core import Variable, Context
 from guppy.checker.expr_checker import ExprSynthesizer, ExprChecker
@@ -74,7 +74,7 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.stmt:
         if node.value is None:
-            raise GuppyError(f"Variable declaration is not supported. Assignment is required", node)
+            raise GuppyError("Variable declaration is not supported. Assignment is required", node)
         ty = type_from_ast(node.annotation, self.ctx.globals)
         node.value = self._check_expr(node.value, ty)
         self._check_assign(node.target, ty, node)

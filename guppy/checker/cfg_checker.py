@@ -1,10 +1,9 @@
 import collections
-from copy import copy
 from dataclasses import dataclass
 from typing import Sequence
 
 from guppy.ast_util import line_col
-from guppy.cfg.bb import BB, BBStatement
+from guppy.cfg.bb import BB
 from guppy.cfg.cfg import CFG, BaseCFG
 from guppy.checker.core import Globals, Context
 

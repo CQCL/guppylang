@@ -1,15 +1,12 @@
-import ast
-from dataclasses import dataclass, field
-from typing import Mapping, Sequence
+from dataclasses import dataclass
 
 from guppy.ast_util import AstNode
-from guppy.checker.core import Variable
 from guppy.checker.func_checker import CheckedFunction, DefinedFunction
 from guppy.compiler.cfg_compiler import compile_cfg
 from guppy.compiler.core import CompiledFunction, CompiledGlobals, DFContainer, \
     PortVariable
 from guppy.guppy_types import type_to_row, FunctionType
-from guppy.hugr.hugr import Hugr, DFContainingNode, OutPortV, DFContainingVNode
+from guppy.hugr.hugr import Hugr, OutPortV, DFContainingVNode
 from guppy.nodes import CheckedNestedFunctionDef
 
 
