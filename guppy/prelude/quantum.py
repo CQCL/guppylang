@@ -1,64 +1,61 @@
-"""Guppy standard extension for quantum operations."""
+"""Guppy standard module for quantum operations."""
 
 # mypy: disable-error-code=empty-body
 
+from guppy.decorator import guppy
+from guppy.hugr import tys, ops
 from guppy.hugr.tys import TypeBound
-from guppy.prelude import builtin
-from guppy.extension import GuppyExtension, OpCompiler
-from guppy.hugr import ops, tys
+from guppy.module import GuppyModule
 
 
-class QuantumOpCompiler(OpCompiler):
-    def __init__(self, op_name: str, ext: str = "quantum.tket2"):
-        super().__init__(ops.CustomOp(extension=ext, op_name=op_name, args=[]))
+quantum = GuppyModule("quantum")
 
 
-_hugr_qubit = tys.Opaque(extension="prelude", id="qubit", args=[], bound=TypeBound.Any)
+def quantum_op(op_name: str) -> ops.OpType:
+    """Utility method to create Hugr quantum ops."""
+    return ops.CustomOp(extension="quantum.tket2", op_name=op_name, args=[])
 
 
-extension = GuppyExtension("quantum.tket2", dependencies=[builtin])
-
-
-@extension.type(_hugr_qubit, linear=True)
+@guppy.type(quantum, tys.Opaque(extension="prelude", id="qubit", args=[], bound=TypeBound.Any), linear=True)
 class Qubit:
     pass
 
 
-@extension.func(QuantumOpCompiler("H"))
+@guppy.hugr_op(quantum, quantum_op("H"))
 def h(q: Qubit) -> Qubit:
     ...
 
 
-@extension.func(QuantumOpCompiler("CX"))
+@guppy.hugr_op(quantum, quantum_op("CX"))
 def cx(control: Qubit, target: Qubit) -> tuple[Qubit, Qubit]:
     ...
 
 
-@extension.func(QuantumOpCompiler("RzF64"))
+@guppy.hugr_op(quantum, quantum_op("RzF64"))
 def rz(q: Qubit, angle: float) -> Qubit:
     ...
 
 
-@extension.func(QuantumOpCompiler("Measure"))
+@guppy.hugr_op(quantum, quantum_op("Measure"))
 def measure(q: Qubit) -> tuple[Qubit, bool]:
     ...
 
 
-@extension.func(QuantumOpCompiler("T"))
+@guppy.hugr_op(quantum, quantum_op("T"))
 def t(q: Qubit) -> Qubit:
     ...
 
 
-@extension.func(QuantumOpCompiler("Tdg"))
+@guppy.hugr_op(quantum, quantum_op("Tdg"))
 def tdg(q: Qubit) -> Qubit:
     ...
 
 
-@extension.func(QuantumOpCompiler("Z"))
+@guppy.hugr_op(quantum, quantum_op("Z"))
 def z(q: Qubit) -> Qubit:
     ...
 
 
-@extension.func(QuantumOpCompiler("X"))
+@guppy.hugr_op(quantum, quantum_op("X"))
 def x(q: Qubit) -> Qubit:
     ...
