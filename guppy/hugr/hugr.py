@@ -3,7 +3,7 @@ import networkx  # type: ignore
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import Optional, Iterator, Tuple, Any
+from typing import Optional, Iterator, Tuple, Any, Union
 from dataclasses import field, dataclass
 
 import guppy.hugr.ops as ops
@@ -12,9 +12,9 @@ from guppy.guppy_types import (
     GuppyType,
     TupleType,
     FunctionType,
-    SumType,
+    SumType, type_to_row, row_to_type,
 )
-from guppy.hugr import val
+from guppy.hugr import val, tys
 
 NodeIdx = int
 PortOffset = int
@@ -483,7 +483,7 @@ class Hugr:
         """Adds a `Call` node to the graph."""
         assert isinstance(def_port.ty, FunctionType)
         return self.add_node(
-            ops.Call(), None, list(def_port.ty.returns), parent, args + [def_port]
+            ops.Call(), None, list(type_to_row(def_port.ty.returns)), parent, args + [def_port]
         )
 
     def add_indirect_call(
@@ -494,7 +494,7 @@ class Hugr:
         return self.add_node(
             ops.CallIndirect(),
             None,
-            list(fun_port.ty.returns),
+            list(type_to_row(fun_port.ty.returns)),
             parent,
             [fun_port] + args,
         )
@@ -628,7 +628,7 @@ class Hugr:
         for n in list(self.nodes()):
             if isinstance(n, VNode) and isinstance(n.op, ops.DummyOp):
                 name = n.op.name
-                fun_ty = FunctionType(list(n.in_port_types), list(n.out_port_types))
+                fun_ty = FunctionType(list(n.in_port_types), row_to_type(n.out_port_types))
                 if name in used_names:
                     used_names[name] += 1
                     name = f"{name}${used_names[name]}"
