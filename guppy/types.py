@@ -20,7 +20,7 @@ class GuppyType(ABC):
 
     @staticmethod
     @abstractmethod
-    def build(*args: "GuppyType", node: AstNode) -> "GuppyType":
+    def build(*args: "GuppyType", node: Optional[AstNode] = None) -> "GuppyType":
         pass
 
     @property
@@ -53,7 +53,7 @@ class FunctionType(GuppyType):
             return f"({', '.join(str(a) for a in self.args)}) -> {self.returns}"
 
     @staticmethod
-    def build(*args: GuppyType, node: AstNode) -> GuppyType:
+    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
         # Function types cannot be constructed using `build`. The type parsing code
         # has a special case for function types.
         raise NotImplementedError()
@@ -71,7 +71,12 @@ class TupleType(GuppyType):
     name: str = "tuple"
 
     @staticmethod
-    def build(*args: GuppyType, node: AstNode) -> GuppyType:
+    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+        from guppy.error import GuppyError
+
+        # TODO: Parse empty tuples via `tuple[()]`
+        if len(args) == 0:
+            raise GuppyError("Tuple type requires generic type arguments", node)
         return TupleType(list(args))
 
     def __str__(self) -> str:
@@ -91,7 +96,7 @@ class SumType(GuppyType):
     element_types: Sequence[GuppyType]
 
     @staticmethod
-    def build(*args: GuppyType, node: AstNode) -> GuppyType:
+    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
         # Sum types cannot be parsed and constructed using `build` since they cannot be
         # written by the user
         raise NotImplementedError()
@@ -118,7 +123,7 @@ class NoneType(GuppyType):
     linear: bool = False
 
     @staticmethod
-    def build(*args: GuppyType, node: AstNode) -> GuppyType:
+    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
         if len(args) > 0:
             from guppy.error import GuppyError
 
@@ -144,7 +149,7 @@ class BoolType(SumType):
         super().__init__([TupleType([]), TupleType([])])
 
     @staticmethod
-    def build(*args: GuppyType, node: AstNode) -> GuppyType:
+    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
         if len(args) > 0:
             from guppy.error import GuppyError
 

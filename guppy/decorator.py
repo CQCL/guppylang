@@ -98,7 +98,9 @@ class _Guppy:
                 name = _name
 
                 @staticmethod
-                def build(*args: GuppyType, node: AstNode) -> "GuppyType":
+                def build(
+                    *args: GuppyType, node: Optional[AstNode] = None
+                ) -> "GuppyType":
                     # At the moment, custom types don't support type arguments.
                     if len(args) > 0:
                         raise GuppyError(
