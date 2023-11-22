@@ -5,7 +5,7 @@
 from guppy.custom import NoopCompiler, DefaultCallChecker
 from guppy.decorator import guppy
 from guppy.types import BoolType
-from guppy.hugr import tys
+from guppy.hugr import tys, ops
 from guppy.module import GuppyModule
 from guppy.prelude._internal import (
     logic_op,
@@ -20,7 +20,6 @@ from guppy.prelude._internal import (
     FloatDivmodCompiler,
     FloatFloordivCompiler,
     FloatModCompiler,
-    NotImplementedCompiler,
     DunderChecker,
     CallableChecker,
 )
@@ -142,9 +141,7 @@ class Int:
     def __pos__(self: int) -> int:
         ...
 
-    @guppy.custom(
-        builtins, NotImplementedCompiler("ipow"), DefaultCallChecker()
-    )  # TODO
+    @guppy.hugr_op(builtins, ops.DummyOp(name="ipow"))  # TODO
     def __pow__(self: int, other: int) -> int:
         ...
 
@@ -194,8 +191,8 @@ class Int:
     def __round__(self: int) -> int:
         ...
 
-    @guppy.custom(
-        builtins, NotImplementedCompiler("ipow"), ReversingChecker(DefaultCallChecker())
+    @guppy.hugr_op(
+        builtins, ops.DummyOp(name="ipow"), ReversingChecker(DefaultCallChecker())
     )  # TODO
     def __rpow__(self: int, other: int) -> int:
         ...
@@ -321,7 +318,7 @@ class Float:
     def __pos__(self: float) -> float:
         ...
 
-    @guppy.custom(builtins, NotImplementedCompiler("fpow"), CoercingChecker())  # TODO
+    @guppy.hugr_op(builtins, ops.DummyOp(name="fpow"))  # TODO
     def __pow__(self: float, other: float) -> float:
         ...
 
@@ -347,14 +344,12 @@ class Float:
     def __rmul__(self: float, other: float) -> float:
         ...
 
-    @guppy.custom(
-        builtins, NotImplementedCompiler("fround"), ReversingChecker(CoercingChecker())
-    )  # TODO
+    @guppy.hugr_op(builtins, ops.DummyOp(name="fround"))  # TODO
     def __round__(self: float) -> float:
         ...
 
-    @guppy.custom(
-        builtins, NotImplementedCompiler("fpow"), ReversingChecker(CoercingChecker())
+    @guppy.hugr_op(
+        builtins, ops.DummyOp(name="fpow"), ReversingChecker(DefaultCallChecker())
     )  # TODO
     def __rpow__(self: float, other: float) -> float:
         ...

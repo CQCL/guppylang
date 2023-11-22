@@ -12,7 +12,7 @@ from guppy.custom import (
     CustomFunction,
     CustomCallCompiler,
 )
-from guppy.error import GuppyTypeError
+from guppy.error import GuppyTypeError, GuppyError
 from guppy.types import GuppyType, type_to_row, FunctionType, BoolType
 from guppy.hugr import ops, tys, val
 from guppy.hugr.hugr import OutPortV
@@ -128,21 +128,6 @@ class ReversingChecker(CustomCallChecker):
         if isinstance(expr, GlobalCall):
             expr.args = list(reversed(args))
         return expr, ty
-
-
-class NotImplementedCompiler(CustomCallCompiler):
-    """Compiler for functions that are not yet implemented."""
-
-    name: str
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        node = self.graph.add_node(ops.DummyOp(name=self.name), inputs=args)
-        return_ty = get_type(self.node)
-        assert return_ty is not None
-        return [node.add_out_port(ty) for ty in type_to_row(return_ty)]
 
 
 class DunderChecker(CustomCallChecker):
