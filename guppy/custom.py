@@ -2,7 +2,7 @@ import ast
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from guppy.ast_util import AstNode, with_type, with_loc
+from guppy.ast_util import AstNode, with_type, with_loc, get_type
 from guppy.checker.core import Context, Globals
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
@@ -12,7 +12,7 @@ from guppy.error import (
     UnknownFunctionType,
     GuppyTypeError,
 )
-from guppy.gtypes import GuppyType, FunctionType
+from guppy.gtypes import GuppyType, FunctionType, type_to_row
 from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV, Hugr, Node, DFContainingVNode
 
@@ -227,4 +227,6 @@ class OpCompiler(CustomCallCompiler):
         self.op = op
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        raise NotImplementedError
+        node = self.graph.add_node(self.op.copy(), inputs=args, parent=self.dfg.node)
+        return_ty = get_type(self.node)
+        return [node.add_out_port(ty) for ty in type_to_row(return_ty)]
