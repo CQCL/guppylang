@@ -13,7 +13,7 @@ from guppy.custom import (
     CustomCallCompiler,
 )
 from guppy.error import GuppyTypeError, GuppyError
-from guppy.types import GuppyType, type_to_row, FunctionType, BoolType
+from guppy.types import GuppyType, FunctionType, BoolType
 from guppy.hugr import ops, tys, val
 from guppy.hugr.hugr import OutPortV
 from guppy.nodes import GlobalCall
@@ -110,8 +110,8 @@ class ReversingChecker(CustomCallChecker):
 
     base_checker: CustomCallChecker
 
-    def __init__(self, base_checker: CustomCallChecker):
-        self.base_checker = base_checker
+    def __init__(self, base_checker: Optional[CustomCallChecker] = None):
+        self.base_checker = base_checker or DefaultCallChecker()
 
     def _setup(self, ctx: Context, node: AstNode, func: CustomFunction) -> None:
         super()._setup(ctx, node, func)

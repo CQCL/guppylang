@@ -145,45 +145,39 @@ class Int:
     def __pow__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(builtins, int_op("iadd"), ReversingChecker(DefaultCallChecker()))
+    @guppy.hugr_op(builtins, int_op("iadd"), ReversingChecker())
     def __radd__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(builtins, int_op("rand"), ReversingChecker(DefaultCallChecker()))
+    @guppy.hugr_op(builtins, int_op("rand"), ReversingChecker())
     def __rand__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(
-        builtins,
-        int_op("idivmod_s", num_params=2),
-        ReversingChecker(DefaultCallChecker()),
-    )
+    @guppy.hugr_op(builtins, int_op("idivmod_s", num_params=2), ReversingChecker())
     def __rdivmod__(self: int, other: int) -> tuple[int, int]:
         ...
 
     @guppy.hugr_op(
-        builtins, int_op("idiv_s", num_params=2), ReversingChecker(DefaultCallChecker())
+        builtins, int_op("idiv_s", num_params=2), ReversingChecker()
     )
     def __rfloordiv__(self: int, other: int) -> int:
         ...
 
     @guppy.hugr_op(
-        builtins, int_op("ishl", num_params=2), ReversingChecker(DefaultCallChecker())
+        builtins, int_op("ishl", num_params=2), ReversingChecker()
     )  # TODO: RHS is unsigned
     def __rlshift__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(
-        builtins, int_op("imod_s", num_params=2), ReversingChecker(DefaultCallChecker())
-    )
+    @guppy.hugr_op(builtins, int_op("imod_s", num_params=2), ReversingChecker())
     def __rmod__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(builtins, int_op("imul"), ReversingChecker(DefaultCallChecker()))
+    @guppy.hugr_op(builtins, int_op("imul"), ReversingChecker())
     def __rmul__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(builtins, int_op("ior"), ReversingChecker(DefaultCallChecker()))
+    @guppy.hugr_op(builtins, int_op("ior"), ReversingChecker())
     def __ror__(self: int, other: int) -> int:
         ...
 
@@ -192,13 +186,13 @@ class Int:
         ...
 
     @guppy.hugr_op(
-        builtins, ops.DummyOp(name="ipow"), ReversingChecker(DefaultCallChecker())
+        builtins, ops.DummyOp(name="ipow"), ReversingChecker()
     )  # TODO
     def __rpow__(self: int, other: int) -> int:
         ...
 
     @guppy.hugr_op(
-        builtins, int_op("ishr", num_params=2), ReversingChecker(DefaultCallChecker())
+        builtins, int_op("ishr", num_params=2), ReversingChecker()
     )  # TODO: RHS is unsigned
     def __rrshift__(self: int, other: int) -> int:
         ...
@@ -207,17 +201,17 @@ class Int:
     def __rshift__(self: int, other: int) -> int:
         ...
 
-    @guppy.hugr_op(builtins, int_op("isub"), ReversingChecker(DefaultCallChecker()))
+    @guppy.hugr_op(builtins, int_op("isub"), ReversingChecker())
     def __rsub__(self: int, other: int) -> int:
         ...
 
     @guppy.custom(
-        builtins, IntTruedivCompiler(), ReversingChecker(DefaultCallChecker())
+        builtins, IntTruedivCompiler(), ReversingChecker()
     )
     def __rtruediv__(self: int, other: int) -> float:
         ...
 
-    @guppy.hugr_op(builtins, int_op("ixor"), ReversingChecker(DefaultCallChecker()))
+    @guppy.hugr_op(builtins, int_op("ixor"), ReversingChecker())
     def __rxor__(self: int, other: int) -> int:
         ...
 
