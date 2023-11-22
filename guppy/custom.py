@@ -228,3 +228,8 @@ class OpCompiler(CustomCallCompiler):
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         raise NotImplementedError
+
+
+class NoopCompiler(CustomCallCompiler):
+    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+        return args
