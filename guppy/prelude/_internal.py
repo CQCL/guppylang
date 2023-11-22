@@ -130,6 +130,23 @@ class ReversingChecker(CustomCallChecker):
         return expr, ty
 
 
+class UnsupportedChecker(CustomCallChecker):
+    """Call checker for Python builtin functions that are not available in Guppy.
+
+    Gives the uses a nicer error message when they try to use an unsupported feature.
+    """
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
+        raise GuppyError(
+            f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
+        )
+
+    def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
+        raise GuppyError(
+            f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
+        )
+
+
 class DunderChecker(CustomCallChecker):
     """Call checker for builtin functions that call out to dunder instance methods"""
 

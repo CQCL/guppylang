@@ -22,6 +22,7 @@ from guppy.prelude._internal import (
     FloatModCompiler,
     DunderChecker,
     CallableChecker,
+    UnsupportedChecker,
 )
 
 
@@ -157,9 +158,7 @@ class Int:
     def __rdivmod__(self: int, other: int) -> tuple[int, int]:
         ...
 
-    @guppy.hugr_op(
-        builtins, int_op("idiv_s", num_params=2), ReversingChecker()
-    )
+    @guppy.hugr_op(builtins, int_op("idiv_s", num_params=2), ReversingChecker())
     def __rfloordiv__(self: int, other: int) -> int:
         ...
 
@@ -185,9 +184,7 @@ class Int:
     def __round__(self: int) -> int:
         ...
 
-    @guppy.hugr_op(
-        builtins, ops.DummyOp(name="ipow"), ReversingChecker()
-    )  # TODO
+    @guppy.hugr_op(builtins, ops.DummyOp(name="ipow"), ReversingChecker())  # TODO
     def __rpow__(self: int, other: int) -> int:
         ...
 
@@ -205,9 +202,7 @@ class Int:
     def __rsub__(self: int, other: int) -> int:
         ...
 
-    @guppy.custom(
-        builtins, IntTruedivCompiler(), ReversingChecker()
-    )
+    @guppy.custom(builtins, IntTruedivCompiler(), ReversingChecker())
     def __rtruediv__(self: int, other: int) -> float:
         ...
 
@@ -418,4 +413,319 @@ def pow(x, y):
 
 @guppy.custom(builtins, checker=DunderChecker("__round__"), higher_order_value=False)
 def round(x):
+    ...
+
+
+# Python builtins that are not supported yet:
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def aiter(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def all(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def anext(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def any(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def bin(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def breakpoint(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def bytearray(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def bytes(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def chr(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def classmethod(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def compile(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def complex(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def delattr(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def dict(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def dir(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def enumerate(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def eval(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def exec(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def filter(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def format(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def forozenset(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def getattr(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def globals():
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def hasattr(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def hash(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def help(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def hex(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def id(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def input(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def isinstance(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def issubclass(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def iter(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def len(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def list(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def locals(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def map(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def max(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def memoryview(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def min(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def next(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def object(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def oct(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def open(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def ord(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def print(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def property(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def range(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def repr(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def reversed(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def set(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def setattr(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def slice(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def sorted(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def staticmethod(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def str(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def sum(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def super(x):
+    ...
+
+
+@guppy.custom(
+    builtins, name="tuple", checker=UnsupportedChecker(), higher_order_value=False
+)
+def _tuple(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def type(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def vars(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def zip(x):
+    ...
+
+
+@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+def __import__(x):
     ...
