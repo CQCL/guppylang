@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import NamedTuple, Optional, Union
 
 from guppy.ast_util import AstNode
-from guppy.types import (
+from guppy.gtypes import (
     GuppyType,
     FunctionType,
     TupleType,

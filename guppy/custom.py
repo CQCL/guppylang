@@ -14,7 +14,7 @@ from guppy.error import (
     UnknownFunctionType,
     GuppyTypeError,
 )
-from guppy.types import GuppyType, FunctionType, type_to_row, TupleType
+from guppy.gtypes import GuppyType, FunctionType, type_to_row, TupleType
 from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV, Hugr, Node, DFContainingVNode
 from guppy.nodes import GlobalCall

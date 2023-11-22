@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Any, Sequence, Callable, TypeVar, cast
 
 from guppy.ast_util import AstNode, get_line_offset, get_file, get_source
-from guppy.types import GuppyType, FunctionType
+from guppy.gtypes import GuppyType, FunctionType
 from guppy.hugr.hugr import OutPortV, Node
 
 

@@ -8,7 +8,7 @@ from guppy.checker.core import Variable, Globals, Context, CallableVariable
 from guppy.checker.cfg_checker import check_cfg, CheckedCFG
 from guppy.checker.expr_checker import synthesize_call, check_call
 from guppy.error import GuppyError
-from guppy.types import FunctionType, type_from_ast, NoneType, GuppyType
+from guppy.gtypes import FunctionType, type_from_ast, NoneType, GuppyType
 from guppy.nodes import GlobalCall, CheckedNestedFunctionDef, NestedFunctionDef
 
 

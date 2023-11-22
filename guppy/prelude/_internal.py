@@ -13,7 +13,7 @@ from guppy.custom import (
     CustomCallCompiler,
 )
 from guppy.error import GuppyTypeError, GuppyError
-from guppy.types import GuppyType, FunctionType, BoolType
+from guppy.gtypes import GuppyType, FunctionType, BoolType
 from guppy.hugr import ops, tys, val
 from guppy.hugr.hugr import OutPortV
 from guppy.nodes import GlobalCall

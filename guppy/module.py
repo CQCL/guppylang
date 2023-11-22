@@ -13,7 +13,7 @@ from guppy.compiler.func_compiler import compile_global_func_def, CompiledFuncti
 from guppy.custom import CustomFunction
 from guppy.declared import DeclaredFunction
 from guppy.error import GuppyError, pretty_errors
-from guppy.types import GuppyType
+from guppy.gtypes import GuppyType
 from guppy.hugr.hugr import Hugr
 
 PyFunc = Callable[..., Any]

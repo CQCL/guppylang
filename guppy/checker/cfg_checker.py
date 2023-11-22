@@ -11,7 +11,7 @@ from guppy.checker.core import Variable
 from guppy.checker.expr_checker import ExprSynthesizer, to_bool
 from guppy.checker.stmt_checker import StmtChecker
 from guppy.error import GuppyError
-from guppy.types import GuppyType
+from guppy.gtypes import GuppyType
 
 
 VarRow = Sequence[Variable]

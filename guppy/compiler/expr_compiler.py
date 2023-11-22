@@ -4,7 +4,7 @@ from typing import Any, Optional
 from guppy.ast_util import AstVisitor, get_type
 from guppy.compiler.core import CompilerBase, DFContainer, CompiledFunction
 from guppy.error import InternalGuppyError
-from guppy.types import FunctionType, type_to_row, BoolType
+from guppy.gtypes import FunctionType, type_to_row, BoolType
 from guppy.hugr import ops, val
 from guppy.hugr.hugr import OutPortV
 from guppy.nodes import LocalName, GlobalName, GlobalCall, LocalCall

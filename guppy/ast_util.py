@@ -2,7 +2,7 @@ import ast
 from typing import Any, TypeVar, Generic, Union, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from guppy.types import GuppyType
+    from guppy.gtypes import GuppyType
 
 AstNode = Union[
     ast.AST,
@@ -179,7 +179,7 @@ def with_type(ty: "GuppyType", node: A) -> A:
 
 def get_type_opt(node: AstNode) -> Optional["GuppyType"]:
     """Tries to retrieve a type annotation from an AST node."""
-    from guppy.types import GuppyType
+    from guppy.gtypes import GuppyType
 
     try:
         ty = getattr(node, "type")

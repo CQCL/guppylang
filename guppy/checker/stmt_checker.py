@@ -6,7 +6,7 @@ from guppy.cfg.bb import BB, BBStatement
 from guppy.checker.core import Variable, Context
 from guppy.checker.expr_checker import ExprSynthesizer, ExprChecker
 from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
-from guppy.types import GuppyType, TupleType, type_from_ast, NoneType
+from guppy.gtypes import GuppyType, TupleType, type_from_ast, NoneType
 from guppy.nodes import NestedFunctionDef
 
 

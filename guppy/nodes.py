@@ -3,7 +3,7 @@
 import ast
 from typing import TYPE_CHECKING, Any, Mapping
 
-from guppy.types import FunctionType
+from guppy.gtypes import FunctionType
 
 if TYPE_CHECKING:
     from guppy.cfg.cfg import CFG
