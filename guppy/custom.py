@@ -2,22 +2,19 @@ import ast
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from guppy.ast_util import AstNode, get_type, with_type, with_loc
+from guppy.ast_util import AstNode, with_type, with_loc
 from guppy.checker.core import Context, Globals
-from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
-from guppy.compiler.expr_compiler import ExprCompiler
 from guppy.error import (
     GuppyError,
     InternalGuppyError,
     UnknownFunctionType,
     GuppyTypeError,
 )
-from guppy.gtypes import GuppyType, FunctionType, type_to_row, TupleType
+from guppy.gtypes import GuppyType, FunctionType
 from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV, Hugr, Node, DFContainingVNode
-from guppy.nodes import GlobalCall
 
 
 class CustomFunction(CompiledFunction):
@@ -210,26 +207,17 @@ class DefaultCallChecker(CustomCallChecker):
     """Checks function calls by comparing to a type signature."""
 
     def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
-        # Use default implementation from the expression checker
-        args = check_call(self.func.ty, args, ty, self.node, self.ctx)
-        return GlobalCall(func=self.func, args=args)
+        raise NotImplementedError
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
-        # Use default implementation from the expression checker
-        args, ty = synthesize_call(self.func.ty, args, self.node, self.ctx)
-        return GlobalCall(func=self.func, args=args), ty
+        raise NotImplementedError
 
 
 class DefaultCallCompiler(CustomCallCompiler):
     """Call compiler that invokes the regular expression compiler."""
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        assert isinstance(self.node, ast.expr)
-        ret = ExprCompiler(self.graph, self.globals).compile(self.node, self.dfg)
-        if isinstance(ret.ty, TupleType):
-            unpack = self.graph.add_unpack_tuple(ret, self.dfg.node)
-            return [unpack.out_port(i) for i in range(len(ret.ty.element_types))]
-        return [ret]
+        raise NotImplementedError
 
 
 class OpCompiler(CustomCallCompiler):
@@ -239,12 +227,4 @@ class OpCompiler(CustomCallCompiler):
         self.op = op
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        node = self.graph.add_node(self.op.copy(), inputs=args, parent=self.dfg.node)
-        return_ty = get_type(self.node)
-        assert return_ty is not None
-        return [node.add_out_port(ty) for ty in type_to_row(return_ty)]
-
-
-class NoopCompiler(CustomCallCompiler):
-    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        return args
+        raise NotImplementedError
