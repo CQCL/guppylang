@@ -4,6 +4,7 @@ from typing import Optional
 
 from guppy.ast_util import AstNode, with_type, with_loc
 from guppy.checker.core import Context, Globals
+from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
 from guppy.error import (
@@ -15,6 +16,7 @@ from guppy.error import (
 from guppy.gtypes import GuppyType, FunctionType
 from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV, Hugr, Node, DFContainingVNode
+from guppy.nodes import GlobalCall
 
 
 class CustomFunction(CompiledFunction):
@@ -207,10 +209,14 @@ class DefaultCallChecker(CustomCallChecker):
     """Checks function calls by comparing to a type signature."""
 
     def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
-        raise NotImplementedError
+        # Use default implementation from the expression checker
+        args = check_call(self.func.ty, args, ty, self.node, self.ctx)
+        return GlobalCall(func=self.func, args=args)
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
-        raise NotImplementedError
+        # Use default implementation from the expression checker
+        args, ty = synthesize_call(self.func.ty, args, self.node, self.ctx)
+        return GlobalCall(func=self.func, args=args), ty
 
 
 class DefaultCallCompiler(CustomCallCompiler):
