@@ -36,4 +36,3 @@ def int_value(i: int) -> val.Value:
 def float_value(f: float) -> val.Value:
     """Returns the Hugr representation of a float value."""
     return val.Prim(val=val.ExtensionVal(c=(ConstF64(value=f),)))
-
