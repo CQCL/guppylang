@@ -42,10 +42,8 @@ def compile_global_func_def(
     globals: CompiledGlobals,
 ) -> CompiledFunctionDef:
     """Compiles a top-level function definition to Hugr."""
-    def_input = graph.add_input(parent=def_node)
-    cfg_node = graph.add_cfg(
-        def_node, inputs=[def_input.add_out_port(ty) for ty in func.ty.args]
-    )
+    _, ports = graph.add_input_with_ports(list(func.ty.args), def_node)
+    cfg_node = graph.add_cfg(def_node, ports)
     compile_cfg(func.cfg, graph, cfg_node, globals)
 
     # Add output node for the cfg
@@ -77,8 +75,7 @@ def compile_local_func_def(
     )
 
     def_node = graph.add_def(closure_ty, dfg.node, func.name)
-    def_input = graph.add_input(parent=def_node)
-    input_ports = [def_input.add_out_port(ty) for ty in closure_ty.args]
+    def_input, input_ports = graph.add_input_with_ports(list(closure_ty.args), def_node)
 
     # If we have captured variables and the body contains a recursive occurrence of
     # the function itself, then we provide the partially applied function as a local

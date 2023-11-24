@@ -135,13 +135,9 @@ class CustomFunction(CompiledFunction):
         # to the function, and returns the results.
         if module not in self._defined:
             def_node = graph.add_def(self.ty, module, self.name)
-            inp = graph.add_input(list(self.ty.args), parent=def_node)
+            _, inp_ports = graph.add_input_with_ports(list(self.ty.args), def_node)
             returns = self.compile_call(
-                [inp.out_port(i) for i in range(len(self.ty.args))],
-                DFContainer(def_node, {}),
-                graph,
-                globals,
-                node,
+                inp_ports, DFContainer(def_node, {}), graph, globals, node
             )
             graph.add_output(returns, parent=def_node)
             self._defined[module] = def_node
