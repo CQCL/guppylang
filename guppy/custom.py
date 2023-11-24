@@ -162,15 +162,12 @@ class CustomCallChecker(ABC):
         self.node = node
         self.func = func
 
+    @abstractmethod
     def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
         """Checks the return value against a given type.
 
         Returns a (possibly) transformed and annotated AST node for the call.
         """
-        args, actual = self.synthesize(args)
-        raise GuppyTypeError(
-            f"Expected expression of type `{ty}`, got `{actual}`", self.node
-        )
 
     @abstractmethod
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
