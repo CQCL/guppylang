@@ -7,7 +7,7 @@ from guppy.error import InternalGuppyError
 from guppy.gtypes import FunctionType, type_to_row, BoolType
 from guppy.hugr import ops, val
 from guppy.hugr.hugr import OutPortV
-from guppy.nodes import LocalName, GlobalName, GlobalCall, LocalCall
+from guppy.nodes import LocalName, GlobalName, GlobalCall, LocalCall, TypeApply
 
 
 class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
@@ -76,6 +76,10 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
+
+    def visit_TypeApply(self, node: TypeApply) -> OutPortV:
+        func = self.visit(node.value)
+        return self.graph.add_type_apply(func, node.tys, self.dfg.node).out_port(0)
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> OutPortV:
         # The only case that is not desugared by the type checker is the `not` operation
