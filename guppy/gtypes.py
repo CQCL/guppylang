@@ -116,7 +116,8 @@ class BoundTypeVar(GuppyType):
         return self.display_name
 
     def to_hugr(self) -> tys.SimpleType:
-        raise NotImplementedError()
+        # TODO
+        return NoneType().to_hugr()
 
 
 @dataclass(frozen=True)
@@ -475,10 +476,11 @@ def type_from_ast(node: AstNode, globals: "Globals", type_var_mapping: Optional[
                 type_from_ast(ret, globals, type_var_mapping),
             )
 
-    if isinstance(node, ast.Subscript):
-        ty = type_from_ast(node.value, globals, type_var_mapping)
-        args = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
-        return ty.build(*(type_from_ast(a, globals) for a in args), node=node)
+    if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
+        x = node.value.id
+        if x in globals.types:
+            args = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+            return globals.types[x].build(*(type_from_ast(a, globals) for a in args), node=node)
 
     raise GuppyError("Not a valid Guppy type", node)
 
