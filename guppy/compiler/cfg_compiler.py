@@ -79,14 +79,14 @@ def compile_bb(
         if all({v.name for v in first} == {v.name for v in r} for r in rest):
             outputs = first
         else:
-            # Otherwise, we have to output a Sum-type predicate: We put all non-linear
-            # variables into the branch predicate and all linear variables in the normal
-            # output (since they are shared between all successors). This is in line
-            # with the ordering on variables which puts linear variables at the end.
-            # The only exception are return vars which must be outputted in order.
-            branch_port = choose_vars_for_pred(
+            # Otherwise, we have to output a TupleSum: We put all non-linear variables
+            # into the branch TupleSum and all linear variables in the normal output
+            # (since they are shared between all successors). This is in line with the
+            # ordering on variables which puts linear variables at the end. The only
+            # exception are return vars which must be outputted in order.
+            branch_port = choose_vars_for_tuple_sum(
                 graph=graph,
-                pred=branch_port,
+                unit_sum=branch_port,
                 output_vars=[
                     [v for v in row if not v.ty.linear or is_return_var(v.name)]
                     for row in bb.sig.output_rows
@@ -123,16 +123,16 @@ def insert_return_vars(cfg: CheckedCFG) -> None:
         pred.sig = Signature(pred.sig.input_row, [return_vars])
 
 
-def choose_vars_for_pred(
-    graph: Hugr, pred: OutPortV, output_vars: list[VarRow], dfg: DFContainer
+def choose_vars_for_tuple_sum(
+    graph: Hugr, unit_sum: OutPortV, output_vars: list[VarRow], dfg: DFContainer
 ) -> OutPortV:
-    """Selects an output based on a predicate.
+    """Selects an output based on a TupleSum.
 
-    Given `pred: Sum((), (), ...)` and output variable sets `#s1, #s2, ...`, constructs
-    a predicate value of type `Sum(Tuple(#s1), Tuple(#s2), ...)`.
+    Given `unit_sum: Sum((), (), ...)` and output variable sets `#s1, #s2, ...`,
+    constructs a TupleSum value of type `Sum(Tuple(#s1), Tuple(#s2), ...)`.
     """
-    assert isinstance(pred.ty, SumType)
-    assert len(pred.ty.element_types) == len(output_vars)
+    assert isinstance(unit_sum.ty, SumType)
+    assert len(unit_sum.ty.element_types) == len(output_vars)
     tuples = [
         graph.add_make_tuple(
             inputs=[dfg[v.name].port for v in sort_vars(vs) if v.name in dfg],
@@ -141,7 +141,9 @@ def choose_vars_for_pred(
         for vs in output_vars
     ]
     tys = [t.ty for t in tuples]
-    conditional = graph.add_conditional(cond_input=pred, inputs=tuples, parent=dfg.node)
+    conditional = graph.add_conditional(
+        cond_input=unit_sum, inputs=tuples, parent=dfg.node
+    )
     for i, ty in enumerate(tys):
         case = graph.add_case(conditional)
         inp = graph.add_input(output_tys=tys, parent=case).out_port(i)
