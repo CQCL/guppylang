@@ -375,6 +375,13 @@ class Hugr:
             parent.input_child = node
         return node
 
+    def add_input_with_ports(
+        self, output_tys: TypeList, parent: Optional[Node] = None
+    ) -> tuple[VNode, list[OutPortV]]:
+        """Adds an `Input` node to the graph."""
+        node = self.add_input(output_tys, parent)
+        return node, [node.add_out_port(ty) for ty in output_tys]
+
     def add_output(
         self,
         inputs: Optional[list[OutPortV]] = None,
