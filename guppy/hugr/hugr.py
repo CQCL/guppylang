@@ -3,7 +3,7 @@ import networkx  # type: ignore
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import Optional, Iterator, Tuple, Any
+from typing import Optional, Iterator, Tuple, Any, Sequence
 from dataclasses import field, dataclass
 
 import guppy.hugr.ops as ops
@@ -376,11 +376,12 @@ class Hugr:
         return node
 
     def add_input_with_ports(
-        self, output_tys: TypeList, parent: Optional[Node] = None
+        self, output_tys: Sequence[GuppyType], parent: Optional[Node] = None
     ) -> tuple[VNode, list[OutPortV]]:
         """Adds an `Input` node to the graph."""
-        node = self.add_input(output_tys, parent)
-        return node, [node.add_out_port(ty) for ty in output_tys]
+        node = self.add_input(list(output_tys), parent)
+        ports = [node.add_out_port(ty) for ty in output_tys]
+        return node, ports
 
     def add_output(
         self,
