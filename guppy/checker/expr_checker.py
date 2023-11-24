@@ -4,8 +4,9 @@ from typing import Optional, Union, NoReturn, Any
 from guppy.ast_util import AstVisitor, with_loc, AstNode, with_type, get_type_opt
 from guppy.checker.core import Context, CallableVariable, Globals
 from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
-from guppy.gtypes import GuppyType, TupleType, FunctionType, BoolType
-from guppy.nodes import LocalName, GlobalName, LocalCall
+from guppy.gtypes import GuppyType, TupleType, FunctionType, BoolType, Subst, \
+    FreeTypeVar, unify, Inst
+from guppy.nodes import LocalName, GlobalName, LocalCall, TypeApply
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
@@ -39,7 +40,7 @@ binary_table: dict[type[AstOp], tuple[str, str, str]] = {
 }
 
 
-class ExprChecker(AstVisitor[ast.expr]):
+class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
     """Checks an expression against a type and produces a new type-annotated AST"""
 
     ctx: Context
@@ -61,7 +62,7 @@ class ExprChecker(AstVisitor[ast.expr]):
         """Raises a type error indicating that the type doesn't match."""
         if not isinstance(actual, GuppyType):
             loc = loc or actual
-            _, actual = self._synthesize(actual)
+            _, actual = self._synthesize(actual, allow_free_vars=True)
         assert loc is not None
         raise GuppyTypeError(
             f"Expected {self._kind} of type `{expected}`, got `{actual}`", loc
@@ -69,34 +70,106 @@ class ExprChecker(AstVisitor[ast.expr]):
 
     def check(
         self, expr: ast.expr, ty: GuppyType, kind: str = "expression"
-    ) -> ast.expr:
+    ) -> tuple[ast.expr, Subst]:
         """Checks an expression against a type.
 
-        Returns a new desugared expression with type annotations.
+        The type may have free type variables which will try to be resolved. Returns
+        a new desugared expression with type annotations and a substitution with the
+        resolved type variables.
         """
+        # When checking against a variable, we have to synthesize
+        if isinstance(ty, FreeTypeVar):
+            expr, syn_ty = self._synthesize(expr, allow_free_vars=False)
+            return with_type(syn_ty, expr), {ty.id: syn_ty}
+
+        # Otherwise, invoke the visitor
         old_kind = self._kind
         self._kind = kind or self._kind
-        expr = self.visit(expr, ty)
+        expr, subst = self.visit(expr, ty)
         self._kind = old_kind
-        return with_type(ty, expr)
+        return with_type(ty.substitute(subst), expr), subst
 
-    def _synthesize(self, node: ast.expr) -> tuple[ast.expr, GuppyType]:
+    def _synthesize(self, node: ast.expr, allow_free_vars: bool) -> tuple[ast.expr, GuppyType]:
         """Invokes the type synthesiser"""
-        return ExprSynthesizer(self.ctx).synthesize(node)
+        return ExprSynthesizer(self.ctx).synthesize(node, allow_free_vars)
 
-    def visit_Tuple(self, node: ast.Tuple, ty: GuppyType) -> ast.expr:
+    def visit_Tuple(self, node: ast.Tuple, ty: GuppyType) -> tuple[ast.expr, Subst]:
         if not isinstance(ty, TupleType) or len(ty.element_types) != len(node.elts):
             return self._fail(ty, node)
+        subst: Subst = {}
         for i, el in enumerate(node.elts):
-            node.elts[i] = self.check(el, ty.element_types[i])
-        return node
+            node.elts[i], s = self.check(el, ty.element_types[i].substitute(subst))
+            subst |= s
+        return node, subst
 
-    def generic_visit(self, node: ast.expr, ty: GuppyType) -> ast.expr:  # type: ignore
-        # Try to synthesize and then check if it matches the given type
-        node, synth = self._synthesize(node)
-        if synth != ty:
+    def visit_Call(self, node: ast.Call, ty: GuppyType) -> tuple[ast.expr, Subst]:
+        if len(node.keywords) > 0:
+            raise GuppyError(
+                "Argument passing by keyword is not supported", node.keywords[0]
+            )
+        node.func, func_ty = self._synthesize(node.func, allow_free_vars=False)
+
+        # First handle direct calls of user-defined functions and extension functions
+        if isinstance(node.func, GlobalName) and isinstance(
+            node.func.value, CallableVariable
+        ):
+            return node.func.value.check_call(node.args, ty, node, self.ctx)
+
+        # Otherwise, it must be a function as a higher-order value
+        if isinstance(func_ty, FunctionType):
+            args, return_ty, inst = check_call(func_ty, node.args, ty, node, self.ctx)
+            # Maybe we have to add a TypeApply node
+            if len(inst) > 0:
+                func = TypeApply(value=with_type(ty, node.func), tys=inst)
+                func = with_type(func_ty.instantiate(inst), func)
+                node.func = with_loc(node.func, func)
+            return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
+        elif f := self.ctx.globals.get_instance_func(func_ty, "__call__"):
+            return f.check_call(node.args, ty, node, self.ctx)
+        else:
+            raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
+
+    def generic_visit(  # type: ignore
+        self, node: ast.expr, ty: GuppyType
+    ) -> tuple[ast.expr, Subst]:
+        # Try to synthesize and then check if we can unify it with the given type
+        node, synth = self._synthesize(node, allow_free_vars=False)
+
+        # Special case if we synthesized a polymorphic function type. In that case, we
+        # have to find an instantiation to avoid higher-rank types.
+        subst: Optional[Subst]
+        if isinstance(synth, FunctionType) and synth.quantified:
+            unquantified, free_vars = synth.unquantified()
+            subst = unify(ty, unquantified, {})
+            if subst is None:
+                self._fail(ty, synth, node)
+            # Check that we have found a valid instantiation for all quantified vars
+            for i, v in enumerate(free_vars):
+                if v.id not in subst:
+                    raise GuppyTypeError(
+                        f"Expected {self._kind} of type `{ty}`, got `{synth}`. "
+                        "Couldn't infer an instantiation for type variable "
+                        f"`{synth.quantified[i]}`",
+                        node
+                    )
+                if subst[v.id].free_vars:
+                    raise GuppyTypeError(
+                        f"Expected {self._kind} of type `{ty}`, got `{synth}`. Can't "
+                        f"instantiate type variable `{synth.quantified[i]}` with type "
+                        f"`{subst[v.id]}` containing free variables",
+                        node
+                    )
+            inst = [subst[v.id] for v in free_vars]
+            node = with_loc(node, TypeApply(value=node, tys=inst))
+            subst = {v: t for v, t in subst.items() if v in ty.free_vars}
+            return node, subst
+
+        # Otherwise, we know that `synth` has no free type vars, so unification is
+        # trivial
+        subst = unify(ty, synth, {})
+        if subst is None:
             self._fail(ty, synth, node)
-        return node
+        return node, subst
 
 
 class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
@@ -105,7 +178,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
     def __init__(self, ctx: Context) -> None:
         self.ctx = ctx
 
-    def synthesize(self, node: ast.expr) -> tuple[ast.expr, GuppyType]:
+    def synthesize(self, node: ast.expr, allow_free_vars: bool = False) -> tuple[ast.expr, GuppyType]:
         """Tries to synthesise a type for the given expression.
 
         Also returns a new desugared expression with type annotations.
@@ -113,11 +186,16 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         if ty := get_type_opt(node):
             return node, ty
         node, ty = self.visit(node)
+        if ty.free_vars and not allow_free_vars:
+            raise GuppyTypeError(
+                f"Cannot infer type variable in expression of type `{ty}`",
+                node
+            )
         return with_type(ty, node), ty
 
     def _check(
         self, expr: ast.expr, ty: GuppyType, kind: str = "expression"
-    ) -> ast.expr:
+    ) -> tuple[ast.expr, Subst]:
         """Checks an expression against a given type"""
         return ExprChecker(self.ctx).check(expr, ty, kind)
 
@@ -234,7 +312,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
         # Otherwise, it must be a function as a higher-order value
         if isinstance(ty, FunctionType):
-            args, return_ty = synthesize_call(ty, node.args, node, self.ctx)
+            args, return_ty, inst = synthesize_call(ty, node.args, node, self.ctx)
+            # Maybe we have to add a TypeApply node
+            if len(inst) > 0:
+                func = TypeApply(value=with_type(ty, node.func), tys=inst)
+                func = with_type(ty.instantiate(inst), func)
+                node.func = with_loc(node.func, func)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
         elif f := self.ctx.globals.get_instance_func(ty, "__call__"):
             return f.synthesize_call(node.args, node, self.ctx)
@@ -274,14 +357,59 @@ def check_num_args(exp: int, act: int, node: AstNode) -> None:
         )
 
 
+def type_check_args(args: list[ast.expr], func_ty: FunctionType, subst: Subst, ctx: Context, node: AstNode) -> tuple[list[ast.expr], Subst]:
+    """Checks the arguments of a function call and infers free type variables.
+
+    We expect that quantified variables have been replaced with free unification
+    variables. Checks that all unification variables can be inferred.
+    """
+    assert not func_ty.quantified
+    check_num_args(len(func_ty.args), len(args), node)
+
+    new_args: list[ast.expr] = []
+    for arg, ty in zip(args, func_ty.args):
+        a, s = ExprChecker(ctx).check(arg, ty.substitute(subst), "argument")
+        new_args.append(a)
+        subst |= s
+
+    # If the argument check succeeded, this means that we must have found instantiations
+    # for all unification variables occurring in the argument types
+    assert all(
+        set.issubset(set(arg.free_vars.keys()), subst.keys())
+        for arg in func_ty.args
+    )
+
+    # We just have to check that we found instantiations for all vars in the return type
+    if not set.issubset(set(func_ty.returns.free_vars.keys()), subst.keys()):
+        raise GuppyTypeError(
+            f"Cannot infer type variable in expression of type "
+            f"`{func_ty.returns.substitute(subst)}`",
+            node
+        )
+
+    return new_args, subst
+
+
 def synthesize_call(
     func_ty: FunctionType, args: list[ast.expr], node: AstNode, ctx: Context
-) -> tuple[list[ast.expr], GuppyType]:
-    """Synthesizes the return type of a function call"""
+) -> tuple[list[ast.expr], GuppyType, Inst]:
+    """Synthesizes the return type of a function call.
+
+    Returns an annotated argument list, the synthesized return type, and an
+    instantiation for the quantifiers in the function type.
+    """
+    assert not func_ty.free_vars
     check_num_args(len(func_ty.args), len(args), node)
-    for i, arg in enumerate(args):
-        args[i] = ExprChecker(ctx).check(arg, func_ty.args[i], "argument")
-    return args, func_ty.returns
+
+    # Replace quantified variables with free unification variables and try to infer an
+    # instantiation by checking the arguments
+    unquantified, free_vars = func_ty.unquantified()
+    args, subst = type_check_args(args, unquantified, {}, ctx, node)
+
+    # Success implies that the substitution is closed
+    assert all(not t.free_vars for t in subst.values())
+    inst = [subst[v.id] for v in free_vars]
+    return args, unquantified.returns.substitute(subst), inst
 
 
 def check_call(
@@ -290,14 +418,42 @@ def check_call(
     ty: GuppyType,
     node: AstNode,
     ctx: Context,
-) -> list[ast.expr]:
-    """Checks the return type of a function call against a given type"""
-    args, return_ty = synthesize_call(func_ty, args, node, ctx)
-    if return_ty != ty:
+    kind: str = "expression"
+) -> tuple[list[ast.expr], Subst, Inst]:
+    """Checks the return type of a function call against a given type.
+
+    Returns an annotated argument list, a substitution for the free variables in the
+    expected type, and an instantiation for the quantifiers in the function type.
+    """
+    assert not func_ty.free_vars
+    check_num_args(len(func_ty.args), len(args), node)
+
+    # Replace quantified variables with free unification variables and try to do some
+    # inference based on the expected return type
+    unquantified, free_vars = func_ty.unquantified()
+    subst = unify(ty, unquantified.returns, {})
+    if subst is None:
         raise GuppyTypeError(
-            f"Expected expression of type `{ty}`, got `{return_ty}`", node
+            f"Expected {kind} of type `{ty}`, got `{unquantified.returns}`", node
         )
-    return args
+
+    # Try to infer more by checking against the arguments
+    args, subst = type_check_args(args, unquantified, subst, ctx, node)
+
+    # Also make sure we found an instantiation for all free vars in the type we're
+    # checking against
+    if not set.issubset(set(ty.free_vars.keys()), subst.keys()):
+        raise GuppyTypeError(
+            f"Expected expression of type `{ty}`, got "
+            f"`{func_ty.returns.substitute(subst)}`. Couldn't infer type variables",
+            node
+        )
+
+    # Success implies that the substitution is closed
+    assert all(not t.free_vars for t in subst.values())
+    inst = [subst[v.id] for v in free_vars]
+    subst = {v: t for v, t in subst.items() if v in ty.free_vars}
+    return args, subst, inst
 
 
 def to_bool(

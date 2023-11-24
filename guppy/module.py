@@ -6,7 +6,7 @@ from types import ModuleType
 from typing import Callable, Any, Optional, Union
 
 from guppy.ast_util import annotate_location, AstNode
-from guppy.checker.core import Globals, qualified_name
+from guppy.checker.core import Globals, qualified_name, TypeVarDecl
 from guppy.checker.func_checker import DefinedFunction, check_global_func_def
 from guppy.compiler.core import CompiledGlobals
 from guppy.compiler.func_compiler import compile_global_func_def, CompiledFunctionDef
@@ -48,7 +48,7 @@ class GuppyModule:
 
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
-        self._globals = Globals({}, {})
+        self._globals = Globals({}, {}, {})
         self._compiled_globals = {}
         self._imported_globals = Globals.default()
         self._imported_compiled_globals = {}
@@ -124,7 +124,15 @@ class GuppyModule:
 
     def register_type(self, name: str, ty: type[GuppyType]) -> None:
         """Registers an existing Guppy type as belonging to this Guppy module."""
+        self._check_not_yet_compiled()
+        self._check_type_name_available(name, None)
         self._globals.types[name] = ty
+
+    def register_type_var(self, name: str, linear: bool) -> None:
+        """Registers a new type variable"""
+        self._check_not_yet_compiled()
+        self._check_type_name_available(name, None)
+        self._globals.type_vars[name] = TypeVarDecl(name, linear)
 
     def _register_buffered_instance_funcs(self, instance: type[GuppyType]) -> None:
         assert self._instance_func_buffer is not None
@@ -204,6 +212,19 @@ class GuppyModule:
         if name in self._func_defs or name in self._custom_funcs:
             raise GuppyError(
                 f"Module `{self.name}` already contains a function named `{name}`",
+                node,
+            )
+
+    def _check_type_name_available(self, name: str, node: Optional[AstNode]) -> None:
+        if name in self._globals.types:
+            raise GuppyError(
+                f"Module `{self.name}` already contains a type `{name}`",
+                node,
+            )
+
+        if name in self._globals.type_vars:
+            raise GuppyError(
+                f"Module `{self.name}` already contains a type variable `{name}`",
                 node,
             )
 

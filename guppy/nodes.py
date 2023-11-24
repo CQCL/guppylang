@@ -1,9 +1,9 @@
 """Custom AST nodes used by Guppy"""
 
 import ast
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
-from guppy.gtypes import FunctionType
+from guppy.gtypes import FunctionType, GuppyType, Inst
 
 if TYPE_CHECKING:
     from guppy.cfg.cfg import CFG
@@ -40,12 +40,22 @@ class LocalCall(ast.expr):
 class GlobalCall(ast.expr):
     func: "CallableVariable"
     args: list[ast.expr]
-
-    # Later: Inferred type args
+    type_args: Inst  # Inferred type arguments
 
     _fields = (
         "func",
         "args",
+        "type_args",
+    )
+
+
+class TypeApply(ast.expr):
+    value: ast.expr
+    tys: Sequence[GuppyType]
+
+    _fields = (
+        "value",
+        "tys",
     )
 
 

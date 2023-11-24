@@ -1,6 +1,6 @@
 import functools
 from dataclasses import dataclass
-from typing import Optional, Union, Callable, Any
+from typing import Optional, Union, Callable, Any, Iterator, Sequence, ClassVar, TypeVar
 
 from guppy.ast_util import AstNode, has_empty_body
 from guppy.custom import (
@@ -12,7 +12,7 @@ from guppy.custom import (
     DefaultCallCompiler,
 )
 from guppy.error import GuppyError, pretty_errors
-from guppy.gtypes import GuppyType
+from guppy.gtypes import GuppyType, TypeTransformer
 from guppy.hugr import tys, ops
 from guppy.hugr.hugr import Hugr
 from guppy.module import GuppyModule, PyFunc, parse_py_func
@@ -95,7 +95,8 @@ class _Guppy:
 
             @dataclass(frozen=True)
             class NewType(GuppyType):
-                name = _name
+                args: Sequence[GuppyType]
+                name: ClassVar[str] = _name
 
                 @staticmethod
                 def build(
@@ -106,7 +107,11 @@ class _Guppy:
                         raise GuppyError(
                             f"Type `{_name}` does not accept type parameters.", node
                         )
-                    return NewType()
+                    return NewType([])
+
+                @property
+                def type_args(self) -> Iterator[GuppyType]:
+                    return iter(self.args)
 
                 @property
                 def linear(self) -> bool:
@@ -114,6 +119,11 @@ class _Guppy:
 
                 def to_hugr(self) -> tys.SimpleType:
                     return hugr_ty
+
+                def transform(self, transformer: TypeTransformer) -> GuppyType:
+                    return transformer.transform(self) or NewType(
+                        [ty.transform(transformer) for ty in self.args]
+                    )
 
                 def __str__(self) -> str:
                     return _name
@@ -126,6 +136,12 @@ class _Guppy:
             return c
 
         return dec
+
+    @pretty_errors
+    def type_var(self, module: GuppyModule, name: str, linear: bool = False) -> TypeVar:
+        """Creates a new type variable in a module."""
+        module.register_type_var(name, linear)
+        return TypeVar(name)
 
     @pretty_errors
     def custom(

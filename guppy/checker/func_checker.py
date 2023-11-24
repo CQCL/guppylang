@@ -8,7 +8,8 @@ from guppy.checker.core import Variable, Globals, Context, CallableVariable
 from guppy.checker.cfg_checker import check_cfg, CheckedCFG
 from guppy.checker.expr_checker import synthesize_call, check_call
 from guppy.error import GuppyError
-from guppy.gtypes import FunctionType, type_from_ast, NoneType, GuppyType
+from guppy.gtypes import FunctionType, type_from_ast, NoneType, GuppyType, Subst, \
+    BoundTypeVar
 from guppy.nodes import GlobalCall, CheckedNestedFunctionDef, NestedFunctionDef
 
 
@@ -24,21 +25,25 @@ class DefinedFunction(CallableVariable):
         func_def: ast.FunctionDef, name: str, globals: Globals
     ) -> "DefinedFunction":
         ty = check_signature(func_def, globals)
+        if ty.quantified:
+            raise GuppyError(
+                "Generic function definitions are not supported yet", func_def
+            )
         return DefinedFunction(name, ty, func_def, None)
 
     def check_call(
         self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context
-    ) -> GlobalCall:
+    ) -> tuple[ast.expr, Subst]:
         # Use default implementation from the expression checker
-        args = check_call(self.ty, args, ty, node, ctx)
-        return GlobalCall(func=self, args=args)
+        args, subst, inst = check_call(self.ty, args, ty, node, ctx)
+        return GlobalCall(func=self, args=args, type_args=inst), subst
 
     def synthesize_call(
         self, args: list[ast.expr], node: AstNode, ctx: Context
     ) -> tuple[GlobalCall, GuppyType]:
         # Use default implementation from the expression checker
-        args, ty = synthesize_call(self.ty, args, node, ctx)
-        return GlobalCall(func=self, args=args), ty
+        args, ty, inst = synthesize_call(self.ty, args, node, ctx)
+        return GlobalCall(func=self, args=args, type_args=inst), ty
 
 
 @dataclass
@@ -122,7 +127,7 @@ def check_nested_func_def(
         if len(captured) == 0:
             # If there are no captured vars, we treat the function like a global name
             func = DefinedFunction(func_def.name, func_ty, func_def, None)
-            globals = ctx.globals | Globals({func_def.name: func}, {})
+            globals = ctx.globals | Globals({func_def.name: func}, {}, {})
 
         else:
             # Otherwise, we treat it like a local name
@@ -167,14 +172,16 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
             )
         raise GuppyError("Return type must be annotated", func_def)
 
+    # TODO: Prepopulate mapping when using Python 3.12 style generic functions
+    type_var_mapping: dict[str, BoundTypeVar] = {}
     arg_tys = []
     arg_names = []
     for i, arg in enumerate(func_def.args.args):
         if arg.annotation is None:
             raise GuppyError("Argument type must be annotated", arg)
-        ty = type_from_ast(arg.annotation, globals)
+        ty = type_from_ast(arg.annotation, globals, type_var_mapping)
         arg_tys.append(ty)
         arg_names.append(arg.arg)
 
-    ret_type = type_from_ast(func_def.returns, globals)
-    return FunctionType(arg_tys, ret_type, arg_names)
+    ret_type = type_from_ast(func_def.returns, globals, type_var_mapping)
+    return FunctionType(arg_tys, ret_type, arg_names, sorted(type_var_mapping.values(), key=lambda v: v.idx))
