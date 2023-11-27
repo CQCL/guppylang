@@ -60,12 +60,12 @@ def bool_value(b: bool) -> val.Value:
 
 def int_value(i: int) -> val.Value:
     """Returns the Hugr representation of an integer value."""
-    return val.Prim(val=val.ExtensionVal(c=(ConstIntS(log_width=INT_WIDTH, value=i),)))
+    return val.ExtensionVal(c=(ConstIntS(log_width=INT_WIDTH, value=i),))
 
 
 def float_value(f: float) -> val.Value:
     """Returns the Hugr representation of a float value."""
-    return val.Prim(val=val.ExtensionVal(c=(ConstF64(value=f),)))
+    return val.ExtensionVal(c=(ConstF64(value=f),))
 
 
 def logic_op(op_name: str, args: Optional[list[tys.TypeArgUnion]] = None) -> ops.OpType:

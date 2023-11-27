@@ -7,14 +7,14 @@ use lazy_static::lazy_static;
 
 
 lazy_static! {
-    pub static ref REGISTRY: ExtensionRegistry = [
+    pub static ref REGISTRY: ExtensionRegistry = ExtensionRegistry::try_new([
         PRELUDE.to_owned(),
         logic::EXTENSION.to_owned(),
         int_types::extension(),
-        int_ops::extension(),
+        int_ops::EXTENSION.to_owned(),
         float_types::extension(),
         float_ops::extension()
-    ].into();
+    ]).unwrap();
 }
 
 #[pyfunction]
