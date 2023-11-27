@@ -3,12 +3,17 @@
 # mypy: disable-error-code=empty-body
 
 from guppy.decorator import guppy
-from guppy.hugr import tys
+from guppy.hugr import tys, ops
 from guppy.hugr.tys import TypeBound
 from guppy.module import GuppyModule
 
 
 quantum = GuppyModule("quantum")
+
+
+def quantum_op(op_name: str) -> ops.OpType:
+    """Utility method to create Hugr quantum ops."""
+    return ops.CustomOp(extension="quantum.tket2", op_name=op_name, args=[])
 
 
 @guppy.type(
@@ -20,13 +25,41 @@ class Qubit:
     pass
 
 
+@guppy.hugr_op(quantum, quantum_op("H"))
 def h(q: Qubit) -> Qubit:
     ...
 
 
+@guppy.hugr_op(quantum, quantum_op("CX"))
 def cx(control: Qubit, target: Qubit) -> tuple[Qubit, Qubit]:
     ...
 
 
+@guppy.hugr_op(quantum, quantum_op("RzF64"))
+def rz(q: Qubit, angle: float) -> Qubit:
+    ...
+
+
+@guppy.hugr_op(quantum, quantum_op("Measure"))
 def measure(q: Qubit) -> tuple[Qubit, bool]:
+    ...
+
+
+@guppy.hugr_op(quantum, quantum_op("T"))
+def t(q: Qubit) -> Qubit:
+    ...
+
+
+@guppy.hugr_op(quantum, quantum_op("Tdg"))
+def tdg(q: Qubit) -> Qubit:
+    ...
+
+
+@guppy.hugr_op(quantum, quantum_op("Z"))
+def z(q: Qubit) -> Qubit:
+    ...
+
+
+@guppy.hugr_op(quantum, quantum_op("X"))
+def x(q: Qubit) -> Qubit:
     ...
