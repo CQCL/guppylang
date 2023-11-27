@@ -1,6 +1,6 @@
 import ast
 import itertools
-from typing import Optional, Iterator, Union, NamedTuple
+from typing import Optional, Iterator, NamedTuple
 
 from guppy.ast_util import set_location_from, AstVisitor
 from guppy.cfg.bb import BB, BBStatement
