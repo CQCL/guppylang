@@ -428,8 +428,40 @@ def check_call(
     assert not func_ty.free_vars
     check_num_args(len(func_ty.args), len(args), node)
 
-    # Replace quantified variables with free unification variables and try to do some
-    # inference based on the expected return type
+    # When checking, we can use the information from the expected return type to infer
+    # some type arguments. However, this pushes errors inwards. For example, given a
+    # function `foo: forall T. T -> T`, the following type mismatch would be reported:
+    #
+    #       x: int = foo(None)
+    #                    ^^^^  Expected argument of type `int`, got `None`
+    #
+    # The following error location would be easier to understand for users:
+    #
+    #       x: int = foo(None)
+    #                ^^^^^^^^^ Expected expression of type `int`, got `None`
+    #
+    # Therefore, we should only resort to using the type information for inference if
+    # the regular synthesis method doesn't succeed.
+
+    # TODO: This approach can result in exponential runtime in the worst case. However
+    #  the bad case, e.g. `x: int = foo(foo(...foo(?)...))`, shouldn't be common in
+    #  practice
+
+    # First, try to synthesize
+    res: Optional[tuple[GuppyType, Inst]] = None
+    try:
+        args, synth, inst = synthesize_call(func_ty, args, node, ctx)
+        res = synth, inst
+    except GuppyTypeError:
+        pass
+    if res is not None:
+        synth, inst = res
+        subst = unify(ty, synth, {})
+        if subst is None:
+            raise GuppyTypeError(f"Expected {kind} of type `{ty}`, got `{synth}`", node)
+        return args, subst, inst
+
+    # Only if synthesis fails, we try to infer more from the return type
     unquantified, free_vars = func_ty.unquantified()
     subst = unify(ty, unquantified.returns, {})
     if subst is None:
