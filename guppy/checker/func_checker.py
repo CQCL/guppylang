@@ -8,8 +8,14 @@ from guppy.checker.core import Variable, Globals, Context, CallableVariable
 from guppy.checker.cfg_checker import check_cfg, CheckedCFG
 from guppy.checker.expr_checker import synthesize_call, check_call
 from guppy.error import GuppyError
-from guppy.gtypes import FunctionType, type_from_ast, NoneType, GuppyType, Subst, \
-    BoundTypeVar
+from guppy.gtypes import (
+    FunctionType,
+    type_from_ast,
+    NoneType,
+    GuppyType,
+    Subst,
+    BoundTypeVar,
+)
 from guppy.nodes import GlobalCall, CheckedNestedFunctionDef, NestedFunctionDef
 
 
@@ -184,4 +190,9 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         arg_names.append(arg.arg)
 
     ret_type = type_from_ast(func_def.returns, globals, type_var_mapping)
-    return FunctionType(arg_tys, ret_type, arg_names, sorted(type_var_mapping.values(), key=lambda v: v.idx))
+    return FunctionType(
+        arg_tys,
+        ret_type,
+        arg_names,
+        sorted(type_var_mapping.values(), key=lambda v: v.idx),
+    )

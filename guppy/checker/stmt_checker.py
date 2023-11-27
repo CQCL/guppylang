@@ -99,7 +99,9 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def visit_Return(self, node: ast.Return) -> ast.stmt:
         if node.value is not None:
-            node.value, subst = self._check_expr(node.value, self.return_ty, "return value")
+            node.value, subst = self._check_expr(
+                node.value, self.return_ty, "return value"
+            )
             assert len(subst) == 0  # `self.return_ty` is closed!
         elif not isinstance(self.return_ty, NoneType):
             raise GuppyTypeError(

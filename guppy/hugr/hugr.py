@@ -14,7 +14,8 @@ from guppy.gtypes import (
     FunctionType,
     SumType,
     type_to_row,
-    row_to_type, Inst,
+    row_to_type,
+    Inst,
 )
 from guppy.hugr import val
 

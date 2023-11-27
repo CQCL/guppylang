@@ -10,7 +10,8 @@ from guppy.gtypes import (
     TupleType,
     SumType,
     NoneType,
-    BoolType, Subst,
+    BoolType,
+    Subst,
 )
 
 
@@ -90,7 +91,7 @@ class Globals(NamedTuple):
         return Globals(
             self.values | other.values,
             self.types | other.types,
-            self.type_vars | other.type_vars
+            self.type_vars | other.type_vars,
         )
 
     def __ior__(self, other: "Globals") -> "Globals":
