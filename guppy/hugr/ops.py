@@ -4,7 +4,14 @@ from abc import ABC
 from typing import Annotated, Literal, Union, Optional, Any
 from pydantic import Field, BaseModel
 
-from .tys import TypeRow, SimpleType, FunctionType, ExtensionId, ExtensionSet
+from .tys import (
+    TypeRow,
+    SimpleType,
+    PolyFuncType,
+    FunctionType,
+    ExtensionId,
+    ExtensionSet,
+)
 import guppy.hugr.tys as tys
 from .val import Value
 
@@ -60,13 +67,13 @@ class FuncDefn(BaseOp):
     op: Literal["FuncDefn"] = "FuncDefn"
 
     name: str
-    signature: FunctionType = Field(default_factory=FunctionType.empty)
+    signature: PolyFuncType = Field(default_factory=PolyFuncType.empty)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(in_types) == 0
         assert len(out_types) == 1
         out = out_types[0]
-        assert isinstance(out, FunctionType)
+        assert isinstance(out, PolyFuncType)
         self.signature = out  # TODO: Extensions
 
 
@@ -75,13 +82,13 @@ class FuncDecl(BaseOp):
 
     op: Literal["FuncDecl"] = "FuncDecl"
     name: str
-    signature: FunctionType = Field(default_factory=FunctionType.empty)
+    signature: PolyFuncType = Field(default_factory=PolyFuncType.empty)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(in_types) == 0
         assert len(out_types) == 1
         out = out_types[0]
-        assert isinstance(out, FunctionType)
+        assert isinstance(out, PolyFuncType)
         self.signature = out
 
 
@@ -194,8 +201,9 @@ class Call(DataflowOp):
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         # The constE edge comes after the value inputs
         fun_ty = in_types[-1]
-        assert isinstance(fun_ty, FunctionType)
-        self.signature = fun_ty
+        assert isinstance(fun_ty, PolyFuncType)
+        assert len(fun_ty.params) == 0
+        self.signature = fun_ty.body
 
 
 class CallIndirect(DataflowOp):
@@ -208,10 +216,11 @@ class CallIndirect(DataflowOp):
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         fun_ty = in_types[0]
-        assert isinstance(fun_ty, FunctionType)
-        assert len(fun_ty.input) == len(in_types) - 1
-        assert len(fun_ty.output) == len(out_types)
-        self.signature = fun_ty
+        assert isinstance(fun_ty, PolyFuncType)
+        assert len(fun_ty.params) == 0
+        assert len(fun_ty.body.input) == len(in_types) - 1
+        assert len(fun_ty.body.output) == len(out_types)
+        self.signature = fun_ty.body
 
 
 class LoadConstant(DataflowOp):

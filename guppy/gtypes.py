@@ -198,7 +198,8 @@ class FunctionType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         ins = [t.to_hugr() for t in self.args]
         outs = [t.to_hugr() for t in type_to_row(self.returns)]
-        return tys.FunctionType(input=ins, output=outs, extension_reqs=[])
+        func_ty = tys.FunctionType(input=ins, output=outs, extension_reqs=[])
+        return tys.PolyFuncType(params=[], body=func_ty)
 
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or FunctionType(

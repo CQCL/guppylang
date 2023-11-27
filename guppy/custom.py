@@ -11,7 +11,6 @@ from guppy.error import (
     GuppyError,
     InternalGuppyError,
     UnknownFunctionType,
-    GuppyTypeError,
 )
 from guppy.gtypes import GuppyType, FunctionType, Subst, type_to_row
 from guppy.hugr import ops
