@@ -3,8 +3,15 @@ import functools
 import itertools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, Sequence, TYPE_CHECKING, Mapping, Iterator, ClassVar, \
-    Literal
+from typing import (
+    Optional,
+    Sequence,
+    TYPE_CHECKING,
+    Mapping,
+    Iterator,
+    ClassVar,
+    Literal,
+)
 
 import guppy.hugr.tys as tys
 from guppy.ast_util import AstNode, set_location_from
@@ -16,6 +23,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class TypeVarId:
     """Identifier for free type variables."""
+
     id: int
 
     _id_generator: ClassVar[Iterator[int]] = itertools.count()
@@ -164,12 +172,18 @@ class FunctionType(GuppyType):
     linear = False
 
     def __str__(self) -> str:
-        prefix = "forall " + ", ".join(str(v) for v in self.quantified) + ". " if self.quantified else ""
+        prefix = (
+            "forall " + ", ".join(str(v) for v in self.quantified) + ". "
+            if self.quantified
+            else ""
+        )
         if len(self.args) == 1:
             [arg] = self.args
             return prefix + f"{arg} -> {self.returns}"
         else:
-            return prefix + f"({', '.join(str(a) for a in self.args)}) -> {self.returns}"
+            return (
+                prefix + f"({', '.join(str(a) for a in self.args)}) -> {self.returns}"
+            )
 
     @staticmethod
     def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
@@ -190,7 +204,7 @@ class FunctionType(GuppyType):
         return transformer.transform(self) or FunctionType(
             [ty.transform(transformer) for ty in self.args],
             self.returns.transform(transformer),
-            self.arg_names
+            self.arg_names,
         )
 
     def instantiate(self, tys: Sequence[GuppyType]) -> "FunctionType":
@@ -426,7 +440,11 @@ def _unify_var(var: FreeTypeVar, t: GuppyType, subst: Subst) -> Optional[Subst]:
     return {var.id: t, **subst}
 
 
-def type_from_ast(node: AstNode, globals: "Globals", type_var_mapping: Optional[dict[str, BoundTypeVar]] = None) -> GuppyType:
+def type_from_ast(
+    node: AstNode,
+    globals: "Globals",
+    type_var_mapping: Optional[dict[str, BoundTypeVar]] = None,
+) -> GuppyType:
     """Turns an AST expression into a Guppy type."""
     from guppy.error import GuppyError
 
@@ -459,7 +477,9 @@ def type_from_ast(node: AstNode, globals: "Globals", type_var_mapping: Optional[
         raise GuppyError(f"Constant `{v}` is not a valid type", node)
 
     if isinstance(node, ast.Tuple):
-        return TupleType([type_from_ast(el, globals) for el in node.elts])
+        return TupleType(
+            [type_from_ast(el, globals, type_var_mapping) for el in node.elts]
+        )
 
     if (
         isinstance(node, ast.Subscript)
@@ -479,8 +499,12 @@ def type_from_ast(node: AstNode, globals: "Globals", type_var_mapping: Optional[
     if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
         x = node.value.id
         if x in globals.types:
-            args = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
-            return globals.types[x].build(*(type_from_ast(a, globals) for a in args), node=node)
+            args = (
+                node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+            )
+            return globals.types[x].build(
+                *(type_from_ast(a, globals, type_var_mapping) for a in args), node=node
+            )
 
     raise GuppyError("Not a valid Guppy type", node)
 
