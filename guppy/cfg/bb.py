@@ -34,7 +34,9 @@ class VariableStats:
                 self.used[name.id] = name
 
 
-BBStatement = Union[ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Return, NestedFunctionDef]
+BBStatement = Union[
+    ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Return, NestedFunctionDef
+]
 
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
