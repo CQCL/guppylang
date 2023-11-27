@@ -3,7 +3,8 @@ from typing import Optional, Union, NoReturn, Any
 
 from guppy.ast_util import AstVisitor, with_loc, AstNode, with_type, get_type_opt
 from guppy.checker.core import Context, CallableVariable, Globals
-from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
+from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError, \
+    GuppyTypeInferenceError
 from guppy.gtypes import (
     GuppyType,
     TupleType,
@@ -325,34 +326,20 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         )
 
 
-def check_num_args(exp: int, act: int, node: AstNode) -> None:
-    """Checks that the correct number of arguments have been passed to a function."""
-    if act < exp:
-        raise GuppyTypeError(
-            f"Not enough arguments passed (expected {exp}, got {act})", node
-        )
-    if exp < act:
-        if isinstance(node, ast.Call):
-            raise GuppyTypeError("Unexpected argument", node.args[exp])
-        raise GuppyTypeError(
-            f"Too many arguments passed (expected {exp}, got {act})", node
-        )
-
-
 def check_type_against(
     act: GuppyType, exp: GuppyType, node: AstNode, kind: str = "expression"
 ) -> tuple[Subst, Inst]:
     """Checks a type against another type.
 
     Returns a substitution for the free variables the expected type and an instantiation
-    for the quantified variables in the actual type.
+    for the quantified variables in the actual type. Note that the expected type may not
+    be quantified and the actual type may not contain free unification variables.
     """
-    # Expected type may not be quantified
     assert not isinstance(exp, FunctionType) or not exp.quantified
     assert not act.free_vars
 
-    # However, the actual type may be. In that case, we have to find an instantiation to
-    # avoid higher-rank types.
+    # The actual type may be quantified. In that case, we have to find an instantiation
+    # to avoid higher-rank types.
     subst: Optional[Subst]
     if isinstance(act, FunctionType) and act.quantified:
         unquantified, free_vars = act.unquantified()
@@ -362,7 +349,7 @@ def check_type_against(
         # Check that we have found a valid instantiation for all quantified vars
         for i, v in enumerate(free_vars):
             if v.id not in subst:
-                raise GuppyTypeError(
+                raise GuppyTypeInferenceError(
                     f"Expected {kind} of type `{exp}`, got `{act}`. Couldn't infer an "
                     f"instantiation for type variable `{act.quantified[i]}` (higher-"
                     "rank polymorphic types are not supported)",
@@ -385,6 +372,20 @@ def check_type_against(
     if subst is None:
         raise GuppyTypeError(f"Expected {kind} of type `{exp}`, got `{act}`", node)
     return subst, []
+
+
+def check_num_args(exp: int, act: int, node: AstNode) -> None:
+    """Checks that the correct number of arguments have been passed to a function."""
+    if act < exp:
+        raise GuppyTypeError(
+            f"Not enough arguments passed (expected {exp}, got {act})", node
+        )
+    if exp < act:
+        if isinstance(node, ast.Call):
+            raise GuppyTypeError("Unexpected argument", node.args[exp])
+        raise GuppyTypeError(
+            f"Too many arguments passed (expected {exp}, got {act})", node
+        )
 
 
 def type_check_args(
@@ -416,7 +417,7 @@ def type_check_args(
 
     # We also have to check that we found instantiations for all vars in the return type
     if not set.issubset(set(func_ty.returns.free_vars.keys()), subst.keys()):
-        raise GuppyTypeError(
+        raise GuppyTypeInferenceError(
             f"Cannot infer type variable in expression of type "
             f"`{func_ty.returns.substitute(subst)}`",
             node,
@@ -470,24 +471,24 @@ def check_call(
     #       x: int = foo(None)
     #                    ^^^^  Expected argument of type `int`, got `None`
     #
-    # The following error location would be more intuitive for users:
+    # But the following error location would be more intuitive for users:
     #
     #       x: int = foo(None)
-    #                ^^^^^^^^^ Expected expression of type `int`, got `None`
+    #                ^^^^^^^^^  Expected expression of type `int`, got `None`
     #
-    # Therefore, we should only resort to using the type information for inference if
-    # the regular synthesis method doesn't succeed.
+    # In other words, if we can get away with synthesising the call without the extra
+    # information from the expected type, we should do that to improve the error.
 
-    # TODO: This approach can result in exponential runtime in the worst case. However
-    #  the bad case, e.g. `x: int = foo(foo(...foo(?)...))`, shouldn't be common in
-    #  practice
+    # TODO: The approach below can result in exponential runtime in the worst case.
+    #  However the bad case, e.g. `x: int = foo(foo(...foo(?)...))`, shouldn't be common
+    #  in practice. Can we do better than that?
 
     # First, try to synthesize
     res: Optional[tuple[GuppyType, Inst]] = None
     try:
         args, synth, inst = synthesize_call(func_ty, args, node, ctx)
         res = synth, inst
-    except GuppyTypeError:
+    except GuppyTypeInferenceError:
         pass
     if res is not None:
         synth, inst = res
@@ -496,7 +497,8 @@ def check_call(
             raise GuppyTypeError(f"Expected {kind} of type `{ty}`, got `{synth}`", node)
         return args, subst, inst
 
-    # Only if synthesis fails, we try to infer more from the return type
+    # If synthesis fails, we try again, this time also using information from the
+    # expected return type
     unquantified, free_vars = func_ty.unquantified()
     subst = unify(ty, unquantified.returns, {})
     if subst is None:
@@ -510,7 +512,7 @@ def check_call(
     # Also make sure we found an instantiation for all free vars in the type we're
     # checking against
     if not set.issubset(set(ty.free_vars.keys()), subst.keys()):
-        raise GuppyTypeError(
+        raise GuppyTypeInferenceError(
             f"Expected expression of type `{ty}`, got "
             f"`{func_ty.returns.substitute(subst)}`. Couldn't infer type variables",
             node,

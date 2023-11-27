@@ -73,6 +73,12 @@ class GuppyTypeError(GuppyError):
     pass
 
 
+class GuppyTypeInferenceError(GuppyError):
+    """Special Guppy exception for type inference errors."""
+
+    pass
+
+
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
 
