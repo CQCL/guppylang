@@ -4,7 +4,7 @@ from typing import Optional, Iterator
 
 from guppy.ast_util import AstNode
 from guppy.checker.core import Variable, CallableVariable
-from guppy.gtypes import FunctionType
+from guppy.gtypes import FunctionType, GuppyType, Inst
 from guppy.hugr.hugr import OutPortV, DFContainingNode, Hugr
 
 
@@ -47,6 +47,7 @@ class CompiledFunction(CompiledVariable, CallableVariable):
     def compile_call(
         self,
         args: list[OutPortV],
+        type_args: Inst,
         dfg: "DFContainer",
         graph: Hugr,
         globals: "CompiledGlobals",

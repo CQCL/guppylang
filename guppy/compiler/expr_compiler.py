@@ -71,7 +71,9 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         assert isinstance(func, CompiledFunction)
 
         args = [self.visit(arg) for arg in node.args]
-        rets = func.compile_call(args, self.dfg, self.graph, self.globals, node)
+        rets = func.compile_call(
+            args, list(node.type_args), self.dfg, self.graph, self.globals, node
+        )
         return self._pack_returns(rets)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:

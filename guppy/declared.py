@@ -4,11 +4,11 @@ from typing import Optional
 
 from guppy.ast_util import AstNode, has_empty_body
 from guppy.checker.core import Globals, Context
-from guppy.checker.expr_checker import check_call, synthesize_call
+from guppy.checker.expr_checker import check_call, synthesize_call, instantiate_poly
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
 from guppy.error import GuppyError
-from guppy.gtypes import type_to_row, GuppyType, Subst
+from guppy.gtypes import type_to_row, GuppyType, Subst, Inst
 from guppy.hugr.hugr import VNode, Hugr, Node, OutPortV
 from guppy.nodes import GlobalCall
 
@@ -56,11 +56,19 @@ class DeclaredFunction(CompiledFunction):
     def compile_call(
         self,
         args: list[OutPortV],
+        type_args: Inst,
         dfg: DFContainer,
         graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
     ) -> list[OutPortV]:
         assert self.node is not None
-        call = graph.add_call(self.node.out_port(0), args, dfg.node)
+        # TODO: Hugr should probably allow us to pass type args to `Call`, so we can
+        #   avoid loading the function to manually add a `TypeApply`
+        if type_args:
+            func = graph.add_load_constant(self.node.out_port(0), dfg.node)
+            func = graph.add_type_apply(func.out_port(0), type_args, dfg.node)
+            call = graph.add_indirect_call(func.out_port(0), args, dfg.node)
+        else:
+            call = graph.add_call(self.node.out_port(0), args, dfg.node)
         return [call.out_port(i) for i in range(len(type_to_row(self.ty.returns)))]

@@ -17,7 +17,7 @@ from guppy.gtypes import (
     row_to_type,
     Inst,
 )
-from guppy.hugr import val
+from guppy.hugr import val, tys
 
 NodeIdx = int
 PortOffset = int
@@ -533,15 +533,21 @@ class Hugr:
         )
 
     def add_type_apply(
-        self, func_port: OutPortV, tys: Inst, parent: Optional[Node] = None
+        self, func_port: OutPortV, args: Inst, parent: Optional[Node] = None
     ) -> VNode:
         """Adds a `TypeApply` node to the graph."""
         assert isinstance(func_port.ty, FunctionType)
-        assert len(func_port.ty.quantified) == len(tys)
+        assert len(func_port.ty.quantified) == len(args)
+        result_ty = func_port.ty.instantiate(args)
+        ta = ops.TypeApplication(
+            input=func_port.ty.to_hugr(),
+            args=[tys.TypeArg(ty=ty.to_hugr()) for ty in args],
+            output=result_ty.to_hugr(),
+        )
         return self.add_node(
-            ops.DummyOp(name="TypeApply"),
+            ops.TypeApply(ta=ta),
             inputs=[func_port],
-            output_types=[func_port.ty.instantiate(tys)],
+            output_types=[result_ty],
             parent=parent,
         )
 

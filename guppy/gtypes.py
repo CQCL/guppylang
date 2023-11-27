@@ -63,7 +63,7 @@ class GuppyType(ABC):
         if isinstance(self, FreeTypeVar):
             vs = {self.id: self}
         else:
-            vs: dict[TypeVarId, FreeTypeVar] = {}
+            vs = {}
             for arg in self.type_args:
                 vs |= arg.free_vars
         object.__setattr__(self, "_free_vars", vs)
@@ -124,8 +124,7 @@ class BoundTypeVar(GuppyType):
         return self.display_name
 
     def to_hugr(self) -> tys.SimpleType:
-        # TODO
-        return NoneType().to_hugr()
+        return tys.Variable(i=self.idx, b=tys.TypeBound.from_linear(self.linear))
 
 
 @dataclass(frozen=True)
@@ -195,11 +194,17 @@ class FunctionType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return itertools.chain(iter(self.args), iter((self.returns,)))
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.PolyFuncType:
         ins = [t.to_hugr() for t in self.args]
         outs = [t.to_hugr() for t in type_to_row(self.returns)]
         func_ty = tys.FunctionType(input=ins, output=outs, extension_reqs=[])
-        return tys.PolyFuncType(params=[], body=func_ty)
+        return tys.PolyFuncType(
+            params=[
+                tys.TypeParam(b=tys.TypeBound.from_linear(v.linear))
+                for v in self.quantified
+            ],
+            body=func_ty,
+        )
 
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or FunctionType(

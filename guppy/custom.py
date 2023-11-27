@@ -12,7 +12,7 @@ from guppy.error import (
     InternalGuppyError,
     UnknownFunctionType,
 )
-from guppy.gtypes import GuppyType, FunctionType, Subst, type_to_row
+from guppy.gtypes import GuppyType, FunctionType, Subst, type_to_row, Inst
 from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV, Hugr, Node, DFContainingVNode
 from guppy.nodes import GlobalCall
@@ -100,12 +100,13 @@ class CustomFunction(CompiledFunction):
     def compile_call(
         self,
         args: list[OutPortV],
+        type_args: Inst,
         dfg: DFContainer,
         graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
     ) -> list[OutPortV]:
-        self.call_compiler._setup(dfg, graph, globals, node)
+        self.call_compiler._setup(type_args, dfg, graph, globals, node)
         return self.call_compiler.compile(args)
 
     def load(
@@ -121,6 +122,12 @@ class CustomFunction(CompiledFunction):
             raise GuppyError(
                 "This function does not support usage in a higher-order context",
                 node,
+            )
+
+        if self._ty.quantified:
+            raise InternalGuppyError(
+                "Can't yet generate higher-order versions of custom functions. This "
+                "requires generic function *definitions*"
             )
 
         # Find the module node by walking up the hierarchy
@@ -139,7 +146,7 @@ class CustomFunction(CompiledFunction):
             def_node = graph.add_def(self.ty, module, self.name)
             _, inp_ports = graph.add_input_with_ports(list(self.ty.args), def_node)
             returns = self.compile_call(
-                inp_ports, DFContainer(def_node, {}), graph, globals, node
+                inp_ports, [], DFContainer(def_node, {}), graph, globals, node
             )
             graph.add_output(returns, parent=def_node)
             self._defined[module] = def_node
@@ -180,14 +187,21 @@ class CustomCallChecker(ABC):
 class CustomCallCompiler(ABC):
     """Protocol for custom function call compilers."""
 
+    type_args: Inst
     dfg: DFContainer
     graph: Hugr
     globals: CompiledGlobals
     node: AstNode
 
     def _setup(
-        self, dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode
+        self,
+        type_args: Inst,
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: CompiledGlobals,
+        node: AstNode,
     ) -> None:
+        self.type_args = type_args
         self.dfg = dfg
         self.graph = graph
         self.globals = globals

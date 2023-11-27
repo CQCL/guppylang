@@ -2,6 +2,7 @@ import inspect
 import sys
 from abc import ABC
 from typing import Annotated, Literal, Union, Optional, Any
+
 from pydantic import Field, BaseModel
 
 from .tys import (
@@ -499,6 +500,22 @@ class Tag(LeafOp):
     variants: TypeRow  # The variants of the sum type.
 
 
+class TypeApply(LeafOp):
+    """Fixes some TypeParams of a polymorphic type by providing TypeArgs"""
+
+    lop: Literal["TypeApply"] = "TypeApply"
+    ta: "TypeApplication"
+
+
+class TypeApplication(BaseModel):
+    """Records details of an application of a PolyFuncType to some TypeArgs and the
+    result (a less-, but still potentially-, polymorphic type)."""
+
+    input: PolyFuncType
+    args: list[tys.TypeArg]
+    output: PolyFuncType
+
+
 LeafOpUnion = Annotated[
     Union[
         CustomOp,
@@ -521,6 +538,7 @@ LeafOpUnion = Annotated[
         UnpackTuple,
         MakeNewType,
         Tag,
+        TypeApply,
     ],
     Field(discriminator="lop"),
 ]

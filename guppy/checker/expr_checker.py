@@ -3,8 +3,12 @@ from typing import Optional, Union, NoReturn, Any
 
 from guppy.ast_util import AstVisitor, with_loc, AstNode, with_type, get_type_opt
 from guppy.checker.core import Context, CallableVariable, Globals
-from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError, \
-    GuppyTypeInferenceError
+from guppy.error import (
+    GuppyError,
+    GuppyTypeError,
+    InternalGuppyError,
+    GuppyTypeInferenceError,
+)
 from guppy.gtypes import (
     GuppyType,
     TupleType,
@@ -129,11 +133,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         # Otherwise, it must be a function as a higher-order value
         if isinstance(func_ty, FunctionType):
             args, return_ty, inst = check_call(func_ty, node.args, ty, node, self.ctx)
-            # Maybe we have to add a TypeApply node
-            if len(inst) > 0:
-                func = TypeApply(value=with_type(ty, node.func), tys=inst)
-                func = with_type(func_ty.instantiate(inst), func)
-                node.func = with_loc(node.func, func)
+            node.func = instantiate_poly(node.func, func_ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
         elif f := self.ctx.globals.get_instance_func(func_ty, "__call__"):
             return f.check_call(node.args, ty, node, self.ctx)
@@ -296,11 +296,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         # Otherwise, it must be a function as a higher-order value
         if isinstance(ty, FunctionType):
             args, return_ty, inst = synthesize_call(ty, node.args, node, self.ctx)
-            # Maybe we have to add a TypeApply node
-            if len(inst) > 0:
-                func = TypeApply(value=with_type(ty, node.func), tys=inst)
-                func = with_type(ty.instantiate(inst), func)
-                node.func = with_loc(node.func, func)
+            node.func = instantiate_poly(node.func, ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
         elif f := self.ctx.globals.get_instance_func(ty, "__call__"):
             return f.synthesize_call(node.args, node, self.ctx)
@@ -523,6 +519,15 @@ def check_call(
     inst = [subst[v.id] for v in free_vars]
     subst = {v: t for v, t in subst.items() if v in ty.free_vars}
     return args, subst, inst
+
+
+def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
+    """Instantiates quantified type arguments in a function."""
+    assert len(ty.quantified) == len(inst)
+    if len(inst) > 0:
+        node = with_loc(node, TypeApply(value=with_type(ty, node), tys=inst))
+        return with_type(ty.instantiate(inst), node)
+    return node
 
 
 def to_bool(
