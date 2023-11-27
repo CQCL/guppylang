@@ -134,41 +134,12 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
     ) -> tuple[ast.expr, Subst]:
         # Try to synthesize and then check if we can unify it with the given type
         node, synth = self._synthesize(node, allow_free_vars=False)
+        subst, inst = check_type_against(synth, ty, node, self._kind)
 
-        # Special case if we synthesized a polymorphic function type. In that case, we
-        # have to find an instantiation to avoid higher-rank types.
-        subst: Optional[Subst]
-        if isinstance(synth, FunctionType) and synth.quantified:
-            unquantified, free_vars = synth.unquantified()
-            subst = unify(ty, unquantified, {})
-            if subst is None:
-                self._fail(ty, synth, node)
-            # Check that we have found a valid instantiation for all quantified vars
-            for i, v in enumerate(free_vars):
-                if v.id not in subst:
-                    raise GuppyTypeError(
-                        f"Expected {self._kind} of type `{ty}`, got `{synth}`. "
-                        "Couldn't infer an instantiation for type variable "
-                        f"`{synth.quantified[i]}`",
-                        node
-                    )
-                if subst[v.id].free_vars:
-                    raise GuppyTypeError(
-                        f"Expected {self._kind} of type `{ty}`, got `{synth}`. Can't "
-                        f"instantiate type variable `{synth.quantified[i]}` with type "
-                        f"`{subst[v.id]}` containing free variables",
-                        node
-                    )
-            inst = [subst[v.id] for v in free_vars]
+        # Apply instantiation of quantified type variables
+        if inst:
             node = with_loc(node, TypeApply(value=node, tys=inst))
-            subst = {v: t for v, t in subst.items() if v in ty.free_vars}
-            return node, subst
 
-        # Otherwise, we know that `synth` has no free type vars, so unification is
-        # trivial
-        subst = unify(ty, synth, {})
-        if subst is None:
-            self._fail(ty, synth, node)
         return node, subst
 
 
@@ -357,6 +328,52 @@ def check_num_args(exp: int, act: int, node: AstNode) -> None:
         )
 
 
+def check_type_against(act: GuppyType, exp: GuppyType, node: AstNode, kind: str = "expression") -> tuple[Subst, Inst]:
+    """Checks a type against another type.
+
+    Returns a substitution for the free variables the expected type and an instantiation
+    for the quantified variables in the actual type.
+    """
+    # Expected type may not be quantified
+    assert not isinstance(exp, FunctionType) or not exp.quantified
+    assert not act.free_vars
+
+    # However, the actual type may be. In that case, we have to find an instantiation to
+    # avoid higher-rank types.
+    subst: Optional[Subst]
+    if isinstance(act, FunctionType) and act.quantified:
+        unquantified, free_vars = act.unquantified()
+        subst = unify(exp, unquantified, {})
+        if subst is None:
+            raise GuppyTypeError(f"Expected {kind} of type `{exp}`, got `{act}`", node)
+        # Check that we have found a valid instantiation for all quantified vars
+        for i, v in enumerate(free_vars):
+            if v.id not in subst:
+                raise GuppyTypeError(
+                    f"Expected {kind} of type `{exp}`, got `{act}`. Couldn't infer an "
+                    f"instantiation for type variable `{act.quantified[i]}` (higher-"
+                    "rank polymorphic types are not supported)",
+                    node
+                )
+            if subst[v.id].free_vars:
+                raise GuppyTypeError(
+                    f"Expected {kind} of type `{exp}`, got `{act}`. Can't instantiate "
+                    f"type variable `{act.quantified[i]}` with type `{subst[v.id]}` "
+                    "containing free variables",
+                    node
+                )
+        inst = [subst[v.id] for v in free_vars]
+        subst = {v: t for v, t in subst.items() if v in exp.free_vars}
+        return subst, inst
+
+    # Otherwise, we know that `act` has no free type vars, so unification is trivial
+    assert not act.free_vars
+    subst = unify(exp, act, {})
+    if subst is None:
+        raise GuppyTypeError(f"Expected {kind} of type `{exp}`, got `{act}`", node)
+    return subst, []
+
+
 def type_check_args(args: list[ast.expr], func_ty: FunctionType, subst: Subst, ctx: Context, node: AstNode) -> tuple[list[ast.expr], Subst]:
     """Checks the arguments of a function call and infers free type variables.
 
@@ -379,7 +396,7 @@ def type_check_args(args: list[ast.expr], func_ty: FunctionType, subst: Subst, c
         for arg in func_ty.args
     )
 
-    # We just have to check that we found instantiations for all vars in the return type
+    # We also have to check that we found instantiations for all vars in the return type
     if not set.issubset(set(func_ty.returns.free_vars.keys()), subst.keys()):
         raise GuppyTypeError(
             f"Cannot infer type variable in expression of type "
@@ -435,7 +452,7 @@ def check_call(
     #       x: int = foo(None)
     #                    ^^^^  Expected argument of type `int`, got `None`
     #
-    # The following error location would be easier to understand for users:
+    # The following error location would be more intuitive for users:
     #
     #       x: int = foo(None)
     #                ^^^^^^^^^ Expected expression of type `int`, got `None`
