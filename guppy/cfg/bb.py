@@ -103,6 +103,11 @@ class VariableVisitor(ast.NodeVisitor):
         for name in name_nodes_in_ast(node.target):
             self.stats.assigned[name.id] = node
 
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        self.stats.update_used(node.value)
+        for name in name_nodes_in_ast(node.target):
+            self.stats.assigned[name.id] = node
+
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> None:
         # In order to compute the used external variables in a nested function
         # definition, we have to run live variable analysis first
