@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:17
+
+15:    @guppy(module)
+16:    def main() -> None:
+17:        x: bool = foo()
+                     ^^^^^
+GuppyTypeError: Expected expression of type `bool`, got `(?T, ?T)`
