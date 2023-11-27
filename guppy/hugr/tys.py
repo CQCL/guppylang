@@ -2,13 +2,49 @@ import inspect
 import sys
 from abc import ABC
 from enum import Enum
-from typing import Literal, Union, Annotated
+from typing import Literal, Union, Annotated, Optional
 from pydantic import Field, BaseModel
 
 
 ExtensionId = str
 ExtensionSet = list[  # TODO: Set not supported by MessagePack. Is list correct here?
     ExtensionId
+]
+
+
+# --------------------------------------------
+# --------------- TypeParam ------------------
+# --------------------------------------------
+
+
+class TypeParam(BaseModel):
+    tp: Literal["Type"] = "Type"
+    b: "TypeBound"
+
+
+class BoundedNatParam(BaseModel):
+    tp: Literal["BoundedNat"] = "BoundedNat"
+    bound: Optional[int]
+
+
+class OpaqueParam(BaseModel):
+    tp: Literal["Opaque"] = "Opaque"
+    ty: "Opaque"
+
+
+class ListParam(BaseModel):
+    tp: Literal["List"] = "List"
+    param: "TypeParamUnion"
+
+
+class TupleParam(BaseModel):
+    tp: Literal["Tuple"] = "Tuple"
+    params: list["TypeParamUnion"]
+
+
+TypeParamUnion = Annotated[
+    Union[TypeParam, BoundedNatParam, OpaqueParam, ListParam, TupleParam],
+    Field(discriminator="tp"),
 ]
 
 
@@ -137,7 +173,6 @@ class FunctionType(BaseModel):
     """A graph encoded as a value. It contains a concrete signature and a set of
     required resources."""
 
-    t: Literal["G"] = "G"
     input: "TypeRow"  # Value inputs of the function.
     output: "TypeRow"  # Value outputs of the function.
     # The extension requirements which are added by the operation
@@ -146,6 +181,26 @@ class FunctionType(BaseModel):
     @classmethod
     def empty(cls) -> "FunctionType":
         return FunctionType(input=[], output=[], extension_reqs=[])
+
+
+class PolyFuncType(BaseModel):
+    """A graph encoded as a value. It contains a concrete signature and a set of
+    required resources."""
+
+    t: Literal["G"] = "G"
+
+    # The declared type parameters, i.e., these must be instantiated with the same
+    # number of TypeArgs before the function can be called. Note that within the body,
+    # variable (DeBruijn) index 0 is element 0 of this array, i.e. the variables are
+    # bound from right to left.
+    params: list[TypeParamUnion]
+
+    # Template for the function. May contain variables up to length of `params`
+    body: FunctionType
+
+    @classmethod
+    def empty(cls) -> "PolyFuncType":
+        return PolyFuncType(params=[], body=FunctionType.empty())
 
 
 class TypeBound(Enum):
@@ -177,7 +232,7 @@ class Qubit(BaseModel):
 
 SimpleType = Annotated[
     Union[
-        Qubit, Variable, Int, F64, String, FunctionType, List, Array, Tuple, Sum, Opaque
+        Qubit, Variable, Int, F64, String, PolyFuncType, List, Array, Tuple, Sum, Opaque
     ],
     Field(discriminator="t"),
 ]
@@ -202,7 +257,7 @@ class Signature(BaseModel):
     (value) of a call (constant).
     """
 
-    signature: "FunctionType"  # The underlying signature
+    signature: "PolyFuncType"  # The underlying signature
 
     # The extensions which are associated with all the inputs and carried through
     input_extensions: ExtensionSet

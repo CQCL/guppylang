@@ -202,9 +202,9 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+checksum = "25db6b064527c5d482d0423354fcd07a89a2dfe07b67892e62411946db7f07b0"
 dependencies = [
  "either",
 ]
@@ -426,7 +426,7 @@ dependencies = [
 [[package]]
 name = "quantinuum-hugr"
 version = "0.1.0"
-source = "git+https://github.com/CQCL-DEV/hugr.git?rev=1a07cd9aca60aa75257bdb297d7442d9529765fb#1a07cd9aca60aa75257bdb297d7442d9529765fb"
+source = "git+https://github.com/CQCL-DEV/hugr.git?rev=d00dc3f1d6000349404f01a6bfc6bf94a32b9956#d00dc3f1d6000349404f01a6bfc6bf94a32b9956"
 dependencies = [
  "bitvec",
  "cgmath",
@@ -439,9 +439,11 @@ dependencies = [
  "itertools",
  "lazy_static",
  "num-rational",
+ "paste",
  "petgraph",
  "portgraph",
  "regex",
+ "rustversion",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -533,6 +535,12 @@ checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
 dependencies = [
  "semver",
 ]
+
+[[package]]
+name = "rustversion"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
 
 [[package]]
 name = "ryu"
