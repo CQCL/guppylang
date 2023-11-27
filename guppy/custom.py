@@ -2,7 +2,7 @@ import ast
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from guppy.ast_util import AstNode, with_type, with_loc
+from guppy.ast_util import AstNode, with_type, with_loc, get_type
 from guppy.checker.core import Context, Globals
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
@@ -12,7 +12,7 @@ from guppy.error import (
     UnknownFunctionType,
     GuppyTypeError,
 )
-from guppy.gtypes import GuppyType, FunctionType
+from guppy.gtypes import GuppyType, FunctionType, type_to_row
 from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV, Hugr, Node, DFContainingVNode
 
@@ -135,13 +135,9 @@ class CustomFunction(CompiledFunction):
         # to the function, and returns the results.
         if module not in self._defined:
             def_node = graph.add_def(self.ty, module, self.name)
-            inp = graph.add_input(list(self.ty.args), parent=def_node)
+            _, inp_ports = graph.add_input_with_ports(list(self.ty.args), def_node)
             returns = self.compile_call(
-                [inp.out_port(i) for i in range(len(self.ty.args))],
-                DFContainer(def_node, {}),
-                graph,
-                globals,
-                node,
+                inp_ports, DFContainer(def_node, {}), graph, globals, node
             )
             graph.add_output(returns, parent=def_node)
             self._defined[module] = def_node
@@ -227,7 +223,9 @@ class OpCompiler(CustomCallCompiler):
         self.op = op
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        raise NotImplementedError
+        node = self.graph.add_node(self.op.copy(), inputs=args, parent=self.dfg.node)
+        return_ty = get_type(self.node)
+        return [node.add_out_port(ty) for ty in type_to_row(return_ty)]
 
 
 class NoopCompiler(CustomCallCompiler):
