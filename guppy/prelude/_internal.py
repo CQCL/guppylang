@@ -99,7 +99,8 @@ class CoercingChecker(DefaultCallChecker):
             args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
             if isinstance(ty, self.ctx.globals.types["int"]):
                 call = with_loc(
-                    self.node, GlobalCall(func=Int.__float__, args=[args[i]])
+                    self.node,
+                    GlobalCall(func=Int.__float__, args=[args[i]], type_args=[]),
                 )
                 args[i] = with_type(self.ctx.globals.types["float"].build(), call)
         return super().synthesize(args)
