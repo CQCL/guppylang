@@ -196,6 +196,14 @@ class CallableChecker(CustomCallChecker):
         const = with_loc(self.node, ast.Constant(value=is_callable))
         return const, BoolType()
 
+    def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
+        args, _ = self.synthesize(args)
+        if not isinstance(ty, BoolType):
+            raise GuppyTypeError(
+                f"Expected expression of type `{ty}`, got `bool`", self.node
+            )
+        return args
+
 
 class IntTruedivCompiler(CustomCallCompiler):
     """Compiler for the `int.__truediv__` method."""
