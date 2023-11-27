@@ -211,7 +211,7 @@ class TypeBound(Enum):
 
     @staticmethod
     def from_linear(linear: bool) -> "TypeBound":
-        return TypeBound.Any if linear else TypeBound.Eq
+        return TypeBound.Any if linear else TypeBound.Copyable
 
 
 class Opaque(BaseModel):
