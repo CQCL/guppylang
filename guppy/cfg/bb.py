@@ -34,7 +34,7 @@ class VariableStats:
                 self.used[name.id] = name
 
 
-BBStatement = Union[ast.Assign, ast.AugAssign, ast.Expr, ast.Return, NestedFunctionDef]
+BBStatement = Union[ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Return, NestedFunctionDef]
 
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
@@ -104,7 +104,8 @@ class VariableVisitor(ast.NodeVisitor):
             self.stats.assigned[name.id] = node
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
-        self.stats.update_used(node.value)
+        if node.value:
+            self.stats.update_used(node.value)
         for name in name_nodes_in_ast(node.target):
             self.stats.assigned[name.id] = node
 
