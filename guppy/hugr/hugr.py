@@ -379,7 +379,7 @@ class Hugr:
         self, output_tys: Sequence[GuppyType], parent: Optional[Node] = None
     ) -> tuple[VNode, list[OutPortV]]:
         """Adds an `Input` node to the graph."""
-        node = self.add_input(list(output_tys), parent)
+        node = self.add_input(None, parent)
         ports = [node.add_out_port(ty) for ty in output_tys]
         return node, ports
 
