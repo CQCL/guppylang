@@ -11,25 +11,15 @@ CustomConst = Any  # TODO
 class ExtensionVal(BaseModel):
     """An extension constant value, that can check it is of a given [CustomType]."""
 
-    pv: Literal["Extension"] = "Extension"
+    v: Literal["Extension"] = "Extension"
     c: tuple[CustomConst]
 
 
 class FunctionVal(BaseModel):
     """A higher-order function value."""
 
-    pv: Literal["Function"] = "Function"
+    v: Literal["Function"] = "Function"
     hugr: Any  # TODO
-
-
-PrimValue = Annotated[Union[ExtensionVal, FunctionVal], Field(discriminator="pv")]
-
-
-class Prim(BaseModel):
-    """A primitive (non-container) value."""
-
-    v: Literal["Prim"] = "Prim"
-    val: PrimValue
 
 
 class Tuple(BaseModel):
@@ -50,7 +40,9 @@ class Sum(BaseModel):
     value: "Value"
 
 
-Value = Annotated[Union[Prim, Tuple, Sum], Field(discriminator="v")]
+Value = Annotated[
+    Union[ExtensionVal, FunctionVal, Tuple, Sum], Field(discriminator="v")
+]
 
 
 # Now that all classes are defined, we need to update the ForwardRefs in all type

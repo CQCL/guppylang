@@ -70,7 +70,8 @@ class FunctionType(GuppyType):
     def to_hugr(self) -> tys.SimpleType:
         ins = [t.to_hugr() for t in self.args]
         outs = [t.to_hugr() for t in self.returns]
-        return tys.FunctionType(input=ins, output=outs, extension_reqs=[])
+        func_ty = tys.FunctionType(input=ins, output=outs, extension_reqs=[])
+        return tys.PolyFuncType(params=[], body=func_ty)
 
 
 @dataclass(frozen=True)
