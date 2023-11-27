@@ -3,7 +3,7 @@ import itertools
 from typing import Optional, Iterator, Union, NamedTuple
 
 from guppy.ast_util import set_location_from, AstVisitor
-from guppy.cfg.bb import BB
+from guppy.cfg.bb import BB, BBStatement
 from guppy.cfg.cfg import CFG
 from guppy.checker.core import Globals
 from guppy.error import GuppyError, InternalGuppyError
@@ -75,15 +75,13 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
                 bb_opt = self.visit(node, bb_opt, jumps)
         return bb_opt
 
-    def _build_node_value(
-        self, node: Union[ast.Assign, ast.AugAssign, ast.Return, ast.Expr], bb: BB
-    ) -> BB:
+    def _build_node_value(self, node: BBStatement, bb: BB) -> BB:
         """Utility method for building a node containing a `value` expression.
 
         Builds the expression and mutates `node.value` to point to the built expression.
         Returns the BB in which the expression is available and adds the node to it.
         """
-        if node.value is not None:
+        if not isinstance(node, NestedFunctionDef) and node.value is not None:
             node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
         return bb
