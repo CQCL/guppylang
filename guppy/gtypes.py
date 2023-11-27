@@ -253,9 +253,6 @@ class TupleType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter(self.element_types)
 
-    def substitute(self, s: Subst) -> GuppyType:
-        return TupleType([ty.substitute(s) for ty in self.element_types])
-
     def to_hugr(self) -> tys.SimpleType:
         ts = [t.to_hugr() for t in self.element_types]
         return tys.Tuple(inner=ts)
@@ -289,9 +286,6 @@ class SumType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter(self.element_types)
 
-    def substitute(self, s: Subst) -> GuppyType:
-        return TupleType([ty.substitute(s) for ty in self.element_types])
-
     def to_hugr(self) -> tys.SimpleType:
         if all(
             isinstance(e, TupleType) and len(e.element_types) == 0
@@ -301,7 +295,7 @@ class SumType(GuppyType):
         return tys.GeneralSum(row=[t.to_hugr() for t in self.element_types])
 
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
-        return transformer.transform(self) or TupleType(
+        return transformer.transform(self) or SumType(
             [ty.transform(transformer) for ty in self.element_types]
         )
 
