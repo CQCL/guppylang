@@ -90,7 +90,7 @@ def float_op(op_name: str, ext: str = "arithmetic.float") -> ops.OpType:
 
 
 class CoercingChecker(DefaultCallChecker):
-    """Function call type checker thag automatically coerces arguments to float."""
+    """Function call type checker that automatically coerces arguments to float."""
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
         from .builtins import Int
