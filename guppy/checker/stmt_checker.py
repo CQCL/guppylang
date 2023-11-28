@@ -92,7 +92,9 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def visit_Expr(self, node: ast.Expr) -> ast.stmt:
         # An expression statement where the return value is discarded
-        node.value, _ = self._synth_expr(node.value)
+        node.value, ty = self._synth_expr(node.value)
+        if ty.linear:
+            raise GuppyTypeError(f"Value with linear type `{ty}` is not used", node)
         return node
 
     def visit_Return(self, node: ast.Return) -> ast.stmt:
