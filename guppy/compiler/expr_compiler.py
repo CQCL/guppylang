@@ -4,8 +4,15 @@ from typing import Any, Optional
 from guppy.ast_util import AstVisitor, get_type
 from guppy.compiler.core import CompilerBase, DFContainer, CompiledFunction
 from guppy.error import InternalGuppyError, GuppyError
-from guppy.gtypes import FunctionType, type_to_row, BoolType, BoundTypeVar, TupleType, \
-    Inst, NoneType
+from guppy.gtypes import (
+    FunctionType,
+    type_to_row,
+    BoolType,
+    BoundTypeVar,
+    TupleType,
+    Inst,
+    NoneType,
+)
 from guppy.hugr import ops, val
 from guppy.hugr.hugr import OutPortV
 from guppy.nodes import LocalName, GlobalName, GlobalCall, LocalCall, TypeApply
@@ -95,7 +102,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         if instantiation_needs_unpacking(func.ty, node.tys):
             raise GuppyError(
                 "Generic function instantiations returning rows are not supported yet",
-                node
+                node,
             )
 
         return ta

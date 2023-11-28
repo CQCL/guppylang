@@ -4,7 +4,7 @@ from typing import Optional
 
 from guppy.ast_util import AstNode, has_empty_body
 from guppy.checker.core import Globals, Context
-from guppy.checker.expr_checker import check_call, synthesize_call, instantiate_poly
+from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
 from guppy.error import GuppyError

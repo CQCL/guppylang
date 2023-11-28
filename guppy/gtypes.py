@@ -1,5 +1,4 @@
 import ast
-import functools
 import itertools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -14,7 +13,7 @@ from typing import (
 )
 
 import guppy.hugr.tys as tys
-from guppy.ast_util import AstNode, set_location_from
+from guppy.ast_util import AstNode
 
 if TYPE_CHECKING:
     from guppy.checker.core import Globals
