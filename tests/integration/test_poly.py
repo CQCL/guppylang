@@ -263,3 +263,22 @@ def test_pass_linear(validate):
 
     validate(module.compile())
 
+
+def test_higher_order_value(validate):
+    module = GuppyModule("test")
+    T = guppy.type_var(module, "T")
+
+    @guppy.declare(module)
+    def foo(x: T) -> T:
+        ...
+
+    @guppy.declare(module)
+    def bar(x: T) -> T:
+        ...
+
+    @guppy(module)
+    def main(b: bool) -> int:
+        f = foo if b else bar
+        return f(42)
+
+    validate(module.compile())
