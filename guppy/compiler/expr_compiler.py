@@ -3,8 +3,9 @@ from typing import Any, Optional
 
 from guppy.ast_util import AstVisitor, get_type
 from guppy.compiler.core import CompilerBase, DFContainer, CompiledFunction
-from guppy.error import InternalGuppyError
-from guppy.gtypes import FunctionType, type_to_row, BoolType
+from guppy.error import InternalGuppyError, GuppyError
+from guppy.gtypes import FunctionType, type_to_row, BoolType, BoundTypeVar, TupleType, \
+    Inst, NoneType
 from guppy.hugr import ops, val
 from guppy.hugr.hugr import OutPortV
 from guppy.nodes import LocalName, GlobalName, GlobalCall, LocalCall, TypeApply
@@ -81,7 +82,23 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 
     def visit_TypeApply(self, node: TypeApply) -> OutPortV:
         func = self.visit(node.value)
-        return self.graph.add_type_apply(func, node.tys, self.dfg.node).out_port(0)
+        assert isinstance(func.ty, FunctionType)
+        ta = self.graph.add_type_apply(func, node.tys, self.dfg.node).out_port(0)
+
+        # We have to be very careful here: If we instantiate `foo: forall T. T -> T`
+        # with a tuple type `tuple[A, B]`, we get the type `tuple[A, B] -> tuple[A, B]`.
+        # Normally, this would be represented in Hugr as a function with two output
+        # ports types A and B. However, when TypeApplying `foo`, we actually get a
+        # function with a single output port typed `tuple[A, B]`.
+        # TODO: We would need to do manual monomorphisation in that case to obtain a
+        #  function that returns two ports as expected
+        if instantiation_needs_unpacking(func.ty, node.tys):
+            raise GuppyError(
+                "Generic function instantiations returning rows are not supported yet",
+                node
+            )
+
+        return ta
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> OutPortV:
         # The only case that is not desugared by the type checker is the `not` operation
@@ -104,6 +121,14 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 def expr_to_row(expr: ast.expr) -> list[ast.expr]:
     """Turns an expression into a row expressions by unpacking top-level tuples."""
     return expr.elts if isinstance(expr, ast.Tuple) else [expr]
+
+
+def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
+    """Checks if instantiating a polymorphic makes it return a row."""
+    if isinstance(func_ty.returns, BoundTypeVar):
+        return_ty = inst[func_ty.returns.idx]
+        return isinstance(return_ty, TupleType) or isinstance(return_ty, NoneType)
+    return False
 
 
 def python_value_to_hugr(v: Any) -> Optional[val.Value]:

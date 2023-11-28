@@ -216,7 +216,17 @@ class FunctionType(GuppyType):
     def instantiate(self, tys: Sequence[GuppyType]) -> "FunctionType":
         """Instantiates quantified type variables."""
         assert len(tys) == len(self.quantified)
-        inst = Instantiator(tys)
+
+        # Set the `preserve` flag for instantiated tuples and None
+        preserved_tys: list[GuppyType] = []
+        for ty in tys:
+            if isinstance(ty, TupleType):
+                ty = TupleType(ty.element_types, preserve=True)
+            elif isinstance(ty, NoneType):
+                ty = NoneType(preserve=True)
+            preserved_tys.append(ty)
+
+        inst = Instantiator(preserved_tys)
         return FunctionType(
             [ty.transform(inst) for ty in self.args],
             self.returns.transform(inst),
@@ -235,6 +245,11 @@ class FunctionType(GuppyType):
 @dataclass(frozen=True)
 class TupleType(GuppyType):
     element_types: Sequence[GuppyType]
+
+    # Flag to avoid turning the tuple into row when calling `type_to_row()`. This is
+    # used to make sure that type vars instantiated to tuples are not broken up into
+    # rows when generating a Hugr
+    preserve: bool = field(default=False, compare=False)
 
     name: ClassVar[Literal["tuple"]] = "tuple"
 
@@ -309,6 +324,11 @@ class SumType(GuppyType):
 class NoneType(GuppyType):
     name: ClassVar[Literal["None"]] = "None"
     linear: bool = False
+
+    # Flag to avoid turning the type into a row when calling `type_to_row()`. This is
+    # used to make sure that type vars instantiated to Nones are not broken up into
+    # empty rows when generating a Hugr
+    preserve: bool = field(default=False, compare=False)
 
     @staticmethod
     def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
@@ -536,8 +556,8 @@ def row_to_type(row: Sequence[GuppyType]) -> GuppyType:
 
 def type_to_row(ty: GuppyType) -> Sequence[GuppyType]:
     """Turns a type into a row of types by unpacking top-level tuples."""
-    if isinstance(ty, NoneType):
+    if isinstance(ty, NoneType) and not ty.preserve:
         return []
-    if isinstance(ty, TupleType):
+    if isinstance(ty, TupleType) and not ty.preserve:
         return ty.element_types
     return [ty]
