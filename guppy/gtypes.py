@@ -6,10 +6,10 @@ from typing import (
     Optional,
     Sequence,
     TYPE_CHECKING,
-    Mapping,
     Iterator,
     ClassVar,
-    Literal, Set,
+    Literal,
+    Set,
 )
 
 import guppy.hugr.tys as tys

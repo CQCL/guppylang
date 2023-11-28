@@ -133,6 +133,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         # Otherwise, it must be a function as a higher-order value
         if isinstance(func_ty, FunctionType):
             args, return_ty, inst = check_call(func_ty, node.args, ty, node, self.ctx)
+            check_inst(func_ty, inst, node)
             node.func = instantiate_poly(node.func, func_ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
         elif f := self.ctx.globals.get_instance_func(func_ty, "__call__"):
@@ -360,6 +361,10 @@ def check_type_against(
                 )
         inst = [subst[v] for v in free_vars]
         subst = {v: t for v, t in subst.items() if v in exp.free_vars}
+
+        # Finally, check that the instantiation respects the linearity requirements
+        check_inst(act, inst, node)
+
         return subst, inst
 
     # Otherwise, we know that `act` has no free type vars, so unification is trivial
@@ -439,6 +444,10 @@ def synthesize_call(
     # Success implies that the substitution is closed
     assert all(not t.free_vars for t in subst.values())
     inst = [subst[v] for v in free_vars]
+
+    # Finally, check that the instantiation respects the linearity requirements
+    check_inst(func_ty, inst, node)
+
     return args, unquantified.returns.substitute(subst), inst
 
 
@@ -516,7 +525,25 @@ def check_call(
     assert all(not t.free_vars for t in subst.values())
     inst = [subst[v] for v in free_vars]
     subst = {v: t for v, t in subst.items() if v in ty.free_vars}
+
+    # Finally, check that the instantiation respects the linearity requirements
+    check_inst(func_ty, inst, node)
+
     return args, subst, inst
+
+
+def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
+    """Checks if an instantiation is valid.
+
+    Makes sure that the linearity requirements are satisfied.
+    """
+    for var, ty in zip(func_ty.quantified, inst):
+        if not var.linear and ty.linear:
+            raise GuppyTypeError(
+                f"Cannot instantiate non-linear type variable `{var}` in type "
+                f"`{func_ty}` with linear type `{ty}`",
+                node,
+            )
 
 
 def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:

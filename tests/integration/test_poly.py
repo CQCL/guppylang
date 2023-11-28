@@ -2,6 +2,9 @@ from typing import Callable
 
 from guppy.decorator import guppy
 from guppy.module import GuppyModule
+from guppy.prelude.quantum import Qubit
+
+import guppy.prelude.quantum as quantum
 
 
 def test_id(validate):
@@ -200,6 +203,58 @@ def test_pass_poly_cross(validate):
 
     @guppy.declare(module)
     def bar(x: bool) -> T:
+        ...
+
+    @guppy(module)
+    def main() -> None:
+        foo(bar)
+
+    validate(module.compile())
+
+
+def test_linear(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+    T = guppy.type_var(module, "T", linear=True)
+
+    @guppy.declare(module)
+    def foo(x: T) -> T:
+        ...
+
+    @guppy(module)
+    def main(q: Qubit) -> Qubit:
+        return foo(q)
+
+    validate(module.compile())
+
+
+def test_pass_nonlinear(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+    T = guppy.type_var(module, "T", linear=True)
+
+    @guppy.declare(module)
+    def foo(x: T) -> T:
+        ...
+
+    @guppy(module)
+    def main(x: int) -> None:
+        foo(x)
+
+    validate(module.compile())
+
+
+def test_pass_linear(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+    T = guppy.type_var(module, "T", linear=True)
+
+    @guppy.declare(module)
+    def foo(f: Callable[[T], T]) -> None:
+        ...
+
+    @guppy.declare(module)
+    def bar(q: Qubit) -> Qubit:
         ...
 
     @guppy(module)
