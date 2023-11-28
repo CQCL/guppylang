@@ -93,7 +93,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         # When checking against a variable, we have to synthesize
         if isinstance(ty, FreeTypeVar):
             expr, syn_ty = self._synthesize(expr, allow_free_vars=False)
-            return with_type(syn_ty, expr), {ty.id: syn_ty}
+            return with_type(syn_ty, expr), {ty: syn_ty}
 
         # Otherwise, invoke the visitor
         old_kind = self._kind
@@ -344,21 +344,21 @@ def check_type_against(
             raise GuppyTypeError(f"Expected {kind} of type `{exp}`, got `{act}`", node)
         # Check that we have found a valid instantiation for all quantified vars
         for i, v in enumerate(free_vars):
-            if v.id not in subst:
+            if v not in subst:
                 raise GuppyTypeInferenceError(
                     f"Expected {kind} of type `{exp}`, got `{act}`. Couldn't infer an "
                     f"instantiation for type variable `{act.quantified[i]}` (higher-"
                     "rank polymorphic types are not supported)",
                     node,
                 )
-            if subst[v.id].free_vars:
+            if subst[v].free_vars:
                 raise GuppyTypeError(
                     f"Expected {kind} of type `{exp}`, got `{act}`. Can't instantiate "
-                    f"type variable `{act.quantified[i]}` with type `{subst[v.id]}` "
+                    f"type variable `{act.quantified[i]}` with type `{subst[v]}` "
                     "containing free variables",
                     node,
                 )
-        inst = [subst[v.id] for v in free_vars]
+        inst = [subst[v] for v in free_vars]
         subst = {v: t for v, t in subst.items() if v in exp.free_vars}
         return subst, inst
 
@@ -407,12 +407,10 @@ def type_check_args(
 
     # If the argument check succeeded, this means that we must have found instantiations
     # for all unification variables occurring in the argument types
-    assert all(
-        set.issubset(set(arg.free_vars.keys()), subst.keys()) for arg in func_ty.args
-    )
+    assert all(set.issubset(arg.free_vars, subst.keys()) for arg in func_ty.args)
 
     # We also have to check that we found instantiations for all vars in the return type
-    if not set.issubset(set(func_ty.returns.free_vars.keys()), subst.keys()):
+    if not set.issubset(func_ty.returns.free_vars, subst.keys()):
         raise GuppyTypeInferenceError(
             f"Cannot infer type variable in expression of type "
             f"`{func_ty.returns.substitute(subst)}`",
@@ -440,7 +438,7 @@ def synthesize_call(
 
     # Success implies that the substitution is closed
     assert all(not t.free_vars for t in subst.values())
-    inst = [subst[v.id] for v in free_vars]
+    inst = [subst[v] for v in free_vars]
     return args, unquantified.returns.substitute(subst), inst
 
 
@@ -507,7 +505,7 @@ def check_call(
 
     # Also make sure we found an instantiation for all free vars in the type we're
     # checking against
-    if not set.issubset(set(ty.free_vars.keys()), subst.keys()):
+    if not set.issubset(ty.free_vars, subst.keys()):
         raise GuppyTypeInferenceError(
             f"Expected expression of type `{ty}`, got "
             f"`{func_ty.returns.substitute(subst)}`. Couldn't infer type variables",
@@ -516,7 +514,7 @@ def check_call(
 
     # Success implies that the substitution is closed
     assert all(not t.free_vars for t in subst.values())
-    inst = [subst[v.id] for v in free_vars]
+    inst = [subst[v] for v in free_vars]
     subst = {v: t for v, t in subst.items() if v in ty.free_vars}
     return args, subst, inst
 

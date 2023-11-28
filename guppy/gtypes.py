@@ -9,7 +9,7 @@ from typing import (
     Mapping,
     Iterator,
     ClassVar,
-    Literal,
+    Literal, Set,
 )
 
 import guppy.hugr.tys as tys
@@ -19,20 +19,7 @@ if TYPE_CHECKING:
     from guppy.checker.core import Globals
 
 
-@dataclass(frozen=True)
-class TypeVarId:
-    """Identifier for free type variables."""
-
-    id: int
-
-    _id_generator: ClassVar[Iterator[int]] = itertools.count()
-
-    @classmethod
-    def new(cls) -> "TypeVarId":
-        return TypeVarId(next(cls._id_generator))
-
-
-Subst = dict[TypeVarId, "GuppyType"]
+Subst = dict["FreeTypeVar", "GuppyType"]
 Inst = Sequence["GuppyType"]
 
 
@@ -46,7 +33,7 @@ class GuppyType(ABC):
     name: ClassVar[str]
 
     # Cache for free variables
-    _free_vars: Mapping["TypeVarId", "FreeTypeVar"] = field(init=False, repr=False)
+    _free_vars: Set["FreeTypeVar"] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         # Make sure that we don't have higher-rank polymorphic types
@@ -60,9 +47,9 @@ class GuppyType(ABC):
 
         # Compute free variables
         if isinstance(self, FreeTypeVar):
-            vs = {self.id: self}
+            vs = {self}
         else:
-            vs = {}
+            vs = set()
             for arg in self.type_args:
                 vs |= arg.free_vars
         object.__setattr__(self, "_free_vars", vs)
@@ -91,7 +78,7 @@ class GuppyType(ABC):
         pass
 
     @property
-    def free_vars(self) -> Mapping["TypeVarId", "FreeTypeVar"]:
+    def free_vars(self) -> Set["FreeTypeVar"]:
         return self._free_vars
 
     def substitute(self, s: Subst) -> "GuppyType":
@@ -128,13 +115,22 @@ class BoundTypeVar(GuppyType):
 
 @dataclass(frozen=True)
 class FreeTypeVar(GuppyType):
-    """Free type variable, identified with a globally unique id."""
+    """Free type variable, identified with a globally unique id.
 
-    id: TypeVarId
+    Serves as an existential variable for unification.
+    """
+
+    id: int
     display_name: str
     linear: bool = False
 
     name: ClassVar[Literal["FreeTypeVar"]] = "FreeTypeVar"
+
+    _id_generator: ClassVar[Iterator[int]] = itertools.count()
+
+    @classmethod
+    def new(cls, display_name: str, linear: bool) -> "FreeTypeVar":
+        return FreeTypeVar(next(cls._id_generator), display_name, linear)
 
     @staticmethod
     def build(*rgs: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
@@ -149,6 +145,9 @@ class FreeTypeVar(GuppyType):
 
     def __str__(self) -> str:
         return "?" + self.display_name
+
+    def __hash__(self) -> int:
+        return self.id
 
     def to_hugr(self) -> tys.SimpleType:
         from guppy.error import InternalGuppyError
@@ -234,10 +233,7 @@ class FunctionType(GuppyType):
 
     def unquantified(self) -> tuple["FunctionType", Sequence[FreeTypeVar]]:
         """Replaces all quantified variables with free type variables."""
-        inst = [
-            FreeTypeVar(TypeVarId.new(), v.display_name, v.linear)
-            for v in self.quantified
-        ]
+        inst = [FreeTypeVar.new(v.display_name, v.linear) for v in self.quantified]
         return self.instantiate(inst), inst
 
 
@@ -402,7 +398,7 @@ class Substituter(TypeTransformer):
 
     def transform(self, ty: GuppyType) -> Optional[GuppyType]:
         if isinstance(ty, FreeTypeVar):
-            return self.subst.get(ty.id, None)
+            return self.subst.get(ty, None)
         return None
 
 
@@ -450,13 +446,13 @@ def unify(s: GuppyType, t: GuppyType, subst: Optional[Subst]) -> Optional[Subst]
 
 def _unify_var(var: FreeTypeVar, t: GuppyType, subst: Subst) -> Optional[Subst]:
     """Helper function for unification of type variables."""
-    if var.id in subst:
-        return unify(subst[var.id], t, subst)
-    if isinstance(t, FreeTypeVar) and t.id in subst:
-        return unify(var, subst[t.id], subst)
-    if var.id in t.free_vars:
+    if var in subst:
+        return unify(subst[var], t, subst)
+    if isinstance(t, FreeTypeVar) and t in subst:
+        return unify(var, subst[t], subst)
+    if var in t.free_vars:
         return None
-    return {var.id: t, **subst}
+    return {var: t, **subst}
 
 
 def type_from_ast(
