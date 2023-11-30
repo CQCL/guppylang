@@ -46,7 +46,7 @@ class BB(ABC):
     idx: int
 
     # Pointer to the CFG that contains this node
-    cfg: "BaseCFG[Self]"
+    containing_cfg: "BaseCFG[Self]"
 
     # AST statements contained in this BB
     statements: list[BBStatement] = field(default_factory=list)

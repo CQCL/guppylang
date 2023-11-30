@@ -1,3 +1,9 @@
+"""Type checking code for control-flow graphs
+
+Operates on CFGs produced by the `CFGBuilder`. Produces a `CheckedCFG` consisting of
+`CheckedBB`s with inferred type signatures.
+"""
+
 import collections
 from dataclasses import dataclass
 from typing import Sequence
@@ -113,11 +119,12 @@ def check_bb(
     return_ty: GuppyType,
     globals: Globals,
 ) -> CheckedBB:
-    cfg = bb.cfg
+    cfg = bb.containing_cfg
 
     # For the entry BB we have to separately check that all used variables are
     # defined. For all other BBs, this will be checked when compiling a predecessor.
-    if len(bb.predecessors) == 0:
+    if bb == cfg.entry_bb:
+        assert len(bb.predecessors) == 0
         for x, use in bb.vars.used.items():
             if x not in cfg.ass_before[bb] and x not in globals.values:
                 raise GuppyError(f"Variable `{x}` is not defined", use)
@@ -211,6 +218,6 @@ def check_rows_match(row1: VarRow, row2: VarRow, bb: BB) -> None:
             raise GuppyError(
                 f"{ident} can refer to different types: "
                 f"`{v1.ty}` (at {{}}) vs `{v2.ty}` (at {{}})",
-                bb.cfg.live_before[bb][v1.name].vars.used[v1.name],
+                bb.containing_cfg.live_before[bb][v1.name].vars.used[v1.name],
                 [v1.defined_at, v2.defined_at],
             )

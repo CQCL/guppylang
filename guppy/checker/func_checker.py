@@ -1,3 +1,10 @@
+"""Type checking code for top-level and nested function definitions.
+
+For top-level functions, we take the `DefinedFunction` containing the `ast.FunctionDef`
+node straight from the Python AST. We build a CFG, check it, and return a
+`CheckedFunction` containing a `CheckedCFG` with type annotations.
+"""
+
 import ast
 from dataclasses import dataclass
 
@@ -87,7 +94,7 @@ def check_nested_func_def(
     cfg = func_def.cfg
 
     # Find captured variables
-    parent_cfg = bb.cfg
+    parent_cfg = bb.containing_cfg
     def_ass_before = set(func_ty.arg_names) | ctx.locals.keys()
     maybe_ass_before = def_ass_before | parent_cfg.maybe_ass_before[bb]
     cfg.analyze(def_ass_before, maybe_ass_before)

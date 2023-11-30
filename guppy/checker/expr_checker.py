@@ -1,3 +1,25 @@
+"""Type checking and synthesizing code for expressions.
+
+Operates on expressions in a basic block after CFG construction. In particular, we
+assume that expressions that involve control flow (i.e. short-circuiting and ternary
+expressions) have been removed during CFG construction.
+
+Furthermore, we assume that assignment expressions with the walrus operator := have
+been turned into regular assignments and are no longer present. As a result, expressions
+are assumed to be side effect free, in the sense that they do not modify the variables
+available in the type checking context.
+
+We may alter/desugar AST nodes during type checking. In particular, we turn `ast.Name`
+nodes into either `LocalName` or `GlobalName` nodes and `ast.Call` nodes are turned into
+`LocalCall` or `GlobalCall` nodes. Furthermore, all nodes in the resulting AST are
+annotated with their type.
+
+Expressions can be checked against a given type by the `ExprChecker`, raising an Error
+if the expressions doesn't have the expected type. Checking is used for annotated
+assignments, return values, and function arguments. Alternatively, the `ExprSynthesizer`
+can be used to infer a type for an expression.
+"""
+
 import ast
 from typing import Optional, Union, NoReturn, Any
 

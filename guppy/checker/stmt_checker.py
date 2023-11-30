@@ -1,3 +1,13 @@
+"""Type checking code for statements.
+
+Operates on statements in a basic block after CFG construction. In particular, we
+assume that statements involving control flow (i.e. if, while, break, and return
+statements) have been removed during CFG construction.
+
+After checking, we return a desugared statement where all sub-expression have beem type
+annotated.
+"""
+
 import ast
 from typing import Sequence
 
@@ -94,7 +104,9 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def visit_Expr(self, node: ast.Expr) -> ast.stmt:
         # An expression statement where the return value is discarded
-        node.value, _ = self._synth_expr(node.value)
+        node.value, ty = self._synth_expr(node.value)
+        if ty.linear:
+            raise GuppyTypeError(f"Value with linear type `{ty}` is not used", node)
         return node
 
     def visit_Return(self, node: ast.Return) -> ast.stmt:
