@@ -83,7 +83,7 @@ def check_nested_func_def(
     cfg = func_def.cfg
 
     # Find captured variables
-    parent_cfg = bb.cfg
+    parent_cfg = bb.containing_cfg
     def_ass_before = set(func_ty.arg_names) | ctx.locals.keys()
     maybe_ass_before = def_ass_before | parent_cfg.maybe_ass_before[bb]
     cfg.analyze(def_ass_before, maybe_ass_before)
