@@ -3,10 +3,10 @@ import functools
 import sys
 import textwrap
 from dataclasses import dataclass, field
-from typing import Optional, Any, Sequence, Callable, TypeVar, cast
+from typing import Optional, Any, Sequence, Callable, TypeVar, cast, Set
 
 from guppy.ast_util import AstNode, get_line_offset, get_file, get_source
-from guppy.gtypes import GuppyType, FunctionType
+from guppy.gtypes import GuppyType, FunctionType, BoundTypeVar, FreeTypeVar
 from guppy.hugr.hugr import OutPortV, Node
 
 
@@ -127,6 +127,15 @@ class UnknownFunctionType(FunctionType):
     @property
     def args_names(self) -> Optional[Sequence[str]]:
         raise InternalGuppyError("Tried to access unknown function type")
+
+    @property
+    def quantified(self) -> Sequence[BoundTypeVar]:
+        raise InternalGuppyError("Tried to access unknown function type")
+
+    @property
+    def free_vars(self) -> Set[FreeTypeVar]:
+        return set()
+
 
 
 def format_source_location(
