@@ -277,7 +277,10 @@ def check_num_args(exp: int, act: int, node: AstNode) -> None:
 def synthesize_call(
     func_ty: FunctionType, args: list[ast.expr], node: AstNode, ctx: Context
 ) -> tuple[list[ast.expr], GuppyType]:
-    """Synthesizes the return type of a function call"""
+    """Synthesizes the return type of a function call.
+
+    Also returns desugared versions of the arguments with type annotations.
+    """
     check_num_args(len(func_ty.args), len(args), node)
     for i, arg in enumerate(args):
         args[i] = ExprChecker(ctx).check(arg, func_ty.args[i], "argument")
