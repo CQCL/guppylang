@@ -137,7 +137,6 @@ class UnknownFunctionType(FunctionType):
         return set()
 
 
-
 def format_source_location(
     loc: ast.AST,
     num_lines: int = 3,
