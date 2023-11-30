@@ -1,3 +1,10 @@
+"""Type checking code for top-level and nested function definitions.
+
+For top-level functions, we take the `DefinedFunction` containing the `ast.FunctionDef`
+node straight from the Python AST. We build a CFG, check it, and return a
+`CheckedFunction` containing a `CheckedCFG` with type annotations.
+"""
+
 import ast
 from dataclasses import dataclass
 

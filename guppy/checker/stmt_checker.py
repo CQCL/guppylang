@@ -1,3 +1,13 @@
+"""Type checking code for statements.
+
+Operates on statements in a basic block after CFG construction. In particular, we
+assume that statements involving control flow (i.e. if, while, break, and return
+statements) have been removed during CFG construction.
+
+After checking, we return a desugared statement where all sub-expression have beem type
+annotated.
+"""
+
 import ast
 from typing import Sequence
 

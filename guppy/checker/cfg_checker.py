@@ -1,3 +1,9 @@
+"""Type checking code for control-flow graphs
+
+Operates on CFGs produced by the `CFGBuilder`. Produces a `CheckedCFG` consisting of
+`CheckedBB`s with inferred type signatures.
+"""
+
 import collections
 from dataclasses import dataclass
 from typing import Sequence
