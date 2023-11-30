@@ -123,7 +123,8 @@ def check_bb(
 
     # For the entry BB we have to separately check that all used variables are
     # defined. For all other BBs, this will be checked when compiling a predecessor.
-    if len(bb.predecessors) == 0:
+    if bb == cfg.entry_bb:
+        assert len(bb.predecessors) == 0
         for x, use in bb.vars.used.items():
             if x not in cfg.ass_before[bb] and x not in globals.values:
                 raise GuppyError(f"Variable `{x}` is not defined", use)
