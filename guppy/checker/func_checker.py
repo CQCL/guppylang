@@ -126,7 +126,7 @@ def check_nested_func_def(
 
     # Check if the body contains a recursive occurrence of the function name
     if func_def.name in cfg.live_before[cfg.entry_bb]:
-        if len(captured) == 0:
+        if not captured:
             # If there are no captured vars, we treat the function like a global name
             func = DefinedFunction(func_def.name, func_ty, func_def, None)
             globals = ctx.globals | Globals({func_def.name: func}, {})
