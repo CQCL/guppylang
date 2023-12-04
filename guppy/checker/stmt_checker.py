@@ -94,9 +94,7 @@ class StmtChecker(AstVisitor[BBStatement]):
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.stmt:
         if node.value is None:
             msg = "Variable declaration is not supported. Assignment is required"
-            raise GuppyError(
-                msg, node
-            )
+            raise GuppyError(msg, node)
         ty = type_from_ast(node.annotation, self.ctx.globals)
         node.value = self._check_expr(node.value, ty)
         self._check_assign(node.target, ty, node)
@@ -122,9 +120,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             node.value = self._check_expr(node.value, self.return_ty, "return value")
         elif not isinstance(self.return_ty, NoneType):
             msg = f"Expected return value of type `{self.return_ty}`"
-            raise GuppyTypeError(
-                msg, None
-            )
+            raise GuppyTypeError(msg, None)
         return node
 
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> ast.stmt:

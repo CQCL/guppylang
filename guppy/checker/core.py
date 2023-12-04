@@ -83,7 +83,7 @@ class Globals(NamedTuple):
             self.types | other.types,
         )
 
-    def __ior__(self, other: "Globals") -> "Globals":
+    def __ior__(self, other: "Globals") -> "Globals":  # noqa: PYI034
         self.values.update(other.values)
         self.types.update(other.types)
         return self

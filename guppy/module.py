@@ -77,9 +77,7 @@ class GuppyModule:
                 not isinstance(v, CustomFunction) for v in m._compiled_globals.values()
             ):
                 msg = "Importing modules with defined functions is not supported yet"
-                raise GuppyError(
-                    msg
-                )
+                raise GuppyError(msg)
 
             self._imported_globals |= m._globals
             self._imported_compiled_globals |= m._compiled_globals

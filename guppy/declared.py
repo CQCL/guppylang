@@ -25,9 +25,7 @@ class DeclaredFunction(CompiledFunction):
         ty = check_signature(func_def, globals)
         if not has_empty_body(func_def):
             msg = "Body of function declaration must be empty"
-            raise GuppyError(
-                msg, func_def.body[0]
-            )
+            raise GuppyError(msg, func_def.body[0])
         return DeclaredFunction(name, ty, func_def, None)
 
     def check_call(

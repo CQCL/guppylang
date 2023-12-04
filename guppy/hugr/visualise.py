@@ -3,7 +3,7 @@ import ast
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
-import graphviz as gv  # type: ignore
+import graphviz as gv  # type: ignore[import]
 
 from guppy.cfg.analysis import (
     DefAssignmentDomain,
@@ -56,18 +56,23 @@ _COLOURS = {
 _FONTFACE = "monospace"
 
 _HTML_LABEL_TEMPLATE = """
-<TABLE BORDER="{border_width}" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1" BGCOLOR="{node_back_color}" COLOR="{border_colour}">
-{inputs_row}
-    <TR>
-        <TD>
-            <TABLE BORDER="0" CELLBORDER="0">
-                <TR>
-                    <TD><FONT POINT-SIZE="{fontsize}" FACE="{fontface}" COLOR="{label_color}"><B>{node_label}</B>{node_data}</FONT></TD>
-                </TR>
-            </TABLE>
-        </TD>
-    </TR>
-{outputs_row}
+<TABLE BORDER="{border_width}" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+       BGCOLOR="{node_back_color}" COLOR="{border_colour}">
+  {inputs_row}
+  <TR>
+    <TD>
+      <TABLE BORDER="0" CELLBORDER="0">
+        <TR>
+          <TD>
+            <FONT POINT-SIZE="{fontsize}" FACE="{fontface}" COLOR="{label_color}">
+              <B>{node_label}</B>{node_data}
+            </FONT>
+          </TD>
+        </TR>
+      </TABLE>
+    </TD>
+  </TR>
+  {outputs_row}
 </TABLE>
 """
 

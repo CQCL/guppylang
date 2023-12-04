@@ -30,7 +30,7 @@ class CustomFunction(CompiledFunction):
     call_compiler: "CustomCallCompiler"
 
     _ty: FunctionType | None = None
-    _defined: dict[Node, DFContainingVNode] = {}
+    _defined: dict[Node, DFContainingVNode] = {}  # noqa: RUF012
 
     def __init__(
         self,
@@ -50,7 +50,7 @@ class CustomFunction(CompiledFunction):
         self._ty = ty
         self._defined = {}
 
-    @property  # type: ignore
+    @property  # type: ignore[override]
     def ty(self) -> FunctionType:
         if self._ty is None:
             return UnknownFunctionType()
@@ -72,9 +72,7 @@ class CustomFunction(CompiledFunction):
                     "Alternatively, try passing `higher_order_value=False` on "
                     "definition."
                 )
-                raise GuppyError(
-                    msg
-                )
+                raise GuppyError(msg)
             return
 
         try:
@@ -130,9 +128,7 @@ class CustomFunction(CompiledFunction):
         while not isinstance(module.op, ops.Module):
             if module.parent is None:
                 msg = "Encountered node that is not contained in a module."
-                raise InternalGuppyError(
-                    msg
-                )
+                raise InternalGuppyError(msg)
             module = module.parent
 
         # If the function has not yet been loaded in this module, we first have to

@@ -72,10 +72,8 @@ class GuppyTypeError(GuppyError):
     """Special Guppy exception for type errors."""
 
 
-
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
-
 
 
 class UndefinedPort(OutPortV):
@@ -171,7 +169,7 @@ def pretty_errors(f: FuncT) -> FuncT:
             assert file is not None
             assert line_offset is not None
             line = line_offset + loc.lineno - 1
-            print(
+            print(  # noqa: T201
                 f"Guppy compilation failed. Error in file {file}:{line}\n\n"
                 f"{format_source_location(loc)}\n"
                 f"{err.__class__.__name__}: {err.get_msg()}",

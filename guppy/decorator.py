@@ -36,13 +36,11 @@ class _Guppy:
         self._module = module
 
     @pretty_errors
-    def __call__(
-        self, arg: PyFunc | GuppyModule
-    ) -> Hugr | None | FuncDecorator:
+    def __call__(self, arg: PyFunc | GuppyModule) -> Hugr | None | FuncDecorator:
         """Decorator to annotate Python functions as Guppy code.
 
-        Optionally, the `GuppyModule` in which the function should be placed can be passed
-        to the decorator.
+        Optionally, the `GuppyModule` in which the function should be placed can be
+        passed to the decorator.
         """
         if isinstance(arg, GuppyModule):
 
@@ -53,9 +51,7 @@ class _Guppy:
                 @functools.wraps(f)
                 def dummy(*args: Any, **kwargs: Any) -> Any:
                     msg = "Guppy functions can only be called in a Guppy context"
-                    raise GuppyError(
-                        msg
-                    )
+                    raise GuppyError(msg)
 
                 return dummy
 
@@ -100,15 +96,11 @@ class _Guppy:
                 name = _name
 
                 @staticmethod
-                def build(
-                    *args: GuppyType, node: AstNode | None = None
-                ) -> "GuppyType":
+                def build(*args: GuppyType, node: AstNode | None = None) -> "GuppyType":
                     # At the moment, custom types don't support type arguments.
                     if len(args) > 0:
                         msg = f"Type `{_name}` does not accept type parameters."
-                        raise GuppyError(
-                            msg, node
-                        )
+                        raise GuppyError(msg, node)
                     return NewType()
 
                 @property
@@ -188,9 +180,7 @@ class _Guppy:
             @functools.wraps(f)
             def dummy(*args: Any, **kwargs: Any) -> Any:
                 msg = "Guppy functions can only be called in a Guppy context"
-                raise GuppyError(
-                    msg
-                )
+                raise GuppyError(msg)
 
             return dummy
 

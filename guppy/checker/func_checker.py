@@ -163,14 +163,10 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     Guppy type."""
     if len(func_def.args.posonlyargs) != 0:
         msg = "Positional-only parameters not supported"
-        raise GuppyError(
-            msg, func_def.args.posonlyargs[0]
-        )
+        raise GuppyError(msg, func_def.args.posonlyargs[0])
     if len(func_def.args.kwonlyargs) != 0:
         msg = "Keyword-only parameters not supported"
-        raise GuppyError(
-            msg, func_def.args.kwonlyargs[0]
-        )
+        raise GuppyError(msg, func_def.args.kwonlyargs[0])
     if func_def.args.vararg is not None:
         msg = "*args not supported"
         raise GuppyError(msg, func_def.args.vararg)

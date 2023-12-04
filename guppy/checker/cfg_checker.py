@@ -39,7 +39,7 @@ class Signature:
 class CheckedBB(BB):
     """Basic block annotated with an input and output type signature."""
 
-    sig: Signature = Signature.empty()
+    sig: Signature = Signature.empty()  # noqa: RUF009
 
 
 class CheckedCFG(BaseCFG[CheckedBB]):

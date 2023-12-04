@@ -15,15 +15,15 @@ select = [
   "B",    # flake8-Bugbear
   "BLE",  # flake8-blind-except
   "C4",   # flake8-comprehensions
-  "C90",  # mccabe
+  # "C90",  # mccabe
   # "COM",  # flake8-commas
   # "CPY",  # flake8-copyright
   # "D",    # pydocstyle
   "EM",   # flake8-errmsg
-  "ERA",  # eradicate
+  # "ERA",  # eradicate
   "EXE",  # flake8-executable
   "FA",   # flake8-future-annotations
-  "FBT",  # flake8-boolean-trap
+  # "FBT",  # flake8-boolean-trap
   # "FIX",  # flake8-fixme
   "FLY",  # flynt
   # "FURB", # refurb
@@ -49,7 +49,7 @@ select = [
   "RUF",  # Ruff-specific
   "S",    # flake8-bandit (Security)
   "SIM",  # flake8-simplify
-  "SLF",  # flake8-self
+  # "SLF",  # flake8-self
   "SLOT", # flake8-slots
   "T10",  # flake8-debugger
   "T20",  # flake8-print
@@ -64,6 +64,7 @@ select = [
 ignore = [
   "COM812", "ISC001",   # conflicting with the formatter
   "S101",               # Use of `assert` detected
+  "B905",               # `zip()` without an explicit `strict=` parameter
 ]
 
 [per-file-ignores]

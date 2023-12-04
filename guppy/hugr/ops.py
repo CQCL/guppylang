@@ -1,7 +1,7 @@
 import inspect
 import sys
 from abc import ABC
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -152,7 +152,7 @@ class Exit(BasicBlock):
     cfg_outputs: TypeRow
 
 
-BasicBlockOp = Annotated[Union[DFB, Exit], Field(discriminator="block")]
+BasicBlockOp = Annotated[DFB | Exit, Field(discriminator="block")]
 
 
 # ---------------------------------------------
@@ -323,7 +323,7 @@ class CFG(DataflowOp):
         )
 
 
-ControlFlowOp = Union[Conditional, TailLoop, CFG]
+ControlFlowOp = Conditional | TailLoop | CFG
 
 
 # -----------------------------------------
@@ -486,54 +486,54 @@ class Tag(LeafOp):
 
 
 LeafOpUnion = Annotated[
-    Union[
-        CustomOp,
-        H,
-        S,
-        T,
-        X,
-        Y,
-        Z,
-        Tadj,
-        Sadj,
-        CX,
-        ZZMax,
-        Reset,
-        Noop,
-        Measure,
-        RzF64,
-        Xor,
-        MakeTuple,
-        UnpackTuple,
-        MakeNewType,
-        Tag,
-    ],
+    (
+        CustomOp
+        | H
+        | S
+        | T
+        | X
+        | Y
+        | Z
+        | Tadj
+        | Sadj
+        | CX
+        | ZZMax
+        | Reset
+        | Noop
+        | Measure
+        | RzF64
+        | Xor
+        | MakeTuple
+        | UnpackTuple
+        | MakeNewType
+        | Tag
+    ),
     Field(discriminator="lop"),
 ]
 
 
 OpType = Annotated[
-    Union[
-        Module,
-        BasicBlock,
-        Case,
-        Module,
-        FuncDefn,
-        FuncDecl,
-        Const,
-        DummyOp,
-        BasicBlockOp,
-        Conditional,
-        TailLoop,
-        CFG,
-        Input,
-        Output,
-        Call,
-        CallIndirect,
-        LoadConstant,
-        LeafOpUnion,
-        DFG,
-    ],
+    (
+        Module
+        | BasicBlock
+        | Case
+        | Module
+        | FuncDefn
+        | FuncDecl
+        | Const
+        | DummyOp
+        | BasicBlockOp
+        | Conditional
+        | TailLoop
+        | CFG
+        | Input
+        | Output
+        | Call
+        | CallIndirect
+        | LoadConstant
+        | LeafOpUnion
+        | DFG
+    ),
     Field(discriminator="op"),
 ]
 

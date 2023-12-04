@@ -1,19 +1,19 @@
 import ast
-from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar
 
 if TYPE_CHECKING:
     from guppy.gtypes import GuppyType
 
-AstNode = Union[
-    ast.AST,
-    ast.operator,
-    ast.expr,
-    ast.arg,
-    ast.stmt,
-    ast.Name,
-    ast.keyword,
-    ast.FunctionDef,
-]
+AstNode = (
+    ast.AST
+    | ast.operator
+    | ast.expr
+    | ast.arg
+    | ast.stmt
+    | ast.Name
+    | ast.keyword
+    | ast.FunctionDef
+)
 
 T = TypeVar("T", covariant=True)
 

@@ -1,7 +1,7 @@
 import ast
 import itertools
 from collections.abc import Iterator
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 from guppy.ast_util import AstVisitor, set_location_from
 from guppy.cfg.bb import BB, BBStatement
@@ -29,7 +29,7 @@ class Jumps(NamedTuple):
     break_bb: BB | None
 
 
-class CFGBuilder(AstVisitor[Optional[BB]]):
+class CFGBuilder(AstVisitor[BB | None]):
     """Constructs a CFG from ast nodes."""
 
     cfg: CFG
@@ -92,14 +92,10 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_Assign(self, node: ast.Assign, bb: BB, jumps: Jumps) -> BB | None:
         return self._build_node_value(node, bb)
 
-    def visit_AugAssign(
-        self, node: ast.AugAssign, bb: BB, jumps: Jumps
-    ) -> BB | None:
+    def visit_AugAssign(self, node: ast.AugAssign, bb: BB, jumps: Jumps) -> BB | None:
         return self._build_node_value(node, bb)
 
-    def visit_AnnAssign(
-        self, node: ast.AnnAssign, bb: BB, jumps: Jumps
-    ) -> BB | None:
+    def visit_AnnAssign(self, node: ast.AnnAssign, bb: BB, jumps: Jumps) -> BB | None:
         return self._build_node_value(node, bb)
 
     def visit_Expr(self, node: ast.Expr, bb: BB, jumps: Jumps) -> BB | None:
@@ -193,7 +189,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         bb.statements.append(new_node)
         return bb
 
-    def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:  # type: ignore
+    def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:  # type: ignore[override]
         # When adding support for new statements, we have to remember to use the
         # ExprBuilder to transform all included expressions!
         msg = "Statement is not supported"
@@ -375,7 +371,7 @@ class BranchBuilder(AstVisitor[None]):
         self.visit(node.body, then_bb, true_bb, false_bb)
         self.visit(node.orelse, else_bb, true_bb, false_bb)
 
-    def generic_visit(self, node: ast.expr, bb: BB, true_bb: BB, false_bb: BB) -> None:  # type: ignore
+    def generic_visit(self, node: ast.expr, bb: BB, true_bb: BB, false_bb: BB) -> None:  # type: ignore[override]
         # We can always fall back to building the node as a regular expression and using
         # the result as a branch predicate
         pred, bb = ExprBuilder.build(node, self.cfg, bb)

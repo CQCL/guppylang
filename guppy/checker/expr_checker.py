@@ -22,7 +22,7 @@ can be used to infer a type for an expression.
 
 import ast
 from contextlib import suppress
-from typing import Any, NoReturn, Union
+from typing import Any, NoReturn
 
 from guppy.ast_util import AstNode, AstVisitor, get_type_opt, with_loc, with_type
 from guppy.checker.core import CallableVariable, Context, Globals
@@ -38,7 +38,7 @@ unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
 }  # fmt: skip
 
 # Mapping from binary AST op to left dunder method, right dunder method and display name
-AstOp = Union[ast.operator, ast.cmpop]
+AstOp = ast.operator | ast.cmpop
 binary_table: dict[type[AstOp], tuple[str, str, str]] = {
     ast.Add:      ("__add__",      "__radd__",      "+"),
     ast.Sub:      ("__sub__",      "__rsub__",      "-"),
@@ -89,9 +89,7 @@ class ExprChecker(AstVisitor[ast.expr]):
             msg = "Failure location is required"
             raise InternalGuppyError(msg)
         msg = f"Expected {self._kind} of type `{expected}`, got `{actual}`"
-        raise GuppyTypeError(
-            msg, loc
-        )
+        raise GuppyTypeError(msg, loc)
 
     def check(
         self, expr: ast.expr, ty: GuppyType, kind: str = "expression"
@@ -178,9 +176,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             f"Variable `{x}` is not defined in `TypeSynthesiser`. This should have "
             f"been caught by program analysis!"
         )
-        raise InternalGuppyError(
-            msg
-        )
+        raise InternalGuppyError(msg)
 
     def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, GuppyType]:
         elems = [self.synthesize(elem) for elem in node.elts]
@@ -252,9 +248,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
                 "BB contains chained comparison. Should have been removed during CFG "
                 "construction."
             )
-            raise InternalGuppyError(
-                msg
-            )
+            raise InternalGuppyError(msg)
         left_expr, [op], [right_expr] = node.left, node.ops, node.comparators
         return self._synthesize_binary(left_expr, right_expr, op, node)
 
@@ -285,44 +279,34 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             "BB contains `NamedExpr`. Should have been removed during CFG"
             f"construction: `{ast.unparse(node)}`"
         )
-        raise InternalGuppyError(
-            msg
-        )
+        raise InternalGuppyError(msg)
 
     def visit_BoolOp(self, node: ast.BoolOp) -> tuple[ast.expr, GuppyType]:
         msg = (
             "BB contains `BoolOp`. Should have been removed during CFG construction: "
             f"`{ast.unparse(node)}`"
         )
-        raise InternalGuppyError(
-            msg
-        )
+        raise InternalGuppyError(msg)
 
     def visit_IfExp(self, node: ast.IfExp) -> tuple[ast.expr, GuppyType]:
         msg = (
             "BB contains `IfExp`. Should have been removed during CFG construction: "
             f"`{ast.unparse(node)}`"
         )
-        raise InternalGuppyError(
-            msg
-        )
+        raise InternalGuppyError(msg)
 
 
 def check_num_args(exp: int, act: int, node: AstNode) -> None:
     """Checks that the correct number of arguments have been passed to a function."""
     if act < exp:
         msg = f"Not enough arguments passed (expected {exp}, got {act})"
-        raise GuppyTypeError(
-            msg, node
-        )
+        raise GuppyTypeError(msg, node)
     if exp < act:
         if isinstance(node, ast.Call):
             msg = "Unexpected argument"
             raise GuppyTypeError(msg, node.args[exp])
         msg = f"Too many arguments passed (expected {exp}, got {act})"
-        raise GuppyTypeError(
-            msg, node
-        )
+        raise GuppyTypeError(msg, node)
 
 
 def synthesize_call(
@@ -349,9 +333,7 @@ def check_call(
     args, return_ty = synthesize_call(func_ty, args, node, ctx)
     if return_ty != ty:
         msg = f"Expected expression of type `{ty}`, got `{return_ty}`"
-        raise GuppyTypeError(
-            msg, node
-        )
+        raise GuppyTypeError(msg, node)
     return args
 
 

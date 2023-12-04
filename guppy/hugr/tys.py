@@ -2,7 +2,7 @@ import inspect
 import sys
 from abc import ABC
 from enum import Enum
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
@@ -43,7 +43,7 @@ class TupleParam(BaseModel):
 
 
 TypeParamUnion = Annotated[
-    Union[TypeParam, BoundedNatParam, OpaqueParam, ListParam, TupleParam],
+    TypeParam | BoundedNatParam | OpaqueParam | ListParam | TupleParam,
     Field(discriminator="tp"),
 ]
 
@@ -84,7 +84,7 @@ class ExtensionsArg(BaseModel):
 
 
 TypeArgUnion = Annotated[
-    Union[TypeArg, BoundedNatArg, OpaqueArg, SequenceArg, ExtensionsArg],
+    TypeArg | BoundedNatArg | OpaqueArg | SequenceArg | ExtensionsArg,
     Field(discriminator="tya"),
 ]
 
@@ -231,9 +231,17 @@ class Qubit(BaseModel):
 
 
 SimpleType = Annotated[
-    Union[
-        Qubit, Variable, Int, F64, String, PolyFuncType, List, Array, Tuple, Sum, Opaque
-    ],
+    Qubit
+    | Variable
+    | Int
+    | F64
+    | String
+    | PolyFuncType
+    | List
+    | Array
+    | Tuple
+    | Sum
+    | Opaque,
     Field(discriminator="t"),
 ]
 

@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-import networkx as nx  # type: ignore
+import networkx as nx  # type: ignore[import]
 
 import guppy.hugr.ops as ops
 import guppy.hugr.raw as raw
@@ -35,10 +35,8 @@ class InPort(Port, ABC):
     """Base class for a port that incoming wires connect to."""
 
 
-
 class OutPort(Port, ABC):
     """Base class for a port that outgoing wires come from."""
-
 
 
 @dataclass(frozen=True)
@@ -67,7 +65,6 @@ class InPortCF(InPort):
 
 class OutPortCF(OutPort):
     """A control-flow output port."""
-
 
 
 Edge = tuple[OutPort, InPort]
@@ -540,15 +537,9 @@ class Hugr:
     def add_edge(self, src_port: OutPort, tgt_port: InPort) -> None:
         """Adds an edge between two ports."""
         if isinstance(src_port, OutPortV) or isinstance(tgt_port, InPortV):
-            assert (
-                isinstance(src_port, OutPortV)
-            )
-            assert (
-                isinstance(tgt_port, InPortV)
-            )
-            assert (
-                src_port.ty == tgt_port.ty
-            )
+            assert isinstance(src_port, OutPortV)
+            assert isinstance(tgt_port, InPortV)
+            assert src_port.ty == tgt_port.ty
         else:
             assert isinstance(src_port, OutPortCF)
             assert isinstance(tgt_port, InPortCF)
@@ -566,7 +557,7 @@ class Hugr:
 
     def get_node(self, idx: int) -> Node:
         """Returns the node corresponding to given index."""
-        return self._graph.nodes[idx]["data"]  # type: ignore
+        return self._graph.nodes[idx]["data"]  # type: ignore[no-any-return]
 
     def children(self, node: Node) -> list[Node]:
         """Returns list of a node's immediate children in the hierarchy."""
@@ -680,7 +671,7 @@ class Hugr:
                 # Special case: Call ops for functions without any arguments are
                 # only connected to the top-level def/declare and also need an
                 # order edge
-                if isinstance(n.op, ops.Call) and n.num_in_ports == 1:
+                if isinstance(n.op, ops.Call) and n.num_in_ports == 1:  # noqa: SIM114
                     assert n.parent.input_child is not None
                     self.add_order_edge(n.parent.input_child, n)
                 # Special case: Load constant ops always need an order edge

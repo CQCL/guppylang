@@ -1,7 +1,7 @@
 import ast
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from typing_extensions import Self
 
@@ -35,9 +35,14 @@ class VariableStats:
                 self.used[name.id] = name
 
 
-BBStatement = Union[
-    ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Return, NestedFunctionDef
-]
+BBStatement = (
+    ast.Assign
+    | ast.AugAssign
+    | ast.AnnAssign
+    | ast.Expr
+    | ast.Return
+    | NestedFunctionDef
+)
 
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
@@ -124,9 +129,7 @@ class VariableVisitor(ast.NodeVisitor):
         # Only store used *external* variables: things defined in the current BB, as
         # well as the function name and argument names should not be included
         assigned_before_in_bb = (
-            self.stats.assigned.keys()
-            | {node.name}
-            | {a.arg for a in node.args.args}
+            self.stats.assigned.keys() | {node.name} | {a.arg for a in node.args.args}
         )
         self.stats.used |= {
             x: using_bb.vars.used[x]
