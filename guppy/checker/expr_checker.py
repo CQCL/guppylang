@@ -85,7 +85,8 @@ class ExprChecker(AstVisitor[ast.expr]):
         if not isinstance(actual, GuppyType):
             loc = loc or actual
             _, actual = self._synthesize(actual)
-        assert loc is not None
+        if loc is None:
+            raise InternalGuppyError("Failure location is required")
         raise GuppyTypeError(
             f"Expected {self._kind} of type `{expected}`, got `{actual}`", loc
         )
@@ -240,9 +241,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def visit_Call(self, node: ast.Call) -> tuple[ast.expr, GuppyType]:
         if len(node.keywords) > 0:
-            raise GuppyError(
-                "Keyword arguments are not supported", node.keywords[0]
-            )
+            raise GuppyError("Keyword arguments are not supported", node.keywords[0])
         node.func, ty = self.synthesize(node.func)
 
         # First handle direct calls of user-defined functions and extension functions
