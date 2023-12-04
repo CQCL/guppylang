@@ -32,34 +32,34 @@ from guppy.nodes import LocalName, GlobalName, LocalCall
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
-    ast.UAdd: ("__pos__", "+"),
-    ast.USub: ("__neg__", "-"),
+    ast.UAdd:   ("__pos__",    "+"),
+    ast.USub:   ("__neg__",    "-"),
     ast.Invert: ("__invert__", "~"),
-}
+}  # fmt: skip
 
 # Mapping from binary AST op to left dunder method, right dunder method and display name
 AstOp = Union[ast.operator, ast.cmpop]
 binary_table: dict[type[AstOp], tuple[str, str, str]] = {
-    ast.Add: ("__add__", "__radd__", "+"),
-    ast.Sub: ("__sub__", "__rsub__", "-"),
-    ast.Mult: ("__mul__", "__rmul__", "*"),
-    ast.Div: ("__truediv__", "__rtruediv__", "/"),
+    ast.Add:      ("__add__",      "__radd__",      "+"),
+    ast.Sub:      ("__sub__",      "__rsub__",      "-"),
+    ast.Mult:     ("__mul__",      "__rmul__",      "*"),
+    ast.Div:      ("__truediv__",  "__rtruediv__",  "/"),
     ast.FloorDiv: ("__floordiv__", "__rfloordiv__", "//"),
-    ast.Mod: ("__mod__", "__rmod__", "%"),
-    ast.Pow: ("__pow__", "__rpow__", "**"),
-    ast.LShift: ("__lshift__", "__rlshift__", "<<"),
-    ast.RShift: ("__rshift__", "__rrshift__", ">>"),
-    ast.BitOr: ("__or__", "__ror__", "|"),
-    ast.BitXor: ("__xor__", "__rxor__", "^"),
-    ast.BitAnd: ("__and__", "__rand__", "&"),
-    ast.MatMult: ("__matmul__", "__rmatmul__", "@"),
-    ast.Eq: ("__eq__", "__eq__", "=="),
-    ast.NotEq: ("__neq__", "__neq__", "!="),
-    ast.Lt: ("__lt__", "__gt__", "<"),
-    ast.LtE: ("__le__", "__ge__", "<="),
-    ast.Gt: ("__gt__", "__lt__", ">"),
-    ast.GtE: ("__ge__", "__le__", ">="),
-}
+    ast.Mod:      ("__mod__",      "__rmod__",      "%"),
+    ast.Pow:      ("__pow__",      "__rpow__",      "**"),
+    ast.LShift:   ("__lshift__",   "__rlshift__",   "<<"),
+    ast.RShift:   ("__rshift__",   "__rrshift__",   ">>"),
+    ast.BitOr:    ("__or__",       "__ror__",       "|"),
+    ast.BitXor:   ("__xor__",      "__rxor__",      "^"),
+    ast.BitAnd:   ("__and__",      "__rand__",      "&"),
+    ast.MatMult:  ("__matmul__",   "__rmatmul__",   "@"),
+    ast.Eq:       ("__eq__",       "__eq__",        "=="),
+    ast.NotEq:    ("__neq__",      "__neq__",       "!="),
+    ast.Lt:       ("__lt__",       "__gt__",        "<"),
+    ast.LtE:      ("__le__",       "__ge__",        "<="),
+    ast.Gt:       ("__gt__",       "__lt__",        ">"),
+    ast.GtE:      ("__ge__",       "__le__",        ">="),
+}  # fmt: skip
 
 
 class ExprChecker(AstVisitor[ast.expr]):
