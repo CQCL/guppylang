@@ -14,8 +14,8 @@ nodes into either `LocalName` or `GlobalName` nodes and `ast.Call` nodes are tur
 `LocalCall` or `GlobalCall` nodes. Furthermore, all nodes in the resulting AST are
 annotated with their type.
 
-Expressions can be checked against a given type by the `ExprChecker`, raising an Error
-if the expressions doesn't have the expected type. Checking is used for annotated
+Expressions can be checked against a given type by the `ExprChecker`, raising a type
+error if the expressions doesn't have the expected type. Checking is used for annotated
 assignments, return values, and function arguments. Alternatively, the `ExprSynthesizer`
 can be used to infer a type for an expression.
 """
