@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-import networkx  # type: ignore
+import networkx as nx  # type: ignore
 
 import guppy.hugr.ops as ops
 import guppy.hugr.raw as raw
@@ -28,7 +28,7 @@ class Port(ABC):
     """Base class for ports on nodes."""
 
     node: "Node"
-    offset: Optional[PortOffset]
+    offset: PortOffset | None
 
 
 class InPort(Port, ABC):
@@ -98,11 +98,11 @@ class Node(ABC):
         """The number of output ports on this node."""
 
     @abstractmethod
-    def in_port(self, offset: Optional[PortOffset]) -> InPort:
+    def in_port(self, offset: PortOffset | None) -> InPort:
         """Returns the input port at the given offset."""
 
     @abstractmethod
-    def out_port(self, offset: Optional[PortOffset]) -> OutPort:
+    def out_port(self, offset: PortOffset | None) -> OutPort:
         """Returns the output port at the given offset."""
 
     @abstractmethod
@@ -152,14 +152,16 @@ class VNode(Node):
         self.out_port_types.append(ty)
         return p
 
-    def in_port(self, offset: Optional[PortOffset]) -> InPortV:
+    def in_port(self, offset: PortOffset | None) -> InPortV:
         """Returns the input port at the given offset."""
-        assert offset is not None and offset < self.num_in_ports
+        assert offset is not None
+        assert offset < self.num_in_ports
         return InPortV(self, offset, self.in_port_types[offset])
 
-    def out_port(self, offset: Optional[PortOffset]) -> OutPortV:
+    def out_port(self, offset: PortOffset | None) -> OutPortV:
         """Returns the output port at the given offset."""
-        assert offset is not None and offset < self.num_out_ports
+        assert offset is not None
+        assert offset < self.num_out_ports
         return OutPortV(self, offset, self.out_port_types[offset])
 
     @property
@@ -209,11 +211,11 @@ class CFNode(Node):
         self._num_out_ports += 1
         return p
 
-    def in_port(self, offset: Optional[PortOffset]) -> InPortCF:
+    def in_port(self, offset: PortOffset | None) -> InPortCF:
         assert offset is None
         return InPortCF(self)
 
-    def out_port(self, offset: Optional[PortOffset]) -> OutPortCF:
+    def out_port(self, offset: PortOffset | None) -> OutPortCF:
         """Returns the output port at the given offset."""
         assert offset is not None
         assert offset < self.num_out_ports
@@ -239,7 +241,8 @@ class DFContainingNode(Node, ABC):
         Feeds type information from the signature of the contained dataflow graph to
         the operation class to. This function must be called before serialisation.
         """
-        assert self.input_child is not None and self.output_child is not None
+        assert self.input_child is not None
+        assert self.output_child is not None
         # Input and output node may have extra order edges connected, so we filter
         # `None`s here
         ins = [ty.to_hugr() for ty in self.input_child.out_port_types]
@@ -265,15 +268,15 @@ class Hugr:
 
     name: str
     root: VNode
-    _graph: networkx.MultiDiGraph  # TODO: We probably don't need networkx.
+    _graph: nx.MultiDiGraph  # TODO: We probably don't need networkx.
     _children: dict[NodeIdx, list[Node]]
-    _default_parent: Optional[Node]
+    _default_parent: Node | None
 
-    def __init__(self, name: Optional[str] = None) -> None:
+    def __init__(self, name: str | None = None) -> None:
         """Creates a new Hugr."""
         self.name = name or "Unnamed"
         self._default_parent = None
-        self._graph = networkx.MultiDiGraph()
+        self._graph = nx.MultiDiGraph()
         self._children = {-1: []}
         self.root = self.add_node(
             op=ops.Module(), meta_data={"name": name}, parent=None
@@ -287,7 +290,7 @@ class Hugr:
         yield
         self._default_parent = old_default
 
-    def _insert_node(self, node: Node, inputs: Optional[list[OutPortV]] = None) -> None:
+    def _insert_node(self, node: Node, inputs: list[OutPortV] | None = None) -> None:
         """Helper method to insert a node into the graph datastructure."""
         self._graph.add_node(node.idx, data=node)
         self._children[node.idx] = []
@@ -299,11 +302,11 @@ class Hugr:
     def add_node(
         self,
         op: ops.OpType,
-        input_types: Optional[TypeList] = None,
-        output_types: Optional[TypeList] = None,
-        parent: Optional[Node] = None,
-        inputs: Optional[list[OutPortV]] = None,
-        meta_data: Optional[dict[str, Any]] = None,
+        input_types: TypeList | None = None,
+        output_types: TypeList | None = None,
+        parent: Node | None = None,
+        inputs: list[OutPortV] | None = None,
+        meta_data: dict[str, Any] | None = None,
     ) -> VNode:
         """Helper method to add a generic value node to the graph."""
         input_types = input_types or []
@@ -323,11 +326,11 @@ class Hugr:
     def _add_dfg_node(
         self,
         op: ops.OpType,
-        input_types: Optional[TypeList] = None,
-        output_types: Optional[TypeList] = None,
-        parent: Optional[Node] = None,
-        inputs: Optional[list[OutPortV]] = None,
-        meta_data: Optional[dict[str, Any]] = None,
+        input_types: TypeList | None = None,
+        output_types: TypeList | None = None,
+        parent: Node | None = None,
+        inputs: list[OutPortV] | None = None,
+        meta_data: dict[str, Any] | None = None,
     ) -> DFContainingVNode:
         """Helper method to add a generic dataflow containing value node to the
         graph."""
@@ -351,7 +354,7 @@ class Hugr:
         return self.root
 
     def add_constant(
-        self, value: val.Value, ty: GuppyType, parent: Optional[Node] = None
+        self, value: val.Value, ty: GuppyType, parent: Node | None = None
     ) -> VNode:
         """Adds a constant node holding a given value to the graph."""
         return self.add_node(
@@ -359,7 +362,7 @@ class Hugr:
         )
 
     def add_input(
-        self, output_tys: Optional[TypeList] = None, parent: Optional[Node] = None
+        self, output_tys: TypeList | None = None, parent: Node | None = None
     ) -> VNode:
         """Adds an `Input` node to the graph."""
         parent = parent or self._default_parent
@@ -369,7 +372,7 @@ class Hugr:
         return node
 
     def add_input_with_ports(
-        self, output_tys: Sequence[GuppyType], parent: Optional[Node] = None
+        self, output_tys: Sequence[GuppyType], parent: Node | None = None
     ) -> tuple[VNode, list[OutPortV]]:
         """Adds an `Input` node to the graph."""
         node = self.add_input(None, parent)
@@ -378,9 +381,9 @@ class Hugr:
 
     def add_output(
         self,
-        inputs: Optional[list[OutPortV]] = None,
-        input_tys: Optional[TypeList] = None,
-        parent: Optional[Node] = None,
+        inputs: list[OutPortV] | None = None,
+        input_tys: TypeList | None = None,
+        parent: Node | None = None,
     ) -> VNode:
         """Adds an `Output` node to the graph."""
         node = self.add_node(ops.Output(), input_tys, [], parent, inputs)
@@ -388,7 +391,7 @@ class Hugr:
             parent.output_child = node
         return node
 
-    def add_block(self, parent: Optional[Node], num_successors: int = 0) -> BlockNode:
+    def add_block(self, parent: Node | None, num_successors: int = 0) -> BlockNode:
         """Adds a `Block` node to the graph."""
         node = BlockNode(
             idx=self._graph.number_of_nodes(), op=ops.DFB(), parent=parent, meta_data={}
@@ -426,27 +429,27 @@ class Hugr:
         self,
         cond_input: OutPortV,
         inputs: list[OutPortV],
-        parent: Optional[Node] = None,
+        parent: Node | None = None,
     ) -> VNode:
         """Adds a `Conditional` node to the graph."""
-        inputs = [cond_input] + inputs
+        inputs = [cond_input, *inputs]
         return self.add_node(ops.Conditional(), None, None, parent, inputs)
 
     def add_tail_loop(
-        self, inputs: list[OutPortV], parent: Optional[Node] = None
+        self, inputs: list[OutPortV], parent: Node | None = None
     ) -> DFContainingVNode:
         """Adds a `TailLoop` node to the graph."""
         return self._add_dfg_node(ops.TailLoop(), None, None, parent, inputs)
 
     def add_make_tuple(
-        self, inputs: list[OutPortV], parent: Optional[Node] = None
+        self, inputs: list[OutPortV], parent: Node | None = None
     ) -> VNode:
         """Adds a `MakeTuple` node to the graph."""
         ty = TupleType([port.ty for port in inputs])
         return self.add_node(ops.MakeTuple(), None, [ty], parent, inputs)
 
     def add_unpack_tuple(
-        self, input_tuple: OutPortV, parent: Optional[Node] = None
+        self, input_tuple: OutPortV, parent: Node | None = None
     ) -> VNode:
         """Adds an `UnpackTuple` node to the graph."""
         assert isinstance(input_tuple.ty, TupleType)
@@ -459,7 +462,7 @@ class Hugr:
         )
 
     def add_tag(
-        self, variants: TypeList, tag: int, inp: OutPortV, parent: Optional[Node] = None
+        self, variants: TypeList, tag: int, inp: OutPortV, parent: Node | None = None
     ) -> VNode:
         """Adds a `Tag` node to the graph."""
         types = [ty.to_hugr() for ty in variants]
@@ -469,7 +472,7 @@ class Hugr:
         )
 
     def add_load_constant(
-        self, const_port: OutPortV, parent: Optional[Node] = None
+        self, const_port: OutPortV, parent: Node | None = None
     ) -> VNode:
         """Adds a `LoadConstant` node to the graph."""
         return self.add_node(
@@ -481,7 +484,7 @@ class Hugr:
         )
 
     def add_call(
-        self, def_port: OutPortV, args: list[OutPortV], parent: Optional[Node] = None
+        self, def_port: OutPortV, args: list[OutPortV], parent: Node | None = None
     ) -> VNode:
         """Adds a `Call` node to the graph."""
         assert isinstance(def_port.ty, FunctionType)
@@ -490,11 +493,11 @@ class Hugr:
             None,
             list(type_to_row(def_port.ty.returns)),
             parent,
-            args + [def_port],
+            [*args, def_port],
         )
 
     def add_indirect_call(
-        self, fun_port: OutPortV, args: list[OutPortV], parent: Optional[Node] = None
+        self, fun_port: OutPortV, args: list[OutPortV], parent: Node | None = None
     ) -> VNode:
         """Adds an `IndirectCall` node to the graph."""
         assert isinstance(fun_port.ty, FunctionType)
@@ -503,11 +506,11 @@ class Hugr:
             None,
             list(type_to_row(fun_port.ty.returns)),
             parent,
-            [fun_port] + args,
+            [fun_port, *args],
         )
 
     def add_partial(
-        self, def_port: OutPortV, args: list[OutPortV], parent: Optional[Node] = None
+        self, def_port: OutPortV, args: list[OutPortV], parent: Node | None = None
     ) -> VNode:
         """Adds a `Partial` evaluation node to the graph."""
         assert isinstance(def_port.ty, FunctionType)
@@ -521,11 +524,11 @@ class Hugr:
             else None,
         )
         return self.add_node(
-            ops.DummyOp(name="partial"), None, [new_ty], parent, args + [def_port]
+            ops.DummyOp(name="partial"), None, [new_ty], parent, [*args, def_port]
         )
 
     def add_def(
-        self, fun_ty: FunctionType, parent: Optional[Node], name: str
+        self, fun_ty: FunctionType, parent: Node | None, name: str
     ) -> DFContainingVNode:
         """Adds a `Def` node to the graph."""
         return self._add_dfg_node(ops.FuncDefn(name=name), [], [fun_ty], parent, None)
@@ -539,11 +542,16 @@ class Hugr:
         if isinstance(src_port, OutPortV) or isinstance(tgt_port, InPortV):
             assert (
                 isinstance(src_port, OutPortV)
-                and isinstance(tgt_port, InPortV)
-                and src_port.ty == tgt_port.ty
+            )
+            assert (
+                isinstance(tgt_port, InPortV)
+            )
+            assert (
+                src_port.ty == tgt_port.ty
             )
         else:
-            assert isinstance(src_port, OutPortCF) and isinstance(tgt_port, InPortCF)
+            assert isinstance(src_port, OutPortCF)
+            assert isinstance(tgt_port, InPortCF)
         self._graph.add_edge(
             src_port.node.idx, tgt_port.node.idx, key=(src_port.offset, tgt_port.offset)
         )
@@ -605,14 +613,14 @@ class Hugr:
     def order_successors(self, node: Node) -> Iterator[Node]:
         """Returns an iterator over all nodes that this node connects to via an
         order edge."""
-        for src, tgt, key in self._graph.out_edges(node.idx, keys=True):
+        for _src, tgt, key in self._graph.out_edges(node.idx, keys=True):
             if key == ORDER_EDGE_KEY:
                 yield tgt
 
     def order_predecessors(self, node: Node) -> Iterator[Node]:
         """Returns an iterator over all nodes that are connected to this node via an
         order edge."""
-        for src, tgt, key in self._graph.in_edges(node.idx, keys=True):
+        for src, _tgt, key in self._graph.in_edges(node.idx, keys=True):
             if key == ORDER_EDGE_KEY:
                 yield src
 
@@ -630,7 +638,8 @@ class Hugr:
     def remove_dummy_nodes(self) -> "Hugr":
         """Replaces dummy ops with external function calls."""
         if self.root is None:
-            raise ValueError("Dummy node removal requires a module root node")
+            msg = "Dummy node removal requires a module root node"
+            raise ValueError(msg)
         used_names: dict[str, int] = {}
         for n in list(self.nodes()):
             if isinstance(n, VNode) and isinstance(n.op, ops.DummyOp):
@@ -743,7 +752,8 @@ class Hugr:
             edges.append(((raw_index[src.idx], None), (raw_index[tgt.idx], None)))
 
         if self.root is None:
-            raise ValueError("Raw Hugr requires a root node")
+            msg = "Raw Hugr requires a root node"
+            raise ValueError(msg)
         return raw.RawHugr(nodes=nodes, edges=edges)
 
     def serialize(self) -> bytes:

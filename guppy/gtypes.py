@@ -2,7 +2,7 @@ import ast
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import guppy.hugr.tys as tys
 from guppy.ast_util import AstNode, set_location_from
@@ -21,7 +21,7 @@ class GuppyType(ABC):
 
     @staticmethod
     @abstractmethod
-    def build(*args: "GuppyType", node: Optional[AstNode] = None) -> "GuppyType":
+    def build(*args: "GuppyType", node: AstNode | None = None) -> "GuppyType":
         pass
 
     @property
@@ -38,7 +38,7 @@ class GuppyType(ABC):
 class FunctionType(GuppyType):
     args: Sequence[GuppyType]
     returns: GuppyType
-    arg_names: Optional[Sequence[str]] = field(
+    arg_names: Sequence[str] | None = field(
         default=None,
         compare=False,  # Argument names are not taken into account for type equality
     )
@@ -54,7 +54,7 @@ class FunctionType(GuppyType):
             return f"({', '.join(str(a) for a in self.args)}) -> {self.returns}"
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         # Function types cannot be constructed using `build`. The type parsing code
         # has a special case for function types.
         raise NotImplementedError
@@ -73,12 +73,13 @@ class TupleType(GuppyType):
     name: str = "tuple"
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         from guppy.error import GuppyError
 
         # TODO: Parse empty tuples via `tuple[()]`
         if len(args) == 0:
-            raise GuppyError("Tuple type requires generic type arguments", node)
+            msg = "Tuple type requires generic type arguments"
+            raise GuppyError(msg, node)
         return TupleType(list(args))
 
     def __str__(self) -> str:
@@ -98,7 +99,7 @@ class SumType(GuppyType):
     element_types: Sequence[GuppyType]
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         # Sum types cannot be parsed and constructed using `build` since they cannot be
         # written by the user
         raise NotImplementedError
@@ -125,11 +126,12 @@ class NoneType(GuppyType):
     linear: bool = False
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         if len(args) > 0:
             from guppy.error import GuppyError
 
-            raise GuppyError("Type `None` is not generic", node)
+            msg = "Type `None` is not generic"
+            raise GuppyError(msg, node)
         return NoneType()
 
     def __str__(self) -> str:
@@ -151,18 +153,19 @@ class BoolType(SumType):
         super().__init__([TupleType([]), TupleType([])])
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         if len(args) > 0:
             from guppy.error import GuppyError
 
-            raise GuppyError("Type `bool` is not generic", node)
+            msg = "Type `bool` is not generic"
+            raise GuppyError(msg, node)
         return BoolType()
 
     def __str__(self) -> str:
         return "bool"
 
 
-def _lookup_type(node: AstNode, globals: "Globals") -> Optional[type[GuppyType]]:
+def _lookup_type(node: AstNode, globals: "Globals") -> type[GuppyType] | None:
     if isinstance(node, ast.Name) and node.id in globals.types:
         return globals.types[node.id]
     if isinstance(node, ast.Constant) and node.value is None:
@@ -204,7 +207,8 @@ def type_from_ast(node: AstNode, globals: "Globals") -> GuppyType:
             )
     from guppy.error import GuppyError
 
-    raise GuppyError("Not a valid Guppy type", node)
+    msg = "Not a valid Guppy type"
+    raise GuppyError(msg, node)
 
 
 def type_row_from_ast(node: ast.expr, globals: "Globals") -> Sequence[GuppyType]:

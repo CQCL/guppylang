@@ -1,11 +1,11 @@
-from typing import Literal, Optional
+from typing import Literal
 
 import ormsgpack
 from pydantic import BaseModel
 
 from guppy.hugr.ops import NodeID, OpType
 
-Port = tuple[NodeID, Optional[int]]  # (node, offset)
+Port = tuple[NodeID, int | None]  # (node, offset)
 Edge = tuple[Port, Port]
 
 

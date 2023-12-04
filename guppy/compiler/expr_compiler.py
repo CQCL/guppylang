@@ -1,5 +1,5 @@
 import ast
-from typing import Any, Optional
+from typing import Any
 
 from guppy.ast_util import AstVisitor, get_type
 from guppy.compiler.core import CompiledFunction, CompilerBase, DFContainer
@@ -35,7 +35,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         if value := python_value_to_hugr(node.value):
             const = self.graph.add_constant(value, get_type(node)).out_port(0)
             return self.graph.add_load_constant(const).out_port(0)
-        raise InternalGuppyError("Unsupported constant expression in compiler")
+        msg = "Unsupported constant expression in compiler"
+        raise InternalGuppyError(msg)
 
     def visit_LocalName(self, node: LocalName) -> OutPortV:
         return self.dfg[node.id].port
@@ -44,7 +45,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         return self.globals[node.id].load(self.dfg, self.graph, self.globals, node)
 
     def visit_Name(self, node: ast.Name) -> OutPortV:
-        raise InternalGuppyError("Node should have been removed during type checking.")
+        msg = "Node should have been removed during type checking."
+        raise InternalGuppyError(msg)
 
     def visit_Tuple(self, node: ast.Tuple) -> OutPortV:
         return self.graph.add_make_tuple(
@@ -75,7 +77,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         return self._pack_returns(rets)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
-        raise InternalGuppyError("Node should have been removed during type checking.")
+        msg = "Node should have been removed during type checking."
+        raise InternalGuppyError(msg)
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> OutPortV:
         # The only case that is not desugared by the type checker is the `not` operation
@@ -86,13 +89,16 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
                 ops.CustomOp(extension="logic", op_name="Not", args=[]), inputs=[arg]
             ).add_out_port(BoolType())
 
-        raise InternalGuppyError("Node should have been removed during type checking.")
+        msg = "Node should have been removed during type checking."
+        raise InternalGuppyError(msg)
 
     def visit_BinOp(self, node: ast.BinOp) -> OutPortV:
-        raise InternalGuppyError("Node should have been removed during type checking.")
+        msg = "Node should have been removed during type checking."
+        raise InternalGuppyError(msg)
 
     def visit_Compare(self, node: ast.Compare) -> OutPortV:
-        raise InternalGuppyError("Node should have been removed during type checking.")
+        msg = "Node should have been removed during type checking."
+        raise InternalGuppyError(msg)
 
 
 def expr_to_row(expr: ast.expr) -> list[ast.expr]:
@@ -100,7 +106,7 @@ def expr_to_row(expr: ast.expr) -> list[ast.expr]:
     return expr.elts if isinstance(expr, ast.Tuple) else [expr]
 
 
-def python_value_to_hugr(v: Any) -> Optional[val.Value]:
+def python_value_to_hugr(v: Any) -> val.Value | None:
     """Turns a Python value into a Hugr value.
 
     Returns None if the Python value cannot be represented in Guppy.

@@ -56,7 +56,8 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             for i, pat in enumerate(lhs.elts):
                 self._unpack_assign(pat, unpack.out_port(i), node)
         else:
-            raise InternalGuppyError("Invalid assign pattern in compiler")
+            msg = "Invalid assign pattern in compiler"
+            raise InternalGuppyError(msg)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         [target] = node.targets
@@ -69,7 +70,8 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         self._unpack_assign(node.target, port, node)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
-        raise InternalGuppyError("Node should have been removed during type checking.")
+        msg = "Node should have been removed during type checking."
+        raise InternalGuppyError(msg)
 
     def visit_Expr(self, node: ast.Expr) -> None:
         self.expr_compiler.compile_row(node.value, self.dfg)

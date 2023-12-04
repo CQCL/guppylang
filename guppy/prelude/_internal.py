@@ -1,5 +1,5 @@
 import ast
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -67,7 +67,7 @@ def float_value(f: float) -> val.Value:
     return val.ExtensionVal(c=(ConstF64(value=f),))
 
 
-def logic_op(op_name: str, args: Optional[list[tys.TypeArgUnion]] = None) -> ops.OpType:
+def logic_op(op_name: str, args: list[tys.TypeArgUnion] | None = None) -> ops.OpType:
     """Utility method to create Hugr logic ops."""
     return ops.CustomOp(extension="logic", op_name=op_name, args=args or [])
 
@@ -109,7 +109,7 @@ class ReversingChecker(CustomCallChecker):
 
     base_checker: CustomCallChecker
 
-    def __init__(self, base_checker: Optional[CustomCallChecker] = None):
+    def __init__(self, base_checker: CustomCallChecker | None = None):
         self.base_checker = base_checker or DefaultCallChecker()
 
     def _setup(self, ctx: Context, node: AstNode, func: CustomFunction) -> None:
@@ -136,13 +136,15 @@ class UnsupportedChecker(CustomCallChecker):
     """
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
+        msg = f"Builtin method `{self.func.name}` is not supported by Guppy"
         raise GuppyError(
-            f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
+            msg, self.node
         )
 
     def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
+        msg = f"Builtin method `{self.func.name}` is not supported by Guppy"
         raise GuppyError(
-            f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
+            msg, self.node
         )
 
 
@@ -165,9 +167,12 @@ class DunderChecker(CustomCallChecker):
         fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
         func = self.ctx.globals.get_instance_func(ty, self.dunder_name)
         if func is None:
-            raise GuppyTypeError(
+            msg = (
                 f"Builtin function `{self.func.name}` is not defined for argument of "
-                f"type `{ty}`",
+                f"type `{ty}`"
+            )
+            raise GuppyTypeError(
+                msg,
                 self.node.args[0] if isinstance(self.node, ast.Call) else self.node,
             )
         return [fst, *rest], func
@@ -198,8 +203,9 @@ class CallableChecker(CustomCallChecker):
     def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
         args, _ = self.synthesize(args)
         if not isinstance(ty, BoolType):
+            msg = f"Expected expression of type `{ty}`, got `bool`"
             raise GuppyTypeError(
-                f"Expected expression of type `{ty}`, got `bool`", self.node
+                msg, self.node
             )
         return args
 

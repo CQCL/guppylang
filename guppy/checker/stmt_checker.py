@@ -50,8 +50,9 @@ class StmtChecker(AstVisitor[BBStatement]):
                 if x in self.ctx.locals:
                     var = self.ctx.locals[x]
                     if var.ty.linear and var.used is None:
+                        msg = f"Variable `{x}` with linear type `{var.ty}` is not used"
                         raise GuppyError(
-                            f"Variable `{x}` with linear type `{var.ty}` is not used",
+                            msg,
                             var.defined_at,
                         )
                 self.ctx.locals[x] = Variable(x, ty, node, None)
@@ -61,9 +62,12 @@ class StmtChecker(AstVisitor[BBStatement]):
                 tys = ty.element_types if isinstance(ty, TupleType) else [ty]
                 n, m = len(elts), len(tys)
                 if n != m:
-                    raise GuppyTypeError(
+                    msg = (
                         f"{'Too many' if n < m else 'Not enough'} values to unpack "
-                        f"(expected {n}, got {m})",
+                        f"(expected {n}, got {m})"
+                    )
+                    raise GuppyTypeError(
+                        msg,
                         node,
                     )
                 for pat, el_ty in zip(elts, tys):
@@ -73,12 +77,14 @@ class StmtChecker(AstVisitor[BBStatement]):
             #  `a, *b = ...`. The former would require some runtime checks but
             #  the latter should be easier to do (unpack and repack the rest).
             case _:
-                raise GuppyError("Assignment pattern not supported", lhs)
+                msg = "Assignment pattern not supported"
+                raise GuppyError(msg, lhs)
 
     def visit_Assign(self, node: ast.Assign) -> ast.stmt:
         if len(node.targets) > 1:
             # This is the case for assignments like `a = b = 1`
-            raise GuppyError("Multi assignment not supported", node)
+            msg = "Multi assignment not supported"
+            raise GuppyError(msg, node)
 
         [target] = node.targets
         node.value, ty = self._synth_expr(node.value)
@@ -87,8 +93,9 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.stmt:
         if node.value is None:
+            msg = "Variable declaration is not supported. Assignment is required"
             raise GuppyError(
-                "Variable declaration is not supported. Assignment is required", node
+                msg, node
             )
         ty = type_from_ast(node.annotation, self.ctx.globals)
         node.value = self._check_expr(node.value, ty)
@@ -106,15 +113,17 @@ class StmtChecker(AstVisitor[BBStatement]):
         # An expression statement where the return value is discarded
         node.value, ty = self._synth_expr(node.value)
         if ty.linear:
-            raise GuppyTypeError(f"Value with linear type `{ty}` is not used", node)
+            msg = f"Value with linear type `{ty}` is not used"
+            raise GuppyTypeError(msg, node)
         return node
 
     def visit_Return(self, node: ast.Return) -> ast.stmt:
         if node.value is not None:
             node.value = self._check_expr(node.value, self.return_ty, "return value")
         elif not isinstance(self.return_ty, NoneType):
+            msg = f"Expected return value of type `{self.return_ty}`"
             raise GuppyTypeError(
-                f"Expected return value of type `{self.return_ty}`", None
+                msg, None
             )
         return node
 
@@ -128,13 +137,17 @@ class StmtChecker(AstVisitor[BBStatement]):
         return func_def
 
     def visit_If(self, node: ast.If) -> None:
-        raise InternalGuppyError("Control-flow statement should not be present here.")
+        msg = "Control-flow statement should not be present here."
+        raise InternalGuppyError(msg)
 
     def visit_While(self, node: ast.While) -> None:
-        raise InternalGuppyError("Control-flow statement should not be present here.")
+        msg = "Control-flow statement should not be present here."
+        raise InternalGuppyError(msg)
 
     def visit_Break(self, node: ast.Break) -> None:
-        raise InternalGuppyError("Control-flow statement should not be present here.")
+        msg = "Control-flow statement should not be present here."
+        raise InternalGuppyError(msg)
 
     def visit_Continue(self, node: ast.Continue) -> None:
-        raise InternalGuppyError("Control-flow statement should not be present here.")
+        msg = "Control-flow statement should not be present here."
+        raise InternalGuppyError(msg)

@@ -1,7 +1,7 @@
 import ast
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import NamedTuple, Optional, Union
+from typing import NamedTuple
 
 from guppy.ast_util import AstNode
 from guppy.gtypes import (
@@ -20,8 +20,8 @@ class Variable:
 
     name: str
     ty: GuppyType
-    defined_at: Optional[AstNode]
-    used: Optional[AstNode]
+    defined_at: AstNode | None
+    used: AstNode | None
 
 
 @dataclass
@@ -65,7 +65,7 @@ class Globals(NamedTuple):
         }
         return Globals({}, tys)
 
-    def get_instance_func(self, ty: GuppyType, name: str) -> Optional[CallableVariable]:
+    def get_instance_func(self, ty: GuppyType, name: str) -> CallableVariable | None:
         """Looks up an instance function with a given name for a type.
 
         Returns `None` if the name doesn't exist or isn't a function.
@@ -100,7 +100,7 @@ class Context(NamedTuple):
     locals: Locals
 
 
-def qualified_name(ty: Union[type[GuppyType], str], name: str) -> str:
+def qualified_name(ty: type[GuppyType] | str, name: str) -> str:
     """Returns a qualified name for an instance function on a type."""
     ty_name = ty if isinstance(ty, str) else ty.name
     return f"{ty_name}.{name}"

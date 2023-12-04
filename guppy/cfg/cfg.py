@@ -1,4 +1,4 @@
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from guppy.cfg.analysis import (
     AssignmentAnalysis,
@@ -25,7 +25,7 @@ class BaseCFG(Generic[T]):
     maybe_ass_before: Result[MaybeAssignmentDomain]
 
     def __init__(
-        self, bbs: list[T], entry_bb: Optional[T] = None, exit_bb: Optional[T] = None
+        self, bbs: list[T], entry_bb: T | None = None, exit_bb: T | None = None
     ):
         self.bbs = bbs
         if entry_bb:
@@ -53,7 +53,7 @@ class CFG(BaseCFG[BB]):
         self.entry_bb = self.new_bb()
         self.exit_bb = self.new_bb()
 
-    def new_bb(self, *preds: BB, statements: Optional[list[BBStatement]] = None) -> BB:
+    def new_bb(self, *preds: BB, statements: list[BBStatement] | None = None) -> BB:
         """Adds a new basic block to the CFG."""
         bb = BB(
             len(self.bbs), self, predecessors=list(preds), statements=statements or []

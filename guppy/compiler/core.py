@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Optional
 
 from guppy.ast_util import AstNode
 from guppy.checker.core import CallableVariable, Variable
@@ -22,8 +21,8 @@ class PortVariable(Variable):
         self,
         name: str,
         port: OutPortV,
-        defined_at: Optional[AstNode],
-        used: Optional[AstNode] = None,
+        defined_at: AstNode | None,
+        used: AstNode | None = None,
     ) -> None:
         super().__init__(name, port.ty, defined_at, used)
         object.__setattr__(self, "port", port)
@@ -90,7 +89,7 @@ class DFContainer:
         # mutate our variable mapping
         return DFContainer(self.node, self.locals.copy())
 
-    def get_var(self, name: str) -> Optional[PortVariable]:
+    def get_var(self, name: str) -> PortVariable | None:
         return self.locals.get(name, None)
 
 

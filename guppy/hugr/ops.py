@@ -1,7 +1,7 @@
 import inspect
 import sys
 from abc import ABC
-from typing import Annotated, Any, Literal, Optional, Union
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field
 
@@ -338,7 +338,7 @@ class CustomOp(LeafOp):
     lop: Literal["CustomOp"] = "CustomOp"
     extension: ExtensionId
     op_name: str
-    signature: Optional[tys.FunctionType] = None
+    signature: tys.FunctionType | None = None
     description: str = ""
     args: list[tys.TypeArgUnion] = Field(default_factory=list)
 
@@ -548,10 +548,10 @@ class OpDef(BaseOp, allow_population_by_field_name=True):
 
     name: str  # Unique identifier of the operation.
     description: str  # Human readable description of the operation.
-    inputs: list[tuple[Optional[str], SimpleType]]
-    outputs: list[tuple[Optional[str], SimpleType]]
+    inputs: list[tuple[str | None, SimpleType]]
+    outputs: list[tuple[str | None, SimpleType]]
     misc: dict[str, Any]  # Miscellaneous data associated with the operation.
-    def_: Optional[str] = Field(
+    def_: str | None = Field(
         ..., alias="def"
     )  # (YAML?)-encoded definition of the operation.
     extension_reqs: ExtensionSet  # Resources required to execute this operation.

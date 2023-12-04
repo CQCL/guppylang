@@ -22,7 +22,7 @@ can be used to infer a type for an expression.
 
 import ast
 from contextlib import suppress
-from typing import Any, NoReturn, Optional, Union
+from typing import Any, NoReturn, Union
 
 from guppy.ast_util import AstNode, AstVisitor, get_type_opt, with_loc, with_type
 from guppy.checker.core import CallableVariable, Context, Globals
@@ -78,17 +78,19 @@ class ExprChecker(AstVisitor[ast.expr]):
     def _fail(
         self,
         expected: GuppyType,
-        actual: Union[ast.expr, GuppyType],
-        loc: Optional[AstNode] = None,
+        actual: ast.expr | GuppyType,
+        loc: AstNode | None = None,
     ) -> NoReturn:
         """Raises a type error indicating that the type doesn't match."""
         if not isinstance(actual, GuppyType):
             loc = loc or actual
             _, actual = self._synthesize(actual)
         if loc is None:
-            raise InternalGuppyError("Failure location is required")
+            msg = "Failure location is required"
+            raise InternalGuppyError(msg)
+        msg = f"Expected {self._kind} of type `{expected}`, got `{actual}`"
         raise GuppyTypeError(
-            f"Expected {self._kind} of type `{expected}`, got `{actual}`", loc
+            msg, loc
         )
 
     def check(
@@ -148,7 +150,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
     def visit_Constant(self, node: ast.Constant) -> tuple[ast.expr, GuppyType]:
         ty = python_value_to_guppy_type(node.value, node, self.ctx.globals)
         if ty is None:
-            raise GuppyError("Unsupported constant", node)
+            msg = "Unsupported constant"
+            raise GuppyError(msg, node)
         return node, ty
 
     def visit_Name(self, node: ast.Name) -> tuple[ast.expr, GuppyType]:
@@ -156,9 +159,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         if x in self.ctx.locals:
             var = self.ctx.locals[x]
             if var.ty.linear and var.used is not None:
-                raise GuppyError(
+                msg = (
                     f"Variable `{x}` with linear type `{var.ty}` was "
-                    "already used (at {0})",
+                    "already used (at {0})"
+                )
+                raise GuppyError(
+                    msg,
                     node,
                     [var.used],
                 )
@@ -168,9 +174,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             # Cache value in the AST
             value = self.ctx.globals.values[x]
             return with_loc(node, GlobalName(id=x, value=value)), value.ty
-        raise InternalGuppyError(
+        msg = (
             f"Variable `{x}` is not defined in `TypeSynthesiser`. This should have "
             f"been caught by program analysis!"
+        )
+        raise InternalGuppyError(
+            msg
         )
 
     def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, GuppyType]:
@@ -192,9 +201,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         op, display_name = unary_table[node.op.__class__]
         func = self.ctx.globals.get_instance_func(op_ty, op)
         if func is None:
-            raise GuppyTypeError(
+            msg = (
                 f"Unary operator `{display_name}` not defined for argument of type "
-                f" `{op_ty}`",
+                f" `{op_ty}`"
+            )
+            raise GuppyTypeError(
+                msg,
                 node.operand,
             )
         return func.synthesize_call([node.operand], node, self.ctx)
@@ -208,7 +220,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         `__radd__` on the right operand.
         """
         if op.__class__ not in binary_table:
-            raise GuppyError("This binary operation is not supported by Guppy.", op)
+            msg = "This binary operation is not supported by Guppy."
+            raise GuppyError(msg, op)
         lop, rop, display_name = binary_table[op.__class__]
         left_expr, left_ty = self.synthesize(left_expr)
         right_expr, right_ty = self.synthesize(right_expr)
@@ -221,9 +234,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             with suppress(GuppyError):
                 return func.synthesize_call([right_expr, left_expr], node, self.ctx)
 
-        raise GuppyTypeError(
+        msg = (
             f"Binary operator `{display_name}` not defined for arguments of type "
-            f"`{left_ty}` and `{right_ty}`",
+            f"`{left_ty}` and `{right_ty}`"
+        )
+        raise GuppyTypeError(
+            msg,
             node,
         )
 
@@ -232,16 +248,20 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def visit_Compare(self, node: ast.Compare) -> tuple[ast.expr, GuppyType]:
         if len(node.comparators) != 1 or len(node.ops) != 1:
-            raise InternalGuppyError(
+            msg = (
                 "BB contains chained comparison. Should have been removed during CFG "
                 "construction."
+            )
+            raise InternalGuppyError(
+                msg
             )
         left_expr, [op], [right_expr] = node.left, node.ops, node.comparators
         return self._synthesize_binary(left_expr, right_expr, op, node)
 
     def visit_Call(self, node: ast.Call) -> tuple[ast.expr, GuppyType]:
         if len(node.keywords) > 0:
-            raise GuppyError("Keyword arguments are not supported", node.keywords[0])
+            msg = "Keyword arguments are not supported"
+            raise GuppyError(msg, node.keywords[0])
         node.func, ty = self.synthesize(node.func)
 
         # First handle direct calls of user-defined functions and extension functions
@@ -257,38 +277,51 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         elif f := self.ctx.globals.get_instance_func(ty, "__call__"):
             return f.synthesize_call(node.args, node, self.ctx)
         else:
-            raise GuppyTypeError(f"Expected function type, got `{ty}`", node.func)
+            msg = f"Expected function type, got `{ty}`"
+            raise GuppyTypeError(msg, node.func)
 
     def visit_NamedExpr(self, node: ast.NamedExpr) -> tuple[ast.expr, GuppyType]:
-        raise InternalGuppyError(
+        msg = (
             "BB contains `NamedExpr`. Should have been removed during CFG"
             f"construction: `{ast.unparse(node)}`"
         )
+        raise InternalGuppyError(
+            msg
+        )
 
     def visit_BoolOp(self, node: ast.BoolOp) -> tuple[ast.expr, GuppyType]:
-        raise InternalGuppyError(
+        msg = (
             "BB contains `BoolOp`. Should have been removed during CFG construction: "
             f"`{ast.unparse(node)}`"
         )
+        raise InternalGuppyError(
+            msg
+        )
 
     def visit_IfExp(self, node: ast.IfExp) -> tuple[ast.expr, GuppyType]:
-        raise InternalGuppyError(
+        msg = (
             "BB contains `IfExp`. Should have been removed during CFG construction: "
             f"`{ast.unparse(node)}`"
+        )
+        raise InternalGuppyError(
+            msg
         )
 
 
 def check_num_args(exp: int, act: int, node: AstNode) -> None:
     """Checks that the correct number of arguments have been passed to a function."""
     if act < exp:
+        msg = f"Not enough arguments passed (expected {exp}, got {act})"
         raise GuppyTypeError(
-            f"Not enough arguments passed (expected {exp}, got {act})", node
+            msg, node
         )
     if exp < act:
         if isinstance(node, ast.Call):
-            raise GuppyTypeError("Unexpected argument", node.args[exp])
+            msg = "Unexpected argument"
+            raise GuppyTypeError(msg, node.args[exp])
+        msg = f"Too many arguments passed (expected {exp}, got {act})"
         raise GuppyTypeError(
-            f"Too many arguments passed (expected {exp}, got {act})", node
+            msg, node
         )
 
 
@@ -315,8 +348,9 @@ def check_call(
     """Checks the return type of a function call against a given type"""
     args, return_ty = synthesize_call(func_ty, args, node, ctx)
     if return_ty != ty:
+        msg = f"Expected expression of type `{ty}`, got `{return_ty}`"
         raise GuppyTypeError(
-            f"Expected expression of type `{ty}`, got `{return_ty}`", node
+            msg, node
         )
     return args
 
@@ -330,8 +364,9 @@ def to_bool(
 
     func = ctx.globals.get_instance_func(node_ty, "__bool__")
     if func is None:
+        msg = f"Expression of type `{node_ty}` cannot be interpreted as a `bool`"
         raise GuppyTypeError(
-            f"Expression of type `{node_ty}` cannot be interpreted as a `bool`",
+            msg,
             node,
         )
 
@@ -339,8 +374,9 @@ def to_bool(
     # message if we synthesise and compare to bool by hand
     call, return_ty = func.synthesize_call([node], node, ctx)
     if not isinstance(return_ty, BoolType):
+        msg = f"`__bool__` on type `{node_ty}` returns `{return_ty}` instead of `bool`"
         raise GuppyTypeError(
-            f"`__bool__` on type `{node_ty}` returns `{return_ty}` instead of `bool`",
+            msg,
             node,
         )
     return call, return_ty
@@ -348,7 +384,7 @@ def to_bool(
 
 def python_value_to_guppy_type(
     v: Any, node: ast.expr, globals: Globals
-) -> Optional[GuppyType]:
+) -> GuppyType | None:
     """Turns a primitive Python value into a Guppy type.
 
     Returns `None` if the Python value cannot be represented in Guppy.

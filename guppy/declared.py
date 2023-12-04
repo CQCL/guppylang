@@ -1,6 +1,5 @@
 import ast
 from dataclasses import dataclass
-from typing import Optional
 
 from guppy.ast_util import AstNode, has_empty_body
 from guppy.checker.core import Context, Globals
@@ -17,7 +16,7 @@ from guppy.nodes import GlobalCall
 class DeclaredFunction(CompiledFunction):
     """A user-declared function that compiles to a Hugr function declaration."""
 
-    node: Optional[VNode] = None
+    node: VNode | None = None
 
     @staticmethod
     def from_ast(
@@ -25,8 +24,9 @@ class DeclaredFunction(CompiledFunction):
     ) -> "DeclaredFunction":
         ty = check_signature(func_def, globals)
         if not has_empty_body(func_def):
+            msg = "Body of function declaration must be empty"
             raise GuppyError(
-                "Body of function declaration must be empty", func_def.body[0]
+                msg, func_def.body[0]
             )
         return DeclaredFunction(name, ty, func_def, None)
 

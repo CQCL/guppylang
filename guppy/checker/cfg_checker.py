@@ -61,7 +61,7 @@ def check_cfg(
     unreachable blocks.
     """
     # First, we need to run program analysis
-    ass_before = set(v.name for v in inputs)
+    ass_before = {v.name for v in inputs}
     cfg.analyze(ass_before, ass_before)
 
     # We start by compiling the entry BB
@@ -124,7 +124,8 @@ def check_bb(
         assert len(bb.predecessors) == 0
         for x, use in bb.vars.used.items():
             if x not in cfg.ass_before[bb] and x not in globals.values:
-                raise GuppyError(f"Variable `{x}` is not defined", use)
+                msg = f"Variable `{x}` is not defined"
+                raise GuppyError(msg, use)
 
     # Check the basic block
     ctx = Context(globals, {v.name: v for v in inputs})
@@ -146,19 +147,24 @@ def check_bb(
                     # TODO: This should be "Variable x is not defined when coming
                     #  from {bb}". But for this we need a way to associate BBs with
                     #  source locations.
+                    msg = f"Variable `{x}` is not defined on all control-flow paths."
                     raise GuppyError(
-                        f"Variable `{x}` is not defined on all control-flow paths.",
+                        msg,
                         use_bb.vars.used[x],
                     )
-                raise GuppyError(f"Variable `{x}` is not defined", use_bb.vars.used[x])
+                msg = f"Variable `{x}` is not defined"
+                raise GuppyError(msg, use_bb.vars.used[x])
 
             # We have to check that used linear variables are not being outputted
             if x in ctx.locals:
                 var = ctx.locals[x]
                 if var.ty.linear and var.used:
-                    raise GuppyError(
+                    msg = (
                         f"Variable `{x}` with linear type `{var.ty}` was "
-                        "already used (at {0})",
+                        "already used (at {0})"
+                    )
+                    raise GuppyError(
+                        msg,
                         cfg.live_before[succ][x].vars.used[x],
                         [var.used],
                     )
@@ -169,9 +175,12 @@ def check_bb(
                 # TODO: This should be "Variable x with linear type ty is not
                 #  used in {bb}". But for this we need a way to associate BBs with
                 #  source locations.
-                raise GuppyError(
+                msg = (
                     f"Variable `{x}` with linear type `{var.ty}` is "
-                    "not used on all control-flow paths",
+                    "not used on all control-flow paths"
+                )
+                raise GuppyError(
+                    msg,
                     var.defined_at,
                 )
 
@@ -212,9 +221,12 @@ def check_rows_match(row1: VarRow, row2: VarRow, bb: BB) -> None:
             # We shouldn't mention temporary variables (starting with `%`)
             # in error messages:
             ident = "Expression" if v1.name.startswith("%") else f"Variable `{v1.name}`"
-            raise GuppyError(
+            msg = (
                 f"{ident} can refer to different types: "
-                f"`{v1.ty}` (at {{}}) vs `{v2.ty}` (at {{}})",
+                f"`{v1.ty}` (at {{}}) vs `{v2.ty}` (at {{}})"
+            )
+            raise GuppyError(
+                msg,
                 bb.containing_cfg.live_before[bb][v1.name].vars.used[v1.name],
                 [v1.defined_at, v2.defined_at],
             )

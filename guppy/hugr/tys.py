@@ -2,7 +2,7 @@ import inspect
 import sys
 from abc import ABC
 from enum import Enum
-from typing import Annotated, Literal, Optional, Union
+from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
 
@@ -24,7 +24,7 @@ class TypeParam(BaseModel):
 
 class BoundedNatParam(BaseModel):
     tp: Literal["BoundedNat"] = "BoundedNat"
-    bound: Optional[int]
+    bound: int | None
 
 
 class OpaqueParam(BaseModel):

@@ -1,7 +1,7 @@
 import functools
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any
 
 from guppy.ast_util import AstNode, has_empty_body
 from guppy.custom import (
@@ -27,7 +27,7 @@ class _Guppy:
     """Class for the `@guppy` decorator."""
 
     # The current module
-    _module: Optional[GuppyModule]
+    _module: GuppyModule | None
 
     def __init__(self) -> None:
         self._module = None
@@ -37,8 +37,8 @@ class _Guppy:
 
     @pretty_errors
     def __call__(
-        self, arg: Union[PyFunc, GuppyModule]
-    ) -> Union[Optional[Hugr], FuncDecorator]:
+        self, arg: PyFunc | GuppyModule
+    ) -> Hugr | None | FuncDecorator:
         """Decorator to annotate Python functions as Guppy code.
 
         Optionally, the `GuppyModule` in which the function should be placed can be passed
@@ -52,8 +52,9 @@ class _Guppy:
 
                 @functools.wraps(f)
                 def dummy(*args: Any, **kwargs: Any) -> Any:
+                    msg = "Guppy functions can only be called in a Guppy context"
                     raise GuppyError(
-                        "Guppy functions can only be called in a Guppy context"
+                        msg
                     )
 
                 return dummy
@@ -100,12 +101,13 @@ class _Guppy:
 
                 @staticmethod
                 def build(
-                    *args: GuppyType, node: Optional[AstNode] = None
+                    *args: GuppyType, node: AstNode | None = None
                 ) -> "GuppyType":
                     # At the moment, custom types don't support type arguments.
                     if len(args) > 0:
+                        msg = f"Type `{_name}` does not accept type parameters."
                         raise GuppyError(
-                            f"Type `{_name}` does not accept type parameters.", node
+                            msg, node
                         )
                     return NewType()
 
@@ -132,8 +134,8 @@ class _Guppy:
     def custom(
         self,
         module: GuppyModule,
-        compiler: Optional[CustomCallCompiler] = None,
-        checker: Optional[CustomCallChecker] = None,
+        compiler: CustomCallCompiler | None = None,
+        checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
     ) -> CustomFuncDecorator:
@@ -147,8 +149,9 @@ class _Guppy:
         def dec(f: PyFunc) -> CustomFunction:
             func_ast = parse_py_func(f)
             if not has_empty_body(func_ast):
+                msg = "Body of custom function declaration must be empty"
                 raise GuppyError(
-                    "Body of custom function declaration must be empty",
+                    msg,
                     func_ast.body[0],
                 )
             call_checker = checker or DefaultCallChecker()
@@ -169,7 +172,7 @@ class _Guppy:
         self,
         module: GuppyModule,
         op: ops.OpType,
-        checker: Optional[CustomCallChecker] = None,
+        checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
     ) -> CustomFuncDecorator:
@@ -184,8 +187,9 @@ class _Guppy:
 
             @functools.wraps(f)
             def dummy(*args: Any, **kwargs: Any) -> Any:
+                msg = "Guppy functions can only be called in a Guppy context"
                 raise GuppyError(
-                    "Guppy functions can only be called in a Guppy context"
+                    msg
                 )
 
             return dummy

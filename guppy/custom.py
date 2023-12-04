@@ -1,6 +1,5 @@
 import ast
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from guppy.ast_util import AstNode, get_type, with_loc, with_type
 from guppy.checker.core import Context, Globals
@@ -21,7 +20,7 @@ from guppy.nodes import GlobalCall
 class CustomFunction(CompiledFunction):
     """A function whose type checking and compilation behaviour can be customised."""
 
-    defined_at: Optional[ast.FunctionDef]
+    defined_at: ast.FunctionDef | None
 
     # Whether the function may be used as a higher-order value. This is only possible
     # if a static type for the function is provided.
@@ -30,17 +29,17 @@ class CustomFunction(CompiledFunction):
     call_checker: "CustomCallChecker"
     call_compiler: "CustomCallCompiler"
 
-    _ty: Optional[FunctionType] = None
+    _ty: FunctionType | None = None
     _defined: dict[Node, DFContainingVNode] = {}
 
     def __init__(
         self,
         name: str,
-        defined_at: Optional[ast.FunctionDef],
+        defined_at: ast.FunctionDef | None,
         compiler: "CustomCallCompiler",
         checker: "CustomCallChecker",
         higher_order_value: bool = True,
-        ty: Optional[FunctionType] = None,
+        ty: FunctionType | None = None,
     ):
         self.name = name
         self.defined_at = defined_at
@@ -68,20 +67,23 @@ class CustomFunction(CompiledFunction):
 
         if self.defined_at is None:
             if self.higher_order_value:
-                raise GuppyError(
+                msg = (
                     f"Type signature for function `{self.name}` is required. "
                     "Alternatively, try passing `higher_order_value=False` on "
                     "definition."
+                )
+                raise GuppyError(
+                    msg
                 )
             return
 
         try:
             self._ty = check_signature(self.defined_at, globals)
-        except GuppyError as err:
+        except GuppyError:
             # We can ignore the error if a custom call checker is provided and the
             # function may not be used as a higher-order value
             if self.call_checker is None or self.higher_order_value:
-                raise err
+                raise
 
     def check_call(
         self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context
@@ -117,8 +119,9 @@ class CustomFunction(CompiledFunction):
         fail if no function type has been specified.
         """
         if self._ty is None:
+            msg = "This function does not support usage in a higher-order context"
             raise GuppyError(
-                "This function does not support usage in a higher-order context",
+                msg,
                 node,
             )
 
@@ -126,8 +129,9 @@ class CustomFunction(CompiledFunction):
         module: Node = dfg.node
         while not isinstance(module.op, ops.Module):
             if module.parent is None:
+                msg = "Encountered node that is not contained in a module."
                 raise InternalGuppyError(
-                    "Encountered node that is not contained in a module."
+                    msg
                 )
             module = module.parent
 

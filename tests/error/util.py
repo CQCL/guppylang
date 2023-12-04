@@ -2,7 +2,7 @@ import importlib.util
 import pathlib
 import pytest
 
-from typing import Optional, Any
+from typing import Any
 from collections.abc import Callable
 
 from guppy.hugr import tys
@@ -13,7 +13,7 @@ from guppy.hugr.hugr import Hugr
 import guppy.decorator as decorator
 
 
-def guppy(f: Callable[..., Any]) -> Optional[Hugr]:
+def guppy(f: Callable[..., Any]) -> Hugr | None:
     """ Decorator to compile functions outside of modules for testing. """
     module = GuppyModule("module")
     module.register_func_def(f)

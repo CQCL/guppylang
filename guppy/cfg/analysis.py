@@ -101,7 +101,7 @@ class LivenessAnalysis(BackwardAnalysis[LivenessDomain]):
         return live1.keys() == live2.keys()
 
     def initial(self) -> LivenessDomain:
-        return dict()
+        return {}
 
     def join(self, *ts: LivenessDomain) -> LivenessDomain:
         res: LivenessDomain = {}

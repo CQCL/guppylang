@@ -3,7 +3,7 @@ import inspect
 import textwrap
 from collections.abc import Callable
 from types import ModuleType
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 from guppy.ast_util import AstNode, annotate_location
 from guppy.checker.core import Globals, qualified_name
@@ -44,7 +44,7 @@ class GuppyModule:
     # When `_instance_buffer` is not `None`, then all registered functions will be
     # buffered in this list. They only get properly registered, once
     # `_register_buffered_instance_funcs` is called. This way, we can associate
-    _instance_func_buffer: Optional[dict[str, Union[PyFunc, CustomFunction]]]
+    _instance_func_buffer: dict[str, PyFunc | CustomFunction] | None
 
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
@@ -76,8 +76,9 @@ class GuppyModule:
             if any(
                 not isinstance(v, CustomFunction) for v in m._compiled_globals.values()
             ):
+                msg = "Importing modules with defined functions is not supported yet"
                 raise GuppyError(
-                    "Importing modules with defined functions is not supported yet"
+                    msg
                 )
 
             self._imported_globals |= m._globals
@@ -88,7 +89,7 @@ class GuppyModule:
                     self.load(val)
 
     def register_func_def(
-        self, f: PyFunc, instance: Optional[type[GuppyType]] = None
+        self, f: PyFunc, instance: type[GuppyType] | None = None
     ) -> None:
         """Registers a Python function definition as belonging to this Guppy module."""
         self._check_not_yet_compiled()
@@ -110,7 +111,7 @@ class GuppyModule:
         self._func_decls[func_ast.name] = func_ast
 
     def register_custom_func(
-        self, func: CustomFunction, instance: Optional[type[GuppyType]] = None
+        self, func: CustomFunction, instance: type[GuppyType] | None = None
     ) -> None:
         """Registers a custom function as belonging to this Guppy module."""
         self._check_not_yet_compiled()
@@ -130,7 +131,7 @@ class GuppyModule:
         assert self._instance_func_buffer is not None
         buffer = self._instance_func_buffer
         self._instance_func_buffer = None
-        for name, f in buffer.items():
+        for f in buffer.values():
             if isinstance(f, CustomFunction):
                 self.register_custom_func(f, instance)
             else:
@@ -141,10 +142,11 @@ class GuppyModule:
         return self._compiled
 
     @pretty_errors
-    def compile(self) -> Optional[Hugr]:
+    def compile(self) -> Hugr | None:
         """Compiles the module and returns the final Hugr."""
         if self.compiled:
-            raise GuppyError("Module has already been compiled")
+            msg = "Module has already been compiled"
+            raise GuppyError(msg)
 
         # Prepare globals for type checking
         for func in self._custom_funcs.values():
@@ -198,12 +200,14 @@ class GuppyModule:
 
     def _check_not_yet_compiled(self) -> None:
         if self._compiled:
-            raise GuppyError(f"The module `{self.name}` has already been compiled")
+            msg = f"The module `{self.name}` has already been compiled"
+            raise GuppyError(msg)
 
-    def _check_name_available(self, name: str, node: Optional[AstNode]) -> None:
+    def _check_name_available(self, name: str, node: AstNode | None) -> None:
         if name in self._func_defs or name in self._custom_funcs:
+            msg = f"Module `{self.name}` already contains a function named `{name}`"
             raise GuppyError(
-                f"Module `{self.name}` already contains a function named `{name}`",
+                msg,
                 node,
             )
 
@@ -215,8 +219,10 @@ def parse_py_func(f: PyFunc) -> ast.FunctionDef:
     func_ast = ast.parse(source).body[0]
     file = inspect.getsourcefile(f)
     if file is None:
-        raise GuppyError("Couldn't determine source file for function")
+        msg = "Couldn't determine source file for function"
+        raise GuppyError(msg)
     annotate_location(func_ast, source, file, line_offset)
     if not isinstance(func_ast, ast.FunctionDef):
-        raise GuppyError("Expected a function definition", func_ast)
+        msg = "Expected a function definition"
+        raise GuppyError(msg, func_ast)
     return func_ast
