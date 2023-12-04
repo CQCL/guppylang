@@ -10,4 +10,9 @@ def pytest_addoption(parser):
         msg = f"export-test-cases dir:{path} exists and is not a directory"
         raise argparse.ArgumentTypeError(msg)
 
-    parser.addoption("--export-test-cases", action="store", type=dir_path, help="A directory to which to export test cases")
+    parser.addoption(
+        "--export-test-cases",
+        action="store",
+        type=dir_path,
+        help="A directory to which to export test cases",
+    )

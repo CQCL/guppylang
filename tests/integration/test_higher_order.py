@@ -73,13 +73,18 @@ def test_curry(validate):
         def g(x: int) -> Callable[[int], bool]:
             def h(y: int) -> bool:
                 return f(x, y)
+
             return h
+
         return g
 
     @guppy(module)
-    def uncurry(f: Callable[[int], Callable[[int], bool]]) -> Callable[[int, int], bool]:
+    def uncurry(
+        f: Callable[[int], Callable[[int], bool]]
+    ) -> Callable[[int, int], bool]:
         def g(x: int, y: int) -> bool:
             return f(x)(y)
+
         return g
 
     @guppy(module)

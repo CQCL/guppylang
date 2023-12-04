@@ -14,7 +14,7 @@ import guppy.decorator as decorator
 
 
 def guppy(f: Callable[..., Any]) -> Hugr | None:
-    """ Decorator to compile functions outside of modules for testing. """
+    """Decorator to compile functions outside of modules for testing."""
     module = GuppyModule("module")
     module.register_func_def(f)
     return module.compile()
@@ -30,7 +30,7 @@ def run_error_test(file, capsys):
 
     err = capsys.readouterr().err
 
-    with open(file.with_suffix(".err")) as f:
+    with pathlib.Path(file.with_suffix(".err")).open() as f:
         exp_err = f.read()
 
     exp_err = exp_err.replace("$FILE", str(file))
@@ -40,6 +40,8 @@ def run_error_test(file, capsys):
 util = GuppyModule("test")
 
 
-@decorator.guppy.type(util, tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable))
+@decorator.guppy.type(
+    util, tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable)
+)
 class NonBool:
     pass

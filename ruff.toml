@@ -61,6 +61,11 @@ select = [
   "YTT",  # flake8-2020
 ]
 
+ignore = [
+  "COM812", "ISC001",   # conflicting with the formatter
+  "S101",               # Use of `assert` detected
+]
+
 [per-file-ignores]
 "guppy/ast_util.py"   = ["B009", "B010"]
 "guppy/decorator.py"  = ["B010"]
@@ -69,11 +74,8 @@ select = [
     "F821",     # Undefined name
     "F823",     # Local variable referenced before assignment
     "F841",     # Local variable `x` is assigned to but never used
-    "S101",     # Use of `assert` detected
     ]
 "tests/{hugr,error,integration}/*" = ["B", "FBT", "SIM", "I"]
-
-ignore = ["COM812", "ISC001"]  # conflicting with the formatter
 
 # [pydocstyle]
 # convention = "google"
