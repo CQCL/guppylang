@@ -3,10 +3,9 @@
 # mypy: disable-error-code=empty-body
 
 from guppy.decorator import guppy
-from guppy.hugr import tys, ops
+from guppy.hugr import ops, tys
 from guppy.hugr.tys import TypeBound
 from guppy.module import GuppyModule
-
 
 quantum = GuppyModule("quantum")
 

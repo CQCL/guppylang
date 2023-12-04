@@ -1,9 +1,8 @@
 import inspect
 import sys
-from typing import Literal, Any, Annotated, Union
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field
-
 
 CustomConst = Any  # TODO
 

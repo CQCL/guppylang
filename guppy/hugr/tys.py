@@ -2,9 +2,9 @@ import inspect
 import sys
 from abc import ABC
 from enum import Enum
-from typing import Literal, Union, Annotated, Optional
-from pydantic import Field, BaseModel
+from typing import Annotated, Literal, Optional, Union
 
+from pydantic import BaseModel, Field
 
 ExtensionId = str
 ExtensionSet = list[  # TODO: Set not supported by MessagePack. Is list correct here?

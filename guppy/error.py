@@ -2,13 +2,13 @@ import ast
 import functools
 import sys
 import textwrap
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Optional, Any, Sequence, Callable, TypeVar, cast
+from typing import Any, Optional, TypeVar, cast
 
-from guppy.ast_util import AstNode, get_line_offset, get_file, get_source
-from guppy.gtypes import GuppyType, FunctionType
-from guppy.hugr.hugr import OutPortV, Node
-
+from guppy.ast_util import AstNode, get_file, get_line_offset, get_source
+from guppy.gtypes import FunctionType, GuppyType
+from guppy.hugr.hugr import Node, OutPortV
 
 # Whether the interpreter should exit when a Guppy error occurs
 EXIT_ON_ERROR: bool = True
@@ -70,13 +70,11 @@ class GuppyError(Exception):
 class GuppyTypeError(GuppyError):
     """Special Guppy exception for type errors."""
 
-    pass
 
 
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
 
-    pass
 
 
 class UndefinedPort(OutPortV):

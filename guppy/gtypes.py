@@ -1,7 +1,8 @@
 import ast
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Optional, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import guppy.hugr.tys as tys
 from guppy.ast_util import AstNode, set_location_from
@@ -56,7 +57,7 @@ class FunctionType(GuppyType):
     def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
         # Function types cannot be constructed using `build`. The type parsing code
         # has a special case for function types.
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def to_hugr(self) -> tys.SimpleType:
         ins = [t.to_hugr() for t in self.args]
@@ -100,7 +101,7 @@ class SumType(GuppyType):
     def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
         # Sum types cannot be parsed and constructed using `build` since they cannot be
         # written by the user
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def __str__(self) -> str:
         return f"Sum({', '.join(str(e) for e in self.element_types)})"

@@ -1,16 +1,17 @@
 """Visualise HUGR using graphviz."""
 import ast
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 import graphviz as gv  # type: ignore
-from typing import Iterable, TYPE_CHECKING
 
 from guppy.cfg.analysis import (
-    LivenessDomain,
     DefAssignmentDomain,
+    LivenessDomain,
     MaybeAssignmentDomain,
 )
 from guppy.cfg.bb import BB
-from guppy.hugr.hugr import InPort, OutPort, Node, Hugr, OutPortV
+from guppy.hugr.hugr import Hugr, InPort, Node, OutPort, OutPortV
 
 if TYPE_CHECKING:
     from guppy.cfg.cfg import CFG

@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic, Iterable
+from collections.abc import Iterable
+from typing import Generic, TypeVar
 
 from guppy.cfg.bb import BB
-
 
 # Type variable for the lattice domain
 T = TypeVar("T")
@@ -21,12 +21,10 @@ class Analysis(ABC, Generic[T]):
     @abstractmethod
     def initial(self) -> T:
         """Initial lattice value"""
-        pass
 
     @abstractmethod
     def join(self, *ts: T) -> T:
         """Lattice join operation"""
-        pass
 
     @abstractmethod
     def run(self, bbs: Iterable[BB]) -> Result[T]:
@@ -34,7 +32,6 @@ class Analysis(ABC, Generic[T]):
 
         Returns a mapping from basic blocks to lattice values at the start of each BB.
         """
-        pass
 
 
 class ForwardAnalysis(Analysis[T], ABC, Generic[T]):
@@ -43,7 +40,6 @@ class ForwardAnalysis(Analysis[T], ABC, Generic[T]):
     @abstractmethod
     def apply_bb(self, val_before: T, bb: BB, /) -> T:
         """Transformation a basic block applies to a lattice value"""
-        pass
 
     def run(self, bbs: Iterable[BB]) -> Result[T]:
         """Runs the analysis pass.
@@ -69,7 +65,6 @@ class BackwardAnalysis(Analysis[T], ABC, Generic[T]):
     @abstractmethod
     def apply_bb(self, val_after: T, bb: BB, /) -> T:
         """Transformation a basic block applies to a lattice value"""
-        pass
 
     def run(self, bbs: Iterable[BB]) -> Result[T]:
         """Runs the analysis pass.

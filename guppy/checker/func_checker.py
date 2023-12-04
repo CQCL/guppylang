@@ -8,15 +8,15 @@ node straight from the Python AST. We build a CFG, check it, and return a
 import ast
 from dataclasses import dataclass
 
-from guppy.ast_util import return_nodes_in_ast, AstNode, with_loc
+from guppy.ast_util import AstNode, return_nodes_in_ast, with_loc
 from guppy.cfg.bb import BB
 from guppy.cfg.builder import CFGBuilder
-from guppy.checker.core import Variable, Globals, Context, CallableVariable
-from guppy.checker.cfg_checker import check_cfg, CheckedCFG
-from guppy.checker.expr_checker import synthesize_call, check_call
+from guppy.checker.cfg_checker import CheckedCFG, check_cfg
+from guppy.checker.core import CallableVariable, Context, Globals, Variable
+from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.error import GuppyError
-from guppy.gtypes import FunctionType, type_from_ast, NoneType, GuppyType
-from guppy.nodes import GlobalCall, CheckedNestedFunctionDef, NestedFunctionDef
+from guppy.gtypes import FunctionType, GuppyType, NoneType, type_from_ast
+from guppy.nodes import CheckedNestedFunctionDef, GlobalCall, NestedFunctionDef
 
 
 @dataclass

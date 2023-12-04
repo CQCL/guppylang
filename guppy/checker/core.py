@@ -5,12 +5,12 @@ from typing import NamedTuple, Optional, Union
 
 from guppy.ast_util import AstNode
 from guppy.gtypes import (
-    GuppyType,
-    FunctionType,
-    TupleType,
-    SumType,
-    NoneType,
     BoolType,
+    FunctionType,
+    GuppyType,
+    NoneType,
+    SumType,
+    TupleType,
 )
 
 

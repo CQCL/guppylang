@@ -1,20 +1,21 @@
 import itertools
-import networkx  # type: ignore
-
 from abc import ABC, abstractmethod
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from typing import Optional, Iterator, Tuple, Any, Sequence
-from dataclasses import field, dataclass
+from dataclasses import dataclass, field
+from typing import Any, Optional
+
+import networkx  # type: ignore
 
 import guppy.hugr.ops as ops
 import guppy.hugr.raw as raw
 from guppy.gtypes import (
-    GuppyType,
-    TupleType,
     FunctionType,
+    GuppyType,
     SumType,
-    type_to_row,
+    TupleType,
     row_to_type,
+    type_to_row,
 )
 from guppy.hugr import val
 
@@ -33,13 +34,11 @@ class Port(ABC):
 class InPort(Port, ABC):
     """Base class for a port that incoming wires connect to."""
 
-    pass
 
 
 class OutPort(Port, ABC):
     """Base class for a port that outgoing wires come from."""
 
-    pass
 
 
 @dataclass(frozen=True)
@@ -69,7 +68,6 @@ class InPortCF(InPort):
 class OutPortCF(OutPort):
     """A control-flow output port."""
 
-    pass
 
 
 Edge = tuple[OutPort, InPort]
@@ -93,23 +91,19 @@ class Node(ABC):
     @abstractmethod
     def num_in_ports(self) -> int:
         """The number of input ports on this node."""
-        pass
 
     @property
     @abstractmethod
     def num_out_ports(self) -> int:
         """The number of output ports on this node."""
-        pass
 
     @abstractmethod
     def in_port(self, offset: Optional[PortOffset]) -> InPort:
         """Returns the input port at the given offset."""
-        pass
 
     @abstractmethod
     def out_port(self, offset: Optional[PortOffset]) -> OutPort:
         """Returns the output port at the given offset."""
-        pass
 
     @abstractmethod
     def update_op(self) -> None:
@@ -117,7 +111,6 @@ class Node(ABC):
 
         This should be called before serialisation.
         """
-        pass
 
     @property
     def in_ports(self) -> Iterator[InPort]:
@@ -623,7 +616,7 @@ class Hugr:
             if key == ORDER_EDGE_KEY:
                 yield src
 
-    def _to_edge(self, src: int, tgt: int, key: Tuple[int, int]) -> Edge:
+    def _to_edge(self, src: int, tgt: int, key: tuple[int, int]) -> Edge:
         src_node = self.get_node(src)
         tgt_node = self.get_node(tgt)
         return src_node.out_port(key[0]), tgt_node.in_port(key[1])

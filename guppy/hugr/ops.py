@@ -1,18 +1,20 @@
 import inspect
 import sys
 from abc import ABC
-from typing import Annotated, Literal, Union, Optional, Any
-from pydantic import Field, BaseModel
+from typing import Annotated, Any, Literal, Optional, Union
+
+from pydantic import BaseModel, Field
+
+import guppy.hugr.tys as tys
 
 from .tys import (
-    TypeRow,
-    SimpleType,
-    PolyFuncType,
-    FunctionType,
     ExtensionId,
     ExtensionSet,
+    FunctionType,
+    PolyFuncType,
+    SimpleType,
+    TypeRow,
 )
-import guppy.hugr.tys as tys
 from .val import Value
 
 NodeID = int
@@ -28,11 +30,9 @@ class BaseOp(ABC, BaseModel):
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         """Hook to insert type information from the input and output ports into the
         op"""
-        pass
 
     def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
         """Hook to insert type information from a child dataflow graph"""
-        pass
 
     def display_name(self) -> str:
         """Name of the op for visualisation"""
@@ -353,77 +353,66 @@ class H(LeafOp):
     """A Hadamard gate."""
 
     lop: Literal["H"] = "H"
-    pass
 
 
 class T(LeafOp):
     """A T gate."""
 
     lop: Literal["T"] = "T"
-    pass
 
 
 class S(LeafOp):
     """An S gate."""
 
     lop: Literal["S"] = "S"
-    pass
 
 
 class X(LeafOp):
     """A Pauli X gate."""
 
     lop: Literal["X"] = "X"
-    pass
 
 
 class Y(LeafOp):
     """A Pauli Y gate."""
 
     lop: Literal["Y"] = "Y"
-    pass
 
 
 class Z(LeafOp):
     """A Pauli Z gate."""
 
     lop: Literal["Z"] = "Z"
-    pass
 
 
 class Tadj(LeafOp):
     """An adjoint T gate."""
 
     lop: Literal["Tadj"] = "Tadj"
-    pass
 
 
 class Sadj(LeafOp):
     """An adjoint S gate."""
 
     lop: Literal["Sadj"] = "Sadj"
-    pass
 
 
 class CX(LeafOp):
     """A controlled X gate."""
 
     lop: Literal["CX"] = "CX"
-    pass
 
 
 class ZZMax(LeafOp):
     """A maximally entangling ZZ phase gate."""
 
     lop: Literal["ZZMax"] = "ZZMax"
-    pass
 
 
 class Reset(LeafOp):
     """A qubit reset operation."""
 
     lop: Literal["Reset"] = "Reset"
-    pass
 
 
 class Noop(LeafOp):
@@ -443,21 +432,18 @@ class Measure(LeafOp):
     """A qubit measurement operation."""
 
     lop: Literal["Measure"] = "Measure"
-    pass
 
 
 class RzF64(LeafOp):
     """A rotation of a qubit about the Pauli Z axis by an input float angle."""
 
     lop: Literal["RzF64"] = "RzF64"
-    pass
 
 
 class Xor(LeafOp):
     """A bitwise XOR operation."""
 
     lop: Literal["Xor"] = "Xor"
-    pass
 
 
 class MakeTuple(LeafOp):

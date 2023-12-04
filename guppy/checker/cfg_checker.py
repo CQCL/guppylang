@@ -5,20 +5,17 @@ Operates on CFGs produced by the `CFGBuilder`. Produces a `CheckedCFG` consistin
 """
 
 import collections
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 from guppy.ast_util import line_col
 from guppy.cfg.bb import BB
 from guppy.cfg.cfg import CFG, BaseCFG
-from guppy.checker.core import Globals, Context
-
-from guppy.checker.core import Variable
+from guppy.checker.core import Context, Globals, Variable
 from guppy.checker.expr_checker import ExprSynthesizer, to_bool
 from guppy.checker.stmt_checker import StmtChecker
 from guppy.error import GuppyError
 from guppy.gtypes import GuppyType
-
 
 VarRow = Sequence[Variable]
 

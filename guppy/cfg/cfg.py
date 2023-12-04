@@ -1,15 +1,14 @@
-from typing import Optional, TypeVar, Generic
+from typing import Generic, Optional, TypeVar
 
 from guppy.cfg.analysis import (
-    LivenessDomain,
-    LivenessAnalysis,
     AssignmentAnalysis,
     DefAssignmentDomain,
+    LivenessAnalysis,
+    LivenessDomain,
     MaybeAssignmentDomain,
     Result,
 )
 from guppy.cfg.bb import BB, BBStatement
-
 
 T = TypeVar("T", bound=BB)
 

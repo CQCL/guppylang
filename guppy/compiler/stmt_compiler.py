@@ -1,12 +1,12 @@
 import ast
-from typing import Sequence
+from collections.abc import Sequence
 
 from guppy.ast_util import AstVisitor
 from guppy.checker.cfg_checker import CheckedBB
 from guppy.compiler.core import (
+    CompiledGlobals,
     CompilerBase,
     DFContainer,
-    CompiledGlobals,
     PortVariable,
     return_var,
 )

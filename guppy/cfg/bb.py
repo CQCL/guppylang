@@ -1,7 +1,8 @@
 import ast
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
+
 from typing_extensions import Self
 
 from guppy.ast_util import AstNode, name_nodes_in_ast

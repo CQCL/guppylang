@@ -1,8 +1,9 @@
 import ast
 import itertools
-from typing import Optional, Iterator, NamedTuple
+from collections.abc import Iterator
+from typing import NamedTuple, Optional
 
-from guppy.ast_util import set_location_from, AstVisitor
+from guppy.ast_util import AstVisitor, set_location_from
 from guppy.cfg.bb import BB, BBStatement
 from guppy.cfg.cfg import CFG
 from guppy.checker.core import Globals
@@ -69,7 +70,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
             if next_functional:
                 # TODO: This should be an assertion that the Hugr can be un-flattened
-                raise NotImplementedError()
+                raise NotImplementedError
                 next_functional = False
             else:
                 bb_opt = self.visit(node, bb_opt, jumps)

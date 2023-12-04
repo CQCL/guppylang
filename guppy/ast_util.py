@@ -1,5 +1,5 @@
 import ast
-from typing import Any, TypeVar, Generic, Union, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, Union
 
 if TYPE_CHECKING:
     from guppy.gtypes import GuppyType

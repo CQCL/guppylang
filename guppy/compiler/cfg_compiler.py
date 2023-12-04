@@ -1,19 +1,19 @@
 import functools
-from typing import Sequence
+from collections.abc import Sequence
 
-from guppy.checker.cfg_checker import CheckedBB, VarRow, CheckedCFG, Signature
+from guppy.checker.cfg_checker import CheckedBB, CheckedCFG, Signature, VarRow
 from guppy.checker.core import Variable
 from guppy.compiler.core import (
     CompiledGlobals,
-    is_return_var,
     DFContainer,
-    return_var,
     PortVariable,
+    is_return_var,
+    return_var,
 )
 from guppy.compiler.expr_compiler import ExprCompiler
 from guppy.compiler.stmt_compiler import StmtCompiler
-from guppy.gtypes import TupleType, SumType, type_to_row
-from guppy.hugr.hugr import Hugr, Node, CFNode, OutPortV
+from guppy.gtypes import SumType, TupleType, type_to_row
+from guppy.hugr.hugr import CFNode, Hugr, Node, OutPortV
 
 
 def compile_cfg(

@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Optional, Iterator
+from typing import Optional
 
 from guppy.ast_util import AstNode
-from guppy.checker.core import Variable, CallableVariable
+from guppy.checker.core import CallableVariable, Variable
 from guppy.gtypes import FunctionType
-from guppy.hugr.hugr import OutPortV, DFContainingNode, Hugr
+from guppy.hugr.hugr import DFContainingNode, Hugr, OutPortV
 
 
 @dataclass

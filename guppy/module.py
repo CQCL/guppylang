@@ -1,15 +1,15 @@
 import ast
 import inspect
 import textwrap
+from collections.abc import Callable
 from types import ModuleType
+from typing import Any, Optional, Union
 
-from typing import Callable, Any, Optional, Union
-
-from guppy.ast_util import annotate_location, AstNode
+from guppy.ast_util import AstNode, annotate_location
 from guppy.checker.core import Globals, qualified_name
 from guppy.checker.func_checker import DefinedFunction, check_global_func_def
 from guppy.compiler.core import CompiledGlobals
-from guppy.compiler.func_compiler import compile_global_func_def, CompiledFunctionDef
+from guppy.compiler.func_compiler import CompiledFunctionDef, compile_global_func_def
 from guppy.custom import CustomFunction
 from guppy.declared import DeclaredFunction
 from guppy.error import GuppyError, pretty_errors

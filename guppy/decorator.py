@@ -1,19 +1,20 @@
 import functools
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Optional, Union, Callable, Any
+from typing import Any, Optional, Union
 
 from guppy.ast_util import AstNode, has_empty_body
 from guppy.custom import (
-    CustomFunction,
-    OpCompiler,
-    DefaultCallChecker,
-    CustomCallCompiler,
     CustomCallChecker,
+    CustomCallCompiler,
+    CustomFunction,
+    DefaultCallChecker,
     DefaultCallCompiler,
+    OpCompiler,
 )
 from guppy.error import GuppyError, pretty_errors
 from guppy.gtypes import GuppyType
-from guppy.hugr import tys, ops
+from guppy.hugr import ops, tys
 from guppy.hugr.hugr import Hugr
 from guppy.module import GuppyModule, PyFunc, parse_py_func
 

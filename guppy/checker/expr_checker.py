@@ -22,13 +22,13 @@ can be used to infer a type for an expression.
 
 import ast
 from contextlib import suppress
-from typing import Optional, Union, NoReturn, Any
+from typing import Any, NoReturn, Optional, Union
 
-from guppy.ast_util import AstVisitor, with_loc, AstNode, with_type, get_type_opt
-from guppy.checker.core import Context, CallableVariable, Globals
+from guppy.ast_util import AstNode, AstVisitor, get_type_opt, with_loc, with_type
+from guppy.checker.core import CallableVariable, Context, Globals
 from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
-from guppy.gtypes import GuppyType, TupleType, FunctionType, BoolType
-from guppy.nodes import LocalName, GlobalName, LocalCall
+from guppy.gtypes import BoolType, FunctionType, GuppyType, TupleType
+from guppy.nodes import GlobalName, LocalCall, LocalName
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[ast.unaryop], tuple[str, str]] = {

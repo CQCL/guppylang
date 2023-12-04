@@ -1,23 +1,22 @@
 import ast
-from typing import Optional, Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-from guppy.ast_util import with_type, AstNode, with_loc, get_type
-from guppy.checker.core import Context, CallableVariable
+from guppy.ast_util import AstNode, get_type, with_loc, with_type
+from guppy.checker.core import CallableVariable, Context
 from guppy.checker.expr_checker import ExprSynthesizer, check_num_args
 from guppy.custom import (
     CustomCallChecker,
-    DefaultCallChecker,
-    CustomFunction,
     CustomCallCompiler,
+    CustomFunction,
+    DefaultCallChecker,
 )
-from guppy.error import GuppyTypeError, GuppyError
-from guppy.gtypes import GuppyType, FunctionType, BoolType
+from guppy.error import GuppyError, GuppyTypeError
+from guppy.gtypes import BoolType, FunctionType, GuppyType
 from guppy.hugr import ops, tys, val
 from guppy.hugr.hugr import OutPortV
 from guppy.nodes import GlobalCall
-
 
 INT_WIDTH = 6  # 2^6 = 64 bit
 
@@ -209,7 +208,7 @@ class IntTruedivCompiler(CustomCallCompiler):
     """Compiler for the `int.__truediv__` method."""
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        from .builtins import Int, Float
+        from .builtins import Float, Int
 
         # Compile `truediv` using float arithmetic
         [left, right] = args

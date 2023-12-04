@@ -2,19 +2,19 @@ import ast
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from guppy.ast_util import AstNode, with_type, with_loc, get_type
+from guppy.ast_util import AstNode, get_type, with_loc, with_type
 from guppy.checker.core import Context, Globals
 from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
-from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
+from guppy.compiler.core import CompiledFunction, CompiledGlobals, DFContainer
 from guppy.error import (
     GuppyError,
     InternalGuppyError,
     UnknownFunctionType,
 )
-from guppy.gtypes import GuppyType, FunctionType, type_to_row
+from guppy.gtypes import FunctionType, GuppyType, type_to_row
 from guppy.hugr import ops
-from guppy.hugr.hugr import OutPortV, Hugr, Node, DFContainingVNode
+from guppy.hugr.hugr import DFContainingVNode, Hugr, Node, OutPortV
 from guppy.nodes import GlobalCall
 
 
