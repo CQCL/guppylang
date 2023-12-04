@@ -2,7 +2,8 @@ import importlib.util
 import pathlib
 import pytest
 
-from typing import Callable, Optional, Any
+from typing import Optional, Any
+from collections.abc import Callable
 
 from guppy.hugr import tys
 from guppy.hugr.tys import TypeBound
@@ -42,4 +43,3 @@ util = GuppyModule("test")
 @decorator.guppy.type(util, tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable))
 class NonBool:
     pass
-

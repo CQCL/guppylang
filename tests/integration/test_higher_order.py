@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 from guppy.decorator import guppy
 from guppy.module import GuppyModule

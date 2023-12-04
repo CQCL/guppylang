@@ -7,4 +7,3 @@ def foo() -> int:
         return x
 
     return bar()
-

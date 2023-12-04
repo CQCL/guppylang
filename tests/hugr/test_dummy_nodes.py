@@ -34,4 +34,3 @@ def test_unique_names():
     g.remove_dummy_nodes()
     [decl1, decl2] = [n for n in g.nodes() if isinstance(n.op, ops.FuncDecl)]
     assert {decl1.op.name, decl2.op.name} == {"dummy", "dummy$1"}
-

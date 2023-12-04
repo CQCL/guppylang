@@ -12,4 +12,3 @@ def test_undefined_port():
         p.node
     with pytest.raises(InternalGuppyError, match="Tried to access undefined Port"):
         p.offset
-

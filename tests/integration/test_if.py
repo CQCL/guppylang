@@ -1,7 +1,6 @@
 import pytest
 
 from guppy.decorator import guppy
-from guppy.module import GuppyModule
 
 
 def test_if_no_else(validate):
@@ -265,4 +264,3 @@ def test_continue_different_types2(validate):
         return z
 
     validate(foo)
-

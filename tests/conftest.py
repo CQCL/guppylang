@@ -1,6 +1,6 @@
-import pytest
-from pathlib import Path
 import argparse
+from pathlib import Path
+
 
 def pytest_addoption(parser):
     def dir_path(s):
