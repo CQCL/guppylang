@@ -354,10 +354,12 @@ def python_value_to_guppy_type(
 
     Returns `None` if the Python value cannot be represented in Guppy.
     """
-    if isinstance(v, bool):
-        return globals.types["bool"].build(node=node)
-    elif isinstance(v, int):
-        return globals.types["int"].build(node=node)
-    if isinstance(v, float):
-        return globals.types["float"].build(node=node)
-    return None
+    match v:
+        case bool():
+            return globals.types["bool"].build(node=node)
+        case int():
+            return globals.types["int"].build(node=node)
+        case float():
+            return globals.types["float"].build(node=node)
+        case _:
+            return None

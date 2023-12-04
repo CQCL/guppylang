@@ -43,35 +43,37 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def _check_assign(self, lhs: ast.expr, ty: GuppyType, node: ast.stmt) -> None:
         """Helper function to check assignments with patterns."""
-        # Easiest case is if the LHS pattern is a single variable.
-        if isinstance(lhs, ast.Name):
-            # Check if we override an unused linear variable
-            x = lhs.id
-            if x in self.ctx.locals:
-                var = self.ctx.locals[x]
-                if var.ty.linear and var.used is None:
-                    raise GuppyError(
-                        f"Variable `{x}` with linear type `{var.ty}` is not used",
-                        var.defined_at,
+        match lhs:
+            # Easiest case is if the LHS pattern is a single variable.
+            case ast.Name(id=x):
+                # Check if we override an unused linear variable
+                if x in self.ctx.locals:
+                    var = self.ctx.locals[x]
+                    if var.ty.linear and var.used is None:
+                        raise GuppyError(
+                            f"Variable `{x}` with linear type `{var.ty}` is not used",
+                            var.defined_at,
+                        )
+                self.ctx.locals[x] = Variable(x, ty, node, None)
+
+            # The only other thing we support right now are tuples
+            case ast.Tuple(elts=elts):
+                tys = ty.element_types if isinstance(ty, TupleType) else [ty]
+                n, m = len(elts), len(tys)
+                if n != m:
+                    raise GuppyTypeError(
+                        f"{'Too many' if n < m else 'Not enough'} values to unpack "
+                        f"(expected {n}, got {m})",
+                        node,
                     )
-            self.ctx.locals[x] = Variable(x, ty, node, None)
-        # The only other thing we support right now are tuples
-        elif isinstance(lhs, ast.Tuple):
-            tys = ty.element_types if isinstance(ty, TupleType) else [ty]
-            n, m = len(lhs.elts), len(tys)
-            if n != m:
-                raise GuppyTypeError(
-                    f"{'Too many' if n < m else 'Not enough'} values to unpack "
-                    f"(expected {n}, got {m})",
-                    node,
-                )
-            for pat, el_ty in zip(lhs.elts, tys):
-                self._check_assign(pat, el_ty, node)
-        # TODO: Python also supports assignments like `[a, b] = [1, 2]` or
-        #  `a, *b = ...`. The former would require some runtime checks but
-        #  the latter should be easier to do (unpack and repack the rest).
-        else:
-            raise GuppyError("Assignment pattern not supported", lhs)
+                for pat, el_ty in zip(elts, tys):
+                    self._check_assign(pat, el_ty, node)
+
+            # TODO: Python also supports assignments like `[a, b] = [1, 2]` or
+            #  `a, *b = ...`. The former would require some runtime checks but
+            #  the latter should be easier to do (unpack and repack the rest).
+            case _:
+                raise GuppyError("Assignment pattern not supported", lhs)
 
     def visit_Assign(self, node: ast.Assign) -> ast.stmt:
         if len(node.targets) > 1:
