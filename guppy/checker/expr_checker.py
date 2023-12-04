@@ -241,7 +241,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
     def visit_Call(self, node: ast.Call) -> tuple[ast.expr, GuppyType]:
         if len(node.keywords) > 0:
             raise GuppyError(
-                "Argument passing by keyword is not supported", node.keywords[0]
+                "Keyword arguments are not supported", node.keywords[0]
             )
         node.func, ty = self.synthesize(node.func)
 
