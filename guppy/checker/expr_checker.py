@@ -21,6 +21,7 @@ can be used to infer a type for an expression.
 """
 
 import ast
+from contextlib import suppress
 from typing import Optional, Union, NoReturn, Any
 
 from guppy.ast_util import AstVisitor, with_loc, AstNode, with_type, get_type_opt
@@ -212,16 +213,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         right_expr, right_ty = self.synthesize(right_expr)
 
         if func := self.ctx.globals.get_instance_func(left_ty, lop):
-            try:
+            with suppress(GuppyError):
                 return func.synthesize_call([left_expr, right_expr], node, self.ctx)
-            except GuppyError:
-                pass
 
         if func := self.ctx.globals.get_instance_func(right_ty, rop):
-            try:
+            with suppress(GuppyError):
                 return func.synthesize_call([right_expr, left_expr], node, self.ctx)
-            except GuppyError:
-                pass
 
         raise GuppyTypeError(
             f"Binary operator `{display_name}` not defined for arguments of type "
