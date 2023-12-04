@@ -124,7 +124,9 @@ def check_nested_func_def(
     ]
     globals = ctx.globals
 
-    # Check if the body contains a recursive occurrence of the function name
+    # Check if the body contains a free (recursive) occurrence of the function name.
+    # By checking if the name is free at the entry BB, we avoid false positives when
+    # a user shadows the name with a local variable
     if func_def.name in cfg.live_before[cfg.entry_bb]:
         if not captured:
             # If there are no captured vars, we treat the function like a global name
