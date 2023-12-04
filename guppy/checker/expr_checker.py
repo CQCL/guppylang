@@ -114,7 +114,7 @@ class ExprChecker(AstVisitor[ast.expr]):
             node.elts[i] = self.check(el, ty.element_types[i])
         return node
 
-    def generic_visit(self, node: ast.expr, ty: GuppyType) -> ast.expr:  # type: ignore
+    def generic_visit(self, node: ast.expr, ty: GuppyType) -> ast.expr:  # type: ignore[override]
         # Try to synthesize and then check if it matches the given type
         node, synth = self._synthesize(node)
         if synth != ty:
