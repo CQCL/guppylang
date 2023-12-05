@@ -188,7 +188,7 @@ def check_bb(
     checked_bb = CheckedBB(
         bb.idx, checked_cfg, checked_stmts, sig=Signature(inputs, outputs)
     )
-    checked_bb.successors = [None] * len(bb.successors)  # type: ignore
+    checked_bb.successors = [None] * len(bb.successors)  # type: ignore[list-item]
     checked_bb.branch_pred = bb.branch_pred
     return checked_bb
 

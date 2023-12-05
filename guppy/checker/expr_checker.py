@@ -14,13 +14,14 @@ nodes into either `LocalName` or `GlobalName` nodes and `ast.Call` nodes are tur
 `LocalCall` or `GlobalCall` nodes. Furthermore, all nodes in the resulting AST are
 annotated with their type.
 
-Expressions can be checked against a given type by the `ExprChecker`, raising an Error
-if the expressions doesn't have the expected type. Checking is used for annotated
+Expressions can be checked against a given type by the `ExprChecker`, raising a type
+error if the expressions doesn't have the expected type. Checking is used for annotated
 assignments, return values, and function arguments. Alternatively, the `ExprSynthesizer`
 can be used to infer a type for an expression.
 """
 
 import ast
+from contextlib import suppress
 from typing import Optional, Union, NoReturn, Any
 
 from guppy.ast_util import AstVisitor, with_loc, AstNode, with_type, get_type_opt
@@ -45,34 +46,34 @@ from guppy.nodes import LocalName, GlobalName, LocalCall, TypeApply
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
-    ast.UAdd: ("__pos__", "+"),
-    ast.USub: ("__neg__", "-"),
+    ast.UAdd:   ("__pos__",    "+"),
+    ast.USub:   ("__neg__",    "-"),
     ast.Invert: ("__invert__", "~"),
-}
+}  # fmt: skip
 
 # Mapping from binary AST op to left dunder method, right dunder method and display name
 AstOp = Union[ast.operator, ast.cmpop]
 binary_table: dict[type[AstOp], tuple[str, str, str]] = {
-    ast.Add: ("__add__", "__radd__", "+"),
-    ast.Sub: ("__sub__", "__rsub__", "-"),
-    ast.Mult: ("__mul__", "__rmul__", "*"),
-    ast.Div: ("__truediv__", "__rtruediv__", "/"),
+    ast.Add:      ("__add__",      "__radd__",      "+"),
+    ast.Sub:      ("__sub__",      "__rsub__",      "-"),
+    ast.Mult:     ("__mul__",      "__rmul__",      "*"),
+    ast.Div:      ("__truediv__",  "__rtruediv__",  "/"),
     ast.FloorDiv: ("__floordiv__", "__rfloordiv__", "//"),
-    ast.Mod: ("__mod__", "__rmod__", "%"),
-    ast.Pow: ("__pow__", "__rpow__", "**"),
-    ast.LShift: ("__lshift__", "__rlshift__", "<<"),
-    ast.RShift: ("__rshift__", "__rrshift__", ">>"),
-    ast.BitOr: ("__or__", "__ror__", "|"),
-    ast.BitXor: ("__xor__", "__rxor__", "^"),
-    ast.BitAnd: ("__and__", "__rand__", "&"),
-    ast.MatMult: ("__matmul__", "__rmatmul__", "@"),
-    ast.Eq: ("__eq__", "__eq__", "=="),
-    ast.NotEq: ("__neq__", "__neq__", "!="),
-    ast.Lt: ("__lt__", "__gt__", "<"),
-    ast.LtE: ("__le__", "__ge__", "<="),
-    ast.Gt: ("__gt__", "__lt__", ">"),
-    ast.GtE: ("__ge__", "__le__", ">="),
-}
+    ast.Mod:      ("__mod__",      "__rmod__",      "%"),
+    ast.Pow:      ("__pow__",      "__rpow__",      "**"),
+    ast.LShift:   ("__lshift__",   "__rlshift__",   "<<"),
+    ast.RShift:   ("__rshift__",   "__rrshift__",   ">>"),
+    ast.BitOr:    ("__or__",       "__ror__",       "|"),
+    ast.BitXor:   ("__xor__",      "__rxor__",      "^"),
+    ast.BitAnd:   ("__and__",      "__rand__",      "&"),
+    ast.MatMult:  ("__matmul__",   "__rmatmul__",   "@"),
+    ast.Eq:       ("__eq__",       "__eq__",        "=="),
+    ast.NotEq:    ("__neq__",      "__neq__",       "!="),
+    ast.Lt:       ("__lt__",       "__gt__",        "<"),
+    ast.LtE:      ("__le__",       "__ge__",        "<="),
+    ast.Gt:       ("__gt__",       "__lt__",        ">"),
+    ast.GtE:      ("__ge__",       "__le__",        ">="),
+}  # fmt: skip
 
 
 class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
@@ -98,7 +99,8 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         if not isinstance(actual, GuppyType):
             loc = loc or actual
             _, actual = self._synthesize(actual, allow_free_vars=True)
-        assert loc is not None
+        if loc is None:
+            raise InternalGuppyError("Failure location is required")
         raise GuppyTypeError(
             f"Expected {self._kind} of type `{expected}`, got `{actual}`", loc
         )
@@ -163,7 +165,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         else:
             raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
 
-    def generic_visit(  # type: ignore
+    def generic_visit(  # type: ignore[override]
         self, node: ast.expr, ty: GuppyType
     ) -> tuple[ast.expr, Subst]:
         # Try to synthesize and then check if we can unify it with the given type
@@ -274,16 +276,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         right_expr, right_ty = self.synthesize(right_expr)
 
         if func := self.ctx.globals.get_instance_func(left_ty, lop):
-            try:
+            with suppress(GuppyError):
                 return func.synthesize_call([left_expr, right_expr], node, self.ctx)
-            except GuppyError:
-                pass
 
         if func := self.ctx.globals.get_instance_func(right_ty, rop):
-            try:
+            with suppress(GuppyError):
                 return func.synthesize_call([right_expr, left_expr], node, self.ctx)
-            except GuppyError:
-                pass
 
         raise GuppyTypeError(
             f"Binary operator `{display_name}` not defined for arguments of type "
@@ -305,9 +303,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def visit_Call(self, node: ast.Call) -> tuple[ast.expr, GuppyType]:
         if len(node.keywords) > 0:
-            raise GuppyError(
-                "Argument passing by keyword is not supported", node.keywords[0]
-            )
+            raise GuppyError("Keyword arguments are not supported", node.keywords[0])
         node.func, ty = self.synthesize(node.func)
 
         # First handle direct calls of user-defined functions and extension functions
@@ -609,10 +605,12 @@ def python_value_to_guppy_type(
 
     Returns `None` if the Python value cannot be represented in Guppy.
     """
-    if isinstance(v, bool):
-        return globals.types["bool"].build(node=node)
-    elif isinstance(v, int):
-        return globals.types["int"].build(node=node)
-    if isinstance(v, float):
-        return globals.types["float"].build(node=node)
-    return None
+    match v:
+        case bool():
+            return globals.types["bool"].build(node=node)
+        case int():
+            return globals.types["int"].build(node=node)
+        case float():
+            return globals.types["float"].build(node=node)
+        case _:
+            return None
