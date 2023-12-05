@@ -3,16 +3,18 @@ import networkx  # type: ignore
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import Optional, Iterator, Tuple, Any
+from typing import Optional, Iterator, Tuple, Any, Sequence
 from dataclasses import field, dataclass
 
 import guppy.hugr.ops as ops
 import guppy.hugr.raw as raw
-from guppy.guppy_types import (
+from guppy.gtypes import (
     GuppyType,
     TupleType,
     FunctionType,
     SumType,
+    type_to_row,
+    row_to_type,
 )
 from guppy.hugr import val
 
@@ -373,6 +375,14 @@ class Hugr:
             parent.input_child = node
         return node
 
+    def add_input_with_ports(
+        self, output_tys: Sequence[GuppyType], parent: Optional[Node] = None
+    ) -> tuple[VNode, list[OutPortV]]:
+        """Adds an `Input` node to the graph."""
+        node = self.add_input(None, parent)
+        ports = [node.add_out_port(ty) for ty in output_tys]
+        return node, ports
+
     def add_output(
         self,
         inputs: Optional[list[OutPortV]] = None,
@@ -483,7 +493,11 @@ class Hugr:
         """Adds a `Call` node to the graph."""
         assert isinstance(def_port.ty, FunctionType)
         return self.add_node(
-            ops.Call(), None, list(def_port.ty.returns), parent, args + [def_port]
+            ops.Call(),
+            None,
+            list(type_to_row(def_port.ty.returns)),
+            parent,
+            args + [def_port],
         )
 
     def add_indirect_call(
@@ -494,7 +508,7 @@ class Hugr:
         return self.add_node(
             ops.CallIndirect(),
             None,
-            list(fun_port.ty.returns),
+            list(type_to_row(fun_port.ty.returns)),
             parent,
             [fun_port] + args,
         )
@@ -628,7 +642,9 @@ class Hugr:
         for n in list(self.nodes()):
             if isinstance(n, VNode) and isinstance(n.op, ops.DummyOp):
                 name = n.op.name
-                fun_ty = FunctionType(list(n.in_port_types), list(n.out_port_types))
+                fun_ty = FunctionType(
+                    list(n.in_port_types), row_to_type(n.out_port_types)
+                )
                 if name in used_names:
                     used_names[name] += 1
                     name = f"{name}${used_names[name]}"

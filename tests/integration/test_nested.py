@@ -1,4 +1,4 @@
-from guppy.compiler import guppy
+from guppy.decorator import guppy
 
 
 def test_basic(validate):

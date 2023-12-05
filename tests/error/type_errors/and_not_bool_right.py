@@ -1,6 +1,6 @@
 import tests.error.util
-
-from guppy.compiler import GuppyModule, guppy
+from guppy.decorator import guppy
+from guppy.module import GuppyModule
 from tests.error.util import NonBool
 
 module = GuppyModule("test")
@@ -12,4 +12,4 @@ def foo(x: bool, y: NonBool) -> bool:
     return x and y
 
 
-module.compile(True)
+module.compile()

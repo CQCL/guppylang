@@ -1,5 +1,6 @@
-from guppy.compiler import guppy
+from guppy.decorator import guppy
 from guppy.hugr import ops
+from guppy.module import GuppyModule
 
 
 def test_id(validate):
@@ -70,9 +71,11 @@ def test_func_def_name():
 
 
 def test_func_decl_name():
-    @guppy
+    module = GuppyModule("test")
+
+    @guppy.declare(module)
     def func_name() -> None:
         ...
 
-    [def_op] = [n.op for n in func_name.nodes() if isinstance(n.op, ops.FuncDecl)]
+    [def_op] = [n.op for n in module.compile().nodes() if isinstance(n.op, ops.FuncDecl)]
     assert def_op.name == "func_name"

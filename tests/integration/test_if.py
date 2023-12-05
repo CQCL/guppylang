@@ -1,6 +1,7 @@
 import pytest
 
-from guppy.compiler import guppy
+from guppy.decorator import guppy
+from guppy.module import GuppyModule
 
 
 def test_if_no_else(validate):

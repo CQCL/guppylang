@@ -1,8 +1,9 @@
-from guppy.compiler import guppy, GuppyModule
+from guppy.decorator import guppy
+from guppy.module import GuppyModule
 from guppy.prelude.quantum import Qubit
 
 import guppy.prelude.quantum as quantum
-from guppy.prelude.quantum import h, cx
+from guppy.prelude.quantum import h, cx, measure
 
 
 def test_id(validate):
@@ -13,7 +14,7 @@ def test_id(validate):
     def test(q: Qubit) -> Qubit:
         return q
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_assign(validate):
@@ -26,7 +27,7 @@ def test_assign(validate):
         s = r
         return s
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_linear_return_order(validate):
@@ -38,18 +39,18 @@ def test_linear_return_order(validate):
     def test(q: Qubit) -> tuple[Qubit, bool]:
         return measure(q)
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_interleave(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy(module)
+    @guppy.declare(module)
     def f(q1: Qubit, q2: Qubit) -> tuple[Qubit, Qubit]:
         ...
 
-    @guppy(module)
+    @guppy.declare(module)
     def g(q1: Qubit, q2: Qubit) -> tuple[Qubit, Qubit]:
         ...
 
@@ -60,14 +61,14 @@ def test_interleave(validate):
         b, c = g(b, c)
         return a, b, c, d
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_if(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy(module)
+    @guppy.declare(module)
     def new() -> Qubit:
         ...
 
@@ -80,14 +81,14 @@ def test_if(validate):
             q = new()
         return q
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_if_return(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy(module)
+    @guppy.declare(module)
     def new() -> Qubit:
         ...
 
@@ -100,14 +101,14 @@ def test_if_return(validate):
             q = new()
         return q
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_measure(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy(module)
+    @guppy.declare(module)
     def measure(q: Qubit) -> bool:
         ...
 
@@ -116,14 +117,14 @@ def test_measure(validate):
         b = measure(q)
         return x
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_return_call(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy(module)
+    @guppy.declare(module)
     def op(q: Qubit) -> Qubit:
         ...
 
@@ -131,7 +132,7 @@ def test_return_call(validate):
     def test(q: Qubit) -> Qubit:
         return op(q)
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_while(validate):
@@ -145,7 +146,7 @@ def test_while(validate):
             q = h(q)
         return q
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_while_break(validate):
@@ -161,7 +162,7 @@ def test_while_break(validate):
                 break
         return q
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_while_continue(validate):
@@ -177,18 +178,18 @@ def test_while_continue(validate):
             q = h(q)
         return q
 
-    validate(module.compile(True))
+    validate(module.compile())
 
 
 def test_while_reset(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy(module)
+    @guppy.declare(module)
     def new_qubit() -> Qubit:
         ...
 
-    @guppy(module)
+    @guppy.declare(module)
     def measure() -> bool:
         ...
 
@@ -208,15 +209,15 @@ def test_rus(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy(module)
+    @guppy.declare(module)
     def measure(q: Qubit) -> bool:
         ...
 
-    @guppy(module)
+    @guppy.declare(module)
     def qalloc() -> Qubit:
         ...
 
-    @guppy(module)
+    @guppy.declare(module)
     def t(q: Qubit) -> Qubit:
         ...
 

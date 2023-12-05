@@ -1,13 +1,14 @@
 import ast
 import itertools
-from typing import Optional, Iterator, Union, NamedTuple
+from typing import Optional, Iterator, NamedTuple
 
 from guppy.ast_util import set_location_from, AstVisitor
-from guppy.cfg.bb import BB, NestedFunctionDef
+from guppy.cfg.bb import BB, BBStatement
 from guppy.cfg.cfg import CFG
-from guppy.compiler_base import Globals
+from guppy.checker.core import Globals
 from guppy.error import GuppyError, InternalGuppyError
-
+from guppy.gtypes import NoneType
+from guppy.nodes import NestedFunctionDef
 
 # In order to build expressions, need an endless stream of unique temporary variables
 # to store intermediate results
@@ -31,10 +32,9 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     """Constructs a CFG from ast nodes."""
 
     cfg: CFG
-    num_returns: int
     globals: Globals
 
-    def build(self, nodes: list[ast.stmt], num_returns: int, globals: Globals) -> CFG:
+    def build(self, nodes: list[ast.stmt], returns_none: bool, globals: Globals) -> CFG:
         """Builds a CFG from a list of ast nodes.
 
         We also require the expected number of return ports for the whole CFG. This is
@@ -42,7 +42,6 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         variables.
         """
         self.cfg = CFG()
-        self.num_returns = num_returns
         self.globals = globals
 
         final_bb = self.visit_stmts(
@@ -52,7 +51,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         # If we're still in a basic block after compiling the whole body, we have to add
         # an implicit void return
         if final_bb is not None:
-            if num_returns > 0:
+            if not returns_none:
                 raise GuppyError("Expected return statement", nodes[-1])
             self.cfg.link(final_bb, self.cfg.exit_bb)
 
@@ -76,15 +75,13 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
                 bb_opt = self.visit(node, bb_opt, jumps)
         return bb_opt
 
-    def _build_node_value(
-        self, node: Union[ast.Assign, ast.AugAssign, ast.Return, ast.Expr], bb: BB
-    ) -> BB:
+    def _build_node_value(self, node: BBStatement, bb: BB) -> BB:
         """Utility method for building a node containing a `value` expression.
 
         Builds the expression and mutates `node.value` to point to the built expression.
         Returns the BB in which the expression is available and adds the node to it.
         """
-        if node.value is not None:
+        if not isinstance(node, NestedFunctionDef) and node.value is not None:
             node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
         return bb
@@ -94,6 +91,11 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
     def visit_AugAssign(
         self, node: ast.AugAssign, bb: BB, jumps: Jumps
+    ) -> Optional[BB]:
+        return self._build_node_value(node, bb)
+
+    def visit_AnnAssign(
+        self, node: ast.AnnAssign, bb: BB, jumps: Jumps
     ) -> Optional[BB]:
         return self._build_node_value(node, bb)
 
@@ -166,10 +168,11 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
     def visit_FunctionDef(
         self, node: ast.FunctionDef, bb: BB, jumps: Jumps
     ) -> Optional[BB]:
-        from guppy.function import FunctionDefCompiler
+        from guppy.checker.func_checker import check_signature
 
-        func_ty = FunctionDefCompiler.validate_signature(node, self.globals)
-        cfg = CFGBuilder().build(node.body, len(func_ty.returns), self.globals)
+        func_ty = check_signature(node, self.globals)
+        returns_none = isinstance(func_ty.returns, NoneType)
+        cfg = CFGBuilder().build(node.body, returns_none, self.globals)
 
         new_node = NestedFunctionDef(
             cfg,

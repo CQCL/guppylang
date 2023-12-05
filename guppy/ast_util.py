@@ -1,6 +1,8 @@
 import ast
-from typing import Any, TypeVar, Generic, Union
+from typing import Any, TypeVar, Generic, Union, Optional, TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from guppy.gtypes import GuppyType
 
 AstNode = Union[
     ast.AST,
@@ -111,8 +113,92 @@ def set_location_from(node: ast.AST, loc: ast.AST) -> None:
     node.end_lineno = loc.end_lineno
     node.end_col_offset = loc.end_col_offset
 
+    source, file, line_offset = get_source(loc), get_file(loc), get_line_offset(loc)
+    assert source is not None and file is not None and line_offset is not None
+    annotate_location(node, source, file, line_offset)
 
-def is_empty_body(func_ast: ast.FunctionDef) -> bool:
+
+def annotate_location(
+    node: ast.AST, source: str, file: str, line_offset: int, recurse: bool = True
+) -> None:
+    setattr(node, "line_offset", line_offset)
+    setattr(node, "file", file)
+    setattr(node, "source", source)
+
+    if recurse:
+        for field, value in ast.iter_fields(node):
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, ast.AST):
+                        annotate_location(item, source, file, line_offset, recurse)
+            elif isinstance(value, ast.AST):
+                annotate_location(value, source, file, line_offset, recurse)
+
+
+def get_file(node: AstNode) -> Optional[str]:
+    """Tries to retrieve a file annotation from an AST node."""
+    try:
+        file = getattr(node, "file")
+        return file if isinstance(file, str) else None
+    except AttributeError:
+        return None
+
+
+def get_source(node: AstNode) -> Optional[str]:
+    """Tries to retrieve a source annotation from an AST node."""
+    try:
+        source = getattr(node, "source")
+        return source if isinstance(source, str) else None
+    except AttributeError:
+        return None
+
+
+def get_line_offset(node: AstNode) -> Optional[int]:
+    """Tries to retrieve a line offset annotation from an AST node."""
+    try:
+        line_offset = getattr(node, "line_offset")
+        return line_offset if isinstance(line_offset, int) else None
+    except AttributeError:
+        return None
+
+
+A = TypeVar("A", bound=ast.AST)
+
+
+def with_loc(loc: ast.AST, node: A) -> A:
+    """Copy source location from one AST node to the other."""
+    set_location_from(node, loc)
+    return node
+
+
+def with_type(ty: "GuppyType", node: A) -> A:
+    """Annotates an AST node with a type."""
+    setattr(node, "type", ty)
+    return node
+
+
+def get_type_opt(node: AstNode) -> Optional["GuppyType"]:
+    """Tries to retrieve a type annotation from an AST node."""
+    from guppy.gtypes import GuppyType
+
+    try:
+        ty = getattr(node, "type")
+        return ty if isinstance(ty, GuppyType) else None
+    except AttributeError:
+        return None
+
+
+def get_type(node: AstNode) -> "GuppyType":
+    """Retrieve a type annotation from an AST node.
+
+    Fails if the node is not annotated.
+    """
+    ty = get_type_opt(node)
+    assert ty is not None
+    return ty
+
+
+def has_empty_body(func_ast: ast.FunctionDef) -> bool:
     """Returns `True` if the body of a function definition is empty.
 
     This is the case if the body only contains a single `pass` statement or an ellipsis

@@ -1,4 +1,4 @@
-from guppy.compiler import guppy
+from guppy.decorator import guppy
 
 
 def test_arith_basic(validate):
@@ -17,7 +17,7 @@ def test_constant(validate):
     validate(const)
 
 
-def test_ann_assign(validate):
+def test_aug_assign(validate):
     @guppy
     def add(x: int) -> int:
         x += 1

@@ -1,4 +1,5 @@
-from guppy.compiler import guppy, GuppyModule
+from guppy.decorator import guppy
+from guppy.module import GuppyModule
 
 
 def test_call(validate):
@@ -12,7 +13,7 @@ def test_call(validate):
     def bar() -> int:
         return foo()
 
-    validate(module.compile(exit_on_error=True))
+    validate(module.compile())
 
 
 def test_call_back(validate):
@@ -26,7 +27,7 @@ def test_call_back(validate):
     def bar(x: int) -> int:
         return x
 
-    validate(module.compile(exit_on_error=True))
+    validate(module.compile())
 
 
 def test_recursion(validate):
@@ -48,7 +49,7 @@ def test_mutual_recursion(validate):
     def bar(x: int) -> int:
         return foo(x)
 
-    validate(module.compile(exit_on_error=True))
+    validate(module.compile())
 
 
 

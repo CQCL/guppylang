@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:11
 10:    
 11:    return bar
               ^^^
-GuppyTypeError: Return type mismatch: expected `int -> int`, got `int -> bool`
+GuppyTypeError: Expected return value of type `int -> int`, got `int -> bool`
