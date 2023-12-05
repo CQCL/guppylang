@@ -4,17 +4,18 @@ from typing import Optional
 
 from guppy.ast_util import AstNode, with_type, with_loc, get_type
 from guppy.checker.core import Context, Globals
+from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
 from guppy.error import (
     GuppyError,
     InternalGuppyError,
     UnknownFunctionType,
-    GuppyTypeError,
 )
 from guppy.gtypes import GuppyType, FunctionType, type_to_row
 from guppy.hugr import ops
 from guppy.hugr.hugr import OutPortV, Hugr, Node, DFContainingVNode
+from guppy.nodes import GlobalCall
 
 
 class CustomFunction(CompiledFunction):
@@ -160,15 +161,12 @@ class CustomCallChecker(ABC):
         self.node = node
         self.func = func
 
+    @abstractmethod
     def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
         """Checks the return value against a given type.
 
         Returns a (possibly) transformed and annotated AST node for the call.
         """
-        args, actual = self.synthesize(args)
-        raise GuppyTypeError(
-            f"Expected expression of type `{ty}`, got `{actual}`", self.node
-        )
 
     @abstractmethod
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
@@ -203,10 +201,14 @@ class DefaultCallChecker(CustomCallChecker):
     """Checks function calls by comparing to a type signature."""
 
     def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
-        raise NotImplementedError
+        # Use default implementation from the expression checker
+        args = check_call(self.func.ty, args, ty, self.node, self.ctx)
+        return GlobalCall(func=self.func, args=args)
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
-        raise NotImplementedError
+        # Use default implementation from the expression checker
+        args, ty = synthesize_call(self.func.ty, args, self.node, self.ctx)
+        return GlobalCall(func=self.func, args=args), ty
 
 
 class DefaultCallCompiler(CustomCallCompiler):
