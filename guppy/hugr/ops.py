@@ -1,18 +1,20 @@
 import inspect
 import sys
 from abc import ABC
-from typing import Annotated, Literal, Union, Optional, Any
-from pydantic import Field, BaseModel
+from typing import Annotated, Any, Literal
+
+from pydantic import BaseModel, Field
+
+import guppy.hugr.tys as tys
 
 from .tys import (
-    TypeRow,
-    SimpleType,
-    PolyFuncType,
-    FunctionType,
     ExtensionId,
     ExtensionSet,
+    FunctionType,
+    PolyFuncType,
+    SimpleType,
+    TypeRow,
 )
-import guppy.hugr.tys as tys
 from .val import Value
 
 NodeID = int
@@ -28,11 +30,9 @@ class BaseOp(ABC, BaseModel):
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         """Hook to insert type information from the input and output ports into the
         op"""
-        pass
 
     def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
         """Hook to insert type information from a child dataflow graph"""
-        pass
 
     def display_name(self) -> str:
         """Name of the op for visualisation"""
@@ -152,7 +152,7 @@ class Exit(BasicBlock):
     cfg_outputs: TypeRow
 
 
-BasicBlockOp = Annotated[Union[DFB, Exit], Field(discriminator="block")]
+BasicBlockOp = Annotated[DFB | Exit, Field(discriminator="block")]
 
 
 # ---------------------------------------------
@@ -323,7 +323,7 @@ class CFG(DataflowOp):
         )
 
 
-ControlFlowOp = Union[Conditional, TailLoop, CFG]
+ControlFlowOp = Conditional | TailLoop | CFG
 
 
 # -----------------------------------------
@@ -338,7 +338,7 @@ class CustomOp(LeafOp):
     lop: Literal["CustomOp"] = "CustomOp"
     extension: ExtensionId
     op_name: str
-    signature: Optional[tys.FunctionType] = None
+    signature: tys.FunctionType | None = None
     description: str = ""
     args: list[tys.TypeArgUnion] = Field(default_factory=list)
 
@@ -353,77 +353,66 @@ class H(LeafOp):
     """A Hadamard gate."""
 
     lop: Literal["H"] = "H"
-    pass
 
 
 class T(LeafOp):
     """A T gate."""
 
     lop: Literal["T"] = "T"
-    pass
 
 
 class S(LeafOp):
     """An S gate."""
 
     lop: Literal["S"] = "S"
-    pass
 
 
 class X(LeafOp):
     """A Pauli X gate."""
 
     lop: Literal["X"] = "X"
-    pass
 
 
 class Y(LeafOp):
     """A Pauli Y gate."""
 
     lop: Literal["Y"] = "Y"
-    pass
 
 
 class Z(LeafOp):
     """A Pauli Z gate."""
 
     lop: Literal["Z"] = "Z"
-    pass
 
 
 class Tadj(LeafOp):
     """An adjoint T gate."""
 
     lop: Literal["Tadj"] = "Tadj"
-    pass
 
 
 class Sadj(LeafOp):
     """An adjoint S gate."""
 
     lop: Literal["Sadj"] = "Sadj"
-    pass
 
 
 class CX(LeafOp):
     """A controlled X gate."""
 
     lop: Literal["CX"] = "CX"
-    pass
 
 
 class ZZMax(LeafOp):
     """A maximally entangling ZZ phase gate."""
 
     lop: Literal["ZZMax"] = "ZZMax"
-    pass
 
 
 class Reset(LeafOp):
     """A qubit reset operation."""
 
     lop: Literal["Reset"] = "Reset"
-    pass
 
 
 class Noop(LeafOp):
@@ -443,21 +432,18 @@ class Measure(LeafOp):
     """A qubit measurement operation."""
 
     lop: Literal["Measure"] = "Measure"
-    pass
 
 
 class RzF64(LeafOp):
     """A rotation of a qubit about the Pauli Z axis by an input float angle."""
 
     lop: Literal["RzF64"] = "RzF64"
-    pass
 
 
 class Xor(LeafOp):
     """A bitwise XOR operation."""
 
     lop: Literal["Xor"] = "Xor"
-    pass
 
 
 class MakeTuple(LeafOp):
@@ -500,54 +486,54 @@ class Tag(LeafOp):
 
 
 LeafOpUnion = Annotated[
-    Union[
-        CustomOp,
-        H,
-        S,
-        T,
-        X,
-        Y,
-        Z,
-        Tadj,
-        Sadj,
-        CX,
-        ZZMax,
-        Reset,
-        Noop,
-        Measure,
-        RzF64,
-        Xor,
-        MakeTuple,
-        UnpackTuple,
-        MakeNewType,
-        Tag,
-    ],
+    (
+        CustomOp
+        | H
+        | S
+        | T
+        | X
+        | Y
+        | Z
+        | Tadj
+        | Sadj
+        | CX
+        | ZZMax
+        | Reset
+        | Noop
+        | Measure
+        | RzF64
+        | Xor
+        | MakeTuple
+        | UnpackTuple
+        | MakeNewType
+        | Tag
+    ),
     Field(discriminator="lop"),
 ]
 
 
 OpType = Annotated[
-    Union[
-        Module,
-        BasicBlock,
-        Case,
-        Module,
-        FuncDefn,
-        FuncDecl,
-        Const,
-        DummyOp,
-        BasicBlockOp,
-        Conditional,
-        TailLoop,
-        CFG,
-        Input,
-        Output,
-        Call,
-        CallIndirect,
-        LoadConstant,
-        LeafOpUnion,
-        DFG,
-    ],
+    (
+        Module
+        | BasicBlock
+        | Case
+        | Module
+        | FuncDefn
+        | FuncDecl
+        | Const
+        | DummyOp
+        | BasicBlockOp
+        | Conditional
+        | TailLoop
+        | CFG
+        | Input
+        | Output
+        | Call
+        | CallIndirect
+        | LoadConstant
+        | LeafOpUnion
+        | DFG
+    ),
     Field(discriminator="op"),
 ]
 
@@ -562,10 +548,10 @@ class OpDef(BaseOp, allow_population_by_field_name=True):
 
     name: str  # Unique identifier of the operation.
     description: str  # Human readable description of the operation.
-    inputs: list[tuple[Optional[str], SimpleType]]
-    outputs: list[tuple[Optional[str], SimpleType]]
+    inputs: list[tuple[str | None, SimpleType]]
+    outputs: list[tuple[str | None, SimpleType]]
     misc: dict[str, Any]  # Miscellaneous data associated with the operation.
-    def_: Optional[str] = Field(
+    def_: str | None = Field(
         ..., alias="def"
     )  # (YAML?)-encoded definition of the operation.
     extension_reqs: ExtensionSet  # Resources required to execute this operation.

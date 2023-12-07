@@ -1,6 +1,5 @@
 from guppy.decorator import guppy
 from guppy.module import GuppyModule
-from tests.integration.util import functional, _
 
 
 def test_factorial(validate):
@@ -24,19 +23,9 @@ def test_factorial(validate):
             return acc
         return factorial3(x - 1, acc * x)
 
-    # @guppy
-    # def factorial4(x: int) -> int:
-    #     acc = 1
-    #     _@functional
-    #     while x > 0:
-    #         acc *= x
-    #         x -= 1
-    #     return acc
-
     validate(factorial1, name="factorial1")
     validate(factorial2, name="factorial2")
     validate(factorial3, name="factorial3")
-    # validate(factorial4)
 
 
 def test_even_odd(validate):

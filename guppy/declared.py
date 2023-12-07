@@ -1,15 +1,14 @@
 import ast
 from dataclasses import dataclass
-from typing import Optional
 
 from guppy.ast_util import AstNode, has_empty_body
-from guppy.checker.core import Globals, Context
+from guppy.checker.core import Context, Globals
 from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
-from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
+from guppy.compiler.core import CompiledFunction, CompiledGlobals, DFContainer
 from guppy.error import GuppyError
-from guppy.gtypes import type_to_row, GuppyType
-from guppy.hugr.hugr import VNode, Hugr, Node, OutPortV
+from guppy.gtypes import GuppyType, type_to_row
+from guppy.hugr.hugr import Hugr, Node, OutPortV, VNode
 from guppy.nodes import GlobalCall
 
 
@@ -17,7 +16,7 @@ from guppy.nodes import GlobalCall
 class DeclaredFunction(CompiledFunction):
     """A user-declared function that compiles to a Hugr function declaration."""
 
-    node: Optional[VNode] = None
+    node: VNode | None = None
 
     @staticmethod
     def from_ast(

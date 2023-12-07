@@ -5,20 +5,17 @@ Operates on CFGs produced by the `CFGBuilder`. Produces a `CheckedCFG` consistin
 """
 
 import collections
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 from guppy.ast_util import line_col
 from guppy.cfg.bb import BB
 from guppy.cfg.cfg import CFG, BaseCFG
-from guppy.checker.core import Globals, Context
-
-from guppy.checker.core import Variable
+from guppy.checker.core import Context, Globals, Variable
 from guppy.checker.expr_checker import ExprSynthesizer, to_bool
 from guppy.checker.stmt_checker import StmtChecker
 from guppy.error import GuppyError
 from guppy.gtypes import GuppyType
-
 
 VarRow = Sequence[Variable]
 
@@ -42,7 +39,7 @@ class Signature:
 class CheckedBB(BB):
     """Basic block annotated with an input and output type signature."""
 
-    sig: Signature = Signature.empty()
+    sig: Signature = Signature.empty()  # noqa: RUF009
 
 
 class CheckedCFG(BaseCFG[CheckedBB]):
@@ -64,7 +61,7 @@ def check_cfg(
     unreachable blocks.
     """
     # First, we need to run program analysis
-    ass_before = set(v.name for v in inputs)
+    ass_before = {v.name for v in inputs}
     cfg.analyze(ass_before, ass_before)
 
     # We start by compiling the entry BB

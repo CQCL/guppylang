@@ -1,10 +1,8 @@
-use pyo3::prelude::*;
-use hugr;
 use hugr::extension::{ExtensionRegistry, PRELUDE};
-use hugr::std_extensions::arithmetic::{int_ops, int_types, float_ops, float_types};
+use hugr::std_extensions::arithmetic::{float_ops, float_types, int_ops, int_types};
 use hugr::std_extensions::logic;
 use lazy_static::lazy_static;
-
+use pyo3::prelude::*;
 
 lazy_static! {
     pub static ref REGISTRY: ExtensionRegistry = ExtensionRegistry::try_new([
@@ -14,7 +12,8 @@ lazy_static! {
         int_ops::EXTENSION.to_owned(),
         float_types::extension(),
         float_ops::extension()
-    ]).unwrap();
+    ])
+    .unwrap();
 }
 
 #[pyfunction]

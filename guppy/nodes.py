@@ -1,14 +1,15 @@
 """Custom AST nodes used by Guppy"""
 
 import ast
-from typing import TYPE_CHECKING, Any, Mapping
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 from guppy.gtypes import FunctionType
 
 if TYPE_CHECKING:
     from guppy.cfg.cfg import CFG
-    from guppy.checker.core import Variable, CallableVariable
     from guppy.checker.cfg_checker import CheckedCFG
+    from guppy.checker.core import CallableVariable, Variable
 
 
 class LocalName(ast.expr):

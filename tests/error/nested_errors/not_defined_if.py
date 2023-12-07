@@ -7,4 +7,3 @@ def foo(b: bool) -> int:
         def bar() -> int:
             return 0
     return bar()
-

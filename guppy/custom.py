@@ -1,27 +1,26 @@
 import ast
 from abc import ABC, abstractmethod
-from typing import Optional
 
-from guppy.ast_util import AstNode, with_type, with_loc, get_type
+from guppy.ast_util import AstNode, get_type, with_loc, with_type
 from guppy.checker.core import Context, Globals
 from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
-from guppy.compiler.core import CompiledFunction, DFContainer, CompiledGlobals
+from guppy.compiler.core import CompiledFunction, CompiledGlobals, DFContainer
 from guppy.error import (
     GuppyError,
     InternalGuppyError,
     UnknownFunctionType,
 )
-from guppy.gtypes import GuppyType, FunctionType, type_to_row
+from guppy.gtypes import FunctionType, GuppyType, type_to_row
 from guppy.hugr import ops
-from guppy.hugr.hugr import OutPortV, Hugr, Node, DFContainingVNode
+from guppy.hugr.hugr import DFContainingVNode, Hugr, Node, OutPortV
 from guppy.nodes import GlobalCall
 
 
 class CustomFunction(CompiledFunction):
     """A function whose type checking and compilation behaviour can be customised."""
 
-    defined_at: Optional[ast.FunctionDef]
+    defined_at: ast.FunctionDef | None
 
     # Whether the function may be used as a higher-order value. This is only possible
     # if a static type for the function is provided.
@@ -30,17 +29,17 @@ class CustomFunction(CompiledFunction):
     call_checker: "CustomCallChecker"
     call_compiler: "CustomCallCompiler"
 
-    _ty: Optional[FunctionType] = None
-    _defined: dict[Node, DFContainingVNode] = {}
+    _ty: FunctionType | None = None
+    _defined: dict[Node, DFContainingVNode] = {}  # noqa: RUF012
 
     def __init__(
         self,
         name: str,
-        defined_at: Optional[ast.FunctionDef],
+        defined_at: ast.FunctionDef | None,
         compiler: "CustomCallCompiler",
         checker: "CustomCallChecker",
         higher_order_value: bool = True,
-        ty: Optional[FunctionType] = None,
+        ty: FunctionType | None = None,
     ):
         self.name = name
         self.defined_at = defined_at
@@ -51,7 +50,7 @@ class CustomFunction(CompiledFunction):
         self._ty = ty
         self._defined = {}
 
-    @property  # type: ignore
+    @property  # type: ignore[override]
     def ty(self) -> FunctionType:
         if self._ty is None:
             return UnknownFunctionType()
@@ -77,11 +76,11 @@ class CustomFunction(CompiledFunction):
 
         try:
             self._ty = check_signature(self.defined_at, globals)
-        except GuppyError as err:
+        except GuppyError:
             # We can ignore the error if a custom call checker is provided and the
             # function may not be used as a higher-order value
             if self.call_checker is None or self.higher_order_value:
-                raise err
+                raise
 
     def check_call(
         self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context

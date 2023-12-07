@@ -1,7 +1,8 @@
 import ast
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Optional, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import guppy.hugr.tys as tys
 from guppy.ast_util import AstNode, set_location_from
@@ -20,7 +21,7 @@ class GuppyType(ABC):
 
     @staticmethod
     @abstractmethod
-    def build(*args: "GuppyType", node: Optional[AstNode] = None) -> "GuppyType":
+    def build(*args: "GuppyType", node: AstNode | None = None) -> "GuppyType":
         pass
 
     @property
@@ -37,7 +38,7 @@ class GuppyType(ABC):
 class FunctionType(GuppyType):
     args: Sequence[GuppyType]
     returns: GuppyType
-    arg_names: Optional[Sequence[str]] = field(
+    arg_names: Sequence[str] | None = field(
         default=None,
         compare=False,  # Argument names are not taken into account for type equality
     )
@@ -53,10 +54,10 @@ class FunctionType(GuppyType):
             return f"({', '.join(str(a) for a in self.args)}) -> {self.returns}"
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         # Function types cannot be constructed using `build`. The type parsing code
         # has a special case for function types.
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def to_hugr(self) -> tys.SimpleType:
         ins = [t.to_hugr() for t in self.args]
@@ -72,7 +73,7 @@ class TupleType(GuppyType):
     name: str = "tuple"
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         from guppy.error import GuppyError
 
         # TODO: Parse empty tuples via `tuple[()]`
@@ -97,10 +98,10 @@ class SumType(GuppyType):
     element_types: Sequence[GuppyType]
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         # Sum types cannot be parsed and constructed using `build` since they cannot be
         # written by the user
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def __str__(self) -> str:
         return f"Sum({', '.join(str(e) for e in self.element_types)})"
@@ -124,7 +125,7 @@ class NoneType(GuppyType):
     linear: bool = False
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         if len(args) > 0:
             from guppy.error import GuppyError
 
@@ -150,7 +151,7 @@ class BoolType(SumType):
         super().__init__([TupleType([]), TupleType([])])
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         if len(args) > 0:
             from guppy.error import GuppyError
 
@@ -161,7 +162,7 @@ class BoolType(SumType):
         return "bool"
 
 
-def _lookup_type(node: AstNode, globals: "Globals") -> Optional[type[GuppyType]]:
+def _lookup_type(node: AstNode, globals: "Globals") -> type[GuppyType] | None:
     if isinstance(node, ast.Name) and node.id in globals.types:
         return globals.types[node.id]
     if isinstance(node, ast.Constant) and node.value is None:

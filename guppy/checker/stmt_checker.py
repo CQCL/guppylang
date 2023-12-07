@@ -9,14 +9,14 @@ annotated.
 """
 
 import ast
-from typing import Sequence
+from collections.abc import Sequence
 
-from guppy.ast_util import with_loc, AstVisitor
+from guppy.ast_util import AstVisitor, with_loc
 from guppy.cfg.bb import BB, BBStatement
-from guppy.checker.core import Variable, Context
-from guppy.checker.expr_checker import ExprSynthesizer, ExprChecker
+from guppy.checker.core import Context, Variable
+from guppy.checker.expr_checker import ExprChecker, ExprSynthesizer
 from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
-from guppy.gtypes import GuppyType, TupleType, type_from_ast, NoneType
+from guppy.gtypes import GuppyType, NoneType, TupleType, type_from_ast
 from guppy.nodes import NestedFunctionDef
 
 

@@ -22,13 +22,13 @@ can be used to infer a type for an expression.
 
 import ast
 from contextlib import suppress
-from typing import Optional, Union, NoReturn, Any
+from typing import Any, NoReturn
 
-from guppy.ast_util import AstVisitor, with_loc, AstNode, with_type, get_type_opt
-from guppy.checker.core import Context, CallableVariable, Globals
+from guppy.ast_util import AstNode, AstVisitor, get_type_opt, with_loc, with_type
+from guppy.checker.core import CallableVariable, Context, Globals
 from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
-from guppy.gtypes import GuppyType, TupleType, FunctionType, BoolType
-from guppy.nodes import LocalName, GlobalName, LocalCall
+from guppy.gtypes import BoolType, FunctionType, GuppyType, TupleType
+from guppy.nodes import GlobalName, LocalCall, LocalName
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
@@ -38,7 +38,7 @@ unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
 }  # fmt: skip
 
 # Mapping from binary AST op to left dunder method, right dunder method and display name
-AstOp = Union[ast.operator, ast.cmpop]
+AstOp = ast.operator | ast.cmpop
 binary_table: dict[type[AstOp], tuple[str, str, str]] = {
     ast.Add:      ("__add__",      "__radd__",      "+"),
     ast.Sub:      ("__sub__",      "__rsub__",      "-"),
@@ -78,8 +78,8 @@ class ExprChecker(AstVisitor[ast.expr]):
     def _fail(
         self,
         expected: GuppyType,
-        actual: Union[ast.expr, GuppyType],
-        loc: Optional[AstNode] = None,
+        actual: ast.expr | GuppyType,
+        loc: AstNode | None = None,
     ) -> NoReturn:
         """Raises a type error indicating that the type doesn't match."""
         if not isinstance(actual, GuppyType):
@@ -348,7 +348,7 @@ def to_bool(
 
 def python_value_to_guppy_type(
     v: Any, node: ast.expr, globals: Globals
-) -> Optional[GuppyType]:
+) -> GuppyType | None:
     """Turns a primitive Python value into a Guppy type.
 
     Returns `None` if the Python value cannot be represented in Guppy.

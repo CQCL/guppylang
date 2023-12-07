@@ -55,7 +55,9 @@ def test_interleave(validate):
         ...
 
     @guppy(module)
-    def test(a: Qubit, b: Qubit, c: Qubit, d: Qubit) -> tuple[Qubit, Qubit, Qubit, Qubit]:
+    def test(
+        a: Qubit, b: Qubit, c: Qubit, d: Qubit
+    ) -> tuple[Qubit, Qubit, Qubit, Qubit]:
         a, b = f(a, b)
         c, d = f(c, d)
         b, c = g(b, c)

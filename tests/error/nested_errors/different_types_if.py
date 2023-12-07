@@ -11,4 +11,3 @@ def foo(b: bool) -> int:
             return False
 
     return bar()
-

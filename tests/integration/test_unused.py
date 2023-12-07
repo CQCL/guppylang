@@ -1,8 +1,6 @@
-import pytest
+""" All sorts of weird stuff is allowed when variables are not used. """
 
 from guppy.decorator import guppy
-
-""" All sorts of weird stuff is allowed when variables are not used. """
 
 
 def test_not_always_defined1(validate):

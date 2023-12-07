@@ -1,19 +1,22 @@
 import functools
-from typing import Sequence
+from typing import TYPE_CHECKING
 
-from guppy.checker.cfg_checker import CheckedBB, VarRow, CheckedCFG, Signature
+from guppy.checker.cfg_checker import CheckedBB, CheckedCFG, Signature, VarRow
 from guppy.checker.core import Variable
 from guppy.compiler.core import (
     CompiledGlobals,
-    is_return_var,
     DFContainer,
-    return_var,
     PortVariable,
+    is_return_var,
+    return_var,
 )
 from guppy.compiler.expr_compiler import ExprCompiler
 from guppy.compiler.stmt_compiler import StmtCompiler
-from guppy.gtypes import TupleType, SumType, type_to_row
-from guppy.hugr.hugr import Hugr, Node, CFNode, OutPortV
+from guppy.gtypes import SumType, TupleType, type_to_row
+from guppy.hugr.hugr import CFNode, Hugr, Node, OutPortV
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def compile_cfg(
@@ -119,7 +122,8 @@ def insert_return_vars(cfg: CheckedCFG) -> None:
     # Also patch the predecessors
     for pred in cfg.exit_bb.predecessors:
         # The exit BB will be the only successor
-        assert len(pred.sig.output_rows) == 1 and len(pred.sig.output_rows[0]) == 0
+        assert len(pred.sig.output_rows) == 1
+        assert len(pred.sig.output_rows[0]) == 0
         pred.sig = Signature(pred.sig.input_row, [return_vars])
 
 
@@ -144,7 +148,7 @@ def choose_vars_for_tuple_sum(
     conditional = graph.add_conditional(
         cond_input=unit_sum, inputs=tuples, parent=dfg.node
     )
-    for i, ty in enumerate(tys):
+    for i, _ty in enumerate(tys):
         case = graph.add_case(conditional)
         inp = graph.add_input(output_tys=tys, parent=case).out_port(i)
         tag = graph.add_tag(variants=tys, tag=i, inp=inp, parent=case).out_port(0)

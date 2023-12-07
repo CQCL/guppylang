@@ -1,13 +1,13 @@
 import ast
-from typing import Any, Optional
+from typing import Any
 
 from guppy.ast_util import AstVisitor, get_type
-from guppy.compiler.core import CompilerBase, DFContainer, CompiledFunction
+from guppy.compiler.core import CompiledFunction, CompilerBase, DFContainer
 from guppy.error import InternalGuppyError
-from guppy.gtypes import FunctionType, type_to_row, BoolType
+from guppy.gtypes import BoolType, FunctionType, type_to_row
 from guppy.hugr import ops, val
 from guppy.hugr.hugr import OutPortV
-from guppy.nodes import LocalName, GlobalName, GlobalCall, LocalCall
+from guppy.nodes import GlobalCall, GlobalName, LocalCall, LocalName
 
 
 class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
@@ -100,12 +100,12 @@ def expr_to_row(expr: ast.expr) -> list[ast.expr]:
     return expr.elts if isinstance(expr, ast.Tuple) else [expr]
 
 
-def python_value_to_hugr(v: Any) -> Optional[val.Value]:
+def python_value_to_hugr(v: Any) -> val.Value | None:
     """Turns a Python value into a Hugr value.
 
     Returns None if the Python value cannot be represented in Guppy.
     """
-    from guppy.prelude._internal import int_value, bool_value, float_value
+    from guppy.prelude._internal import bool_value, float_value, int_value
 
     if isinstance(v, bool):
         return bool_value(v)

@@ -14,4 +14,3 @@ def foo(x: int) -> int:
 
     bar()
     return y
-

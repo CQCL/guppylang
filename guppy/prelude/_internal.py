@@ -1,23 +1,22 @@
 import ast
-from typing import Optional, Literal
+from typing import Literal
 
 from pydantic import BaseModel
 
-from guppy.ast_util import with_type, AstNode, with_loc, get_type
-from guppy.checker.core import Context, CallableVariable
+from guppy.ast_util import AstNode, get_type, with_loc, with_type
+from guppy.checker.core import CallableVariable, Context
 from guppy.checker.expr_checker import ExprSynthesizer, check_num_args
 from guppy.custom import (
     CustomCallChecker,
-    DefaultCallChecker,
-    CustomFunction,
     CustomCallCompiler,
+    CustomFunction,
+    DefaultCallChecker,
 )
-from guppy.error import GuppyTypeError, GuppyError
-from guppy.gtypes import GuppyType, FunctionType, BoolType
+from guppy.error import GuppyError, GuppyTypeError
+from guppy.gtypes import BoolType, FunctionType, GuppyType
 from guppy.hugr import ops, tys, val
 from guppy.hugr.hugr import OutPortV
 from guppy.nodes import GlobalCall
-
 
 INT_WIDTH = 6  # 2^6 = 64 bit
 
@@ -68,7 +67,7 @@ def float_value(f: float) -> val.Value:
     return val.ExtensionVal(c=(ConstF64(value=f),))
 
 
-def logic_op(op_name: str, args: Optional[list[tys.TypeArgUnion]] = None) -> ops.OpType:
+def logic_op(op_name: str, args: list[tys.TypeArgUnion] | None = None) -> ops.OpType:
     """Utility method to create Hugr logic ops."""
     return ops.CustomOp(extension="logic", op_name=op_name, args=args or [])
 
@@ -110,7 +109,7 @@ class ReversingChecker(CustomCallChecker):
 
     base_checker: CustomCallChecker
 
-    def __init__(self, base_checker: Optional[CustomCallChecker] = None):
+    def __init__(self, base_checker: CustomCallChecker | None = None):
         self.base_checker = base_checker or DefaultCallChecker()
 
     def _setup(self, ctx: Context, node: AstNode, func: CustomFunction) -> None:
@@ -209,7 +208,7 @@ class IntTruedivCompiler(CustomCallCompiler):
     """Compiler for the `int.__truediv__` method."""
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        from .builtins import Int, Float
+        from .builtins import Float, Int
 
         # Compile `truediv` using float arithmetic
         [left, right] = args

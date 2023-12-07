@@ -30,7 +30,8 @@ pip install -e '.[dev]'
 
 ### Git blame
 
-You can configure Git to ignore formatting commits when using `git blame` by running 
+You can configure Git to ignore formatting commits when using `git blame` by running
+
 ```sh
 git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
@@ -41,14 +42,14 @@ TODO
 
 ## Testing
 
-First, build the PyO3 Hugr validation library using
+First, build the PyO3 Hugr validation library from the `validator` directory using
+
 ```sh
 maturin develop
 ```
 
-from the `validator` directory.
-
 Run tests using
+
 ```sh
 pytest -v
 ```
@@ -59,6 +60,7 @@ Integration test cases can be exported to a directory using
 pytest --export-test-cases=guppy-exports
 
 ```
+
 which will create a directory `./guppy-exports` populated with hugr modules serialised in msgpack.
 
 ## Packaging
