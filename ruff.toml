@@ -2,7 +2,8 @@
 target-version = "py310"
 
 line-length = 88
-# preview = true
+
+exclude = ["tests/error"]
 
 select = [
   "F",    # pyflakes
@@ -68,15 +69,10 @@ ignore = [
 ]
 
 [per-file-ignores]
-"guppy/ast_util.py"   = ["B009", "B010"]
-"guppy/decorator.py"  = ["B010"]
-"tests/*"             = [
-    "E226",     # Missing whitespace around arithmetic operator
-    "F821",     # Undefined name
-    "F823",     # Local variable referenced before assignment
-    "F841",     # Local variable `x` is assigned to but never used
-    ]
-"tests/{hugr,error,integration}/*" = ["B", "FBT", "SIM", "I"]
+"guppy/ast_util.py"           = ["B009", "B010"]
+"guppy/decorator.py"          = ["B010"]
+"tests/integration/*"         = ["F841"]
+"tests/{hugr,integration}/*"  = ["B", "FBT", "SIM", "I"]
 
 # [pydocstyle]
 # convention = "google"
