@@ -148,10 +148,7 @@ def check_bb(
                     #  from {bb}". But for this we need a way to associate BBs with
                     #  source locations.
                     msg = f"Variable `{x}` is not defined on all control-flow paths."
-                    raise GuppyError(
-                        msg,
-                        use_bb.vars.used[x],
-                    )
+                    raise GuppyError(msg, use_bb.vars.used[x])
                 msg = f"Variable `{x}` is not defined"
                 raise GuppyError(msg, use_bb.vars.used[x])
 

@@ -6,9 +6,7 @@ recursive-include guppy *.py
 recursive-include tests *.err
 recursive-include tests *.py
 recursive-include tests *.sh
-recursive-include validator *.lock
-recursive-include validator *.rs
-recursive-include validator *.toml
-recursive-exclude validator/target *.rs
-recursive-exclude validator/target *.lock
+recursive-exclude validator *.lock
+recursive-exclude validator *.rs
+recursive-exclude validator *.toml
 exclude .git-blame-ignore-revs
