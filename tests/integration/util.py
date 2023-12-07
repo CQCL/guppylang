@@ -1,9 +1,9 @@
-
 import validator
 
 
 def validate_bytes(hugr: bytes):
     validator.validate(hugr)
+
 
 class Decorator:
     def __matmul__(self, other):

@@ -80,7 +80,7 @@ def test_curry(validate):
 
     @guppy(module)
     def uncurry(
-        f: Callable[[int], Callable[[int], bool]]
+        f: Callable[[int], Callable[[int], bool]],
     ) -> Callable[[int, int], bool]:
         def g(x: int, y: int) -> bool:
             return f(x)(y)

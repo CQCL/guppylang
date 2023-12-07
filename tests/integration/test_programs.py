@@ -27,6 +27,7 @@ def test_factorial(validate):
     validate(factorial2, name="factorial2")
     validate(factorial3, name="factorial3")
 
+
 def test_even_odd(validate):
     module = GuppyModule("module")
 

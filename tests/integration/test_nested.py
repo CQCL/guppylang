@@ -6,6 +6,7 @@ def test_basic(validate):
     def foo(x: int) -> int:
         def bar(y: int) -> int:
             return y
+
         return bar(x + 1)
 
     validate(foo)
@@ -16,6 +17,7 @@ def test_call_twice(validate):
     def foo(x: int) -> int:
         def bar(y: int) -> int:
             return y + 3
+
         if x > 5:
             return bar(x)
         else:
@@ -45,11 +47,14 @@ def test_define_twice(validate):
     @guppy
     def foo(x: int) -> int:
         if x == 0:
+
             def bar(y: int) -> int:
                 return y + 3
         else:
+
             def bar(y: int) -> int:
                 return y - 42
+
         return bar(x)
 
     validate(foo)
@@ -61,7 +66,9 @@ def test_nested_deep(validate):
         def bar(y: int) -> int:
             def baz(z: int) -> int:
                 return z - 1
-            return baz(5*y)
+
+            return baz(5 * y)
+
         return bar(x + 1)
 
     validate(foo)
@@ -74,6 +81,7 @@ def test_recurse(validate):
             if y == 0:
                 return 0
             return 2 * bar(y - 1)
+
         return bar(x)
 
     validate(foo)
@@ -84,6 +92,7 @@ def test_capture_arg(validate):
     def foo(x: int) -> int:
         def bar() -> int:
             return 1 + x
+
         return bar()
 
     validate(foo)
@@ -96,6 +105,7 @@ def test_capture_assigned(validate):
 
         def bar() -> int:
             return y
+
         return bar()
 
     validate(foo)
@@ -113,6 +123,7 @@ def test_capture_multiple(validate):
         def bar() -> int:
             q = y
             return q + z
+
         return bar()
 
     validate(foo)
@@ -127,6 +138,7 @@ def test_capture_cfg(validate):
 
             def bar() -> int:
                 return x + y + a
+
             return bar()
         return 4
 
@@ -159,6 +171,7 @@ def test_capture_recurse(validate):
             if y == 0:
                 return z
             return bar(z, z * x)
+
         return bar(x, 0)
 
     validate(foo)
@@ -190,7 +203,7 @@ def test_capture_while(validate):
         while x > 0:
 
             def bar() -> int:
-                return x*x
+                return x * x
 
             a += bar()
             x -= 1

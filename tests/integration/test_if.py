@@ -54,7 +54,7 @@ def test_if_elif_else(validate):
 def test_if_expr(validate):
     @guppy
     def foo(x: bool, y: int) -> int:
-        return y+1 if x else 42
+        return y + 1 if x else 42
 
     validate(foo)
 
