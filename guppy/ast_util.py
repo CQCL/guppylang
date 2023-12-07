@@ -51,8 +51,7 @@ class AstVisitor(Generic[T]):
 
     def generic_visit(self, node: Any, *args: Any, **kwargs: Any) -> T:
         """Called if no explicit visitor function exists for a node."""
-        msg = f"visit_{node.__class__.__name__} is not implemented"
-        raise NotImplementedError(msg)
+        raise NotImplementedError(f"visit_{node.__class__.__name__} is not implemented")
 
 
 class NameVisitor(ast.NodeVisitor):

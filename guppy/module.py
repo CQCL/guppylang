@@ -76,8 +76,9 @@ class GuppyModule:
             if any(
                 not isinstance(v, CustomFunction) for v in m._compiled_globals.values()
             ):
-                msg = "Importing modules with defined functions is not supported yet"
-                raise GuppyError(msg)
+                raise GuppyError(
+                    "Importing modules with defined functions is not supported yet"
+                )
 
             self._imported_globals |= m._globals
             self._imported_compiled_globals |= m._compiled_globals
@@ -143,8 +144,7 @@ class GuppyModule:
     def compile(self) -> Hugr | None:
         """Compiles the module and returns the final Hugr."""
         if self.compiled:
-            msg = "Module has already been compiled"
-            raise GuppyError(msg)
+            raise GuppyError("Module has already been compiled")
 
         # Prepare globals for type checking
         for func in self._custom_funcs.values():
@@ -198,14 +198,12 @@ class GuppyModule:
 
     def _check_not_yet_compiled(self) -> None:
         if self._compiled:
-            msg = f"The module `{self.name}` has already been compiled"
-            raise GuppyError(msg)
+            raise GuppyError(f"The module `{self.name}` has already been compiled")
 
     def _check_name_available(self, name: str, node: AstNode | None) -> None:
         if name in self._func_defs or name in self._custom_funcs:
-            msg = f"Module `{self.name}` already contains a function named `{name}`"
             raise GuppyError(
-                msg,
+                f"Module `{self.name}` already contains a function named `{name}`",
                 node,
             )
 
@@ -217,10 +215,8 @@ def parse_py_func(f: PyFunc) -> ast.FunctionDef:
     func_ast = ast.parse(source).body[0]
     file = inspect.getsourcefile(f)
     if file is None:
-        msg = "Couldn't determine source file for function"
-        raise GuppyError(msg)
+        raise GuppyError("Couldn't determine source file for function")
     annotate_location(func_ast, source, file, line_offset)
     if not isinstance(func_ast, ast.FunctionDef):
-        msg = "Expected a function definition"
-        raise GuppyError(msg, func_ast)
+        raise GuppyError("Expected a function definition", func_ast)
     return func_ast

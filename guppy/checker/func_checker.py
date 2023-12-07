@@ -98,12 +98,9 @@ def check_nested_func_def(
         if v.ty.linear:
             x = v.name
             using_bb = cfg.live_before[cfg.entry_bb][x]
-            msg = (
-                f"Variable `{x}` with linear type `{v.ty}` may not be used here "
-                f"because it was defined in an outer scope (at {{0}})"
-            )
             raise GuppyError(
-                msg,
+                f"Variable `{x}` with linear type `{v.ty}` may not be used here "
+                f"because it was defined in an outer scope (at {{0}})",
                 using_bb.vars.used[x],
                 [v.defined_at],
             )
@@ -113,12 +110,9 @@ def check_nested_func_def(
         for v in captured.values():
             x = v.name
             if x in bb.vars.assigned:
-                msg = (
-                    f"Variable `{x}` defined in an outer scope (at {{0}}) may not "
-                    f"be assigned to"
-                )
                 raise GuppyError(
-                    msg,
+                    f"Variable `{x}` defined in an outer scope (at {{0}}) may not "
+                    f"be assigned to",
                     bb.vars.assigned[x],
                     [v.defined_at],
                 )
@@ -162,34 +156,31 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     """Checks the signature of a function definition and returns the corresponding
     Guppy type."""
     if len(func_def.args.posonlyargs) != 0:
-        msg = "Positional-only parameters not supported"
-        raise GuppyError(msg, func_def.args.posonlyargs[0])
+        raise GuppyError(
+            "Positional-only parameters not supported", func_def.args.posonlyargs[0]
+        )
     if len(func_def.args.kwonlyargs) != 0:
-        msg = "Keyword-only parameters not supported"
-        raise GuppyError(msg, func_def.args.kwonlyargs[0])
+        raise GuppyError(
+            "Keyword-only parameters not supported", func_def.args.kwonlyargs[0]
+        )
     if func_def.args.vararg is not None:
-        msg = "*args not supported"
-        raise GuppyError(msg, func_def.args.vararg)
+        raise GuppyError("*args not supported", func_def.args.vararg)
     if func_def.args.kwarg is not None:
-        msg = "**kwargs not supported"
-        raise GuppyError(msg, func_def.args.kwarg)
+        raise GuppyError("**kwargs not supported", func_def.args.kwarg)
     if func_def.returns is None:
         # TODO: Error location is incorrect
         if all(r.value is None for r in return_nodes_in_ast(func_def)):
-            msg = "Return type must be annotated. Try adding a `-> None` annotation."
             raise GuppyError(
-                msg,
+                "Return type must be annotated. Try adding a `-> None` annotation.",
                 func_def,
             )
-        msg = "Return type must be annotated"
-        raise GuppyError(msg, func_def)
+        raise GuppyError("Return type must be annotated", func_def)
 
     arg_tys = []
     arg_names = []
     for _i, arg in enumerate(func_def.args.args):
         if arg.annotation is None:
-            msg = "Argument type must be annotated"
-            raise GuppyError(msg, arg)
+            raise GuppyError("Argument type must be annotated", arg)
         ty = type_from_ast(arg.annotation, globals)
         arg_tys.append(ty)
         arg_names.append(arg.arg)

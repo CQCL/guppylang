@@ -78,8 +78,7 @@ class TupleType(GuppyType):
 
         # TODO: Parse empty tuples via `tuple[()]`
         if len(args) == 0:
-            msg = "Tuple type requires generic type arguments"
-            raise GuppyError(msg, node)
+            raise GuppyError("Tuple type requires generic type arguments", node)
         return TupleType(list(args))
 
     def __str__(self) -> str:
@@ -130,8 +129,7 @@ class NoneType(GuppyType):
         if len(args) > 0:
             from guppy.error import GuppyError
 
-            msg = "Type `None` is not generic"
-            raise GuppyError(msg, node)
+            raise GuppyError("Type `None` is not generic", node)
         return NoneType()
 
     def __str__(self) -> str:
@@ -157,8 +155,7 @@ class BoolType(SumType):
         if len(args) > 0:
             from guppy.error import GuppyError
 
-            msg = "Type `bool` is not generic"
-            raise GuppyError(msg, node)
+            raise GuppyError("Type `bool` is not generic", node)
         return BoolType()
 
     def __str__(self) -> str:
@@ -207,8 +204,7 @@ def type_from_ast(node: AstNode, globals: "Globals") -> GuppyType:
             )
     from guppy.error import GuppyError
 
-    msg = "Not a valid Guppy type"
-    raise GuppyError(msg, node)
+    raise GuppyError("Not a valid Guppy type", node)
 
 
 def type_row_from_ast(node: ast.expr, globals: "Globals") -> Sequence[GuppyType]:

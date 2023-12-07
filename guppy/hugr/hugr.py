@@ -629,8 +629,7 @@ class Hugr:
     def remove_dummy_nodes(self) -> "Hugr":
         """Replaces dummy ops with external function calls."""
         if self.root is None:
-            msg = "Dummy node removal requires a module root node"
-            raise ValueError(msg)
+            raise ValueError("Dummy node removal requires a module root node")
         used_names: dict[str, int] = {}
         for n in list(self.nodes()):
             if isinstance(n, VNode) and isinstance(n.op, ops.DummyOp):
@@ -743,8 +742,7 @@ class Hugr:
             edges.append(((raw_index[src.idx], None), (raw_index[tgt.idx], None)))
 
         if self.root is None:
-            msg = "Raw Hugr requires a root node"
-            raise ValueError(msg)
+            raise ValueError("Raw Hugr requires a root node")
         return raw.RawHugr(nodes=nodes, edges=edges)
 
     def serialize(self) -> bytes:

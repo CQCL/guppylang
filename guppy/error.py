@@ -91,13 +91,11 @@ class UndefinedPort(OutPortV):
 
     @property
     def node(self) -> Node:
-        msg = "Tried to access undefined Port"
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Tried to access undefined Port")
 
     @property
     def offset(self) -> int:
-        msg = "Tried to access undefined Port"
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Tried to access undefined Port")
 
 
 class UnknownFunctionType(FunctionType):
@@ -111,18 +109,15 @@ class UnknownFunctionType(FunctionType):
 
     @property
     def args(self) -> Sequence[GuppyType]:
-        msg = "Tried to access unknown function type"
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Tried to access unknown function type")
 
     @property
     def returns(self) -> GuppyType:
-        msg = "Tried to access unknown function type"
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Tried to access unknown function type")
 
     @property
     def args_names(self) -> Sequence[str] | None:
-        msg = "Tried to access unknown function type"
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Tried to access unknown function type")
 
 
 def format_source_location(

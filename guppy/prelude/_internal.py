@@ -136,12 +136,14 @@ class UnsupportedChecker(CustomCallChecker):
     """
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
-        msg = f"Builtin method `{self.func.name}` is not supported by Guppy"
-        raise GuppyError(msg, self.node)
+        raise GuppyError(
+            f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
+        )
 
     def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
-        msg = f"Builtin method `{self.func.name}` is not supported by Guppy"
-        raise GuppyError(msg, self.node)
+        raise GuppyError(
+            f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
+        )
 
 
 class DunderChecker(CustomCallChecker):
@@ -163,12 +165,9 @@ class DunderChecker(CustomCallChecker):
         fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
         func = self.ctx.globals.get_instance_func(ty, self.dunder_name)
         if func is None:
-            msg = (
-                f"Builtin function `{self.func.name}` is not defined for argument of "
-                f"type `{ty}`"
-            )
             raise GuppyTypeError(
-                msg,
+                f"Builtin function `{self.func.name}` is not defined for argument of "
+                f"type `{ty}`",
                 self.node.args[0] if isinstance(self.node, ast.Call) else self.node,
             )
         return [fst, *rest], func
@@ -199,8 +198,9 @@ class CallableChecker(CustomCallChecker):
     def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
         args, _ = self.synthesize(args)
         if not isinstance(ty, BoolType):
-            msg = f"Expected expression of type `{ty}`, got `bool`"
-            raise GuppyTypeError(msg, self.node)
+            raise GuppyTypeError(
+                f"Expected expression of type `{ty}`, got `bool`", self.node
+            )
         return args
 
 

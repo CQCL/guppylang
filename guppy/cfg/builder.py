@@ -53,8 +53,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         # an implicit void return
         if final_bb is not None:
             if not returns_none:
-                msg = "Expected return statement"
-                raise GuppyError(msg, nodes[-1])
+                raise GuppyError("Expected return statement", nodes[-1])
             self.cfg.link(final_bb, self.cfg.exit_bb)
 
         return self.cfg
@@ -64,8 +63,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         next_functional = False
         for node in nodes:
             if bb_opt is None:
-                msg = "Unreachable code"
-                raise GuppyError(msg, node)
+                raise GuppyError("Unreachable code", node)
             if is_functional_annotation(node):
                 next_functional = True
                 continue
@@ -146,15 +144,13 @@ class CFGBuilder(AstVisitor[BB | None]):
 
     def visit_Continue(self, node: ast.Continue, bb: BB, jumps: Jumps) -> BB | None:
         if not jumps.continue_bb:
-            msg = "Continue BB not defined"
-            raise InternalGuppyError(msg)
+            raise InternalGuppyError("Continue BB not defined")
         self.cfg.link(bb, jumps.continue_bb)
         return None
 
     def visit_Break(self, node: ast.Break, bb: BB, jumps: Jumps) -> BB | None:
         if not jumps.break_bb:
-            msg = "Break BB not defined"
-            raise InternalGuppyError(msg)
+            raise InternalGuppyError("Break BB not defined")
         self.cfg.link(bb, jumps.break_bb)
         return None
 
@@ -192,8 +188,7 @@ class CFGBuilder(AstVisitor[BB | None]):
     def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:  # type: ignore[override]
         # When adding support for new statements, we have to remember to use the
         # ExprBuilder to transform all included expressions!
-        msg = "Statement is not supported"
-        raise GuppyError(msg, node)
+        raise GuppyError("Statement is not supported", node)
 
 
 class ExprBuilder(ast.NodeTransformer):
@@ -238,8 +233,7 @@ class ExprBuilder(ast.NodeTransformer):
         # This is an assignment expression, e.g. `x := 42`. We turn it into an
         # assignment statement and replace the expression with `x`.
         if not isinstance(node.target, ast.Name):
-            msg = f"Unexpected assign target: {node.target}"
-            raise InternalGuppyError(msg)
+            raise InternalGuppyError(f"Unexpected assign target: {node.target}")
         assign = ast.Assign(targets=[node.target], value=self.visit(node.value))
         set_location_from(assign, node)
         self.bb.statements.append(assign)

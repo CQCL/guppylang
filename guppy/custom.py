@@ -67,12 +67,11 @@ class CustomFunction(CompiledFunction):
 
         if self.defined_at is None:
             if self.higher_order_value:
-                msg = (
+                raise GuppyError(
                     f"Type signature for function `{self.name}` is required. "
                     "Alternatively, try passing `higher_order_value=False` on "
                     "definition."
                 )
-                raise GuppyError(msg)
             return
 
         try:
@@ -117,9 +116,8 @@ class CustomFunction(CompiledFunction):
         fail if no function type has been specified.
         """
         if self._ty is None:
-            msg = "This function does not support usage in a higher-order context"
             raise GuppyError(
-                msg,
+                "This function does not support usage in a higher-order context",
                 node,
             )
 
@@ -127,8 +125,9 @@ class CustomFunction(CompiledFunction):
         module: Node = dfg.node
         while not isinstance(module.op, ops.Module):
             if module.parent is None:
-                msg = "Encountered node that is not contained in a module."
-                raise InternalGuppyError(msg)
+                raise InternalGuppyError(
+                    "Encountered node that is not contained in a module."
+                )
             module = module.parent
 
         # If the function has not yet been loaded in this module, we first have to

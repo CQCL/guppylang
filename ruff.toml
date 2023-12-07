@@ -64,7 +64,9 @@ select = [
 
 ignore = [
   "COM812", "ISC001",   # conflicting with the formatter
+  "EM101", "EM102",     # Exception must not use a string (an f-string) literal, assign to variable first
   "S101",               # Use of `assert` detected
+  "TRY003",             # Avoid specifying long messages outside the exception class
   "B905",               # `zip()` without an explicit `strict=` parameter
 ]
 

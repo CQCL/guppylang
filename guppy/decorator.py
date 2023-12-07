@@ -50,8 +50,9 @@ class _Guppy:
 
                 @functools.wraps(f)
                 def dummy(*args: Any, **kwargs: Any) -> Any:
-                    msg = "Guppy functions can only be called in a Guppy context"
-                    raise GuppyError(msg)
+                    raise GuppyError(
+                        "Guppy functions can only be called in a Guppy context"
+                    )
 
                 return dummy
 
@@ -99,8 +100,9 @@ class _Guppy:
                 def build(*args: GuppyType, node: AstNode | None = None) -> "GuppyType":
                     # At the moment, custom types don't support type arguments.
                     if len(args) > 0:
-                        msg = f"Type `{_name}` does not accept type parameters."
-                        raise GuppyError(msg, node)
+                        raise GuppyError(
+                            f"Type `{_name}` does not accept type parameters.", node
+                        )
                     return NewType()
 
                 @property
@@ -141,9 +143,8 @@ class _Guppy:
         def dec(f: PyFunc) -> CustomFunction:
             func_ast = parse_py_func(f)
             if not has_empty_body(func_ast):
-                msg = "Body of custom function declaration must be empty"
                 raise GuppyError(
-                    msg,
+                    "Body of custom function declaration must be empty",
                     func_ast.body[0],
                 )
             call_checker = checker or DefaultCallChecker()
@@ -179,8 +180,9 @@ class _Guppy:
 
             @functools.wraps(f)
             def dummy(*args: Any, **kwargs: Any) -> Any:
-                msg = "Guppy functions can only be called in a Guppy context"
-                raise GuppyError(msg)
+                raise GuppyError(
+                    "Guppy functions can only be called in a Guppy context"
+                )
 
             return dummy
 

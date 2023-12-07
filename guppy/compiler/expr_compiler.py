@@ -35,8 +35,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         if value := python_value_to_hugr(node.value):
             const = self.graph.add_constant(value, get_type(node)).out_port(0)
             return self.graph.add_load_constant(const).out_port(0)
-        msg = "Unsupported constant expression in compiler"
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Unsupported constant expression in compiler")
 
     def visit_LocalName(self, node: LocalName) -> OutPortV:
         return self.dfg[node.id].port
@@ -45,8 +44,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         return self.globals[node.id].load(self.dfg, self.graph, self.globals, node)
 
     def visit_Name(self, node: ast.Name) -> OutPortV:
-        msg = "Node should have been removed during type checking."
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Node should have been removed during type checking.")
 
     def visit_Tuple(self, node: ast.Tuple) -> OutPortV:
         return self.graph.add_make_tuple(
@@ -77,8 +75,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         return self._pack_returns(rets)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
-        msg = "Node should have been removed during type checking."
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Node should have been removed during type checking.")
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> OutPortV:
         # The only case that is not desugared by the type checker is the `not` operation
@@ -89,16 +86,13 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
                 ops.CustomOp(extension="logic", op_name="Not", args=[]), inputs=[arg]
             ).add_out_port(BoolType())
 
-        msg = "Node should have been removed during type checking."
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Node should have been removed during type checking.")
 
     def visit_BinOp(self, node: ast.BinOp) -> OutPortV:
-        msg = "Node should have been removed during type checking."
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Node should have been removed during type checking.")
 
     def visit_Compare(self, node: ast.Compare) -> OutPortV:
-        msg = "Node should have been removed during type checking."
-        raise InternalGuppyError(msg)
+        raise InternalGuppyError("Node should have been removed during type checking.")
 
 
 def expr_to_row(expr: ast.expr) -> list[ast.expr]:
