@@ -1,15 +1,15 @@
 import ast
 import inspect
 import textwrap
+from collections.abc import Callable
 from types import ModuleType
+from typing import Any, Union
 
-from typing import Callable, Any, Optional, Union
-
-from guppy.ast_util import annotate_location, AstNode
-from guppy.checker.core import Globals, qualified_name, TypeVarDecl
+from guppy.ast_util import AstNode, annotate_location
+from guppy.checker.core import Globals, TypeVarDecl, qualified_name
 from guppy.checker.func_checker import DefinedFunction, check_global_func_def
 from guppy.compiler.core import CompiledGlobals
-from guppy.compiler.func_compiler import compile_global_func_def, CompiledFunctionDef
+from guppy.compiler.func_compiler import CompiledFunctionDef, compile_global_func_def
 from guppy.custom import CustomFunction
 from guppy.declared import DeclaredFunction
 from guppy.error import GuppyError, pretty_errors
@@ -44,7 +44,7 @@ class GuppyModule:
     # When `_instance_buffer` is not `None`, then all registered functions will be
     # buffered in this list. They only get properly registered, once
     # `_register_buffered_instance_funcs` is called. This way, we can associate
-    _instance_func_buffer: Optional[dict[str, Union[PyFunc, CustomFunction]]]
+    _instance_func_buffer: dict[str, PyFunc | CustomFunction] | None
 
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
@@ -88,7 +88,7 @@ class GuppyModule:
                     self.load(val)
 
     def register_func_def(
-        self, f: PyFunc, instance: Optional[type[GuppyType]] = None
+        self, f: PyFunc, instance: type[GuppyType] | None = None
     ) -> None:
         """Registers a Python function definition as belonging to this Guppy module."""
         self._check_not_yet_compiled()
@@ -110,7 +110,7 @@ class GuppyModule:
         self._func_decls[func_ast.name] = func_ast
 
     def register_custom_func(
-        self, func: CustomFunction, instance: Optional[type[GuppyType]] = None
+        self, func: CustomFunction, instance: type[GuppyType] | None = None
     ) -> None:
         """Registers a custom function as belonging to this Guppy module."""
         self._check_not_yet_compiled()
@@ -138,7 +138,7 @@ class GuppyModule:
         assert self._instance_func_buffer is not None
         buffer = self._instance_func_buffer
         self._instance_func_buffer = None
-        for name, f in buffer.items():
+        for f in buffer.values():
             if isinstance(f, CustomFunction):
                 self.register_custom_func(f, instance)
             else:
@@ -149,7 +149,7 @@ class GuppyModule:
         return self._compiled
 
     @pretty_errors
-    def compile(self) -> Optional[Hugr]:
+    def compile(self) -> Hugr | None:
         """Compiles the module and returns the final Hugr."""
         if self.compiled:
             raise GuppyError("Module has already been compiled")
@@ -208,14 +208,14 @@ class GuppyModule:
         if self._compiled:
             raise GuppyError(f"The module `{self.name}` has already been compiled")
 
-    def _check_name_available(self, name: str, node: Optional[AstNode]) -> None:
+    def _check_name_available(self, name: str, node: AstNode | None) -> None:
         if name in self._func_defs or name in self._custom_funcs:
             raise GuppyError(
                 f"Module `{self.name}` already contains a function named `{name}`",
                 node,
             )
 
-    def _check_type_name_available(self, name: str, node: Optional[AstNode]) -> None:
+    def _check_type_name_available(self, name: str, node: AstNode | None) -> None:
         if name in self._globals.types:
             raise GuppyError(
                 f"Module `{self.name}` already contains a type `{name}`",

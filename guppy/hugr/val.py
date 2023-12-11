@@ -1,9 +1,8 @@
 import inspect
 import sys
-from typing import Literal, Any, Annotated, Union
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
-
 
 CustomConst = Any  # TODO
 
@@ -40,9 +39,7 @@ class Sum(BaseModel):
     value: "Value"
 
 
-Value = Annotated[
-    Union[ExtensionVal, FunctionVal, Tuple, Sum], Field(discriminator="v")
-]
+Value = Annotated[ExtensionVal | FunctionVal | Tuple | Sum, Field(discriminator="v")]
 
 
 # Now that all classes are defined, we need to update the ForwardRefs in all type

@@ -2,29 +2,28 @@
 
 # mypy: disable-error-code="empty-body, misc, override, no-untyped-def"
 
-from guppy.custom import NoopCompiler, DefaultCallChecker
+from guppy.custom import DefaultCallChecker, NoopCompiler
 from guppy.decorator import guppy
 from guppy.gtypes import BoolType
-from guppy.hugr import tys, ops
+from guppy.hugr import ops, tys
 from guppy.module import GuppyModule
 from guppy.prelude._internal import (
-    logic_op,
-    int_op,
-    hugr_int_type,
-    hugr_float_type,
-    float_op,
+    CallableChecker,
     CoercingChecker,
-    ReversingChecker,
-    IntTruedivCompiler,
+    DunderChecker,
     FloatBoolCompiler,
     FloatDivmodCompiler,
     FloatFloordivCompiler,
     FloatModCompiler,
-    DunderChecker,
-    CallableChecker,
+    IntTruedivCompiler,
+    ReversingChecker,
     UnsupportedChecker,
+    float_op,
+    hugr_float_type,
+    hugr_int_type,
+    int_op,
+    logic_op,
 )
-
 
 builtins = GuppyModule("builtins", import_builtins=False)
 

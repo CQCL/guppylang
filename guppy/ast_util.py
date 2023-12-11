@@ -1,19 +1,19 @@
 import ast
-from typing import Any, TypeVar, Generic, Union, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar
 
 if TYPE_CHECKING:
     from guppy.gtypes import GuppyType
 
-AstNode = Union[
-    ast.AST,
-    ast.operator,
-    ast.expr,
-    ast.arg,
-    ast.stmt,
-    ast.Name,
-    ast.keyword,
-    ast.FunctionDef,
-]
+AstNode = (
+    ast.AST
+    | ast.operator
+    | ast.expr
+    | ast.arg
+    | ast.stmt
+    | ast.Name
+    | ast.keyword
+    | ast.FunctionDef
+)
 
 T = TypeVar("T", covariant=True)
 
@@ -114,7 +114,9 @@ def set_location_from(node: ast.AST, loc: ast.AST) -> None:
     node.end_col_offset = loc.end_col_offset
 
     source, file, line_offset = get_source(loc), get_file(loc), get_line_offset(loc)
-    assert source is not None and file is not None and line_offset is not None
+    assert source is not None
+    assert file is not None
+    assert line_offset is not None
     annotate_location(node, source, file, line_offset)
 
 
@@ -126,7 +128,7 @@ def annotate_location(
     setattr(node, "source", source)
 
     if recurse:
-        for field, value in ast.iter_fields(node):
+        for _field, value in ast.iter_fields(node):
             if isinstance(value, list):
                 for item in value:
                     if isinstance(item, ast.AST):
@@ -135,7 +137,7 @@ def annotate_location(
                 annotate_location(value, source, file, line_offset, recurse)
 
 
-def get_file(node: AstNode) -> Optional[str]:
+def get_file(node: AstNode) -> str | None:
     """Tries to retrieve a file annotation from an AST node."""
     try:
         file = getattr(node, "file")
@@ -144,7 +146,7 @@ def get_file(node: AstNode) -> Optional[str]:
         return None
 
 
-def get_source(node: AstNode) -> Optional[str]:
+def get_source(node: AstNode) -> str | None:
     """Tries to retrieve a source annotation from an AST node."""
     try:
         source = getattr(node, "source")
@@ -153,7 +155,7 @@ def get_source(node: AstNode) -> Optional[str]:
         return None
 
 
-def get_line_offset(node: AstNode) -> Optional[int]:
+def get_line_offset(node: AstNode) -> int | None:
     """Tries to retrieve a line offset annotation from an AST node."""
     try:
         line_offset = getattr(node, "line_offset")

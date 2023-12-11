@@ -8,7 +8,7 @@ from tests.integration.util import functional, _
 def test_if_no_else(validate):
     @guppy
     def foo(x: bool, y: int) -> int:
-        _@functional
+        _ @ functional
         if x:
             y += 1
         return y
@@ -20,7 +20,7 @@ def test_if_no_else(validate):
 def test_if_else(validate):
     @guppy
     def foo(x: bool, y: int) -> int:
-        _@functional
+        _ @ functional
         if x:
             y += 1
         else:
@@ -34,7 +34,7 @@ def test_if_else(validate):
 def test_if_elif(validate):
     @guppy
     def foo(x: bool, y: int) -> int:
-        _@functional
+        _ @ functional
         if x:
             y += 1
         elif y > 4:
@@ -48,7 +48,7 @@ def test_if_elif(validate):
 def test_if_elif_else(validate):
     @guppy
     def foo(x: bool, y: int) -> int:
-        _@functional
+        _ @ functional
         if x:
             y += 1
         elif y > 4:
@@ -87,7 +87,7 @@ def test_nested_loop(validate):
     @guppy
     def foo(x: int, y: int) -> int:
         p = 0
-        _@functional
+        _ @ functional
         while x > 0:
             s = 0
             while y > 0:

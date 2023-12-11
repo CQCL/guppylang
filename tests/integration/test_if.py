@@ -1,7 +1,6 @@
 import pytest
 
 from guppy.decorator import guppy
-from guppy.module import GuppyModule
 
 
 def test_if_no_else(validate):
@@ -55,7 +54,7 @@ def test_if_elif_else(validate):
 def test_if_expr(validate):
     @guppy
     def foo(x: bool, y: int) -> int:
-        return y+1 if x else 42
+        return y + 1 if x else 42
 
     validate(foo)
 
@@ -265,4 +264,3 @@ def test_continue_different_types2(validate):
         return z
 
     validate(foo)
-

@@ -77,5 +77,7 @@ def test_func_decl_name():
     def func_name() -> None:
         ...
 
-    [def_op] = [n.op for n in module.compile().nodes() if isinstance(n.op, ops.FuncDecl)]
+    [def_op] = [
+        n.op for n in module.compile().nodes() if isinstance(n.op, ops.FuncDecl)
+    ]
     assert def_op.name == "func_name"

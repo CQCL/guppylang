@@ -9,8 +9,8 @@ from guppy.compiler.core import (
     DFContainer,
     PortVariable,
 )
-from guppy.gtypes import type_to_row, FunctionType, Inst
-from guppy.hugr.hugr import Hugr, OutPortV, DFContainingVNode
+from guppy.gtypes import FunctionType, Inst, type_to_row
+from guppy.hugr.hugr import DFContainingVNode, Hugr, OutPortV
 from guppy.nodes import CheckedNestedFunctionDef
 
 

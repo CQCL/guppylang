@@ -1,8 +1,9 @@
 import ast
 import itertools
-from typing import Optional, Iterator, NamedTuple
+from collections.abc import Iterator
+from typing import NamedTuple
 
-from guppy.ast_util import set_location_from, AstVisitor
+from guppy.ast_util import AstVisitor, set_location_from
 from guppy.cfg.bb import BB, BBStatement
 from guppy.cfg.cfg import CFG
 from guppy.checker.core import Globals
@@ -24,11 +25,11 @@ class Jumps(NamedTuple):
     """Holds jump targets for return, continue, and break during CFG construction."""
 
     return_bb: BB
-    continue_bb: Optional[BB]
-    break_bb: Optional[BB]
+    continue_bb: BB | None
+    break_bb: BB | None
 
 
-class CFGBuilder(AstVisitor[Optional[BB]]):
+class CFGBuilder(AstVisitor[BB | None]):
     """Constructs a CFG from ast nodes."""
 
     cfg: CFG
@@ -57,8 +58,8 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
         return self.cfg
 
-    def visit_stmts(self, nodes: list[ast.stmt], bb: BB, jumps: Jumps) -> Optional[BB]:
-        bb_opt: Optional[BB] = bb
+    def visit_stmts(self, nodes: list[ast.stmt], bb: BB, jumps: Jumps) -> BB | None:
+        bb_opt: BB | None = bb
         next_functional = False
         for node in nodes:
             if bb_opt is None:
@@ -69,7 +70,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
 
             if next_functional:
                 # TODO: This should be an assertion that the Hugr can be un-flattened
-                raise NotImplementedError()
+                raise NotImplementedError
                 next_functional = False
             else:
                 bb_opt = self.visit(node, bb_opt, jumps)
@@ -86,20 +87,16 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         bb.statements.append(node)
         return bb
 
-    def visit_Assign(self, node: ast.Assign, bb: BB, jumps: Jumps) -> Optional[BB]:
+    def visit_Assign(self, node: ast.Assign, bb: BB, jumps: Jumps) -> BB | None:
         return self._build_node_value(node, bb)
 
-    def visit_AugAssign(
-        self, node: ast.AugAssign, bb: BB, jumps: Jumps
-    ) -> Optional[BB]:
+    def visit_AugAssign(self, node: ast.AugAssign, bb: BB, jumps: Jumps) -> BB | None:
         return self._build_node_value(node, bb)
 
-    def visit_AnnAssign(
-        self, node: ast.AnnAssign, bb: BB, jumps: Jumps
-    ) -> Optional[BB]:
+    def visit_AnnAssign(self, node: ast.AnnAssign, bb: BB, jumps: Jumps) -> BB | None:
         return self._build_node_value(node, bb)
 
-    def visit_Expr(self, node: ast.Expr, bb: BB, jumps: Jumps) -> Optional[BB]:
+    def visit_Expr(self, node: ast.Expr, bb: BB, jumps: Jumps) -> BB | None:
         # This is an expression statement where the value is discarded
         node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
         # We don't add it to the BB if it's just a temporary variable. This will be the
@@ -110,7 +107,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
             bb.statements.append(node)
         return bb
 
-    def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> Optional[BB]:
+    def visit_If(self, node: ast.If, bb: BB, jumps: Jumps) -> BB | None:
         then_bb, else_bb = self.cfg.new_bb(), self.cfg.new_bb()
         BranchBuilder.add_branch(node.test, self.cfg, bb, then_bb, else_bb)
         then_bb = self.visit_stmts(node.body, then_bb, jumps)
@@ -127,7 +124,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
             # No branch jumps: We have to merge the control flow
             return self.cfg.new_bb(then_bb, else_bb)
 
-    def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> Optional[BB]:
+    def visit_While(self, node: ast.While, bb: BB, jumps: Jumps) -> BB | None:
         head_bb = self.cfg.new_bb(bb)
         body_bb, tail_bb = self.cfg.new_bb(), self.cfg.new_bb()
         BranchBuilder.add_branch(node.test, self.cfg, head_bb, body_bb, tail_bb)
@@ -145,29 +142,29 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         # its own jumps since the body is not guaranteed to execute
         return tail_bb
 
-    def visit_Continue(self, node: ast.Continue, bb: BB, jumps: Jumps) -> Optional[BB]:
+    def visit_Continue(self, node: ast.Continue, bb: BB, jumps: Jumps) -> BB | None:
         if not jumps.continue_bb:
             raise InternalGuppyError("Continue BB not defined")
         self.cfg.link(bb, jumps.continue_bb)
         return None
 
-    def visit_Break(self, node: ast.Break, bb: BB, jumps: Jumps) -> Optional[BB]:
+    def visit_Break(self, node: ast.Break, bb: BB, jumps: Jumps) -> BB | None:
         if not jumps.break_bb:
             raise InternalGuppyError("Break BB not defined")
         self.cfg.link(bb, jumps.break_bb)
         return None
 
-    def visit_Return(self, node: ast.Return, bb: BB, jumps: Jumps) -> Optional[BB]:
+    def visit_Return(self, node: ast.Return, bb: BB, jumps: Jumps) -> BB | None:
         bb = self._build_node_value(node, bb)
         self.cfg.link(bb, jumps.return_bb)
         return None
 
-    def visit_Pass(self, node: ast.Pass, bb: BB, jumps: Jumps) -> Optional[BB]:
+    def visit_Pass(self, node: ast.Pass, bb: BB, jumps: Jumps) -> BB | None:
         return bb
 
     def visit_FunctionDef(
         self, node: ast.FunctionDef, bb: BB, jumps: Jumps
-    ) -> Optional[BB]:
+    ) -> BB | None:
         from guppy.checker.func_checker import check_signature
 
         func_ty = check_signature(node, self.globals)
@@ -188,7 +185,7 @@ class CFGBuilder(AstVisitor[Optional[BB]]):
         bb.statements.append(new_node)
         return bb
 
-    def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> Optional[BB]:  # type: ignore
+    def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:  # type: ignore[override]
         # When adding support for new statements, we have to remember to use the
         # ExprBuilder to transform all included expressions!
         raise GuppyError("Statement is not supported", node)
@@ -215,7 +212,7 @@ class ExprBuilder(ast.NodeTransformer):
         return builder.visit(node), builder.bb
 
     @classmethod
-    def _make_var(cls, name: str, loc: Optional[ast.expr] = None) -> ast.Name:
+    def _make_var(cls, name: str, loc: ast.expr | None = None) -> ast.Name:
         """Creates an `ast.Name` node."""
         node = ast.Name(id=name, ctx=ast.Load)
         if loc is not None:
@@ -343,7 +340,7 @@ class BranchBuilder(AstVisitor[None]):
         # Support chained comparisons, e.g. `x <= 5 < y` by compiling to `x <= 5 and
         # 5 < y`. This way we get short-circuit evaluation for free.
         if len(node.comparators) > 1:
-            comparators = [node.left] + node.comparators
+            comparators = [node.left, *node.comparators]
             values = [
                 ast.Compare(
                     left=left,
@@ -368,7 +365,7 @@ class BranchBuilder(AstVisitor[None]):
         self.visit(node.body, then_bb, true_bb, false_bb)
         self.visit(node.orelse, else_bb, true_bb, false_bb)
 
-    def generic_visit(self, node: ast.expr, bb: BB, true_bb: BB, false_bb: BB) -> None:  # type: ignore
+    def generic_visit(self, node: ast.expr, bb: BB, true_bb: BB, false_bb: BB) -> None:  # type: ignore[override]
         # We can always fall back to building the node as a regular expression and using
         # the result as a branch predicate
         pred, bb = ExprBuilder.build(node, self.cfg, bb)

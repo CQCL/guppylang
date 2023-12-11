@@ -1,7 +1,8 @@
 import ast
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
+
 from typing_extensions import Self
 
 from guppy.ast_util import AstNode, name_nodes_in_ast
@@ -34,9 +35,14 @@ class VariableStats:
                 self.used[name.id] = name
 
 
-BBStatement = Union[
-    ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Return, NestedFunctionDef
-]
+BBStatement = (
+    ast.Assign
+    | ast.AugAssign
+    | ast.AnnAssign
+    | ast.Expr
+    | ast.Return
+    | NestedFunctionDef
+)
 
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
@@ -57,10 +63,10 @@ class BB(ABC):
 
     # If the BB has multiple successors, we need a predicate to decide to which one to
     # jump to
-    branch_pred: Optional[ast.expr] = None
+    branch_pred: ast.expr | None = None
 
     # Information about assigned/used variables in the BB
-    _vars: Optional[VariableStats] = None
+    _vars: VariableStats | None = None
 
     @property
     def vars(self) -> VariableStats:
@@ -123,9 +129,7 @@ class VariableVisitor(ast.NodeVisitor):
         # Only store used *external* variables: things defined in the current BB, as
         # well as the function name and argument names should not be included
         assigned_before_in_bb = (
-            self.stats.assigned.keys()
-            | {node.name}
-            | set(a.arg for a in node.args.args)
+            self.stats.assigned.keys() | {node.name} | {a.arg for a in node.args.args}
         )
         self.stats.used |= {
             x: using_bb.vars.used[x]

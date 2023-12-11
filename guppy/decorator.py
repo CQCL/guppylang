@@ -1,19 +1,20 @@
 import functools
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
-from typing import Optional, Union, Callable, Any, Iterator, Sequence, ClassVar, TypeVar
+from typing import Any, ClassVar, TypeVar
 
 from guppy.ast_util import AstNode, has_empty_body
 from guppy.custom import (
-    CustomFunction,
-    OpCompiler,
-    DefaultCallChecker,
-    CustomCallCompiler,
     CustomCallChecker,
+    CustomCallCompiler,
+    CustomFunction,
+    DefaultCallChecker,
     DefaultCallCompiler,
+    OpCompiler,
 )
 from guppy.error import GuppyError, pretty_errors
 from guppy.gtypes import GuppyType, TypeTransformer
-from guppy.hugr import tys, ops
+from guppy.hugr import ops, tys
 from guppy.hugr.hugr import Hugr
 from guppy.module import GuppyModule, PyFunc, parse_py_func
 
@@ -26,7 +27,7 @@ class _Guppy:
     """Class for the `@guppy` decorator."""
 
     # The current module
-    _module: Optional[GuppyModule]
+    _module: GuppyModule | None
 
     def __init__(self) -> None:
         self._module = None
@@ -35,13 +36,11 @@ class _Guppy:
         self._module = module
 
     @pretty_errors
-    def __call__(
-        self, arg: Union[PyFunc, GuppyModule]
-    ) -> Union[Optional[Hugr], FuncDecorator]:
+    def __call__(self, arg: PyFunc | GuppyModule) -> Hugr | None | FuncDecorator:
         """Decorator to annotate Python functions as Guppy code.
 
-        Optionally, the `GuppyModule` in which the function should be placed can be passed
-        to the decorator.
+        Optionally, the `GuppyModule` in which the function should be placed can be
+        passed to the decorator.
         """
         if isinstance(arg, GuppyModule):
 
@@ -99,9 +98,7 @@ class _Guppy:
                 name: ClassVar[str] = _name
 
                 @staticmethod
-                def build(
-                    *args: GuppyType, node: Optional[AstNode] = None
-                ) -> "GuppyType":
+                def build(*args: GuppyType, node: AstNode | None = None) -> "GuppyType":
                     # At the moment, custom types don't support type arguments.
                     if len(args) > 0:
                         raise GuppyError(
@@ -147,8 +144,8 @@ class _Guppy:
     def custom(
         self,
         module: GuppyModule,
-        compiler: Optional[CustomCallCompiler] = None,
-        checker: Optional[CustomCallChecker] = None,
+        compiler: CustomCallCompiler | None = None,
+        checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
     ) -> CustomFuncDecorator:
@@ -184,7 +181,7 @@ class _Guppy:
         self,
         module: GuppyModule,
         op: ops.OpType,
-        checker: Optional[CustomCallChecker] = None,
+        checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
     ) -> CustomFuncDecorator:

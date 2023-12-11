@@ -1,11 +1,9 @@
-from typing import TypeVar
-
 import validator
-from guppy.hugr.hugr import Hugr
 
 
 def validate_bytes(hugr: bytes):
     validator.validate(hugr)
+
 
 class Decorator:
     def __matmul__(self, other):

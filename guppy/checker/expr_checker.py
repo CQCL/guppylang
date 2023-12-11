@@ -22,27 +22,27 @@ can be used to infer a type for an expression.
 
 import ast
 from contextlib import suppress
-from typing import Optional, Union, NoReturn, Any
+from typing import Any, NoReturn
 
-from guppy.ast_util import AstVisitor, with_loc, AstNode, with_type, get_type_opt
-from guppy.checker.core import Context, CallableVariable, Globals
+from guppy.ast_util import AstNode, AstVisitor, get_type_opt, with_loc, with_type
+from guppy.checker.core import CallableVariable, Context, Globals
 from guppy.error import (
     GuppyError,
     GuppyTypeError,
-    InternalGuppyError,
     GuppyTypeInferenceError,
+    InternalGuppyError,
 )
 from guppy.gtypes import (
-    GuppyType,
-    TupleType,
-    FunctionType,
     BoolType,
-    Subst,
     FreeTypeVar,
-    unify,
+    FunctionType,
+    GuppyType,
     Inst,
+    Subst,
+    TupleType,
+    unify,
 )
-from guppy.nodes import LocalName, GlobalName, LocalCall, TypeApply
+from guppy.nodes import GlobalName, LocalCall, LocalName, TypeApply
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
@@ -52,7 +52,7 @@ unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
 }  # fmt: skip
 
 # Mapping from binary AST op to left dunder method, right dunder method and display name
-AstOp = Union[ast.operator, ast.cmpop]
+AstOp = ast.operator | ast.cmpop
 binary_table: dict[type[AstOp], tuple[str, str, str]] = {
     ast.Add:      ("__add__",      "__radd__",      "+"),
     ast.Sub:      ("__sub__",      "__rsub__",      "-"),
@@ -92,8 +92,8 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
     def _fail(
         self,
         expected: GuppyType,
-        actual: Union[ast.expr, GuppyType],
-        loc: Optional[AstNode] = None,
+        actual: ast.expr | GuppyType,
+        loc: AstNode | None = None,
     ) -> NoReturn:
         """Raises a type error indicating that the type doesn't match."""
         if not isinstance(actual, GuppyType):
@@ -355,7 +355,7 @@ def check_type_against(
 
     # The actual type may be quantified. In that case, we have to find an instantiation
     # to avoid higher-rank types.
-    subst: Optional[Subst]
+    subst: Subst | None
     if isinstance(act, FunctionType) and act.quantified:
         unquantified, free_vars = act.unquantified()
         subst = unify(exp, unquantified, {})
@@ -505,7 +505,7 @@ def check_call(
     #  in practice. Can we do better than that?
 
     # First, try to synthesize
-    res: Optional[tuple[GuppyType, Inst]] = None
+    res: tuple[GuppyType, Inst] | None = None
     try:
         args, synth, inst = synthesize_call(func_ty, args, node, ctx)
         res = synth, inst
@@ -600,7 +600,7 @@ def to_bool(
 
 def python_value_to_guppy_type(
     v: Any, node: ast.expr, globals: Globals
-) -> Optional[GuppyType]:
+) -> GuppyType | None:
     """Turns a primitive Python value into a Guppy type.
 
     Returns `None` if the Python value cannot be represented in Guppy.

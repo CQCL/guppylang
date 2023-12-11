@@ -2,13 +2,13 @@ import ast
 import functools
 import sys
 import textwrap
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Optional, Any, Sequence, Callable, TypeVar, cast, Set
+from typing import Any, TypeVar, cast
 
-from guppy.ast_util import AstNode, get_line_offset, get_file, get_source
-from guppy.gtypes import GuppyType, FunctionType, BoundTypeVar, FreeTypeVar
-from guppy.hugr.hugr import OutPortV, Node
-
+from guppy.ast_util import AstNode, get_file, get_line_offset, get_source
+from guppy.gtypes import BoundTypeVar, FreeTypeVar, FunctionType, GuppyType
+from guppy.hugr.hugr import Node, OutPortV
 
 # Whether the interpreter should exit when a Guppy error occurs
 EXIT_ON_ERROR: bool = True
@@ -25,12 +25,13 @@ class SourceLoc:
     file: str
     line: int
     col: int
-    ast_node: Optional[AstNode]
+    ast_node: AstNode | None
 
     @staticmethod
     def from_ast(node: AstNode) -> "SourceLoc":
         file, line_offset = get_file(node), get_line_offset(node)
-        assert file is not None and line_offset is not None
+        assert file is not None
+        assert line_offset is not None
         return SourceLoc(file, line_offset + node.lineno - 1, node.col_offset, node)
 
     def __str__(self) -> str:
@@ -50,9 +51,9 @@ class GuppyError(Exception):
     `{1}`, etc. and passing the corresponding AST nodes to `locs_in_msg`."""
 
     raw_msg: str
-    location: Optional[AstNode] = None
+    location: AstNode | None = None
     # The message can also refer to AST locations using format placeholders `{0}`, `{1}`
-    locs_in_msg: Sequence[Optional[AstNode]] = field(default_factory=list)
+    locs_in_msg: Sequence[AstNode | None] = field(default_factory=list)
 
     def get_msg(self) -> str:
         """Returns the message associated with this error.
@@ -70,19 +71,13 @@ class GuppyError(Exception):
 class GuppyTypeError(GuppyError):
     """Special Guppy exception for type errors."""
 
-    pass
-
 
 class GuppyTypeInferenceError(GuppyError):
     """Special Guppy exception for type inference errors."""
 
-    pass
-
 
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
-
-    pass
 
 
 class UndefinedPort(OutPortV):
@@ -125,7 +120,7 @@ class UnknownFunctionType(FunctionType):
         raise InternalGuppyError("Tried to access unknown function type")
 
     @property
-    def args_names(self) -> Optional[Sequence[str]]:
+    def args_names(self) -> Sequence[str] | None:
         raise InternalGuppyError("Tried to access unknown function type")
 
     @property
@@ -133,7 +128,7 @@ class UnknownFunctionType(FunctionType):
         raise InternalGuppyError("Tried to access unknown function type")
 
     @property
-    def free_vars(self) -> Set[FreeTypeVar]:
+    def free_vars(self) -> set[FreeTypeVar]:
         return set()
 
 
@@ -144,7 +139,8 @@ def format_source_location(
 ) -> str:
     """Creates a pretty banner to show source locations for errors."""
     source, line_offset = get_source(loc), get_line_offset(loc)
-    assert source is not None and line_offset is not None
+    assert source is not None
+    assert line_offset is not None
     source_lines = source.splitlines(keepends=True)
     end_col_offset = loc.end_col_offset
     if end_col_offset is None or (loc.end_lineno and loc.end_lineno > loc.lineno):
@@ -176,12 +172,13 @@ def pretty_errors(f: FuncT) -> FuncT:
         except GuppyError as err:
             # Reraise if we're missing a location
             if not err.location:
-                raise err
+                raise
             loc = err.location
             file, line_offset = get_file(loc), get_line_offset(loc)
-            assert file is not None and line_offset is not None
+            assert file is not None
+            assert line_offset is not None
             line = line_offset + loc.lineno - 1
-            print(
+            print(  # noqa: T201
                 f"Guppy compilation failed. Error in file {file}:{line}\n\n"
                 f"{format_source_location(loc)}\n"
                 f"{err.__class__.__name__}: {err.get_msg()}",

@@ -50,6 +50,3 @@ def test_mutual_recursion(validate):
         return foo(x)
 
     validate(module.compile())
-
-
-

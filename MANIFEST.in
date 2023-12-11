@@ -1,0 +1,12 @@
+include *.toml
+include *.txt
+include *.yaml
+recursive-include examples *.ipynb
+recursive-include guppy *.py
+recursive-include tests *.err
+recursive-include tests *.py
+recursive-include tests *.sh
+recursive-exclude validator *.lock
+recursive-exclude validator *.rs
+recursive-exclude validator *.toml
+exclude .git-blame-ignore-revs

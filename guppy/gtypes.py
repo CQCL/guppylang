@@ -1,15 +1,13 @@
 import ast
 import itertools
 from abc import ABC, abstractmethod
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import (
-    Optional,
-    Sequence,
     TYPE_CHECKING,
-    Iterator,
     ClassVar,
     Literal,
-    Set,
+    Optional,
 )
 
 import guppy.hugr.tys as tys
@@ -33,7 +31,7 @@ class GuppyType(ABC):
     name: ClassVar[str]
 
     # Cache for free variables
-    _free_vars: Set["FreeTypeVar"] = field(init=False, repr=False)
+    _free_vars: set["FreeTypeVar"] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         # Make sure that we don't have higher-rank polymorphic types
@@ -56,7 +54,7 @@ class GuppyType(ABC):
 
     @staticmethod
     @abstractmethod
-    def build(*args: "GuppyType", node: Optional[AstNode] = None) -> "GuppyType":
+    def build(*args: "GuppyType", node: AstNode | None = None) -> "GuppyType":
         pass
 
     @property
@@ -78,7 +76,7 @@ class GuppyType(ABC):
         pass
 
     @property
-    def free_vars(self) -> Set["FreeTypeVar"]:
+    def free_vars(self) -> set["FreeTypeVar"]:
         return self._free_vars
 
     def substitute(self, s: Subst) -> "GuppyType":
@@ -97,7 +95,7 @@ class BoundTypeVar(GuppyType):
 
     @staticmethod
     def build(*rgs: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @property
     def type_args(self) -> Iterator["GuppyType"]:
@@ -134,7 +132,7 @@ class FreeTypeVar(GuppyType):
 
     @staticmethod
     def build(*rgs: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @property
     def type_args(self) -> Iterator["GuppyType"]:
@@ -159,7 +157,7 @@ class FreeTypeVar(GuppyType):
 class FunctionType(GuppyType):
     args: Sequence[GuppyType]
     returns: GuppyType
-    arg_names: Optional[Sequence[str]] = field(
+    arg_names: Sequence[str] | None = field(
         default=None,
         compare=False,  # Argument names are not taken into account for type equality
     )
@@ -183,10 +181,10 @@ class FunctionType(GuppyType):
             )
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         # Function types cannot be constructed using `build`. The type parsing code
         # has a special case for function types.
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @property
     def type_args(self) -> Iterator[GuppyType]:
@@ -249,7 +247,7 @@ class TupleType(GuppyType):
     name: ClassVar[Literal["tuple"]] = "tuple"
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         from guppy.error import GuppyError
 
         # TODO: Parse empty tuples via `tuple[()]`
@@ -285,10 +283,10 @@ class SumType(GuppyType):
     name: ClassVar[str] = "%tuple"
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         # Sum types cannot be parsed and constructed using `build` since they cannot be
         # written by the user
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def __str__(self) -> str:
         return f"Sum({', '.join(str(e) for e in self.element_types)})"
@@ -326,7 +324,7 @@ class NoneType(GuppyType):
     preserve: bool = field(default=False, compare=False)
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         if len(args) > 0:
             from guppy.error import GuppyError
 
@@ -362,7 +360,7 @@ class BoolType(SumType):
         super().__init__([TupleType([]), TupleType([])])
 
     @staticmethod
-    def build(*args: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
         if len(args) > 0:
             from guppy.error import GuppyError
 
@@ -385,7 +383,6 @@ class TypeTransformer(ABC):
 
         Return a transformed type or `None` to continue the recursive visit.
         """
-        pass
 
 
 class Substituter(TypeTransformer):

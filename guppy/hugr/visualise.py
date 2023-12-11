@@ -1,16 +1,17 @@
 """Visualise HUGR using graphviz."""
 import ast
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
-import graphviz as gv  # type: ignore
-from typing import Iterable, TYPE_CHECKING
+import graphviz as gv  # type: ignore[import]
 
 from guppy.cfg.analysis import (
-    LivenessDomain,
     DefAssignmentDomain,
+    LivenessDomain,
     MaybeAssignmentDomain,
 )
 from guppy.cfg.bb import BB
-from guppy.hugr.hugr import InPort, OutPort, Node, Hugr, OutPortV
+from guppy.hugr.hugr import Hugr, InPort, Node, OutPort, OutPortV
 
 if TYPE_CHECKING:
     from guppy.cfg.cfg import CFG
@@ -55,18 +56,23 @@ _COLOURS = {
 _FONTFACE = "monospace"
 
 _HTML_LABEL_TEMPLATE = """
-<TABLE BORDER="{border_width}" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1" BGCOLOR="{node_back_color}" COLOR="{border_colour}">
-{inputs_row}
-    <TR>
-        <TD>
-            <TABLE BORDER="0" CELLBORDER="0">
-                <TR>
-                    <TD><FONT POINT-SIZE="{fontsize}" FACE="{fontface}" COLOR="{label_color}"><B>{node_label}</B>{node_data}</FONT></TD>
-                </TR>
-            </TABLE>
-        </TD>
-    </TR>
-{outputs_row}
+<TABLE BORDER="{border_width}" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+       BGCOLOR="{node_back_color}" COLOR="{border_colour}">
+  {inputs_row}
+  <TR>
+    <TD>
+      <TABLE BORDER="0" CELLBORDER="0">
+        <TR>
+          <TD>
+            <FONT POINT-SIZE="{fontsize}" FACE="{fontface}" COLOR="{label_color}">
+              <B>{node_label}</B>{node_data}
+            </FONT>
+          </TD>
+        </TR>
+      </TABLE>
+    </TD>
+  </TR>
+  {outputs_row}
 </TABLE>
 """
 
