@@ -134,7 +134,7 @@ def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
     """Checks if instantiating a polymorphic makes it return a row."""
     if isinstance(func_ty.returns, BoundTypeVar):
         return_ty = inst[func_ty.returns.idx]
-        return isinstance(return_ty, TupleType) or isinstance(return_ty, NoneType)
+        return isinstance(return_ty, TupleType | NoneType)
     return False
 
 

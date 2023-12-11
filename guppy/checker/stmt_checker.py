@@ -93,7 +93,8 @@ class StmtChecker(AstVisitor[BBStatement]):
             )
         ty = type_from_ast(node.annotation, self.ctx.globals)
         node.value, subst = self._check_expr(node.value, ty)
-        assert not ty.free_vars and len(subst) == 0  # `ty` must be closed!
+        assert not ty.free_vars  # `ty` must be closed!
+        assert len(subst) == 0
         self._check_assign(node.target, ty, node)
         return node
 

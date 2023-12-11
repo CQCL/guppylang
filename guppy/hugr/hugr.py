@@ -526,7 +526,7 @@ class Hugr:
         )
 
     def add_type_apply(
-        self, func_port: OutPortV, args: Inst, parent: Optional[Node] = None
+        self, func_port: OutPortV, args: Inst, parent: Node | None = None
     ) -> VNode:
         """Adds a `TypeApply` node to the graph."""
         assert isinstance(func_port.ty, FunctionType)

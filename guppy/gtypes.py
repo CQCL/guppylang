@@ -7,7 +7,6 @@ from typing import (
     TYPE_CHECKING,
     ClassVar,
     Literal,
-    Optional,
 )
 
 import guppy.hugr.tys as tys
@@ -94,7 +93,7 @@ class BoundTypeVar(GuppyType):
     name: ClassVar[Literal["BoundTypeVar"]] = "BoundTypeVar"
 
     @staticmethod
-    def build(*rgs: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*rgs: GuppyType, node: AstNode | None = None) -> GuppyType:
         raise NotImplementedError
 
     @property
@@ -131,7 +130,7 @@ class FreeTypeVar(GuppyType):
         return FreeTypeVar(next(cls._id_generator), display_name, linear)
 
     @staticmethod
-    def build(*rgs: GuppyType, node: Optional[AstNode] = None) -> GuppyType:
+    def build(*rgs: GuppyType, node: AstNode | None = None) -> GuppyType:
         raise NotImplementedError
 
     @property
@@ -378,7 +377,7 @@ class TypeTransformer(ABC):
     """Abstract base class for a type visitor that transforms types."""
 
     @abstractmethod
-    def transform(self, ty: GuppyType) -> Optional[GuppyType]:
+    def transform(self, ty: GuppyType) -> GuppyType | None:
         """This method is called for each visited type.
 
         Return a transformed type or `None` to continue the recursive visit.
@@ -393,7 +392,7 @@ class Substituter(TypeTransformer):
     def __init__(self, subst: Subst) -> None:
         self.subst = subst
 
-    def transform(self, ty: GuppyType) -> Optional[GuppyType]:
+    def transform(self, ty: GuppyType) -> GuppyType | None:
         if isinstance(ty, FreeTypeVar):
             return self.subst.get(ty, None)
         return None
@@ -407,7 +406,7 @@ class Instantiator(TypeTransformer):
     def __init__(self, tys: Sequence[GuppyType]) -> None:
         self.tys = tys
 
-    def transform(self, ty: GuppyType) -> Optional[GuppyType]:
+    def transform(self, ty: GuppyType) -> GuppyType | None:
         if isinstance(ty, BoundTypeVar):
             # Instantiate if type for the index is available
             if ty.idx < len(self.tys):
@@ -418,7 +417,7 @@ class Instantiator(TypeTransformer):
         return None
 
 
-def unify(s: GuppyType, t: GuppyType, subst: Optional[Subst]) -> Optional[Subst]:
+def unify(s: GuppyType, t: GuppyType, subst: Subst | None) -> Subst | None:
     """Computes a most general unifier for two types.
 
     Return a substitutions `subst` such that `s[subst] == t[subst]` or `None` if this
@@ -441,7 +440,7 @@ def unify(s: GuppyType, t: GuppyType, subst: Optional[Subst]) -> Optional[Subst]
     return None
 
 
-def _unify_var(var: FreeTypeVar, t: GuppyType, subst: Subst) -> Optional[Subst]:
+def _unify_var(var: FreeTypeVar, t: GuppyType, subst: Subst) -> Subst | None:
     """Helper function for unification of type variables."""
     if var in subst:
         return unify(subst[var], t, subst)
@@ -455,7 +454,7 @@ def _unify_var(var: FreeTypeVar, t: GuppyType, subst: Subst) -> Optional[Subst]:
 def type_from_ast(
     node: AstNode,
     globals: "Globals",
-    type_var_mapping: Optional[dict[str, BoundTypeVar]] = None,
+    type_var_mapping: dict[str, BoundTypeVar] | None = None,
 ) -> GuppyType:
     """Turns an AST expression into a Guppy type."""
     from guppy.error import GuppyError
@@ -484,8 +483,8 @@ def type_from_ast(
         if isinstance(v, str):
             try:
                 return type_from_ast(ast.parse(v), globals, type_var_mapping)
-            except Exception:
-                raise GuppyError("Invalid Guppy type", node)
+            except SyntaxError:
+                raise GuppyError("Invalid Guppy type", node) from None
         raise GuppyError(f"Constant `{v}` is not a valid type", node)
 
     if isinstance(node, ast.Tuple):
