@@ -70,6 +70,11 @@ class GuppyType(ABC):
     def to_hugr(self) -> tys.SimpleType:
         pass
 
+    def hugr_bound(self) -> tys.TypeBound:
+        if self.linear:
+            return tys.TypeBound.Any
+        return tys.TypeBound.join(*(ty.hugr_bound() for ty in self.type_args))
+
     @abstractmethod
     def transform(self, transformer: "TypeTransformer") -> "GuppyType":
         pass
@@ -100,6 +105,11 @@ class BoundTypeVar(GuppyType):
     def type_args(self) -> Iterator["GuppyType"]:
         return iter(())
 
+    def hugr_bound(self) -> tys.TypeBound:
+        # We shouldn't make variables equatable, since we also want to substitute types
+        # like `float`
+        return tys.TypeBound.Any if self.linear else tys.TypeBound.Copyable
+
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or self
 
@@ -107,7 +117,7 @@ class BoundTypeVar(GuppyType):
         return self.display_name
 
     def to_hugr(self) -> tys.SimpleType:
-        return tys.Variable(i=self.idx, b=tys.TypeBound.from_linear(self.linear))
+        return tys.Variable(i=self.idx, b=self.hugr_bound())
 
 
 @dataclass(frozen=True)
@@ -194,12 +204,13 @@ class FunctionType(GuppyType):
         outs = [t.to_hugr() for t in type_to_row(self.returns)]
         func_ty = tys.FunctionType(input=ins, output=outs, extension_reqs=[])
         return tys.PolyFuncType(
-            params=[
-                tys.TypeParam(b=tys.TypeBound.from_linear(v.linear))
-                for v in self.quantified
-            ],
+            params=[tys.TypeParam(b=v.hugr_bound()) for v in self.quantified],
             body=func_ty,
         )
+
+    def hugr_bound(self) -> tys.TypeBound:
+        # Functions are not equatable, only copyable
+        return tys.TypeBound.Copyable
 
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or FunctionType(
@@ -309,6 +320,90 @@ class SumType(GuppyType):
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or SumType(
             [ty.transform(transformer) for ty in self.element_types]
+        )
+
+
+@dataclass(frozen=True)
+class ListType(GuppyType):
+    element_type: GuppyType
+
+    name: ClassVar[Literal["list"]] = "list"
+    linear: bool = field(default=False, init=False)
+
+    @staticmethod
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
+        from guppy.error import GuppyError
+
+        if len(args) == 0:
+            raise GuppyError("Missing type parameter for generic type `list`", node)
+        if len(args) > 1:
+            raise GuppyError("Too many type arguments for generic type `list`", node)
+        (arg,) = args
+        if arg.linear:
+            raise GuppyError(
+                "Type `list` cannot store linear data, use `linst` instead", node
+            )
+        return ListType(arg)
+
+    def __str__(self) -> str:
+        return f"list[{self.element_type}]"
+
+    @property
+    def type_args(self) -> Iterator[GuppyType]:
+        return iter((self.element_type,))
+
+    def to_hugr(self) -> tys.SimpleType:
+        return tys.Opaque(
+            extension="Collections",
+            id="List",
+            args=[tys.TypeArg(ty=self.element_type.to_hugr())],
+            bound=self.hugr_bound(),
+        )
+
+    def transform(self, transformer: "TypeTransformer") -> GuppyType:
+        return transformer.transform(self) or ListType(
+            self.element_type.transform(transformer)
+        )
+
+
+@dataclass(frozen=True)
+class LinstType(GuppyType):
+    element_type: GuppyType
+
+    name: ClassVar[Literal["linst"]] = "linst"
+
+    @staticmethod
+    def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
+        from guppy.error import GuppyError
+
+        if len(args) == 0:
+            raise GuppyError("Missing type parameter for generic type `linst`", node)
+        if len(args) > 1:
+            raise GuppyError("Too many type arguments for generic type `linst`", node)
+        return LinstType(args[0])
+
+    def __str__(self) -> str:
+        return f"linst[{self.element_type}]"
+
+    @property
+    def linear(self) -> bool:
+        return self.element_type.linear
+
+    @property
+    def type_args(self) -> Iterator[GuppyType]:
+        return iter((self.element_type,))
+
+    def to_hugr(self) -> tys.SimpleType:
+        return tys.Opaque(
+            extension="Collections",
+            id="List",
+            args=[tys.TypeArg(ty=self.element_type.to_hugr())],
+            bound=self.hugr_bound(),
+        )
+
+    def transform(self, transformer: "TypeTransformer") -> GuppyType:
+        return transformer.transform(self) or LinstType(
+            self.element_type.transform(transformer)
         )
 
 
@@ -482,8 +577,11 @@ def type_from_ast(
             return NoneType()
         if isinstance(v, str):
             try:
-                return type_from_ast(ast.parse(v), globals, type_var_mapping)
-            except SyntaxError:
+                [stmt] = ast.parse(v).body
+                if not isinstance(stmt, ast.Expr):
+                    raise GuppyError("Invalid Guppy type", node)
+                return type_from_ast(stmt.value, globals, type_var_mapping)
+            except (SyntaxError, ValueError):
                 raise GuppyError("Invalid Guppy type", node) from None
         raise GuppyError(f"Constant `{v}` is not a valid type", node)
 
