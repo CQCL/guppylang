@@ -8,6 +8,8 @@ from guppy.gtypes import (
     BoolType,
     FunctionType,
     GuppyType,
+    LinstType,
+    ListType,
     NoneType,
     Subst,
     SumType,
@@ -72,6 +74,8 @@ class Globals(NamedTuple):
             SumType.name: SumType,
             NoneType.name: NoneType,
             BoolType.name: BoolType,
+            ListType.name: ListType,
+            LinstType.name: LinstType,
         }
         return Globals({}, tys, {})
 
