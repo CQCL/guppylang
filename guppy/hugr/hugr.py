@@ -384,6 +384,7 @@ class Hugr:
         parent: Node | None = None,
     ) -> VNode:
         """Adds an `Output` node to the graph."""
+        parent = parent or self._default_parent
         node = self.add_node(ops.Output(), input_tys, [], parent, inputs)
         if isinstance(parent, DFContainingNode):
             parent.output_child = node
@@ -697,6 +698,25 @@ class Hugr:
                 elif isinstance(n.op, ops.LoadConstant):
                     assert n.parent.input_child is not None
                     self.add_order_edge(n.parent.input_child, n)
+
+        # Also add order edges for non-local edges
+        for src, tgt in list(self.edges()):
+            # Exclude CF and constant edges
+            if isinstance(src, OutPortCF) or isinstance(
+                src.node.op, ops.FuncDecl | ops.FuncDefn | ops.Const
+            ):
+                continue
+
+            if src.node.parent != tgt.node.parent:
+                # Walk up the hierarchy from the src until we hit a node at the same
+                # level as tgt
+                node = tgt.node
+                while node.parent != src.node.parent:
+                    if node.parent is None:
+                        raise ValueError("Invalid non-local edge!")
+                    node = node.parent
+                # Edge order edge to make sure that the src is executed first
+                self.add_order_edge(src.node, node)
         return self
 
     def to_raw(self) -> raw.RawHugr:

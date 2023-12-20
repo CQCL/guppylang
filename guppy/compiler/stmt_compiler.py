@@ -2,7 +2,6 @@ import ast
 from collections.abc import Sequence
 
 from guppy.ast_util import AstVisitor
-from guppy.checker.cfg_checker import CheckedBB
 from guppy.compiler.core import (
     CompiledGlobals,
     CompilerBase,
@@ -22,7 +21,6 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
     expr_compiler: ExprCompiler
 
-    bb: CheckedBB
     dfg: DFContainer
 
     def __init__(self, graph: Hugr, globals: CompiledGlobals):
@@ -32,7 +30,6 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
     def compile_stmts(
         self,
         stmts: Sequence[ast.stmt],
-        bb: CheckedBB,
         dfg: DFContainer,
     ) -> DFContainer:
         """Compiles a list of basic statements into a dataflow node.
@@ -40,7 +37,6 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         Note that the `dfg` is mutated in-place. After compilation, the DFG will also
         contain all variables that are assigned in the given list of statements.
         """
-        self.bb = bb
         self.dfg = dfg
         for s in stmts:
             self.visit(s)

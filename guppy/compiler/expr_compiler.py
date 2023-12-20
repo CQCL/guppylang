@@ -1,8 +1,16 @@
 import ast
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
-from guppy.ast_util import AstVisitor, get_type
-from guppy.compiler.core import CompiledFunction, CompilerBase, DFContainer
+from guppy.ast_util import AstVisitor, get_type, with_loc, with_type
+from guppy.cfg.builder import tmp_vars
+from guppy.compiler.core import (
+    CompiledFunction,
+    CompilerBase,
+    DFContainer,
+    PortVariable,
+)
 from guppy.error import GuppyError, InternalGuppyError
 from guppy.gtypes import (
     BoolType,
@@ -14,8 +22,16 @@ from guppy.gtypes import (
     type_to_row,
 )
 from guppy.hugr import ops, val
-from guppy.hugr.hugr import OutPortV
-from guppy.nodes import GlobalCall, GlobalName, LocalCall, LocalName, TypeApply
+from guppy.hugr.hugr import DFContainingNode, OutPortV, VNode
+from guppy.nodes import (
+    DesugaredGenerator,
+    DesugaredListComp,
+    GlobalCall,
+    GlobalName,
+    LocalCall,
+    LocalName,
+    TypeApply,
+)
 
 
 class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
@@ -39,6 +55,64 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         """
         return [self.compile(e, dfg) for e in expr_to_row(expr)]
 
+    @contextmanager
+    def _new_dfcontainer(
+        self, inputs: list[ast.Name], node: DFContainingNode
+    ) -> Iterator[None]:
+        """Context manager to build a graph inside a new `DFContainer`.
+
+        Automatically updates `self.dfg` and makes the inputs available.
+        """
+        old = self.dfg
+        inp = self.graph.add_input(parent=node)
+        new_locals = {
+            name.id: PortVariable(name.id, inp.add_out_port(get_type(name)), name, None)
+            for name in inputs
+        }
+        self.dfg = DFContainer(node, self.dfg.locals | new_locals)
+        with self.graph.parent(node):
+            yield
+        self.dfg = old
+
+    @contextmanager
+    def _new_loop(
+        self,
+        inputs: list[ast.Name],
+        branch: ast.Name,
+        parent: DFContainingNode | None = None,
+    ) -> Iterator[None]:
+        """Context manager to build a graph inside a new `TailLoop` node.
+
+        Automatically adds the `Output` node once the context manager exists.
+        """
+        loop = self.graph.add_tail_loop([self.visit(name) for name in inputs], parent)
+        with self._new_dfcontainer(inputs, loop):
+            yield
+            # Output the branch predicate and the inputs for the next iteration
+            self.graph.add_output(
+                [self.visit(branch), *(self.visit(name) for name in inputs)]
+            )
+        # Update the DFG with the outputs from the loop
+        for name in inputs:
+            self.dfg[name.id].port = loop.add_out_port(get_type(name))
+
+    @contextmanager
+    def _new_case(
+        self, inputs: list[ast.Name], outputs: list[ast.Name], cond_node: VNode
+    ) -> Iterator[None]:
+        """Context manager to build a graph inside a new `Case` node.
+
+        Automatically adds the `Output` node once the context manager exists.
+        """
+        with self._new_dfcontainer(inputs, self.graph.add_case(cond_node)):
+            yield
+            self.graph.add_output([self.visit(name) for name in outputs])
+        # Update the DFG with the outputs from the Conditional node, but only we haven't
+        # already added some
+        if cond_node.num_out_ports == 0:
+            for name in inputs:
+                self.dfg[name.id].port = cond_node.add_out_port(get_type(name))
+
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
         if value := python_value_to_hugr(node.value):
             const = self.graph.add_constant(value, get_type(node)).out_port(0)
@@ -58,6 +132,11 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         return self.graph.add_make_tuple(
             inputs=[self.visit(e) for e in node.elts]
         ).out_port(0)
+
+    def visit_List(self, node: ast.List) -> OutPortV:
+        return self.graph.add_node(
+            ops.DummyOp(name="MakeList"), inputs=[self.visit(e) for e in node.elts]
+        ).add_out_port(get_type(node))
 
     def _pack_returns(self, returns: list[OutPortV]) -> OutPortV:
         """Groups function return values into a tuple"""
@@ -117,6 +196,76 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             ).add_out_port(BoolType())
 
         raise InternalGuppyError("Node should have been removed during type checking.")
+
+    def visit_DesugaredListComp(self, node: DesugaredListComp) -> OutPortV:
+        from guppy.compiler.stmt_compiler import StmtCompiler
+
+        compiler = StmtCompiler(self.graph, self.globals)
+
+        # Make up a name for the list under construction and bind it to an empty list
+        list_ty = get_type(node)
+        list_name = with_type(list_ty, with_loc(node, LocalName(id=next(tmp_vars))))
+        empty_list = self.graph.add_node(ops.DummyOp(name="MakeList"))
+        self.dfg[list_name.id] = PortVariable(
+            list_name.id, empty_list.add_out_port(list_ty), node, None
+        )
+
+        def compile_generators(elt: ast.expr, gens: list[DesugaredGenerator]) -> None:
+            """Helper function to generate nested TailLoop nodes for generators"""
+            # If there are no more generators left, just append the element to the list
+            if not gens:
+                list_port, elt_port = self.visit(list_name), self.visit(elt)
+                push = self.graph.add_node(
+                    ops.DummyOp(name="Push"), inputs=[list_port, elt_port]
+                )
+                self.dfg[list_name.id].port = push.add_out_port(list_port.ty)
+                return
+
+            # Otherwise, compile the first iterator and construct a TailLoop
+            gen, *gens = gens
+            compiler.compile_stmts([gen.iter_assign], self.dfg)
+            inputs = [gen.iter, list_name]
+            with self._new_loop(inputs, gen.hasnext):
+                # Compile the `hasnext` check and plug it into a conditional
+                compiler.compile_stmts([gen.hasnext_assign], self.dfg)
+                cond = self.graph.add_conditional(
+                    self.visit(gen.hasnext),
+                    [self.visit(gen.iter), self.visit(list_name)],
+                )
+
+                # If the iterator is finished, output the iterator and list as is
+                with self._new_case(inputs, inputs, cond):
+                    pass
+
+                # If there is a next element, compile it and continue with the next
+                # generator
+                with self._new_case(inputs, inputs, cond):
+
+                    def compile_ifs(ifs: list[ast.expr]) -> None:
+                        if not ifs:
+                            # If there are no guards left, compile the next generator
+                            compile_generators(elt, gens)
+                            return
+                        if_expr, *ifs = ifs
+                        cond = self.graph.add_conditional(
+                            self.visit(if_expr),
+                            [self.visit(gen.iter), self.visit(list_name)],
+                        )
+                        # If the condition is false, output the iterator and list as is
+                        with self._new_case(inputs, inputs, cond):
+                            pass
+                        # If the condition is true, continue with the next one
+                        with self._new_case(inputs, inputs, cond):
+                            compile_ifs(ifs)
+
+                    compiler.compile_stmts([gen.next_assign], self.dfg)
+                    compile_ifs(gen.ifs)
+
+            # After the loop is done, we have to finalize the iterator
+            self.visit(gen.iterend)
+
+        compile_generators(node.elt, node.generators)
+        return self.visit(list_name)
 
     def visit_BinOp(self, node: ast.BinOp) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
