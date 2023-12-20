@@ -1,15 +1,29 @@
 import ast
 import itertools
 from collections.abc import Iterator
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
-from guppy.ast_util import AstVisitor, set_location_from
+from guppy.ast_util import (
+    AstVisitor,
+    find_nodes,
+    set_location_from,
+    template_replace,
+    with_loc,
+)
 from guppy.cfg.bb import BB, BBStatement
 from guppy.cfg.cfg import CFG
 from guppy.checker.core import Globals
 from guppy.error import GuppyError, InternalGuppyError
 from guppy.gtypes import NoneType
-from guppy.nodes import NestedFunctionDef
+from guppy.nodes import (
+    DesugaredGenerator,
+    DesugaredListComp,
+    IterEnd,
+    IterHasNext,
+    IterNext,
+    MakeIter,
+    NestedFunctionDef,
+)
 
 # In order to build expressions, need an endless stream of unique temporary variables
 # to store intermediate results
@@ -142,6 +156,35 @@ class CFGBuilder(AstVisitor[BB | None]):
         # its own jumps since the body is not guaranteed to execute
         return tail_bb
 
+    def visit_For(self, node: ast.For, bb: BB, jumps: Jumps) -> BB | None:
+        template = """
+            it = make_iter
+            while True:
+                b, it = has_next
+                if b:
+                    x, it = get_next
+                    body
+                else:
+                    break
+            end_iter  # Consume iterator one last time
+        """
+
+        it = make_var(next(tmp_vars), node.iter)
+        b = make_var(next(tmp_vars), node.iter)
+        new_nodes = template_replace(
+            template,
+            node,
+            it=it,
+            b=b,
+            x=node.target,
+            make_iter=with_loc(node.iter, MakeIter(value=node.iter, origin_node=node)),
+            has_next=with_loc(node.iter, IterHasNext(value=it)),
+            get_next=with_loc(node.iter, IterNext(value=it)),
+            end_iter=with_loc(node.iter, IterEnd(value=it)),
+            body=node.body,
+        )
+        return self.visit_stmts(new_nodes, bb, jumps)
+
     def visit_Continue(self, node: ast.Continue, bb: BB, jumps: Jumps) -> BB | None:
         if not jumps.continue_bb:
             raise InternalGuppyError("Continue BB not defined")
@@ -212,17 +255,9 @@ class ExprBuilder(ast.NodeTransformer):
         return builder.visit(node), builder.bb
 
     @classmethod
-    def _make_var(cls, name: str, loc: ast.expr | None = None) -> ast.Name:
-        """Creates an `ast.Name` node."""
-        node = ast.Name(id=name, ctx=ast.Load)
-        if loc is not None:
-            set_location_from(node, loc)
-        return node
-
-    @classmethod
     def _tmp_assign(cls, tmp_name: str, value: ast.expr, bb: BB) -> None:
         """Adds a temporary variable assignment to a basic block."""
-        node = ast.Assign(targets=[cls._make_var(tmp_name, value)], value=value)
+        node = ast.Assign(targets=[make_var(tmp_name, value)], value=value)
         set_location_from(node, value)
         bb.statements.append(node)
 
@@ -256,7 +291,51 @@ class ExprBuilder(ast.NodeTransformer):
         self.bb = merge_bb
 
         # The final value is stored in the temporary variable
-        return self._make_var(tmp, node)
+        return make_var(tmp, node)
+
+    def visit_ListComp(self, node: ast.ListComp) -> ast.AST:
+        # Check for illegal expressions
+        illegals = find_nodes(is_illegal_in_list_comp, node)
+        if illegals:
+            raise GuppyError(
+                "Expression is not supported inside a list comprehension", illegals[0]
+            )
+
+        # Desugar into statements that create the iterator, check for a next element,
+        # get the next element, and finalise the iterator.
+        gens = []
+        for g in node.generators:
+            if g.is_async:
+                raise GuppyError("Async generators are not supported", g)
+            g.iter = self.visit(g.iter)
+            gen = DesugaredGenerator()
+
+            template = """
+                it = make_iter
+                b, it = has_next
+                x, it = get_next
+            """
+            it = make_var(next(tmp_vars), g.iter)
+            b = make_var(next(tmp_vars), g.iter)
+            [gen.iter_assign, gen.hasnext_assign, gen.next_assign] = cast(
+                list[ast.Assign],
+                template_replace(
+                    template,
+                    g.iter,
+                    it=it,
+                    b=b,
+                    x=g.target,
+                    make_iter=with_loc(it, MakeIter(value=g.iter, origin_node=node)),
+                    has_next=with_loc(it, IterHasNext(value=it)),
+                    get_next=with_loc(it, IterNext(value=it)),
+                ),
+            )
+            gen.iterend = with_loc(it, IterEnd(value=it))
+            gen.iter, gen.hasnext, gen.ifs = it, b, g.ifs
+            gens.append(gen)
+
+        node.elt = self.visit(node.elt)
+        return with_loc(node, DesugaredListComp(elt=node.elt, generators=gens))
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
         # Short-circuit expressions must be built using the `BranchBuilder`. However, we
@@ -275,7 +354,7 @@ class ExprBuilder(ast.NodeTransformer):
             self._tmp_assign(tmp, false_const, false_bb)
             merge_bb = self.cfg.new_bb(true_bb, false_bb)
             self.bb = merge_bb
-            return self._make_var(tmp, node)
+            return make_var(tmp, node)
         # For all other expressions, just recurse deeper with the node transformer
         return super().generic_visit(node)
 
@@ -398,3 +477,16 @@ def is_short_circuit_expr(node: ast.AST) -> bool:
     return isinstance(node, ast.BoolOp) or (
         isinstance(node, ast.Compare) and len(node.comparators) > 1
     )
+
+
+def is_illegal_in_list_comp(node: ast.AST) -> bool:
+    """Checks if an expression is illegal to use in a list comprehension."""
+    return isinstance(node, ast.IfExp | ast.NamedExpr) or is_short_circuit_expr(node)
+
+
+def make_var(name: str, loc: ast.AST | None = None) -> ast.Name:
+    """Creates an `ast.Name` node."""
+    node = ast.Name(id=name, ctx=ast.Load)
+    if loc is not None:
+        set_location_from(node, loc)
+    return node
