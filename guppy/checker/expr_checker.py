@@ -22,10 +22,19 @@ can be used to infer a type for an expression.
 
 import ast
 from contextlib import suppress
-from typing import Any, NoReturn
+from typing import Any, NoReturn, cast
 
-from guppy.ast_util import AstNode, AstVisitor, get_type_opt, with_loc, with_type
-from guppy.checker.core import CallableVariable, Context, Globals
+from guppy.ast_util import (
+    AstNode,
+    AstVisitor,
+    breaks_in_loop,
+    get_type_opt,
+    name_nodes_in_ast,
+    return_nodes_in_ast,
+    with_loc,
+    with_type,
+)
+from guppy.checker.core import CallableVariable, Context, Globals, Locals
 from guppy.error import (
     GuppyError,
     GuppyTypeError,
@@ -38,11 +47,25 @@ from guppy.gtypes import (
     FunctionType,
     GuppyType,
     Inst,
+    LinstType,
+    ListType,
+    NoneType,
     Subst,
     TupleType,
     unify,
 )
-from guppy.nodes import GlobalName, LocalCall, LocalName, TypeApply
+from guppy.nodes import (
+    DesugaredGenerator,
+    DesugaredListComp,
+    GlobalName,
+    IterEnd,
+    IterHasNext,
+    IterNext,
+    LocalCall,
+    LocalName,
+    MakeIter,
+    TypeApply,
+)
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
@@ -114,6 +137,14 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         a new desugared expression with type annotations and a substitution with the
         resolved type variables.
         """
+        # If we already have a type for the expression, we just have to match it against
+        # the target
+        if actual := get_type_opt(expr):
+            subst, inst = check_type_against(actual, ty, expr, kind)
+            if inst:
+                expr = with_loc(expr, TypeApply(value=expr, tys=inst))
+            return with_type(ty.substitute(subst), expr), subst
+
         # When checking against a variable, we have to synthesize
         if isinstance(ty, FreeTypeVar):
             expr, syn_ty = self._synthesize(expr, allow_free_vars=False)
@@ -139,6 +170,27 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         for i, el in enumerate(node.elts):
             node.elts[i], s = self.check(el, ty.element_types[i].substitute(subst))
             subst |= s
+        return node, subst
+
+    def visit_List(self, node: ast.List, ty: GuppyType) -> tuple[ast.expr, Subst]:
+        if not isinstance(ty, ListType | LinstType):
+            return self._fail(ty, node)
+        subst: Subst = {}
+        for i, el in enumerate(node.elts):
+            node.elts[i], s = self.check(el, ty.element_type.substitute(subst))
+            subst |= s
+        return node, subst
+
+    def visit_DesugaredListComp(
+        self, node: DesugaredListComp, ty: GuppyType
+    ) -> tuple[ast.expr, Subst]:
+        if not isinstance(ty, ListType | LinstType):
+            return self._fail(ty, node)
+        node, elt_ty = synthesize_comprehension(node, node.generators, self.ctx)
+        subst = unify(ty.element_type, elt_ty, {})
+        if subst is None:
+            actual = LinstType(elt_ty) if elt_ty.linear else ListType(elt_ty)
+            return self._fail(ty, actual, node)
         return node, subst
 
     def visit_Call(self, node: ast.Call, ty: GuppyType) -> tuple[ast.expr, Subst]:
@@ -213,7 +265,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             raise GuppyError("Unsupported constant", node)
         return node, ty
 
-    def visit_Name(self, node: ast.Name) -> tuple[ast.expr, GuppyType]:
+    def visit_Name(self, node: ast.Name) -> tuple[ast.Name, GuppyType]:
         x = node.id
         if x in self.ctx.locals:
             var = self.ctx.locals[x]
@@ -239,6 +291,22 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         elems = [self.synthesize(elem) for elem in node.elts]
         node.elts = [n for n, _ in elems]
         return node, TupleType([ty for _, ty in elems])
+
+    def visit_List(self, node: ast.List) -> tuple[ast.expr, GuppyType]:
+        if len(node.elts) == 0:
+            raise GuppyTypeInferenceError(
+                "Cannot infer type variable in expression of type `list[?T]`", node
+            )
+        node.elts[0], el_ty = self.synthesize(node.elts[0])
+        node.elts[1:] = [self._check(el, el_ty)[0] for el in node.elts[1:]]
+        return node, LinstType(el_ty) if el_ty.linear else ListType(el_ty)
+
+    def visit_DesugaredListComp(
+        self, node: DesugaredListComp
+    ) -> tuple[ast.expr, GuppyType]:
+        node, elt_ty = synthesize_comprehension(node, node.generators, self.ctx)
+        result_ty = LinstType(elt_ty) if elt_ty.linear else ListType(elt_ty)
+        return node, result_ty
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> tuple[ast.expr, GuppyType]:
         # We need to synthesise the argument type, so we can look up dunder methods
@@ -289,6 +357,36 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             node,
         )
 
+    def _synthesize_instance_func(
+        self,
+        node: ast.expr,
+        args: list[ast.expr],
+        func_name: str,
+        err: str,
+        exp_ty: FunctionType | None = None,
+        var: FreeTypeVar | None = None,
+        give_reason: bool = False,
+    ) -> tuple[ast.expr, GuppyType]:
+        """Helper method for expressions that are implemented via instance methods."""
+        node, ty = self.synthesize(node)
+        func = self.ctx.globals.get_instance_func(ty, func_name)
+        if func is None:
+            reason = f" since it does not implement the `{func_name}` method"
+            raise GuppyTypeError(
+                f"Expression of type `{ty}` is {err}{reason if give_reason else ''}",
+                node,
+            )
+        if exp_ty:
+            assert var is not None
+            exp_ty = cast(FunctionType, exp_ty.substitute({var: ty}))
+            if unify(exp_ty, func.ty.unquantified()[0], {}) is None:
+                raise GuppyError(
+                    f"Method `{ty.name}.{func_name}` has signature `{func.ty}`, but "
+                    f"expected `{exp_ty}`",
+                    node,
+                )
+        return func.synthesize_call([node, *args], node, self.ctx)
+
     def visit_BinOp(self, node: ast.BinOp) -> tuple[ast.expr, GuppyType]:
         return self._synthesize_binary(node.left, node.right, node.op, node)
 
@@ -300,6 +398,16 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             )
         left_expr, [op], [right_expr] = node.left, node.ops, node.comparators
         return self._synthesize_binary(left_expr, right_expr, op, node)
+
+    def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, GuppyType]:
+        var = FreeTypeVar.new("T", False)
+        exp_ty = FunctionType(
+            [var, FreeTypeVar.new("Key", False)],
+            FreeTypeVar.new("Val", False),
+        )
+        return self._synthesize_instance_func(
+            node.value, [node.slice], "__getitem__", "not subscriptable", exp_ty, var
+        )
 
     def visit_Call(self, node: ast.Call) -> tuple[ast.expr, GuppyType]:
         if len(node.keywords) > 0:
@@ -321,6 +429,55 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             return f.synthesize_call(node.args, node, self.ctx)
         else:
             raise GuppyTypeError(f"Expected function type, got `{ty}`", node.func)
+
+    def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, GuppyType]:
+        var = FreeTypeVar.new("T", False)
+        exp_ty = FunctionType([var], FreeTypeVar.new("Iter", False))
+        expr, ty = self._synthesize_instance_func(
+            node.value, [], "__iter__", "not iterable", exp_ty, var
+        )
+
+        # If the iterator was created by a `for` loop, we can add some extra checks to
+        # produce nicer errors for linearity violations. Namely, `break` and `return`
+        # are not allowed when looping over a linear iterator (`continue` is allowed)
+        if ty.linear and isinstance(node.origin_node, ast.For):
+            breaks = breaks_in_loop(node.origin_node) or return_nodes_in_ast(
+                node.origin_node
+            )
+            if breaks:
+                raise GuppyTypeError(
+                    f"Loop over iterator with linear type `{ty}` cannot be terminated "
+                    f"(cannot ensure that all values have been used)",
+                    breaks[0],
+                )
+        return expr, ty
+
+    def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, GuppyType]:
+        var = FreeTypeVar.new("Iter", False)
+        exp_ty = FunctionType([var], TupleType([BoolType(), var]))
+        return self._synthesize_instance_func(
+            node.value, [], "__hasnext__", "not an iterator", exp_ty, var, True
+        )
+
+    def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, GuppyType]:
+        var = FreeTypeVar.new("Iter", False)
+        exp_ty = FunctionType([var], TupleType([FreeTypeVar.new("T", True), var]))
+        return self._synthesize_instance_func(
+            node.value, [], "__next__", "not an iterator", exp_ty, var, True
+        )
+
+    def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, GuppyType]:
+        var = FreeTypeVar.new("Iter", False)
+        exp_ty = FunctionType([var], NoneType())
+        return self._synthesize_instance_func(
+            node.value, [], "__end__", "not an iterator", exp_ty, var, True
+        )
+
+    def visit_ListComp(self, node: ast.ListComp) -> tuple[ast.expr, GuppyType]:
+        raise InternalGuppyError(
+            "BB contains `ListComp`. Should have been removed during CFG"
+            f"construction: `{ast.unparse(node)}`"
+        )
 
     def visit_NamedExpr(self, node: ast.NamedExpr) -> tuple[ast.expr, GuppyType]:
         raise InternalGuppyError(
@@ -596,6 +753,95 @@ def to_bool(
             node,
         )
     return call, return_ty
+
+
+def synthesize_comprehension(
+    node: DesugaredListComp, gens: list[DesugaredGenerator], ctx: Context
+) -> tuple[DesugaredListComp, GuppyType]:
+    """Helper function to synthesise the element type of a list comprehension."""
+    from guppy.checker.stmt_checker import StmtChecker
+
+    def check_linear_use_from_outer_scope(expr: ast.expr, locals: Locals) -> None:
+        """Checks if an expression uses a linear variable from an outer scope.
+
+        Since the expression is executed multiple times in the inner scope, this would
+        mean that the outer linear variable is used multiple times, which is not
+        allowed.
+        """
+        for name in name_nodes_in_ast(expr):
+            x = name.id
+            if x in locals and x not in locals.vars:
+                var = locals[x]
+                if var.ty.linear:
+                    raise GuppyTypeError(
+                        f"Variable `{x}` with linear type `{var.ty}` would be used "
+                        "multiple times when evaluating this comprehension",
+                        name,
+                    )
+
+    # If there are no more generators left, we can check the list element
+    if not gens:
+        node.elt, elt_ty = ExprSynthesizer(ctx).synthesize(node.elt)
+        check_linear_use_from_outer_scope(node.elt, ctx.locals)
+        return node, elt_ty
+
+    # Check the iterator in the outer context
+    gen, *gens = gens
+    gen.iter_assign = StmtChecker(ctx).visit_Assign(gen.iter_assign)
+    check_linear_use_from_outer_scope(gen.iter_assign.value, ctx.locals)
+
+    # The rest is checked in a new nested context to ensure that variables don't escape
+    # their scope
+    inner_locals = Locals({}, parent_scope=ctx.locals)
+    inner_ctx = Context(ctx.globals, inner_locals)
+    expr_sth, stmt_chk = ExprSynthesizer(inner_ctx), StmtChecker(inner_ctx)
+    gen.hasnext_assign = stmt_chk.visit_Assign(gen.hasnext_assign)
+    gen.next_assign = stmt_chk.visit_Assign(gen.next_assign)
+    gen.hasnext, hasnext_ty = expr_sth.visit_Name(gen.hasnext)
+    gen.hasnext = with_type(hasnext_ty, gen.hasnext)
+    gen.iter, iter_ty = expr_sth.visit_Name(gen.iter)
+    gen.iter = with_type(iter_ty, gen.iter)
+
+    # `if` guards are generally not allowed when we're iterating over linear variables.
+    # The only exception is if all linear variables are already consumed by the first
+    # guard
+    if gen.ifs:
+        gen.ifs[0], _ = expr_sth.synthesize(gen.ifs[0])
+
+        # Now, check if there are linear iteration variables that have not been used by
+        # the first guard
+        for target in name_nodes_in_ast(gen.next_assign.targets[0]):
+            var = inner_ctx.locals[target.id]
+            if var.ty.linear and not var.used and gen.ifs:
+                raise GuppyTypeError(
+                    f"Variable `{var.name}` with linear type `{var.ty}` is not used on "
+                    "all control-flow paths of the list comprehension",
+                    target,
+                )
+
+        # Now, we can properly check all guards
+        for i in range(len(gen.ifs)):
+            gen.ifs[i], if_ty = expr_sth.synthesize(gen.ifs[i])
+            gen.ifs[i], _ = to_bool(gen.ifs[i], if_ty, inner_ctx)
+            check_linear_use_from_outer_scope(gen.ifs[i], inner_locals)
+
+    # Check remaining generators
+    node, elt_ty = synthesize_comprehension(node, gens, inner_ctx)
+
+    # We have to make sure that all linear variables that were introduced in this scope
+    # have been used
+    for x, var in inner_ctx.locals.vars.items():
+        if var.ty.linear and not var.used:
+            raise GuppyTypeError(
+                f"Variable `{x}` with linear type `{var.ty}` is not used",
+                var.defined_at,
+            )
+
+    # The iter finalizer is again checked in the outer context
+    ctx.locals[gen.iter.id].used = None
+    gen.iterend, iterend_ty = ExprSynthesizer(ctx).synthesize(gen.iterend)
+    gen.iterend = with_type(iterend_ty, gen.iterend)
+    return node, elt_ty
 
 
 def python_value_to_guppy_type(

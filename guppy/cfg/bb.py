@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from typing_extensions import Self
 
 from guppy.ast_util import AstNode, name_nodes_in_ast
-from guppy.nodes import NestedFunctionDef
+from guppy.nodes import DesugaredListComp, NestedFunctionDef
 
 if TYPE_CHECKING:
     from guppy.cfg.cfg import BaseCFG
@@ -99,23 +99,45 @@ class VariableVisitor(ast.NodeVisitor):
         self.bb = bb
         self.stats = VariableStats()
 
+    def visit_Name(self, node: ast.Name) -> None:
+        self.stats.update_used(node)
+
     def visit_Assign(self, node: ast.Assign) -> None:
-        self.stats.update_used(node.value)
+        self.visit(node.value)
         for t in node.targets:
             for name in name_nodes_in_ast(t):
                 self.stats.assigned[name.id] = node
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
-        self.stats.update_used(node.value)
+        self.visit(node.value)
         self.stats.update_used(node.target)  # The target is also used
         for name in name_nodes_in_ast(node.target):
             self.stats.assigned[name.id] = node
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         if node.value:
-            self.stats.update_used(node.value)
+            self.visit(node.value)
         for name in name_nodes_in_ast(node.target):
             self.stats.assigned[name.id] = node
+
+    def visit_DesugaredListComp(self, node: DesugaredListComp) -> None:
+        # Names bound in the comprehension are only available inside, so we shouldn't
+        # update `self.stats` with assignments
+        inner_visitor = VariableVisitor(self.bb)
+        inner_stats = inner_visitor.stats
+
+        # The generators are evaluated left to right
+        for gen in node.generators:
+            inner_visitor.visit(gen.iter_assign)
+            inner_visitor.visit(gen.hasnext_assign)
+            inner_visitor.visit(gen.next_assign)
+            for cond in gen.ifs:
+                inner_visitor.visit(cond)
+        inner_visitor.visit(node.elt)
+
+        self.stats.used = {
+            x: n for x, n in inner_stats.used.items() if x not in self.stats.assigned
+        }
 
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> None:
         # In order to compute the used external variables in a nested function
@@ -139,6 +161,3 @@ class VariableVisitor(ast.NodeVisitor):
 
         # The name of the function is now assigned
         self.stats.assigned[node.name] = node
-
-    def generic_visit(self, node: ast.AST) -> None:
-        self.stats.update_used(node)

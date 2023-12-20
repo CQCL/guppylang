@@ -1,7 +1,7 @@
 import ast
 from dataclasses import dataclass
 
-from guppy.ast_util import AstNode, has_empty_body
+from guppy.ast_util import AstNode, has_empty_body, with_loc
 from guppy.checker.core import Context, Globals
 from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
@@ -34,14 +34,14 @@ class DeclaredFunction(CompiledFunction):
     ) -> tuple[ast.expr, Subst]:
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.ty, args, ty, node, ctx)
-        return GlobalCall(func=self, args=args, type_args=inst), subst
+        return with_loc(node, GlobalCall(func=self, args=args, type_args=inst)), subst
 
     def synthesize_call(
         self, args: list[ast.expr], node: AstNode, ctx: Context
     ) -> tuple[GlobalCall, GuppyType]:
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.ty, args, node, ctx)
-        return GlobalCall(func=self, args=args, type_args=inst), ty
+        return with_loc(node, GlobalCall(func=self, args=args, type_args=inst)), ty
 
     def add_to_graph(self, graph: Hugr, parent: Node) -> None:
         self.node = graph.add_declare(self.ty, parent, self.name)

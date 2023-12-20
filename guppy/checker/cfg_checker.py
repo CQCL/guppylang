@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from guppy.ast_util import line_col
 from guppy.cfg.bb import BB
 from guppy.cfg.cfg import CFG, BaseCFG
-from guppy.checker.core import Context, Globals, Variable
+from guppy.checker.core import Context, Globals, Locals, Variable
 from guppy.checker.expr_checker import ExprSynthesizer, to_bool
 from guppy.checker.stmt_checker import StmtChecker
 from guppy.error import GuppyError
@@ -127,7 +127,7 @@ def check_bb(
                 raise GuppyError(f"Variable `{x}` is not defined", use)
 
     # Check the basic block
-    ctx = Context(globals, {v.name: v for v in inputs})
+    ctx = Context(globals, Locals({v.name: v for v in inputs}))
     checked_stmts = StmtChecker(ctx, bb, return_ty).check_stmts(bb.statements)
 
     # If we branch, we also have to check the branch predicate
