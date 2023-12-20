@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file /Users/mark.koch/code/guppy/tests/error/iter_errors/end_missing.py:33
+
+31:    @guppy(module)
+32:    def test(x: MyType) -> None:
+33:        for _ in x:
+                    ^
+GuppyTypeError: Expression of type `MyIter` is not an iterator since it does not implement the `__end__` method

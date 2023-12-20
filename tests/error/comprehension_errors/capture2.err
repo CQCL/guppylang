@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:18
+
+16:    @guppy(module)
+17:    def foo(xs: list[int], q: Qubit) -> list[int]:
+18:        return [x for x in xs if bar(q)]
+                                        ^
+GuppyTypeError: Variable `q` with linear type `Qubit` would be used multiple times when evaluating this comprehension

@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:8
+
+6:    for x in xs:
+7:        pass
+8:    return x
+             ^
+GuppyError: Variable `x` is not defined on all control-flow paths.

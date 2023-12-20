@@ -17,6 +17,7 @@ from guppy.gtypes import GuppyType
 from guppy.hugr.hugr import Hugr
 
 PyFunc = Callable[..., Any]
+PyFuncDefOrDecl = tuple[bool, PyFunc]
 
 
 class GuppyModule:
@@ -44,7 +45,7 @@ class GuppyModule:
     # When `_instance_buffer` is not `None`, then all registered functions will be
     # buffered in this list. They only get properly registered, once
     # `_register_buffered_instance_funcs` is called. This way, we can associate
-    _instance_func_buffer: dict[str, PyFunc | CustomFunction] | None
+    _instance_func_buffer: dict[str, PyFuncDefOrDecl | CustomFunction] | None
 
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
@@ -94,7 +95,7 @@ class GuppyModule:
         self._check_not_yet_compiled()
         func_ast = parse_py_func(f)
         if self._instance_func_buffer is not None:
-            self._instance_func_buffer[func_ast.name] = f
+            self._instance_func_buffer[func_ast.name] = (True, f)
         else:
             name = (
                 qualified_name(instance, func_ast.name) if instance else func_ast.name
@@ -102,12 +103,20 @@ class GuppyModule:
             self._check_name_available(name, func_ast)
             self._func_defs[name] = func_ast
 
-    def register_func_decl(self, f: PyFunc) -> None:
+    def register_func_decl(
+        self, f: PyFunc, instance: type[GuppyType] | None = None
+    ) -> None:
         """Registers a Python function declaration as belonging to this Guppy module."""
         self._check_not_yet_compiled()
         func_ast = parse_py_func(f)
-        self._check_name_available(func_ast.name, func_ast)
-        self._func_decls[func_ast.name] = func_ast
+        if self._instance_func_buffer is not None:
+            self._instance_func_buffer[func_ast.name] = (False, f)
+        else:
+            name = (
+                qualified_name(instance, func_ast.name) if instance else func_ast.name
+            )
+            self._check_name_available(name, func_ast)
+            self._func_decls[name] = func_ast
 
     def register_custom_func(
         self, func: CustomFunction, instance: type[GuppyType] | None = None
@@ -142,7 +151,11 @@ class GuppyModule:
             if isinstance(f, CustomFunction):
                 self.register_custom_func(f, instance)
             else:
-                self.register_func_def(f, instance)
+                is_def, pyfunc = f
+                if is_def:
+                    self.register_func_def(pyfunc, instance)
+                else:
+                    self.register_func_decl(pyfunc, instance)
 
     @property
     def compiled(self) -> bool:
