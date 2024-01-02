@@ -679,10 +679,38 @@ class Hugr:
                     self.add_order_edge(n.parent.input_child, n)
         return self
 
+    def insert_dfg_extension_deltas(self) -> None:
+        """Inserts dummy extension requirements into the nodes.
+
+        This is a temporary fix for the fact that Hugr extension inference cannot infer
+        these in some cases (https://github.com/CQCL/hugr/issues/640). Since we're
+        hoping that this will be resolved in the future, we don't bother with writing
+        any actual inference code here. Instead, we simply over-approximate, by
+        inserting *all* Hugr standard extensions
+        """
+        std_extensions = [
+            "logic",
+            "Collections",
+            "arithmetic.int",
+            "arithmetic.int.types",
+            "arithmetic.float",
+            "arithmetic.float.types",
+            "arithmetic.conversions",
+        ]
+        for n in self.nodes():
+            n.op.input_extensions = std_extensions
+            if isinstance(n.op, ops.DFB):
+                n.op.extension_delta = std_extensions
+            elif isinstance(n.op, ops.DFG | ops.Case):
+                n.op.signature.extension_reqs = std_extensions
+            elif isinstance(n.op, ops.FuncDefn | ops.FuncDecl):
+                n.op.signature.body.extension_reqs = std_extensions
+
     def to_raw(self) -> raw.RawHugr:
         """Returns the raw representation of this HUGR for serialisation."""
         self.remove_dummy_nodes()
         self.insert_order_edges()
+        self.insert_dfg_extension_deltas()
         # Hugr requires that Input/Output nodes are the first/second children in a DFG.
         # Furthermore, exit nodes must be the second children of CFGs. We're going to
         # satisfy this trivially by first serialising all inputs, outputs, entry and

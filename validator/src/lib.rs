@@ -10,8 +10,8 @@ lazy_static! {
         logic::EXTENSION.to_owned(),
         int_types::extension(),
         int_ops::EXTENSION.to_owned(),
-        float_types::extension(),
-        float_ops::extension()
+        float_types::EXTENSION.to_owned(),
+        float_ops::EXTENSION.to_owned()
     ])
     .unwrap();
 }
