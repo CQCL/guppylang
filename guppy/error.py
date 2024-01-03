@@ -144,7 +144,7 @@ def format_source_location(
     source_lines = source.splitlines(keepends=True)
     end_col_offset = loc.end_col_offset
     if end_col_offset is None or (loc.end_lineno and loc.end_lineno > loc.lineno):
-        end_col_offset = len(source_lines[loc.lineno - 1])
+        end_col_offset = len(source_lines[loc.lineno - 1]) - 1
     s = "".join(source_lines[max(loc.lineno - num_lines, 0) : loc.lineno]).rstrip()
     s += "\n" + loc.col_offset * " " + (end_col_offset - loc.col_offset) * "^"
     s = textwrap.dedent(s).splitlines()

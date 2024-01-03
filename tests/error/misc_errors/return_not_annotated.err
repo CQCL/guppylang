@@ -2,5 +2,5 @@ Guppy compilation failed. Error in file $FILE:5
 
 3:    @guppy
 4:    def foo(x: bool):
-      ^^^^^^^^^^^^^^^^^^
+      ^^^^^^^^^^^^^^^^^
 GuppyError: Return type must be annotated
