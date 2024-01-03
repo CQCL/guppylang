@@ -50,6 +50,14 @@ class GlobalCall(ast.expr):
     )
 
 
+class PyExpr(ast.expr):
+    """A compile-time evaluated `py(...)` expression."""
+
+    value: ast.expr
+
+    _fields = ("value",)
+
+
 class NestedFunctionDef(ast.FunctionDef):
     cfg: "CFG"
     ty: FunctionType

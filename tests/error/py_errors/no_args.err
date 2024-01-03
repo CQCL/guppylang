@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo() -> int:
+6:        return py()
+                 ^^^^
+GuppyError: Compile-time evaluated `py(...)` expression requires an argument

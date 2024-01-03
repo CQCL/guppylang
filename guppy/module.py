@@ -6,7 +6,7 @@ from types import ModuleType
 from typing import Any, Union
 
 from guppy.ast_util import AstNode, annotate_location
-from guppy.checker.core import Globals, qualified_name
+from guppy.checker.core import Globals, PyScope, qualified_name
 from guppy.checker.func_checker import DefinedFunction, check_global_func_def
 from guppy.compiler.core import CompiledGlobals
 from guppy.compiler.func_compiler import CompiledFunctionDef, compile_global_func_def
@@ -37,7 +37,7 @@ class GuppyModule:
     _compiled_globals: CompiledGlobals
 
     # Mappings of functions defined in this module
-    _func_defs: dict[str, ast.FunctionDef]
+    _func_defs: dict[str, tuple[ast.FunctionDef, PyScope]]
     _func_decls: dict[str, ast.FunctionDef]
     _custom_funcs: dict[str, CustomFunction]
 
@@ -48,7 +48,7 @@ class GuppyModule:
 
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
-        self._globals = Globals({}, {})
+        self._globals = Globals({}, {}, {})
         self._compiled_globals = {}
         self._imported_globals = Globals.default()
         self._imported_compiled_globals = {}
@@ -88,7 +88,7 @@ class GuppyModule:
                     self.load(val)
 
     def register_func_def(
-        self, f: PyFunc, instance: type[GuppyType] | None = None
+        self, f: PyFunc, py_scope: PyScope, instance: type[GuppyType] | None = None
     ) -> None:
         """Registers a Python function definition as belonging to this Guppy module."""
         self._check_not_yet_compiled()
@@ -100,7 +100,7 @@ class GuppyModule:
                 qualified_name(instance, func_ast.name) if instance else func_ast.name
             )
             self._check_name_available(name, func_ast)
-            self._func_defs[name] = func_ast
+            self._func_defs[name] = func_ast, py_scope.copy()
 
     def register_func_decl(self, f: PyFunc) -> None:
         """Registers a Python function declaration as belonging to this Guppy module."""
@@ -126,7 +126,9 @@ class GuppyModule:
         """Registers an existing Guppy type as belonging to this Guppy module."""
         self._globals.types[name] = ty
 
-    def _register_buffered_instance_funcs(self, instance: type[GuppyType]) -> None:
+    def _register_buffered_instance_funcs(
+        self, instance: type[GuppyType], py_scope: PyScope
+    ) -> None:
         assert self._instance_func_buffer is not None
         buffer = self._instance_func_buffer
         self._instance_func_buffer = None
@@ -134,7 +136,7 @@ class GuppyModule:
             if isinstance(f, CustomFunction):
                 self.register_custom_func(f, instance)
             else:
-                self.register_func_def(f, instance)
+                self.register_func_def(f, py_scope, instance)
 
     @property
     def compiled(self) -> bool:
@@ -151,7 +153,7 @@ class GuppyModule:
             func.check_type(self._imported_globals | self._globals)
         defined_funcs = {
             x: DefinedFunction.from_ast(f, x, self._imported_globals | self._globals)
-            for x, f in self._func_defs.items()
+            for x, (f, _) in self._func_defs.items()
         }
         declared_funcs = {
             x: DeclaredFunction.from_ast(f, x, self._imported_globals | self._globals)
@@ -163,7 +165,12 @@ class GuppyModule:
 
         # Type check function definitions
         checked = {
-            x: check_global_func_def(f, self._imported_globals | self._globals)
+            x: check_global_func_def(
+                f,
+                self._imported_globals
+                | self._globals
+                | Globals({}, {}, self._func_defs[x][1]),
+            )
             for x, f in defined_funcs.items()
         }
 
