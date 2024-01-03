@@ -214,10 +214,10 @@ class TypeBound(Enum):
         """Computes the least upper bound for a sequence of bounds."""
         res = TypeBound.Eq
         for b in bs:
+            if b == TypeBound.Any:
+                return TypeBound.Any
             if res == TypeBound.Eq:
                 res = b
-            if res == TypeBound.Copyable and b == TypeBound.Any:
-                res = TypeBound.Any
         return res
 
 
