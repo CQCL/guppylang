@@ -77,7 +77,11 @@ binary_table: dict[type[AstOp], tuple[str, str, str]] = {
 
 
 class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
-    """Checks an expression against a type and produces a new type-annotated AST"""
+    """Checks an expression against a type and produces a new type-annotated AST.
+
+    The type may contain free variables that the checker will try to solve. Note that
+    the checker will fail, if some free variables cannot be inferred.
+    """
 
     ctx: Context
 
