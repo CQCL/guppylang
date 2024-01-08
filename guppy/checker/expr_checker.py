@@ -465,7 +465,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, GuppyType]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType([ty], TupleType([FreeTypeVar.new("T", True), ty]))
+        exp_sig = FunctionType([ty], TupleType([FreeTypeVar.new("T", False), ty]))
         return self._synthesize_instance_func(
             node.value, [], "__next__", "not an iterator", exp_sig, True
         )
