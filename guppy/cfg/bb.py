@@ -135,7 +135,7 @@ class VariableVisitor(ast.NodeVisitor):
                 inner_visitor.visit(cond)
         inner_visitor.visit(node.elt)
 
-        self.stats.used = {
+        self.stats.used |= {
             x: n for x, n in inner_stats.used.items() if x not in self.stats.assigned
         }
 
