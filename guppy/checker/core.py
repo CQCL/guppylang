@@ -125,7 +125,8 @@ class Locals:
         self.vars[key] = value
 
     def __iter__(self) -> Iterator[str]:
-        return iter(self.keys())
+        parent_iter = iter(self.parent_scope) if self.parent_scope else iter(())
+        return itertools.chain(iter(self.vars), parent_iter)
 
     def __contains__(self, item: str) -> bool:
         return (item in self.vars) or (
