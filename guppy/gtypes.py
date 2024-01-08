@@ -1,7 +1,7 @@
 import ast
 import itertools
 from abc import ABC, abstractmethod
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
@@ -80,6 +80,12 @@ class GuppyType(ABC):
 
     def substitute(self, s: Subst) -> "GuppyType":
         return self.transform(Substituter(s))
+
+    def find_sub_type(self, pred: Callable[["GuppyType"], bool]) -> list["GuppyType"]:
+        """Returns a list of all structural subtypes that satisfy the given predicate"""
+        t = SubtypeFinder(pred)
+        self.transform(t)
+        return t.found
 
 
 @dataclass(frozen=True)
@@ -417,6 +423,22 @@ class Instantiator(TypeTransformer):
         return None
 
 
+class SubtypeFinder(TypeTransformer):
+    """Type transformer that finds all structural subtypes satisfying a predicate."""
+
+    predicate: Callable[[GuppyType], bool]
+    found: list[GuppyType]
+
+    def __init__(self, predicate: Callable[[GuppyType], bool]):
+        self.predicate = predicate
+        self.found = []
+
+    def transform(self, ty: GuppyType) -> GuppyType | None:
+        if self.predicate(ty):
+            self.found.append(ty)
+        return None
+
+
 def unify(s: GuppyType, t: GuppyType, subst: Subst | None) -> Subst | None:
     """Computes a most general unifier for two types.
 
@@ -431,6 +453,8 @@ def unify(s: GuppyType, t: GuppyType, subst: Subst | None) -> Subst | None:
         return _unify_var(s, t, subst)
     if isinstance(t, FreeTypeVar):
         return _unify_var(t, s, subst)
+    if isinstance(s, BoundTypeVar) and isinstance(t, BoundTypeVar):
+        return subst if s.idx == t.idx else None
     if type(s) == type(t):
         sargs, targs = list(s.type_args), list(t.type_args)
         if len(sargs) == len(targs):

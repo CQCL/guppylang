@@ -7,6 +7,7 @@ node straight from the Python AST. We build a CFG, check it, and return a
 
 import ast
 from dataclasses import dataclass
+from typing import ClassVar
 
 from guppy.ast_util import AstNode, return_nodes_in_ast, with_loc
 from guppy.cfg.bb import BB
@@ -38,10 +39,6 @@ class DefinedFunction(CallableVariable):
         func_def: ast.FunctionDef, name: str, globals: Globals
     ) -> "DefinedFunction":
         ty = check_signature(func_def, globals)
-        if ty.quantified:
-            raise GuppyError(
-                "Generic function definitions are not supported yet", func_def
-            )
         return DefinedFunction(name, ty, func_def, None)
 
     def check_call(
@@ -73,6 +70,11 @@ def check_global_func_def(func: DefinedFunction, globals: Globals) -> CheckedFun
     returns_none = isinstance(func.ty.returns, NoneType)
     assert func.ty.arg_names is not None
 
+    # Make quantified type variables available as type names in the body
+    globals = globals | Globals(
+        {}, {v.display_name: type_builder(v) for v in func.ty.quantified}, {}
+    )
+
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
     inputs = [
         Variable(x, ty, loc, None)
@@ -88,6 +90,16 @@ def check_nested_func_def(
     """Type checks a local (nested) function definition."""
     func_ty = check_signature(func_def, ctx.globals)
     assert func_ty.arg_names is not None
+
+    # We don't deal with nested generic function definitions yet
+    if func_ty.quantified:
+        raise GuppyError("Nested generic functions are not yet supported", func_def)
+
+    # Therefore, also purge all type variables from the globals for now
+    tys = {
+        x: ty for x, ty in ctx.globals.types.items() if not issubclass(ty, BoundTypeVar)
+    }
+    ctx = Context(Globals(ctx.globals.values, tys, ctx.globals.type_vars), ctx.locals)
 
     # We've already built the CFG for this function while building the CFG of the
     # enclosing function
@@ -114,6 +126,16 @@ def check_nested_func_def(
                 f"because it was defined in an outer scope (at {{0}})",
                 using_bb.vars.used[x],
                 [v.defined_at],
+            )
+
+        # For now, their type also cannot contain type variable from the outer scope
+        if v.ty.find_sub_type(lambda ty: isinstance(ty, BoundTypeVar)):
+            x = v.name
+            using_bb = cfg.live_before[cfg.entry_bb][x]
+            raise GuppyError(
+                f"Capturing of variable `{x}` with generic type `{v.ty}` from "
+                "outer scope is not supported yet",
+                using_bb.vars.used[x],
             )
 
     # Captured variables may never be assigned to
@@ -205,3 +227,31 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         arg_names,
         sorted(type_var_mapping.values(), key=lambda v: v.idx),
     )
+
+
+def type_builder(v: BoundTypeVar) -> type[GuppyType]:
+    """Create a dummy type class that returns a given variable when trying to build it.
+
+    This is a workaround for the fact that `Globals.types` only stores type classes and
+    we call `build()` to construct them. Thus, we need to create a new class in order to
+    refer to a specific variable.
+    """
+
+    # TODO: Find a better solution for this. Possibly refactor the way we store types
+    #  in the context
+
+    class TypeBuilder(BoundTypeVar):
+        name: ClassVar[str] = v.display_name  # type: ignore[assignment]
+        linear: bool = v.linear
+
+        @staticmethod
+        def build(*args: GuppyType, node: AstNode | None = None) -> GuppyType:
+            if len(args) > 0:
+                raise GuppyError(
+                    f"Type `{v.name}` is not generic (higher-kinded generic types "
+                    "are not supported)",
+                    node,
+                )
+            return v
+
+    return TypeBuilder

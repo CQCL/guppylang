@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:12
+
+10:    @guppy(module)
+11:    def foo() -> int:
+12:        def bar(x: T) -> T:
+           ^^^^^^^^^^^^^^^^^^^
+GuppyError: Nested generic functions are not yet supported

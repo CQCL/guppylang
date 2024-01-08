@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:13
+
+11:    def foo(x: T) -> T:
+12:        def bar() -> None:
+13:            _ = x
+                   ^
+GuppyError: Capturing of variable `x` with generic type `T` from outer scope is not supported yet
