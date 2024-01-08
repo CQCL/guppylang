@@ -22,7 +22,7 @@ can be used to infer a type for an expression.
 
 import ast
 from contextlib import suppress
-from typing import Any, NoReturn, cast
+from typing import Any, NoReturn
 
 from guppy.ast_util import (
     AstNode,
@@ -363,11 +363,18 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         args: list[ast.expr],
         func_name: str,
         err: str,
-        exp_ty: FunctionType | None = None,
-        var: FreeTypeVar | None = None,
+        exp_sig: FunctionType | None = None,
         give_reason: bool = False,
     ) -> tuple[ast.expr, GuppyType]:
-        """Helper method for expressions that are implemented via instance methods."""
+        """Helper method for expressions that are implemented via instance methods.
+
+        Raises a `GuppyTypeError` if the given instance method is not defined. The error
+        message can be customised by passing an `err` string and an optional error
+        reason can be printed.
+
+        Optionally, the signature of the instance function can also be checked against a
+        given expected signature.
+        """
         node, ty = self.synthesize(node)
         func = self.ctx.globals.get_instance_func(ty, func_name)
         if func is None:
@@ -376,15 +383,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
                 f"Expression of type `{ty}` is {err}{reason if give_reason else ''}",
                 node,
             )
-        if exp_ty:
-            assert var is not None
-            exp_ty = cast(FunctionType, exp_ty.substitute({var: ty}))
-            if unify(exp_ty, func.ty.unquantified()[0], {}) is None:
-                raise GuppyError(
-                    f"Method `{ty.name}.{func_name}` has signature `{func.ty}`, but "
-                    f"expected `{exp_ty}`",
-                    node,
-                )
+        if exp_sig and unify(exp_sig, func.ty.unquantified()[0], {}) is None:
+            raise GuppyError(
+                f"Method `{ty.name}.{func_name}` has signature `{func.ty}`, but "
+                f"expected `{exp_sig}`",
+                node,
+            )
         return func.synthesize_call([node, *args], node, self.ctx)
 
     def visit_BinOp(self, node: ast.BinOp) -> tuple[ast.expr, GuppyType]:
@@ -400,13 +404,13 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         return self._synthesize_binary(left_expr, right_expr, op, node)
 
     def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, GuppyType]:
-        var = FreeTypeVar.new("T", False)
-        exp_ty = FunctionType(
-            [var, FreeTypeVar.new("Key", False)],
+        node.value, ty = self.synthesize(node.value)
+        exp_sig = FunctionType(
+            [ty, FreeTypeVar.new("Key", False)],
             FreeTypeVar.new("Val", False),
         )
         return self._synthesize_instance_func(
-            node.value, [node.slice], "__getitem__", "not subscriptable", exp_ty, var
+            node.value, [node.slice], "__getitem__", "not subscriptable", exp_sig
         )
 
     def visit_Call(self, node: ast.Call) -> tuple[ast.expr, GuppyType]:
@@ -431,10 +435,10 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             raise GuppyTypeError(f"Expected function type, got `{ty}`", node.func)
 
     def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, GuppyType]:
-        var = FreeTypeVar.new("T", False)
-        exp_ty = FunctionType([var], FreeTypeVar.new("Iter", False))
+        node.value, ty = self.synthesize(node.value)
+        exp_sig = FunctionType([ty], FreeTypeVar.new("Iter", False))
         expr, ty = self._synthesize_instance_func(
-            node.value, [], "__iter__", "not iterable", exp_ty, var
+            node.value, [], "__iter__", "not iterable", exp_sig
         )
 
         # If the iterator was created by a `for` loop, we can add some extra checks to
@@ -453,24 +457,24 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         return expr, ty
 
     def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, GuppyType]:
-        var = FreeTypeVar.new("Iter", False)
-        exp_ty = FunctionType([var], TupleType([BoolType(), var]))
+        node.value, ty = self.synthesize(node.value)
+        exp_sig = FunctionType([ty], TupleType([BoolType(), ty]))
         return self._synthesize_instance_func(
-            node.value, [], "__hasnext__", "not an iterator", exp_ty, var, True
+            node.value, [], "__hasnext__", "not an iterator", exp_sig, True
         )
 
     def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, GuppyType]:
-        var = FreeTypeVar.new("Iter", False)
-        exp_ty = FunctionType([var], TupleType([FreeTypeVar.new("T", True), var]))
+        node.value, ty = self.synthesize(node.value)
+        exp_sig = FunctionType([ty], TupleType([FreeTypeVar.new("T", True), ty]))
         return self._synthesize_instance_func(
-            node.value, [], "__next__", "not an iterator", exp_ty, var, True
+            node.value, [], "__next__", "not an iterator", exp_sig, True
         )
 
     def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, GuppyType]:
-        var = FreeTypeVar.new("Iter", False)
-        exp_ty = FunctionType([var], NoneType())
+        node.value, ty = self.synthesize(node.value)
+        exp_sig = FunctionType([ty], NoneType())
         return self._synthesize_instance_func(
-            node.value, [], "__end__", "not an iterator", exp_ty, var, True
+            node.value, [], "__end__", "not an iterator", exp_sig, True
         )
 
     def visit_ListComp(self, node: ast.ListComp) -> tuple[ast.expr, GuppyType]:
