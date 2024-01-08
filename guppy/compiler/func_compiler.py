@@ -80,6 +80,7 @@ def compile_local_func_def(
         [v.ty for v in captured] + list(func.ty.args),
         func.ty.returns,
         [v.name for v in captured] + list(func.ty.arg_names),
+        func.ty.quantified,
     )
 
     def_node = graph.add_def(closure_ty, dfg.node, func.name)

@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:18
+
+16:    def foo(x: T) -> T:
+17:        def bar() -> None:
+18:            y: T = make()
+                  ^
+GuppyError: Free type variable. Only function types can be generic
