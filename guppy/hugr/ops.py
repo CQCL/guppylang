@@ -105,17 +105,11 @@ class Const(BaseOp):
 # -----------------------------------------------
 
 
-class BasicBlock(BaseOp):
-    """A basic block in a control flow graph - parent will be a CFG node."""
-
-    op: Literal["BasicBlock"] = "BasicBlock"
-
-
-class DFB(BasicBlock):
+class DataflowBlock(BaseOp):
     """A CFG basic block node. The signature is that of the internal Dataflow
     graph."""
 
-    block: Literal["DFB"] = "DFB"
+    op: Literal["DataflowBlock"] = "DataflowBlock"
     inputs: TypeRow = Field(default_factory=list)
     other_outputs: TypeRow = Field(default_factory=list)
     tuple_sum_rows: list[TypeRow] = Field(default_factory=list)
@@ -144,15 +138,12 @@ class DFB(BasicBlock):
         self.other_outputs = outputs[1:]
 
 
-class Exit(BasicBlock):
+class ExitBlock(BaseOp):
     """The single exit node of the CFG, has no children, stores the types of
     the CFG node output."""
 
-    block: Literal["Exit"] = "Exit"
+    op: Literal["ExitBlock"] = "ExitBlock"
     cfg_outputs: TypeRow
-
-
-BasicBlockOp = Annotated[DFB | Exit, Field(discriminator="block")]
 
 
 # ---------------------------------------------
@@ -494,7 +485,11 @@ class TypeApply(LeafOp):
 
 class TypeApplication(BaseModel):
     """Records details of an application of a PolyFuncType to some TypeArgs and the
-    result (a less-, but still potentially-, polymorphic type)."""
+    result (a less-, but still potentially-, polymorphic type).
+
+    Note that Guppy only generates full type applications, where the result is a
+    monomorphic type. Partial type applications are not used by Guppy.
+    """
 
     input: PolyFuncType
     args: list[tys.TypeArg]
@@ -532,14 +527,14 @@ LeafOpUnion = Annotated[
 OpType = Annotated[
     (
         Module
-        | BasicBlock
         | Case
         | Module
         | FuncDefn
         | FuncDecl
         | Const
         | DummyOp
-        | BasicBlockOp
+        | DataflowBlock
+        | ExitBlock
         | Conditional
         | TailLoop
         | CFG

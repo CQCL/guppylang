@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from guppy.checker.core import Globals
 
 
-Subst = dict["FreeTypeVar", "GuppyType"]
+Subst = dict["ExistentialTypeVar", "GuppyType"]
 Inst = Sequence["GuppyType"]
 
 
@@ -30,7 +30,7 @@ class GuppyType(ABC):
     name: ClassVar[str]
 
     # Cache for free variables
-    _free_vars: set["FreeTypeVar"] = field(init=False, repr=False)
+    _unsolved_vars: set["ExistentialTypeVar"] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         # Make sure that we don't have higher-rank polymorphic types
@@ -43,13 +43,13 @@ class GuppyType(ABC):
                 )
 
         # Compute free variables
-        if isinstance(self, FreeTypeVar):
+        if isinstance(self, ExistentialTypeVar):
             vs = {self}
         else:
             vs = set()
             for arg in self.type_args:
-                vs |= arg.free_vars
-        object.__setattr__(self, "_free_vars", vs)
+                vs |= arg.unsolved_vars
+        object.__setattr__(self, "_unsolved_vars", vs)
 
     @staticmethod
     @abstractmethod
@@ -80,8 +80,8 @@ class GuppyType(ABC):
         pass
 
     @property
-    def free_vars(self) -> set["FreeTypeVar"]:
-        return self._free_vars
+    def unsolved_vars(self) -> set["ExistentialTypeVar"]:
+        return self._unsolved_vars
 
     def substitute(self, s: Subst) -> "GuppyType":
         return self.transform(Substituter(s))
@@ -121,23 +121,23 @@ class BoundTypeVar(GuppyType):
 
 
 @dataclass(frozen=True)
-class FreeTypeVar(GuppyType):
-    """Free type variable, identified with a globally unique id.
+class ExistentialTypeVar(GuppyType):
+    """Existential type variable, identified with a globally unique id.
 
-    Serves as an existential variable for unification.
+    Is solved during type checking.
     """
 
     id: int
     display_name: str
     linear: bool = False
 
-    name: ClassVar[Literal["FreeTypeVar"]] = "FreeTypeVar"
+    name: ClassVar[Literal["ExistentialTypeVar"]] = "ExistentialTypeVar"
 
     _id_generator: ClassVar[Iterator[int]] = itertools.count()
 
     @classmethod
-    def new(cls, display_name: str, linear: bool) -> "FreeTypeVar":
-        return FreeTypeVar(next(cls._id_generator), display_name, linear)
+    def new(cls, display_name: str, linear: bool) -> "ExistentialTypeVar":
+        return ExistentialTypeVar(next(cls._id_generator), display_name, linear)
 
     @staticmethod
     def build(*rgs: GuppyType, node: AstNode | None = None) -> GuppyType:
@@ -239,9 +239,11 @@ class FunctionType(GuppyType):
             self.arg_names,
         )
 
-    def unquantified(self) -> tuple["FunctionType", Sequence[FreeTypeVar]]:
+    def unquantified(self) -> tuple["FunctionType", Sequence[ExistentialTypeVar]]:
         """Replaces all quantified variables with free type variables."""
-        inst = [FreeTypeVar.new(v.display_name, v.linear) for v in self.quantified]
+        inst = [
+            ExistentialTypeVar.new(v.display_name, v.linear) for v in self.quantified
+        ]
         return self.instantiate(inst), inst
 
 
@@ -488,7 +490,7 @@ class Substituter(TypeTransformer):
         self.subst = subst
 
     def transform(self, ty: GuppyType) -> GuppyType | None:
-        if isinstance(ty, FreeTypeVar):
+        if isinstance(ty, ExistentialTypeVar):
             return self.subst.get(ty, None)
         return None
 
@@ -522,9 +524,9 @@ def unify(s: GuppyType, t: GuppyType, subst: Subst | None) -> Subst | None:
         return None
     if s == t:
         return subst
-    if isinstance(s, FreeTypeVar):
+    if isinstance(s, ExistentialTypeVar):
         return _unify_var(s, t, subst)
-    if isinstance(t, FreeTypeVar):
+    if isinstance(t, ExistentialTypeVar):
         return _unify_var(t, s, subst)
     if type(s) == type(t):
         sargs, targs = list(s.type_args), list(t.type_args)
@@ -535,13 +537,13 @@ def unify(s: GuppyType, t: GuppyType, subst: Subst | None) -> Subst | None:
     return None
 
 
-def _unify_var(var: FreeTypeVar, t: GuppyType, subst: Subst) -> Subst | None:
+def _unify_var(var: ExistentialTypeVar, t: GuppyType, subst: Subst) -> Subst | None:
     """Helper function for unification of type variables."""
     if var in subst:
         return unify(subst[var], t, subst)
-    if isinstance(t, FreeTypeVar) and t in subst:
+    if isinstance(t, ExistentialTypeVar) and t in subst:
         return unify(var, subst[t], subst)
-    if var in t.free_vars:
+    if var in t.unsolved_vars:
         return None
     return {var: t, **subst}
 
