@@ -26,6 +26,7 @@ jobs:
         with:
           command: build
           sccache: 'true'
+          rust-toolchain: '1.75'
           working-directory: validator
 
       - name: Install Hugr validator
