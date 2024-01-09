@@ -485,7 +485,11 @@ class TypeApply(LeafOp):
 
 class TypeApplication(BaseModel):
     """Records details of an application of a PolyFuncType to some TypeArgs and the
-    result (a less-, but still potentially-, polymorphic type)."""
+    result (a less-, but still potentially-, polymorphic type).
+
+    Note that Guppy only generates full type applications, where the result is a
+    monomorphic type. Partial type applications are not used by Guppy.
+    """
 
     input: PolyFuncType
     args: list[tys.TypeArg]
