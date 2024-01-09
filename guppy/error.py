@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, TypeVar, cast
 
 from guppy.ast_util import AstNode, get_file, get_line_offset, get_source
-from guppy.gtypes import BoundTypeVar, FreeTypeVar, FunctionType, GuppyType
+from guppy.gtypes import BoundTypeVar, ExistentialTypeVar, FunctionType, GuppyType
 from guppy.hugr.hugr import Node, OutPortV
 
 # Whether the interpreter should exit when a Guppy error occurs
@@ -128,7 +128,7 @@ class UnknownFunctionType(FunctionType):
         raise InternalGuppyError("Tried to access unknown function type")
 
     @property
-    def free_vars(self) -> set[FreeTypeVar]:
+    def unsolved_vars(self) -> set[ExistentialTypeVar]:
         return set()
 
 

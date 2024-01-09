@@ -34,7 +34,7 @@ from guppy.error import (
 )
 from guppy.gtypes import (
     BoolType,
-    FreeTypeVar,
+    ExistentialTypeVar,
     FunctionType,
     GuppyType,
     Inst,
@@ -119,7 +119,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         resolved type variables.
         """
         # When checking against a variable, we have to synthesize
-        if isinstance(ty, FreeTypeVar):
+        if isinstance(ty, ExistentialTypeVar):
             expr, syn_ty = self._synthesize(expr, allow_free_vars=False)
             return with_type(syn_ty, expr), {ty: syn_ty}
 
@@ -199,7 +199,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         if ty := get_type_opt(node):
             return node, ty
         node, ty = self.visit(node)
-        if ty.free_vars and not allow_free_vars:
+        if ty.unsolved_vars and not allow_free_vars:
             raise GuppyTypeError(
                 f"Cannot infer type variable in expression of type `{ty}`", node
             )
@@ -355,7 +355,7 @@ def check_type_against(
     be quantified and the actual type may not contain free unification variables.
     """
     assert not isinstance(exp, FunctionType) or not exp.quantified
-    assert not act.free_vars
+    assert not act.unsolved_vars
 
     # The actual type may be quantified. In that case, we have to find an instantiation
     # to avoid higher-rank types.
@@ -374,7 +374,7 @@ def check_type_against(
                     "rank polymorphic types are not supported)",
                     node,
                 )
-            if subst[v].free_vars:
+            if subst[v].unsolved_vars:
                 raise GuppyTypeError(
                     f"Expected {kind} of type `{exp}`, got `{act}`. Can't instantiate "
                     f"type variable `{act.quantified[i]}` with type `{subst[v]}` "
@@ -382,15 +382,15 @@ def check_type_against(
                     node,
                 )
         inst = [subst[v] for v in free_vars]
-        subst = {v: t for v, t in subst.items() if v in exp.free_vars}
+        subst = {v: t for v, t in subst.items() if v in exp.unsolved_vars}
 
         # Finally, check that the instantiation respects the linearity requirements
         check_inst(act, inst, node)
 
         return subst, inst
 
-    # Otherwise, we know that `act` has no free type vars, so unification is trivial
-    assert not act.free_vars
+    # Otherwise, we know that `act` has no unsolved type vars, so unification is trivial
+    assert not act.unsolved_vars
     subst = unify(exp, act, {})
     if subst is None:
         raise GuppyTypeError(f"Expected {kind} of type `{exp}`, got `{act}`", node)
@@ -434,10 +434,10 @@ def type_check_args(
 
     # If the argument check succeeded, this means that we must have found instantiations
     # for all unification variables occurring in the argument types
-    assert all(set.issubset(arg.free_vars, subst.keys()) for arg in func_ty.args)
+    assert all(set.issubset(arg.unsolved_vars, subst.keys()) for arg in func_ty.args)
 
     # We also have to check that we found instantiations for all vars in the return type
-    if not set.issubset(func_ty.returns.free_vars, subst.keys()):
+    if not set.issubset(func_ty.returns.unsolved_vars, subst.keys()):
         raise GuppyTypeInferenceError(
             f"Cannot infer type variable in expression of type "
             f"`{func_ty.returns.substitute(subst)}`",
@@ -455,7 +455,7 @@ def synthesize_call(
     Returns an annotated argument list, the synthesized return type, and an
     instantiation for the quantifiers in the function type.
     """
-    assert not func_ty.free_vars
+    assert not func_ty.unsolved_vars
     check_num_args(len(func_ty.args), len(args), node)
 
     # Replace quantified variables with free unification variables and try to infer an
@@ -464,7 +464,7 @@ def synthesize_call(
     args, subst = type_check_args(args, unquantified, {}, ctx, node)
 
     # Success implies that the substitution is closed
-    assert all(not t.free_vars for t in subst.values())
+    assert all(not t.unsolved_vars for t in subst.values())
     inst = [subst[v] for v in free_vars]
 
     # Finally, check that the instantiation respects the linearity requirements
@@ -486,7 +486,7 @@ def check_call(
     Returns an annotated argument list, a substitution for the free variables in the
     expected type, and an instantiation for the quantifiers in the function type.
     """
-    assert not func_ty.free_vars
+    assert not func_ty.unsolved_vars
     check_num_args(len(func_ty.args), len(args), node)
 
     # When checking, we can use the information from the expected return type to infer
@@ -536,7 +536,7 @@ def check_call(
 
     # Also make sure we found an instantiation for all free vars in the type we're
     # checking against
-    if not set.issubset(ty.free_vars, subst.keys()):
+    if not set.issubset(ty.unsolved_vars, subst.keys()):
         raise GuppyTypeInferenceError(
             f"Expected expression of type `{ty}`, got "
             f"`{func_ty.returns.substitute(subst)}`. Couldn't infer type variables",
@@ -544,9 +544,9 @@ def check_call(
         )
 
     # Success implies that the substitution is closed
-    assert all(not t.free_vars for t in subst.values())
+    assert all(not t.unsolved_vars for t in subst.values())
     inst = [subst[v] for v in free_vars]
-    subst = {v: t for v, t in subst.items() if v in ty.free_vars}
+    subst = {v: t for v, t in subst.items() if v in ty.unsolved_vars}
 
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
