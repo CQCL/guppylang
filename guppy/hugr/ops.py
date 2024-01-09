@@ -476,6 +476,26 @@ class Tag(LeafOp):
     variants: TypeRow  # The variants of the sum type.
 
 
+class TypeApply(LeafOp):
+    """Fixes some TypeParams of a polymorphic type by providing TypeArgs"""
+
+    lop: Literal["TypeApply"] = "TypeApply"
+    ta: "TypeApplication"
+
+
+class TypeApplication(BaseModel):
+    """Records details of an application of a PolyFuncType to some TypeArgs and the
+    result (a less-, but still potentially-, polymorphic type).
+
+    Note that Guppy only generates full type applications, where the result is a
+    monomorphic type. Partial type applications are not used by Guppy.
+    """
+
+    input: PolyFuncType
+    args: list[tys.TypeArg]
+    output: PolyFuncType
+
+
 LeafOpUnion = Annotated[
     (
         CustomOp
@@ -498,6 +518,7 @@ LeafOpUnion = Annotated[
         | UnpackTuple
         | MakeNewType
         | Tag
+        | TypeApply
     ),
     Field(discriminator="lop"),
 ]

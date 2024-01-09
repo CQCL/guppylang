@@ -9,7 +9,7 @@ from guppy.compiler.core import (
     DFContainer,
     PortVariable,
 )
-from guppy.gtypes import FunctionType, type_to_row
+from guppy.gtypes import FunctionType, Inst, type_to_row
 from guppy.hugr.hugr import DFContainingVNode, Hugr, OutPortV
 from guppy.nodes import CheckedNestedFunctionDef
 
@@ -26,12 +26,20 @@ class CompiledFunctionDef(DefinedFunction, CompiledFunction):
     def compile_call(
         self,
         args: list[OutPortV],
+        type_args: Inst,
         dfg: DFContainer,
         graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
     ) -> list[OutPortV]:
-        call = graph.add_call(self.node.out_port(0), args, dfg.node)
+        # TODO: Hugr should probably allow us to pass type args to `Call`, so we can
+        #   avoid loading the function to manually add a `TypeApply`
+        if type_args:
+            func = graph.add_load_constant(self.node.out_port(0), dfg.node)
+            func = graph.add_type_apply(func.out_port(0), type_args, dfg.node)
+            call = graph.add_indirect_call(func.out_port(0), args, dfg.node)
+        else:
+            call = graph.add_call(self.node.out_port(0), args, dfg.node)
         return [call.out_port(i) for i in range(len(type_to_row(self.ty.returns)))]
 
 

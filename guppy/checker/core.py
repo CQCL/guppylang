@@ -9,6 +9,7 @@ from guppy.gtypes import (
     FunctionType,
     GuppyType,
     NoneType,
+    Subst,
     SumType,
     TupleType,
 )
@@ -33,7 +34,7 @@ class CallableVariable(ABC, Variable):
     @abstractmethod
     def check_call(
         self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: "Context"
-    ) -> ast.expr:
+    ) -> tuple[ast.expr, Subst]:
         """Checks the return type of a function call against a given type."""
 
     @abstractmethod
@@ -41,6 +42,14 @@ class CallableVariable(ABC, Variable):
         self, args: list[ast.expr], node: AstNode, ctx: "Context"
     ) -> tuple[ast.expr, GuppyType]:
         """Synthesizes the return type of a function call."""
+
+
+@dataclass
+class TypeVarDecl:
+    """A declared type variable."""
+
+    name: str
+    linear: bool
 
 
 class Globals(NamedTuple):
@@ -52,6 +61,7 @@ class Globals(NamedTuple):
 
     values: dict[str, Variable]
     types: dict[str, type[GuppyType]]
+    type_vars: dict[str, TypeVarDecl]
 
     @staticmethod
     def default() -> "Globals":
@@ -63,7 +73,7 @@ class Globals(NamedTuple):
             NoneType.name: NoneType,
             BoolType.name: BoolType,
         }
-        return Globals({}, tys)
+        return Globals({}, tys, {})
 
     def get_instance_func(self, ty: GuppyType, name: str) -> CallableVariable | None:
         """Looks up an instance function with a given name for a type.
@@ -81,11 +91,13 @@ class Globals(NamedTuple):
         return Globals(
             self.values | other.values,
             self.types | other.types,
+            self.type_vars | other.type_vars,
         )
 
     def __ior__(self, other: "Globals") -> "Globals":  # noqa: PYI034
         self.values.update(other.values)
         self.types.update(other.types)
+        self.type_vars.update(other.type_vars)
         return self
 
 

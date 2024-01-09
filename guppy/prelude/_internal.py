@@ -13,7 +13,7 @@ from guppy.custom import (
     DefaultCallChecker,
 )
 from guppy.error import GuppyError, GuppyTypeError
-from guppy.gtypes import BoolType, FunctionType, GuppyType
+from guppy.gtypes import BoolType, FunctionType, GuppyType, Subst, unify
 from guppy.hugr import ops, tys, val
 from guppy.hugr.hugr import OutPortV
 from guppy.nodes import GlobalCall
@@ -98,7 +98,8 @@ class CoercingChecker(DefaultCallChecker):
             args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
             if isinstance(ty, self.ctx.globals.types["int"]):
                 call = with_loc(
-                    self.node, GlobalCall(func=Int.__float__, args=[args[i]])
+                    self.node,
+                    GlobalCall(func=Int.__float__, args=[args[i]], type_args=[]),
                 )
                 args[i] = with_type(self.ctx.globals.types["float"].build(), call)
         return super().synthesize(args)
@@ -116,11 +117,11 @@ class ReversingChecker(CustomCallChecker):
         super()._setup(ctx, node, func)
         self.base_checker._setup(ctx, node, func)
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
-        expr = self.base_checker.check(args, ty)
+    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
+        expr, subst = self.base_checker.check(args, ty)
         if isinstance(expr, GlobalCall):
             expr.args = list(reversed(args))
-        return expr
+        return expr, subst
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
         expr, ty = self.base_checker.synthesize(args)
@@ -140,7 +141,7 @@ class UnsupportedChecker(CustomCallChecker):
             f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
         )
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
+    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
         raise GuppyError(
             f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
         )
@@ -176,7 +177,7 @@ class DunderChecker(CustomCallChecker):
         args, func = self._get_func(args)
         return func.synthesize_call(args, self.node, self.ctx)
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
+    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
         args, func = self._get_func(args)
         return func.check_call(args, ty, self.node, self.ctx)
 
@@ -195,13 +196,14 @@ class CallableChecker(CustomCallChecker):
         const = with_loc(self.node, ast.Constant(value=is_callable))
         return const, BoolType()
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
+    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
         args, _ = self.synthesize(args)
-        if not isinstance(ty, BoolType):
+        subst = unify(ty, BoolType(), {})
+        if subst is None:
             raise GuppyTypeError(
                 f"Expected expression of type `{ty}`, got `bool`", self.node
             )
-        return args
+        return args, subst
 
 
 class IntTruedivCompiler(CustomCallCompiler):
@@ -213,13 +215,13 @@ class IntTruedivCompiler(CustomCallCompiler):
         # Compile `truediv` using float arithmetic
         [left, right] = args
         [left] = Int.__float__.compile_call(
-            [left], self.dfg, self.graph, self.globals, self.node
+            [left], [], self.dfg, self.graph, self.globals, self.node
         )
         [right] = Int.__float__.compile_call(
-            [right], self.dfg, self.graph, self.globals, self.node
+            [right], [], self.dfg, self.graph, self.globals, self.node
         )
         return Float.__truediv__.compile_call(
-            [left, right], self.dfg, self.graph, self.globals, self.node
+            [left, right], [], self.dfg, self.graph, self.globals, self.node
         )
 
 
@@ -235,7 +237,12 @@ class FloatBoolCompiler(CustomCallCompiler):
         )
         zero = self.graph.add_load_constant(zero_const.out_port(0), self.dfg.node)
         return Float.__ne__.compile_call(
-            [args[0], zero.out_port(0)], self.dfg, self.graph, self.globals, self.node
+            [args[0], zero.out_port(0)],
+            [],
+            self.dfg,
+            self.graph,
+            self.globals,
+            self.node,
         )
 
 
@@ -247,10 +254,10 @@ class FloatFloordivCompiler(CustomCallCompiler):
 
         # We have: floordiv(x, y) = floor(truediv(x, y))
         [div] = Float.__truediv__.compile_call(
-            args, self.dfg, self.graph, self.globals, self.node
+            args, [], self.dfg, self.graph, self.globals, self.node
         )
         [floor] = Float.__floor__.compile_call(
-            [div], self.dfg, self.graph, self.globals, self.node
+            [div], [], self.dfg, self.graph, self.globals, self.node
         )
         return [floor]
 
@@ -263,13 +270,13 @@ class FloatModCompiler(CustomCallCompiler):
 
         # We have: mod(x, y) = x - (x // y) * y
         [div] = Float.__floordiv__.compile_call(
-            args, self.dfg, self.graph, self.globals, self.node
+            args, [], self.dfg, self.graph, self.globals, self.node
         )
         [mul] = Float.__mul__.compile_call(
-            [div, args[1]], self.dfg, self.graph, self.globals, self.node
+            [div, args[1]], [], self.dfg, self.graph, self.globals, self.node
         )
         [sub] = Float.__sub__.compile_call(
-            [args[0], mul], self.dfg, self.graph, self.globals, self.node
+            [args[0], mul], [], self.dfg, self.graph, self.globals, self.node
         )
         return [sub]
 
@@ -282,9 +289,9 @@ class FloatDivmodCompiler(CustomCallCompiler):
 
         # We have: divmod(x, y) = (div(x, y), mod(x, y))
         [div] = Float.__truediv__.compile_call(
-            args, self.dfg, self.graph, self.globals, self.node
+            args, [], self.dfg, self.graph, self.globals, self.node
         )
         [mod] = Float.__mod__.compile_call(
-            args, self.dfg, self.graph, self.globals, self.node
+            args, [], self.dfg, self.graph, self.globals, self.node
         )
         return [self.graph.add_make_tuple([div, mod], self.dfg.node).out_port(0)]

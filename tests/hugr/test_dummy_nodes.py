@@ -5,7 +5,7 @@ from guppy.hugr.hugr import Hugr
 
 def test_single_dummy():
     g = Hugr()
-    defn = g.add_def(FunctionType([BoolType()], [BoolType()]), g.root, "test")
+    defn = g.add_def(FunctionType([BoolType()], BoolType()), g.root, "test")
     dfg = g.add_dfg(defn)
     inp = g.add_input([BoolType()], dfg).out_port(0)
     dummy = g.add_node(

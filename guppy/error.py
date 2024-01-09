@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, TypeVar, cast
 
 from guppy.ast_util import AstNode, get_file, get_line_offset, get_source
-from guppy.gtypes import FunctionType, GuppyType
+from guppy.gtypes import BoundTypeVar, ExistentialTypeVar, FunctionType, GuppyType
 from guppy.hugr.hugr import Node, OutPortV
 
 # Whether the interpreter should exit when a Guppy error occurs
@@ -72,6 +72,10 @@ class GuppyTypeError(GuppyError):
     """Special Guppy exception for type errors."""
 
 
+class GuppyTypeInferenceError(GuppyError):
+    """Special Guppy exception for type inference errors."""
+
+
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
 
@@ -119,6 +123,14 @@ class UnknownFunctionType(FunctionType):
     def args_names(self) -> Sequence[str] | None:
         raise InternalGuppyError("Tried to access unknown function type")
 
+    @property
+    def quantified(self) -> Sequence[BoundTypeVar]:
+        raise InternalGuppyError("Tried to access unknown function type")
+
+    @property
+    def unsolved_vars(self) -> set[ExistentialTypeVar]:
+        return set()
+
 
 def format_source_location(
     loc: ast.AST,
@@ -130,7 +142,9 @@ def format_source_location(
     assert source is not None
     assert line_offset is not None
     source_lines = source.splitlines(keepends=True)
-    end_col_offset = loc.end_col_offset or len(source_lines[loc.lineno])
+    end_col_offset = loc.end_col_offset
+    if end_col_offset is None or (loc.end_lineno and loc.end_lineno > loc.lineno):
+        end_col_offset = len(source_lines[loc.lineno - 1]) - 1
     s = "".join(source_lines[max(loc.lineno - num_lines, 0) : loc.lineno]).rstrip()
     s += "\n" + loc.col_offset * " " + (end_col_offset - loc.col_offset) * "^"
     s = textwrap.dedent(s).splitlines()

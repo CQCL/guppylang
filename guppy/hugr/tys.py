@@ -144,10 +144,11 @@ class GeneralSum(Sum):
 
 
 class Variable(BaseModel):
-    """A type variable identified by a name."""
+    """A type variable identified by a de Bruijn index."""
 
-    t: Literal["Var"] = "Var"
-    name: str
+    t: Literal["V"] = "V"
+    i: int
+    b: "TypeBound"
 
 
 class Int(BaseModel):
@@ -207,6 +208,10 @@ class TypeBound(Enum):
     Eq = "E"
     Copyable = "C"
     Any = "A"
+
+    @staticmethod
+    def from_linear(linear: bool) -> "TypeBound":
+        return TypeBound.Any if linear else TypeBound.Copyable
 
 
 class Opaque(BaseModel):
