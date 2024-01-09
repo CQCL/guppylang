@@ -451,7 +451,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             if breaks:
                 raise GuppyTypeError(
                     f"Loop over iterator with linear type `{ty}` cannot be terminated "
-                    f"(cannot ensure that all values have been used)",
+                    f"prematurely",
                     breaks[0],
                 )
         return expr, ty
