@@ -1,4 +1,6 @@
-from typing import Literal
+from __future__ import annotations
+
+from typing import Any, Literal
 
 import ormsgpack
 from pydantic import BaseModel
@@ -17,6 +19,16 @@ class RawHugr(BaseModel):
     def packb(self) -> bytes:
         return ormsgpack.packb(self.model_dump(), option=ormsgpack.OPT_NON_STR_KEYS)
 
+    def to_json(self) -> str:
+        """Return a JSON representation of the Hugr."""
+        return self.model_dump_json()
+
     @classmethod
-    def unpackb(cls, b: bytes) -> "RawHugr":
+    def unpackb(cls, b: bytes) -> RawHugr:
+        """Decode a msgpack-encoded Hugr."""
         return cls(**ormsgpack.unpackb(b, option=ormsgpack.OPT_NON_STR_KEYS))
+
+    @classmethod
+    def load_json(cls, json: dict[Any, Any]) -> RawHugr:
+        """Decode a JSON-encoded Hugr."""
+        return cls(**json)

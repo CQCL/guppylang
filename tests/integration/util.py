@@ -2,7 +2,11 @@ import validator
 
 
 def validate_bytes(hugr: bytes):
-    validator.validate(hugr)
+    validator.validate_bytes(hugr)
+
+
+def validate_json(hugr: str):
+    validator.validate_json(hugr)
 
 
 class Decorator:
