@@ -13,7 +13,6 @@ from guppy.gtypes import (
     FunctionType,
     GuppyType,
     Inst,
-    NoneType,
     SumType,
     TupleType,
     row_to_type,
@@ -155,21 +154,15 @@ class VNode(Node):
         """Returns the input port at the given offset."""
         assert offset is not None
         assert offset < self.num_in_ports
-        if offset < 0:
-            # Order edge
-            return InPortV(self, len(self.in_port_types), NoneType())
-        else:
-            return InPortV(self, offset, self.in_port_types[offset])
+        assert offset != -1, "Cannot get the port of an order edge"
+        return InPortV(self, offset, self.in_port_types[offset])
 
     def out_port(self, offset: PortOffset | None) -> OutPortV:
         """Returns the output port at the given offset."""
         assert offset is not None
         assert offset < self.num_out_ports
-        if offset < 0:
-            # Order edge
-            return OutPortV(self, len(self.out_port_types), NoneType())
-        else:
-            return OutPortV(self, offset, self.out_port_types[offset])
+        assert offset != -1, "Cannot get the port of an order edge"
+        return OutPortV(self, offset, self.out_port_types[offset])
 
     @property
     def in_ports(self) -> Iterator[InPortV]:
@@ -622,6 +615,8 @@ class Hugr:
     def in_edges(self, port: InPort) -> Iterator[Edge]:
         """Returns an iterator over all edges connected to a given in-port."""
         for e in self._graph.in_edges(port.node.idx, keys=True):
+            if e[2] == ORDER_EDGE_KEY:
+                continue
             src, tgt = self._to_edge(*e)
             if tgt.offset == port.offset:
                 yield src, tgt
@@ -629,6 +624,8 @@ class Hugr:
     def out_edges(self, port: OutPort) -> Iterator[Edge]:
         """Returns an iterator over all edges originating from a given out-port."""
         for e in self._graph.out_edges(port.node.idx, keys=True):
+            if e[2] == ORDER_EDGE_KEY:
+                continue
             src, tgt = self._to_edge(*e)
             if src.offset == port.offset:
                 yield src, tgt
