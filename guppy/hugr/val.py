@@ -18,7 +18,7 @@ class FunctionVal(BaseModel):
     """A higher-order function value."""
 
     v: Literal["Function"] = "Function"
-    hugr: Any  # TODO
+    hugr: Any = None  # TODO
 
 
 class Tuple(BaseModel):
@@ -50,4 +50,4 @@ classes = inspect.getmembers(
 )
 for _, c in classes:
     if issubclass(c, BaseModel):
-        c.update_forward_refs()
+        c.model_rebuild()

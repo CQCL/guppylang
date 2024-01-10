@@ -126,7 +126,7 @@ class DataflowBlock(BaseOp):
     def insert_child_dfg_signature(self, inputs: TypeRow, outputs: TypeRow) -> None:
         self.inputs = inputs
         pred = outputs[0]
-        assert isinstance(pred, tys.Sum)
+        assert isinstance(pred, tys.UnitSum | tys.GeneralSum)
         if isinstance(pred, tys.UnitSum):
             self.tuple_sum_rows = [[] for _ in range(pred.size)]
         else:
@@ -555,7 +555,7 @@ OpType = Annotated[
 # --------------------------------------
 
 
-class OpDef(BaseOp, allow_population_by_field_name=True):
+class OpDef(BaseOp, populate_by_name=True):
     """Serializable definition for dynamically loaded operations."""
 
     name: str  # Unique identifier of the operation.
@@ -577,4 +577,4 @@ classes = inspect.getmembers(
 )
 for _, c in classes:
     if issubclass(c, BaseModel):
-        c.update_forward_refs()
+        c.model_rebuild()
