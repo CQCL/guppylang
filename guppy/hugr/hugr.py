@@ -13,6 +13,7 @@ from guppy.gtypes import (
     FunctionType,
     GuppyType,
     Inst,
+    NoneType,
     SumType,
     TupleType,
     row_to_type,
@@ -154,13 +155,21 @@ class VNode(Node):
         """Returns the input port at the given offset."""
         assert offset is not None
         assert offset < self.num_in_ports
-        return InPortV(self, offset, self.in_port_types[offset])
+        if offset < 0:
+            # Order edge
+            return InPortV(self, len(self.in_port_types), NoneType)
+        else:
+            return InPortV(self, offset, self.in_port_types[offset])
 
     def out_port(self, offset: PortOffset | None) -> OutPortV:
         """Returns the output port at the given offset."""
         assert offset is not None
         assert offset < self.num_out_ports
-        return OutPortV(self, offset, self.out_port_types[offset])
+        if offset < 0:
+            # Order edge
+            return OutPortV(self, len(self.out_port_types), NoneType)
+        else:
+            return OutPortV(self, offset, self.out_port_types[offset])
 
     @property
     def in_ports(self) -> Iterator[InPortV]:

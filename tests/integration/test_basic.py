@@ -33,6 +33,7 @@ def test_discard(validate):
         return
 
     validate(discard)
+    validate(discard)
 
 
 def test_implicit_return(validate):
