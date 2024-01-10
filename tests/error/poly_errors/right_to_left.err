@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:22
+
+20:    @guppy(module)
+21:    def main() -> None:
+22:        bar(foo(), 42)
+               ^^^^^
+GuppyTypeInferenceError: Cannot infer type variable in expression of type `?T`

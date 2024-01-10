@@ -16,7 +16,7 @@ from guppy.cfg.bb import BB, BBStatement
 from guppy.checker.core import Context, Variable
 from guppy.checker.expr_checker import ExprChecker, ExprSynthesizer
 from guppy.error import GuppyError, GuppyTypeError, InternalGuppyError
-from guppy.gtypes import GuppyType, NoneType, TupleType, type_from_ast
+from guppy.gtypes import GuppyType, NoneType, Subst, TupleType, type_from_ast
 from guppy.nodes import NestedFunctionDef
 
 
@@ -26,6 +26,7 @@ class StmtChecker(AstVisitor[BBStatement]):
     return_ty: GuppyType
 
     def __init__(self, ctx: Context, bb: BB, return_ty: GuppyType) -> None:
+        assert not return_ty.unsolved_vars
         self.ctx = ctx
         self.bb = bb
         self.return_ty = return_ty
@@ -38,7 +39,7 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def _check_expr(
         self, node: ast.expr, ty: GuppyType, kind: str = "expression"
-    ) -> ast.expr:
+    ) -> tuple[ast.expr, Subst]:
         return ExprChecker(self.ctx).check(node, ty, kind)
 
     def _check_assign(self, lhs: ast.expr, ty: GuppyType, node: ast.stmt) -> None:
@@ -91,7 +92,9 @@ class StmtChecker(AstVisitor[BBStatement]):
                 "Variable declaration is not supported. Assignment is required", node
             )
         ty = type_from_ast(node.annotation, self.ctx.globals)
-        node.value = self._check_expr(node.value, ty)
+        node.value, subst = self._check_expr(node.value, ty)
+        assert not ty.unsolved_vars  # `ty` must be closed!
+        assert len(subst) == 0
         self._check_assign(node.target, ty, node)
         return node
 
@@ -111,7 +114,10 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def visit_Return(self, node: ast.Return) -> ast.stmt:
         if node.value is not None:
-            node.value = self._check_expr(node.value, self.return_ty, "return value")
+            node.value, subst = self._check_expr(
+                node.value, self.return_ty, "return value"
+            )
+            assert len(subst) == 0  # `self.return_ty` is closed!
         elif not isinstance(self.return_ty, NoneType):
             raise GuppyTypeError(
                 f"Expected return value of type `{self.return_ty}`", None

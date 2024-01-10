@@ -3,11 +3,19 @@ from typing import Any
 
 from guppy.ast_util import AstVisitor, get_type
 from guppy.compiler.core import CompiledFunction, CompilerBase, DFContainer
-from guppy.error import InternalGuppyError
-from guppy.gtypes import BoolType, FunctionType, type_to_row
+from guppy.error import GuppyError, InternalGuppyError
+from guppy.gtypes import (
+    BoolType,
+    BoundTypeVar,
+    FunctionType,
+    Inst,
+    NoneType,
+    TupleType,
+    type_to_row,
+)
 from guppy.hugr import ops, val
 from guppy.hugr.hugr import OutPortV
-from guppy.nodes import GlobalCall, GlobalName, LocalCall, LocalName
+from guppy.nodes import GlobalCall, GlobalName, LocalCall, LocalName, TypeApply
 
 
 class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
@@ -71,11 +79,33 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         assert isinstance(func, CompiledFunction)
 
         args = [self.visit(arg) for arg in node.args]
-        rets = func.compile_call(args, self.dfg, self.graph, self.globals, node)
+        rets = func.compile_call(
+            args, list(node.type_args), self.dfg, self.graph, self.globals, node
+        )
         return self._pack_returns(rets)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
+
+    def visit_TypeApply(self, node: TypeApply) -> OutPortV:
+        func = self.visit(node.value)
+        assert isinstance(func.ty, FunctionType)
+        ta = self.graph.add_type_apply(func, node.tys, self.dfg.node).out_port(0)
+
+        # We have to be very careful here: If we instantiate `foo: forall T. T -> T`
+        # with a tuple type `tuple[A, B]`, we get the type `tuple[A, B] -> tuple[A, B]`.
+        # Normally, this would be represented in Hugr as a function with two output
+        # ports types A and B. However, when TypeApplying `foo`, we actually get a
+        # function with a single output port typed `tuple[A, B]`.
+        # TODO: We would need to do manual monomorphisation in that case to obtain a
+        #  function that returns two ports as expected
+        if instantiation_needs_unpacking(func.ty, node.tys):
+            raise GuppyError(
+                "Generic function instantiations returning rows are not supported yet",
+                node,
+            )
+
+        return ta
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> OutPortV:
         # The only case that is not desugared by the type checker is the `not` operation
@@ -98,6 +128,14 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 def expr_to_row(expr: ast.expr) -> list[ast.expr]:
     """Turns an expression into a row expressions by unpacking top-level tuples."""
     return expr.elts if isinstance(expr, ast.Tuple) else [expr]
+
+
+def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
+    """Checks if instantiating a polymorphic makes it return a row."""
+    if isinstance(func_ty.returns, BoundTypeVar):
+        return_ty = inst[func_ty.returns.idx]
+        return isinstance(return_ty, TupleType | NoneType)
+    return False
 
 
 def python_value_to_hugr(v: Any) -> val.Value | None:

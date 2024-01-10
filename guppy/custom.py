@@ -11,7 +11,7 @@ from guppy.error import (
     InternalGuppyError,
     UnknownFunctionType,
 )
-from guppy.gtypes import FunctionType, GuppyType, type_to_row
+from guppy.gtypes import FunctionType, GuppyType, Inst, Subst, type_to_row
 from guppy.hugr import ops
 from guppy.hugr.hugr import DFContainingVNode, Hugr, Node, OutPortV
 from guppy.nodes import GlobalCall
@@ -84,9 +84,10 @@ class CustomFunction(CompiledFunction):
 
     def check_call(
         self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context
-    ) -> ast.expr:
+    ) -> tuple[ast.expr, Subst]:
         self.call_checker._setup(ctx, node, self)
-        return with_type(ty, with_loc(node, self.call_checker.check(args, ty)))
+        new_node, subst = self.call_checker.check(args, ty)
+        return with_type(ty, with_loc(node, new_node)), subst
 
     def synthesize_call(
         self, args: list[ast.expr], node: AstNode, ctx: "Context"
@@ -98,12 +99,13 @@ class CustomFunction(CompiledFunction):
     def compile_call(
         self,
         args: list[OutPortV],
+        type_args: Inst,
         dfg: DFContainer,
         graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
     ) -> list[OutPortV]:
-        self.call_compiler._setup(dfg, graph, globals, node)
+        self.call_compiler._setup(type_args, dfg, graph, globals, node)
         return self.call_compiler.compile(args)
 
     def load(
@@ -119,6 +121,12 @@ class CustomFunction(CompiledFunction):
             raise GuppyError(
                 "This function does not support usage in a higher-order context",
                 node,
+            )
+
+        if self._ty.quantified:
+            raise InternalGuppyError(
+                "Can't yet generate higher-order versions of custom functions. This "
+                "requires generic function *definitions*"
             )
 
         # Find the module node by walking up the hierarchy
@@ -137,7 +145,7 @@ class CustomFunction(CompiledFunction):
             def_node = graph.add_def(self.ty, module, self.name)
             _, inp_ports = graph.add_input_with_ports(list(self.ty.args), def_node)
             returns = self.compile_call(
-                inp_ports, DFContainer(def_node, {}), graph, globals, node
+                inp_ports, [], DFContainer(def_node, {}), graph, globals, node
             )
             graph.add_output(returns, parent=def_node)
             self._defined[module] = def_node
@@ -161,7 +169,7 @@ class CustomCallChecker(ABC):
         self.func = func
 
     @abstractmethod
-    def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
+    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
         """Checks the return value against a given type.
 
         Returns a (possibly) transformed and annotated AST node for the call.
@@ -178,14 +186,21 @@ class CustomCallChecker(ABC):
 class CustomCallCompiler(ABC):
     """Protocol for custom function call compilers."""
 
+    type_args: Inst
     dfg: DFContainer
     graph: Hugr
     globals: CompiledGlobals
     node: AstNode
 
     def _setup(
-        self, dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode
+        self,
+        type_args: Inst,
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: CompiledGlobals,
+        node: AstNode,
     ) -> None:
+        self.type_args = type_args
         self.dfg = dfg
         self.graph = graph
         self.globals = globals
@@ -199,15 +214,15 @@ class CustomCallCompiler(ABC):
 class DefaultCallChecker(CustomCallChecker):
     """Checks function calls by comparing to a type signature."""
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> ast.expr:
+    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
         # Use default implementation from the expression checker
-        args = check_call(self.func.ty, args, ty, self.node, self.ctx)
-        return GlobalCall(func=self.func, args=args)
+        args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
+        return GlobalCall(func=self.func, args=args, type_args=inst), subst
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
         # Use default implementation from the expression checker
-        args, ty = synthesize_call(self.func.ty, args, self.node, self.ctx)
-        return GlobalCall(func=self.func, args=args), ty
+        args, ty, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
+        return GlobalCall(func=self.func, args=args, type_args=inst), ty
 
 
 class DefaultCallCompiler(CustomCallCompiler):

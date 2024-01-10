@@ -12,12 +12,13 @@ import guppy.hugr.raw as raw
 from guppy.gtypes import (
     FunctionType,
     GuppyType,
+    Inst,
     SumType,
     TupleType,
     row_to_type,
     type_to_row,
 )
-from guppy.hugr import val
+from guppy.hugr import tys, val
 
 NodeIdx = int
 PortOffset = int
@@ -391,7 +392,10 @@ class Hugr:
     def add_block(self, parent: Node | None, num_successors: int = 0) -> BlockNode:
         """Adds a `Block` node to the graph."""
         node = BlockNode(
-            idx=self._graph.number_of_nodes(), op=ops.DFB(), parent=parent, meta_data={}
+            idx=self._graph.number_of_nodes(),
+            op=ops.DataflowBlock(),
+            parent=parent,
+            meta_data={},
         )
         self._insert_node(node)
         for _ in range(num_successors):
@@ -403,7 +407,7 @@ class Hugr:
         outputs = [ty.to_hugr() for ty in output_tys]
         node = CFNode(
             idx=self._graph.number_of_nodes(),
-            op=ops.Exit(cfg_outputs=outputs),
+            op=ops.ExitBlock(cfg_outputs=outputs),
             parent=parent,
             meta_data={},
         )
@@ -522,6 +526,25 @@ class Hugr:
         )
         return self.add_node(
             ops.DummyOp(name="partial"), None, [new_ty], parent, [*args, def_port]
+        )
+
+    def add_type_apply(
+        self, func_port: OutPortV, args: Inst, parent: Node | None = None
+    ) -> VNode:
+        """Adds a `TypeApply` node to the graph."""
+        assert isinstance(func_port.ty, FunctionType)
+        assert len(func_port.ty.quantified) == len(args)
+        result_ty = func_port.ty.instantiate(args)
+        ta = ops.TypeApplication(
+            input=func_port.ty.to_hugr(),
+            args=[tys.TypeArg(ty=ty.to_hugr()) for ty in args],
+            output=result_ty.to_hugr(),
+        )
+        return self.add_node(
+            ops.TypeApply(ta=ta),
+            inputs=[func_port],
+            output_types=[result_ty],
+            parent=parent,
         )
 
     def add_def(
@@ -702,11 +725,11 @@ class Hugr:
             elif isinstance(n.op, ops.Output):
                 output_nodes.append(n)
             elif (
-                isinstance(n.op, ops.DFB)
+                isinstance(n.op, ops.DataflowBlock)
                 and next(self.in_edges(n.in_port(None)), None) is None
             ):
                 entry_nodes.append(n)
-            elif isinstance(n.op, ops.Exit):
+            elif isinstance(n.op, ops.ExitBlock):
                 exit_nodes.append(n)
             else:
                 remaining_nodes.append(n)

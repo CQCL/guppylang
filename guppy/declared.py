@@ -7,7 +7,7 @@ from guppy.checker.expr_checker import check_call, synthesize_call
 from guppy.checker.func_checker import check_signature
 from guppy.compiler.core import CompiledFunction, CompiledGlobals, DFContainer
 from guppy.error import GuppyError
-from guppy.gtypes import GuppyType, type_to_row
+from guppy.gtypes import GuppyType, Inst, Subst, type_to_row
 from guppy.hugr.hugr import Hugr, Node, OutPortV, VNode
 from guppy.nodes import GlobalCall
 
@@ -31,17 +31,17 @@ class DeclaredFunction(CompiledFunction):
 
     def check_call(
         self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context
-    ) -> GlobalCall:
+    ) -> tuple[ast.expr, Subst]:
         # Use default implementation from the expression checker
-        args = check_call(self.ty, args, ty, node, ctx)
-        return GlobalCall(func=self, args=args)
+        args, subst, inst = check_call(self.ty, args, ty, node, ctx)
+        return GlobalCall(func=self, args=args, type_args=inst), subst
 
     def synthesize_call(
         self, args: list[ast.expr], node: AstNode, ctx: Context
     ) -> tuple[GlobalCall, GuppyType]:
         # Use default implementation from the expression checker
-        args, ty = synthesize_call(self.ty, args, node, ctx)
-        return GlobalCall(func=self, args=args), ty
+        args, ty, inst = synthesize_call(self.ty, args, node, ctx)
+        return GlobalCall(func=self, args=args, type_args=inst), ty
 
     def add_to_graph(self, graph: Hugr, parent: Node) -> None:
         self.node = graph.add_declare(self.ty, parent, self.name)
@@ -55,11 +55,19 @@ class DeclaredFunction(CompiledFunction):
     def compile_call(
         self,
         args: list[OutPortV],
+        type_args: Inst,
         dfg: DFContainer,
         graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
     ) -> list[OutPortV]:
         assert self.node is not None
-        call = graph.add_call(self.node.out_port(0), args, dfg.node)
+        # TODO: Hugr should probably allow us to pass type args to `Call`, so we can
+        #   avoid loading the function to manually add a `TypeApply`
+        if type_args:
+            func = graph.add_load_constant(self.node.out_port(0), dfg.node)
+            func = graph.add_type_apply(func.out_port(0), type_args, dfg.node)
+            call = graph.add_indirect_call(func.out_port(0), args, dfg.node)
+        else:
+            call = graph.add_call(self.node.out_port(0), args, dfg.node)
         return [call.out_port(i) for i in range(len(type_to_row(self.ty.returns)))]

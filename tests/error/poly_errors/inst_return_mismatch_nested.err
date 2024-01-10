@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:17
+
+15:    @guppy(module)
+16:    def main(x: bool) -> None:
+17:        y: None = foo(foo(foo(x)))
+                     ^^^^^^^^^^^^^^^^
+GuppyTypeError: Expected expression of type `None`, got `bool`
