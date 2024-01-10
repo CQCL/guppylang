@@ -7,7 +7,7 @@ name = "guppy"
 authors = [{ name = "Mark Koch", email = "mark.koch@quantinuum.com" }]
 version = "0.1.0"
 requires-python = ">=3.9"
-dependencies = ["graphviz", "networkx", "ormsgpack", "pydantic==1.10.8"]
+dependencies = ["graphviz", "networkx", "ormsgpack", "pydantic==2.5.3"]
 readme = "README.md"
 license = { text = "Apache-2.0" }
 

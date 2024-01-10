@@ -50,4 +50,4 @@ classes = inspect.getmembers(
 )
 for _, c in classes:
     if issubclass(c, BaseModel):
-        c.update_forward_refs()
+        c.model_rebuild()
