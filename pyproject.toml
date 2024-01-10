@@ -9,7 +9,7 @@ version = "0.1.0"
 requires-python = ">=3.9"
 dependencies = ["graphviz", "networkx", "ormsgpack", "pydantic==1.10.8"]
 readme = "README.md"
-license = "Apache-2.0"
+license = { text = "Apache-2.0" }
 
 [project.optional-dependencies]
 dev = [
