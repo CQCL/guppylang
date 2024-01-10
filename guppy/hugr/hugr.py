@@ -157,7 +157,7 @@ class VNode(Node):
         assert offset < self.num_in_ports
         if offset < 0:
             # Order edge
-            return InPortV(self, len(self.in_port_types), NoneType)
+            return InPortV(self, len(self.in_port_types), NoneType())
         else:
             return InPortV(self, offset, self.in_port_types[offset])
 
@@ -167,7 +167,7 @@ class VNode(Node):
         assert offset < self.num_out_ports
         if offset < 0:
             # Order edge
-            return OutPortV(self, len(self.out_port_types), NoneType)
+            return OutPortV(self, len(self.out_port_types), NoneType())
         else:
             return OutPortV(self, offset, self.out_port_types[offset])
 
