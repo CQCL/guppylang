@@ -18,7 +18,7 @@ class FunctionVal(BaseModel):
     """A higher-order function value."""
 
     v: Literal["Function"] = "Function"
-    hugr: Any = None  # TODO
+    hugr: Any  # TODO
 
 
 class Tuple(BaseModel):

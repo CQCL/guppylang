@@ -23,7 +23,7 @@ class TypeParam(BaseModel):
 
 class BoundedNatParam(BaseModel):
     tp: Literal["BoundedNat"] = "BoundedNat"
-    bound: int | None = None
+    bound: int | None
 
 
 class OpaqueParam(BaseModel):
