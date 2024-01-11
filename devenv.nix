@@ -3,7 +3,10 @@
 {
   languages.python = {
     enable = true;
-    venv.enable = true;
+    poetry = {
+      enable = true;
+      activate.enable = true;
+    };
   };
 
   languages.rust = {
