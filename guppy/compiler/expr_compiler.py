@@ -65,6 +65,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         """
         old = self.dfg
         inp = self.graph.add_input(parent=node)
+        # Check that the input names are unique
+        assert len({inp.id for inp in inputs}) == len(inputs), "Inputs are not unique"
         new_locals = {
             name.id: PortVariable(name.id, inp.add_out_port(get_type(name)), name, None)
             for name in inputs
