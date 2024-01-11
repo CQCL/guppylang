@@ -237,7 +237,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
                     [self.visit(gen.iter), self.visit(list_name)],
                 )
 
-                # If the iterator is finished, output the iterator and list as is
+                # If the iterator is finished, output the iterator and list as is (this
+                # is achieved by passing `inputs, inputs` below)
                 with self._new_case(inputs, inputs, cond):
                     pass
 
