@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any, Literal
 
 import ormsgpack
@@ -24,11 +22,11 @@ class RawHugr(BaseModel):
         return self.model_dump_json()
 
     @classmethod
-    def unpackb(cls, b: bytes) -> RawHugr:
+    def unpackb(cls, b: bytes) -> "RawHugr":
         """Decode a msgpack-encoded Hugr."""
         return cls(**ormsgpack.unpackb(b, option=ormsgpack.OPT_NON_STR_KEYS))
 
     @classmethod
-    def load_json(cls, json: dict[Any, Any]) -> RawHugr:
+    def load_json(cls, json: dict[Any, Any]) -> "RawHugr":
         """Decode a JSON-encoded Hugr."""
         return cls(**json)
