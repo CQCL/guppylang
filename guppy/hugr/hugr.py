@@ -708,14 +708,14 @@ class Hugr:
                 continue
 
             if src.node.parent != tgt.node.parent:
-                # Walk up the hierarchy from the src until we hit a node at the same
-                # level as tgt
+                # Walk up the hierarchy from the tgt until we hit a node at the same
+                # level as src
                 node = tgt.node
                 while node.parent != src.node.parent:
                     if node.parent is None:
                         raise ValueError("Invalid non-local edge!")
                     node = node.parent
-                # Edge order edge to make sure that the src is executed first
+                # Add order edge to make sure that the src is executed first
                 self.add_order_edge(src.node, node)
         return self
 
