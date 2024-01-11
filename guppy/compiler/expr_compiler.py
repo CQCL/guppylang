@@ -234,7 +234,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
                 compiler.compile_stmts([gen.hasnext_assign], self.dfg)
                 cond = self.graph.add_conditional(
                     self.visit(gen.hasnext),
-                    [self.visit(gen.iter), self.visit(list_name)],
+                    [self.visit(inp) for inp in inputs],
                 )
 
                 # If the iterator is finished, output the iterator and list as is (this
