@@ -134,6 +134,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         ).out_port(0)
 
     def visit_List(self, node: ast.List) -> OutPortV:
+        # Note that this is a list literal (i.e. `[e1, e2, ...]`), not a comprehension
         return self.graph.add_node(
             ops.DummyOp(name="MakeList"), inputs=[self.visit(e) for e in node.elts]
         ).add_out_port(get_type(node))
