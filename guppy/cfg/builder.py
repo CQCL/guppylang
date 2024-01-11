@@ -185,7 +185,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         bb.statements.append(new_node)
         return bb
 
-    def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:  # type: ignore[override]
+    def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:
         # When adding support for new statements, we have to remember to use the
         # ExprBuilder to transform all included expressions!
         raise GuppyError("Statement is not supported", node)
@@ -365,7 +365,7 @@ class BranchBuilder(AstVisitor[None]):
         self.visit(node.body, then_bb, true_bb, false_bb)
         self.visit(node.orelse, else_bb, true_bb, false_bb)
 
-    def generic_visit(self, node: ast.expr, bb: BB, true_bb: BB, false_bb: BB) -> None:  # type: ignore[override]
+    def generic_visit(self, node: ast.expr, bb: BB, true_bb: BB, false_bb: BB) -> None:
         # We can always fall back to building the node as a regular expression and using
         # the result as a branch predicate
         pred, bb = ExprBuilder.build(node, self.cfg, bb)
