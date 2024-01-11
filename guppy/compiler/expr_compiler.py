@@ -85,7 +85,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `TailLoop` node.
 
-        Automatically adds the `Output` node once the context manager exists.
+        Automatically adds the `Output` node to the loop body once the context manager
+        exits.
         """
         loop = self.graph.add_tail_loop([self.visit(name) for name in variants], parent)
         with self._new_dfcontainer(variants, loop):
@@ -104,7 +105,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `Case` node.
 
-        Automatically adds the `Output` node once the context manager exists.
+        Automatically adds the `Output` node once the context manager exits.
         """
         with self._new_dfcontainer(inputs, self.graph.add_case(cond_node)):
             yield
