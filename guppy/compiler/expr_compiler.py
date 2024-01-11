@@ -113,7 +113,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         # Update the DFG with the outputs from the Conditional node, but only we haven't
         # already added some
         if cond_node.num_out_ports == 0:
-            for name in inputs:
+            for name in outputs:
                 self.dfg[name.id].port = cond_node.add_out_port(get_type(name))
 
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
