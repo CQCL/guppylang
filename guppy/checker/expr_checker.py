@@ -170,9 +170,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         else:
             raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
 
-    def generic_visit(  # type: ignore[override]
-        self, node: ast.expr, ty: GuppyType
-    ) -> tuple[ast.expr, Subst]:
+    def generic_visit(self, node: ast.expr, ty: GuppyType) -> tuple[ast.expr, Subst]:
         # Try to synthesize and then check if we can unify it with the given type
         node, synth = self._synthesize(node, allow_free_vars=False)
         subst, inst = check_type_against(synth, ty, node, self._kind)

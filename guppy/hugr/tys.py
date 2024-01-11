@@ -1,6 +1,5 @@
 import inspect
 import sys
-from abc import ABC
 from enum import Enum
 from typing import Annotated, Literal
 
@@ -118,26 +117,25 @@ class Tuple(BaseModel):
     inner: "TypeRow"
 
 
-class Sum(ABC, BaseModel):
-    """Sum type, variants are tagged by their position in the type row"""
+class UnitSum(BaseModel):
+    """Simple predicate where all variants are empty tuples"""
 
     t: Literal["Sum"] = "Sum"
-
-
-class UnitSum(Sum):
-    """Simple predicate where all variants are empty tuples"""
 
     s: Literal["Unit"] = "Unit"
     size: int
 
 
-class GeneralSum(Sum):
+class GeneralSum(BaseModel):
     """General sum type that explicitly stores the types of the variants"""
+
+    t: Literal["Sum"] = "Sum"
 
     s: Literal["General"] = "General"
     row: "TypeRow"
 
 
+Sum = Annotated[UnitSum | GeneralSum, Field(discriminator="s")]
 # ----------------------------------------------
 # --------------- ClassicType ------------------
 # ----------------------------------------------
@@ -284,4 +282,4 @@ classes = inspect.getmembers(
 )
 for _, c in classes:
     if issubclass(c, BaseModel):
-        c.update_forward_refs()
+        c.model_rebuild()

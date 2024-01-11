@@ -239,7 +239,9 @@ class OpCompiler(CustomCallCompiler):
         self.op = op
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        node = self.graph.add_node(self.op.copy(), inputs=args, parent=self.dfg.node)
+        node = self.graph.add_node(
+            self.op.model_copy(), inputs=args, parent=self.dfg.node
+        )
         return_ty = get_type(self.node)
         return [node.add_out_port(ty) for ty in type_to_row(return_ty)]
 

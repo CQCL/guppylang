@@ -15,7 +15,7 @@ class RawHugr(BaseModel):
     edges: list[Edge]
 
     def packb(self) -> bytes:
-        return ormsgpack.packb(self.dict(), option=ormsgpack.OPT_NON_STR_KEYS)
+        return ormsgpack.packb(self.model_dump(), option=ormsgpack.OPT_NON_STR_KEYS)
 
     @classmethod
     def unpackb(cls, b: bytes) -> "RawHugr":

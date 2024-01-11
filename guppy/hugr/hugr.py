@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-import networkx as nx  # type: ignore[import]
+import networkx as nx  # type: ignore[import-untyped]
 
 import guppy.hugr.ops as ops
 import guppy.hugr.raw as raw
@@ -154,12 +154,14 @@ class VNode(Node):
         """Returns the input port at the given offset."""
         assert offset is not None
         assert offset < self.num_in_ports
+        assert offset != -1, "Cannot get the port of an order edge"
         return InPortV(self, offset, self.in_port_types[offset])
 
     def out_port(self, offset: PortOffset | None) -> OutPortV:
         """Returns the output port at the given offset."""
         assert offset is not None
         assert offset < self.num_out_ports
+        assert offset != -1, "Cannot get the port of an order edge"
         return OutPortV(self, offset, self.out_port_types[offset])
 
     @property
@@ -613,6 +615,8 @@ class Hugr:
     def in_edges(self, port: InPort) -> Iterator[Edge]:
         """Returns an iterator over all edges connected to a given in-port."""
         for e in self._graph.in_edges(port.node.idx, keys=True):
+            if e[2] == ORDER_EDGE_KEY:
+                continue
             src, tgt = self._to_edge(*e)
             if tgt.offset == port.offset:
                 yield src, tgt
@@ -620,6 +624,8 @@ class Hugr:
     def out_edges(self, port: OutPort) -> Iterator[Edge]:
         """Returns an iterator over all edges originating from a given out-port."""
         for e in self._graph.out_edges(port.node.idx, keys=True):
+            if e[2] == ORDER_EDGE_KEY:
+                continue
             src, tgt = self._to_edge(*e)
             if src.offset == port.offset:
                 yield src, tgt
