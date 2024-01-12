@@ -21,6 +21,7 @@ can be used to infer a type for an expression.
 """
 
 import ast
+import sys
 import traceback
 from contextlib import suppress
 from typing import Any, NoReturn, cast
@@ -326,6 +327,14 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             raise GuppyTypeError(f"Expected function type, got `{ty}`", node.func)
 
     def visit_PyExpr(self, node: PyExpr) -> tuple[ast.expr, GuppyType]:
+        # The method we used for obtaining the Python variables in scope only works in
+        # CPython (see `get_py_scope()`).
+        if sys.implementation.name != "cpython":
+            raise GuppyError(
+                "Compile-time `py(...)` expressions are only supported in CPython",
+                node
+            )
+
         try:
             python_val = eval(  # noqa: S307, PGH001
                 ast.unparse(node.value),

@@ -48,7 +48,7 @@ class _Guppy:
 
             def dec(f: Callable[..., Any]) -> Callable[..., Any]:
                 assert isinstance(arg, GuppyModule)
-                arg.register_func_def(f, get_python_scope())
+                arg.register_func_def(f)
 
                 @functools.wraps(f)
                 def dummy(*args: Any, **kwargs: Any) -> Any:
@@ -61,7 +61,7 @@ class _Guppy:
             return dec
         else:
             module = self._module or GuppyModule("module")
-            module.register_func_def(arg, get_python_scope())
+            module.register_func_def(arg)
             return module.compile()
 
     @pretty_errors
@@ -70,7 +70,7 @@ class _Guppy:
         module._instance_func_buffer = {}
 
         def dec(c: type) -> type:
-            module._register_buffered_instance_funcs(ty, get_python_scope())
+            module._register_buffered_instance_funcs(ty)
             return c
 
         return dec
@@ -130,7 +130,7 @@ class _Guppy:
             NewType.__name__ = name
             NewType.__qualname__ = _name
             module.register_type(_name, NewType)
-            module._register_buffered_instance_funcs(NewType, get_python_scope())
+            module._register_buffered_instance_funcs(NewType)
             setattr(c, "_guppy_type", NewType)
             return c
 
@@ -208,37 +208,3 @@ class _Guppy:
 
 
 guppy = _Guppy()
-
-
-def get_python_scope() -> PyScope:
-    """Looks up all available Python variables from the call-site.
-
-    Walks up the call stack until we have left the `guppy` module.
-    """
-    # Note that this approach will yield unintended results if the user doesn't invoke
-    # the decorator directly. For example:
-    #
-    #       def my_dec(f):
-    #           some_local = ...
-    #           return guppy(f)
-    #
-    #       @my_dec
-    #       def guppy_func(x: int) -> int:
-    #           ....
-    #
-    # Here, we would reach the scope of `my_dec` and `some_local` would be available
-    # in the Guppy code.
-    # TODO: Is there a better way to obtain the variables in scope? Note that we
-    #  could do `inspect.getclosurevars(f)` but it will fail if `f` has recursive
-    #  calls. A custom solution based on `f.__code__.co_freevars` and
-    #  `f.__closure__` would only work for CPython.
-    frame = inspect.currentframe()
-    if frame is None:
-        return {}
-    while frame.f_back is not None and frame.f_globals["__name__"].startswith("guppy."):
-        frame = frame.f_back
-    py_scope = frame.f_globals | frame.f_locals
-    # Explicitly delete frame to avoid reference cycle.
-    # See https://docs.python.org/3/library/inspect.html#the-interpreter-stack
-    del frame
-    return py_scope

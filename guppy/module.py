@@ -1,5 +1,6 @@
 import ast
 import inspect
+import sys
 import textwrap
 from collections.abc import Callable
 from types import ModuleType
@@ -88,7 +89,7 @@ class GuppyModule:
                     self.load(val)
 
     def register_func_def(
-        self, f: PyFunc, py_scope: PyScope, instance: type[GuppyType] | None = None
+        self, f: PyFunc, instance: type[GuppyType] | None = None
     ) -> None:
         """Registers a Python function definition as belonging to this Guppy module."""
         self._check_not_yet_compiled()
@@ -100,7 +101,7 @@ class GuppyModule:
                 qualified_name(instance, func_ast.name) if instance else func_ast.name
             )
             self._check_name_available(name, func_ast)
-            self._func_defs[name] = func_ast, py_scope.copy()
+            self._func_defs[name] = func_ast, get_py_scope(f)
 
     def register_func_decl(self, f: PyFunc) -> None:
         """Registers a Python function declaration as belonging to this Guppy module."""
@@ -134,9 +135,7 @@ class GuppyModule:
         self._check_type_name_available(name, None)
         self._globals.type_vars[name] = TypeVarDecl(name, linear)
 
-    def _register_buffered_instance_funcs(
-        self, instance: type[GuppyType], py_scope: PyScope
-    ) -> None:
+    def _register_buffered_instance_funcs(self, instance: type[GuppyType]) -> None:
         assert self._instance_func_buffer is not None
         buffer = self._instance_func_buffer
         self._instance_func_buffer = None
@@ -144,7 +143,7 @@ class GuppyModule:
             if isinstance(f, CustomFunction):
                 self.register_custom_func(f, instance)
             else:
-                self.register_func_def(f, py_scope, instance)
+                self.register_func_def(f, instance)
 
     @property
     def compiled(self) -> bool:
@@ -248,3 +247,33 @@ def parse_py_func(f: PyFunc) -> ast.FunctionDef:
     if not isinstance(func_ast, ast.FunctionDef):
         raise GuppyError("Expected a function definition", func_ast)
     return func_ast
+
+
+def get_py_scope(f: PyFunc) -> PyScope:
+    """Returns a mapping of all variables captured by a Python function.
+
+    Note that this function only works in CPython. On other platforms, an empty
+    dictionary is returned.
+
+    Relies on inspecting the `__globals__` and `__closure__` attributes of the function.
+    See https://docs.python.org/3/reference/datamodel.html#special-read-only-attributes
+    """
+    if sys.implementation.name != "cpython":
+        return dict()
+
+    if inspect.ismethod(f):
+        f = f.__func__
+    code = f.__code__
+
+    nonlocals: PyScope = {}
+    if f.__closure__ is not None:
+        for var, cell in zip(code.co_freevars, f.__closure__):
+            try:
+                value = cell.cell_contents
+            except ValueError:
+                # The call to `cell_contents` will fail if `var` is a recursive
+                # reference to the decorated function
+                continue
+            nonlocals[var] = value
+
+    return nonlocals | f.__globals__.copy()
