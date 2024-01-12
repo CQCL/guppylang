@@ -67,7 +67,7 @@ class GuppyType(ABC):
         pass
 
     @abstractmethod
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         pass
 
     @abstractmethod
@@ -106,7 +106,7 @@ class BoundTypeVar(GuppyType):
     def __str__(self) -> str:
         return self.display_name
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         return tys.Variable(i=self.idx, b=tys.TypeBound.from_linear(self.linear))
 
 
@@ -146,7 +146,7 @@ class ExistentialTypeVar(GuppyType):
     def __hash__(self) -> int:
         return self.id
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         from guppy.error import InternalGuppyError
 
         raise InternalGuppyError("Tried to convert free type variable to Hugr")
@@ -195,7 +195,7 @@ class FunctionType(GuppyType):
         func_ty = tys.FunctionType(input=ins, output=outs, extension_reqs=[])
         return tys.PolyFuncType(
             params=[
-                tys.TypeParam(b=tys.TypeBound.from_linear(v.linear))
+                tys.TypeTypeParam(b=tys.TypeBound.from_linear(v.linear))
                 for v in self.quantified
             ],
             body=func_ty,
@@ -267,9 +267,9 @@ class TupleType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter(self.element_types)
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         ts = [t.to_hugr() for t in self.element_types]
-        return tys.Tuple(inner=ts)
+        return tys.TupleType(inner=ts)
 
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or TupleType(
@@ -300,7 +300,7 @@ class SumType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter(self.element_types)
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         if all(
             isinstance(e, TupleType) and len(e.element_types) == 0
             for e in self.element_types
@@ -342,8 +342,8 @@ class NoneType(GuppyType):
     def __str__(self) -> str:
         return "None"
 
-    def to_hugr(self) -> tys.SimpleType:
-        return tys.Tuple(inner=[])
+    def to_hugr(self) -> tys.Type:
+        return tys.TupleType(inner=[])
 
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or self

@@ -67,7 +67,7 @@ def float_value(f: float) -> val.Value:
     return val.ExtensionVal(c=(ConstF64(value=f),))
 
 
-def logic_op(op_name: str, args: list[tys.TypeArgUnion] | None = None) -> ops.OpType:
+def logic_op(op_name: str, args: list[tys.TypeArg] | None = None) -> ops.OpType:
     """Utility method to create Hugr logic ops."""
     return ops.CustomOp(extension="logic", op_name=op_name, args=args or [])
 
