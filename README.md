@@ -14,19 +14,37 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Installing
 
-Setup your virtual environment and install dependencies:
+
+First make sure poetry [is
+installed](https://python-poetry.org/docs/#installation). For instance, with
+pipx:
 
 ```sh
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+pipx install poetry
 ```
 
-Install a local development version using:
+Then run the following to setup your virtual environment and install dependencies:
 
 ```sh
-pip install -e '.[dev]'
+poetry install
 ```
+
+Any shell commands can now be run in the virtual environment by prefixing with
+`poetry run`, e.g. to run all tests:
+
+```sh
+poetry run pytest
+```
+
+You can also activate the virtual environment and work within it with
+
+```sh
+poetry shell
+```
+
+Consider using [direnv](https://github.com/direnv/direnv/wiki/Python#poetry) to
+automate this when entering and leaving a directory.
+
 
 ### Git blame
 
@@ -51,13 +69,13 @@ maturin develop
 Run tests using
 
 ```sh
-pytest -v
+poetry run pytest -v
 ```
 
 Integration test cases can be exported to a directory using
 
 ```sh
-pytest --export-test-cases=guppy-exports
+poetry run pytest --export-test-cases=guppy-exports
 
 ```
 
@@ -66,7 +84,7 @@ which will create a directory `./guppy-exports` populated with hugr modules seri
 ## Packaging
 
 ```sh
-python -m build -n
+poetry build
 ```
 
 ## License
