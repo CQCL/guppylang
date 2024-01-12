@@ -1,9 +1,10 @@
 import inspect
 import sys
 from abc import ABC
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypeAliasType
 
 import guppy.hugr.tys as tys
 
@@ -12,7 +13,7 @@ from .tys import (
     ExtensionSet,
     FunctionType,
     PolyFuncType,
-    SimpleType,
+    Type,
     TypeRow,
 )
 from .val import Value
@@ -97,7 +98,7 @@ class Const(BaseOp):
 
     op: Literal["Const"] = "Const"
     value: Value
-    typ: SimpleType
+    typ: Type
 
 
 # -----------------------------------------------
@@ -128,12 +129,12 @@ class DataflowBlock(BaseOp):
         pred = outputs[0]
         assert isinstance(pred, tys.UnitSum | tys.GeneralSum)
         if isinstance(pred, tys.UnitSum):
-            self.tuple_sum_rows = [[] for _ in range(pred.size)]
+            self.tuple_sum_rows = [[] for _ in range(cast(tys.UnitSum, pred).size)]
         else:
             assert isinstance(pred, tys.GeneralSum)
             self.tuple_sum_rows = []
             for variant in pred.row:
-                assert isinstance(variant, tys.Tuple)
+                assert isinstance(variant, tys.TupleType)
                 self.tuple_sum_rows.append(variant.inner)
         self.other_outputs = outputs[1:]
 
@@ -193,6 +194,7 @@ class Call(DataflowOp):
         # The constE edge comes after the value inputs
         fun_ty = in_types[-1]
         assert isinstance(fun_ty, PolyFuncType)
+        fun_ty = cast(PolyFuncType, fun_ty)
         assert len(fun_ty.params) == 0
         self.signature = fun_ty.body
 
@@ -208,6 +210,7 @@ class CallIndirect(DataflowOp):
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         fun_ty = in_types[0]
         assert isinstance(fun_ty, PolyFuncType)
+        fun_ty = cast(PolyFuncType, fun_ty)
         assert len(fun_ty.params) == 0
         assert len(fun_ty.body.input) == len(in_types) - 1
         assert len(fun_ty.body.output) == len(out_types)
@@ -218,7 +221,7 @@ class LoadConstant(DataflowOp):
     """Load a static constant in to the local dataflow graph."""
 
     op: Literal["LoadConstant"] = "LoadConstant"
-    datatype: SimpleType
+    datatype: Type
 
 
 class LeafOp(DataflowOp):
@@ -262,12 +265,12 @@ class Conditional(DataflowOp):
         # those into a list of type rows
         pred = in_types[0]
         if isinstance(pred, tys.UnitSum):
-            self.tuple_sum_rows = [[] for _ in range(pred.size)]
+            self.tuple_sum_rows = [[] for _ in range(cast(tys.UnitSum, pred).size)]
         else:
             assert isinstance(pred, tys.GeneralSum)
             self.tuple_sum_rows = []
             for ty in pred.row:
-                assert isinstance(ty, tys.Tuple)
+                assert isinstance(ty, tys.TupleType)
                 self.tuple_sum_rows.append(ty.inner)
         self.other_inputs = list(in_types[1:])
         self.outputs = list(out_types)
@@ -329,9 +332,9 @@ class CustomOp(LeafOp):
     lop: Literal["CustomOp"] = "CustomOp"
     extension: ExtensionId
     op_name: str
-    signature: tys.FunctionType | None = None
+    signature: tys.FunctionType = Field(default_factory=tys.FunctionType.empty)
     description: str = ""
-    args: list[tys.TypeArgUnion] = Field(default_factory=list)
+    args: list[tys.TypeArg] = Field(default_factory=list)
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         self.signature = tys.FunctionType(input=list(in_types), output=list(out_types))
@@ -340,101 +343,17 @@ class CustomOp(LeafOp):
         return self.op_name
 
 
-class H(LeafOp):
-    """A Hadamard gate."""
-
-    lop: Literal["H"] = "H"
-
-
-class T(LeafOp):
-    """A T gate."""
-
-    lop: Literal["T"] = "T"
-
-
-class S(LeafOp):
-    """An S gate."""
-
-    lop: Literal["S"] = "S"
-
-
-class X(LeafOp):
-    """A Pauli X gate."""
-
-    lop: Literal["X"] = "X"
-
-
-class Y(LeafOp):
-    """A Pauli Y gate."""
-
-    lop: Literal["Y"] = "Y"
-
-
-class Z(LeafOp):
-    """A Pauli Z gate."""
-
-    lop: Literal["Z"] = "Z"
-
-
-class Tadj(LeafOp):
-    """An adjoint T gate."""
-
-    lop: Literal["Tadj"] = "Tadj"
-
-
-class Sadj(LeafOp):
-    """An adjoint S gate."""
-
-    lop: Literal["Sadj"] = "Sadj"
-
-
-class CX(LeafOp):
-    """A controlled X gate."""
-
-    lop: Literal["CX"] = "CX"
-
-
-class ZZMax(LeafOp):
-    """A maximally entangling ZZ phase gate."""
-
-    lop: Literal["ZZMax"] = "ZZMax"
-
-
-class Reset(LeafOp):
-    """A qubit reset operation."""
-
-    lop: Literal["Reset"] = "Reset"
-
-
 class Noop(LeafOp):
     """A no-op operation."""
 
     lop: Literal["Noop"] = "Noop"
-    ty: SimpleType
+    ty: Type
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         assert len(in_types) == 1
         assert len(out_types) == 1
-        assert in_types[0] == out_types[0]
+        assert in_types[0] == out_types[0]  # type: ignore[operator]  # mypy doesn't understand the type union
         self.ty = in_types[0]
-
-
-class Measure(LeafOp):
-    """A qubit measurement operation."""
-
-    lop: Literal["Measure"] = "Measure"
-
-
-class RzF64(LeafOp):
-    """A rotation of a qubit about the Pauli Z axis by an input float angle."""
-
-    lop: Literal["RzF64"] = "RzF64"
-
-
-class Xor(LeafOp):
-    """A bitwise XOR operation."""
-
-    lop: Literal["Xor"] = "Xor"
 
 
 class MakeTuple(LeafOp):
@@ -458,14 +377,6 @@ class UnpackTuple(LeafOp):
 
     def insert_port_types(self, in_types: TypeRow, out_types: TypeRow) -> None:
         self.tys = list(out_types)
-
-
-class MakeNewType(LeafOp):
-    """An operation that wraps a value into a new type."""
-
-    lop: Literal["MakeNewType"] = "MakeNewType"
-    name: str  # The new type name.
-    typ: SimpleType  # The wrapped type.
 
 
 class Tag(LeafOp):
@@ -492,62 +403,46 @@ class TypeApplication(BaseModel):
     """
 
     input: PolyFuncType
-    args: list[tys.TypeArg]
+    args: list[tys.TypeTypeArg]
     output: PolyFuncType
 
 
-LeafOpUnion = Annotated[
-    (
-        CustomOp
-        | H
-        | S
-        | T
-        | X
-        | Y
-        | Z
-        | Tadj
-        | Sadj
-        | CX
-        | ZZMax
-        | Reset
-        | Noop
-        | Measure
-        | RzF64
-        | Xor
-        | MakeTuple
-        | UnpackTuple
-        | MakeNewType
-        | Tag
-        | TypeApply
-    ),
-    Field(discriminator="lop"),
-]
+LeafOpUnion = TypeAliasType(
+    "LeafOpUnion",
+    Annotated[
+        (CustomOp | Noop | MakeTuple | UnpackTuple | Tag | TypeApply),
+        Field(discriminator="lop"),
+    ],
+)
 
 
-OpType = Annotated[
-    (
-        Module
-        | Case
-        | Module
-        | FuncDefn
-        | FuncDecl
-        | Const
-        | DummyOp
-        | DataflowBlock
-        | ExitBlock
-        | Conditional
-        | TailLoop
-        | CFG
-        | Input
-        | Output
-        | Call
-        | CallIndirect
-        | LoadConstant
-        | LeafOpUnion
-        | DFG
-    ),
-    Field(discriminator="op"),
-]
+OpType = TypeAliasType(
+    "OpType",
+    Annotated[
+        (
+            Module
+            | Case
+            | Module
+            | FuncDefn
+            | FuncDecl
+            | Const
+            | DummyOp
+            | DataflowBlock
+            | ExitBlock
+            | Conditional
+            | TailLoop
+            | CFG
+            | Input
+            | Output
+            | Call
+            | CallIndirect
+            | LoadConstant
+            | LeafOpUnion
+            | DFG
+        ),
+        Field(discriminator="op"),
+    ],
+)
 
 
 # --------------------------------------
@@ -560,8 +455,8 @@ class OpDef(BaseOp, populate_by_name=True):
 
     name: str  # Unique identifier of the operation.
     description: str  # Human readable description of the operation.
-    inputs: list[tuple[str | None, SimpleType]]
-    outputs: list[tuple[str | None, SimpleType]]
+    inputs: list[tuple[str | None, Type]]
+    outputs: list[tuple[str | None, Type]]
     misc: dict[str, Any]  # Miscellaneous data associated with the operation.
     def_: str | None = Field(
         ..., alias="def"
