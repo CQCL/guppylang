@@ -332,9 +332,7 @@ class CustomOp(LeafOp):
     lop: Literal["CustomOp"] = "CustomOp"
     extension: ExtensionId
     op_name: str
-    signature: tys.FunctionType = Field(
-        default_factory=lambda: tys.FunctionType(input=[], output=[], extension_reqs=[])
-    )
+    signature: tys.FunctionType = Field(default_factory=tys.FunctionType.empty)
     description: str = ""
     args: list[tys.TypeArg] = Field(default_factory=list)
 
