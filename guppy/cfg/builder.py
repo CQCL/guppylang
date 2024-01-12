@@ -264,8 +264,7 @@ class ExprBuilder(ast.NodeTransformer):
             match node.args:
                 case []:
                     raise GuppyError(
-                        "Compile-time evaluated `py(...)` expression requires an "
-                        "argument",
+                        "Compile-time `py(...)` expression requires an argument",
                         node,
                     )
                 case [arg]:

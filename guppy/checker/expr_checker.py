@@ -335,7 +335,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         except DummyEvalDict.GuppyVarUsedError as e:
             raise GuppyError(
                 f"Guppy variable `{e.var}` cannot be accessed in a compile-time "
-                "evaluated `py(...)` expression",
+                "`py(...)` expression",
                 e.node or node,
             ) from None
         except Exception as e:  # noqa: BLE001
