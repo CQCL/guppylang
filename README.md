@@ -16,12 +16,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 
 First make sure poetry [is
-installed](https://python-poetry.org/docs/#installation). For instance, with
-pipx:
-
-```sh
-pipx install poetry
-```
+installed](https://python-poetry.org/docs/#installation).
 
 Then run the following to setup your virtual environment and install dependencies:
 
@@ -29,14 +24,7 @@ Then run the following to setup your virtual environment and install dependencie
 poetry install
 ```
 
-Any shell commands can now be run in the virtual environment by prefixing with
-`poetry run`, e.g. to run all tests:
-
-```sh
-poetry run pytest
-```
-
-You can also activate the virtual environment and work within it with
+You can then activate the virtual environment and work within it with:
 
 ```sh
 poetry shell
@@ -44,6 +32,8 @@ poetry shell
 
 Consider using [direnv](https://github.com/direnv/direnv/wiki/Python#poetry) to
 automate this when entering and leaving a directory.
+
+To run a single command in the shell, just prefix it with `poetry run`.
 
 
 ### Git blame
