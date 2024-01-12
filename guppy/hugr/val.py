@@ -3,6 +3,7 @@ import sys
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypeAliasType
 
 CustomConst = Any  # TODO
 
@@ -39,7 +40,13 @@ class Sum(BaseModel):
     value: "Value"
 
 
-Value = Annotated[ExtensionVal | FunctionVal | Tuple | Sum, Field(discriminator="v")]
+Value = TypeAliasType(
+    "Value",
+    Annotated[
+        ExtensionVal | FunctionVal | Tuple | Sum,
+        Field(discriminator="v"),
+    ],
+)
 
 
 # Now that all classes are defined, we need to update the ForwardRefs in all type

@@ -210,12 +210,20 @@ class GuppyModule:
         self._compiled = True
         return graph
 
+    def contains_function(self, name: str) -> bool:
+        """Returns 'True' if the module contains a function with the given name."""
+        return name in self._func_defs or name in self._custom_funcs
+
+    def contains_type(self, name: str) -> bool:
+        """Returns 'True' if the module contains a type with the given name."""
+        return name in self._globals.types or name in self._globals.type_vars
+
     def _check_not_yet_compiled(self) -> None:
         if self._compiled:
             raise GuppyError(f"The module `{self.name}` has already been compiled")
 
     def _check_name_available(self, name: str, node: AstNode | None) -> None:
-        if name in self._func_defs or name in self._custom_funcs:
+        if self.contains_function(name):
             raise GuppyError(
                 f"Module `{self.name}` already contains a function named `{name}`",
                 node,

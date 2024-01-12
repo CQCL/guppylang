@@ -79,7 +79,7 @@ class _Guppy:
     def type(
         self,
         module: GuppyModule,
-        hugr_ty: tys.SimpleType,
+        hugr_ty: tys.Type,
         name: str = "",
         linear: bool = False,
     ) -> ClassDecorator:
@@ -116,7 +116,7 @@ class _Guppy:
                 def linear(self) -> bool:
                     return linear
 
-                def to_hugr(self) -> tys.SimpleType:
+                def to_hugr(self) -> tys.Type:
                     return hugr_ty
 
                 def transform(self, transformer: TypeTransformer) -> GuppyType:

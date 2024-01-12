@@ -12,6 +12,7 @@ graphviz = "^0.20.1"
 networkx = "^3.2.1"
 ormsgpack = "^1.4.1"
 pydantic = "^2.5.3"
+typing-extensions = "^4.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"
@@ -28,3 +29,6 @@ build-backend = "poetry.core.masonry.api"
 plugins = ["pydantic.mypy"]
 strict = true
 allow_redefinition = true
+# mypy doesn't support TypeAliasType fully yet
+# https://github.com/python/mypy/issues/16614
+disable_error_code = "valid-type"
