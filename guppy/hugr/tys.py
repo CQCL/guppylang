@@ -1,9 +1,40 @@
 import inspect
 import sys
 from enum import Enum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationError,
+    ValidationInfo,
+    ValidatorFunctionWrapHandler,
+    WrapValidator,
+)
+from pydantic_core import PydanticCustomError
+from typing_extensions import TypeAliasType
+
+
+def _json_custom_error_validator(
+    value: Any, handler: ValidatorFunctionWrapHandler, _info: ValidationInfo
+) -> Any:
+    """Simplify the error message to avoid a gross error stemming
+    from exhaustive checking of all union options.
+
+    As suggested at
+    https://docs.pydantic.dev/latest/concepts/types/#named-recursive-types
+
+
+    Used to define named recursive alias types.
+    """
+    try:
+        return handler(value)
+    except ValidationError as err:
+        raise PydanticCustomError(
+            "invalid_json",
+            "Input is not valid json",
+        ) from err
+
 
 ExtensionId = str
 ExtensionSet = list[  # TODO: Set not supported by MessagePack. Is list correct here?
@@ -16,7 +47,7 @@ ExtensionSet = list[  # TODO: Set not supported by MessagePack. Is list correct 
 # --------------------------------------------
 
 
-class TypeParam(BaseModel):
+class TypeTypeParam(BaseModel):
     tp: Literal["Type"] = "Type"
     b: "TypeBound"
 
@@ -33,18 +64,22 @@ class OpaqueParam(BaseModel):
 
 class ListParam(BaseModel):
     tp: Literal["List"] = "List"
-    param: "TypeParamUnion"
+    param: "TypeParam"
 
 
 class TupleParam(BaseModel):
     tp: Literal["Tuple"] = "Tuple"
-    params: list["TypeParamUnion"]
+    params: list["TypeParam"]
 
 
-TypeParamUnion = Annotated[
-    TypeParam | BoundedNatParam | OpaqueParam | ListParam | TupleParam,
-    Field(discriminator="tp"),
-]
+TypeParam = TypeAliasType(
+    "TypeParam",
+    Annotated[
+        TypeTypeParam | BoundedNatParam | OpaqueParam | ListParam | TupleParam,
+        Field(discriminator="tp"),
+        WrapValidator(_json_custom_error_validator),
+    ],
+)
 
 
 # ------------------------------------------
@@ -57,9 +92,9 @@ class CustomTypeArg(BaseModel):
     value: str
 
 
-class TypeArg(BaseModel):
+class TypeTypeArg(BaseModel):
     tya: Literal["Type"] = "Type"
-    ty: "SimpleType"
+    ty: "Type"
 
 
 class BoundedNatArg(BaseModel):
@@ -74,7 +109,7 @@ class OpaqueArg(BaseModel):
 
 class SequenceArg(BaseModel):
     tya: Literal["Sequence"] = "Sequence"
-    args: list["TypeArgUnion"]
+    args: list["TypeArg"]
 
 
 class ExtensionsArg(BaseModel):
@@ -82,10 +117,14 @@ class ExtensionsArg(BaseModel):
     es: ExtensionSet
 
 
-TypeArgUnion = Annotated[
-    TypeArg | BoundedNatArg | OpaqueArg | SequenceArg | ExtensionsArg,
-    Field(discriminator="tya"),
-]
+TypeArg = TypeAliasType(
+    "TypeArg",
+    Annotated[
+        TypeTypeArg | BoundedNatArg | OpaqueArg | SequenceArg | ExtensionsArg,
+        Field(discriminator="tya"),
+        WrapValidator(_json_custom_error_validator),
+    ],
+)
 
 
 # --------------------------------------------
@@ -94,13 +133,7 @@ TypeArgUnion = Annotated[
 
 
 class MultiContainer(BaseModel):
-    ty: "SimpleType"
-
-
-class List(MultiContainer):
-    """Variable sized list of types"""
-
-    t: Literal["List"] = "List"
+    ty: "Type"
 
 
 class Array(MultiContainer):
@@ -110,7 +143,7 @@ class Array(MultiContainer):
     len: int
 
 
-class Tuple(BaseModel):
+class TupleType(BaseModel):
     """Product type, known-size tuple over elements of type row"""
 
     t: Literal["Tuple"] = "Tuple"
@@ -149,23 +182,10 @@ class Variable(BaseModel):
     b: "TypeBound"
 
 
-class Int(BaseModel):
-    """An arbitrary size integer."""
+class USize(BaseModel):
+    """Unsigned integer size type."""
 
     t: Literal["I"] = "I"
-    width: int
-
-
-class F64(BaseModel):
-    """A 64-bit floating point number."""
-
-    t: Literal["F"] = "F"
-
-
-class String(BaseModel):
-    """An arbitrary length string."""
-
-    t: Literal["S"] = "S"
 
 
 class FunctionType(BaseModel):
@@ -192,7 +212,7 @@ class PolyFuncType(BaseModel):
     # number of TypeArgs before the function can be called. Note that within the body,
     # variable (DeBruijn) index 0 is element 0 of this array, i.e. the variables are
     # bound from right to left.
-    params: list[TypeParamUnion]
+    params: list[TypeParam]
 
     # Template for the function. May contain variables up to length of `params`
     body: FunctionType
@@ -218,7 +238,7 @@ class Opaque(BaseModel):
     t: Literal["Opaque"] = "Opaque"
     extension: ExtensionId
     id: str  # Unique identifier of the opaque type.
-    args: list[TypeArgUnion]
+    args: list[TypeArg]
     bound: TypeBound
 
 
@@ -233,27 +253,21 @@ class Qubit(BaseModel):
     t: Literal["Q"] = "Q"
 
 
-SimpleType = Annotated[
-    Qubit
-    | Variable
-    | Int
-    | F64
-    | String
-    | PolyFuncType
-    | List
-    | Array
-    | Tuple
-    | Sum
-    | Opaque,
-    Field(discriminator="t"),
-]
+Type = TypeAliasType(
+    "Type",
+    Annotated[
+        Qubit | Variable | USize | PolyFuncType | Array | TupleType | Sum | Opaque,
+        Field(discriminator="t"),
+        WrapValidator(_json_custom_error_validator),
+    ],
+)
 
 
 # -------------------------------------------
 # --------------- TypeRow -------------------
 # -------------------------------------------
 
-TypeRow = list[SimpleType]
+TypeRow = list[Type]
 
 
 # -------------------------------------------

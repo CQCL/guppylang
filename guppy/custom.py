@@ -233,9 +233,9 @@ class DefaultCallCompiler(CustomCallCompiler):
 
 
 class OpCompiler(CustomCallCompiler):
-    op: ops.OpType
+    op: ops.BaseOp
 
-    def __init__(self, op: ops.OpType) -> None:
+    def __init__(self, op: ops.BaseOp) -> None:
         self.op = op
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:

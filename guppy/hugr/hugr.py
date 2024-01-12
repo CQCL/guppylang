@@ -81,7 +81,7 @@ class Node(ABC):
     """
 
     idx: NodeIdx
-    op: ops.OpType
+    op: ops.BaseOp
     parent: Optional["Node"]
     meta_data: dict[str, Any]
 
@@ -301,7 +301,7 @@ class Hugr:
 
     def add_node(
         self,
-        op: ops.OpType,
+        op: ops.BaseOp,
         input_types: TypeList | None = None,
         output_types: TypeList | None = None,
         parent: Node | None = None,
@@ -539,7 +539,7 @@ class Hugr:
         result_ty = func_port.ty.instantiate(args)
         ta = ops.TypeApplication(
             input=func_port.ty.to_hugr(),
-            args=[tys.TypeArg(ty=ty.to_hugr()) for ty in args],
+            args=[tys.TypeTypeArg(ty=ty.to_hugr()) for ty in args],
             output=result_ty.to_hugr(),
         )
         return self.add_node(
