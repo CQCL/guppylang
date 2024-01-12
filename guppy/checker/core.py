@@ -117,7 +117,7 @@ class Context(NamedTuple):
     locals: Locals
 
 
-class DummyEvalDict(dict[str, Any]):
+class DummyEvalDict(PyScope):
     """A custom dict that can be passed to `eval` to give better error messages.
     This class is used to implement the `py(...)` expression. If the user tries to
     access a Guppy variable in the Python context, we give an informative error message.
