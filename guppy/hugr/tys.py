@@ -182,11 +182,10 @@ class Variable(BaseModel):
     b: "TypeBound"
 
 
-class Int(BaseModel):
-    """An arbitrary size integer."""
+class USize(BaseModel):
+    """Unsigned integer size type."""
 
     t: Literal["I"] = "I"
-    width: int
 
 
 class FunctionType(BaseModel):
@@ -257,7 +256,7 @@ class Qubit(BaseModel):
 Type = TypeAliasType(
     "Type",
     Annotated[
-        Qubit | Variable | Int | PolyFuncType | Array | TupleType | Sum | Opaque,
+        Qubit | Variable | USize | PolyFuncType | Array | TupleType | Sum | Opaque,
         Field(discriminator="t"),
         WrapValidator(_json_custom_error_validator),
     ],
