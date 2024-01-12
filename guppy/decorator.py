@@ -1,11 +1,9 @@
 import functools
-import inspect
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, TypeVar
 
 from guppy.ast_util import AstNode, has_empty_body
-from guppy.checker.core import PyScope
 from guppy.custom import (
     CustomCallChecker,
     CustomCallCompiler,

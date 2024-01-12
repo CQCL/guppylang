@@ -331,8 +331,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         # CPython (see `get_py_scope()`).
         if sys.implementation.name != "cpython":
             raise GuppyError(
-                "Compile-time `py(...)` expressions are only supported in CPython",
-                node
+                "Compile-time `py(...)` expressions are only supported in CPython", node
             )
 
         try:

@@ -267,7 +267,7 @@ def get_py_scope(f: PyFunc) -> PyScope:
     See https://docs.python.org/3/reference/datamodel.html#special-read-only-attributes
     """
     if sys.implementation.name != "cpython":
-        return dict()
+        return {}
 
     if inspect.ismethod(f):
         f = f.__func__
