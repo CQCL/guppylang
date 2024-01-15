@@ -79,7 +79,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
     @contextmanager
     def _new_loop(
         self,
-        variants: list[ast.Name],
+        loop_vars: list[ast.Name],
         branch: ast.Name,
         parent: DFContainingNode | None = None,
     ) -> Iterator[None]:
@@ -88,15 +88,15 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         Automatically adds the `Output` node to the loop body once the context manager
         exits.
         """
-        loop = self.graph.add_tail_loop([self.visit(name) for name in variants], parent)
-        with self._new_dfcontainer(variants, loop):
+        loop = self.graph.add_tail_loop([self.visit(name) for name in loop_vars], parent)
+        with self._new_dfcontainer(loop_vars, loop):
             yield
             # Output the branch predicate and the inputs for the next iteration
             self.graph.add_output(
-                [self.visit(branch), *(self.visit(name) for name in variants)]
+                [self.visit(branch), *(self.visit(name) for name in loop_vars)]
             )
         # Update the DFG with the outputs from the loop
-        for name in variants:
+        for name in loop_vars:
             self.dfg[name.id].port = loop.add_out_port(get_type(name))
 
     @contextmanager
