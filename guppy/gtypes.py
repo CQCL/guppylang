@@ -67,17 +67,17 @@ class GuppyType(ABC):
         pass
 
     @abstractmethod
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
+        pass
+
+    @abstractmethod
+    def transform(self, transformer: "TypeTransformer") -> "GuppyType":
         pass
 
     def hugr_bound(self) -> tys.TypeBound:
         if self.linear:
             return tys.TypeBound.Any
         return tys.TypeBound.join(*(ty.hugr_bound() for ty in self.type_args))
-
-    @abstractmethod
-    def transform(self, transformer: "TypeTransformer") -> "GuppyType":
-        pass
 
     @property
     def unsolved_vars(self) -> set["ExistentialTypeVar"]:
@@ -116,7 +116,7 @@ class BoundTypeVar(GuppyType):
     def __str__(self) -> str:
         return self.display_name
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         return tys.Variable(i=self.idx, b=self.hugr_bound())
 
 
@@ -156,7 +156,7 @@ class ExistentialTypeVar(GuppyType):
     def __hash__(self) -> int:
         return self.id
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         from guppy.error import InternalGuppyError
 
         raise InternalGuppyError("Tried to convert free type variable to Hugr")
@@ -204,7 +204,7 @@ class FunctionType(GuppyType):
         outs = [t.to_hugr() for t in type_to_row(self.returns)]
         func_ty = tys.FunctionType(input=ins, output=outs, extension_reqs=[])
         return tys.PolyFuncType(
-            params=[tys.TypeParam(b=v.hugr_bound()) for v in self.quantified],
+            params=[tys.TypeTypeParam(b=v.hugr_bound()) for v in self.quantified],
             body=func_ty,
         )
 
@@ -278,9 +278,9 @@ class TupleType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter(self.element_types)
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         ts = [t.to_hugr() for t in self.element_types]
-        return tys.Tuple(inner=ts)
+        return tys.TupleType(inner=ts)
 
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or TupleType(
@@ -311,7 +311,7 @@ class SumType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter(self.element_types)
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         if all(
             isinstance(e, TupleType) and len(e.element_types) == 0
             for e in self.element_types
@@ -354,11 +354,11 @@ class ListType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter((self.element_type,))
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         return tys.Opaque(
             extension="Collections",
             id="List",
-            args=[tys.TypeArg(ty=self.element_type.to_hugr())],
+            args=[tys.TypeTypeArg(ty=self.element_type.to_hugr())],
             bound=self.hugr_bound(),
         )
 
@@ -395,11 +395,11 @@ class LinstType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter((self.element_type,))
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         return tys.Opaque(
             extension="Collections",
             id="List",
-            args=[tys.TypeArg(ty=self.element_type.to_hugr())],
+            args=[tys.TypeTypeArg(ty=self.element_type.to_hugr())],
             bound=self.hugr_bound(),
         )
 
@@ -437,8 +437,8 @@ class NoneType(GuppyType):
     def __str__(self) -> str:
         return "None"
 
-    def to_hugr(self) -> tys.SimpleType:
-        return tys.Tuple(inner=[])
+    def to_hugr(self) -> tys.Type:
+        return tys.TupleType(inner=[])
 
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or self

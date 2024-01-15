@@ -13,13 +13,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
+      - name: Install poetry
+        run: pipx install poetry
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
-          cache-dependency-path: pyproject.toml
+          cache: "poetry"
 
       - name: Build Hugr validator
         uses: PyO3/maturin-action@v1
@@ -29,14 +29,14 @@ jobs:
           rust-toolchain: '1.75'
           working-directory: validator
 
-      - name: Install Hugr validator
-        run: pip install validator/target/wheels/*
-
       - name: Install Guppy
-        run: pip install -e '.[dev]'
+        run: poetry install
+
+      - name: Install Hugr validator
+        run: poetry add validator/target/wheels/*
 
       - name: Type check with mypy
-        run: mypy guppy
+        run: poetry run mypy guppy
 
       - name: Check formatting with ruff
         uses: chartboost/ruff-action@v1
@@ -51,4 +51,4 @@ jobs:
           args: check
 
       - name: Run tests
-        run: pytest
+        run: poetry run pytest

@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-import networkx as nx  # type: ignore[import]
+import networkx as nx  # type: ignore[import-untyped]
 
 import guppy.hugr.ops as ops
 import guppy.hugr.raw as raw
@@ -81,7 +81,7 @@ class Node(ABC):
     """
 
     idx: NodeIdx
-    op: ops.OpType
+    op: ops.BaseOp
     parent: Optional["Node"]
     meta_data: dict[str, Any]
 
@@ -154,12 +154,14 @@ class VNode(Node):
         """Returns the input port at the given offset."""
         assert offset is not None
         assert offset < self.num_in_ports
+        assert offset != -1, "Cannot get the port of an order edge"
         return InPortV(self, offset, self.in_port_types[offset])
 
     def out_port(self, offset: PortOffset | None) -> OutPortV:
         """Returns the output port at the given offset."""
         assert offset is not None
         assert offset < self.num_out_ports
+        assert offset != -1, "Cannot get the port of an order edge"
         return OutPortV(self, offset, self.out_port_types[offset])
 
     @property
@@ -299,7 +301,7 @@ class Hugr:
 
     def add_node(
         self,
-        op: ops.OpType,
+        op: ops.BaseOp,
         input_types: TypeList | None = None,
         output_types: TypeList | None = None,
         parent: Node | None = None,
@@ -537,7 +539,7 @@ class Hugr:
         result_ty = func_port.ty.instantiate(args)
         ta = ops.TypeApplication(
             input=func_port.ty.to_hugr(),
-            args=[tys.TypeArg(ty=ty.to_hugr()) for ty in args],
+            args=[tys.TypeTypeArg(ty=ty.to_hugr()) for ty in args],
             output=result_ty.to_hugr(),
         )
         return self.add_node(
@@ -613,6 +615,8 @@ class Hugr:
     def in_edges(self, port: InPort) -> Iterator[Edge]:
         """Returns an iterator over all edges connected to a given in-port."""
         for e in self._graph.in_edges(port.node.idx, keys=True):
+            if e[2] == ORDER_EDGE_KEY:
+                continue
             src, tgt = self._to_edge(*e)
             if tgt.offset == port.offset:
                 yield src, tgt
@@ -620,6 +624,8 @@ class Hugr:
     def out_edges(self, port: OutPort) -> Iterator[Edge]:
         """Returns an iterator over all edges originating from a given out-port."""
         for e in self._graph.out_edges(port.node.idx, keys=True):
+            if e[2] == ORDER_EDGE_KEY:
+                continue
             src, tgt = self._to_edge(*e)
             if src.offset == port.offset:
                 yield src, tgt
@@ -771,3 +777,7 @@ class Hugr:
     def serialize(self) -> bytes:
         """Serialize this Hugr in binary format."""
         return self.to_raw().packb()
+
+    def serialize_json(self) -> str:
+        """Serialize this Hugr in JSON format."""
+        return self.to_raw().to_json()
