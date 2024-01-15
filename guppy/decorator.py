@@ -20,7 +20,7 @@ from guppy.hugr import ops, tys
 from guppy.hugr.hugr import Hugr
 from guppy.module import GuppyModule, PyFunc, parse_py_func
 
-FuncDecorator = Callable[[PyFunc], PyFunc]
+FuncDecorator = Callable[[PyFunc], PyFunc | Hugr]
 CustomFuncDecorator = Callable[[PyFunc], CustomFunction]
 ClassDecorator = Callable[[type], type]
 
@@ -71,7 +71,8 @@ class _Guppy:
         if arg is not None and not isinstance(arg, GuppyModule):
             # Decorator used without any arguments.
             f = arg
-            return self.__call__(None)(f)
+            decorator: FuncDecorator = self.__call__(None)  # type: ignore[assignment]
+            return decorator(f)
 
         def make_dummy(wraps: PyFunc) -> Callable[..., Any]:
             @functools.wraps(wraps)
@@ -84,17 +85,19 @@ class _Guppy:
 
         if arg is None and compile:
             # No module passed, and compile option is set.
-            def dec(f: Callable[..., Any]) -> Callable[..., Any]:
+            def dec(f: Callable[..., Any]) -> Callable[..., Any] | Hugr:
                 module = GuppyModule("module")
                 module.register_func_def(f)
-                return module.compile()
+                compiled = module.compile()
+                assert compiled is not None
+                return compiled
 
             return dec
 
         if arg is None and not compile:
             # No module specified, and `compile` option is not set.
             # We use a module associate with the caller of the decorator.
-            def dec(f: Callable[..., Any]) -> Callable[..., Any]:
+            def dec(f: Callable[..., Any]) -> Callable[..., Any] | Hugr:
                 caller = self._get_python_caller()
                 if caller not in self._modules:
                     self._modules[caller] = GuppyModule(caller.name)
@@ -107,7 +110,7 @@ class _Guppy:
         if isinstance(arg, GuppyModule):
             # Module passed. Ignore `compile` option.
 
-            def dec(f: Callable[..., Any]) -> Callable[..., Any]:
+            def dec(f: Callable[..., Any]) -> Callable[..., Any] | Hugr:
                 arg.register_func_def(f)
                 return make_dummy(f)
 
