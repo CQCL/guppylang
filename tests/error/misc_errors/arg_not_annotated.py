@@ -1,4 +1,4 @@
-from tests.error.util import guppy
+from guppy.decorator import guppy
 
 
 @guppy

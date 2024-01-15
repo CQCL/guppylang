@@ -371,7 +371,7 @@ class Float:
 
 @guppy.extend_type(builtins, ListType)
 class List:
-    @guppy.hugr_op(builtins, ops.DummyOp(name="Append"))
+    @guppy.hugr_op(builtins, ops.DummyOp(name="Concat"))
     def __add__(self: list[T], other: list[T]) -> list[T]:
         ...
 
@@ -387,11 +387,11 @@ class List:
     def __end__(self: list[T]) -> None:
         ...
 
-    @guppy.hugr_op(builtins, ops.DummyOp(name="Get"))
+    @guppy.hugr_op(builtins, ops.DummyOp(name="Lookup"))
     def __getitem__(self: list[T], idx: int) -> T:
         ...
 
-    @guppy.hugr_op(builtins, ops.DummyOp(name="IsNonempty"))
+    @guppy.hugr_op(builtins, ops.DummyOp(name="IsNonEmpty"))
     def __hasnext__(self: list[T]) -> tuple[bool, list[T]]:
         ...
 

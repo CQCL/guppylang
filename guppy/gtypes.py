@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from guppy.checker.core import Globals
 
 
-Subst = dict["FreeTypeVar", "GuppyType"]
+Subst = dict["ExistentialTypeVar", "GuppyType"]
 Inst = Sequence["GuppyType"]
 
 
@@ -30,7 +30,7 @@ class GuppyType(ABC):
     name: ClassVar[str]
 
     # Cache for free variables
-    _free_vars: set["FreeTypeVar"] = field(init=False, repr=False)
+    _unsolved_vars: set["ExistentialTypeVar"] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         # Make sure that we don't have higher-rank polymorphic types
@@ -43,13 +43,13 @@ class GuppyType(ABC):
                 )
 
         # Compute free variables
-        if isinstance(self, FreeTypeVar):
+        if isinstance(self, ExistentialTypeVar):
             vs = {self}
         else:
             vs = set()
             for arg in self.type_args:
-                vs |= arg.free_vars
-        object.__setattr__(self, "_free_vars", vs)
+                vs |= arg.unsolved_vars
+        object.__setattr__(self, "_unsolved_vars", vs)
 
     @staticmethod
     @abstractmethod
@@ -67,7 +67,11 @@ class GuppyType(ABC):
         pass
 
     @abstractmethod
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
+        pass
+
+    @abstractmethod
+    def transform(self, transformer: "TypeTransformer") -> "GuppyType":
         pass
 
     def hugr_bound(self) -> tys.TypeBound:
@@ -75,13 +79,9 @@ class GuppyType(ABC):
             return tys.TypeBound.Any
         return tys.TypeBound.join(*(ty.hugr_bound() for ty in self.type_args))
 
-    @abstractmethod
-    def transform(self, transformer: "TypeTransformer") -> "GuppyType":
-        pass
-
     @property
-    def free_vars(self) -> set["FreeTypeVar"]:
-        return self._free_vars
+    def unsolved_vars(self) -> set["ExistentialTypeVar"]:
+        return self._unsolved_vars
 
     def substitute(self, s: Subst) -> "GuppyType":
         return self.transform(Substituter(s))
@@ -116,28 +116,28 @@ class BoundTypeVar(GuppyType):
     def __str__(self) -> str:
         return self.display_name
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         return tys.Variable(i=self.idx, b=self.hugr_bound())
 
 
 @dataclass(frozen=True)
-class FreeTypeVar(GuppyType):
-    """Free type variable, identified with a globally unique id.
+class ExistentialTypeVar(GuppyType):
+    """Existential type variable, identified with a globally unique id.
 
-    Serves as an existential variable for unification.
+    Is solved during type checking.
     """
 
     id: int
     display_name: str
     linear: bool = False
 
-    name: ClassVar[Literal["FreeTypeVar"]] = "FreeTypeVar"
+    name: ClassVar[Literal["ExistentialTypeVar"]] = "ExistentialTypeVar"
 
     _id_generator: ClassVar[Iterator[int]] = itertools.count()
 
     @classmethod
-    def new(cls, display_name: str, linear: bool) -> "FreeTypeVar":
-        return FreeTypeVar(next(cls._id_generator), display_name, linear)
+    def new(cls, display_name: str, linear: bool) -> "ExistentialTypeVar":
+        return ExistentialTypeVar(next(cls._id_generator), display_name, linear)
 
     @staticmethod
     def build(*rgs: GuppyType, node: AstNode | None = None) -> GuppyType:
@@ -156,7 +156,7 @@ class FreeTypeVar(GuppyType):
     def __hash__(self) -> int:
         return self.id
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         from guppy.error import InternalGuppyError
 
         raise InternalGuppyError("Tried to convert free type variable to Hugr")
@@ -204,7 +204,7 @@ class FunctionType(GuppyType):
         outs = [t.to_hugr() for t in type_to_row(self.returns)]
         func_ty = tys.FunctionType(input=ins, output=outs, extension_reqs=[])
         return tys.PolyFuncType(
-            params=[tys.TypeParam(b=v.hugr_bound()) for v in self.quantified],
+            params=[tys.TypeTypeParam(b=v.hugr_bound()) for v in self.quantified],
             body=func_ty,
         )
 
@@ -239,9 +239,11 @@ class FunctionType(GuppyType):
             self.arg_names,
         )
 
-    def unquantified(self) -> tuple["FunctionType", Sequence[FreeTypeVar]]:
+    def unquantified(self) -> tuple["FunctionType", Sequence[ExistentialTypeVar]]:
         """Replaces all quantified variables with free type variables."""
-        inst = [FreeTypeVar.new(v.display_name, v.linear) for v in self.quantified]
+        inst = [
+            ExistentialTypeVar.new(v.display_name, v.linear) for v in self.quantified
+        ]
         return self.instantiate(inst), inst
 
 
@@ -276,9 +278,9 @@ class TupleType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter(self.element_types)
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         ts = [t.to_hugr() for t in self.element_types]
-        return tys.Tuple(inner=ts)
+        return tys.TupleType(inner=ts)
 
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or TupleType(
@@ -309,7 +311,7 @@ class SumType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter(self.element_types)
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         if all(
             isinstance(e, TupleType) and len(e.element_types) == 0
             for e in self.element_types
@@ -352,11 +354,11 @@ class ListType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter((self.element_type,))
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         return tys.Opaque(
             extension="Collections",
             id="List",
-            args=[tys.TypeArg(ty=self.element_type.to_hugr())],
+            args=[tys.TypeTypeArg(ty=self.element_type.to_hugr())],
             bound=self.hugr_bound(),
         )
 
@@ -393,11 +395,11 @@ class LinstType(GuppyType):
     def type_args(self) -> Iterator[GuppyType]:
         return iter((self.element_type,))
 
-    def to_hugr(self) -> tys.SimpleType:
+    def to_hugr(self) -> tys.Type:
         return tys.Opaque(
             extension="Collections",
             id="List",
-            args=[tys.TypeArg(ty=self.element_type.to_hugr())],
+            args=[tys.TypeTypeArg(ty=self.element_type.to_hugr())],
             bound=self.hugr_bound(),
         )
 
@@ -435,8 +437,8 @@ class NoneType(GuppyType):
     def __str__(self) -> str:
         return "None"
 
-    def to_hugr(self) -> tys.SimpleType:
-        return tys.Tuple(inner=[])
+    def to_hugr(self) -> tys.Type:
+        return tys.TupleType(inner=[])
 
     def transform(self, transformer: "TypeTransformer") -> GuppyType:
         return transformer.transform(self) or self
@@ -488,7 +490,7 @@ class Substituter(TypeTransformer):
         self.subst = subst
 
     def transform(self, ty: GuppyType) -> GuppyType | None:
-        if isinstance(ty, FreeTypeVar):
+        if isinstance(ty, ExistentialTypeVar):
             return self.subst.get(ty, None)
         return None
 
@@ -522,9 +524,9 @@ def unify(s: GuppyType, t: GuppyType, subst: Subst | None) -> Subst | None:
         return None
     if s == t:
         return subst
-    if isinstance(s, FreeTypeVar):
+    if isinstance(s, ExistentialTypeVar):
         return _unify_var(s, t, subst)
-    if isinstance(t, FreeTypeVar):
+    if isinstance(t, ExistentialTypeVar):
         return _unify_var(t, s, subst)
     if type(s) == type(t):
         sargs, targs = list(s.type_args), list(t.type_args)
@@ -535,13 +537,13 @@ def unify(s: GuppyType, t: GuppyType, subst: Subst | None) -> Subst | None:
     return None
 
 
-def _unify_var(var: FreeTypeVar, t: GuppyType, subst: Subst) -> Subst | None:
+def _unify_var(var: ExistentialTypeVar, t: GuppyType, subst: Subst) -> Subst | None:
     """Helper function for unification of type variables."""
     if var in subst:
         return unify(subst[var], t, subst)
-    if isinstance(t, FreeTypeVar) and t in subst:
+    if isinstance(t, ExistentialTypeVar) and t in subst:
         return unify(var, subst[t], subst)
-    if var in t.free_vars:
+    if var in t.unsolved_vars:
         return None
     return {var: t, **subst}
 

@@ -8,16 +8,8 @@ from collections.abc import Callable
 from guppy.hugr import tys
 from guppy.hugr.tys import TypeBound
 from guppy.module import GuppyModule
-from guppy.hugr.hugr import Hugr
 
 import guppy.decorator as decorator
-
-
-def guppy(f: Callable[..., Any]) -> Hugr | None:
-    """Decorator to compile functions outside of modules for testing."""
-    module = GuppyModule("module")
-    module.register_func_def(f)
-    return module.compile()
 
 
 def run_error_test(file, capsys):
