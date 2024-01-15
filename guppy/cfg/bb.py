@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from typing_extensions import Self
 
 from guppy.ast_util import AstNode, name_nodes_in_ast
-from guppy.nodes import NestedFunctionDef
+from guppy.nodes import NestedFunctionDef, PyExpr
 
 if TYPE_CHECKING:
     from guppy.cfg.cfg import BaseCFG
@@ -83,10 +83,9 @@ class BB(ABC):
         visitor = VariableVisitor(self)
         for s in self.statements:
             visitor.visit(s)
-        self._vars = visitor.stats
-
         if self.branch_pred is not None:
-            self._vars.update_used(self.branch_pred)
+            visitor.visit(self.branch_pred)
+        self._vars = visitor.stats
 
 
 class VariableVisitor(ast.NodeVisitor):
@@ -99,23 +98,30 @@ class VariableVisitor(ast.NodeVisitor):
         self.bb = bb
         self.stats = VariableStats()
 
+    def visit_Name(self, node: ast.Name) -> None:
+        self.stats.update_used(node)
+
     def visit_Assign(self, node: ast.Assign) -> None:
-        self.stats.update_used(node.value)
+        self.visit(node.value)
         for t in node.targets:
             for name in name_nodes_in_ast(t):
                 self.stats.assigned[name.id] = node
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
-        self.stats.update_used(node.value)
+        self.visit(node.value)
         self.stats.update_used(node.target)  # The target is also used
         for name in name_nodes_in_ast(node.target):
             self.stats.assigned[name.id] = node
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         if node.value:
-            self.stats.update_used(node.value)
+            self.visit(node.value)
         for name in name_nodes_in_ast(node.target):
             self.stats.assigned[name.id] = node
+
+    def visit_PyExpr(self, node: PyExpr) -> None:
+        # Don't look into `py(...)` expressions
+        pass
 
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> None:
         # In order to compute the used external variables in a nested function
@@ -139,6 +145,3 @@ class VariableVisitor(ast.NodeVisitor):
 
         # The name of the function is now assigned
         self.stats.assigned[node.name] = node
-
-    def generic_visit(self, node: ast.AST) -> None:
-        self.stats.update_used(node)
