@@ -777,3 +777,7 @@ class Hugr:
     def serialize(self) -> bytes:
         """Serialize this Hugr in binary format."""
         return self.to_raw().packb()
+
+    def serialize_json(self) -> str:
+        """Serialize this Hugr in JSON format."""
+        return self.to_raw().to_json()
