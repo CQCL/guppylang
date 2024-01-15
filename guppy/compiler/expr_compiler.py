@@ -93,6 +93,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             yield
             # Output the branch predicate and the inputs for the next iteration
             self.graph.add_output(
+                # Note that we have to do fresh calls to `self.visit` here since we're
+                # in a new context
                 [self.visit(branch), *(self.visit(name) for name in loop_vars)]
             )
         # Update the DFG with the outputs from the loop
