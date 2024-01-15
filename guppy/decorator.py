@@ -1,6 +1,8 @@
 import functools
+import inspect
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, ClassVar, TypeVar
 
 from guppy.ast_util import AstNode, has_empty_body
@@ -23,44 +25,104 @@ CustomFuncDecorator = Callable[[PyFunc], CustomFunction]
 ClassDecorator = Callable[[type], type]
 
 
+@dataclass
+class CallerIdentifier:
+    """Identifier for the interpreter frame that called the decorator."""
+
+    filename: Path
+    function: str
+
+    @property
+    def name(self) -> str:
+        """Returns a user-friendly name for the caller.
+
+        If the called is not a function, uses the file name.
+        """
+        if self.function == "<module>":
+            return self.filename.name
+        return self.function
+
+    def __hash__(self) -> int:
+        return hash((self.filename, self.function))
+
+
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
-    # The current module
-    _module: GuppyModule | None
+    # The currently-alive modules, associated with an element in the call stack.
+    _modules: dict[CallerIdentifier, GuppyModule]
 
     def __init__(self) -> None:
-        self._module = None
-
-    def set_module(self, module: GuppyModule) -> None:
-        self._module = module
+        self._modules = {}
 
     @pretty_errors
-    def __call__(self, arg: PyFunc | GuppyModule) -> Hugr | None | FuncDecorator:
+    def __call__(
+        self, arg: PyFunc | GuppyModule | None = None, *, compile: bool = False
+    ) -> Hugr | None | FuncDecorator:
         """Decorator to annotate Python functions as Guppy code.
 
-        Optionally, the `GuppyModule` in which the function should be placed can be
-        passed to the decorator.
+        Optionally, the `GuppyModule` in which the function should be placed can
+        be passed to the decorator.
+
+        If `compile` is set to `True` and no `GuppyModule` is passed, the
+        function is compiled immediately as an standalone module and the Hugr is
+        returned.
         """
-        if isinstance(arg, GuppyModule):
+        if arg is not None and not isinstance(arg, GuppyModule):
+            # Decorator used without any arguments.
+            f = arg
+            return self.__call__(None)(f)
 
+        def make_dummy(wraps: PyFunc) -> Callable[..., Any]:
+            @functools.wraps(wraps)
+            def dummy(*args: Any, **kwargs: Any) -> Any:
+                raise GuppyError(
+                    "Guppy functions can only be called in a Guppy context"
+                )
+
+            return dummy
+
+        if arg is None and compile:
+            # No module passed, and compile option is set.
             def dec(f: Callable[..., Any]) -> Callable[..., Any]:
-                assert isinstance(arg, GuppyModule)
-                arg.register_func_def(f)
-
-                @functools.wraps(f)
-                def dummy(*args: Any, **kwargs: Any) -> Any:
-                    raise GuppyError(
-                        "Guppy functions can only be called in a Guppy context"
-                    )
-
-                return dummy
+                module = GuppyModule("module")
+                module.register_func_def(f)
+                return module.compile()
 
             return dec
-        else:
-            module = self._module or GuppyModule("module")
-            module.register_func_def(arg)
-            return module.compile()
+
+        if arg is None and not compile:
+            # No module specified, and `compile` option is not set.
+            # We use a module associate with the caller of the decorator.
+            def dec(f: Callable[..., Any]) -> Callable[..., Any]:
+                caller = self._get_python_caller()
+                if caller not in self._modules:
+                    self._modules[caller] = GuppyModule(caller.name)
+                module = self._modules[caller]
+                module.register_func_def(f)
+                return make_dummy(f)
+
+            return dec
+
+        if isinstance(arg, GuppyModule):
+            # Module passed. Ignore `compile` option.
+
+            def dec(f: Callable[..., Any]) -> Callable[..., Any]:
+                arg.register_func_def(f)
+                return make_dummy(f)
+
+            return dec
+
+        raise ValueError(f"Invalid arguments to `@guppy` decorator: {arg}")
+
+    def _get_python_caller(self) -> CallerIdentifier:
+        """Returns an identifier for the interpreter frame that called the decorator."""
+        for s in inspect.stack():
+            # Note the hacky check for the pretty errors wrapper,
+            # since @pretty_errors wraps the __call__ method.
+            if s.filename != __file__ and s.function != "pretty_errors_wrapped":
+                return CallerIdentifier(Path(s.filename), s.function)
+        raise GuppyError("Could not find caller of `@guppy` decorator")
 
     @pretty_errors
     def extend_type(self, module: GuppyModule, ty: type[GuppyType]) -> ClassDecorator:
@@ -203,6 +265,25 @@ class _Guppy:
             return dummy
 
         return dec
+
+    def take_module(self, id: CallerIdentifier | None = None) -> GuppyModule | None:
+        """Returns the local GuppyModule, removing it from the local state."""
+        if id is None:
+            id = self._get_python_caller()
+        if id not in self._modules:
+            return None
+        module = self._modules[id]
+        del self._modules[id]
+        return module
+
+    def compile(self, id: CallerIdentifier | None = None) -> Hugr | None:
+        """Compiles the local module into a Hugr."""
+        module = self.take_module(id)
+        return module.compile() if module else None
+
+    def registered_modules(self) -> list[CallerIdentifier]:
+        """Returns a list of all currently registered modules for local contexts."""
+        return list(self._modules.keys())
 
 
 guppy = _Guppy()
