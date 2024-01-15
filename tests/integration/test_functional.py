@@ -6,7 +6,7 @@ from tests.integration.util import functional, _
 
 @pytest.mark.skip()
 def test_if_no_else(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         _ @ functional
         if x:
@@ -18,7 +18,7 @@ def test_if_no_else(validate):
 
 @pytest.mark.skip()
 def test_if_else(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         _ @ functional
         if x:
@@ -32,7 +32,7 @@ def test_if_else(validate):
 
 @pytest.mark.skip()
 def test_if_elif(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         _ @ functional
         if x:
@@ -46,7 +46,7 @@ def test_if_elif(validate):
 
 @pytest.mark.skip()
 def test_if_elif_else(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         _ @ functional
         if x:
@@ -62,7 +62,7 @@ def test_if_elif_else(validate):
 
 @pytest.mark.skip()
 def test_infinite_loop(validate):
-    @guppy
+    @guppy(compile=True)
     def foo() -> int:
         while True:
             pass
@@ -73,7 +73,7 @@ def test_infinite_loop(validate):
 
 @pytest.mark.skip()
 def test_counting_loop(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(i: int) -> int:
         while i > 0:
             i -= 1
@@ -84,7 +84,7 @@ def test_counting_loop(validate):
 
 @pytest.mark.skip()
 def test_nested_loop(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: int, y: int) -> int:
         p = 0
         _ @ functional

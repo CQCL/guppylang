@@ -55,7 +55,7 @@ def test_call_2(validate):
 
 
 def test_nested(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: int) -> Callable[[int], bool]:
         def bar(y: int) -> bool:
             return x > y

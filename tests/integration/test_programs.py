@@ -3,7 +3,7 @@ from guppy.module import GuppyModule
 
 
 def test_factorial(validate):
-    @guppy
+    @guppy(compile=True)
     def factorial1(x: int) -> int:
         acc = 1
         while x > 0:
@@ -11,13 +11,13 @@ def test_factorial(validate):
             x -= 1
         return acc
 
-    @guppy
+    @guppy(compile=True)
     def factorial2(x: int) -> int:
         if x == 0:
             return 1
         return factorial2(x - 1) * x
 
-    @guppy
+    @guppy(compile=True)
     def factorial3(x: int, acc: int) -> int:
         if x == 0:
             return acc

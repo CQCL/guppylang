@@ -4,7 +4,7 @@ from guppy.module import GuppyModule
 
 
 def test_id(validate):
-    @guppy
+    @guppy(compile=True)
     def identity(x: int) -> int:
         return x
 
@@ -12,7 +12,7 @@ def test_id(validate):
 
 
 def test_void(validate):
-    @guppy
+    @guppy(compile=True)
     def void() -> None:
         return
 
@@ -20,7 +20,7 @@ def test_void(validate):
 
 
 def test_copy(validate):
-    @guppy
+    @guppy(compile=True)
     def copy(x: int) -> (int, int):
         return x, x
 
@@ -28,7 +28,7 @@ def test_copy(validate):
 
 
 def test_discard(validate):
-    @guppy
+    @guppy(compile=True)
     def discard(x: int) -> None:
         return
 
@@ -36,7 +36,7 @@ def test_discard(validate):
 
 
 def test_implicit_return(validate):
-    @guppy
+    @guppy(compile=True)
     def ret() -> None:
         pass
 
@@ -44,7 +44,7 @@ def test_implicit_return(validate):
 
 
 def test_assign(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool) -> bool:
         y = x
         return y
@@ -53,7 +53,7 @@ def test_assign(validate):
 
 
 def test_assign_expr(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool) -> bool:
         (y := x)
         return y
@@ -62,7 +62,7 @@ def test_assign_expr(validate):
 
 
 def test_func_def_name():
-    @guppy
+    @guppy(compile=True)
     def func_name() -> None:
         return
 

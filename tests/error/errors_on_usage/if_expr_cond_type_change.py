@@ -1,7 +1,7 @@
 from guppy.decorator import guppy
 
 
-@guppy
+@guppy(compile=True)
 def foo(x: bool) -> int:
     y = 4
     0 if (y := x) else (y := 6)

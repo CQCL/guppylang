@@ -1,7 +1,7 @@
 from guppy.decorator import guppy
 
 
-@guppy
+@guppy(compile=True)
 def foo(x: int) -> int:
     y = x + 1
 

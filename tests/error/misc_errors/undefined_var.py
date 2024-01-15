@@ -1,6 +1,6 @@
 from guppy.decorator import guppy
 
 
-@guppy
+@guppy(compile=True)
 def foo() -> int:
     return x

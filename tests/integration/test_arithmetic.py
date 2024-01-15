@@ -2,7 +2,7 @@ from guppy.decorator import guppy
 
 
 def test_arith_basic(validate):
-    @guppy
+    @guppy(compile=True)
     def add(x: int, y: int) -> int:
         return x + y
 
@@ -10,7 +10,7 @@ def test_arith_basic(validate):
 
 
 def test_constant(validate):
-    @guppy
+    @guppy(compile=True)
     def const() -> float:
         return 42.0
 
@@ -18,7 +18,7 @@ def test_constant(validate):
 
 
 def test_aug_assign(validate):
-    @guppy
+    @guppy(compile=True)
     def add(x: int) -> int:
         x += 1
         return x
@@ -27,7 +27,7 @@ def test_aug_assign(validate):
 
 
 def test_float_coercion(validate):
-    @guppy
+    @guppy(compile=True)
     def coerce(x: int, y: float) -> float:
         return x * y
 
@@ -35,7 +35,7 @@ def test_float_coercion(validate):
 
 
 def test_arith_big(validate):
-    @guppy
+    @guppy(compile=True)
     def arith(x: int, y: float, z: int) -> bool:
         a = x // y + 3 * z
         b = -8 >= a > 5 or (x * y == 0 and a % 3 < x)
@@ -45,7 +45,7 @@ def test_arith_big(validate):
 
 
 def test_shortcircuit_assign1(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> bool:
         if (z := x) and y > 0:
             return z
@@ -55,7 +55,7 @@ def test_shortcircuit_assign1(validate):
 
 
 def test_shortcircuit_assign2(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> bool:
         if y > 0 and (z := x):
             return z
@@ -65,7 +65,7 @@ def test_shortcircuit_assign2(validate):
 
 
 def test_shortcircuit_assign3(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> bool:
         if (z := x) or y > 0:
             return z
@@ -75,7 +75,7 @@ def test_shortcircuit_assign3(validate):
 
 
 def test_shortcircuit_assign4(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> bool:
         if y > 0 or (z := x):
             return False

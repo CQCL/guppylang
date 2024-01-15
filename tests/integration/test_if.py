@@ -4,7 +4,7 @@ from guppy.decorator import guppy
 
 
 def test_if_no_else(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         if x:
             y += 1
@@ -14,7 +14,7 @@ def test_if_no_else(validate):
 
 
 def test_if_else(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         if x:
             y += 1
@@ -26,7 +26,7 @@ def test_if_else(validate):
 
 
 def test_if_elif(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         if x:
             y += 1
@@ -38,7 +38,7 @@ def test_if_elif(validate):
 
 
 def test_if_elif_else(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         if x:
             y += 1
@@ -52,7 +52,7 @@ def test_if_elif_else(validate):
 
 
 def test_if_expr(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         return y + 1 if x else 42
 
@@ -60,7 +60,7 @@ def test_if_expr(validate):
 
 
 def test_if_expr_nested(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         a = y + 1 if x else y * y if 0 < y <= 10 else 42
         b = a if a < 5 or (not x and -7 >= a > 42) else -a
@@ -70,7 +70,7 @@ def test_if_expr_nested(validate):
 
 
 def test_if_expr_tuple(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> (int, int, int):
         t = (y + 1 if x else 42), 8, (y * 2 if x else 64)
         return t
@@ -79,7 +79,7 @@ def test_if_expr_tuple(validate):
 
 
 def test_if_expr_assign_both(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool) -> int:
         (z := 5) if x else (z := 42)
         return z
@@ -88,7 +88,7 @@ def test_if_expr_assign_both(validate):
 
 
 def test_if_expr_assign_cond(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool) -> bool:
         return z if (z := x) else False
 
@@ -96,7 +96,7 @@ def test_if_expr_assign_cond(validate):
 
 
 def test_if_expr_reassign(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool) -> int:
         y = 5
         (y := 1) if x else 6
@@ -108,7 +108,7 @@ def test_if_expr_reassign(validate):
 
 
 def test_if_expr_reassign_cond(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool) -> int:
         y = 5
         return y if (y := 42) > 5 else 64 if x else y
@@ -117,7 +117,7 @@ def test_if_expr_reassign_cond(validate):
 
 
 def test_if_expr_double_type_change(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool) -> int:
         y = 4
         (y := 1) if (y := x) else (y := 6)
@@ -127,7 +127,7 @@ def test_if_expr_double_type_change(validate):
 
 
 def test_if_return(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         if x:
             return y
@@ -138,7 +138,7 @@ def test_if_return(validate):
 
 
 def test_else_return(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         if x:
             y += 3
@@ -151,7 +151,7 @@ def test_else_return(validate):
 
 
 def test_both_return(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: bool, y: int) -> int:
         if x:
             y += 3
@@ -164,7 +164,7 @@ def test_both_return(validate):
 
 
 def test_nested_return(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: int, y: int) -> int:
         if x > 5:
             if y == 4:
@@ -177,7 +177,7 @@ def test_nested_return(validate):
 
 
 def test_return_defined1(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: int, y: int) -> int:
         if x > 5:
             return y
@@ -189,7 +189,7 @@ def test_return_defined1(validate):
 
 
 def test_return_defined2(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: int) -> int:
         if x > 5:
             z = 45
@@ -201,7 +201,7 @@ def test_return_defined2(validate):
 
 
 def test_break_different_types1(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: int) -> int:
         z = 0
         while True:
@@ -217,7 +217,7 @@ def test_break_different_types1(validate):
 
 
 def test_break_different_types2(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: int) -> int:
         z = 0
         while True:
@@ -234,7 +234,7 @@ def test_break_different_types2(validate):
 
 @pytest.mark.skip("Known bug")
 def test_continue_different_types1(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: int) -> int:
         z = 0
         while True:
@@ -251,7 +251,7 @@ def test_continue_different_types1(validate):
 
 @pytest.mark.skip("Known bug")
 def test_continue_different_types2(validate):
-    @guppy
+    @guppy(compile=True)
     def foo(x: int) -> int:
         z = 0
         while True:

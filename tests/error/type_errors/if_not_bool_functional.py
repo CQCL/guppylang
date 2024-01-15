@@ -1,7 +1,7 @@
 from guppy.decorator import guppy
 
 
-@guppy
+@guppy(compile=True)
 def foo() -> int:
     _@functional
     if 42:

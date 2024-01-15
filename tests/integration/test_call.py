@@ -31,7 +31,7 @@ def test_call_back(validate):
 
 
 def test_recursion(validate):
-    @guppy
+    @guppy(compile=True)
     def main(x: int) -> int:
         return main(x)
 

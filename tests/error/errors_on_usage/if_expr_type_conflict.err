@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:6
 
-4:    @guppy
+4:    @guppy(compile=True)
 5:    def foo(x: bool) -> None:
 6:        y = True if x else 42
               ^^^^^^^^^^^^^^^^^

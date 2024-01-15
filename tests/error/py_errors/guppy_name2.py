@@ -4,6 +4,6 @@ from guppy.decorator import guppy
 x = 42
 
 
-@guppy
+@guppy(compile=True)
 def foo(x: int) -> int:
     return py(x + 1)
