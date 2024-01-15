@@ -443,7 +443,8 @@ dependencies = [
 [[package]]
 name = "quantinuum-hugr"
 version = "0.1.0"
-source = "git+https://github.com/CQCL/hugr.git?rev=d07406c13b03a93014ae08a70bb789b25e0b31eb#d07406c13b03a93014ae08a70bb789b25e0b31eb"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3dff35dcdb01eaaf25378f89b0f0d0dce79dc3189307d784d4c7bebbd5effa7e"
 dependencies = [
  "bitvec",
  "cgmath",
