@@ -81,8 +81,6 @@ def test_continue(validate):
 
     validate(foo)
 
-    validate(foo)
-
 
 def test_return_in_loop(validate):
     @guppy
