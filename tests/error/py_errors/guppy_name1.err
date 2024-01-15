@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo(x: int) -> int:
+6:        return py(x + 1)
+                    ^
+GuppyError: Guppy variable `x` cannot be accessed in a compile-time `py(...)` expression

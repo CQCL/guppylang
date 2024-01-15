@@ -21,11 +21,13 @@ can be used to infer a type for an expression.
 """
 
 import ast
+import sys
+import traceback
 from contextlib import suppress
-from typing import Any, NoReturn
+from typing import Any, NoReturn, cast
 
 from guppy.ast_util import AstNode, AstVisitor, get_type_opt, with_loc, with_type
-from guppy.checker.core import CallableVariable, Context, Globals
+from guppy.checker.core import CallableVariable, Context, DummyEvalDict, Globals
 from guppy.error import (
     GuppyError,
     GuppyTypeError,
@@ -42,7 +44,7 @@ from guppy.gtypes import (
     TupleType,
     unify,
 )
-from guppy.nodes import GlobalName, LocalCall, LocalName, TypeApply
+from guppy.nodes import GlobalName, LocalCall, LocalName, PyExpr, TypeApply
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
@@ -323,6 +325,43 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             return f.synthesize_call(node.args, node, self.ctx)
         else:
             raise GuppyTypeError(f"Expected function type, got `{ty}`", node.func)
+
+    def visit_PyExpr(self, node: PyExpr) -> tuple[ast.expr, GuppyType]:
+        # The method we used for obtaining the Python variables in scope only works in
+        # CPython (see `get_py_scope()`).
+        if sys.implementation.name != "cpython":
+            raise GuppyError(
+                "Compile-time `py(...)` expressions are only supported in CPython", node
+            )
+
+        try:
+            python_val = eval(  # noqa: S307, PGH001
+                ast.unparse(node.value),
+                None,
+                DummyEvalDict(self.ctx, node.value),
+            )
+        except DummyEvalDict.GuppyVarUsedError as e:
+            raise GuppyError(
+                f"Guppy variable `{e.var}` cannot be accessed in a compile-time "
+                "`py(...)` expression",
+                e.node or node,
+            ) from None
+        except Exception as e:  # noqa: BLE001
+            # Remove the top frame pointing to the `eval` call from the stack trace
+            tb = e.__traceback__.tb_next if e.__traceback__ else None
+            raise GuppyError(
+                "Error occurred while evaluating Python expression:\n\n"
+                + "".join(traceback.format_exception(type(e), e, tb)),
+                node,
+            ) from e
+
+        if ty := python_value_to_guppy_type(python_val, node, self.ctx.globals):
+            return with_loc(node, ast.Constant(value=python_val)), ty
+
+        raise GuppyError(
+            f"Python expression of type `{type(python_val)}` is not supported by Guppy",
+            node,
+        )
 
     def visit_NamedExpr(self, node: ast.NamedExpr) -> tuple[ast.expr, GuppyType]:
         raise InternalGuppyError(
@@ -614,5 +653,10 @@ def python_value_to_guppy_type(
             return globals.types["int"].build(node=node)
         case float():
             return globals.types["float"].build(node=node)
+        case tuple(elts):
+            tys = [python_value_to_guppy_type(elt, node, globals) for elt in elts]
+            if any(ty is None for ty in tys):
+                return None
+            return TupleType(cast(list[GuppyType], tys))
         case _:
             return None
