@@ -3,5 +3,5 @@ Guppy compilation failed. Error in file $FILE:13
 11:    @guppy(module)
 12:    def foo(q: Qubit) -> int:
 13:        x = q
-           ^^^^^
+           ^
 GuppyError: Variable `x` with linear type `Qubit` is not used

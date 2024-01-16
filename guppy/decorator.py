@@ -80,6 +80,7 @@ class _Guppy:
         hugr_ty: tys.Type,
         name: str = "",
         linear: bool = False,
+        bound: tys.TypeBound | None = None,
     ) -> ClassDecorator:
         """Decorator to annotate a class definitions as Guppy types.
 
@@ -116,6 +117,9 @@ class _Guppy:
 
                 def to_hugr(self) -> tys.Type:
                     return hugr_ty
+
+                def hugr_bound(self) -> tys.TypeBound:
+                    return bound or super().hugr_bound()
 
                 def transform(self, transformer: TypeTransformer) -> GuppyType:
                     return transformer.transform(self) or NewType(

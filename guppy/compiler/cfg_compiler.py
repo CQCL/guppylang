@@ -56,7 +56,7 @@ def compile_bb(
             for (i, v) in enumerate(inputs)
         },
     )
-    dfg = StmtCompiler(graph, globals).compile_stmts(bb.statements, bb, dfg)
+    dfg = StmtCompiler(graph, globals).compile_stmts(bb.statements, dfg)
 
     # If we branch, we also have to compile the branch predicate
     if len(bb.successors) > 1:

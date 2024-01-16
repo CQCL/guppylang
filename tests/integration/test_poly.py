@@ -134,6 +134,22 @@ def test_infer_basic(validate):
     validate(module.compile())
 
 
+def test_infer_list(validate):
+    module = GuppyModule("test")
+    T = guppy.type_var(module, "T")
+
+    @guppy.declare(module)
+    def foo() -> T:
+        ...
+
+    @guppy(module)
+    def main() -> None:
+        xs: list[int] = [foo()]
+        ys = [1.0, foo()]
+
+    validate(module.compile())
+
+
 def test_infer_nested(validate):
     module = GuppyModule("test")
     T = guppy.type_var(module, "T")

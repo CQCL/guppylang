@@ -228,8 +228,15 @@ class TypeBound(Enum):
     Any = "A"
 
     @staticmethod
-    def from_linear(linear: bool) -> "TypeBound":
-        return TypeBound.Any if linear else TypeBound.Copyable
+    def join(*bs: "TypeBound") -> "TypeBound":
+        """Computes the least upper bound for a sequence of bounds."""
+        res = TypeBound.Eq
+        for b in bs:
+            if b == TypeBound.Any:
+                return TypeBound.Any
+            if res == TypeBound.Eq:
+                res = b
+        return res
 
 
 class Opaque(BaseModel):

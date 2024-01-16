@@ -1,5 +1,8 @@
 import ast
+import copy
+import itertools
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Any, NamedTuple
 
@@ -8,6 +11,8 @@ from guppy.gtypes import (
     BoolType,
     FunctionType,
     GuppyType,
+    LinstType,
+    ListType,
     NoneType,
     Subst,
     SumType,
@@ -76,6 +81,8 @@ class Globals(NamedTuple):
             SumType.name: SumType,
             NoneType.name: NoneType,
             BoolType.name: BoolType,
+            ListType.name: ListType,
+            LinstType.name: LinstType,
         }
         return Globals({}, tys, {}, {})
 
@@ -106,8 +113,45 @@ class Globals(NamedTuple):
         return self
 
 
-# Local variable mapping
-Locals = dict[str, Variable]
+@dataclass
+class Locals:
+    """Scoped mapping from names to variables"""
+
+    vars: dict[str, Variable]
+    parent_scope: "Locals | None" = None
+
+    def __getitem__(self, item: str) -> Variable:
+        if item not in self.vars and self.parent_scope:
+            return self.parent_scope[item]
+
+        return self.vars[item]
+
+    def __setitem__(self, key: str, value: Variable) -> None:
+        self.vars[key] = value
+
+    def __iter__(self) -> Iterator[str]:
+        parent_iter = iter(self.parent_scope) if self.parent_scope else iter(())
+        return itertools.chain(iter(self.vars), parent_iter)
+
+    def __contains__(self, item: str) -> bool:
+        return (item in self.vars) or (
+            self.parent_scope is not None and item in self.parent_scope
+        )
+
+    def __copy__(self) -> "Locals":
+        # Make a copy of the var map so that mutating the copy doesn't
+        # mutate our variable mapping
+        return Locals(self.vars.copy(), copy.copy(self.parent_scope))
+
+    def keys(self) -> set[str]:
+        parent_keys = self.parent_scope.keys() if self.parent_scope else set()
+        return parent_keys | self.vars.keys()
+
+    def items(self) -> Iterable[tuple[str, Variable]]:
+        parent_items = (
+            iter(self.parent_scope.items()) if self.parent_scope else iter(())
+        )
+        return itertools.chain(self.vars.items(), parent_items)
 
 
 class Context(NamedTuple):

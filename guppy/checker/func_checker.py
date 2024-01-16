@@ -49,14 +49,14 @@ class DefinedFunction(CallableVariable):
     ) -> tuple[ast.expr, Subst]:
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.ty, args, ty, node, ctx)
-        return GlobalCall(func=self, args=args, type_args=inst), subst
+        return with_loc(node, GlobalCall(func=self, args=args, type_args=inst)), subst
 
     def synthesize_call(
         self, args: list[ast.expr], node: AstNode, ctx: Context
     ) -> tuple[GlobalCall, GuppyType]:
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.ty, args, node, ctx)
-        return GlobalCall(func=self, args=args, type_args=inst), ty
+        return with_loc(node, GlobalCall(func=self, args=args, type_args=inst)), ty
 
 
 @dataclass
