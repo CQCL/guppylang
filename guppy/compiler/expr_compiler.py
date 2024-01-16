@@ -88,7 +88,9 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         Automatically adds the `Output` node to the loop body once the context manager
         exits.
         """
-        loop = self.graph.add_tail_loop([self.visit(name) for name in loop_vars], parent)
+        loop = self.graph.add_tail_loop(
+            [self.visit(name) for name in loop_vars], parent
+        )
         with self._new_dfcontainer(loop_vars, loop):
             yield
             # Output the branch predicate and the inputs for the next iteration
