@@ -142,7 +142,7 @@ def check_nested_func_def(
         if not captured:
             # If there are no captured vars, we treat the function like a global name
             func = DefinedFunction(func_def.name, func_ty, func_def, None)
-            globals = ctx.globals | Globals({func_def.name: func}, {}, {})
+            globals = ctx.globals | Globals({func_def.name: func}, {}, {}, {})
 
         else:
             # Otherwise, we treat it like a local name

@@ -299,10 +299,17 @@ def python_value_to_hugr(v: Any) -> val.Value | None:
     """
     from guppy.prelude._internal import bool_value, float_value, int_value
 
-    if isinstance(v, bool):
-        return bool_value(v)
-    elif isinstance(v, int):
-        return int_value(v)
-    elif isinstance(v, float):
-        return float_value(v)
-    return None
+    match v:
+        case bool():
+            return bool_value(v)
+        case int():
+            return int_value(v)
+        case float():
+            return float_value(v)
+        case tuple(elts):
+            vs = [python_value_to_hugr(elt) for elt in elts]
+            if any(value is None for value in vs):
+                return None
+            return val.Tuple(vs=vs)
+        case _:
+            return None
