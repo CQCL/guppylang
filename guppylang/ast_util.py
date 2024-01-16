@@ -236,9 +236,9 @@ def set_location_from(node: ast.AST, loc: ast.AST) -> None:
 def annotate_location(
     node: ast.AST, source: str, file: str, line_offset: int, recurse: bool = True
 ) -> None:
-    setattr(node, "line_offset", line_offset)
-    setattr(node, "file", file)
-    setattr(node, "source", source)
+    node.line_offset = line_offset  # type: ignore[attr-defined]
+    node.file = file  # type: ignore[attr-defined]
+    node.source = source  # type: ignore[attr-defined]
 
     if recurse:
         for _field, value in ast.iter_fields(node):
@@ -253,7 +253,7 @@ def annotate_location(
 def get_file(node: AstNode) -> str | None:
     """Tries to retrieve a file annotation from an AST node."""
     try:
-        file = getattr(node, "file")
+        file = node.file  # type: ignore[union-attr]
         return file if isinstance(file, str) else None
     except AttributeError:
         return None
@@ -262,7 +262,7 @@ def get_file(node: AstNode) -> str | None:
 def get_source(node: AstNode) -> str | None:
     """Tries to retrieve a source annotation from an AST node."""
     try:
-        source = getattr(node, "source")
+        source = node.source  # type: ignore[union-attr]
         return source if isinstance(source, str) else None
     except AttributeError:
         return None
@@ -271,7 +271,7 @@ def get_source(node: AstNode) -> str | None:
 def get_line_offset(node: AstNode) -> int | None:
     """Tries to retrieve a line offset annotation from an AST node."""
     try:
-        line_offset = getattr(node, "line_offset")
+        line_offset = node.line_offset  # type: ignore[union-attr]
         return line_offset if isinstance(line_offset, int) else None
     except AttributeError:
         return None
@@ -288,7 +288,7 @@ def with_loc(loc: ast.AST, node: A) -> A:
 
 def with_type(ty: "GuppyType", node: A) -> A:
     """Annotates an AST node with a type."""
-    setattr(node, "type", ty)
+    node.type = ty  # type: ignore[attr-defined]
     return node
 
 
@@ -297,7 +297,7 @@ def get_type_opt(node: AstNode) -> Optional["GuppyType"]:
     from guppylang.gtypes import GuppyType
 
     try:
-        ty = getattr(node, "type")
+        ty = node.type  # type: ignore[union-attr]
         return ty if isinstance(ty, GuppyType) else None
     except AttributeError:
         return None

@@ -133,7 +133,7 @@ class _Guppy:
             NewType.__qualname__ = _name
             module.register_type(_name, NewType)
             module._register_buffered_instance_funcs(NewType)
-            setattr(c, "_guppy_type", NewType)
+            c._guppy_type = NewType  # type: ignore[attr-defined]
             return c
 
         return dec
