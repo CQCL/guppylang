@@ -5,7 +5,7 @@ from guppy.prelude.builtins import linst
 from guppy.prelude.quantum import Qubit
 
 import guppy.prelude.quantum as quantum
-from guppy.prelude.quantum import h, cx, measure
+from guppy.prelude.quantum import h, cx, measure_q, measure, t
 
 
 def test_id(validate):
@@ -39,7 +39,7 @@ def test_linear_return_order(validate):
 
     @guppy(module)
     def test(q: Qubit) -> tuple[Qubit, bool]:
-        return measure(q)
+        return measure_q(q)
 
     validate(module.compile())
 
@@ -72,17 +72,13 @@ def test_if(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy.declare(module)
-    def new() -> Qubit:
-        ...
-
     @guppy(module)
     def test(b: bool) -> Qubit:
         if b:
-            a = new()
+            a = Qubit()
             q = h(a)
         else:
-            q = new()
+            q = Qubit()
         return q
 
     validate(module.compile())
@@ -92,17 +88,13 @@ def test_if_return(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy.declare(module)
-    def new() -> Qubit:
-        ...
-
     @guppy(module)
     def test(b: bool) -> Qubit:
         if b:
-            q = new()
+            q = Qubit()
             return h(q)
         else:
-            q = new()
+            q = Qubit()
         return q
 
     validate(module.compile())
@@ -111,10 +103,6 @@ def test_if_return(validate):
 def test_measure(validate):
     module = GuppyModule("test")
     module.load(quantum)
-
-    @guppy.declare(module)
-    def measure(q: Qubit) -> bool:
-        ...
 
     @guppy(module)
     def test(q: Qubit, x: int) -> int:
@@ -189,19 +177,11 @@ def test_while_reset(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy.declare(module)
-    def new_qubit() -> Qubit:
-        ...
-
-    @guppy.declare(module)
-    def measure() -> bool:
-        ...
-
     @guppy(module)
     def foo(i: bool) -> bool:
         b = False
         while True:
-            q = new_qubit()
+            q = Qubit()
             b ^= measure(q)
             if i == 0:
                 break
@@ -228,10 +208,6 @@ def test_for_measure(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy.declare(module)
-    def measure(q: Qubit) -> bool:
-        ...
-
     @guppy(module)
     def test(qs: linst[Qubit]) -> bool:
         parity = False
@@ -245,10 +221,6 @@ def test_for_measure(validate):
 def test_for_continue(validate):
     module = GuppyModule("test")
     module.load(quantum)
-
-    @guppy.declare(module)
-    def measure(q: Qubit) -> bool:
-        ...
 
     @guppy(module)
     def test(qs: linst[Qubit]) -> int:
@@ -308,22 +280,10 @@ def test_rus(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy.declare(module)
-    def measure(q: Qubit) -> bool:
-        ...
-
-    @guppy.declare(module)
-    def qalloc() -> Qubit:
-        ...
-
-    @guppy.declare(module)
-    def t(q: Qubit) -> Qubit:
-        ...
-
     @guppy(module)
     def repeat_until_success(q: Qubit) -> Qubit:
         while True:
-            aux, q = cx(t(h(qalloc())), q)
+            aux, q = cx(t(h(Qubit())), q)
             aux, q = cx(h(aux), q)
             if measure(h(t(aux))):
                 break
