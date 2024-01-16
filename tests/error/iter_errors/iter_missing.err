@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:16
+
+14:    @guppy(module)
+15:    def test(x: MyType) -> None:
+16:        for _ in x:
+                    ^
+GuppyTypeError: Expression of type `MyType` is not iterable

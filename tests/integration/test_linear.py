@@ -1,5 +1,7 @@
 from guppy.decorator import guppy
+from guppy.hugr import tys
 from guppy.module import GuppyModule
+from guppy.prelude.builtins import linst
 from guppy.prelude.quantum import Qubit
 
 import guppy.prelude.quantum as quantum
@@ -205,6 +207,101 @@ def test_while_reset(validate):
                 break
             i -= 1
         return b
+
+
+def test_for(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy(module)
+    def test(qs: linst[tuple[Qubit, Qubit]]) -> linst[Qubit]:
+        rs: linst[Qubit] = []
+        for q1, q2 in qs:
+            q1, q2 = cx(q1, q2)
+            rs += [q1, q2]
+        return rs
+
+    validate(module.compile())
+
+
+def test_for_measure(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.declare(module)
+    def measure(q: Qubit) -> bool:
+        ...
+
+    @guppy(module)
+    def test(qs: linst[Qubit]) -> bool:
+        parity = False
+        for q in qs:
+            parity |= measure(q)
+        return parity
+
+    validate(module.compile())
+
+
+def test_for_continue(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.declare(module)
+    def measure(q: Qubit) -> bool:
+        ...
+
+    @guppy(module)
+    def test(qs: linst[Qubit]) -> int:
+        x = 0
+        for q in qs:
+            if measure(q):
+                continue
+            x += 1
+        return x
+
+    validate(module.compile())
+
+
+def test_for_nonlinear_break(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.type(module, tys.TupleType(inner=[]))
+    class MyIter:
+        """An iterator that yields linear values but is not linear itself."""
+
+        @guppy.declare(module)
+        def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]:
+            ...
+
+        @guppy.declare(module)
+        def __next__(self: "MyIter") -> tuple[Qubit, "MyIter"]:
+            ...
+
+        @guppy.declare(module)
+        def __end__(self: "MyIter") -> None:
+            ...
+
+    @guppy.type(module, tys.TupleType(inner=[]))
+    class MyType:
+        """Type that produces the iterator above."""
+
+        @guppy.declare(module)
+        def __iter__(self: "MyType") -> MyIter:
+            ...
+
+    @guppy.declare(module)
+    def measure(q: Qubit) -> bool:
+        ...
+
+    @guppy(module)
+    def test(mt: MyType, xs: list[int]) -> None:
+        # We can break, since `mt` itself is not linear
+        for q in mt:
+            if measure(q):
+                break
+
+    validate(module.compile())
 
 
 def test_rus(validate):

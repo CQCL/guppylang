@@ -1,0 +1,6 @@
+Guppy compilation failed. Error in file $FILE:13
+
+11:    @guppy(module)
+12:    def foo() -> list[Qubit]:
+                    ^^^^^^^^^^^
+GuppyError: Type `list` cannot store linear data, use `linst` instead

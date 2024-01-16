@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:18
+
+16:    @guppy(module)
+17:    def foo(qs: linst[tuple[bool, Qubit]]) -> list[int]:
+18:        return [42 for b, q in qs if b if q]
+                             ^
+GuppyTypeError: Variable `q` with linear type `Qubit` is not used on all control-flow paths of the list comprehension

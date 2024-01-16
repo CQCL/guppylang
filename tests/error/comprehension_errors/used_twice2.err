@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:18
+
+16:    @guppy(module)
+17:    def foo(qs: linst[Qubit]) -> linst[Qubit]:
+18:        return [q for q in qs if bar(q)]
+                   ^
+GuppyError: Variable `q` with linear type `Qubit` was already used (at 18:33)

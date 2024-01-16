@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo(xs: list[int], ys: list[int], b: bool) -> None:
+6:        [x for x in (xs if b else ys)]
+                       ^^^^^^^^^^^^^^^
+GuppyError: Expression is not supported inside a list comprehension
