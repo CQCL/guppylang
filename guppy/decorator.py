@@ -25,7 +25,7 @@ CustomFuncDecorator = Callable[[PyFunc], CustomFunction]
 ClassDecorator = Callable[[type], type]
 
 
-@dataclass
+@dataclass(frozen=True)
 class CallerIdentifier:
     """Identifier for the interpreter frame that called the decorator."""
 
@@ -38,18 +38,20 @@ class CallerIdentifier:
 
         If the called is not a function, uses the file name.
         """
-        if self.function == "<module>":
-            return self.filename.name
-        return self.function
-
-    def __hash__(self) -> int:
-        return hash((self.filename, self.function))
+        module_name = inspect.getmodulename(self.filename)
+        if self.function != "<module>":
+            return self.function
+        if module_name is not None:
+            return module_name
+        return self.filename.name
 
 
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
     # The currently-alive modules, associated with an element in the call stack.
+    #
+    # Only contains **uncompiled** modules.
     _modules: dict[CallerIdentifier, GuppyModule]
 
     def __init__(self) -> None:
@@ -275,9 +277,7 @@ class _Guppy:
             id = self._get_python_caller()
         if id not in self._modules:
             return None
-        module = self._modules[id]
-        del self._modules[id]
-        return module
+        return self._modules.pop(id)
 
     def compile(self, id: CallerIdentifier | None = None) -> Hugr | None:
         """Compiles the local module into a Hugr."""
