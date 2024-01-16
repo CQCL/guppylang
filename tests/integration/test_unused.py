@@ -1,6 +1,6 @@
 """ All sorts of weird stuff is allowed when variables are not used. """
 
-from guppy.decorator import guppy
+from guppylang.decorator import guppy
 
 
 def test_not_always_defined1(validate):

@@ -1,7 +1,7 @@
 from typing import Callable
 
-from guppy.decorator import guppy
-from guppy.module import GuppyModule
+from guppylang.decorator import guppy
+from guppylang.module import GuppyModule
 
 
 module = GuppyModule("test")
