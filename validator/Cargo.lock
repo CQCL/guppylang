@@ -753,7 +753,7 @@ checksum = "86bd8d4e895da8537e5315b8254664e6b769c4ff3db18321b297a1e7004392e3"
 
 [[package]]
 name = "validator"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "lazy_static",
  "pyo3",
