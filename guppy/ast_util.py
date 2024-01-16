@@ -1,5 +1,8 @@
 import ast
-from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar
+import textwrap
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, cast
 
 if TYPE_CHECKING:
     from guppy.gtypes import GuppyType
@@ -54,51 +57,161 @@ class AstVisitor(Generic[T]):
         raise NotImplementedError(f"visit_{node.__class__.__name__} is not implemented")
 
 
-class NameVisitor(ast.NodeVisitor):
-    """Visitor to collect all `Name` nodes occurring in an AST."""
+class AstSearcher(ast.NodeVisitor):
+    """Visitor that searches for occurrences of specific nodes in an AST."""
 
-    names: list[ast.Name]
+    matcher: Callable[[ast.AST], bool]
+    dont_recurse_into: set[type[ast.AST]]
+    found: list[ast.AST]
+    is_first_node: bool
 
-    def __init__(self) -> None:
-        self.names = []
+    def __init__(
+        self,
+        matcher: Callable[[ast.AST], bool],
+        dont_recurse_into: set[type[ast.AST]] | None = None,
+    ) -> None:
+        self.matcher = matcher
+        self.dont_recurse_into = dont_recurse_into or set()
+        self.found = []
+        self.is_first_node = True
 
-    def visit_Name(self, node: ast.Name) -> None:
-        self.names.append(node)
+    def generic_visit(self, node: ast.AST) -> None:
+        if self.matcher(node):
+            self.found.append(node)
+        if self.is_first_node or type(node) not in self.dont_recurse_into:
+            self.is_first_node = False
+            super().generic_visit(node)
+
+
+def find_nodes(
+    matcher: Callable[[ast.AST], bool],
+    node: ast.AST,
+    dont_recurse_into: set[type[ast.AST]] | None = None,
+) -> list[ast.AST]:
+    """Returns all nodes in the AST that satisfy the matcher."""
+    v = AstSearcher(matcher, dont_recurse_into)
+    v.visit(node)
+    return v.found
 
 
 def name_nodes_in_ast(node: Any) -> list[ast.Name]:
     """Returns all `Name` nodes occurring in an AST."""
-    v = NameVisitor()
-    v.visit(node)
-    return v.names
-
-
-class ReturnVisitor(ast.NodeVisitor):
-    """Visitor to collect all `Return` nodes occurring in an AST."""
-
-    returns: list[ast.Return]
-    inside_func_def: bool
-
-    def __init__(self) -> None:
-        self.returns = []
-        self.inside_func_def = False
-
-    def visit_Return(self, node: ast.Return) -> None:
-        self.returns.append(node)
-
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        # Don't descend into nested function definitions
-        if not self.inside_func_def:
-            self.inside_func_def = True
-            for n in node.body:
-                self.visit(n)
+    found = find_nodes(lambda n: isinstance(n, ast.Name), node)
+    return cast(list[ast.Name], found)
 
 
 def return_nodes_in_ast(node: Any) -> list[ast.Return]:
     """Returns all `Return` nodes occurring in an AST."""
-    v = ReturnVisitor()
-    v.visit(node)
-    return v.returns
+    found = find_nodes(lambda n: isinstance(n, ast.Return), node, {ast.FunctionDef})
+    return cast(list[ast.Return], found)
+
+
+def breaks_in_loop(node: Any) -> list[ast.Break]:
+    """Returns all `Break` nodes occurring in a loop.
+
+    Note that breaks in nested loops are excluded.
+    """
+    found = find_nodes(
+        lambda n: isinstance(n, ast.Break), node, {ast.For, ast.While, ast.FunctionDef}
+    )
+    return cast(list[ast.Break], found)
+
+
+class ContextAdjuster(ast.NodeTransformer):
+    """Updates the `ast.Context` indicating if expressions occur on the LHS or RHS."""
+
+    ctx: ast.expr_context
+
+    def __init__(self, ctx: ast.expr_context) -> None:
+        self.ctx = ctx
+
+    def visit(self, node: ast.AST) -> ast.AST:
+        return cast(ast.AST, super().visit(node))
+
+    def visit_Name(self, node: ast.Name) -> ast.Name:
+        return with_loc(node, ast.Name(id=node.id, ctx=self.ctx))
+
+    def visit_Starred(self, node: ast.Starred) -> ast.Starred:
+        return with_loc(node, ast.Starred(value=self.visit(node.value), ctx=self.ctx))
+
+    def visit_Tuple(self, node: ast.Tuple) -> ast.Tuple:
+        return with_loc(
+            node, ast.Tuple(elts=[self.visit(elt) for elt in node.elts], ctx=self.ctx)
+        )
+
+    def visit_List(self, node: ast.List) -> ast.List:
+        return with_loc(
+            node, ast.List(elts=[self.visit(elt) for elt in node.elts], ctx=self.ctx)
+        )
+
+    def visit_Subscript(self, node: ast.Subscript) -> ast.Subscript:
+        # Don't adjust the slice!
+        return with_loc(
+            node,
+            ast.Subscript(value=self.visit(node.value), slice=node.slice, ctx=self.ctx),
+        )
+
+    def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
+        return with_loc(
+            node,
+            ast.Attribute(value=self.visit(node.value), attr=node.attr, ctx=self.ctx),
+        )
+
+
+@dataclass(frozen=True, eq=False)
+class TemplateReplacer(ast.NodeTransformer):
+    """Replaces nodes in a template."""
+
+    replacements: Mapping[str, ast.AST | Sequence[ast.AST]]
+    default_loc: ast.AST
+
+    def _get_replacement(self, x: str) -> ast.AST | Sequence[ast.AST]:
+        if x not in self.replacements:
+            msg = f"No replacement for `{x}` is given"
+            raise ValueError(msg)
+        return self.replacements[x]
+
+    def visit_Name(self, node: ast.Name) -> ast.AST:
+        repl = self._get_replacement(node.id)
+        if not isinstance(repl, ast.expr):
+            msg = f"Replacement for `{node.id}` must be an expression"
+            raise TypeError(msg)
+
+        # Update the context
+        adjuster = ContextAdjuster(node.ctx)
+        return with_loc(repl, adjuster.visit(repl))
+
+    def visit_Expr(self, node: ast.Expr) -> ast.AST | Sequence[ast.AST]:
+        if isinstance(node.value, ast.Name):
+            repl = self._get_replacement(node.value.id)
+            repls = [repl] if not isinstance(repl, Sequence) else repl
+            # Wrap expressions to turn them into statements
+            return [
+                with_loc(r, ast.Expr(value=r)) if isinstance(r, ast.expr) else r
+                for r in repls
+            ]
+        return self.generic_visit(node)
+
+    def generic_visit(self, node: ast.AST) -> ast.AST:
+        # Insert the default location
+        node = super().generic_visit(node)
+        return with_loc(self.default_loc, node)
+
+
+def template_replace(
+    template: str, default_loc: ast.AST, **kwargs: ast.AST | Sequence[ast.AST]
+) -> list[ast.stmt]:
+    """Turns a template into a proper AST by substituting all placeholders."""
+    nodes = ast.parse(textwrap.dedent(template)).body
+    replacer = TemplateReplacer(kwargs, default_loc)
+    new_nodes = []
+    for n in nodes:
+        new = replacer.visit(n)
+        if isinstance(new, list):
+            new_nodes.extend(new)
+        else:
+            new_nodes.append(new)
+    return new_nodes
 
 
 def line_col(node: ast.AST) -> tuple[int, int]:
