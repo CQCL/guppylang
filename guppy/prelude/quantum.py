@@ -128,4 +128,3 @@ def reset(q: Qubit) -> Qubit:
 @guppy.custom(quantum, MeasureCompiler())
 def measure(q: Qubit) -> bool:
     ...
-
