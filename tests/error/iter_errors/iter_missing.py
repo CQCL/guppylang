@@ -6,7 +6,7 @@ from guppy.module import GuppyModule
 module = GuppyModule("test")
 
 
-@guppy.type(module, tys.Tuple(inner=[]))
+@guppy.type(module, tys.TupleType(inner=[]))
 class MyType:
     """A non-iterable type."""
 

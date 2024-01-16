@@ -6,7 +6,7 @@ from guppy.module import GuppyModule
 module = GuppyModule("test")
 
 
-@guppy.type(module, tys.Tuple(inner=[]))
+@guppy.type(module, tys.TupleType(inner=[]))
 class MyType:
     """A type where the `__iter__` method has the wrong signature."""
 

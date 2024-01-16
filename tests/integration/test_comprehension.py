@@ -188,7 +188,7 @@ def test_linear_next_nonlinear_iter(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy.type(module, tys.Tuple(inner=[]))
+    @guppy.type(module, tys.TupleType(inner=[]))
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
@@ -204,7 +204,7 @@ def test_linear_next_nonlinear_iter(validate):
         def __end__(self: "MyIter") -> None:
             ...
 
-    @guppy.type(module, tys.Tuple(inner=[]))
+    @guppy.type(module, tys.TupleType(inner=[]))
     class MyType:
         """Type that produces the iterator above."""
 
@@ -244,7 +244,7 @@ def test_nonlinear_next_linear_iter(validate):
         def __end__(self: "MyIter") -> None:
             ...
 
-    @guppy.type(module, tys.Tuple(inner=[]))
+    @guppy.type(module, tys.TupleType(inner=[]))
     class MyType:
         """Type that produces the iterator above."""
 

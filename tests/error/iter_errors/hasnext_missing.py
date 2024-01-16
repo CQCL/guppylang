@@ -6,7 +6,7 @@ from guppy.module import GuppyModule
 module = GuppyModule("test")
 
 
-@guppy.type(module, tys.Tuple(inner=[]))
+@guppy.type(module, tys.TupleType(inner=[]))
 class MyIter:
     """An iterator that is missing the `__hasnext__` method."""
 
@@ -19,7 +19,7 @@ class MyIter:
         ...
 
 
-@guppy.type(module, tys.Tuple(inner=[]))
+@guppy.type(module, tys.TupleType(inner=[]))
 class MyType:
     """Type that produces the iterator above."""
 
