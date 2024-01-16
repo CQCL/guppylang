@@ -1,0 +1,12 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo() -> int:
+6:        return py(1 / 0)
+                 ^^^^^^^^^
+GuppyError: Error occurred while evaluating Python expression:
+
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ZeroDivisionError: division by zero
+

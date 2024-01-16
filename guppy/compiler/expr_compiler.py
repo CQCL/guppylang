@@ -65,6 +65,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         """
         old = self.dfg
         inp = self.graph.add_input(parent=node)
+        # Check that the input names are unique
+        assert len({inp.id for inp in inputs}) == len(inputs), "Inputs are not unique"
         new_locals = {
             name.id: PortVariable(name.id, inp.add_out_port(get_type(name)), name, None)
             for name in inputs
@@ -77,23 +79,28 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
     @contextmanager
     def _new_loop(
         self,
-        inputs: list[ast.Name],
+        loop_vars: list[ast.Name],
         branch: ast.Name,
         parent: DFContainingNode | None = None,
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `TailLoop` node.
 
-        Automatically adds the `Output` node once the context manager exists.
+        Automatically adds the `Output` node to the loop body once the context manager
+        exits.
         """
-        loop = self.graph.add_tail_loop([self.visit(name) for name in inputs], parent)
-        with self._new_dfcontainer(inputs, loop):
+        loop = self.graph.add_tail_loop(
+            [self.visit(name) for name in loop_vars], parent
+        )
+        with self._new_dfcontainer(loop_vars, loop):
             yield
             # Output the branch predicate and the inputs for the next iteration
             self.graph.add_output(
-                [self.visit(branch), *(self.visit(name) for name in inputs)]
+                # Note that we have to do fresh calls to `self.visit` here since we're
+                # in a new context
+                [self.visit(branch), *(self.visit(name) for name in loop_vars)]
             )
         # Update the DFG with the outputs from the loop
-        for name in inputs:
+        for name in loop_vars:
             self.dfg[name.id].port = loop.add_out_port(get_type(name))
 
     @contextmanager
@@ -102,16 +109,30 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `Case` node.
 
-        Automatically adds the `Output` node once the context manager exists.
+        Automatically adds the `Output` node once the context manager exits.
         """
         with self._new_dfcontainer(inputs, self.graph.add_case(cond_node)):
             yield
             self.graph.add_output([self.visit(name) for name in outputs])
-        # Update the DFG with the outputs from the Conditional node, but only we haven't
-        # already added some
-        if cond_node.num_out_ports == 0:
-            for name in inputs:
-                self.dfg[name.id].port = cond_node.add_out_port(get_type(name))
+
+    @contextmanager
+    def _if_true(self, cond: ast.expr, inputs: list[ast.Name]) -> Iterator[None]:
+        """Context manager to build a graph inside the `true` case of a `Conditional`
+
+        In the `false` case, the inputs are outputted as is.
+        """
+        cond_node = self.graph.add_conditional(
+            self.visit(cond), [self.visit(inp) for inp in inputs]
+        )
+        # If the condition is false, output the inputs as is
+        with self._new_case(inputs, inputs, cond_node):
+            pass
+        # If the condition is true, we enter the `with` block
+        with self._new_case(inputs, inputs, cond_node):
+            yield
+        # Update the DFG with the outputs from the Conditional node
+        for name in inputs:
+            self.dfg[name.id].port = cond_node.add_out_port(get_type(name))
 
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
         if value := python_value_to_hugr(node.value):
@@ -134,6 +155,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         ).out_port(0)
 
     def visit_List(self, node: ast.List) -> OutPortV:
+        # Note that this is a list literal (i.e. `[e1, e2, ...]`), not a comprehension
         return self.graph.add_node(
             ops.DummyOp(name="MakeList"), inputs=[self.visit(e) for e in node.elts]
         ).add_out_port(get_type(node))
@@ -226,37 +248,22 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             compiler.compile_stmts([gen.iter_assign], self.dfg)
             inputs = [gen.iter, list_name]
             with self._new_loop(inputs, gen.hasnext):
-                # Compile the `hasnext` check and plug it into a conditional
-                compiler.compile_stmts([gen.hasnext_assign], self.dfg)
-                cond = self.graph.add_conditional(
-                    self.visit(gen.hasnext),
-                    [self.visit(gen.iter), self.visit(list_name)],
-                )
-
-                # If the iterator is finished, output the iterator and list as is
-                with self._new_case(inputs, inputs, cond):
-                    pass
-
                 # If there is a next element, compile it and continue with the next
                 # generator
-                with self._new_case(inputs, inputs, cond):
+                compiler.compile_stmts([gen.hasnext_assign], self.dfg)
+                with self._if_true(gen.hasnext, inputs):
 
                     def compile_ifs(ifs: list[ast.expr]) -> None:
-                        if not ifs:
+                        """Helper function to compile a series of if-guards into nested
+                        Conditional nodes."""
+                        if ifs:
+                            if_expr, *ifs = ifs
+                            # If the condition is true, continue with the next one
+                            with self._if_true(if_expr, inputs):
+                                compile_ifs(ifs)
+                        else:
                             # If there are no guards left, compile the next generator
                             compile_generators(elt, gens)
-                            return
-                        if_expr, *ifs = ifs
-                        cond = self.graph.add_conditional(
-                            self.visit(if_expr),
-                            [self.visit(gen.iter), self.visit(list_name)],
-                        )
-                        # If the condition is false, output the iterator and list as is
-                        with self._new_case(inputs, inputs, cond):
-                            pass
-                        # If the condition is true, continue with the next one
-                        with self._new_case(inputs, inputs, cond):
-                            compile_ifs(ifs)
 
                     compiler.compile_stmts([gen.next_assign], self.dfg)
                     compile_ifs(gen.ifs)
@@ -294,10 +301,17 @@ def python_value_to_hugr(v: Any) -> val.Value | None:
     """
     from guppy.prelude._internal import bool_value, float_value, int_value
 
-    if isinstance(v, bool):
-        return bool_value(v)
-    elif isinstance(v, int):
-        return int_value(v)
-    elif isinstance(v, float):
-        return float_value(v)
-    return None
+    match v:
+        case bool():
+            return bool_value(v)
+        case int():
+            return int_value(v)
+        case float():
+            return float_value(v)
+        case tuple(elts):
+            vs = [python_value_to_hugr(elt) for elt in elts]
+            if any(value is None for value in vs):
+                return None
+            return val.Tuple(vs=vs)
+        case _:
+            return None

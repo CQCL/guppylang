@@ -28,7 +28,7 @@ class StmtChecker(AstVisitor[BBStatement]):
     def __init__(
         self, ctx: Context, bb: BB | None = None, return_ty: GuppyType | None = None
     ) -> None:
-        assert not return_ty or not return_ty.free_vars
+        assert not return_ty or not return_ty.unsolved_vars
         self.ctx = ctx
         self.bb = bb
         self.return_ty = return_ty
@@ -95,7 +95,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             )
         ty = type_from_ast(node.annotation, self.ctx.globals)
         node.value, subst = self._check_expr(node.value, ty)
-        assert not ty.free_vars  # `ty` must be closed!
+        assert not ty.unsolved_vars  # `ty` must be closed!
         assert len(subst) == 0
         self._check_assign(node.target, ty, node)
         return node
