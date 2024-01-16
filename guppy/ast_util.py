@@ -1,6 +1,7 @@
 import ast
 import textwrap
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, cast
 
 if TYPE_CHECKING:
@@ -154,19 +155,12 @@ class ContextAdjuster(ast.NodeTransformer):
         return ast.Attribute(value=self.visit(node.value), attr=node.attr, ctx=self.ctx)
 
 
+@dataclass(frozen=True, eq=False)
 class TemplateReplacer(ast.NodeTransformer):
     """Replaces nodes in a template."""
 
     replacements: Mapping[str, ast.AST | Sequence[ast.AST]]
     default_loc: ast.AST
-
-    def __init__(
-        self,
-        replacements: Mapping[str, ast.AST | Sequence[ast.AST]],
-        default_loc: ast.AST,
-    ) -> None:
-        self.replacements = replacements
-        self.default_loc = default_loc
 
     def _get_replacement(self, x: str) -> ast.AST | Sequence[ast.AST]:
         if x not in self.replacements:
