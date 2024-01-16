@@ -2,7 +2,6 @@ use hugr::extension::{ExtensionRegistry, PRELUDE};
 use hugr::std_extensions::arithmetic::{float_ops, float_types, int_ops, int_types};
 use hugr::std_extensions::collections;
 use hugr::std_extensions::logic;
-use hugr::HugrView;
 use lazy_static::lazy_static;
 use pyo3::prelude::*;
 
