@@ -3,5 +3,5 @@ Guppy compilation failed. Error in file $FILE:25
 23:    b = False
 24:    while i > 0:
 25:        q = new_qubit()
-           ^^^^^^^^^^^^^^^
+           ^
 GuppyError: Variable `q` with linear type `Qubit` is not used on all control-flow paths

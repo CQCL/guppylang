@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from typing_extensions import Self
 
 from guppy.ast_util import AstNode, name_nodes_in_ast
-from guppy.nodes import NestedFunctionDef, PyExpr
+from guppy.nodes import DesugaredListComp, NestedFunctionDef, PyExpr
 
 if TYPE_CHECKING:
     from guppy.cfg.cfg import BaseCFG
@@ -118,6 +118,25 @@ class VariableVisitor(ast.NodeVisitor):
             self.visit(node.value)
         for name in name_nodes_in_ast(node.target):
             self.stats.assigned[name.id] = node
+
+    def visit_DesugaredListComp(self, node: DesugaredListComp) -> None:
+        # Names bound in the comprehension are only available inside, so we shouldn't
+        # update `self.stats` with assignments
+        inner_visitor = VariableVisitor(self.bb)
+        inner_stats = inner_visitor.stats
+
+        # The generators are evaluated left to right
+        for gen in node.generators:
+            inner_visitor.visit(gen.iter_assign)
+            inner_visitor.visit(gen.hasnext_assign)
+            inner_visitor.visit(gen.next_assign)
+            for cond in gen.ifs:
+                inner_visitor.visit(cond)
+        inner_visitor.visit(node.elt)
+
+        self.stats.used |= {
+            x: n for x, n in inner_stats.used.items() if x not in self.stats.assigned
+        }
 
     def visit_PyExpr(self, node: PyExpr) -> None:
         # Don't look into `py(...)` expressions

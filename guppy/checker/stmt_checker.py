@@ -22,11 +22,13 @@ from guppy.nodes import NestedFunctionDef
 
 class StmtChecker(AstVisitor[BBStatement]):
     ctx: Context
-    bb: BB
-    return_ty: GuppyType
+    bb: BB | None
+    return_ty: GuppyType | None
 
-    def __init__(self, ctx: Context, bb: BB, return_ty: GuppyType) -> None:
-        assert not return_ty.unsolved_vars
+    def __init__(
+        self, ctx: Context, bb: BB | None = None, return_ty: GuppyType | None = None
+    ) -> None:
+        assert not return_ty or not return_ty.unsolved_vars
         self.ctx = ctx
         self.bb = bb
         self.return_ty = return_ty
@@ -55,7 +57,7 @@ class StmtChecker(AstVisitor[BBStatement]):
                             f"Variable `{x}` with linear type `{var.ty}` is not used",
                             var.defined_at,
                         )
-                self.ctx.locals[x] = Variable(x, ty, node, None)
+                self.ctx.locals[x] = Variable(x, ty, lhs, None)
 
             # The only other thing we support right now are tuples
             case ast.Tuple(elts=elts):
@@ -76,7 +78,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             case _:
                 raise GuppyError("Assignment pattern not supported", lhs)
 
-    def visit_Assign(self, node: ast.Assign) -> ast.stmt:
+    def visit_Assign(self, node: ast.Assign) -> ast.Assign:
         if len(node.targets) > 1:
             # This is the case for assignments like `a = b = 1`
             raise GuppyError("Multi assignment not supported", node)
@@ -113,6 +115,9 @@ class StmtChecker(AstVisitor[BBStatement]):
         return node
 
     def visit_Return(self, node: ast.Return) -> ast.stmt:
+        if not self.return_ty:
+            raise InternalGuppyError("return_ty required to check return stmt!")
+
         if node.value is not None:
             node.value, subst = self._check_expr(
                 node.value, self.return_ty, "return value"
@@ -126,6 +131,9 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> ast.stmt:
         from guppy.checker.func_checker import check_nested_func_def
+
+        if not self.bb:
+            raise InternalGuppyError("BB required to check nested function def!")
 
         func_def = check_nested_func_def(node, self.bb, self.ctx)
         self.ctx.locals[func_def.name] = Variable(
