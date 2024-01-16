@@ -152,7 +152,10 @@ class ContextAdjuster(ast.NodeTransformer):
         )
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
-        return ast.Attribute(value=self.visit(node.value), attr=node.attr, ctx=self.ctx)
+        return with_loc(
+            node,
+            ast.Attribute(value=self.visit(node.value), attr=node.attr, ctx=self.ctx),
+        )
 
 
 @dataclass(frozen=True, eq=False)
