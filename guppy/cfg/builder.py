@@ -5,6 +5,7 @@ from typing import NamedTuple
 
 from guppy.ast_util import (
     AstVisitor,
+    ContextAdjuster,
     find_nodes,
     set_location_from,
     template_replace,
@@ -504,6 +505,8 @@ def make_var(name: str, loc: ast.AST | None = None) -> ast.Name:
 def make_assign(lhs: list[ast.AST], value: ast.expr) -> ast.Assign:
     """Creates an `ast.Assign` node."""
     assert len(lhs) > 0
+    adjuster = ContextAdjuster(ast.Store())
+    lhs = [adjuster.visit(expr) for expr in lhs]
     if len(lhs) == 1:
         target = lhs[0]
     else:
