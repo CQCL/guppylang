@@ -1,12 +1,13 @@
 import ast
 import inspect
+import sys
 import textwrap
 from collections.abc import Callable
 from types import ModuleType
 from typing import Any, Union
 
 from guppy.ast_util import AstNode, annotate_location
-from guppy.checker.core import Globals, TypeVarDecl, qualified_name
+from guppy.checker.core import Globals, PyScope, TypeVarDecl, qualified_name
 from guppy.checker.func_checker import DefinedFunction, check_global_func_def
 from guppy.compiler.core import CompiledGlobals
 from guppy.compiler.func_compiler import CompiledFunctionDef, compile_global_func_def
@@ -37,7 +38,7 @@ class GuppyModule:
     _compiled_globals: CompiledGlobals
 
     # Mappings of functions defined in this module
-    _func_defs: dict[str, ast.FunctionDef]
+    _func_defs: dict[str, tuple[ast.FunctionDef, PyScope]]
     _func_decls: dict[str, ast.FunctionDef]
     _custom_funcs: dict[str, CustomFunction]
 
@@ -48,7 +49,7 @@ class GuppyModule:
 
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
-        self._globals = Globals({}, {}, {})
+        self._globals = Globals({}, {}, {}, {})
         self._compiled_globals = {}
         self._imported_globals = Globals.default()
         self._imported_compiled_globals = {}
@@ -100,7 +101,7 @@ class GuppyModule:
                 qualified_name(instance, func_ast.name) if instance else func_ast.name
             )
             self._check_name_available(name, func_ast)
-            self._func_defs[name] = func_ast
+            self._func_defs[name] = func_ast, get_py_scope(f)
 
     def register_func_decl(self, f: PyFunc) -> None:
         """Registers a Python function declaration as belonging to this Guppy module."""
@@ -159,7 +160,7 @@ class GuppyModule:
             func.check_type(self._imported_globals | self._globals)
         defined_funcs = {
             x: DefinedFunction.from_ast(f, x, self._imported_globals | self._globals)
-            for x, f in self._func_defs.items()
+            for x, (f, _) in self._func_defs.items()
         }
         declared_funcs = {
             x: DeclaredFunction.from_ast(f, x, self._imported_globals | self._globals)
@@ -171,7 +172,12 @@ class GuppyModule:
 
         # Type check function definitions
         checked = {
-            x: check_global_func_def(f, self._imported_globals | self._globals)
+            x: check_global_func_def(
+                f,
+                self._imported_globals
+                | self._globals
+                | Globals({}, {}, {}, self._func_defs[x][1]),
+            )
             for x, f in defined_funcs.items()
         }
 
@@ -204,12 +210,20 @@ class GuppyModule:
         self._compiled = True
         return graph
 
+    def contains_function(self, name: str) -> bool:
+        """Returns 'True' if the module contains a function with the given name."""
+        return name in self._func_defs or name in self._custom_funcs
+
+    def contains_type(self, name: str) -> bool:
+        """Returns 'True' if the module contains a type with the given name."""
+        return name in self._globals.types or name in self._globals.type_vars
+
     def _check_not_yet_compiled(self) -> None:
         if self._compiled:
             raise GuppyError(f"The module `{self.name}` has already been compiled")
 
     def _check_name_available(self, name: str, node: AstNode | None) -> None:
-        if name in self._func_defs or name in self._custom_funcs:
+        if self.contains_function(name):
             raise GuppyError(
                 f"Module `{self.name}` already contains a function named `{name}`",
                 node,
@@ -241,3 +255,33 @@ def parse_py_func(f: PyFunc) -> ast.FunctionDef:
     if not isinstance(func_ast, ast.FunctionDef):
         raise GuppyError("Expected a function definition", func_ast)
     return func_ast
+
+
+def get_py_scope(f: PyFunc) -> PyScope:
+    """Returns a mapping of all variables captured by a Python function.
+
+    Note that this function only works in CPython. On other platforms, an empty
+    dictionary is returned.
+
+    Relies on inspecting the `__globals__` and `__closure__` attributes of the function.
+    See https://docs.python.org/3/reference/datamodel.html#special-read-only-attributes
+    """
+    if sys.implementation.name != "cpython":
+        return {}
+
+    if inspect.ismethod(f):
+        f = f.__func__
+    code = f.__code__
+
+    nonlocals: PyScope = {}
+    if f.__closure__ is not None:
+        for var, cell in zip(code.co_freevars, f.__closure__):
+            try:
+                value = cell.cell_contents
+            except ValueError:
+                # The call to `cell_contents` will fail if `var` is a recursive
+                # reference to the decorated function
+                continue
+            nonlocals[var] = value
+
+    return nonlocals | f.__globals__.copy()

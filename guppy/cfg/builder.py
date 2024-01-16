@@ -1,10 +1,11 @@
 import ast
 import itertools
 from collections.abc import Iterator
-from typing import NamedTuple, cast
+from typing import NamedTuple
 
 from guppy.ast_util import (
     AstVisitor,
+    ContextAdjuster,
     find_nodes,
     set_location_from,
     template_replace,
@@ -23,6 +24,7 @@ from guppy.nodes import (
     IterNext,
     MakeIter,
     NestedFunctionDef,
+    PyExpr,
 )
 
 # In order to build expressions, need an endless stream of unique temporary variables
@@ -228,7 +230,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         bb.statements.append(new_node)
         return bb
 
-    def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:  # type: ignore[override]
+    def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:
         # When adding support for new statements, we have to remember to use the
         # ExprBuilder to transform all included expressions!
         raise GuppyError("Statement is not supported", node)
@@ -257,9 +259,8 @@ class ExprBuilder(ast.NodeTransformer):
     @classmethod
     def _tmp_assign(cls, tmp_name: str, value: ast.expr, bb: BB) -> None:
         """Adds a temporary variable assignment to a basic block."""
-        node = ast.Assign(targets=[make_var(tmp_name, value)], value=value)
-        set_location_from(node, value)
-        bb.statements.append(node)
+        lhs = make_var(tmp_name, value)
+        bb.statements.append(make_assign([lhs], value))
 
     def visit_Name(self, node: ast.Name) -> ast.Name:
         return node
@@ -308,34 +309,43 @@ class ExprBuilder(ast.NodeTransformer):
             if g.is_async:
                 raise GuppyError("Async generators are not supported", g)
             g.iter = self.visit(g.iter)
-            gen = DesugaredGenerator()
-
-            template = """
-                it = make_iter
-                b, it = has_next
-                x, it = get_next
-            """
             it = make_var(next(tmp_vars), g.iter)
-            b = make_var(next(tmp_vars), g.iter)
-            [gen.iter_assign, gen.hasnext_assign, gen.next_assign] = cast(
-                list[ast.Assign],
-                template_replace(
-                    template,
-                    g.iter,
-                    it=it,
-                    b=b,
-                    x=g.target,
-                    make_iter=with_loc(it, MakeIter(value=g.iter, origin_node=node)),
-                    has_next=with_loc(it, IterHasNext(value=it)),
-                    get_next=with_loc(it, IterNext(value=it)),
+            hasnext = make_var(next(tmp_vars), g.iter)
+            desugared = DesugaredGenerator(
+                iter=it,
+                hasnext=hasnext,
+                iter_assign=make_assign(
+                    [it], with_loc(it, MakeIter(value=g.iter, origin_node=node))
                 ),
+                hasnext_assign=make_assign(
+                    [hasnext, it], with_loc(it, IterHasNext(value=it))
+                ),
+                next_assign=make_assign(
+                    [g.target, it], with_loc(it, IterNext(value=it))
+                ),
+                iterend=with_loc(it, IterEnd(value=it)),
+                ifs=g.ifs,
             )
-            gen.iterend = with_loc(it, IterEnd(value=it))
-            gen.iter, gen.hasnext, gen.ifs = it, b, g.ifs
-            gens.append(gen)
+            gens.append(desugared)
 
         node.elt = self.visit(node.elt)
         return with_loc(node, DesugaredListComp(elt=node.elt, generators=gens))
+
+    def visit_Call(self, node: ast.Call) -> ast.AST:
+        # Parse compile-time evaluated `py(...)` expression
+        if isinstance(node.func, ast.Name) and node.func.id == "py":
+            match node.args:
+                case []:
+                    raise GuppyError(
+                        "Compile-time `py(...)` expression requires an argument",
+                        node,
+                    )
+                case [arg]:
+                    pass
+                case args:
+                    arg = with_loc(node, ast.Tuple(elts=args, ctx=ast.Load))
+            return with_loc(node, PyExpr(value=arg))
+        return self.generic_visit(node)
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
         # Short-circuit expressions must be built using the `BranchBuilder`. However, we
@@ -444,7 +454,7 @@ class BranchBuilder(AstVisitor[None]):
         self.visit(node.body, then_bb, true_bb, false_bb)
         self.visit(node.orelse, else_bb, true_bb, false_bb)
 
-    def generic_visit(self, node: ast.expr, bb: BB, true_bb: BB, false_bb: BB) -> None:  # type: ignore[override]
+    def generic_visit(self, node: ast.expr, bb: BB, true_bb: BB, false_bb: BB) -> None:
         # We can always fall back to building the node as a regular expression and using
         # the result as a branch predicate
         pred, bb = ExprBuilder.build(node, self.cfg, bb)
@@ -490,3 +500,15 @@ def make_var(name: str, loc: ast.AST | None = None) -> ast.Name:
     if loc is not None:
         set_location_from(node, loc)
     return node
+
+
+def make_assign(lhs: list[ast.AST], value: ast.expr) -> ast.Assign:
+    """Creates an `ast.Assign` node."""
+    assert len(lhs) > 0
+    adjuster = ContextAdjuster(ast.Store())
+    lhs = [adjuster.visit(expr) for expr in lhs]
+    if len(lhs) == 1:
+        target = lhs[0]
+    else:
+        target = with_loc(value, ast.Tuple(elts=lhs, ctx=ast.Store()))
+    return with_loc(value, ast.Assign(targets=[target], value=value))

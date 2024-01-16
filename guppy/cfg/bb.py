@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from typing_extensions import Self
 
 from guppy.ast_util import AstNode, name_nodes_in_ast
-from guppy.nodes import DesugaredListComp, NestedFunctionDef
+from guppy.nodes import DesugaredListComp, NestedFunctionDef, PyExpr
 
 if TYPE_CHECKING:
     from guppy.cfg.cfg import BaseCFG
@@ -83,10 +83,9 @@ class BB(ABC):
         visitor = VariableVisitor(self)
         for s in self.statements:
             visitor.visit(s)
-        self._vars = visitor.stats
-
         if self.branch_pred is not None:
-            self._vars.update_used(self.branch_pred)
+            visitor.visit(self.branch_pred)
+        self._vars = visitor.stats
 
 
 class VariableVisitor(ast.NodeVisitor):
@@ -138,6 +137,10 @@ class VariableVisitor(ast.NodeVisitor):
         self.stats.used |= {
             x: n for x, n in inner_stats.used.items() if x not in self.stats.assigned
         }
+
+    def visit_PyExpr(self, node: PyExpr) -> None:
+        # Don't look into `py(...)` expressions
+        pass
 
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> None:
         # In order to compute the used external variables in a nested function

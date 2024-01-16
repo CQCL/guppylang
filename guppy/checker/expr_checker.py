@@ -21,8 +21,10 @@ can be used to infer a type for an expression.
 """
 
 import ast
+import sys
+import traceback
 from contextlib import suppress
-from typing import Any, NoReturn
+from typing import Any, NoReturn, cast
 
 from guppy.ast_util import (
     AstNode,
@@ -34,7 +36,7 @@ from guppy.ast_util import (
     with_loc,
     with_type,
 )
-from guppy.checker.core import CallableVariable, Context, Globals, Locals
+from guppy.checker.core import CallableVariable, Context, DummyEvalDict, Globals, Locals
 from guppy.error import (
     GuppyError,
     GuppyTypeError,
@@ -43,7 +45,7 @@ from guppy.error import (
 )
 from guppy.gtypes import (
     BoolType,
-    FreeTypeVar,
+    ExistentialTypeVar,
     FunctionType,
     GuppyType,
     Inst,
@@ -64,6 +66,7 @@ from guppy.nodes import (
     LocalCall,
     LocalName,
     MakeIter,
+    PyExpr,
     TypeApply,
 )
 
@@ -100,7 +103,11 @@ binary_table: dict[type[AstOp], tuple[str, str, str]] = {
 
 
 class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
-    """Checks an expression against a type and produces a new type-annotated AST"""
+    """Checks an expression against a type and produces a new type-annotated AST.
+
+    The type may contain free variables that the checker will try to solve. Note that
+    the checker will fail, if some free variables cannot be inferred.
+    """
 
     ctx: Context
 
@@ -146,7 +153,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             return with_type(ty.substitute(subst), expr), subst
 
         # When checking against a variable, we have to synthesize
-        if isinstance(ty, FreeTypeVar):
+        if isinstance(ty, ExistentialTypeVar):
             expr, syn_ty = self._synthesize(expr, allow_free_vars=False)
             return with_type(syn_ty, expr), {ty: syn_ty}
 
@@ -217,9 +224,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         else:
             raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
 
-    def generic_visit(  # type: ignore[override]
-        self, node: ast.expr, ty: GuppyType
-    ) -> tuple[ast.expr, Subst]:
+    def generic_visit(self, node: ast.expr, ty: GuppyType) -> tuple[ast.expr, Subst]:
         # Try to synthesize and then check if we can unify it with the given type
         node, synth = self._synthesize(node, allow_free_vars=False)
         subst, inst = check_type_against(synth, ty, node, self._kind)
@@ -247,7 +252,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         if ty := get_type_opt(node):
             return node, ty
         node, ty = self.visit(node)
-        if ty.free_vars and not allow_free_vars:
+        if ty.unsolved_vars and not allow_free_vars:
             raise GuppyTypeError(
                 f"Cannot infer type variable in expression of type `{ty}`", node
             )
@@ -406,8 +411,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
     def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, GuppyType]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType(
-            [ty, FreeTypeVar.new("Key", False)],
-            FreeTypeVar.new("Val", False),
+            [ty, ExistentialTypeVar.new("Key", False)],
+            ExistentialTypeVar.new("Val", False),
         )
         return self._synthesize_instance_func(
             node.value, [node.slice], "__getitem__", "not subscriptable", exp_sig
@@ -436,7 +441,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, GuppyType]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType([ty], FreeTypeVar.new("Iter", False))
+        exp_sig = FunctionType([ty], ExistentialTypeVar.new("Iter", False))
         expr, ty = self._synthesize_instance_func(
             node.value, [], "__iter__", "not iterable", exp_sig
         )
@@ -465,7 +470,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, GuppyType]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType([ty], TupleType([FreeTypeVar.new("T", False), ty]))
+        exp_sig = FunctionType(
+            [ty], TupleType([ExistentialTypeVar.new("T", False), ty])
+        )
         return self._synthesize_instance_func(
             node.value, [], "__next__", "not an iterator", exp_sig, True
         )
@@ -481,6 +488,43 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         raise InternalGuppyError(
             "BB contains `ListComp`. Should have been removed during CFG"
             f"construction: `{ast.unparse(node)}`"
+        )
+
+    def visit_PyExpr(self, node: PyExpr) -> tuple[ast.expr, GuppyType]:
+        # The method we used for obtaining the Python variables in scope only works in
+        # CPython (see `get_py_scope()`).
+        if sys.implementation.name != "cpython":
+            raise GuppyError(
+                "Compile-time `py(...)` expressions are only supported in CPython", node
+            )
+
+        try:
+            python_val = eval(  # noqa: S307, PGH001
+                ast.unparse(node.value),
+                None,
+                DummyEvalDict(self.ctx, node.value),
+            )
+        except DummyEvalDict.GuppyVarUsedError as e:
+            raise GuppyError(
+                f"Guppy variable `{e.var}` cannot be accessed in a compile-time "
+                "`py(...)` expression",
+                e.node or node,
+            ) from None
+        except Exception as e:  # noqa: BLE001
+            # Remove the top frame pointing to the `eval` call from the stack trace
+            tb = e.__traceback__.tb_next if e.__traceback__ else None
+            raise GuppyError(
+                "Error occurred while evaluating Python expression:\n\n"
+                + "".join(traceback.format_exception(type(e), e, tb)),
+                node,
+            ) from e
+
+        if ty := python_value_to_guppy_type(python_val, node, self.ctx.globals):
+            return with_loc(node, ast.Constant(value=python_val)), ty
+
+        raise GuppyError(
+            f"Python expression of type `{type(python_val)}` is not supported by Guppy",
+            node,
         )
 
     def visit_NamedExpr(self, node: ast.NamedExpr) -> tuple[ast.expr, GuppyType]:
@@ -512,7 +556,7 @@ def check_type_against(
     be quantified and the actual type may not contain free unification variables.
     """
     assert not isinstance(exp, FunctionType) or not exp.quantified
-    assert not act.free_vars
+    assert not act.unsolved_vars
 
     # The actual type may be quantified. In that case, we have to find an instantiation
     # to avoid higher-rank types.
@@ -531,7 +575,7 @@ def check_type_against(
                     "rank polymorphic types are not supported)",
                     node,
                 )
-            if subst[v].free_vars:
+            if subst[v].unsolved_vars:
                 raise GuppyTypeError(
                     f"Expected {kind} of type `{exp}`, got `{act}`. Can't instantiate "
                     f"type variable `{act.quantified[i]}` with type `{subst[v]}` "
@@ -539,15 +583,15 @@ def check_type_against(
                     node,
                 )
         inst = [subst[v] for v in free_vars]
-        subst = {v: t for v, t in subst.items() if v in exp.free_vars}
+        subst = {v: t for v, t in subst.items() if v in exp.unsolved_vars}
 
         # Finally, check that the instantiation respects the linearity requirements
         check_inst(act, inst, node)
 
         return subst, inst
 
-    # Otherwise, we know that `act` has no free type vars, so unification is trivial
-    assert not act.free_vars
+    # Otherwise, we know that `act` has no unsolved type vars, so unification is trivial
+    assert not act.unsolved_vars
     subst = unify(exp, act, {})
     if subst is None:
         raise GuppyTypeError(f"Expected {kind} of type `{exp}`, got `{act}`", node)
@@ -591,10 +635,10 @@ def type_check_args(
 
     # If the argument check succeeded, this means that we must have found instantiations
     # for all unification variables occurring in the argument types
-    assert all(set.issubset(arg.free_vars, subst.keys()) for arg in func_ty.args)
+    assert all(set.issubset(arg.unsolved_vars, subst.keys()) for arg in func_ty.args)
 
     # We also have to check that we found instantiations for all vars in the return type
-    if not set.issubset(func_ty.returns.free_vars, subst.keys()):
+    if not set.issubset(func_ty.returns.unsolved_vars, subst.keys()):
         raise GuppyTypeInferenceError(
             f"Cannot infer type variable in expression of type "
             f"`{func_ty.returns.substitute(subst)}`",
@@ -612,7 +656,7 @@ def synthesize_call(
     Returns an annotated argument list, the synthesized return type, and an
     instantiation for the quantifiers in the function type.
     """
-    assert not func_ty.free_vars
+    assert not func_ty.unsolved_vars
     check_num_args(len(func_ty.args), len(args), node)
 
     # Replace quantified variables with free unification variables and try to infer an
@@ -621,7 +665,7 @@ def synthesize_call(
     args, subst = type_check_args(args, unquantified, {}, ctx, node)
 
     # Success implies that the substitution is closed
-    assert all(not t.free_vars for t in subst.values())
+    assert all(not t.unsolved_vars for t in subst.values())
     inst = [subst[v] for v in free_vars]
 
     # Finally, check that the instantiation respects the linearity requirements
@@ -643,7 +687,7 @@ def check_call(
     Returns an annotated argument list, a substitution for the free variables in the
     expected type, and an instantiation for the quantifiers in the function type.
     """
-    assert not func_ty.free_vars
+    assert not func_ty.unsolved_vars
     check_num_args(len(func_ty.args), len(args), node)
 
     # When checking, we can use the information from the expected return type to infer
@@ -693,7 +737,7 @@ def check_call(
 
     # Also make sure we found an instantiation for all free vars in the type we're
     # checking against
-    if not set.issubset(ty.free_vars, subst.keys()):
+    if not set.issubset(ty.unsolved_vars, subst.keys()):
         raise GuppyTypeInferenceError(
             f"Expected expression of type `{ty}`, got "
             f"`{func_ty.returns.substitute(subst)}`. Couldn't infer type variables",
@@ -701,9 +745,9 @@ def check_call(
         )
 
     # Success implies that the substitution is closed
-    assert all(not t.free_vars for t in subst.values())
+    assert all(not t.unsolved_vars for t in subst.values())
     inst = [subst[v] for v in free_vars]
-    subst = {v: t for v, t in subst.items() if v in ty.free_vars}
+    subst = {v: t for v, t in subst.items() if v in ty.unsolved_vars}
 
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
@@ -862,5 +906,10 @@ def python_value_to_guppy_type(
             return globals.types["int"].build(node=node)
         case float():
             return globals.types["float"].build(node=node)
+        case tuple(elts):
+            tys = [python_value_to_guppy_type(elt, node, globals) for elt in elts]
+            if any(ty is None for ty in tys):
+                return None
+            return TupleType(cast(list[GuppyType], tys))
         case _:
             return None
