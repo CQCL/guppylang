@@ -36,18 +36,18 @@ jobs:
         run: poetry add validator/target/wheels/*
 
       - name: Type check with mypy
-        run: poetry run mypy guppy
+        run: poetry run mypy guppylang
 
       - name: Check formatting with ruff
         uses: chartboost/ruff-action@v1
         with:
-          src: "./guppy"
+          src: "./guppylang"
           args: format --check
 
       - name: Lint with ruff
         uses: chartboost/ruff-action@v1
         with:
-          src: "./guppy"
+          src: "./guppylang"
           args: check
 
       - name: Run tests

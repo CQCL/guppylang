@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from guppy.decorator import guppy
+from guppylang.decorator import guppy
 
 
 @guppy

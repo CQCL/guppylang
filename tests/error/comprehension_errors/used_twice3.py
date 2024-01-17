@@ -1,8 +1,8 @@
-import guppy.prelude.quantum as quantum
-from guppy.decorator import guppy
-from guppy.module import GuppyModule
-from guppy.hugr.tys import Qubit
-from guppy.prelude.builtins import linst
+import guppylang.prelude.quantum as quantum
+from guppylang.decorator import guppy
+from guppylang.module import GuppyModule
+from guppylang.hugr.tys import Qubit
+from guppylang.prelude.builtins import linst
 
 module = GuppyModule("test")
 module.load(quantum)

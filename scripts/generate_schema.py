@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from guppy.hugr.raw import RawHugr
+from guppylang.hugr.raw import RawHugr
 
 if __name__ == "__main__":
     out_dir = Path(sys.argv[-1])
