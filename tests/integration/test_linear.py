@@ -5,7 +5,7 @@ from guppy.prelude.builtins import linst
 from guppy.prelude.quantum import Qubit
 
 import guppy.prelude.quantum as quantum
-from guppy.prelude.quantum import h, cx, measure_q, measure, t
+from guppy.prelude.quantum import h, cx, measure_return, measure, t
 
 
 def test_id(validate):
@@ -39,7 +39,7 @@ def test_linear_return_order(validate):
 
     @guppy(module)
     def test(q: Qubit) -> tuple[Qubit, bool]:
-        return measure_q(q)
+        return measure_return(q)
 
     validate(module.compile())
 

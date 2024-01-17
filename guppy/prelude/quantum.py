@@ -81,7 +81,7 @@ def zz_max(q: Qubit) -> Qubit:
 
 
 @guppy.hugr_op(quantum, quantum_op("Measure"))
-def measure_q(q: Qubit) -> tuple[Qubit, bool]:
+def measure_return(q: Qubit) -> tuple[Qubit, bool]:
     ...
 
 
