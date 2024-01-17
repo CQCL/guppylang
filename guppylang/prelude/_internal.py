@@ -311,3 +311,17 @@ class FloatDivmodCompiler(CustomCallCompiler):
             args, [], self.dfg, self.graph, self.globals, self.node
         )
         return [self.graph.add_make_tuple([div, mod], self.dfg.node).out_port(0)]
+
+
+class MeasureCompiler(CustomCallCompiler):
+    """Compiler for the `measure` function."""
+
+    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+        from .quantum import quantum_op
+
+        [qubit] = args
+        measure = self.graph.add_node(quantum_op("Measure"), inputs=args)
+        self.graph.add_node(
+            quantum_op("QFree"), inputs=[measure.add_out_port(qubit.ty)]
+        )
+        return [measure.add_out_port(BoolType())]
