@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo(xs: list[int]) -> None:
+6:        [x for x in xs if x < 5 and x != 6]
+                            ^^^^^^^^^^^^^^^^
+GuppyError: Expression is not supported inside a list comprehension

@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:13
+
+11:    @guppy(module)
+12:    def foo(qs: linst[Qubit], xs: list[int]) -> linst[Qubit]:
+13:        return [q for q in qs for x in xs]
+                   ^
+GuppyTypeError: Variable `q` with linear type `Qubit` would be used multiple times when evaluating this comprehension

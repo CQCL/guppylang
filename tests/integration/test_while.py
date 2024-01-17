@@ -1,4 +1,4 @@
-from guppy.decorator import guppy
+from guppylang.decorator import guppy
 
 
 def test_infinite_loop(validate):

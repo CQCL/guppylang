@@ -1,10 +1,10 @@
 from typing import Callable
 
-from guppy.decorator import guppy
-from guppy.module import GuppyModule
-from guppy.prelude.quantum import h
+from guppylang.decorator import guppy
+from guppylang.module import GuppyModule
+from guppylang.prelude.quantum import h
 
-import guppy.prelude.quantum as quantum
+import guppylang.prelude.quantum as quantum
 
 module = GuppyModule("test")
 module.load(quantum)

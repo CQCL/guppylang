@@ -1,7 +1,7 @@
 import pytest
 
-from guppy.error import UndefinedPort, InternalGuppyError
-from guppy.gtypes import BoolType
+from guppylang.error import UndefinedPort, InternalGuppyError
+from guppylang.gtypes import BoolType
 
 
 def test_undefined_port():

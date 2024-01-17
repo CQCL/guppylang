@@ -73,7 +73,7 @@ ignore = [
 [per-file-ignores]
 "guppy/ast_util.py"           = ["B009", "B010"]
 "guppy/decorator.py"          = ["B010"]
-"tests/integration/*"         = ["F841"]
+"tests/integration/*"         = ["F841", "C416", "RUF005"]
 "tests/{hugr,integration}/*"  = ["B", "FBT", "SIM", "I"]
 
 # [pydocstyle]

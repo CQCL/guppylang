@@ -1,6 +1,6 @@
 import tests.error.util
-from guppy.decorator import guppy
-from guppy.module import GuppyModule
+from guppylang.decorator import guppy
+from guppylang.module import GuppyModule
 from tests.error.util import NonBool
 
 module = GuppyModule("test")

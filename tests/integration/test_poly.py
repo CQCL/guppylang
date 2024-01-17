@@ -1,10 +1,10 @@
 from collections.abc import Callable
 
-from guppy.decorator import guppy
-from guppy.module import GuppyModule
-from guppy.prelude.quantum import Qubit
+from guppylang.decorator import guppy
+from guppylang.module import GuppyModule
+from guppylang.prelude.quantum import Qubit
 
-import guppy.prelude.quantum as quantum
+import guppylang.prelude.quantum as quantum
 
 
 def test_id(validate):
@@ -130,6 +130,22 @@ def test_infer_basic(validate):
     @guppy(module)
     def main() -> None:
         x: int = foo()
+
+    validate(module.compile())
+
+
+def test_infer_list(validate):
+    module = GuppyModule("test")
+    T = guppy.type_var(module, "T")
+
+    @guppy.declare(module)
+    def foo() -> T:
+        ...
+
+    @guppy(module)
+    def main() -> None:
+        xs: list[int] = [foo()]
+        ys = [1.0, foo()]
 
     validate(module.compile())
 

@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:37
+
+35:    @guppy(module)
+36:    def test(x: MyType) -> None:
+37:        for _ in x:
+                    ^
+GuppyError: Method `MyIter.__hasnext__` has signature `MyIter -> bool`, but expected `MyIter -> (bool, MyIter)`

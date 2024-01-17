@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "guppy"
+name = "guppylang"
 version = "0.1.0"
 description = ""
 authors = ["Mark Koch <mark.koch@quantinuum.com>"]

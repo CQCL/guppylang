@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:20
+
+18:    @guppy(module)
+19:    def test(x: MyType) -> None:
+20:        for _ in x:
+                    ^
+GuppyError: Method `MyType.__iter__` has signature `(MyType, int) -> MyType`, but expected `MyType -> ?Iter`
