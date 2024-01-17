@@ -1,6 +1,6 @@
-from guppy.decorator import guppy
-from guppy.hugr import tys
-from guppy.module import GuppyModule
+from guppylang.decorator import guppy
+from guppylang.hugr import tys
+from guppylang.module import GuppyModule
 
 
 module = GuppyModule("test")

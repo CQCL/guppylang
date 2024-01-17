@@ -1,11 +1,11 @@
-from guppy.decorator import guppy
-from guppy.hugr import tys
-from guppy.module import GuppyModule
-from guppy.prelude.builtins import linst
-from guppy.prelude.quantum import Qubit
+from guppylang.decorator import guppy
+from guppylang.hugr import tys
+from guppylang.module import GuppyModule
+from guppylang.prelude.builtins import linst
+from guppylang.prelude.quantum import Qubit
 
-import guppy.prelude.quantum as quantum
-from guppy.prelude.quantum import h, cx, measure_return, measure, t
+import guppylang.prelude.quantum as quantum
+from guppylang.prelude.quantum import h, cx, measure_return, measure, t
 
 
 def test_id(validate):

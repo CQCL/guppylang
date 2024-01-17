@@ -5,11 +5,11 @@ import pytest
 from typing import Any
 from collections.abc import Callable
 
-from guppy.hugr import tys
-from guppy.hugr.tys import TypeBound
-from guppy.module import GuppyModule
+from guppylang.hugr import tys
+from guppylang.hugr.tys import TypeBound
+from guppylang.module import GuppyModule
 
-import guppy.decorator as decorator
+import guppylang.decorator as decorator
 
 
 def run_error_test(file, capsys):

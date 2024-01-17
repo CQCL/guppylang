@@ -1,6 +1,6 @@
-from guppy.decorator import guppy
-from guppy.hugr import ops
-from guppy.module import GuppyModule
+from guppylang.decorator import guppy
+from guppylang.hugr import ops
+from guppylang.module import GuppyModule
 
 
 def test_id(validate):
