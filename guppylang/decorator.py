@@ -27,8 +27,8 @@ ClassDecorator = Callable[[type], type]
 
 
 @dataclass(frozen=True)
-class CallerIdentifier:
-    """Identifier for the interpreter frame that called the decorator."""
+class ModuleIdentifier:
+    """Identifier for the Python file/module that called the decorator."""
 
     filename: Path
     module: ModuleType | None
@@ -47,10 +47,10 @@ class CallerIdentifier:
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
-    # The currently-alive modules, associated with an element in the call stack.
+    # The currently-alive GuppyModules, associated with a Python file/module.
     #
     # Only contains **uncompiled** modules.
-    _modules: dict[CallerIdentifier, GuppyModule]
+    _modules: dict[ModuleIdentifier, GuppyModule]
 
     def __init__(self) -> None:
         self._modules = {}
@@ -77,15 +77,12 @@ class _Guppy:
             # We default to a module associated with the caller of the decorator.
             f = arg
 
-            def dec(f: Callable[..., Any]) -> Callable[..., Any]:
-                caller = self._get_python_caller(f)
-                if caller not in self._modules:
-                    self._modules[caller] = GuppyModule(caller.name)
-                module = self._modules[caller]
-                module.register_func_def(f)
-                return make_dummy(f)
-
-            return dec(f)
+            caller = self._get_python_caller(f)
+            if caller not in self._modules:
+                self._modules[caller] = GuppyModule(caller.name)
+            module = self._modules[caller]
+            module.register_func_def(f)
+            return make_dummy(f)
 
         if isinstance(arg, GuppyModule):
             # Module passed.
@@ -97,8 +94,8 @@ class _Guppy:
 
         raise ValueError(f"Invalid arguments to `@guppy` decorator: {arg}")
 
-    def _get_python_caller(self, fn: PyFunc | None = None) -> CallerIdentifier:
-        """Returns an identifier for the interpreter frame that called the decorator.
+    def _get_python_caller(self, fn: PyFunc | None = None) -> ModuleIdentifier:
+        """Returns an identifier for the Python file/module that called the decorator.
 
         :param fn: Optional. The function that was decorated.
         """
@@ -113,7 +110,7 @@ class _Guppy:
                     break
             else:
                 raise GuppyError("Could not find a caller for the `@guppy` decorator")
-        return CallerIdentifier(Path(filename), module)
+        return ModuleIdentifier(Path(filename), module)
 
     @pretty_errors
     def extend_type(self, module: GuppyModule, ty: type[GuppyType]) -> ClassDecorator:
@@ -261,7 +258,7 @@ class _Guppy:
 
         return dec
 
-    def take_module(self, id: CallerIdentifier | None = None) -> GuppyModule:
+    def take_module(self, id: ModuleIdentifier | None = None) -> GuppyModule:
         """Returns the local GuppyModule, removing it from the local state."""
         orig_id = id
         if id is None:
@@ -275,7 +272,7 @@ class _Guppy:
             raise MissingModuleError(err)
         return self._modules.pop(id)
 
-    def compile_module(self, id: CallerIdentifier | None = None) -> Hugr | None:
+    def compile_module(self, id: ModuleIdentifier | None = None) -> Hugr | None:
         """Compiles the local module into a Hugr."""
         module = self.take_module(id)
         if not module:
@@ -287,7 +284,7 @@ class _Guppy:
             raise MissingModuleError(err)
         return module.compile()
 
-    def registered_modules(self) -> list[CallerIdentifier]:
+    def registered_modules(self) -> list[ModuleIdentifier]:
         """Returns a list of all currently registered modules for local contexts."""
         return list(self._modules.keys())
 
