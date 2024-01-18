@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo() -> None:
+6:        xs = py([])
+               ^^^^^^
+GuppyTypeError: Cannot infer type variable in expression of type `list[?T]`

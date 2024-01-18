@@ -230,6 +230,21 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         else:
             raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
 
+    def visit_PyExpr(self, node: PyExpr, ty: GuppyType) -> tuple[ast.expr, Subst]:
+        python_val = eval_py_expr(node, self.ctx)
+        if act := python_value_to_guppy_type(python_val, node, self.ctx.globals):
+            subst = unify(ty, act, {})
+            if subst is None:
+                self._fail(ty, act, node)
+            act = act.substitute(subst)
+            subst = {x: s for x, s in subst.items() if x in ty.unsolved_vars}
+            return with_type(act, with_loc(node, ast.Constant(value=python_val))), subst
+
+        raise GuppyError(
+            f"Python expression of type `{type(python_val)}` is not supported by Guppy",
+            node,
+        )
+
     def generic_visit(self, node: ast.expr, ty: GuppyType) -> tuple[ast.expr, Subst]:
         # Try to synthesize and then check if we can unify it with the given type
         node, synth = self._synthesize(node, allow_free_vars=False)
@@ -497,34 +512,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         )
 
     def visit_PyExpr(self, node: PyExpr) -> tuple[ast.expr, GuppyType]:
-        # The method we used for obtaining the Python variables in scope only works in
-        # CPython (see `get_py_scope()`).
-        if sys.implementation.name != "cpython":
-            raise GuppyError(
-                "Compile-time `py(...)` expressions are only supported in CPython", node
-            )
-
-        try:
-            python_val = eval(  # noqa: S307, PGH001
-                ast.unparse(node.value),
-                None,
-                DummyEvalDict(self.ctx, node.value),
-            )
-        except DummyEvalDict.GuppyVarUsedError as e:
-            raise GuppyError(
-                f"Guppy variable `{e.var}` cannot be accessed in a compile-time "
-                "`py(...)` expression",
-                e.node or node,
-            ) from None
-        except Exception as e:  # noqa: BLE001
-            # Remove the top frame pointing to the `eval` call from the stack trace
-            tb = e.__traceback__.tb_next if e.__traceback__ else None
-            raise GuppyError(
-                "Error occurred while evaluating Python expression:\n\n"
-                + "".join(traceback.format_exception(type(e), e, tb)),
-                node,
-            ) from e
-
+        python_val = eval_py_expr(node, self.ctx)
         if ty := python_value_to_guppy_type(python_val, node, self.ctx.globals):
             return with_loc(node, ast.Constant(value=python_val)), ty
 
@@ -898,6 +886,38 @@ def synthesize_comprehension(
     return node, elt_ty
 
 
+def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
+    """Evaluates a `py(...)` expression."""
+    # The method we used for obtaining the Python variables in scope only works in
+    # CPython (see `get_py_scope()`).
+    if sys.implementation.name != "cpython":
+        raise GuppyError(
+            "Compile-time `py(...)` expressions are only supported in CPython", node
+        )
+
+    try:
+        python_val = eval(  # noqa: S307, PGH001
+            ast.unparse(node.value),
+            None,
+            DummyEvalDict(ctx, node.value),
+        )
+    except DummyEvalDict.GuppyVarUsedError as e:
+        raise GuppyError(
+            f"Guppy variable `{e.var}` cannot be accessed in a compile-time "
+            "`py(...)` expression",
+            e.node or node,
+        ) from None
+    except Exception as e:  # noqa: BLE001
+        # Remove the top frame pointing to the `eval` call from the stack trace
+        tb = e.__traceback__.tb_next if e.__traceback__ else None
+        raise GuppyError(
+            "Error occurred while evaluating Python expression:\n\n"
+            + "".join(traceback.format_exception(type(e), e, tb)),
+            node,
+        ) from e
+    return python_val
+
+
 def python_value_to_guppy_type(
     v: Any, node: ast.expr, globals: Globals
 ) -> GuppyType | None:
@@ -917,5 +937,31 @@ def python_value_to_guppy_type(
             if any(ty is None for ty in tys):
                 return None
             return TupleType(cast(list[GuppyType], tys))
+        case list():
+            return _python_list_to_guppy_type(v, node, globals)
         case _:
             return None
+
+
+def _python_list_to_guppy_type(
+    vs: list[Any], node: ast.expr, globals: Globals
+) -> ListType | None:
+    """Turns a Python list into a Guppy type.
+
+    Returns `None` if the list contains different types or types that are not
+    representable in Guppy.
+    """
+    if len(vs) == 0:
+        return ListType(ExistentialTypeVar.new("T", False))
+
+    # All the list elements must have a unifiable types
+    v, *rest = vs
+    el_ty = python_value_to_guppy_type(v, node, globals)
+    if el_ty is None:
+        return None
+    for v in rest:
+        ty = python_value_to_guppy_type(v, node, globals)
+        if ty is None or (subst := unify(ty, el_ty, {})) is None:
+            return None
+        el_ty = el_ty.substitute(subst)
+    return ListType(el_ty)

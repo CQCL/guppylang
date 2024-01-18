@@ -1,5 +1,5 @@
 import ast
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -52,6 +52,13 @@ class ConstF64(BaseModel):
     value: float
 
 
+class ListValue(BaseModel):
+    """Hugr representation of floats in the arithmetic extension."""
+
+    c: Literal["ListValue"] = "ListValue"
+    value: list[Any]
+
+
 def bool_value(b: bool) -> val.Value:
     """Returns the Hugr representation of a boolean value."""
     return val.Sum(tag=int(b), value=val.Tuple(vs=[]))
@@ -65,6 +72,11 @@ def int_value(i: int) -> val.Value:
 def float_value(f: float) -> val.Value:
     """Returns the Hugr representation of a float value."""
     return val.ExtensionVal(c=(ConstF64(value=f),))
+
+
+def list_value(v: list[val.Value]) -> val.Value:
+    """Returns the Hugr representation of a list value."""
+    return val.ExtensionVal(c=(ListValue(value=v),))
 
 
 def logic_op(op_name: str, args: list[tys.TypeArg] | None = None) -> ops.OpType:
