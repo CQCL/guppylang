@@ -267,7 +267,7 @@ class _Guppy:
             raise MissingModuleError(err)
         return self._modules.pop(id)
 
-    def compile(self, id: CallerIdentifier | None = None) -> Hugr:
+    def compile_module(self, id: CallerIdentifier | None = None) -> Hugr:
         """Compiles the local module into a Hugr."""
         module = self.take_module(id)
         if not module:
