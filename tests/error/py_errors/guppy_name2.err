@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:9
 
-7:    @guppy(compile=True)
+7:    @compile_guppy
 8:    def foo(x: int) -> int:
 9:        return py(x + 1)
                     ^

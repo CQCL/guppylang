@@ -1,6 +1,6 @@
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
-@guppy(compile=True)
+@compile_guppy
 def foo() -> bool:
     return 42

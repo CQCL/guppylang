@@ -1,9 +1,9 @@
 from collections.abc import Callable
 
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
-@guppy(compile=True)
+@compile_guppy
 def foo(x: int) -> int:
     def bar(f: Callable[[int], bool]) -> bool:
         return f(42)

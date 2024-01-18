@@ -58,9 +58,7 @@ class _Guppy:
         self._modules = {}
 
     @pretty_errors
-    def __call__(
-        self, arg: PyFunc | GuppyModule | None = None, *, compile: bool = False
-    ) -> Hugr | None | FuncDecorator:
+    def __call__(self, arg: PyFunc | GuppyModule) -> None | FuncDecorator:
         """Decorator to annotate Python functions as Guppy code.
 
         Optionally, the `GuppyModule` in which the function should be placed can
@@ -70,11 +68,6 @@ class _Guppy:
         function is compiled immediately as an standalone module and the Hugr is
         returned.
         """
-        if arg is not None and not isinstance(arg, GuppyModule):
-            # Decorator used without any arguments.
-            f = arg
-            decorator: FuncDecorator = self.__call__(None)  # type: ignore[assignment]
-            return decorator(f)
 
         def make_dummy(wraps: PyFunc) -> Callable[..., Any]:
             @functools.wraps(wraps)
@@ -85,20 +78,11 @@ class _Guppy:
 
             return dummy
 
-        if arg is None and compile:
-            # No module passed, and compile option is set.
-            def dec(f: Callable[..., Any]) -> Callable[..., Any] | Hugr:
-                module = GuppyModule("module")
-                module.register_func_def(f)
-                compiled = module.compile()
-                assert compiled is not None
-                return compiled
+        if not isinstance(arg, GuppyModule):
+            # Decorator used without any arguments.
+            # We default to a module associated with the caller of the decorator.
+            f = arg
 
-            return dec
-
-        if arg is None and not compile:
-            # No module specified, and `compile` option is not set.
-            # We use a module associate with the caller of the decorator.
             def dec(f: Callable[..., Any]) -> Callable[..., Any] | Hugr:
                 caller = self._get_python_caller()
                 if caller not in self._modules:
@@ -107,11 +91,10 @@ class _Guppy:
                 module.register_func_def(f)
                 return make_dummy(f)
 
-            return dec
+            return dec(f)
 
         if isinstance(arg, GuppyModule):
-            # Module passed. Ignore `compile` option.
-
+            # Module passed.
             def dec(f: Callable[..., Any]) -> Callable[..., Any] | Hugr:
                 arg.register_func_def(f)
                 return make_dummy(f)

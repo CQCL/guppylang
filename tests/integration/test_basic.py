@@ -1,10 +1,11 @@
 from guppylang.decorator import guppy
 from guppylang.hugr import ops
 from guppylang.module import GuppyModule
+from tests.util import compile_guppy
 
 
 def test_id(validate):
-    @guppy(compile=True)
+    @compile_guppy
     def identity(x: int) -> int:
         return x
 
@@ -12,7 +13,7 @@ def test_id(validate):
 
 
 def test_void(validate):
-    @guppy(compile=True)
+    @compile_guppy
     def void() -> None:
         return
 
@@ -20,7 +21,7 @@ def test_void(validate):
 
 
 def test_copy(validate):
-    @guppy(compile=True)
+    @compile_guppy
     def copy(x: int) -> (int, int):
         return x, x
 
@@ -28,7 +29,7 @@ def test_copy(validate):
 
 
 def test_discard(validate):
-    @guppy(compile=True)
+    @compile_guppy
     def discard(x: int) -> None:
         return
 
@@ -36,7 +37,7 @@ def test_discard(validate):
 
 
 def test_implicit_return(validate):
-    @guppy(compile=True)
+    @compile_guppy
     def ret() -> None:
         pass
 
@@ -44,7 +45,7 @@ def test_implicit_return(validate):
 
 
 def test_assign(validate):
-    @guppy(compile=True)
+    @compile_guppy
     def foo(x: bool) -> bool:
         y = x
         return y
@@ -53,7 +54,7 @@ def test_assign(validate):
 
 
 def test_assign_expr(validate):
-    @guppy(compile=True)
+    @compile_guppy
     def foo(x: bool) -> bool:
         (y := x)
         return y
@@ -62,7 +63,7 @@ def test_assign_expr(validate):
 
 
 def test_func_def_name():
-    @guppy(compile=True)
+    @compile_guppy
     def func_name() -> None:
         return
 

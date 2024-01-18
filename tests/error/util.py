@@ -26,7 +26,7 @@ def run_error_test(file, capsys):
         exp_err = f.read()
 
     exp_err = exp_err.replace("$FILE", str(file))
-    assert err == exp_err
+    assert err == exp_err, f"Expected error '{err}', but got '{exp_err}'."
 
 
 util = GuppyModule("test")

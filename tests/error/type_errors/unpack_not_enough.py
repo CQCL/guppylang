@@ -1,7 +1,7 @@
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
-@guppy(compile=True)
+@compile_guppy
 def foo() -> int:
     a, b, c = 1, True
     return a

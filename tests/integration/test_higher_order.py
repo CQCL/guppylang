@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from tests.util import compile_guppy
 
 
 def test_basic(validate):
@@ -55,7 +56,7 @@ def test_call_2(validate):
 
 
 def test_nested(validate):
-    @guppy(compile=True)
+    @compile_guppy
     def foo(x: int) -> Callable[[int], bool]:
         def bar(y: int) -> bool:
             return x > y

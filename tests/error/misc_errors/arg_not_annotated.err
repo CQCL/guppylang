@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:5
 
-3:    @guppy(compile=True)
+3:    @compile_guppy
 4:    def foo(x: bool, y) -> int:
                        ^
 GuppyError: Argument type must be annotated

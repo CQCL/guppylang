@@ -5,10 +5,11 @@ from guppylang.prelude.builtins import linst
 from guppylang.prelude.quantum import Qubit, h, cx
 
 import guppylang.prelude.quantum as quantum
+from tests.util import compile_guppy
 
 
 def test_basic(validate):
-    @guppy
+    @compile_guppy
     def test(xs: list[float]) -> list[int]:
         return [int(x) for x in xs]
 
@@ -27,7 +28,7 @@ def test_basic_linear(validate):
 
 
 def test_guarded(validate):
-    @guppy
+    @compile_guppy
     def test(xs: list[int]) -> list[int]:
         return [2 * x for x in xs if x > 0 if x < 20]
 
@@ -35,7 +36,7 @@ def test_guarded(validate):
 
 
 def test_multiple(validate):
-    @guppy
+    @compile_guppy
     def test(xs: list[int], ys: list[int]) -> list[int]:
         return [x + y for x in xs for y in ys if x + y > 42]
 
@@ -43,7 +44,7 @@ def test_multiple(validate):
 
 
 def test_tuple_pat(validate):
-    @guppy
+    @compile_guppy
     def test(xs: list[tuple[int, int, float]]) -> list[float]:
         return [x + y * z for x, y, z in xs if x - y > z]
 
@@ -62,7 +63,7 @@ def test_tuple_pat_linear(validate):
 
 
 def test_tuple_return(validate):
-    @guppy
+    @compile_guppy
     def test(xs: list[int], ys: list[float]) -> list[tuple[int, float]]:
         return [(x, y) for x in xs for y in ys]
 
@@ -84,7 +85,7 @@ def test_dependent(validate):
 
 
 def test_capture(validate):
-    @guppy
+    @compile_guppy
     def test(xs: list[int], y: int) -> list[int]:
         return [x + y for x in xs if x > y]
 
@@ -92,7 +93,7 @@ def test_capture(validate):
 
 
 def test_scope(validate):
-    @guppy
+    @compile_guppy
     def test(xs: list[None]) -> float:
         x = 42.0
         [x for x in xs]
@@ -102,7 +103,7 @@ def test_scope(validate):
 
 
 def test_nested_left(validate):
-    @guppy
+    @compile_guppy
     def test(xs: list[int], ys: list[float]) -> list[list[float]]:
         return [[x + y for y in ys] for x in xs]
 
@@ -110,7 +111,7 @@ def test_nested_left(validate):
 
 
 def test_nested_right(validate):
-    @guppy
+    @compile_guppy
     def test(xs: list[int]) -> list[int]:
         return [-x for x in [2 * x for x in xs]]
 
