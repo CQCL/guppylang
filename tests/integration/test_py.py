@@ -1,11 +1,11 @@
-from guppylang.decorator import guppy
 from tests.integration.util import py
+from tests.util import compile_guppy
 
 
 def test_basic(validate):
     x = 42
 
-    @guppy
+    @compile_guppy
     def foo() -> int:
         return py(x + 1)
 
@@ -13,7 +13,7 @@ def test_basic(validate):
 
 
 def test_builtin(validate):
-    @guppy
+    @compile_guppy
     def foo() -> int:
         return py(len({"a": 1337, "b": None}))
 
@@ -23,7 +23,7 @@ def test_builtin(validate):
 def test_if(validate):
     b = True
 
-    @guppy
+    @compile_guppy
     def foo() -> int:
         if py(b or 1 > 6):
             return 0
@@ -35,7 +35,7 @@ def test_if(validate):
 def test_redeclare_after(validate):
     x = 1
 
-    @guppy
+    @compile_guppy
     def foo() -> int:
         return py(x)
 
@@ -45,7 +45,7 @@ def test_redeclare_after(validate):
 
 
 def test_tuple(validate):
-    @guppy
+    @compile_guppy
     def foo() -> int:
         x, y = py((1, False))
         return x
@@ -54,7 +54,7 @@ def test_tuple(validate):
 
 
 def test_tuple_implicit(validate):
-    @guppy
+    @compile_guppy
     def foo() -> int:
         x, y = py(1, False)
         return x

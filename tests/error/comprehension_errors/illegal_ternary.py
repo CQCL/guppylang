@@ -1,6 +1,6 @@
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
-@guppy
+@compile_guppy
 def foo(xs: list[int], ys: list[int], b: bool) -> None:
     [x for x in (xs if b else ys)]

@@ -1,6 +1,6 @@
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
-@guppy
+@compile_guppy
 def foo() -> int:
     return py({1, 2, 3})

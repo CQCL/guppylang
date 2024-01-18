@@ -1,8 +1,8 @@
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
 def test_infinite_loop(validate):
-    @guppy
+    @compile_guppy
     def foo() -> int:
         while True:
             pass
@@ -12,7 +12,7 @@ def test_infinite_loop(validate):
 
 
 def test_counting_loop(validate):
-    @guppy
+    @compile_guppy
     def foo(i: int) -> int:
         while i > 0:
             i -= 1
@@ -22,7 +22,7 @@ def test_counting_loop(validate):
 
 
 def test_break(validate):
-    @guppy
+    @compile_guppy
     def foo(i: int) -> int:
         while True:
             if i == 0:
@@ -34,7 +34,7 @@ def test_break(validate):
 
 
 def test_continue(validate):
-    @guppy
+    @compile_guppy
     def foo(i: int) -> int:
         x = 42
         while True:
@@ -47,7 +47,7 @@ def test_continue(validate):
 
 
 def test_return_in_loop(validate):
-    @guppy
+    @compile_guppy
     def foo(i: int) -> int:
         x = 42
         while i > 0:
@@ -61,7 +61,7 @@ def test_return_in_loop(validate):
 
 
 def test_nested_loop(validate):
-    @guppy
+    @compile_guppy
     def foo(x: int, y: int) -> int:
         p = 0
         while x > 0:
@@ -77,7 +77,7 @@ def test_nested_loop(validate):
 
 
 def test_nested_loop_break_continue(validate):
-    @guppy
+    @compile_guppy
     def foo(x: int, y: int) -> int:
         p = 0
         while x > 0:

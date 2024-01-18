@@ -1,6 +1,9 @@
 import functools
+import inspect
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
+from pathlib import Path
+from types import ModuleType
 from typing import Any, ClassVar, TypeVar
 
 from guppylang.ast_util import AstNode, has_empty_body
@@ -12,55 +15,102 @@ from guppylang.custom import (
     DefaultCallCompiler,
     OpCompiler,
 )
-from guppylang.error import GuppyError, pretty_errors
+from guppylang.error import GuppyError, MissingModuleError, pretty_errors
 from guppylang.gtypes import GuppyType, TypeTransformer
 from guppylang.hugr import ops, tys
 from guppylang.hugr.hugr import Hugr
 from guppylang.module import GuppyModule, PyFunc, parse_py_func
 
-FuncDecorator = Callable[[PyFunc], PyFunc]
+FuncDecorator = Callable[[PyFunc], PyFunc | Hugr]
 CustomFuncDecorator = Callable[[PyFunc], CustomFunction]
 ClassDecorator = Callable[[type], type]
+
+
+@dataclass(frozen=True)
+class ModuleIdentifier:
+    """Identifier for the Python file/module that called the decorator."""
+
+    filename: Path
+    module: ModuleType | None
+
+    @property
+    def name(self) -> str:
+        """Returns a user-friendly name for the caller.
+
+        If the called is not a function, uses the file name.
+        """
+        if self.module is not None:
+            return str(self.module.__name__)
+        return self.filename.name
 
 
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
-    # The current module
-    _module: GuppyModule | None
+    # The currently-alive GuppyModules, associated with a Python file/module.
+    #
+    # Only contains **uncompiled** modules.
+    _modules: dict[ModuleIdentifier, GuppyModule]
 
     def __init__(self) -> None:
-        self._module = None
-
-    def set_module(self, module: GuppyModule) -> None:
-        self._module = module
+        self._modules = {}
 
     @pretty_errors
-    def __call__(self, arg: PyFunc | GuppyModule) -> Hugr | None | FuncDecorator:
+    def __call__(self, arg: PyFunc | GuppyModule) -> FuncDecorator:
         """Decorator to annotate Python functions as Guppy code.
 
-        Optionally, the `GuppyModule` in which the function should be placed can be
-        passed to the decorator.
+        Optionally, the `GuppyModule` in which the function should be placed can
+        be passed to the decorator.
         """
+
+        def make_dummy(wraps: PyFunc) -> Callable[..., Any]:
+            @functools.wraps(wraps)
+            def dummy(*args: Any, **kwargs: Any) -> Any:
+                raise GuppyError(
+                    "Guppy functions can only be called in a Guppy context"
+                )
+
+            return dummy
+
+        if not isinstance(arg, GuppyModule):
+            # Decorator used without any arguments.
+            # We default to a module associated with the caller of the decorator.
+            f = arg
+
+            caller = self._get_python_caller(f)
+            if caller not in self._modules:
+                self._modules[caller] = GuppyModule(caller.name)
+            module = self._modules[caller]
+            module.register_func_def(f)
+            return make_dummy(f)
+
         if isinstance(arg, GuppyModule):
-
+            # Module passed.
             def dec(f: Callable[..., Any]) -> Callable[..., Any]:
-                assert isinstance(arg, GuppyModule)
                 arg.register_func_def(f)
-
-                @functools.wraps(f)
-                def dummy(*args: Any, **kwargs: Any) -> Any:
-                    raise GuppyError(
-                        "Guppy functions can only be called in a Guppy context"
-                    )
-
-                return dummy
+                return make_dummy(f)
 
             return dec
+
+        raise ValueError(f"Invalid arguments to `@guppy` decorator: {arg}")
+
+    def _get_python_caller(self, fn: PyFunc | None = None) -> ModuleIdentifier:
+        """Returns an identifier for the Python file/module that called the decorator.
+
+        :param fn: Optional. The function that was decorated.
+        """
+        if fn is not None:
+            filename = inspect.getfile(fn)
+            module = inspect.getmodule(fn)
         else:
-            module = self._module or GuppyModule("module")
-            module.register_func_def(arg)
-            return module.compile()
+            for s in inspect.stack():
+                if s.filename != __file__:
+                    filename = s.filename
+                    module = inspect.getmodule(s.frame)
+                    break
+            else:
+                raise GuppyError("Could not find a caller for the `@guppy` decorator")
+        return ModuleIdentifier(Path(filename), module)
 
     @pretty_errors
     def extend_type(self, module: GuppyModule, ty: type[GuppyType]) -> ClassDecorator:
@@ -207,6 +257,36 @@ class _Guppy:
             return dummy
 
         return dec
+
+    def take_module(self, id: ModuleIdentifier | None = None) -> GuppyModule:
+        """Returns the local GuppyModule, removing it from the local state."""
+        orig_id = id
+        if id is None:
+            id = self._get_python_caller()
+        if id not in self._modules:
+            err = (
+                f"Module {orig_id.name} not found."
+                if orig_id
+                else "No Guppy functions or types defined in this module."
+            )
+            raise MissingModuleError(err)
+        return self._modules.pop(id)
+
+    def compile_module(self, id: ModuleIdentifier | None = None) -> Hugr | None:
+        """Compiles the local module into a Hugr."""
+        module = self.take_module(id)
+        if not module:
+            err = (
+                f"Module {id.name} not found."
+                if id
+                else "No Guppy functions or types defined in this module."
+            )
+            raise MissingModuleError(err)
+        return module.compile()
+
+    def registered_modules(self) -> list[ModuleIdentifier]:
+        """Returns a list of all currently registered modules for local contexts."""
+        return list(self._modules.keys())
 
 
 guppy = _Guppy()

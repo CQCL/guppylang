@@ -1,7 +1,7 @@
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
-@guppy
+@compile_guppy
 def foo(b: bool) -> int:
     if b:
         def bar() -> int:
