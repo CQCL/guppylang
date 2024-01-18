@@ -930,7 +930,8 @@ def python_value_to_guppy_type(
 
                         qubit = globals.types["Qubit"].build()
                         return FunctionType(
-                            [qubit] * v.n_qubits, row_to_type([qubit] * v.n_qubits)
+                            [qubit] * v.n_qubits,
+                            row_to_type([qubit] * v.n_qubits + [BoolType()] * v.n_bits),
                         )
                     except ImportError:
                         raise GuppyError(

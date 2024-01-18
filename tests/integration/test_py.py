@@ -111,3 +111,21 @@ def test_pytket_multi_qubit(validate):
         return py(circ)(q1, q2, q3)
 
     validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_pytket_measure(validate):
+    from pytket import Circuit
+
+    circ = Circuit(1)
+    circ.H(0)
+    circ.measure_all()
+
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy(module)
+    def foo(q: Qubit) -> tuple[Qubit, bool]:
+        return py(circ)(q)
+
+    validate(module.compile())
