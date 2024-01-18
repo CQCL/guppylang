@@ -1,5 +1,18 @@
+import pytest
+
+from guppylang.decorator import guppy
+from guppylang.module import GuppyModule
+from guppylang.prelude.quantum import Qubit, quantum
 from tests.integration.util import py
 from tests.util import compile_guppy
+
+
+try:
+    import tket2
+
+    tket2_installed = True
+except ImportError:
+    tket2_installed = False
 
 
 def test_basic(validate):
@@ -60,3 +73,41 @@ def test_tuple_implicit(validate):
         return x
 
     validate(foo)
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_pytket_single_qubit(validate):
+    from pytket import Circuit
+
+    circ = Circuit(1)
+    circ.H(0)
+
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy(module)
+    def foo(q: Qubit) -> Qubit:
+        f = py(circ)
+        return f(q)
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_pytket_multi_qubit(validate):
+    from pytket import Circuit
+
+    circ = Circuit(3)
+    circ.CX(0, 1)
+    circ.H(2)
+    circ.T(0)
+    circ.CZ(2, 0)
+
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy(module)
+    def foo(q1: Qubit, q2:Qubit, q3:Qubit) -> tuple[Qubit, Qubit, Qubit]:
+        return py(circ)(q1, q2, q3)
+
+    validate(module.compile())
