@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-import networkx as nx  # type: ignore[import-not-found]
+import networkx as nx  # type: ignore[import-untyped]
 
 import guppylang.hugr.ops as ops
 import guppylang.hugr.raw as raw

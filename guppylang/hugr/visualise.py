@@ -3,7 +3,7 @@ import ast
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
-import graphviz as gv  # type: ignore[import-not-found]
+import graphviz as gv  # type: ignore[import-untyped]
 
 from guppylang.cfg.analysis import (
     DefAssignmentDomain,

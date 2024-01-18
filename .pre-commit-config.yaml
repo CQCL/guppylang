@@ -38,7 +38,7 @@ repos:
       - id: mypy
         pass_filenames: false
         args: [--package=guppylang]
-        additional_dependencies: [ormsgpack, pydantic]
+        additional_dependencies: [ormsgpack, pydantic, graphviz, networkx]
 
   - repo: local
     hooks:
