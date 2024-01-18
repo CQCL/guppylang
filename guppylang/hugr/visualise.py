@@ -3,7 +3,7 @@ import ast
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
-import graphviz as gv  # type: ignore[import-untyped]
+import graphviz as gv  # type: ignore[import-not-found]
 
 from guppylang.cfg.analysis import (
     DefAssignmentDomain,
@@ -257,14 +257,17 @@ def cfg_to_graphviz(
 ) -> gv.Digraph:
     graph = gv.Digraph("CFG", strict=False)
     for bb in cfg.bbs:
-        label = f"""
+        label = (
+            f"""
 assigned: {commas(*bb.vars.assigned)}
 used: {commas(*bb.vars.used)}
 maybe_ass_before: {commas(*maybe_ass_before[bb])}
 ass_before: {commas(*ass_before[bb])}
 live_before: {commas(*live_before[bb])}
 --------
-""" + "\n".join(ast.unparse(s) for s in bb.statements)
+"""
+            + "\n".join(ast.unparse(s) for s in bb.statements)
+        )
         if bb.branch_pred is not None:
             label += f"\n{ast.unparse(bb.branch_pred)} ?"
         graph.node(str(bb.idx), label, shape="rect")
