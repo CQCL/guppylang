@@ -63,10 +63,6 @@ class _Guppy:
 
         Optionally, the `GuppyModule` in which the function should be placed can
         be passed to the decorator.
-
-        If `compile` is set to `True` and no `GuppyModule` is passed, the
-        function is compiled immediately as an standalone module and the Hugr is
-        returned.
         """
 
         def make_dummy(wraps: PyFunc) -> Callable[..., Any]:
@@ -192,7 +188,7 @@ class _Guppy:
     def type_var(self, module: GuppyModule, name: str, linear: bool = False) -> TypeVar:
         """Creates a new type variable in a module."""
         module.register_type_var(name, linear)
-        return TypeVar(name)
+        return TypeVar(name)  # type: ignore[parameter]
 
     @pretty_errors
     def custom(
@@ -263,7 +259,11 @@ class _Guppy:
         if id is None:
             id = self._get_python_caller()
         if id not in self._modules:
-            err = f"Module {id.name} not found." if id else "No module found."
+            err = (
+                f"Module {id.name} not found."
+                if id
+                else "No Guppy functions or types defined in this module."
+            )
             raise MissingModuleError(err)
         return self._modules.pop(id)
 
@@ -271,7 +271,11 @@ class _Guppy:
         """Compiles the local module into a Hugr."""
         module = self.take_module(id)
         if not module:
-            err = f"Module {id.name} not found." if id else "No module found."
+            err = (
+                f"Module {id.name} not found."
+                if id
+                else "No Guppy functions or types defined in this module."
+            )
             raise MissingModuleError(err)
         return module.compile() if module else None
 
