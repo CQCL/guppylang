@@ -30,7 +30,7 @@ class CallerIdentifier:
     """Identifier for the interpreter frame that called the decorator."""
 
     filename: Path
-    function: str
+    module: str | None
 
     @property
     def name(self) -> str:
@@ -38,11 +38,8 @@ class CallerIdentifier:
 
         If the called is not a function, uses the file name.
         """
-        module_name = inspect.getmodulename(self.filename)
-        if self.function != "<module>":
-            return self.function
-        if module_name is not None:
-            return module_name
+        if self.module is not None:
+            return self.module.__name__
         return self.filename.name
 
 
@@ -80,7 +77,7 @@ class _Guppy:
             f = arg
 
             def dec(f: Callable[..., Any]) -> Callable[..., Any] | Hugr:
-                caller = self._get_python_caller()
+                caller = self._get_python_caller(f)
                 if caller not in self._modules:
                     self._modules[caller] = GuppyModule(caller.name)
                 module = self._modules[caller]
@@ -99,14 +96,23 @@ class _Guppy:
 
         raise ValueError(f"Invalid arguments to `@guppy` decorator: {arg}")
 
-    def _get_python_caller(self) -> CallerIdentifier:
-        """Returns an identifier for the interpreter frame that called the decorator."""
-        for s in inspect.stack():
-            # Note the hacky check for the pretty errors wrapper,
-            # since @pretty_errors wraps the __call__ method.
-            if s.filename != __file__ and s.function != "pretty_errors_wrapped":
-                return CallerIdentifier(Path(s.filename), s.function)
-        raise GuppyError("Could not find caller of `@guppy` decorator")
+    def _get_python_caller(self, fn: PyFunc | None = None) -> CallerIdentifier:
+        """Returns an identifier for the interpreter frame that called the decorator.
+
+        :param fn: Optional. The function that was decorated.
+        """
+        if fn is not None:
+            filename = inspect.getfile(fn)
+            module = inspect.getmodule(fn)
+        else:
+            for s in inspect.stack():
+                if s.filename != __file__:
+                    filename = s.filename
+                    module = inspect.getmodule(s.frame)
+                    break
+            else:
+                raise GuppyError("Could not find a caller for the `@guppy` decorator")
+        return CallerIdentifier(Path(filename), module)
 
     @pretty_errors
     def extend_type(self, module: GuppyModule, ty: type[GuppyType]) -> ClassDecorator:
@@ -256,12 +262,13 @@ class _Guppy:
 
     def take_module(self, id: CallerIdentifier | None = None) -> GuppyModule:
         """Returns the local GuppyModule, removing it from the local state."""
+        orig_id = id
         if id is None:
             id = self._get_python_caller()
         if id not in self._modules:
             err = (
-                f"Module {id.name} not found."
-                if id
+                f"Module {orig_id.name} not found."
+                if orig_id
                 else "No Guppy functions or types defined in this module."
             )
             raise MissingModuleError(err)
