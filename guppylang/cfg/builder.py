@@ -459,8 +459,8 @@ class BranchBuilder(AstVisitor[None]):
         # the result as a branch predicate
         pred, bb = ExprBuilder.build(node, self.cfg, bb)
         bb.branch_pred = pred
-        self.cfg.link(bb, true_bb)
         self.cfg.link(bb, false_bb)
+        self.cfg.link(bb, true_bb)
 
 
 def is_functional_annotation(stmt: ast.stmt) -> bool:

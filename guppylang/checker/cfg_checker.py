@@ -5,8 +5,9 @@ Operates on CFGs produced by the `CFGBuilder`. Produces a `CheckedCFG` consistin
 """
 
 import collections
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
+from typing import TypeVar
 
 from guppylang.ast_util import line_col
 from guppylang.cfg.bb import BB
@@ -76,7 +77,9 @@ def check_cfg(
     # We do BFS instead of DFS to get a better error ordering.
     queue = collections.deque(
         (checked_cfg.entry_bb, i, succ)
-        for i, succ in enumerate(cfg.entry_bb.successors)
+        # We enumerate the successor starting from the back, so we start with the `True`
+        # branch. This way, we find errors in a more natural order
+        for i, succ in reverse_enumerate(cfg.entry_bb.successors)
     )
     while len(queue) > 0:
         pred, num_output, bb = queue.popleft()
@@ -92,7 +95,12 @@ def check_cfg(
         else:
             # Otherwise, check the BB and enqueue its successors
             checked_bb = check_bb(bb, checked_cfg, input_row, return_ty, globals)
-            queue += [(checked_bb, i, succ) for i, succ in enumerate(bb.successors)]
+            queue += [
+                # We enumerate the successor starting from the back, so we start with
+                # the `True` branch. This way, we find errors in a more natural order
+                (checked_bb, i, succ)
+                for i, succ in reverse_enumerate(bb.successors)
+            ]
             compiled[bb] = checked_bb
 
         # Link up BBs in the checked CFG
@@ -218,3 +226,16 @@ def check_rows_match(row1: VarRow, row2: VarRow, bb: BB) -> None:
                 bb.containing_cfg.live_before[bb][v1.name].vars.used[v1.name],
                 [v1.defined_at, v2.defined_at],
             )
+
+
+T = TypeVar("T")
+
+
+def reverse_enumerate(xs: list[T]) -> Iterator[tuple[int, T]]:
+    """Enumerates a list in reverse order.
+
+    Equivalent to `reversed(list(enumerate(data)))` without creating an intermediate
+    list.
+    """
+    for i in range(len(xs) - 1, -1, -1):
+        yield i, xs[i]
