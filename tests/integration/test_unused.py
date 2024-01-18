@@ -1,6 +1,5 @@
 """ All sorts of weird stuff is allowed when variables are not used. """
 
-from guppylang.decorator import guppy
 from tests.util import compile_guppy
 
 

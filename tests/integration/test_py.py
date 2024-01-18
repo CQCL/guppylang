@@ -1,4 +1,3 @@
-from guppylang.decorator import guppy
 from tests.integration.util import py
 from tests.util import compile_guppy
 
