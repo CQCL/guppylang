@@ -14,7 +14,7 @@ from guppylang.custom import (
     DefaultCallCompiler,
     OpCompiler,
 )
-from guppylang.error import GuppyError, pretty_errors
+from guppylang.error import GuppyError, MissingModuleError, pretty_errors
 from guppylang.gtypes import GuppyType, TypeTransformer
 from guppylang.hugr import ops, tys
 from guppylang.hugr.hugr import Hugr
@@ -258,17 +258,21 @@ class _Guppy:
 
         return dec
 
-    def take_module(self, id: CallerIdentifier | None = None) -> GuppyModule | None:
+    def take_module(self, id: CallerIdentifier | None = None) -> GuppyModule:
         """Returns the local GuppyModule, removing it from the local state."""
         if id is None:
             id = self._get_python_caller()
         if id not in self._modules:
-            return None
+            err = f"Module {id.name} not found." if id else "No module found."
+            raise MissingModuleError(err)
         return self._modules.pop(id)
 
-    def compile(self, id: CallerIdentifier | None = None) -> Hugr | None:
+    def compile(self, id: CallerIdentifier | None = None) -> Hugr:
         """Compiles the local module into a Hugr."""
         module = self.take_module(id)
+        if not module:
+            err = f"Module {id.name} not found." if id else "No module found."
+            raise MissingModuleError(err)
         return module.compile() if module else None
 
     def registered_modules(self) -> list[CallerIdentifier]:

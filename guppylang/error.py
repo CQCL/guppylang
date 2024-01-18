@@ -76,6 +76,10 @@ class GuppyTypeInferenceError(GuppyError):
     """Special Guppy exception for type inference errors."""
 
 
+class MissingModuleError(GuppyError):
+    """Special Guppy exception for operations that require a guppy module."""
+
+
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
 
