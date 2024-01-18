@@ -5,6 +5,7 @@ description = ""
 authors = ["Mark Koch <mark.koch@quantinuum.com>"]
 license = "Apache-2.0"
 readme = "README.md"
+repository = "https://github.com/CQCL/guppy"
 
 [tool.poetry.dependencies]
 python = "^3.10"
