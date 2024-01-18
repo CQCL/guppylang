@@ -3,6 +3,7 @@ import inspect
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from typing import Any, ClassVar, TypeVar
 
 from guppylang.ast_util import AstNode, has_empty_body
@@ -30,7 +31,7 @@ class CallerIdentifier:
     """Identifier for the interpreter frame that called the decorator."""
 
     filename: Path
-    module: str | None
+    module: ModuleType | None
 
     @property
     def name(self) -> str:
@@ -39,7 +40,7 @@ class CallerIdentifier:
         If the called is not a function, uses the file name.
         """
         if self.module is not None:
-            return self.module.__name__
+            return str(self.module.__name__)
         return self.filename.name
 
 
@@ -55,7 +56,7 @@ class _Guppy:
         self._modules = {}
 
     @pretty_errors
-    def __call__(self, arg: PyFunc | GuppyModule) -> None | FuncDecorator:
+    def __call__(self, arg: PyFunc | GuppyModule) -> FuncDecorator:
         """Decorator to annotate Python functions as Guppy code.
 
         Optionally, the `GuppyModule` in which the function should be placed can
@@ -76,7 +77,7 @@ class _Guppy:
             # We default to a module associated with the caller of the decorator.
             f = arg
 
-            def dec(f: Callable[..., Any]) -> Callable[..., Any] | Hugr:
+            def dec(f: Callable[..., Any]) -> Callable[..., Any]:
                 caller = self._get_python_caller(f)
                 if caller not in self._modules:
                     self._modules[caller] = GuppyModule(caller.name)
@@ -88,7 +89,7 @@ class _Guppy:
 
         if isinstance(arg, GuppyModule):
             # Module passed.
-            def dec(f: Callable[..., Any]) -> Callable[..., Any] | Hugr:
+            def dec(f: Callable[..., Any]) -> Callable[..., Any]:
                 arg.register_func_def(f)
                 return make_dummy(f)
 
@@ -194,7 +195,7 @@ class _Guppy:
     def type_var(self, module: GuppyModule, name: str, linear: bool = False) -> TypeVar:
         """Creates a new type variable in a module."""
         module.register_type_var(name, linear)
-        return TypeVar(name)  # type: ignore[parameter]
+        return TypeVar(name)
 
     @pretty_errors
     def custom(
@@ -274,7 +275,7 @@ class _Guppy:
             raise MissingModuleError(err)
         return self._modules.pop(id)
 
-    def compile_module(self, id: CallerIdentifier | None = None) -> Hugr:
+    def compile_module(self, id: CallerIdentifier | None = None) -> Hugr | None:
         """Compiles the local module into a Hugr."""
         module = self.take_module(id)
         if not module:
@@ -284,7 +285,7 @@ class _Guppy:
                 else "No Guppy functions or types defined in this module."
             )
             raise MissingModuleError(err)
-        return module.compile() if module else None
+        return module.compile()
 
     def registered_modules(self) -> list[CallerIdentifier]:
         """Returns a list of all currently registered modules for local contexts."""
