@@ -20,13 +20,12 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/crate-ci/typos
-    rev: v1.16.23
+    rev: v1.17.1
     hooks:
       - id: typos
-        args: []
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.7
+    rev: v0.1.13
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
