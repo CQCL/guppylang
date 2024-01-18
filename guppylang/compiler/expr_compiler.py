@@ -1,4 +1,5 @@
 import ast
+import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -314,4 +315,17 @@ def python_value_to_hugr(v: Any) -> val.Value | None:
                 return None
             return val.Tuple(vs=vs)
         case _:
+            # Pytket conversion is an optional feature
+            try:
+                import pytket
+
+                if isinstance(v, pytket.circuit.Circuit):
+                    from tket2.circuit import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
+                        Tk2Circuit,
+                    )
+
+                    hugr = json.loads(Tk2Circuit(v).to_hugr_json())
+                    return val.FunctionVal(hugr=hugr)
+            except ImportError:
+                pass
             return None
