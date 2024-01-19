@@ -52,3 +52,24 @@ jobs:
 
       - name: Run tests
         run: poetry run pytest
+
+      - name: Checkout tket2
+        uses: actions/checkout@v4
+        with:
+          repository: CQCL/tket2
+          path: tket2
+
+      - name: Build tket2-py
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          sccache: 'true'
+          rust-toolchain: '1.75'
+          working-directory: tket2/tket2-py
+
+      - name: Install tket2-py validator
+        run: poetry add tket2/target/wheels/*
+
+      - name: Rerun `py(...)` expression tests with tket2 installed
+        run: poetry run pytest tests/integration/test_py.py tests/error/test_py_errors.py
+

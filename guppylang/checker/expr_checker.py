@@ -60,6 +60,7 @@ from guppylang.gtypes import (
     NoneType,
     Subst,
     TupleType,
+    row_to_type,
     unify,
 )
 from guppylang.nodes import (
@@ -918,4 +919,26 @@ def python_value_to_guppy_type(
                 return None
             return TupleType(cast(list[GuppyType], tys))
         case _:
+            # Pytket conversion is an optional feature
+            try:
+                import pytket
+
+                if isinstance(v, pytket.circuit.Circuit):
+                    # We also need tket2 installed
+                    try:
+                        import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
+
+                        qubit = globals.types["Qubit"].build()
+                        return FunctionType(
+                            [qubit] * v.n_qubits,
+                            row_to_type([qubit] * v.n_qubits + [BoolType()] * v.n_bits),
+                        )
+                    except ImportError:
+                        raise GuppyError(
+                            "Pytket compatibility requires `tket2` to be installed. "
+                            "See https://github.com/CQCL/tket2/tree/main/tket2-py",
+                            node,
+                        ) from None
+            except ImportError:
+                pass
             return None
