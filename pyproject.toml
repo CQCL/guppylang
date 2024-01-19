@@ -11,10 +11,10 @@ repository = "https://github.com/CQCL/guppy"
 python = "^3.10"
 graphviz = "^0.20.1"
 networkx = "^3.2.1"
-ormsgpack = "^1.4.1"
 pydantic = "^2.5.3"
 typing-extensions = "^4.9.0"
 pytket = { version = "^1.24.0", optional = true }
+tket2-py = { git = "https://github.com/CQCL/tket2.git", optional = true, rev = "9e941f3" }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"
@@ -24,9 +24,15 @@ ruff = "^0.1.11"
 maturin = "^1.4.0"
 pytket = "*"
 
+[tool.poetry.group.validation]
+optional = true
+
+[tool.poetry.group.validation.dependencies]
+guppyval = {path = "validator"}
+
 [tool.poetry.extras]
-pytket = ["pytket"]
-# TODO add tket2 dependency here
+pytket = ["pytket", "tket2-py"]
+
 
 [build-system]
 requires = ["poetry-core"]

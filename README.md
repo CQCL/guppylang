@@ -105,7 +105,7 @@ Integration test cases can be exported to a directory using
 poetry run pytest --export-test-cases=guppy-exports
 ```
 
-which will create a directory `./guppy-exports` populated with hugr modules serialised in msgpack.
+which will create a directory `./guppy-exports` populated with hugr modules serialised in JSON.
 
 
 ## License

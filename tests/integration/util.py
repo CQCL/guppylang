@@ -1,15 +1,5 @@
 from typing import Any
 
-import validator
-
-
-def validate_bytes(hugr: bytes):
-    validator.validate_bytes(hugr)
-
-
-def validate_json(hugr: str):
-    validator.validate_json(hugr)
-
 
 class Decorator:
     def __matmul__(self, other):
