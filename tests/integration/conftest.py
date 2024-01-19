@@ -23,7 +23,7 @@ def validate(request, export_test_cases_dir: Path):
 
     def validate_impl(hugr, name=None):
         # Validate via the json encoding
-        js = hugr.serialize_json()
+        js = hugr.serialize()
         validate_json(js)
 
         if export_test_cases_dir:

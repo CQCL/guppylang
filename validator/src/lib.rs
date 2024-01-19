@@ -18,14 +18,6 @@ lazy_static! {
     .unwrap();
 }
 
-/// Validate a msgpack-encoded Hugr
-#[pyfunction]
-fn validate_bytes(hugr: Vec<u8>) -> PyResult<()> {
-    let hg: hugr::Hugr = rmp_serde::from_slice(&hugr).unwrap();
-    hg.validate(&REGISTRY).unwrap();
-    Ok(())
-}
-
 /// Validate a json-encoded Hugr
 #[pyfunction]
 fn validate_json(hugr: String) -> PyResult<()> {
@@ -36,7 +28,6 @@ fn validate_json(hugr: String) -> PyResult<()> {
 
 #[pymodule]
 fn guppyval(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(validate_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(validate_json, m)?)?;
     Ok(())
 }
