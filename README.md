@@ -107,12 +107,6 @@ poetry run pytest --export-test-cases=guppy-exports
 
 which will create a directory `./guppy-exports` populated with hugr modules serialised in msgpack.
 
-### Packaging
-
-```sh
-poetry build
-```
-
 
 ## License
 
