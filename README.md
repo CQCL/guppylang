@@ -4,14 +4,13 @@ Guppy is a quantum programming language that is fully embedded into Python.
 It allows you to write high-level hybrid quantum programs with classical control flow and mid-circuit measurements using Pythonic syntax:
 
 ```python
-from guppylang import guppy, Qubit
+from guppylang import guppy, Qubit, quantum
 
-import guppylang.prelude.quantum as quantum
 guppy.load(quantum)
 
+# Teleports the state in `src` to `tgt`.
 @guppy
 def teleport(src: Qubit, tgt: Qubit) -> Qubit:
-   """Teleports the state in `src` to `tgt`."""
    # Create ancilla and entangle it with src and tgt
    tmp = Qubit()
    tmp, tgt = cx(h(tmp), tgt)
