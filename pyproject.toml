@@ -23,6 +23,11 @@ pre-commit = "^3.6.0"
 ruff = "^0.1.11"
 maturin = "^1.4.0"
 pytket = "*"
+
+[tool.poetry.group.validation]
+optional = true
+
+[tool.poetry.group.validation.dependencies]
 guppyval = {path = "validator"}
 
 [tool.poetry.extras]

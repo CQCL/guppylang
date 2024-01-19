@@ -912,4 +912,4 @@ pytket = ["pytket", "tket2-py"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "7108630ba769a2e8e76da9f4aca911602ebd33f140501a2abb926d38ab20a076"
+content-hash = "38603201ab598596fc0671e329e91573b78f55f1420767cfbffae55a291fe32c"
