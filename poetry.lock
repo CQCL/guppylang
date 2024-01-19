@@ -91,6 +91,19 @@ docs = ["sphinx (>=5)", "sphinx-autodoc-typehints", "sphinx-rtd-theme"]
 test = ["coverage", "mock (>=4)", "pytest (>=7)", "pytest-cov", "pytest-mock (>=3)"]
 
 [[package]]
+name = "guppyval"
+version = "0.2.0"
+description = ""
+optional = false
+python-versions = ">=3.10"
+files = []
+develop = false
+
+[package.source]
+type = "directory"
+url = "validator"
+
+[[package]]
 name = "identify"
 version = "2.5.33"
 description = "File identification library for Python"
@@ -929,4 +942,4 @@ pytket = ["pytket", "tket2-py"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "6c32b9a879ee8515f7f593a9454ad4557e1c0f80ae5518b3bf3b529c7dd25897"
+content-hash = "e54ee8be1ddcd60f4e7c538c9c6f74187ada720280d5be5da61f65abaa3c6f8c"

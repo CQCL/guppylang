@@ -35,7 +35,7 @@ fn validate_json(hugr: String) -> PyResult<()> {
 }
 
 #[pymodule]
-fn validator(_py: Python, m: &PyModule) -> PyResult<()> {
+fn guppyval(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(validate_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(validate_json, m)?)?;
     Ok(())

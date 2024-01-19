@@ -167,6 +167,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
+name = "guppyval"
+version = "0.2.0"
+dependencies = [
+ "lazy_static",
+ "pyo3",
+ "quantinuum-hugr",
+ "rmp-serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -750,17 +761,6 @@ name = "utf8-width"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86bd8d4e895da8537e5315b8254664e6b769c4ff3db18321b297a1e7004392e3"
-
-[[package]]
-name = "validator"
-version = "0.2.0"
-dependencies = [
- "lazy_static",
- "pyo3",
- "quantinuum-hugr",
- "rmp-serde",
- "serde_json",
-]
 
 [[package]]
 name = "windows-targets"
