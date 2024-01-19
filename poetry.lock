@@ -119,7 +119,7 @@ files = [
 name = "jinja2"
 version = "3.1.3"
 description = "A very fast and expressive template engine."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "Jinja2-3.1.3-py3-none-any.whl", hash = "sha256:7d6d50dd97d52cbc355597bd845fabfbac3f551e1f99619e39a35ce8c370b5fa"},
@@ -136,7 +136,7 @@ i18n = ["Babel (>=2.7)"]
 name = "lark-parser"
 version = "0.12.0"
 description = "a modern parsing library"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "lark-parser-0.12.0.tar.gz", hash = "sha256:15967db1f1214013dca65b1180745047b9be457d73da224fcda3d9dd4e96a138"},
@@ -152,7 +152,7 @@ regex = ["regex"]
 name = "markupsafe"
 version = "2.1.3"
 description = "Safely add untrusted strings to HTML/XML markup."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "MarkupSafe-2.1.3-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:cd0f502fe016460680cd20aaa5a76d241d6f35a1c3350c474bac1273803893fa"},
@@ -250,7 +250,7 @@ zig = ["ziglang (>=0.10.0,<0.11.0)"]
 name = "mpmath"
 version = "1.3.0"
 description = "Python library for arbitrary-precision floating-point arithmetic"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "mpmath-1.3.0-py3-none-any.whl", hash = "sha256:a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"},
@@ -357,7 +357,7 @@ setuptools = "*"
 name = "numpy"
 version = "1.26.3"
 description = "Fundamental package for array computing in Python"
-optional = true
+optional = false
 python-versions = ">=3.9"
 files = [
     {file = "numpy-1.26.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:806dd64230dbbfaca8a27faa64e2f414bf1c6622ab78cc4264f7f5f028fee3bf"},
@@ -649,7 +649,7 @@ testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "no
 name = "pytket"
 version = "1.24.0"
 description = "Python module for interfacing with the CQC tket library of quantum software"
-optional = true
+optional = false
 python-versions = ">=3.10"
 files = [
     {file = "pytket-1.24.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:70f203d2efbf07f8d9857dd92aac7bf3b79bcf121ac2a23a92ac5e1dd3c7ea98"},
@@ -747,7 +747,7 @@ files = [
 name = "qwasm"
 version = "1.0.1"
 description = "WebAssembly decoder & disassembler"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "qwasm-1.0.1-py3-none-any.whl", hash = "sha256:c4c82a3f962d29314634868e06375f0cb4676c3d5266fbe137f6cd67321b0ef1"},
@@ -787,7 +787,7 @@ files = [
 name = "scipy"
 version = "1.11.4"
 description = "Fundamental algorithms for scientific computing in Python"
-optional = true
+optional = false
 python-versions = ">=3.9"
 files = [
     {file = "scipy-1.11.4-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:bc9a714581f561af0848e6b69947fda0614915f072dfd14142ed1bfe1b806710"},
@@ -845,7 +845,7 @@ testing-integration = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "jar
 name = "sympy"
 version = "1.12"
 description = "Computer algebra system (CAS) in Python"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "sympy-1.12-py3-none-any.whl", hash = "sha256:c3588cd4295d0c0f603d0f2ae780587e64e2efeedb3521e46b9bb1d08d184fa5"},
@@ -885,7 +885,7 @@ files = [
 name = "types-pkg-resources"
 version = "0.1.3"
 description = "Typing stubs for pkg_resources"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "types-pkg_resources-0.1.3.tar.gz", hash = "sha256:834a9b8d3dbea343562fd99d5d3359a726f6bf9d3733bccd2b4f3096fbab9dae"},
@@ -929,4 +929,4 @@ pytket = ["pytket", "tket2-py"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "71a360764cabad797d5264c010ea6cc575c961f502d1e7037b63a2cbf46fa307"
+content-hash = "6c32b9a879ee8515f7f593a9454ad4557e1c0f80ae5518b3bf3b529c7dd25897"

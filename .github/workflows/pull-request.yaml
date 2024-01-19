@@ -21,19 +21,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "poetry"
 
-      - name: Build Hugr validator
-        uses: PyO3/maturin-action@v1
-        with:
-          command: build
-          sccache: 'true'
-          rust-toolchain: '1.75'
-          working-directory: validator
-
       - name: Install Guppy
         run: poetry install
-
-      - name: Install Hugr validator
-        run: poetry add validator/target/wheels/*
 
       - name: Type check with mypy
         run: poetry run mypy guppylang
@@ -49,6 +38,17 @@ jobs:
         with:
           src: "./guppylang"
           args: check
+
+      - name: Build Hugr validator
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          sccache: 'true'
+          rust-toolchain: '1.75'
+          working-directory: validator
+
+      - name: Install Hugr validator
+        run: poetry add validator/target/wheels/*
 
       - name: Run tests
         run: poetry run pytest
