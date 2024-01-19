@@ -10,10 +10,10 @@ repos:
       - id: check-vcs-permalinks
       - id: check-yaml
       - id: detect-private-key
-      - id: end-of-file-fixer
+      # - id: end-of-file-fixer
+      # - id: trailing-whitespace
       - id: fix-byte-order-marker
       - id: mixed-line-ending
-      # -   id: trailing-whitespace
       # Python-specific
       - id: check-ast
       - id: check-docstring-first
@@ -37,7 +37,13 @@ repos:
       - id: mypy
         pass_filenames: false
         args: [--package=guppylang]
-        additional_dependencies: [ormsgpack, pydantic, graphviz, networkx]
+        additional_dependencies: [
+          graphviz,
+          networkx,
+          ormsgpack,
+          pydantic,
+          pytket,
+          ]
 
   - repo: local
     hooks:

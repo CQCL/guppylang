@@ -9,3 +9,4 @@ GuppyError: Error occurred while evaluating Python expression:
 Traceback (most recent call last):
   File "<string>", line 1, in <module>
 ZeroDivisionError: division by zero
+
