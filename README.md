@@ -6,6 +6,9 @@ It allows you to write high-level hybrid quantum programs with classical control
 ```python
 from guppylang import guppy, Qubit
 
+import guppylang.prelude.quantum as quantum
+guppy.load(quantum)
+
 @guppy
 def teleport(src: Qubit, tgt: Qubit) -> Qubit:
    """Teleports the state in `src` to `tgt`."""
