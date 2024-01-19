@@ -842,7 +842,7 @@ mpmath = ">=0.19"
 name = "tket2-py"
 version = "0.0.0-alpha.1"
 description = "pytket extension for the tket 2 compiler"
-optional = true
+optional = false
 python-versions = ">=3.10"
 files = []
 develop = false
@@ -906,10 +906,7 @@ platformdirs = ">=3.9.1,<5"
 docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.2)", "sphinx-argparse (>=0.4)", "sphinxcontrib-towncrier (>=0.2.1a0)", "towncrier (>=23.6)"]
 test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7)", "packaging (>=23.1)", "pytest (>=7.4)", "pytest-env (>=0.8.2)", "pytest-freezer (>=0.4.8)", "pytest-mock (>=3.11.1)", "pytest-randomly (>=3.12)", "pytest-timeout (>=2.1)", "setuptools (>=68)", "time-machine (>=2.10)"]
 
-[extras]
-pytket = ["pytket", "tket2-py"]
-
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "38603201ab598596fc0671e329e91573b78f55f1420767cfbffae55a291fe32c"
+content-hash = "f1ece99102a0240654d7058ebefd3eb8a48dfc9d1e6a30116e4e8b50bcc44d01"

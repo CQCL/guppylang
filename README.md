@@ -96,7 +96,7 @@ poetry run pytest -v
 You have to install extra dependencies to test automatic circuit conversion from `pytket`:
 
 ```sh
-poetry install --extras=pytket
+poetry install --with pytket
 poetry run pytest -v  # Now rerun tests
 ```
 

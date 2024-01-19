@@ -13,8 +13,6 @@ graphviz = "^0.20.1"
 networkx = "^3.2.1"
 pydantic = "^2.5.3"
 typing-extensions = "^4.9.0"
-pytket = { version = "^1.24.0", optional = true }
-tket2-py = { git = "https://github.com/CQCL/tket2.git", optional = true, rev = "9e941f3" }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"
@@ -28,10 +26,15 @@ pytket = "*"
 optional = true
 
 [tool.poetry.group.validation.dependencies]
-guppyval = {path = "validator"}
+guppyval = { path = "validator" }
 
-[tool.poetry.extras]
-pytket = ["pytket", "tket2-py"]
+
+[tool.poetry.group.pytket]
+optional = true
+
+[tool.poetry.group.pytket.dependencies]
+pytket = { version = "^1.24.0" }
+tket2-py = {git = "https://github.com/CQCL/tket2.git", rev = "9e941f3"}
 
 
 [build-system]
