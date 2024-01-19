@@ -856,6 +856,21 @@ files = [
 mpmath = ">=0.19"
 
 [[package]]
+name = "tket2-py"
+version = "0.0.0-alpha.1"
+description = "pytket extension for the tket 2 compiler"
+optional = true
+python-versions = ">=3.10"
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/CQCL/tket2.git"
+reference = "9e941f3"
+resolved_reference = "9e941f33489fcdd1f6f885989bfa65b2c0c2519c"
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -909,9 +924,9 @@ docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.2)", "sphinx-
 test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7)", "packaging (>=23.1)", "pytest (>=7.4)", "pytest-env (>=0.8.2)", "pytest-freezer (>=0.4.8)", "pytest-mock (>=3.11.1)", "pytest-randomly (>=3.12)", "pytest-timeout (>=2.1)", "setuptools (>=68)", "time-machine (>=2.10)"]
 
 [extras]
-pytket = ["pytket"]
+pytket = ["pytket", "tket2-py"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "1b1691859b5dded386a32787705bd482adbcf31ec7b5b1249831419ccde9fb80"
+content-hash = "71a360764cabad797d5264c010ea6cc575c961f502d1e7037b63a2cbf46fa307"
