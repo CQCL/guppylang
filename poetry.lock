@@ -91,6 +91,19 @@ docs = ["sphinx (>=5)", "sphinx-autodoc-typehints", "sphinx-rtd-theme"]
 test = ["coverage", "mock (>=4)", "pytest (>=7)", "pytest-cov", "pytest-mock (>=3)"]
 
 [[package]]
+name = "guppyval"
+version = "0.2.0"
+description = ""
+optional = false
+python-versions = ">=3.10"
+files = []
+develop = false
+
+[package.source]
+type = "directory"
+url = "validator"
+
+[[package]]
 name = "identify"
 version = "2.5.33"
 description = "File identification library for Python"
@@ -119,7 +132,7 @@ files = [
 name = "jinja2"
 version = "3.1.3"
 description = "A very fast and expressive template engine."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "Jinja2-3.1.3-py3-none-any.whl", hash = "sha256:7d6d50dd97d52cbc355597bd845fabfbac3f551e1f99619e39a35ce8c370b5fa"},
@@ -136,7 +149,7 @@ i18n = ["Babel (>=2.7)"]
 name = "lark-parser"
 version = "0.12.0"
 description = "a modern parsing library"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "lark-parser-0.12.0.tar.gz", hash = "sha256:15967db1f1214013dca65b1180745047b9be457d73da224fcda3d9dd4e96a138"},
@@ -152,7 +165,7 @@ regex = ["regex"]
 name = "markupsafe"
 version = "2.1.3"
 description = "Safely add untrusted strings to HTML/XML markup."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "MarkupSafe-2.1.3-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:cd0f502fe016460680cd20aaa5a76d241d6f35a1c3350c474bac1273803893fa"},
@@ -250,7 +263,7 @@ zig = ["ziglang (>=0.10.0,<0.11.0)"]
 name = "mpmath"
 version = "1.3.0"
 description = "Python library for arbitrary-precision floating-point arithmetic"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "mpmath-1.3.0-py3-none-any.whl", hash = "sha256:a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"},
@@ -357,7 +370,7 @@ setuptools = "*"
 name = "numpy"
 version = "1.26.3"
 description = "Fundamental package for array computing in Python"
-optional = true
+optional = false
 python-versions = ">=3.9"
 files = [
     {file = "numpy-1.26.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:806dd64230dbbfaca8a27faa64e2f414bf1c6622ab78cc4264f7f5f028fee3bf"},
@@ -396,36 +409,6 @@ files = [
     {file = "numpy-1.26.3-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:46f47ee566d98849323f01b349d58f2557f02167ee301e5e28809a8c0e27a2d0"},
     {file = "numpy-1.26.3-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:a8474703bffc65ca15853d5fd4d06b18138ae90c17c8d12169968e998e448bb5"},
     {file = "numpy-1.26.3.tar.gz", hash = "sha256:697df43e2b6310ecc9d95f05d5ef20eacc09c7c4ecc9da3f235d39e71b7da1e4"},
-]
-
-[[package]]
-name = "ormsgpack"
-version = "1.4.1"
-description = "Fast, correct Python msgpack library supporting dataclasses, datetimes, and numpy"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "ormsgpack-1.4.1-cp310-cp310-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:969f6acdfd9af9fb51f65cd5a92e902e384409df3567ce85c2f5ff3510ec4c45"},
-    {file = "ormsgpack-1.4.1-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:e7e0bd764b414dbb51196cdb8c6a892b237149ade79eaadcdeff25f775d85feb"},
-    {file = "ormsgpack-1.4.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c391fe8edaae80a3e66e6a26ce58edb32d5a6d10bd3b7ec8e2e364095fa7f30f"},
-    {file = "ormsgpack-1.4.1-cp310-none-win_amd64.whl", hash = "sha256:a48a11d8826468385681b12ce5b403b8404390a2410c39a3d0ccc79e46381266"},
-    {file = "ormsgpack-1.4.1-cp311-cp311-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:6987ee003c13e2b826a5219a8edc2d300d1c0dcb602489fa5e7bfd7ccfcefed6"},
-    {file = "ormsgpack-1.4.1-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:eda6e815612b803f8dc8bb5cef9e68453b6f7b5c7b6a160f0dca1e75522c6dbd"},
-    {file = "ormsgpack-1.4.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b44bfe29dc00dee76691fbd5ab1802148321915e902c5f32be1c40c07bbab0a2"},
-    {file = "ormsgpack-1.4.1-cp311-none-win_amd64.whl", hash = "sha256:8c58b0b7160fd8526401d02111e057b91b7359df7b4e7960926e91f8c39e385a"},
-    {file = "ormsgpack-1.4.1-cp312-cp312-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:01a60c0bad98c5b657f4f2259429fba0c5922806c8bd2546c91e2b3c950dcfd6"},
-    {file = "ormsgpack-1.4.1-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:9cf3efaf4dabd5c67f2cfb81f2920fca9f48c707bfceecbcabd9a53826436d9c"},
-    {file = "ormsgpack-1.4.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1fee368927bf96e517da98fa41ccd02511f310a78c3c86e09226833edd840773"},
-    {file = "ormsgpack-1.4.1-cp312-none-win_amd64.whl", hash = "sha256:62d361e1f518763f90e6d7b53be21f5ba3950185a053514d5c2f7bad7de03106"},
-    {file = "ormsgpack-1.4.1-cp38-cp38-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:ddbbe15f3e305e3eaf6cc9071e4a792cef6c8de399096b58b2fb1b9a424ab6c8"},
-    {file = "ormsgpack-1.4.1-cp38-cp38-macosx_10_12_x86_64.whl", hash = "sha256:c401b50d78784b07b4795a728260d37610a0084c773f718040c7671bbe86dfa5"},
-    {file = "ormsgpack-1.4.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:088dbdea632b08350870ec17d88875c497516de65a48b5d0aac4f8cd740e0ad5"},
-    {file = "ormsgpack-1.4.1-cp38-none-win_amd64.whl", hash = "sha256:f078e33505eae7f2a14b4d4e71961494353d4d4afae1341b66a889c1968526e9"},
-    {file = "ormsgpack-1.4.1-cp39-cp39-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:fad94fc3238781ed56283b5a0ab0edc990a9591a1987517d725dd7996100ee97"},
-    {file = "ormsgpack-1.4.1-cp39-cp39-macosx_10_12_x86_64.whl", hash = "sha256:a9d2e1ab48f852b92657f7ae31a6ba23664541237f899c2b6a24a746dcccdf0b"},
-    {file = "ormsgpack-1.4.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ce3062c405c4fcdd4f9cf374053cf4168f0d6606e5411c9db14e404ac8839010"},
-    {file = "ormsgpack-1.4.1-cp39-none-win_amd64.whl", hash = "sha256:a8cd00e082ac3752d289d8f61e6aa91a9ce7d75e7d17a68767149fc45f3f4e10"},
-    {file = "ormsgpack-1.4.1.tar.gz", hash = "sha256:52f4336e7c14e30e42bedba438b5f1eb3e8c8921314f868a5a7a13b6d6ecb17d"},
 ]
 
 [[package]]
@@ -649,7 +632,7 @@ testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "no
 name = "pytket"
 version = "1.24.0"
 description = "Python module for interfacing with the CQC tket library of quantum software"
-optional = true
+optional = false
 python-versions = ">=3.10"
 files = [
     {file = "pytket-1.24.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:70f203d2efbf07f8d9857dd92aac7bf3b79bcf121ac2a23a92ac5e1dd3c7ea98"},
@@ -747,7 +730,7 @@ files = [
 name = "qwasm"
 version = "1.0.1"
 description = "WebAssembly decoder & disassembler"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "qwasm-1.0.1-py3-none-any.whl", hash = "sha256:c4c82a3f962d29314634868e06375f0cb4676c3d5266fbe137f6cd67321b0ef1"},
@@ -787,7 +770,7 @@ files = [
 name = "scipy"
 version = "1.11.4"
 description = "Fundamental algorithms for scientific computing in Python"
-optional = true
+optional = false
 python-versions = ">=3.9"
 files = [
     {file = "scipy-1.11.4-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:bc9a714581f561af0848e6b69947fda0614915f072dfd14142ed1bfe1b806710"},
@@ -845,7 +828,7 @@ testing-integration = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "jar
 name = "sympy"
 version = "1.12"
 description = "Computer algebra system (CAS) in Python"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "sympy-1.12-py3-none-any.whl", hash = "sha256:c3588cd4295d0c0f603d0f2ae780587e64e2efeedb3521e46b9bb1d08d184fa5"},
@@ -854,6 +837,21 @@ files = [
 
 [package.dependencies]
 mpmath = ">=0.19"
+
+[[package]]
+name = "tket2-py"
+version = "0.0.0-alpha.1"
+description = "pytket extension for the tket 2 compiler"
+optional = false
+python-versions = ">=3.10"
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/CQCL/tket2.git"
+reference = "9e941f3"
+resolved_reference = "9e941f33489fcdd1f6f885989bfa65b2c0c2519c"
 
 [[package]]
 name = "tomli"
@@ -870,7 +868,7 @@ files = [
 name = "types-pkg-resources"
 version = "0.1.3"
 description = "Typing stubs for pkg_resources"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "types-pkg_resources-0.1.3.tar.gz", hash = "sha256:834a9b8d3dbea343562fd99d5d3359a726f6bf9d3733bccd2b4f3096fbab9dae"},
@@ -908,10 +906,7 @@ platformdirs = ">=3.9.1,<5"
 docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.2)", "sphinx-argparse (>=0.4)", "sphinxcontrib-towncrier (>=0.2.1a0)", "towncrier (>=23.6)"]
 test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7)", "packaging (>=23.1)", "pytest (>=7.4)", "pytest-env (>=0.8.2)", "pytest-freezer (>=0.4.8)", "pytest-mock (>=3.11.1)", "pytest-randomly (>=3.12)", "pytest-timeout (>=2.1)", "setuptools (>=68)", "time-machine (>=2.10)"]
 
-[extras]
-pytket = ["pytket"]
-
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "1b1691859b5dded386a32787705bd482adbcf31ec7b5b1249831419ccde9fb80"
+content-hash = "f1ece99102a0240654d7058ebefd3eb8a48dfc9d1e6a30116e4e8b50bcc44d01"

@@ -2,6 +2,10 @@ name: Pull Request
 
 on: pull_request
 
+env:
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
 jobs:
   check:
     name: Check Python
@@ -13,6 +17,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
       - name: Install poetry
         run: pipx install poetry
       - name: Set up Python ${{ matrix.python-version }}
@@ -21,19 +27,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "poetry"
 
-      - name: Build Hugr validator
-        uses: PyO3/maturin-action@v1
-        with:
-          command: build
-          sccache: 'true'
-          rust-toolchain: '1.75'
-          working-directory: validator
-
       - name: Install Guppy
         run: poetry install
-
-      - name: Install Hugr validator
-        run: poetry add validator/target/wheels/*
 
       - name: Type check with mypy
         run: poetry run mypy guppylang
@@ -50,25 +45,14 @@ jobs:
           src: "./guppylang"
           args: check
 
+      - name: Install Guppy with validation
+        run: poetry install --with validation
+
       - name: Run tests
         run: poetry run pytest
 
-      - name: Checkout tket2
-        uses: actions/checkout@v4
-        with:
-          repository: CQCL/tket2
-          path: tket2
-
-      - name: Build tket2-py
-        uses: PyO3/maturin-action@v1
-        with:
-          command: build
-          sccache: 'true'
-          rust-toolchain: '1.75'
-          working-directory: tket2/tket2-py
-
-      - name: Install tket2-py validator
-        run: poetry add tket2/target/wheels/*
+      - name: Install tket2 dependencies
+        run: poetry install --with pytket
 
       - name: Rerun `py(...)` expression tests with tket2 installed
         run: poetry run pytest tests/integration/test_py.py tests/error/test_py_errors.py

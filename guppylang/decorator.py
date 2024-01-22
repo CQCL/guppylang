@@ -258,6 +258,13 @@ class _Guppy:
 
         return dec
 
+    def load(self, m: ModuleType | GuppyModule) -> None:
+        caller = self._get_python_caller()
+        if caller not in self._modules:
+            self._modules[caller] = GuppyModule(caller.name)
+        module = self._modules[caller]
+        module.load(m)
+
     def take_module(self, id: ModuleIdentifier | None = None) -> GuppyModule:
         """Returns the local GuppyModule, removing it from the local state."""
         orig_id = id
