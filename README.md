@@ -109,6 +109,9 @@ poetry run pytest --export-test-cases=guppy-exports
 
 which will create a directory `./guppy-exports` populated with hugr modules serialised in JSON.
 
+### Experimental: Execution
+
+See the [guppy-runner](https://github.com/CQCL/guppy-runner) repository for in-progress work for compiling Guppy source programs and executing them.
 
 ## License
 
