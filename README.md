@@ -111,7 +111,7 @@ which will create a directory `./guppy-exports` populated with hugr modules seri
 
 ### Experimental: Execution
 
-See the [guppy-runner](https://github.com/CQCL/guppy-runner) repository for in-progress work for compiling Guppy source from HUGR to an executable.
+See the [guppy-runner](https://github.com/CQCL/guppy-runner) repository for in-progress work for compiling Guppy source programs and executing them.
 
 ## License
 
