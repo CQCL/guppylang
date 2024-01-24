@@ -1,15 +1,12 @@
+from importlib.util import find_spec
+
 import pathlib
 import pytest
 
 from tests.error.util import run_error_test
 
 
-try:
-    import tket2
-
-    tket2_installed = True
-except ImportError:
-    tket2_installed = False
+tket2_installed = find_spec("tket2") is not None
 
 
 path = pathlib.Path(__file__).parent.resolve() / "py_errors"

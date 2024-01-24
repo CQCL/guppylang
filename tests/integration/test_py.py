@@ -1,3 +1,5 @@
+from importlib.util import find_spec
+
 import pytest
 
 from guppylang.decorator import guppy
@@ -6,13 +8,7 @@ from guppylang.prelude.quantum import Qubit, quantum
 from tests.integration.util import py
 from tests.util import compile_guppy
 
-
-try:
-    import tket2
-
-    tket2_installed = True
-except ImportError:
-    tket2_installed = False
+tket2_installed = find_spec("tket2") is not None
 
 
 def test_basic(validate):
@@ -107,7 +103,7 @@ def test_pytket_multi_qubit(validate):
     module.load(quantum)
 
     @guppy(module)
-    def foo(q1: Qubit, q2:Qubit, q3:Qubit) -> tuple[Qubit, Qubit, Qubit]:
+    def foo(q1: Qubit, q2: Qubit, q3: Qubit) -> tuple[Qubit, Qubit, Qubit]:
         return py(circ)(q1, q2, q3)
 
     validate(module.compile())
