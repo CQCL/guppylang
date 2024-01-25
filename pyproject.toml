@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "guppylang"
 version = "0.1.0"
-description = ""
+description = "Pythonic quantum-classical programming language"
 authors = ["Mark Koch <mark.koch@quantinuum.com>"]
 license = "Apache-2.0"
-readme = "README.md"
+readme = "quickstart.md"
 repository = "https://github.com/CQCL/guppy"
 
 [tool.poetry.dependencies]
