@@ -2,9 +2,7 @@ import importlib.util
 import pathlib
 import pytest
 
-from typing import Any
-from collections.abc import Callable
-
+from guppylang.error import GuppyError
 from guppylang.hugr import tys
 from guppylang.hugr.tys import TypeBound
 from guppylang.module import GuppyModule
@@ -17,7 +15,7 @@ def run_error_test(file, capsys):
     spec = importlib.util.spec_from_file_location("test_module", file)
     py_module = importlib.util.module_from_spec(spec)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(GuppyError):
         spec.loader.exec_module(py_module)
 
     err = capsys.readouterr().err
