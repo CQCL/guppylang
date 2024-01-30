@@ -1,16 +1,16 @@
 [tool.poetry]
 name = "guppylang"
 version = "0.1.0"
-description = ""
+description = "Pythonic quantum-classical programming language"
 authors = ["Mark Koch <mark.koch@quantinuum.com>"]
 license = "Apache-2.0"
-readme = "README.md"
+readme = "quickstart.md"
+repository = "https://github.com/CQCL/guppy"
 
 [tool.poetry.dependencies]
 python = "^3.10"
 graphviz = "^0.20.1"
 networkx = "^3.2.1"
-ormsgpack = "^1.4.1"
 pydantic = "^2.5.3"
 typing-extensions = "^4.9.0"
 
@@ -20,6 +20,22 @@ mypy = "^1.8.0"
 pre-commit = "^3.6.0"
 ruff = "^0.1.11"
 maturin = "^1.4.0"
+pytket = "*"
+
+[tool.poetry.group.validation]
+optional = true
+
+[tool.poetry.group.validation.dependencies]
+guppyval = { path = "validator" }
+
+
+[tool.poetry.group.pytket]
+optional = true
+
+[tool.poetry.group.pytket.dependencies]
+pytket = { version = "^1.24.0" }
+tket2-py = {git = "https://github.com/CQCL/tket2.git", rev = "9e941f3"}
+
 
 [build-system]
 requires = ["poetry-core"]

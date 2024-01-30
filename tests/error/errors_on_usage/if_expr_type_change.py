@@ -1,7 +1,7 @@
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
-@guppy
+@compile_guppy
 def foo(x: bool, a: int) -> int:
     y = 3
     (y := False) if x or a > 5 else 0

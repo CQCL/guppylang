@@ -1,7 +1,7 @@
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
-@guppy
+@compile_guppy
 def foo(x: bool) -> int:
     (y := 1) if x else 0
     return y

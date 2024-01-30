@@ -1,8 +1,8 @@
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
 def test_basic(validate):
-    @guppy
+    @compile_guppy
     def foo(xs: list[int]) -> int:
         for x in xs:
             pass
@@ -12,7 +12,7 @@ def test_basic(validate):
 
 
 def test_counting_loop(validate):
-    @guppy
+    @compile_guppy
     def foo(xs: list[int]) -> int:
         s = 0
         for x in xs:
@@ -23,7 +23,7 @@ def test_counting_loop(validate):
 
 
 def test_multi_targets(validate):
-    @guppy
+    @compile_guppy
     def foo(xs: list[tuple[int, float]]) -> float:
         s = 0.0
         for x, y in xs:
@@ -34,7 +34,7 @@ def test_multi_targets(validate):
 
 
 def test_multi_targets_same(validate):
-    @guppy
+    @compile_guppy
     def foo(xs: list[tuple[int, float]]) -> float:
         s = 1.0
         for x, x in xs:
@@ -45,7 +45,7 @@ def test_multi_targets_same(validate):
 
 
 def test_reassign_iter(validate):
-    @guppy
+    @compile_guppy
     def foo(xs: list[int]) -> int:
         s = 1
         for x in xs:
@@ -57,7 +57,7 @@ def test_reassign_iter(validate):
 
 
 def test_break(validate):
-    @guppy
+    @compile_guppy
     def foo(xs: list[int]) -> int:
         i = 1
         for x in xs:
@@ -70,7 +70,7 @@ def test_break(validate):
 
 
 def test_continue(validate):
-    @guppy
+    @compile_guppy
     def foo(xs: list[int]) -> int:
         i = len(xs)
         for x in xs:
@@ -83,7 +83,7 @@ def test_continue(validate):
 
 
 def test_return_in_loop(validate):
-    @guppy
+    @compile_guppy
     def foo(xs: list[int]) -> int:
         y = 42
         for x in xs:
@@ -96,7 +96,7 @@ def test_return_in_loop(validate):
 
 
 def test_nested_loop(validate):
-    @guppy
+    @compile_guppy
     def foo(xs: list[int], ys: list[int]) -> int:
         p = 0
         for x in xs:
@@ -110,7 +110,7 @@ def test_nested_loop(validate):
 
 
 def test_nested_loop_break_continue(validate):
-    @guppy
+    @compile_guppy
     def foo(xs: list[int], ys: list[int]) -> int:
         p = 0
         for x in xs:

@@ -1,5 +1,6 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from tests.util import compile_guppy
 
 
 def test_call(validate):
@@ -31,7 +32,7 @@ def test_call_back(validate):
 
 
 def test_recursion(validate):
-    @guppy
+    @compile_guppy
     def main(x: int) -> int:
         return main(x)
 

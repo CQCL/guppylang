@@ -1,9 +1,10 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from tests.util import compile_guppy
 
 
 def test_factorial(validate):
-    @guppy
+    @compile_guppy
     def factorial1(x: int) -> int:
         acc = 1
         while x > 0:
@@ -11,13 +12,13 @@ def test_factorial(validate):
             x -= 1
         return acc
 
-    @guppy
+    @compile_guppy
     def factorial2(x: int) -> int:
         if x == 0:
             return 1
         return factorial2(x - 1) * x
 
-    @guppy
+    @compile_guppy
     def factorial3(x: int, acc: int) -> int:
         if x == 0:
             return acc

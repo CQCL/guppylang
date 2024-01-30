@@ -76,6 +76,10 @@ class GuppyTypeInferenceError(GuppyError):
     """Special Guppy exception for type inference errors."""
 
 
+class MissingModuleError(GuppyError):
+    """Special Guppy exception for operations that require a guppy module."""
+
+
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
 
@@ -166,7 +170,7 @@ def pretty_errors(f: FuncT) -> FuncT:
     """Decorator to print custom error banners when a `GuppyError` occurs."""
 
     @functools.wraps(f)
-    def wrapped(*args: Any, **kwargs: Any) -> Any:
+    def pretty_errors_wrapped(*args: Any, **kwargs: Any) -> Any:
         try:
             return f(*args, **kwargs)
         except GuppyError as err:
@@ -188,4 +192,4 @@ def pretty_errors(f: FuncT) -> FuncT:
                 sys.exit(1)
             return None
 
-    return cast(FuncT, wrapped)
+    return cast(FuncT, pretty_errors_wrapped)

@@ -1,0 +1,21 @@
+on:
+  push:
+    branches:
+      - main
+      - release-testing
+
+permissions:
+  contents: write
+  pull-requests: write
+
+name: release-please
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Should update changelog, tag commit, and create a github release
+          release-type: simple

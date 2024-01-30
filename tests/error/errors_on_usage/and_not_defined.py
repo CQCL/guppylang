@@ -1,7 +1,7 @@
-from guppylang.decorator import guppy
+from tests.util import compile_guppy
 
 
-@guppy
+@compile_guppy
 def foo(x: bool, y: int) -> int:
     if x and (z := y + 1):
         return z

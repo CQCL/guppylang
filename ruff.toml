@@ -75,6 +75,7 @@ ignore = [
 "guppy/decorator.py"          = ["B010"]
 "tests/integration/*"         = ["F841", "C416", "RUF005"]
 "tests/{hugr,integration}/*"  = ["B", "FBT", "SIM", "I"]
+"__init__.py"                 = ["F401"]    # module imported but unused
 
 # [pydocstyle]
 # convention = "google"
