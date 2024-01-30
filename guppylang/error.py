@@ -1,5 +1,6 @@
 import ast
 import functools
+import os
 import sys
 import textwrap
 from collections.abc import Callable, Iterator, Sequence
@@ -212,8 +213,16 @@ def pretty_errors(f: FuncT) -> FuncT:
                 # reraised below) is not handled. However, when running tests, we have
                 # to manually invoke the hook to print the error message, since the
                 # tests always have to capture exceptions.
-                if "pytest" in sys.modules:
+                if _pytest_running():
                     hook(type(err), err, err.__traceback__)
                 raise
 
     return cast(FuncT, pretty_errors_wrapped)
+
+
+def _pytest_running() -> bool:
+    """Checks if we are currently running pytest.
+
+    See https://docs.pytest.org/en/latest/example/simple.html#pytest-current-test-environment-variable
+    """
+    return "PYTEST_CURRENT_TEST" in os.environ
