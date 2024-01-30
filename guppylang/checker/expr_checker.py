@@ -984,7 +984,9 @@ def _python_list_to_guppy_type(
         return None
     for v in rest:
         ty = python_value_to_guppy_type(v, node, globals)
-        if ty is None or (subst := unify(ty, el_ty, {})) is None:
+        if ty is None:
             return None
+        if (subst := unify(ty, el_ty, {})) is None:
+            raise GuppyError("Python list contains elements with different types", node)
         el_ty = el_ty.substitute(subst)
     return ListType(el_ty)

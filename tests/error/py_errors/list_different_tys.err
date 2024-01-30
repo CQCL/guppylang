@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:6
 5:    def foo() -> int:
 6:        return py([1, 1.0])
                  ^^^^^^^^^^^^
-GuppyError: Python expression of type `<class 'list'>` is not supported by Guppy
+GuppyError: Python list contains elements with different types
