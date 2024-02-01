@@ -71,6 +71,39 @@ def test_tuple_implicit(validate):
     validate(foo)
 
 
+def test_list_basic(validate):
+    @compile_guppy
+    def foo() -> list[int]:
+        xs = py([1, 2, 3])
+        return xs
+
+    validate(foo)
+
+
+def test_list_empty(validate):
+    @compile_guppy
+    def foo() -> list[int]:
+        return py([])
+
+    validate(foo)
+
+
+def test_list_empty_nested(validate):
+    @compile_guppy
+    def foo() -> None:
+        xs: list[tuple[int, list[bool]]] = py([(42, [])])
+
+    validate(foo)
+
+
+def test_list_empty_multiple(validate):
+    @compile_guppy
+    def foo() -> None:
+        xs: tuple[list[int], list[bool]] = py([], [])
+
+    validate(foo)
+
+
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
 def test_pytket_single_qubit(validate):
     from pytket import Circuit

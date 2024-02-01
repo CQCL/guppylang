@@ -17,7 +17,9 @@ from guppylang.gtypes import (
     BoolType,
     BoundTypeVar,
     FunctionType,
+    GuppyType,
     Inst,
+    ListType,
     NoneType,
     TupleType,
     type_to_row,
@@ -136,7 +138,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             self.dfg[name.id].port = cond_node.add_out_port(get_type(name))
 
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
-        if value := python_value_to_hugr(node.value):
+        if value := python_value_to_hugr(node.value, get_type(node)):
             const = self.graph.add_constant(value, get_type(node)).out_port(0)
             return self.graph.add_load_constant(const).out_port(0)
         raise InternalGuppyError("Unsupported constant expression in compiler")
@@ -295,12 +297,17 @@ def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
     return False
 
 
-def python_value_to_hugr(v: Any) -> val.Value | None:
+def python_value_to_hugr(v: Any, exp_ty: GuppyType) -> val.Value | None:
     """Turns a Python value into a Hugr value.
 
     Returns None if the Python value cannot be represented in Guppy.
     """
-    from guppylang.prelude._internal import bool_value, float_value, int_value
+    from guppylang.prelude._internal import (
+        bool_value,
+        float_value,
+        int_value,
+        list_value,
+    )
 
     match v:
         case bool():
@@ -310,10 +317,19 @@ def python_value_to_hugr(v: Any) -> val.Value | None:
         case float():
             return float_value(v)
         case tuple(elts):
-            vs = [python_value_to_hugr(elt) for elt in elts]
+            assert isinstance(exp_ty, TupleType)
+            vs = [
+                python_value_to_hugr(elt, ty)
+                for elt, ty in zip(elts, exp_ty.element_types)
+            ]
             if any(value is None for value in vs):
                 return None
             return val.Tuple(vs=vs)
+        case list(elts):
+            assert isinstance(exp_ty, ListType)
+            return list_value(
+                [python_value_to_hugr(elt, exp_ty.element_type) for elt in elts]
+            )
         case _:
             # Pytket conversion is an optional feature
             try:
