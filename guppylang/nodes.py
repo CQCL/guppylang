@@ -9,7 +9,7 @@ from guppylang.gtypes import FunctionType, GuppyType, Inst
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import CFG
     from guppylang.checker.cfg_checker import CheckedCFG
-    from guppylang.checker.core import CallableVariable, Variable
+    from guppylang.checker.core import CallableVariable, GlobalVariable, Variable
 
 
 class LocalName(ast.Name):
@@ -20,7 +20,7 @@ class LocalName(ast.Name):
 
 class GlobalName(ast.Name):
     id: str
-    value: "Variable"
+    value: "GlobalVariable"
 
     _fields = (
         "id",

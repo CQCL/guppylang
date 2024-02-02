@@ -144,10 +144,6 @@ def test_linear_discard(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy.declare(module)
-    def discard(q: Qubit) -> None:
-        ...
-
     @guppy(module)
     def test(qs: linst[Qubit]) -> list[None]:
         return [discard(q) for q in qs]

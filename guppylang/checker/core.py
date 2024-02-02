@@ -4,7 +4,7 @@ import itertools
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from guppylang.ast_util import AstNode, name_nodes_in_ast
 from guppylang.gtypes import (
@@ -19,6 +19,9 @@ from guppylang.gtypes import (
     TupleType,
 )
 
+if TYPE_CHECKING:
+    from guppylang.module import GuppyModule
+
 
 @dataclass
 class Variable:
@@ -31,10 +34,27 @@ class Variable:
 
 
 @dataclass
-class CallableVariable(ABC, Variable):
+class GlobalVariable(Variable):
+    """Class holding data associated with a module-level variable."""
+
+    module: "GuppyModule | None"
+
+    @property
+    def qualname(self) -> str:
+        """The qualified name of this global variable."""
+        return f"{self.module.name}.{self.name}" if self.module else self.name
+
+
+@dataclass
+class CallableVariable(ABC, GlobalVariable):
     """Abstract base class for global variables that can be called."""
 
     ty: FunctionType
+
+    @property
+    def is_method(self) -> bool:
+        """Returns whether this variable is an instance method."""
+        return "." in self.name
 
     @abstractmethod
     def check_call(
@@ -67,7 +87,7 @@ class Globals(NamedTuple):
     constants), to types, or to instance functions belonging to types.
     """
 
-    values: dict[str, Variable]
+    values: dict[str, GlobalVariable]
     types: dict[str, type[GuppyType]]
     type_vars: dict[str, TypeVarDecl]
     python_scope: PyScope
@@ -91,7 +111,7 @@ class Globals(NamedTuple):
 
         Returns `None` if the name doesn't exist or isn't a function.
         """
-        qualname = qualified_name(ty.__class__, name)
+        qualname = qualified_instance_name(ty.__class__, name)
         if qualname in self.values:
             val = self.values[qualname]
             if isinstance(val, CallableVariable):
@@ -203,7 +223,17 @@ class DummyEvalDict(PyScope):
         return super().__contains__(key)
 
 
-def qualified_name(ty: type[GuppyType] | str, name: str) -> str:
+def qualified_name(module: "GuppyModule | None", name: str) -> str:
+    """Returns a name qualified by a module."""
+    module_name = module.name if module else "builtins"
+    return f"{module_name}.{name}"
+
+
+def instance_name(ty: type[GuppyType], name: str) -> str:
+    """Returns a name for an instance function on a type."""
+    return f"{ty.name}.{name}"
+
+
+def qualified_instance_name(ty: type[GuppyType], name: str) -> str:
     """Returns a qualified name for an instance function on a type."""
-    ty_name = ty if isinstance(ty, str) else ty.name
-    return f"{ty_name}.{name}"
+    return qualified_name(ty.module, instance_name(ty, name))

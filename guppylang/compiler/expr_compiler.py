@@ -147,7 +147,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         return self.dfg[node.id].port
 
     def visit_GlobalName(self, node: GlobalName) -> OutPortV:
-        return self.globals[node.id].load(self.dfg, self.graph, self.globals, node)
+        name = node.value.qualname
+        return self.globals[name].load(self.dfg, self.graph, self.globals, node)
 
     def visit_Name(self, node: ast.Name) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
@@ -179,7 +180,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         return self._pack_returns(rets)
 
     def visit_GlobalCall(self, node: GlobalCall) -> OutPortV:
-        func = self.globals[node.func.name]
+        func = self.globals[node.func.qualname]
         assert isinstance(func, CompiledFunction)
 
         args = [self.visit(arg) for arg in node.args]

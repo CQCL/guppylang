@@ -1,5 +1,6 @@
 import ast
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals
@@ -11,6 +12,9 @@ from guppylang.gtypes import GuppyType, Inst, Subst, type_to_row
 from guppylang.hugr.hugr import Hugr, Node, OutPortV, VNode
 from guppylang.nodes import GlobalCall
 
+if TYPE_CHECKING:
+    from guppylang.module import GuppyModule
+
 
 @dataclass
 class DeclaredFunction(CompiledFunction):
@@ -20,14 +24,14 @@ class DeclaredFunction(CompiledFunction):
 
     @staticmethod
     def from_ast(
-        func_def: ast.FunctionDef, name: str, globals: Globals
+        func_def: ast.FunctionDef, name: str, module: "GuppyModule", globals: Globals
     ) -> "DeclaredFunction":
         ty = check_signature(func_def, globals)
         if not has_empty_body(func_def):
             raise GuppyError(
                 "Body of function declaration must be empty", func_def.body[0]
             )
-        return DeclaredFunction(name, ty, func_def, None)
+        return DeclaredFunction(name, ty, func_def, None, module)
 
     def check_call(
         self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context

@@ -60,7 +60,9 @@ def compile_global_func_def(
         parent=def_node,
     )
 
-    return CompiledFunctionDef(func.name, func.ty, func.defined_at, None, def_node)
+    return CompiledFunctionDef(
+        func.name, func.ty, func.defined_at, None, func.module, def_node
+    )
 
 
 def compile_local_func_def(
@@ -98,7 +100,9 @@ def compile_local_func_def(
     else:
         # Otherwise, we treat the function like a normal global variable
         globals = globals | {
-            func.name: CompiledFunctionDef(func.name, func.ty, func, None, def_node)
+            func.name: CompiledFunctionDef(
+                func.name, func.ty, func, None, None, def_node
+            )
         }
 
     # Compile the CFG

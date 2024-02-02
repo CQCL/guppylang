@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from guppylang.ast_util import AstNode
-from guppylang.checker.core import CallableVariable, Variable
+from guppylang.checker.core import CallableVariable, GlobalVariable, Variable
 from guppylang.gtypes import FunctionType, Inst
 from guppylang.hugr.hugr import DFContainingNode, Hugr, OutPortV
 
@@ -28,7 +28,7 @@ class PortVariable(Variable):
         object.__setattr__(self, "port", port)
 
 
-class CompiledVariable(ABC, Variable):
+class CompiledVariable(ABC, GlobalVariable):
     """Abstract base class for compiled global module-level variables."""
 
     @abstractmethod
