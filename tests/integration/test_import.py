@@ -56,7 +56,7 @@ def test_conflict_alias(validate):
     module.import_(mod_b, "f", alias="f_b")
 
     @guppy(module)
-    def test(x: int, y: bool) ->  tuple[int, bool]:
+    def test(x: int, y: bool) -> tuple[int, bool]:
         return f(x), f_b(y)
 
     validate(module.compile())
@@ -97,3 +97,14 @@ def test_type_transitive_conflict(validate):
         return +ty_b
 
     validate(module.compile())
+
+
+from guppylang.prelude.quantum import Qubit as MyQubit, h as my_h
+
+
+def test_implicit_import(validate):
+    @guppy
+    def test(q: MyQubit) -> MyQubit:
+        return my_h(q)
+
+    validate(guppy.compile_module())

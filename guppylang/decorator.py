@@ -1,4 +1,3 @@
-import functools
 import inspect
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
@@ -7,6 +6,7 @@ from types import ModuleType
 from typing import Any, ClassVar, Protocol, TypeVar
 
 from guppylang.ast_util import AstNode, has_empty_body
+from guppylang.checker.core import GlobalVariable
 from guppylang.custom import (
     CustomCallChecker,
     CustomCallCompiler,
@@ -21,15 +21,9 @@ from guppylang.hugr import ops, tys
 from guppylang.hugr.hugr import Hugr
 from guppylang.module import GuppyModule, PyFunc, parse_py_func
 
-FuncDecorator = Callable[[PyFunc], PyFunc | Hugr]
+FuncDecorator = Callable[[PyFunc], "DecoratedGuppyFunction"]
 CustomFuncDecorator = Callable[[PyFunc], CustomFunction]
 ClassDecorator = Callable[[type], type]
-
-
-class ClassWithGuppyType(Protocol):
-    """Mypy protocol for a class that is annotated with a Guppy type."""
-
-    _guppy_type: type[GuppyType]
 
 
 @dataclass(frozen=True)
@@ -50,6 +44,24 @@ class ModuleIdentifier:
         return self.filename.name
 
 
+@dataclass(frozen=True)
+class DecoratedGuppyFunction:
+    """Object that is returned by the @guppy decorator."""
+
+    name: str
+    py_func: PyFunc
+    module: GuppyModule
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        raise GuppyError("Guppy functions can only be called in a Guppy context")
+
+
+class DecoratedGuppyType(Protocol):
+    """Mypy protocol for a class that is annotated with a Guppy type."""
+
+    _guppy_type: type[GuppyType]
+
+
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
@@ -68,16 +80,6 @@ class _Guppy:
         Optionally, the `GuppyModule` in which the function should be placed can
         be passed to the decorator.
         """
-
-        def make_dummy(wraps: PyFunc) -> Callable[..., Any]:
-            @functools.wraps(wraps)
-            def dummy(*args: Any, **kwargs: Any) -> Any:
-                raise GuppyError(
-                    "Guppy functions can only be called in a Guppy context"
-                )
-
-            return dummy
-
         if not isinstance(arg, GuppyModule):
             # Decorator used without any arguments.
             # We default to a module associated with the caller of the decorator.
@@ -88,13 +90,13 @@ class _Guppy:
                 self._modules[caller] = GuppyModule(caller.name)
             module = self._modules[caller]
             module.register_func_def(f)
-            return make_dummy(f)
+            return DecoratedGuppyFunction(f.__name__, f, module)
 
         if isinstance(arg, GuppyModule):
             # Module passed.
-            def dec(f: Callable[..., Any]) -> Callable[..., Any]:
+            def dec(f: Callable[..., Any]) -> DecoratedGuppyFunction:
                 arg.register_func_def(f)
-                return make_dummy(f)
+                return DecoratedGuppyFunction(f.__name__, f, arg)
 
             return dec
 
@@ -120,7 +122,7 @@ class _Guppy:
 
     @pretty_errors
     def extend_type(
-        self, module: GuppyModule, ty: type[GuppyType] | ClassWithGuppyType
+        self, module: GuppyModule, ty: type[GuppyType] | DecoratedGuppyType
     ) -> ClassDecorator:
         """Decorator to add new instance functions to a type."""
         module._instance_func_buffer = {}
@@ -259,16 +261,9 @@ class _Guppy:
     def declare(self, module: GuppyModule) -> FuncDecorator:
         """Decorator to declare functions"""
 
-        def dec(f: Callable[..., Any]) -> Callable[..., Any]:
+        def dec(f: Callable[..., Any]) -> DecoratedGuppyFunction:
             module.register_func_decl(f)
-
-            @functools.wraps(f)
-            def dummy(*args: Any, **kwargs: Any) -> Any:
-                raise GuppyError(
-                    "Guppy functions can only be called in a Guppy context"
-                )
-
-            return dummy
+            return DecoratedGuppyFunction(f.__name__, f, module)
 
         return dec
 
@@ -303,6 +298,22 @@ class _Guppy:
                 else "No Guppy functions or types defined in this module."
             )
             raise MissingModuleError(err)
+
+        # Implicit imports
+        caller = self._get_python_caller()
+        if caller.module is not None:
+            for x, v in caller.module.__dict__.items():
+                if (
+                    isinstance(v, DecoratedGuppyFunction | GlobalVariable)
+                    and v.module
+                    and v.module != module
+                ):
+                    module.import_(v.module, v.name, x)
+                elif hasattr(v, "_guppy_type"):
+                    ty: type[GuppyType] = v._guppy_type
+                    if ty.module and ty.module != module:
+                        module.import_(ty.module, ty.name, x)
+
         return module.compile()
 
     def registered_modules(self) -> list[ModuleIdentifier]:
