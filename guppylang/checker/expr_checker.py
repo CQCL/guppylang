@@ -73,6 +73,7 @@ from guppylang.nodes import (
     LocalCall,
     LocalName,
     MakeIter,
+    PartialApply,
     PyExpr,
     TypeApply,
 )
@@ -213,6 +214,12 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                 "Argument passing by keyword is not supported", node.keywords[0]
             )
         node.func, func_ty = self._synthesize(node.func, allow_free_vars=False)
+
+        # When calling a `PartialApply` node, we just move the args into this call
+        if isinstance(node.func, PartialApply):
+            node.args = [*node.func.args, *node.args]
+            node.func = node.func.func
+            return self.visit_Call(node, ty)
 
         # First handle direct calls of user-defined functions and extension functions
         if isinstance(node.func, GlobalName) and isinstance(
@@ -445,6 +452,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             raise GuppyError("Keyword arguments are not supported", node.keywords[0])
         node.func, ty = self.synthesize(node.func)
 
+        # When calling a `PartialApply` node, we just move the args into this call
+        if isinstance(node.func, PartialApply):
+            node.args = [*node.func.args, *node.args]
+            node.func = node.func.func
+            return self.visit_Call(node)
+
         # First handle direct calls of user-defined functions and extension functions
         if isinstance(node.func, GlobalName) and isinstance(
             node.func.value, CallableVariable
@@ -460,6 +473,23 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             return f.synthesize_call(node.args, node, self.ctx)
         else:
             raise GuppyTypeError(f"Expected function type, got `{ty}`", node.func)
+
+    def visit_Attribute(self, node: ast.Attribute) -> tuple[ast.expr, GuppyType]:
+        node.value, ty = self.synthesize(node.value)
+        func = self.ctx.globals.get_instance_func(ty, node.attr)
+        if func is None:
+            raise GuppyTypeError(
+                f"Expression of type `{ty}` does not have a method named `{node.attr}`"
+            )
+        # TODO: Infer type args
+        name = with_loc(node, with_type(func.ty, GlobalName(id=func.name, value=func)))
+        partial_ty = FunctionType(
+            func.ty.args[1:],
+            func.ty.returns,
+            func.ty.arg_names[1:] if func.ty.arg_names else None,
+            func.ty.quantified,
+        )
+        return with_loc(node, PartialApply(func=name, args=[node.value])), partial_ty
 
     def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, GuppyType]:
         node.value, ty = self.synthesize(node.value)

@@ -1,7 +1,7 @@
 import ast
 from abc import ABC, abstractmethod
 
-from guppylang.ast_util import AstNode, get_type, with_loc, with_type
+from guppylang.ast_util import AstNode, with_loc, with_type
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
@@ -105,7 +105,7 @@ class CustomFunction(CompiledFunction):
         globals: CompiledGlobals,
         node: AstNode,
     ) -> list[OutPortV]:
-        self.call_compiler._setup(type_args, dfg, graph, globals, node)
+        self.call_compiler._setup(type_args, dfg, graph, globals, self, node)
         return self.call_compiler.compile(args)
 
     def load(
@@ -190,6 +190,7 @@ class CustomCallCompiler(ABC):
     dfg: DFContainer
     graph: Hugr
     globals: CompiledGlobals
+    func: CustomFunction
     node: AstNode
 
     def _setup(
@@ -198,12 +199,14 @@ class CustomCallCompiler(ABC):
         dfg: DFContainer,
         graph: Hugr,
         globals: CompiledGlobals,
+        func: CustomFunction,
         node: AstNode,
     ) -> None:
         self.type_args = type_args
         self.dfg = dfg
         self.graph = graph
         self.globals = globals
+        self.func = func
         self.node = node
 
     @abstractmethod
@@ -242,7 +245,7 @@ class OpCompiler(CustomCallCompiler):
         node = self.graph.add_node(
             self.op.model_copy(), inputs=args, parent=self.dfg.node
         )
-        return_ty = get_type(self.node)
+        return_ty = self.func.ty.instantiate(self.type_args).returns
         return [node.add_out_port(ty) for ty in type_to_row(return_ty)]
 
 

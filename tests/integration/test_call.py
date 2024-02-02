@@ -51,3 +51,10 @@ def test_mutual_recursion(validate):
         return foo(x)
 
     validate(module.compile())
+
+
+def test_instance_call(validate):
+    @compile_guppy
+    def foo(x: int) -> int:
+        return x.__add__(2)
+

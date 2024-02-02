@@ -73,7 +73,7 @@ Edge = tuple[OutPort, InPort]
 TypeList = list[GuppyType]
 
 
-@dataclass
+@dataclass(eq=False)
 class Node(ABC):
     """Base class for a node in the graph.
 
@@ -121,7 +121,7 @@ class Node(ABC):
         return (self.out_port(i) for i in range(self.num_out_ports))
 
 
-@dataclass
+@dataclass(eq=False)
 class VNode(Node):
     """A node with typed value ports."""
 

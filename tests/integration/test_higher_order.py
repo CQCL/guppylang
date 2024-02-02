@@ -55,6 +55,12 @@ def test_call_2(validate):
     validate(module.compile())
 
 
+def test_instance_func(validate):
+    @compile_guppy
+    def foo(x: int) -> Callable[[int], int]:
+        return x.__add__
+
+
 def test_nested(validate):
     @compile_guppy
     def foo(x: int) -> Callable[[int], bool]:
