@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:12
+
+10:    @guppy(module)
+11:    def foo(x: MyType) -> MyType:
+12:        return +x
+                   ^
+GuppyTypeError: Unary operator `+` not defined for argument of type  `MyType`

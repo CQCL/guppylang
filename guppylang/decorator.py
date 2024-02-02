@@ -4,7 +4,7 @@ from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
-from typing import Any, ClassVar, TypeVar
+from typing import Any, ClassVar, Protocol, TypeVar
 
 from guppylang.ast_util import AstNode, has_empty_body
 from guppylang.custom import (
@@ -24,6 +24,12 @@ from guppylang.module import GuppyModule, PyFunc, parse_py_func
 FuncDecorator = Callable[[PyFunc], PyFunc | Hugr]
 CustomFuncDecorator = Callable[[PyFunc], CustomFunction]
 ClassDecorator = Callable[[type], type]
+
+
+class ClassWithGuppyType(Protocol):
+    """Mypy protocol for a class that is annotated with a Guppy type."""
+
+    _guppy_type: type[GuppyType]
 
 
 @dataclass(frozen=True)
@@ -113,12 +119,17 @@ class _Guppy:
         return ModuleIdentifier(Path(filename), module)
 
     @pretty_errors
-    def extend_type(self, module: GuppyModule, ty: type[GuppyType]) -> ClassDecorator:
+    def extend_type(
+        self, module: GuppyModule, ty: type[GuppyType] | ClassWithGuppyType
+    ) -> ClassDecorator:
         """Decorator to add new instance functions to a type."""
         module._instance_func_buffer = {}
+        guppy_ty = (
+            ty if isinstance(ty, type) and issubclass(ty, GuppyType) else ty._guppy_type
+        )
 
         def dec(c: type) -> type:
-            module._register_buffered_instance_funcs(ty)
+            module._register_buffered_instance_funcs(guppy_ty)
             return c
 
         return dec
@@ -142,11 +153,13 @@ class _Guppy:
 
         def dec(c: type) -> type:
             _name = name or c.__name__
+            _module = module
 
             @dataclass(frozen=True)
             class NewType(GuppyType):
                 args: Sequence[GuppyType]
                 name: ClassVar[str] = _name
+                module: ClassVar[GuppyModule | None] = _module
 
                 @staticmethod
                 def build(*args: GuppyType, node: AstNode | None = None) -> "GuppyType":
@@ -220,6 +233,7 @@ class _Guppy:
             call_checker = checker or DefaultCallChecker()
             func = CustomFunction(
                 name or func_ast.name,
+                module,
                 func_ast,
                 compiler or DefaultCallCompiler(),
                 call_checker,

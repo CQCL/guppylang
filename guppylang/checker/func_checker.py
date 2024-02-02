@@ -7,12 +7,19 @@ node straight from the Python AST. We build a CFG, check it, and return a
 
 import ast
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from guppylang.ast_util import AstNode, return_nodes_in_ast, with_loc
 from guppylang.cfg.bb import BB
 from guppylang.cfg.builder import CFGBuilder
 from guppylang.checker.cfg_checker import CheckedCFG, check_cfg
-from guppylang.checker.core import CallableVariable, Context, Globals, Variable
+from guppylang.checker.core import (
+    CallableVariable,
+    Context,
+    Globals,
+    GlobalVariable,
+    Variable,
+)
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.error import GuppyError
 from guppylang.gtypes import (
@@ -25,9 +32,12 @@ from guppylang.gtypes import (
 )
 from guppylang.nodes import CheckedNestedFunctionDef, GlobalCall, NestedFunctionDef
 
+if TYPE_CHECKING:
+    from guppylang.module import GuppyModule
+
 
 @dataclass
-class DefinedFunction(CallableVariable):
+class DefinedFunction(CallableVariable, GlobalVariable):
     """A user-defined function"""
 
     ty: FunctionType
@@ -35,14 +45,14 @@ class DefinedFunction(CallableVariable):
 
     @staticmethod
     def from_ast(
-        func_def: ast.FunctionDef, name: str, globals: Globals
+        func_def: ast.FunctionDef, name: str, module: "GuppyModule", globals: Globals
     ) -> "DefinedFunction":
         ty = check_signature(func_def, globals)
         if ty.quantified:
             raise GuppyError(
                 "Generic function definitions are not supported yet", func_def
             )
-        return DefinedFunction(name, ty, func_def, None)
+        return DefinedFunction(name, ty, func_def, None, module)
 
     def check_call(
         self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context
@@ -79,7 +89,7 @@ def check_global_func_def(func: DefinedFunction, globals: Globals) -> CheckedFun
         for x, ty, loc in zip(func.ty.arg_names, func.ty.args, args)
     ]
     cfg = check_cfg(cfg, inputs, func.ty.returns, globals)
-    return CheckedFunction(func_def.name, func.ty, func_def, None, cfg)
+    return CheckedFunction(func.name, func.ty, func_def, None, func.module, cfg)
 
 
 def check_nested_func_def(
@@ -141,7 +151,7 @@ def check_nested_func_def(
     if func_def.name in cfg.live_before[cfg.entry_bb]:
         if not captured:
             # If there are no captured vars, we treat the function like a global name
-            func = DefinedFunction(func_def.name, func_ty, func_def, None)
+            func = DefinedFunction(func_def.name, func_ty, func_def, None, None)
             globals = ctx.globals | Globals({func_def.name: func}, {}, {}, {})
 
         else:

@@ -14,6 +14,7 @@ from guppylang.ast_util import AstNode
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
+    from guppylang.module import GuppyModule
 
 
 Subst = dict["ExistentialTypeVar", "GuppyType"]
@@ -28,6 +29,7 @@ class GuppyType(ABC):
     """
 
     name: ClassVar[str]
+    module: ClassVar["GuppyModule | None"] = None
 
     # Cache for free variables
     _unsolved_vars: set["ExistentialTypeVar"] = field(init=False, repr=False)
@@ -50,6 +52,10 @@ class GuppyType(ABC):
             for arg in self.type_args:
                 vs |= arg.unsolved_vars
         object.__setattr__(self, "_unsolved_vars", vs)
+
+    @classmethod
+    def qualname(cls) -> str:
+        return f"{cls.module.name}.{cls.name}" if cls.module else cls.name
 
     @staticmethod
     @abstractmethod

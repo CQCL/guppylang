@@ -3,11 +3,19 @@ import inspect
 import sys
 import textwrap
 from collections.abc import Callable
-from types import ModuleType
-from typing import Any, Union
+from typing import TYPE_CHECKING, Any
 
 from guppylang.ast_util import AstNode, annotate_location
-from guppylang.checker.core import Globals, PyScope, TypeVarDecl, qualified_name
+from guppylang.checker.core import (
+    CallableVariable,
+    Globals,
+    GlobalVariable,
+    PyScope,
+    TypeVarDecl,
+    instance_name,
+    qualified_instance_name,
+    qualified_name,
+)
 from guppylang.checker.func_checker import DefinedFunction, check_global_func_def
 from guppylang.compiler.core import CompiledGlobals
 from guppylang.compiler.func_compiler import (
@@ -16,9 +24,16 @@ from guppylang.compiler.func_compiler import (
 )
 from guppylang.custom import CustomFunction
 from guppylang.declared import DeclaredFunction
-from guppylang.error import GuppyError, pretty_errors
+from guppylang.error import (
+    GuppyError,
+    pretty_errors,
+)
 from guppylang.gtypes import GuppyType
 from guppylang.hugr.hugr import Hugr
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
 
 PyFunc = Callable[..., Any]
 PyFuncDefOrDecl = tuple[bool, PyFunc]
@@ -69,28 +84,62 @@ class GuppyModule:
 
             self.load(builtins)
 
-    def load(self, m: Union[ModuleType, "GuppyModule"]) -> None:
-        """Imports another Guppy module."""
+    def load(self, module: "GuppyModule | ModuleType") -> None:
+        """Imports every value and type from another module."""
         self._check_not_yet_compiled()
-        if isinstance(m, GuppyModule):
-            # Compile module if it isn't compiled yet
-            if not m.compiled:
-                m.compile()
-
-            # For now, we can only import custom functions
-            if any(
-                not isinstance(v, CustomFunction) for v in m._compiled_globals.values()
-            ):
-                raise GuppyError(
-                    "Importing modules with defined functions is not supported yet"
-                )
-
-            self._imported_globals |= m._globals
-            self._imported_compiled_globals |= m._compiled_globals
+        if isinstance(module, GuppyModule):
+            if not module.compiled:
+                module.compile()
+            for ty in module._globals.types.values():
+                self._import_type(ty)
+            for val in module._globals.values.values():
+                if not (isinstance(val, CallableVariable) and val.is_method):
+                    self._import_value(val)
+            self._import_instance_methods(module)
         else:
-            for val in m.__dict__.values():
+            for val in module.__dict__.values():
                 if isinstance(val, GuppyModule):
                     self.load(val)
+
+    def import_(self, module: "GuppyModule", name: str, alias: str = "") -> None:
+        """Imports a Guppy value or type from another module by name."""
+        self._check_not_yet_compiled()
+        if not module.compiled:
+            module.compile()
+        if name in module._globals.types:
+            self._import_type(module._globals.types[name], alias)
+        elif name in module._globals.values:
+            self._import_value(module._globals.values[name], alias)
+        else:
+            raise GuppyError(f"Could not find `{name}` in module `{module.name}`")
+        self._import_instance_methods(module)
+
+    def _import_type(self, ty: type[GuppyType], alias: str = "") -> None:
+        """Imports a Guppy type from a different module."""
+        name = alias or ty.name
+        self._check_type_name_available(name, None)
+        self._imported_globals.types[name] = ty
+
+    def _import_value(self, v: GlobalVariable, alias: str = "") -> None:
+        """Imports a Guppy value from a different module."""
+        assert v.module is not None
+        name = alias or v.name
+        self._check_name_available(name, None)
+        self._imported_globals.values[name] = v
+        self._imported_compiled_globals[name] = v.module._compiled_globals[v.name]
+
+    def _import_instance_methods(self, module: "GuppyModule") -> None:
+        """Transitively imports all instance methods from a module."""
+        for x, v in (module._globals.values | module._imported_globals.values).items():
+            if (
+                isinstance(v, CallableVariable)
+                and v.is_method
+                and x not in self._imported_compiled_globals
+            ):
+                assert v.module is not None
+                self._check_name_available(v.qualname, None)
+                self._imported_globals.values[x] = v
+                self._imported_compiled_globals[x] = v.module._compiled_globals[x]
 
     def register_func_def(
         self, f: PyFunc, instance: type[GuppyType] | None = None
@@ -101,9 +150,14 @@ class GuppyModule:
         if self._instance_func_buffer is not None:
             self._instance_func_buffer[func_ast.name] = (True, f)
         else:
-            name = (
-                qualified_name(instance, func_ast.name) if instance else func_ast.name
-            )
+            if instance:
+                # Instance methods are called `Type.method_name`, so that's what we
+                # update the name to. However, to disambiguate we actually use the
+                # qualified name `module.Type.method_name` as the dict key.
+                name = qualified_instance_name(instance, func_ast.name)
+                func_ast.name = instance_name(instance, func_ast.name)
+            else:
+                name = func_ast.name
             self._check_name_available(name, func_ast)
             self._func_defs[name] = func_ast, get_py_scope(f)
 
@@ -116,9 +170,14 @@ class GuppyModule:
         if self._instance_func_buffer is not None:
             self._instance_func_buffer[func_ast.name] = (False, f)
         else:
-            name = (
-                qualified_name(instance, func_ast.name) if instance else func_ast.name
-            )
+            if instance:
+                # Instance methods are called `Type.method_name`, so that's what we
+                # update the name to. However, to disambiguate we actually use the
+                # qualified name `module.Type.method_name` as the dict key.
+                func_ast.name = instance_name(instance, func_ast.name)
+                name = qualified_name(instance.module, func_ast.name)
+            else:
+                name = func_ast.name
             self._check_name_available(name, func_ast)
             self._func_decls[name] = func_ast
 
@@ -131,9 +190,15 @@ class GuppyModule:
             self._instance_func_buffer[func.name] = func
         else:
             if instance:
-                func.name = qualified_name(instance, func.name)
-            self._check_name_available(func.name, func.defined_at)
-            self._custom_funcs[func.name] = func
+                # Instance methods are called `Type.method_name`, so that's what we
+                # update `func.name` to. However, to disambiguate we actually use the
+                # qualified name `module.Type.method_name` as the dict key.
+                name = qualified_instance_name(instance, func.name)
+                func.name = instance_name(instance, func.name)
+            else:
+                name = func.name
+            self._check_name_available(name, func.defined_at)
+            self._custom_funcs[name] = func
 
     def register_type(self, name: str, ty: type[GuppyType]) -> None:
         """Registers an existing Guppy type as belonging to this Guppy module."""
@@ -175,11 +240,15 @@ class GuppyModule:
         for func in self._custom_funcs.values():
             func.check_type(self._imported_globals | self._globals)
         defined_funcs = {
-            x: DefinedFunction.from_ast(f, x, self._imported_globals | self._globals)
+            x: DefinedFunction.from_ast(
+                f, f.name, self, self._imported_globals | self._globals
+            )
             for x, (f, _) in self._func_defs.items()
         }
         declared_funcs = {
-            x: DeclaredFunction.from_ast(f, x, self._imported_globals | self._globals)
+            x: DeclaredFunction.from_ast(
+                f, f.name, self, self._imported_globals | self._globals
+            )
             for x, f in self._func_decls.items()
         }
         self._globals.values.update(self._custom_funcs)
@@ -205,14 +274,35 @@ class GuppyModule:
 
         # Prepare `FunctionDef` nodes for all function definitions
         def_nodes = {x: graph.add_def(f.ty, module_node, x) for x, f in checked.items()}
+
+        # Store the compiled functions, so they can be imported by other modules
         self._compiled_globals |= (
             self._custom_funcs
             | declared_funcs
             | {
-                x: CompiledFunctionDef(x, f.ty, f.defined_at, None, def_nodes[x])
+                x: CompiledFunctionDef(
+                    f.name, f.ty, f.defined_at, None, self, def_nodes[x]
+                )
                 for x, f in checked.items()
             }
         )
+
+        # Construct a mapping from fully qualified names to compiled functions. This
+        # will be used to compile `GlobalName` and `GlobalCall` nodes.
+        compiled_globals: CompiledGlobals = {}
+        for x, v in self._compiled_globals.items():
+            # Note that for instance methods, the dict key `x` is already fully
+            # qualified
+            if isinstance(v, CallableVariable) and v.is_method:
+                compiled_globals[x] = v
+            else:
+                compiled_globals[v.qualname] = v
+        for v in self._imported_compiled_globals.values():
+            # Prepare `FuncDecl` nodes for all imported functions
+            if isinstance(v, DeclaredFunction | DefinedFunction):
+                v = DeclaredFunction(v.name, v.ty, v.defined_at, None, v.module)
+                v.add_to_graph(graph, module_node)
+            compiled_globals[v.qualname] = v
 
         # Compile function definitions to Hugr
         for x, f in checked.items():
@@ -220,7 +310,7 @@ class GuppyModule:
                 f,
                 def_nodes[x],
                 graph,
-                self._imported_compiled_globals | self._compiled_globals,
+                compiled_globals,
             )
 
         self._compiled = True
@@ -244,11 +334,22 @@ class GuppyModule:
                 f"Module `{self.name}` already contains a function named `{name}`",
                 node,
             )
+        if name in self._imported_globals.values:
+            raise GuppyError(
+                f"A function named `{name}` has already been imported",
+                node,
+            )
 
     def _check_type_name_available(self, name: str, node: AstNode | None) -> None:
         if name in self._globals.types:
             raise GuppyError(
-                f"Module `{self.name}` already contains a type `{name}`",
+                f"Module `{self.name}` already contains a type named `{name}`",
+                node,
+            )
+
+        if name in self._imported_globals.types:
+            raise GuppyError(
+                f"A type named `{name}` has already been imported",
                 node,
             )
 

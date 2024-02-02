@@ -262,10 +262,6 @@ def test_for_nonlinear_break(validate):
         def __iter__(self: "MyType") -> MyIter:
             ...
 
-    @guppy.declare(module)
-    def measure(q: Qubit) -> bool:
-        ...
-
     @guppy(module)
     def test(mt: MyType, xs: list[int]) -> None:
         # We can break, since `mt` itself is not linear

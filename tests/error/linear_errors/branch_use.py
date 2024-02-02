@@ -13,11 +13,6 @@ def new_qubit() -> Qubit:
     ...
 
 
-@guppy.declare(module)
-def measure(q: Qubit) -> bool:
-    ...
-
-
 @guppy(module)
 def foo(b: bool) -> bool:
     q = new_qubit()

@@ -1,5 +1,6 @@
 import ast
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from guppylang.ast_util import AstNode, get_type, with_loc, with_type
 from guppylang.checker.core import Context, Globals
@@ -15,6 +16,9 @@ from guppylang.gtypes import FunctionType, GuppyType, Inst, Subst, type_to_row
 from guppylang.hugr import ops
 from guppylang.hugr.hugr import DFContainingVNode, Hugr, Node, OutPortV
 from guppylang.nodes import GlobalCall
+
+if TYPE_CHECKING:
+    from guppylang.module import GuppyModule
 
 
 class CustomFunction(CompiledFunction):
@@ -35,6 +39,7 @@ class CustomFunction(CompiledFunction):
     def __init__(
         self,
         name: str,
+        module: "GuppyModule",
         defined_at: ast.FunctionDef | None,
         compiler: "CustomCallCompiler",
         checker: "CustomCallChecker",
@@ -42,6 +47,7 @@ class CustomFunction(CompiledFunction):
         ty: FunctionType | None = None,
     ):
         self.name = name
+        self.module = module
         self.defined_at = defined_at
         self.higher_order_value = higher_order_value
         self.call_compiler = compiler
