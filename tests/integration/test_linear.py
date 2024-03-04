@@ -49,12 +49,10 @@ def test_interleave(validate):
     module.load(quantum)
 
     @guppy.declare(module)
-    def f(q1: Qubit, q2: Qubit) -> tuple[Qubit, Qubit]:
-        ...
+    def f(q1: Qubit, q2: Qubit) -> tuple[Qubit, Qubit]: ...
 
     @guppy.declare(module)
-    def g(q1: Qubit, q2: Qubit) -> tuple[Qubit, Qubit]:
-        ...
+    def g(q1: Qubit, q2: Qubit) -> tuple[Qubit, Qubit]: ...
 
     @guppy(module)
     def test(
@@ -117,8 +115,7 @@ def test_return_call(validate):
     module.load(quantum)
 
     @guppy.declare(module)
-    def op(q: Qubit) -> Qubit:
-        ...
+    def op(q: Qubit) -> Qubit: ...
 
     @guppy(module)
     def test(q: Qubit) -> Qubit:
@@ -243,28 +240,23 @@ def test_for_nonlinear_break(validate):
         """An iterator that yields linear values but is not linear itself."""
 
         @guppy.declare(module)
-        def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]:
-            ...
+        def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]: ...
 
         @guppy.declare(module)
-        def __next__(self: "MyIter") -> tuple[Qubit, "MyIter"]:
-            ...
+        def __next__(self: "MyIter") -> tuple[Qubit, "MyIter"]: ...
 
         @guppy.declare(module)
-        def __end__(self: "MyIter") -> None:
-            ...
+        def __end__(self: "MyIter") -> None: ...
 
     @guppy.type(module, tys.TupleType(inner=[]))
     class MyType:
         """Type that produces the iterator above."""
 
         @guppy.declare(module)
-        def __iter__(self: "MyType") -> MyIter:
-            ...
+        def __iter__(self: "MyType") -> MyIter: ...
 
     @guppy.declare(module)
-    def measure(q: Qubit) -> bool:
-        ...
+    def measure(q: Qubit) -> bool: ...
 
     @guppy(module)
     def test(mt: MyType, xs: list[int]) -> None:
