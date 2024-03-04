@@ -1,6 +1,15 @@
 name: Pull Request
 
-on: pull_request
+on:
+  push:
+    branches:
+      - main 
+  pull_request:
+    branches:
+      - main
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch: {}
 
 env:
   SCCACHE_GHA_ENABLED: "true"
@@ -56,3 +65,32 @@ jobs:
 
       - name: Rerun `py(...)` expression tests with tket2 installed
         run: poetry run pytest tests/integration/test_py.py tests/error/test_py_errors.py
+
+  coverage:
+    if: github.event_name != 'merge_group'
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+      - name: Install poetry
+        run: pipx install poetry
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.10'
+          cache: "poetry"
+
+      - name: Install Guppy with validation and pytket
+        run: poetry install --with validation --with pytket
+
+      - name: Run python tests with coverage instrumentation
+        run: poetry run pytest --cov=./ --cov-report=xml
+
+      - name: Upload python coverage to codecov.io
+        uses: codecov/codecov-action@v3
+        with:
+          files: coverage.xml
+          name: python
+          token: ${{ secrets.CODECOV_TOKEN }}
