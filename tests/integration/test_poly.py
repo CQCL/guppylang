@@ -12,8 +12,7 @@ def test_id(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo(x: T) -> T:
-        ...
+    def foo(x: T) -> T: ...
 
     @guppy(module)
     def main(x: int) -> int:
@@ -27,8 +26,7 @@ def test_id_nested(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo(x: T) -> T:
-        ...
+    def foo(x: T) -> T: ...
 
     @guppy(module)
     def main(x: int) -> int:
@@ -42,8 +40,7 @@ def test_use_twice(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo(x: T) -> T:
-        ...
+    def foo(x: T) -> T: ...
 
     @guppy(module)
     def main(x: int, y: bool) -> None:
@@ -58,8 +55,7 @@ def test_define_twice(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo(x: T) -> T:
-        ...
+    def foo(x: T) -> T: ...
 
     @guppy.declare(module)
     def bar(x: T) -> T:  # Reuse same type var!
@@ -78,8 +74,7 @@ def test_return_tuple_implicit(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo(x: T) -> T:
-        ...
+    def foo(x: T) -> T: ...
 
     @guppy(module)
     def main(x: int) -> tuple[int, int]:
@@ -93,8 +88,7 @@ def test_same_args(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo(x: T, y: T) -> None:
-        ...
+    def foo(x: T, y: T) -> None: ...
 
     @guppy(module)
     def main(x: int) -> None:
@@ -109,8 +103,7 @@ def test_different_args(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo(x: S, y: T, z: tuple[S, T]) -> T:
-        ...
+    def foo(x: S, y: T, z: tuple[S, T]) -> T: ...
 
     @guppy(module)
     def main(x: int, y: float) -> float:
@@ -124,8 +117,7 @@ def test_infer_basic(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo() -> T:
-        ...
+    def foo() -> T: ...
 
     @guppy(module)
     def main() -> None:
@@ -139,8 +131,7 @@ def test_infer_list(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo() -> T:
-        ...
+    def foo() -> T: ...
 
     @guppy(module)
     def main() -> None:
@@ -155,12 +146,10 @@ def test_infer_nested(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo() -> T:
-        ...
+    def foo() -> T: ...
 
     @guppy.declare(module)
-    def bar(x: T) -> T:
-        ...
+    def bar(x: T) -> T: ...
 
     @guppy(module)
     def main() -> None:
@@ -175,12 +164,10 @@ def test_infer_left_to_right(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo() -> T:
-        ...
+    def foo() -> T: ...
 
     @guppy.declare(module)
-    def bar(x: T, y: T, z: S, a: tuple[T, S]) -> None:
-        ...
+    def bar(x: T, y: T, z: S, a: tuple[T, S]) -> None: ...
 
     @guppy(module)
     def main() -> None:
@@ -194,12 +181,10 @@ def test_pass_poly_basic(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo(f: Callable[[T], T]) -> None:
-        ...
+    def foo(f: Callable[[T], T]) -> None: ...
 
     @guppy.declare(module)
-    def bar(x: int) -> int:
-        ...
+    def bar(x: int) -> int: ...
 
     @guppy(module)
     def main() -> None:
@@ -214,12 +199,10 @@ def test_pass_poly_cross(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo(f: Callable[[S], int]) -> None:
-        ...
+    def foo(f: Callable[[S], int]) -> None: ...
 
     @guppy.declare(module)
-    def bar(x: bool) -> T:
-        ...
+    def bar(x: bool) -> T: ...
 
     @guppy(module)
     def main() -> None:
@@ -234,8 +217,7 @@ def test_linear(validate):
     T = guppy.type_var(module, "T", linear=True)
 
     @guppy.declare(module)
-    def foo(x: T) -> T:
-        ...
+    def foo(x: T) -> T: ...
 
     @guppy(module)
     def main(q: Qubit) -> Qubit:
@@ -250,8 +232,7 @@ def test_pass_nonlinear(validate):
     T = guppy.type_var(module, "T", linear=True)
 
     @guppy.declare(module)
-    def foo(x: T) -> T:
-        ...
+    def foo(x: T) -> T: ...
 
     @guppy(module)
     def main(x: int) -> None:
@@ -266,12 +247,10 @@ def test_pass_linear(validate):
     T = guppy.type_var(module, "T", linear=True)
 
     @guppy.declare(module)
-    def foo(f: Callable[[T], T]) -> None:
-        ...
+    def foo(f: Callable[[T], T]) -> None: ...
 
     @guppy.declare(module)
-    def bar(q: Qubit) -> Qubit:
-        ...
+    def bar(q: Qubit) -> Qubit: ...
 
     @guppy(module)
     def main() -> None:
@@ -285,12 +264,10 @@ def test_higher_order_value(validate):
     T = guppy.type_var(module, "T")
 
     @guppy.declare(module)
-    def foo(x: T) -> T:
-        ...
+    def foo(x: T) -> T: ...
 
     @guppy.declare(module)
-    def bar(x: T) -> T:
-        ...
+    def bar(x: T) -> T: ...
 
     @guppy(module)
     def main(b: bool) -> int:

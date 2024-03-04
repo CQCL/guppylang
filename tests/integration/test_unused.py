@@ -1,4 +1,4 @@
-""" All sorts of weird stuff is allowed when variables are not used. """
+"""All sorts of weird stuff is allowed when variables are not used."""
 
 from tests.util import compile_guppy
 
