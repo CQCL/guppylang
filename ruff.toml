@@ -5,34 +5,36 @@ line-length = 88
 
 exclude = ["tests/error"]
 
+[lint]
+
 select = [
-  "F",    # pyflakes
-  "E",    # pycodestyle Errors
-  "W",    # pycodestyle Warnings
+  "F", # pyflakes
+  "E", # pycodestyle Errors
+  "W", # pycodestyle Warnings
 
   # "A",    # flake8-builtins
   # "ANN",  # flake8-annotations
   # "ARG",  # flake8-unused-arguments
-  "B",    # flake8-Bugbear
-  "BLE",  # flake8-blind-except
-  "C4",   # flake8-comprehensions
+  "B",   # flake8-Bugbear
+  "BLE", # flake8-blind-except
+  "C4",  # flake8-comprehensions
   # "C90",  # mccabe
   # "COM",  # flake8-commas
   # "CPY",  # flake8-copyright
   # "D",    # pydocstyle
-  "EM",   # flake8-errmsg
+  "EM", # flake8-errmsg
   # "ERA",  # eradicate
-  "EXE",  # flake8-executable
-  "FA",   # flake8-future-annotations
+  "EXE", # flake8-executable
+  "FA",  # flake8-future-annotations
   # "FBT",  # flake8-boolean-trap
   # "FIX",  # flake8-fixme
-  "FLY",  # flynt
+  "FLY", # flynt
   # "FURB", # refurb
-  "G",    # flake8-logging-format
-  "I",    # isort
-  "ICN",  # flake8-import-conventions
-  "INP",  # flake8-no-pep420
-  "INT",  # flake8-gettext
+  "G",   # flake8-logging-format
+  "I",   # isort
+  "ICN", # flake8-import-conventions
+  "INP", # flake8-no-pep420
+  "INT", # flake8-gettext
   # "ISC",  # flake8-implicit-str-concat
   # "LOG",  # flake8-logging
   # "N",    # pep8-Naming
@@ -41,41 +43,43 @@ select = [
   "PGH",  # pygrep-hooks
   "PIE",  # flake8-pie
   # "PL",   # pylint
-  "PT",   # flake8-pytest-style
-  "PTH",  # flake8-use-pathlib
-  "PYI",  # flake8-pyi
-  "Q",    # flake8-quotes
+  "PT",  # flake8-pytest-style
+  "PTH", # flake8-use-pathlib
+  "PYI", # flake8-pyi
+  "Q",   # flake8-quotes
   # "RET",  # flake8-return
-  "RSE",  # flake8-raise
-  "RUF",  # Ruff-specific
-  "S",    # flake8-bandit (Security)
-  "SIM",  # flake8-simplify
+  "RSE", # flake8-raise
+  "RUF", # Ruff-specific
+  "S",   # flake8-bandit (Security)
+  "SIM", # flake8-simplify
   # "SLF",  # flake8-self
   "SLOT", # flake8-slots
   "T10",  # flake8-debugger
   "T20",  # flake8-print
   "TCH",  # flake8-type-checking
   # "TD",   # flake8-todos
-  "TID",  # flake8-tidy-imports
-  "TRY",  # tryceratops
-  "UP",   # pyupgrade
-  "YTT",  # flake8-2020
+  "TID", # flake8-tidy-imports
+  "TRY", # tryceratops
+  "UP",  # pyupgrade
+  "YTT", # flake8-2020
 ]
 
 ignore = [
-  "COM812", "ISC001",   # conflicting with the formatter
-  "EM101", "EM102",     # Exception must not use a string (an f-string) literal, assign to variable first
-  "S101",               # Use of `assert` detected
-  "TRY003",             # Avoid specifying long messages outside the exception class
-  "B905",               # `zip()` without an explicit `strict=` parameter
+  "COM812",
+  "ISC001", # conflicting with the formatter
+  "EM101",
+  "EM102",  # Exception must not use a string (an f-string) literal, assign to variable first
+  "S101",   # Use of `assert` detected
+  "TRY003", # Avoid specifying long messages outside the exception class
+  "B905",   # `zip()` without an explicit `strict=` parameter
 ]
 
-[per-file-ignores]
-"guppy/ast_util.py"           = ["B009", "B010"]
-"guppy/decorator.py"          = ["B010"]
-"tests/integration/*"         = ["F841", "C416", "RUF005"]
-"tests/{hugr,integration}/*"  = ["B", "FBT", "SIM", "I"]
-"__init__.py"                 = ["F401"]    # module imported but unused
+[lint.per-file-ignores]
+"guppy/ast_util.py" = ["B009", "B010"]
+"guppy/decorator.py" = ["B010"]
+"tests/integration/*" = ["F841", "C416", "RUF005"]
+"tests/{hugr,integration}/*" = ["B", "FBT", "SIM", "I"]
+"__init__.py" = ["F401"]                                # module imported but unused
 
 # [pydocstyle]
 # convention = "google"
