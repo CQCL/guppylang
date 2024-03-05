@@ -1,4 +1,5 @@
 """Visualise HUGR using graphviz."""
+
 import ast
 from collections.abc import Iterable
 from typing import TYPE_CHECKING

@@ -1,0 +1,4 @@
+# Ignore tests and scripts in codecov report
+ignore:
+  - "tests"
+  - "scripts"

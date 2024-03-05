@@ -1,5 +1,9 @@
 # Guppy
 
+[![codecov][]](https://codecov.io/gh/CQCL/guppylang)
+
+  [codecov]: https://img.shields.io/codecov/c/gh/CQCL/guppylang?logo=codecov
+
 Guppy is a quantum programming language that is fully embedded into Python.
 It allows you to write high-level hybrid quantum programs with classical control flow and mid-circuit measurements using Pythonic syntax:
 
