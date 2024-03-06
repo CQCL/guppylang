@@ -4,7 +4,7 @@ import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.quantum import Qubit, quantum
+from guppylang.prelude.quantum import qubit, quantum
 from tests.integration.util import py
 from tests.util import compile_guppy
 
@@ -115,7 +115,7 @@ def test_pytket_single_qubit(validate):
     module.load(quantum)
 
     @guppy(module)
-    def foo(q: Qubit) -> Qubit:
+    def foo(q: qubit) -> qubit:
         f = py(circ)
         return f(q)
 
@@ -136,7 +136,7 @@ def test_pytket_multi_qubit(validate):
     module.load(quantum)
 
     @guppy(module)
-    def foo(q1: Qubit, q2: Qubit, q3: Qubit) -> tuple[Qubit, Qubit, Qubit]:
+    def foo(q1: qubit, q2: qubit, q3: qubit) -> tuple[qubit, qubit, qubit]:
         return py(circ)(q1, q2, q3)
 
     validate(module.compile())
@@ -154,7 +154,7 @@ def test_pytket_measure(validate):
     module.load(quantum)
 
     @guppy(module)
-    def foo(q: Qubit) -> tuple[Qubit, bool]:
+    def foo(q: qubit) -> tuple[qubit, bool]:
         return py(circ)(q)
 
     validate(module.compile())

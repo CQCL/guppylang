@@ -1,7 +1,7 @@
 Guppy compilation failed. Error in file $FILE:21
 
 19:    @guppy(module)
-20:    def main(q: Qubit) -> None:
+20:    def main(q: qubit) -> None:
 21:        foo(q)
            ^^^^^^
-GuppyTypeError: Cannot instantiate non-linear type variable `T` in type `forall T. T -> None` with linear type `Qubit`
+GuppyTypeError: Cannot instantiate non-linear type variable `T` in type `forall T. T -> None` with linear type `qubit`

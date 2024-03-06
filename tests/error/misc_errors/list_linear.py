@@ -1,6 +1,6 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.quantum import Qubit
+from guppylang.prelude.quantum import qubit
 
 import guppylang.prelude.quantum as quantum
 
@@ -10,7 +10,7 @@ module.load(quantum)
 
 
 @guppy(module)
-def foo() -> list[Qubit]:
+def foo() -> list[qubit]:
     return []
 
 

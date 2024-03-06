@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:17
 16:    if b:
 17:        break
            ^^^^^
-GuppyTypeError: Loop over iterator with linear type `linst[(Qubit, bool)]` cannot be terminated prematurely
+GuppyTypeError: Loop over iterator with linear type `linst[(qubit, bool)]` cannot be terminated prematurely
