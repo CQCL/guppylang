@@ -3,7 +3,7 @@ name: Pull Request
 on:
   push:
     branches:
-      - main 
+      - main
   pull_request:
     branches:
       - main
@@ -47,6 +47,7 @@ jobs:
         with:
           src: "./guppylang"
           args: format --check
+          version: 0.3.0
 
       - name: Lint with ruff
         uses: chartboost/ruff-action@v1
