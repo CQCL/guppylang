@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:19
 18:        if b:
 19:            q = new_qubit()
                ^
-GuppyError: Variable `q` with linear type `Qubit` is not used on all control-flow paths
+GuppyError: Variable `q` with linear type `qubit` is not used on all control-flow paths

@@ -950,7 +950,7 @@ def python_value_to_guppy_type(
                     try:
                         import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
-                        qubit = globals.types["Qubit"].build()
+                        qubit = globals.types["qubit"].build()
                         return FunctionType(
                             [qubit] * v.n_qubits,
                             row_to_type([qubit] * v.n_qubits + [BoolType()] * v.n_bits),
