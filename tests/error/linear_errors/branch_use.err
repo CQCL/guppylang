@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:23
 22:    def foo(b: bool) -> bool:
 23:        q = new_qubit()
            ^
-GuppyError: Variable `q` with linear type `Qubit` is not used on all control-flow paths
+GuppyError: Variable `q` with linear type `qubit` is not used on all control-flow paths

@@ -1,6 +1,6 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.quantum import Qubit
+from guppylang.prelude.quantum import qubit
 
 import guppylang.prelude.quantum as quantum
 
@@ -17,7 +17,7 @@ def foo(x: T) -> None:
 
 
 @guppy(module)
-def main(q: Qubit) -> None:
+def main(q: qubit) -> None:
     foo(q)
 
 
