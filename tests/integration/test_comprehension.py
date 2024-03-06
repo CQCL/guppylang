@@ -74,8 +74,7 @@ def test_dependent(validate):
     module = GuppyModule("test")
 
     @guppy.declare(module)
-    def process(x: float) -> list[int]:
-        ...
+    def process(x: float) -> list[int]: ...
 
     @guppy(module)
     def test(xs: list[float]) -> list[float]:
@@ -145,8 +144,7 @@ def test_linear_discard(validate):
     module.load(quantum)
 
     @guppy.declare(module)
-    def discard(q: qubit) -> None:
-        ...
+    def discard(q: qubit) -> None: ...
 
     @guppy(module)
     def test(qs: linst[qubit]) -> list[None]:
@@ -160,8 +158,7 @@ def test_linear_consume_in_guard(validate):
     module.load(quantum)
 
     @guppy.declare(module)
-    def cond(q: qubit) -> bool:
-        ...
+    def cond(q: qubit) -> bool: ...
 
     @guppy(module)
     def test(qs: linst[tuple[int, qubit]]) -> list[int]:
@@ -175,8 +172,7 @@ def test_linear_consume_in_iter(validate):
     module.load(quantum)
 
     @guppy.declare(module)
-    def make_list(q: qubit) -> list[int]:
-        ...
+    def make_list(q: qubit) -> list[int]: ...
 
     @guppy(module)
     def test(qs: linst[qubit]) -> list[int]:
@@ -194,24 +190,20 @@ def test_linear_next_nonlinear_iter(validate):
         """An iterator that yields linear values but is not linear itself."""
 
         @guppy.declare(module)
-        def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]:
-            ...
+        def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]: ...
 
         @guppy.declare(module)
-        def __next__(self: "MyIter") -> tuple[qubit, "MyIter"]:
-            ...
+        def __next__(self: "MyIter") -> tuple[qubit, "MyIter"]: ...
 
         @guppy.declare(module)
-        def __end__(self: "MyIter") -> None:
-            ...
+        def __end__(self: "MyIter") -> None: ...
 
     @guppy.type(module, tys.TupleType(inner=[]))
     class MyType:
         """Type that produces the iterator above."""
 
         @guppy.declare(module)
-        def __iter__(self: "MyType") -> MyIter:
-            ...
+        def __iter__(self: "MyType") -> MyIter: ...
 
     @guppy(module)
     def test(mt: MyType, xs: list[int]) -> linst[tuple[int, qubit]]:
@@ -234,24 +226,20 @@ def test_nonlinear_next_linear_iter(validate):
         """A linear iterator that yields non-linear values."""
 
         @guppy.declare(module)
-        def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]:
-            ...
+        def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]: ...
 
         @guppy.declare(module)
-        def __next__(self: "MyIter") -> tuple[int, "MyIter"]:
-            ...
+        def __next__(self: "MyIter") -> tuple[int, "MyIter"]: ...
 
         @guppy.declare(module)
-        def __end__(self: "MyIter") -> None:
-            ...
+        def __end__(self: "MyIter") -> None: ...
 
     @guppy.type(module, tys.TupleType(inner=[]))
     class MyType:
         """Type that produces the iterator above."""
 
         @guppy.declare(module)
-        def __iter__(self: "MyType") -> MyIter:
-            ...
+        def __iter__(self: "MyType") -> MyIter: ...
 
     @guppy(module)
     def test(mt: MyType, xs: list[int]) -> linst[tuple[int, int]]:
