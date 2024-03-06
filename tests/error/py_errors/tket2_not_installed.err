@@ -1,7 +1,7 @@
 Guppy compilation failed. Error in file $FILE:16
 
 14:    @guppy(module)
-15:    def foo(q: Qubit) -> Qubit:
+15:    def foo(q: qubit) -> qubit:
 16:        f = py(circ)
                ^^^^^^^^
 GuppyError: Pytket compatibility requires `tket2` to be installed. See https://github.com/CQCL/tket2/tree/main/tket2-py

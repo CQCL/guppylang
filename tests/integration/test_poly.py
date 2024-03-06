@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.quantum import Qubit
+from guppylang.prelude.quantum import qubit
 
 import guppylang.prelude.quantum as quantum
 
@@ -220,7 +220,7 @@ def test_linear(validate):
     def foo(x: T) -> T: ...
 
     @guppy(module)
-    def main(q: Qubit) -> Qubit:
+    def main(q: qubit) -> qubit:
         return foo(q)
 
     validate(module.compile())
@@ -250,7 +250,7 @@ def test_pass_linear(validate):
     def foo(f: Callable[[T], T]) -> None: ...
 
     @guppy.declare(module)
-    def bar(q: Qubit) -> Qubit: ...
+    def bar(q: qubit) -> qubit: ...
 
     @guppy(module)
     def main() -> None:

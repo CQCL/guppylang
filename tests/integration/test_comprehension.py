@@ -2,7 +2,7 @@ from guppylang.decorator import guppy
 from guppylang.hugr import tys
 from guppylang.module import GuppyModule
 from guppylang.prelude.builtins import linst
-from guppylang.prelude.quantum import Qubit, h, cx
+from guppylang.prelude.quantum import qubit, h, cx
 
 import guppylang.prelude.quantum as quantum
 from tests.util import compile_guppy
@@ -21,7 +21,7 @@ def test_basic_linear(validate):
     module.load(quantum)
 
     @guppy(module)
-    def test(qs: linst[Qubit]) -> linst[Qubit]:
+    def test(qs: linst[qubit]) -> linst[qubit]:
         return [h(q) for q in qs]
 
     validate(module.compile())
@@ -56,7 +56,7 @@ def test_tuple_pat_linear(validate):
     module.load(quantum)
 
     @guppy(module)
-    def test(qs: linst[tuple[int, Qubit, Qubit]]) -> linst[tuple[Qubit, Qubit]]:
+    def test(qs: linst[tuple[int, qubit, qubit]]) -> linst[tuple[qubit, qubit]]:
         return [cx(q1, q2) for _, q1, q2 in qs]
 
     validate(module.compile())
@@ -122,7 +122,7 @@ def test_nested_linear(validate):
     module.load(quantum)
 
     @guppy(module)
-    def test(qs: linst[Qubit]) -> linst[Qubit]:
+    def test(qs: linst[qubit]) -> linst[qubit]:
         return [h(q) for q in [h(q) for q in qs]]
 
     validate(module.compile())
@@ -144,10 +144,10 @@ def test_linear_discard(validate):
     module.load(quantum)
 
     @guppy.declare(module)
-    def discard(q: Qubit) -> None: ...
+    def discard(q: qubit) -> None: ...
 
     @guppy(module)
-    def test(qs: linst[Qubit]) -> list[None]:
+    def test(qs: linst[qubit]) -> list[None]:
         return [discard(q) for q in qs]
 
     validate(module.compile())
@@ -158,10 +158,10 @@ def test_linear_consume_in_guard(validate):
     module.load(quantum)
 
     @guppy.declare(module)
-    def cond(q: Qubit) -> bool: ...
+    def cond(q: qubit) -> bool: ...
 
     @guppy(module)
-    def test(qs: linst[tuple[int, Qubit]]) -> list[int]:
+    def test(qs: linst[tuple[int, qubit]]) -> list[int]:
         return [x for x, q in qs if cond(q)]
 
     validate(module.compile())
@@ -172,10 +172,10 @@ def test_linear_consume_in_iter(validate):
     module.load(quantum)
 
     @guppy.declare(module)
-    def make_list(q: Qubit) -> list[int]: ...
+    def make_list(q: qubit) -> list[int]: ...
 
     @guppy(module)
-    def test(qs: linst[Qubit]) -> list[int]:
+    def test(qs: linst[qubit]) -> list[int]:
         return [x for q in qs for x in make_list(q)]
 
     validate(module.compile())
@@ -193,7 +193,7 @@ def test_linear_next_nonlinear_iter(validate):
         def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]: ...
 
         @guppy.declare(module)
-        def __next__(self: "MyIter") -> tuple[Qubit, "MyIter"]: ...
+        def __next__(self: "MyIter") -> tuple[qubit, "MyIter"]: ...
 
         @guppy.declare(module)
         def __end__(self: "MyIter") -> None: ...
@@ -206,7 +206,7 @@ def test_linear_next_nonlinear_iter(validate):
         def __iter__(self: "MyType") -> MyIter: ...
 
     @guppy(module)
-    def test(mt: MyType, xs: list[int]) -> linst[tuple[int, Qubit]]:
+    def test(mt: MyType, xs: list[int]) -> linst[tuple[int, qubit]]:
         # We can use `mt` in an inner loop since it's not linear
         return [(x, q) for x in xs for q in mt]
 
