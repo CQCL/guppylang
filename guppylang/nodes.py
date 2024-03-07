@@ -50,6 +50,11 @@ class GlobalCall(ast.expr):
     )
 
 
+class PartialApply(ast.expr):
+    func: ast.expr
+    args: list[ast.expr]
+
+
 class TypeApply(ast.expr):
     value: ast.expr
     tys: Sequence[GuppyType]

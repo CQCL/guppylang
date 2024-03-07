@@ -33,6 +33,7 @@ from guppylang.nodes import (
     GlobalName,
     LocalCall,
     LocalName,
+    PartialApply,
     TypeApply,
 )
 
@@ -190,6 +191,11 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
+
+    def visit_PartialApply(self, node: PartialApply) -> OutPortV:
+        func = self.visit(node.func)
+        args = [self.visit(arg) for arg in node.args]
+        return self.graph.add_partial(func, args).out_port(0)
 
     def visit_TypeApply(self, node: TypeApply) -> OutPortV:
         func = self.visit(node.value)
