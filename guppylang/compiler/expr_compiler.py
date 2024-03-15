@@ -322,14 +322,15 @@ def python_value_to_hugr(v: Any, exp_ty: GuppyType) -> ops.Const | None:
                 python_value_to_hugr(elt, ty)
                 for elt, ty in zip(elts, exp_ty.element_types)
             ]
-            if any(value is None for value in vs):
+            if None in vs:
                 return None
-            return ops.const.Tuple(vs=vs)
+            return ops.Tuple(vs=vs)
         case list(elts):
             assert isinstance(exp_ty, ListType)
-            return list_value(
-                [python_value_to_hugr(elt, exp_ty.element_type) for elt in elts]
-            )
+            consts = [python_value_to_hugr(elt, exp_ty.element_type) for elt in elts]
+            if None in consts:
+                return None
+            return list_value(consts)  # type: ignore[arg-type] # Lint warns about passible None elements
         case _:
             # Pytket conversion is an optional feature
             try:
@@ -341,7 +342,7 @@ def python_value_to_hugr(v: Any, exp_ty: GuppyType) -> ops.Const | None:
                     )
 
                     hugr = json.loads(Tk2Circuit(v).to_hugr_json())
-                    return ops.const.FunctionConst(hugr=hugr)
+                    return ops.FunctionConst(hugr=hugr)
             except ImportError:
                 pass
             return None

@@ -61,22 +61,22 @@ class ListValue(BaseModel):
 
 def bool_value(b: bool) -> ops.Const:
     """Returns the Hugr representation of a boolean value."""
-    return ops.const.Sum(tag=int(b), values=[], typ=BoolType())
+    return ops.Sum(tag=int(b), vs=[], typ=BoolType())
 
 
 def int_value(i: int) -> ops.Const:
     """Returns the Hugr representation of an integer value."""
-    return ops.const.ExtensionConst(e=ConstIntS(log_width=INT_WIDTH, value=i))
+    return ops.ExtensionConst(e=ConstIntS(log_width=INT_WIDTH, value=i))
 
 
 def float_value(f: float) -> ops.Const:
     """Returns the Hugr representation of a float value."""
-    return ops.const.ExtensionConst(e=ConstF64(value=f))
+    return ops.ExtensionConst(e=ConstF64(value=f))
 
 
 def list_value(v: list[ops.Const]) -> ops.Const:
     """Returns the Hugr representation of a list value."""
-    return ops.const.ExtensionConst(e=ListValue(value=v))
+    return ops.ExtensionConst(e=ListValue(value=v))
 
 
 def logic_op(op_name: str, args: list[tys.TypeArg] | None = None) -> ops.OpType:

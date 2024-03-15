@@ -16,8 +16,6 @@ from guppylang.hugr.tys import (
     TypeRow,
 )
 
-from .const import Const
-
 NodeID = int
 
 
@@ -91,6 +89,52 @@ class FuncDecl(BaseOp):
         out = out_types[0]
         assert isinstance(out, PolyFuncType)
         self.signature = out
+
+
+CustomConst = Any  # TODO
+
+
+class ExtensionConst(BaseOp):
+    """An extension constant value, that can check it is of a given [CustomType]."""
+
+    op: Literal["Const"] = "Const"
+    c: Literal["Extension"] = "Extension"
+    e: CustomConst
+
+
+class FunctionConst(BaseOp):
+    """A higher-order function value."""
+
+    op: Literal["Const"] = "Const"
+    c: Literal["Function"] = "Function"
+    hugr: Any  # TODO
+
+
+class Tuple(BaseOp):
+    """A tuple."""
+
+    op: Literal["Const"] = "Const"
+    c: Literal["Tuple"] = "Tuple"
+    vs: list["Const"]
+
+
+class Sum(BaseOp):
+    """A Sum variant
+
+    For any Sum type where this value meets the type of the variant indicated by the tag
+    """
+
+    op: Literal["Const"] = "Const"
+    c: Literal["Sum"] = "Sum"
+    tag: int
+    typ: Type
+    vs: list["Const"]
+
+
+Const = Annotated[
+    (ExtensionConst | FunctionConst | Tuple | Sum),
+    Field(discriminator="c"),
+]
 
 
 # -----------------------------------------------
@@ -414,7 +458,6 @@ OpType = TypeAliasType(
         (
             Module
             | Case
-            | Module
             | FuncDefn
             | FuncDecl
             | Const
