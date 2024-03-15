@@ -18,7 +18,7 @@ from guppylang.gtypes import (
     row_to_type,
     type_to_row,
 )
-from guppylang.hugr import tys, val
+from guppylang.hugr import tys
 
 NodeIdx = int
 PortOffset = int
@@ -354,12 +354,10 @@ class Hugr:
         return self.root
 
     def add_constant(
-        self, value: val.Value, ty: GuppyType, parent: Node | None = None
+        self, const: ops.Const, ty: GuppyType, parent: Node | None = None
     ) -> VNode:
         """Adds a constant node holding a given value to the graph."""
-        return self.add_node(
-            ops.Const(value=value, typ=ty.to_hugr()), [], [ty], parent, None
-        )
+        return self.add_node(const, [], [ty], parent, None)
 
     def add_input(
         self, output_tys: TypeList | None = None, parent: Node | None = None

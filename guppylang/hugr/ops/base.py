@@ -7,8 +7,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import TypeAliasType
 
 import guppylang.hugr.tys as tys
-
-from .tys import (
+from guppylang.hugr.tys import (
     ExtensionId,
     ExtensionSet,
     FunctionType,
@@ -16,7 +15,8 @@ from .tys import (
     Type,
     TypeRow,
 )
-from .val import Value
+
+from .const import Const
 
 NodeID = int
 
@@ -91,14 +91,6 @@ class FuncDecl(BaseOp):
         out = out_types[0]
         assert isinstance(out, PolyFuncType)
         self.signature = out
-
-
-class Const(BaseOp):
-    """A constant value definition."""
-
-    op: Literal["Const"] = "Const"
-    value: Value
-    typ: Type
 
 
 # -----------------------------------------------

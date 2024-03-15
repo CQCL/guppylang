@@ -24,7 +24,7 @@ from guppylang.gtypes import (
     TupleType,
     type_to_row,
 )
-from guppylang.hugr import ops, val
+from guppylang.hugr import ops
 from guppylang.hugr.hugr import DFContainingNode, OutPortV, VNode
 from guppylang.nodes import (
     DesugaredGenerator,
@@ -297,8 +297,8 @@ def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
     return False
 
 
-def python_value_to_hugr(v: Any, exp_ty: GuppyType) -> val.Value | None:
-    """Turns a Python value into a Hugr value.
+def python_value_to_hugr(v: Any, exp_ty: GuppyType) -> ops.Const | None:
+    """Turns a Python value into a Hugr constant value.
 
     Returns None if the Python value cannot be represented in Guppy.
     """
@@ -324,7 +324,7 @@ def python_value_to_hugr(v: Any, exp_ty: GuppyType) -> val.Value | None:
             ]
             if any(value is None for value in vs):
                 return None
-            return val.Tuple(vs=vs)
+            return ops.const.Tuple(vs=vs)
         case list(elts):
             assert isinstance(exp_ty, ListType)
             return list_value(
@@ -341,7 +341,7 @@ def python_value_to_hugr(v: Any, exp_ty: GuppyType) -> val.Value | None:
                     )
 
                     hugr = json.loads(Tk2Circuit(v).to_hugr_json())
-                    return val.FunctionVal(hugr=hugr)
+                    return ops.const.FunctionConst(hugr=hugr)
             except ImportError:
                 pass
             return None

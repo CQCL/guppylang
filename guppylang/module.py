@@ -166,7 +166,7 @@ class GuppyModule:
         return self._compiled
 
     @pretty_errors
-    def compile(self) -> Hugr | None:
+    def compile(self) -> Hugr:
         """Compiles the module and returns the final Hugr."""
         if self.compiled:
             raise GuppyError("Module has already been compiled")

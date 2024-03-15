@@ -14,7 +14,7 @@ from guppylang.custom import (
 )
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.gtypes import BoolType, FunctionType, GuppyType, Subst, unify
-from guppylang.hugr import ops, tys, val
+from guppylang.hugr import ops, tys
 from guppylang.hugr.hugr import OutPortV
 from guppylang.nodes import GlobalCall
 
@@ -59,24 +59,24 @@ class ListValue(BaseModel):
     value: list[Any]
 
 
-def bool_value(b: bool) -> val.Value:
+def bool_value(b: bool) -> ops.Const:
     """Returns the Hugr representation of a boolean value."""
-    return val.Sum(tag=int(b), value=val.Tuple(vs=[]))
+    return ops.const.Sum(tag=int(b), values=[], typ=BoolType())
 
 
-def int_value(i: int) -> val.Value:
+def int_value(i: int) -> ops.Const:
     """Returns the Hugr representation of an integer value."""
-    return val.ExtensionVal(c=(ConstIntS(log_width=INT_WIDTH, value=i),))
+    return ops.const.ExtensionConst(e=ConstIntS(log_width=INT_WIDTH, value=i))
 
 
-def float_value(f: float) -> val.Value:
+def float_value(f: float) -> ops.Const:
     """Returns the Hugr representation of a float value."""
-    return val.ExtensionVal(c=(ConstF64(value=f),))
+    return ops.const.ExtensionConst(e=ConstF64(value=f))
 
 
-def list_value(v: list[val.Value]) -> val.Value:
+def list_value(v: list[ops.Const]) -> ops.Const:
     """Returns the Hugr representation of a list value."""
-    return val.ExtensionVal(c=(ListValue(value=v),))
+    return ops.const.ExtensionConst(e=ListValue(value=v))
 
 
 def logic_op(op_name: str, args: list[tys.TypeArg] | None = None) -> ops.OpType:

@@ -1,3 +1,5 @@
+"""Constant value variants for the `Const` operation."""
+
 import inspect
 import sys
 from typing import Annotated, Any, Literal
@@ -5,28 +7,30 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, Field
 from typing_extensions import TypeAliasType
 
+from guppylang.hugr.tys import Type
+
 CustomConst = Any  # TODO
 
 
-class ExtensionVal(BaseModel):
+class ExtensionConst(BaseModel):
     """An extension constant value, that can check it is of a given [CustomType]."""
 
-    v: Literal["Extension"] = "Extension"
-    c: tuple[CustomConst]
+    c: Literal["Extension"] = "Extension"
+    e: tuple[CustomConst]
 
 
-class FunctionVal(BaseModel):
+class FunctionConst(BaseModel):
     """A higher-order function value."""
 
-    v: Literal["Function"] = "Function"
+    c: Literal["Function"] = "Function"
     hugr: Any  # TODO
 
 
 class Tuple(BaseModel):
     """A tuple."""
 
-    v: Literal["Tuple"] = "Tuple"
-    vs: list["Value"]
+    c: Literal["Tuple"] = "Tuple"
+    vs: list["Const"]
 
 
 class Sum(BaseModel):
@@ -35,16 +39,17 @@ class Sum(BaseModel):
     For any Sum type where this value meets the type of the variant indicated by the tag
     """
 
-    v: Literal["Sum"] = "Sum"
+    c: Literal["Sum"] = "Sum"
     tag: int
-    value: "Value"
+    values: list["Const"]
+    typ: Type
 
 
-Value = TypeAliasType(
-    "Value",
+Const = TypeAliasType(
+    "Const",
     Annotated[
-        ExtensionVal | FunctionVal | Tuple | Sum,
-        Field(discriminator="v"),
+        ExtensionConst | FunctionConst | Tuple | Sum,
+        Field(discriminator="c"),
     ],
 )
 
