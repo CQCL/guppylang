@@ -190,7 +190,7 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     type_var_mapping: dict[str, "Parameter"] = {}
     input_tys = []
     input_names = []
-    for _i, inp in enumerate(func_def.args.args):
+    for inp in func_def.args.args:
         if inp.annotation is None:
             raise GuppyError("Argument type must be annotated", inp)
         ty = type_from_ast(inp.annotation, globals, type_var_mapping)

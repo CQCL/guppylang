@@ -41,7 +41,7 @@ class ConstValue(Const):
 
 @dataclass(frozen=True)
 class BoundConstVar(BoundVar, Const):
-    """Bound variable referencing a parameter of kind `Const`.
+    """Bound variable referencing a `ConstParam`.
 
     For example, in the function type `forall n: int. array[float, n] -> array[int, n]`,
     we represent the int argument to `array` as a `ConstArg` containing a
@@ -51,10 +51,10 @@ class BoundConstVar(BoundVar, Const):
 
 @dataclass(frozen=True)
 class ExistentialConstVar(ExistentialVar, Const):
-    """Existential variable
+    """Existential constant variable.
 
-    During type checking we try to solve all existential type variables and substitute
-    them with concrete types.
+    During type checking we try to solve all existential constant variables and
+    substitute them with concrete constants.
     """
 
     @classmethod

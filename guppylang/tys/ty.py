@@ -72,6 +72,15 @@ class ParametrizedTypeBase(TypeBase, ABC):
 
     args: Sequence[Argument]
 
+    def __post_init__(self) -> None:
+        # Make sure that we don't have nested generic functions
+        for arg in self.args:
+            match arg:
+                case TypeArg(ty=FunctionType(parametrized=True)):
+                    raise InternalGuppyError(
+                        "Tried to construct a higher-rank polymorphic type!"
+                    )
+
     @property
     @abstractmethod
     def intrinsically_linear(self) -> bool:
@@ -156,7 +165,7 @@ class BoundTypeVar(TypeBase, BoundVar):
 
 @dataclass(frozen=True)
 class ExistentialTypeVar(ExistentialVar, TypeBase):
-    """Existential type variable, referencing a parameter of kind `Type`.
+    """Existential type variable.
 
     For example, the empty list literal `[]` is typed as `list[?T]` where `?T` stands
     for an existential type variable.

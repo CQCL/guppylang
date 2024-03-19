@@ -11,8 +11,6 @@ from typing import Any, TypeVar, cast
 
 from guppylang.ast_util import AstNode, get_file, get_line_offset, get_source
 
-# from guppylang.hugr.hugr import Node, OutPortV
-
 
 @dataclass(frozen=True)
 class SourceLoc:
@@ -82,28 +80,6 @@ class MissingModuleError(GuppyError):
 
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
-
-
-# class UndefinedPort(OutPortV):
-#     """Dummy port for undefined variables.
-#
-#     Raises an `InternalGuppyError` if one tries to access one of its properties.
-#     """
-#
-#     def __init__(self, ty: "GuppyType"):
-#         self._ty = ty
-#
-#     @property
-#     def ty(self) -> "GuppyType":
-#         return self._ty
-#
-#     @property
-#     def node(self) -> Node:
-#         raise InternalGuppyError("Tried to access undefined Port")
-#
-#     @property
-#     def offset(self) -> int:
-#         raise InternalGuppyError("Tried to access undefined Port")
 
 
 ExceptHook = Callable[[type[BaseException], BaseException, TracebackType | None], Any]
