@@ -27,7 +27,7 @@ class Transformer(ABC):
     """Abstract base class for a type visitor that transforms types."""
 
     @abstractmethod
-    def transform(self, arg: Any) -> Any | None:
+    def transform(self, arg: Any, /) -> Any | None:
         """Transforms the object.
 
         Return a transformed type or `None` to continue the recursive visit.
@@ -38,7 +38,7 @@ class Visitable(ABC):
     """Abstract base class for objects that can be recursively visited."""
 
     @abstractmethod
-    def visit(self, visitor: Visitor) -> None:
+    def visit(self, visitor: Visitor, /) -> None:
         """Accepts a visitor on the object.
 
         Implementors of this method should first invoke the visitor on the object
@@ -51,7 +51,7 @@ class Transformable(Visitable, ABC, Generic[T]):
     """Abstract base class for objects that can be recursively transformed."""
 
     @abstractmethod
-    def transform(self, transformer: Transformer) -> T:
+    def transform(self, transformer: Transformer, /) -> T:
         """Accepts a transformer on the object.
 
         Implementors of this method should first invoke the transformer on the object
