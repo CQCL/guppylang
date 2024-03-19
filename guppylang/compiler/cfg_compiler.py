@@ -12,8 +12,9 @@ from guppylang.compiler.core import (
 )
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
-from guppylang.gtypes import SumType, TupleType, type_to_row
 from guppylang.hugr.hugr import CFNode, Hugr, Node, OutPortV
+from guppylang.tys.definition import is_bool_type
+from guppylang.tys.ty import SumType, TupleType, type_to_row
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -135,8 +136,10 @@ def choose_vars_for_tuple_sum(
     Given `unit_sum: Sum((), (), ...)` and output variable sets `#s1, #s2, ...`,
     constructs a TupleSum value of type `Sum(Tuple(#s1), Tuple(#s2), ...)`.
     """
-    assert isinstance(unit_sum.ty, SumType)
-    assert len(unit_sum.ty.element_types) == len(output_vars)
+    assert isinstance(unit_sum.ty, SumType) or is_bool_type(unit_sum.ty)
+    assert len(output_vars) == (
+        len(unit_sum.ty.element_types) if isinstance(unit_sum.ty, SumType) else 2
+    )
     tuples = [
         graph.add_make_tuple(
             inputs=[dfg[v.name].port for v in sort_vars(vs) if v.name in dfg],

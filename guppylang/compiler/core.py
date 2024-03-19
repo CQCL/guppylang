@@ -4,8 +4,9 @@ from dataclasses import dataclass
 
 from guppylang.ast_util import AstNode
 from guppylang.checker.core import CallableVariable, Variable
-from guppylang.gtypes import FunctionType, Inst
 from guppylang.hugr.hugr import DFContainingNode, Hugr, OutPortV
+from guppylang.tys.subst import Inst
+from guppylang.tys.ty import FunctionType
 
 
 @dataclass

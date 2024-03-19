@@ -7,7 +7,7 @@ from types import ModuleType
 from typing import Any, Union
 
 from guppylang.ast_util import AstNode, annotate_location
-from guppylang.checker.core import Globals, PyScope, TypeVarDecl, qualified_name
+from guppylang.checker.core import Globals, PyScope, qualified_name
 from guppylang.checker.func_checker import DefinedFunction, check_global_func_def
 from guppylang.compiler.core import CompiledGlobals
 from guppylang.compiler.func_compiler import (
@@ -17,8 +17,9 @@ from guppylang.compiler.func_compiler import (
 from guppylang.custom import CustomFunction
 from guppylang.declared import DeclaredFunction
 from guppylang.error import GuppyError, pretty_errors
-from guppylang.gtypes import GuppyType
 from guppylang.hugr.hugr import Hugr
+from guppylang.tys.definition import TypeDef
+from guppylang.tys.param import TypeParam
 
 PyFunc = Callable[..., Any]
 PyFuncDefOrDecl = tuple[bool, PyFunc]
@@ -92,9 +93,7 @@ class GuppyModule:
                 if isinstance(val, GuppyModule):
                     self.load(val)
 
-    def register_func_def(
-        self, f: PyFunc, instance: type[GuppyType] | None = None
-    ) -> None:
+    def register_func_def(self, f: PyFunc, instance: TypeDef | None = None) -> None:
         """Registers a Python function definition as belonging to this Guppy module."""
         self._check_not_yet_compiled()
         func_ast = parse_py_func(f)
@@ -107,9 +106,7 @@ class GuppyModule:
             self._check_name_available(name, func_ast)
             self._func_defs[name] = func_ast, get_py_scope(f)
 
-    def register_func_decl(
-        self, f: PyFunc, instance: type[GuppyType] | None = None
-    ) -> None:
+    def register_func_decl(self, f: PyFunc, instance: TypeDef | None = None) -> None:
         """Registers a Python function declaration as belonging to this Guppy module."""
         self._check_not_yet_compiled()
         func_ast = parse_py_func(f)
@@ -123,7 +120,7 @@ class GuppyModule:
             self._func_decls[name] = func_ast
 
     def register_custom_func(
-        self, func: CustomFunction, instance: type[GuppyType] | None = None
+        self, func: CustomFunction, instance: TypeDef | None = None
     ) -> None:
         """Registers a custom function as belonging to this Guppy module."""
         self._check_not_yet_compiled()
@@ -135,31 +132,33 @@ class GuppyModule:
             self._check_name_available(func.name, func.defined_at)
             self._custom_funcs[func.name] = func
 
-    def register_type(self, name: str, ty: type[GuppyType]) -> None:
+    def register_type(self, name: str, defn: TypeDef) -> None:
         """Registers an existing Guppy type as belonging to this Guppy module."""
         self._check_not_yet_compiled()
         self._check_type_name_available(name, None)
-        self._globals.types[name] = ty
+        self._globals.type_defs[name] = defn
 
     def register_type_var(self, name: str, linear: bool) -> None:
         """Registers a new type variable"""
         self._check_not_yet_compiled()
         self._check_type_name_available(name, None)
-        self._globals.type_vars[name] = TypeVarDecl(name, linear)
+        self._globals.param_vars[name] = TypeParam(
+            len(self._globals.param_vars), name, linear
+        )
 
-    def _register_buffered_instance_funcs(self, instance: type[GuppyType]) -> None:
+    def _register_buffered_instance_funcs(self, defn: TypeDef) -> None:
         assert self._instance_func_buffer is not None
         buffer = self._instance_func_buffer
         self._instance_func_buffer = None
         for f in buffer.values():
             if isinstance(f, CustomFunction):
-                self.register_custom_func(f, instance)
+                self.register_custom_func(f, defn)
             else:
                 is_def, pyfunc = f
                 if is_def:
-                    self.register_func_def(pyfunc, instance)
+                    self.register_func_def(pyfunc, defn)
                 else:
-                    self.register_func_decl(pyfunc, instance)
+                    self.register_func_decl(pyfunc, defn)
 
     @property
     def compiled(self) -> bool:
@@ -232,7 +231,7 @@ class GuppyModule:
 
     def contains_type(self, name: str) -> bool:
         """Returns 'True' if the module contains a type with the given name."""
-        return name in self._globals.types or name in self._globals.type_vars
+        return name in self._globals.type_defs or name in self._globals.param_vars
 
     def _check_not_yet_compiled(self) -> None:
         if self._compiled:
@@ -246,13 +245,13 @@ class GuppyModule:
             )
 
     def _check_type_name_available(self, name: str, node: AstNode | None) -> None:
-        if name in self._globals.types:
+        if name in self._globals.type_defs:
             raise GuppyError(
                 f"Module `{self.name}` already contains a type `{name}`",
                 node,
             )
 
-        if name in self._globals.type_vars:
+        if name in self._globals.param_vars:
             raise GuppyError(
                 f"Module `{self.name}` already contains a type variable `{name}`",
                 node,

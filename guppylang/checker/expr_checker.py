@@ -49,20 +49,6 @@ from guppylang.error import (
     GuppyTypeInferenceError,
     InternalGuppyError,
 )
-from guppylang.gtypes import (
-    BoolType,
-    ExistentialTypeVar,
-    FunctionType,
-    GuppyType,
-    Inst,
-    LinstType,
-    ListType,
-    NoneType,
-    Subst,
-    TupleType,
-    row_to_type,
-    unify,
-)
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
@@ -75,6 +61,29 @@ from guppylang.nodes import (
     MakeIter,
     PyExpr,
     TypeApply,
+)
+from guppylang.tys.arg import TypeArg
+from guppylang.tys.definition import (
+    bool_type,
+    get_element_type,
+    is_bool_type,
+    is_linst_type,
+    is_list_type,
+    linst_type,
+    list_type,
+)
+from guppylang.tys.param import TypeParam
+from guppylang.tys.subst import Inst, Subst
+from guppylang.tys.ty import (
+    ExistentialTypeVar,
+    FunctionType,
+    NoneType,
+    OpaqueType,
+    TupleType,
+    Type,
+    TypeBase,
+    row_to_type,
+    unify,
 )
 
 # Mapping from unary AST op to dunder method and display name
@@ -128,12 +137,12 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
     def _fail(
         self,
-        expected: GuppyType,
-        actual: ast.expr | GuppyType,
+        expected: Type,
+        actual: ast.expr | Type,
         loc: AstNode | None = None,
     ) -> NoReturn:
         """Raises a type error indicating that the type doesn't match."""
-        if not isinstance(actual, GuppyType):
+        if not isinstance(actual, TypeBase):
             loc = loc or actual
             _, actual = self._synthesize(actual, allow_free_vars=True)
         if loc is None:
@@ -143,7 +152,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         )
 
     def check(
-        self, expr: ast.expr, ty: GuppyType, kind: str = "expression"
+        self, expr: ast.expr, ty: Type, kind: str = "expression"
     ) -> tuple[ast.expr, Subst]:
         """Checks an expression against a type.
 
@@ -173,11 +182,11 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
     def _synthesize(
         self, node: ast.expr, allow_free_vars: bool
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         """Invokes the type synthesiser"""
         return ExprSynthesizer(self.ctx).synthesize(node, allow_free_vars)
 
-    def visit_Tuple(self, node: ast.Tuple, ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def visit_Tuple(self, node: ast.Tuple, ty: Type) -> tuple[ast.expr, Subst]:
         if not isinstance(ty, TupleType) or len(ty.element_types) != len(node.elts):
             return self._fail(ty, node)
         subst: Subst = {}
@@ -186,28 +195,29 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             subst |= s
         return node, subst
 
-    def visit_List(self, node: ast.List, ty: GuppyType) -> tuple[ast.expr, Subst]:
-        if not isinstance(ty, ListType | LinstType):
+    def visit_List(self, node: ast.List, ty: Type) -> tuple[ast.expr, Subst]:
+        if not is_list_type(ty) and not is_linst_type(ty):
             return self._fail(ty, node)
+        el_ty = get_element_type(ty)
         subst: Subst = {}
         for i, el in enumerate(node.elts):
-            node.elts[i], s = self.check(el, ty.element_type.substitute(subst))
+            node.elts[i], s = self.check(el, el_ty.substitute(subst))
             subst |= s
         return node, subst
 
     def visit_DesugaredListComp(
-        self, node: DesugaredListComp, ty: GuppyType
+        self, node: DesugaredListComp, ty: Type
     ) -> tuple[ast.expr, Subst]:
-        if not isinstance(ty, ListType | LinstType):
+        if not is_list_type(ty) and not is_linst_type(ty):
             return self._fail(ty, node)
         node, elt_ty = synthesize_comprehension(node, node.generators, self.ctx)
-        subst = unify(ty.element_type, elt_ty, {})
+        subst = unify(get_element_type(ty), elt_ty, {})
         if subst is None:
-            actual = LinstType(elt_ty) if elt_ty.linear else ListType(elt_ty)
+            actual = linst_type(elt_ty) if elt_ty.linear else list_type(elt_ty)
             return self._fail(ty, actual, node)
         return node, subst
 
-    def visit_Call(self, node: ast.Call, ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def visit_Call(self, node: ast.Call, ty: Type) -> tuple[ast.expr, Subst]:
         if len(node.keywords) > 0:
             raise GuppyError(
                 "Argument passing by keyword is not supported", node.keywords[0]
@@ -231,7 +241,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         else:
             raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
 
-    def visit_PyExpr(self, node: PyExpr, ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def visit_PyExpr(self, node: PyExpr, ty: Type) -> tuple[ast.expr, Subst]:
         python_val = eval_py_expr(node, self.ctx)
         if act := python_value_to_guppy_type(python_val, node, self.ctx.globals):
             subst = unify(ty, act, {})
@@ -246,19 +256,19 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             node,
         )
 
-    def generic_visit(self, node: ast.expr, ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def generic_visit(self, node: ast.expr, ty: Type) -> tuple[ast.expr, Subst]:
         # Try to synthesize and then check if we can unify it with the given type
         node, synth = self._synthesize(node, allow_free_vars=False)
         subst, inst = check_type_against(synth, ty, node, self._kind)
 
         # Apply instantiation of quantified type variables
         if inst:
-            node = with_loc(node, TypeApply(value=node, tys=inst))
+            node = with_loc(node, TypeApply(value=node, inst=inst))
 
         return node, subst
 
 
-class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
+class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
     ctx: Context
 
     def __init__(self, ctx: Context) -> None:
@@ -266,7 +276,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def synthesize(
         self, node: ast.expr, allow_free_vars: bool = False
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         """Tries to synthesise a type for the given expression.
 
         Also returns a new desugared expression with type annotations.
@@ -281,18 +291,18 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         return with_type(ty, node), ty
 
     def _check(
-        self, expr: ast.expr, ty: GuppyType, kind: str = "expression"
+        self, expr: ast.expr, ty: Type, kind: str = "expression"
     ) -> tuple[ast.expr, Subst]:
         """Checks an expression against a given type"""
         return ExprChecker(self.ctx).check(expr, ty, kind)
 
-    def visit_Constant(self, node: ast.Constant) -> tuple[ast.expr, GuppyType]:
+    def visit_Constant(self, node: ast.Constant) -> tuple[ast.expr, Type]:
         ty = python_value_to_guppy_type(node.value, node, self.ctx.globals)
         if ty is None:
             raise GuppyError("Unsupported constant", node)
         return node, ty
 
-    def visit_Name(self, node: ast.Name) -> tuple[ast.Name, GuppyType]:
+    def visit_Name(self, node: ast.Name) -> tuple[ast.Name, Type]:
         x = node.id
         if x in self.ctx.locals:
             var = self.ctx.locals[x]
@@ -314,28 +324,26 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             f"been caught by program analysis!"
         )
 
-    def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, GuppyType]:
+    def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, Type]:
         elems = [self.synthesize(elem) for elem in node.elts]
         node.elts = [n for n, _ in elems]
         return node, TupleType([ty for _, ty in elems])
 
-    def visit_List(self, node: ast.List) -> tuple[ast.expr, GuppyType]:
+    def visit_List(self, node: ast.List) -> tuple[ast.expr, Type]:
         if len(node.elts) == 0:
             raise GuppyTypeInferenceError(
                 "Cannot infer type variable in expression of type `list[?T]`", node
             )
         node.elts[0], el_ty = self.synthesize(node.elts[0])
         node.elts[1:] = [self._check(el, el_ty)[0] for el in node.elts[1:]]
-        return node, LinstType(el_ty) if el_ty.linear else ListType(el_ty)
+        return node, linst_type(el_ty) if el_ty.linear else list_type(el_ty)
 
-    def visit_DesugaredListComp(
-        self, node: DesugaredListComp
-    ) -> tuple[ast.expr, GuppyType]:
+    def visit_DesugaredListComp(self, node: DesugaredListComp) -> tuple[ast.expr, Type]:
         node, elt_ty = synthesize_comprehension(node, node.generators, self.ctx)
-        result_ty = LinstType(elt_ty) if elt_ty.linear else ListType(elt_ty)
+        result_ty = linst_type(elt_ty) if elt_ty.linear else list_type(elt_ty)
         return node, result_ty
 
-    def visit_UnaryOp(self, node: ast.UnaryOp) -> tuple[ast.expr, GuppyType]:
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> tuple[ast.expr, Type]:
         # We need to synthesise the argument type, so we can look up dunder methods
         node.operand, op_ty = self.synthesize(node.operand)
 
@@ -358,7 +366,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def _synthesize_binary(
         self, left_expr: ast.expr, right_expr: ast.expr, op: AstOp, node: ast.expr
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         """Helper method to compile binary operators by calling out to dunder methods.
 
         For example, first try calling `__add__` on the left operand. If that fails, try
@@ -392,7 +400,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         err: str,
         exp_sig: FunctionType | None = None,
         give_reason: bool = False,
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         """Helper method for expressions that are implemented via instance methods.
 
         Raises a `GuppyTypeError` if the given instance method is not defined. The error
@@ -412,16 +420,16 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             )
         if exp_sig and unify(exp_sig, func.ty.unquantified()[0], {}) is None:
             raise GuppyError(
-                f"Method `{ty.name}.{func_name}` has signature `{func.ty}`, but "
+                f"Method `{ty}.{func_name}` has signature `{func.ty}`, but "
                 f"expected `{exp_sig}`",
                 node,
             )
         return func.synthesize_call([node, *args], node, self.ctx)
 
-    def visit_BinOp(self, node: ast.BinOp) -> tuple[ast.expr, GuppyType]:
+    def visit_BinOp(self, node: ast.BinOp) -> tuple[ast.expr, Type]:
         return self._synthesize_binary(node.left, node.right, node.op, node)
 
-    def visit_Compare(self, node: ast.Compare) -> tuple[ast.expr, GuppyType]:
+    def visit_Compare(self, node: ast.Compare) -> tuple[ast.expr, Type]:
         if len(node.comparators) != 1 or len(node.ops) != 1:
             raise InternalGuppyError(
                 "BB contains chained comparison. Should have been removed during CFG "
@@ -430,17 +438,17 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         left_expr, [op], [right_expr] = node.left, node.ops, node.comparators
         return self._synthesize_binary(left_expr, right_expr, op, node)
 
-    def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, GuppyType]:
+    def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType(
-            [ty, ExistentialTypeVar.new("Key", False)],
-            ExistentialTypeVar.new("Val", False),
+            [ty, ExistentialTypeVar.fresh("Key", False)],
+            ExistentialTypeVar.fresh("Val", False),
         )
         return self._synthesize_instance_func(
             node.value, [node.slice], "__getitem__", "not subscriptable", exp_sig
         )
 
-    def visit_Call(self, node: ast.Call) -> tuple[ast.expr, GuppyType]:
+    def visit_Call(self, node: ast.Call) -> tuple[ast.expr, Type]:
         if len(node.keywords) > 0:
             raise GuppyError("Keyword arguments are not supported", node.keywords[0])
         node.func, ty = self.synthesize(node.func)
@@ -461,9 +469,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         else:
             raise GuppyTypeError(f"Expected function type, got `{ty}`", node.func)
 
-    def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, GuppyType]:
+    def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType([ty], ExistentialTypeVar.new("Iter", False))
+        exp_sig = FunctionType([ty], ExistentialTypeVar.fresh("Iter", False))
         expr, ty = self._synthesize_instance_func(
             node.value, [], "__iter__", "not iterable", exp_sig
         )
@@ -483,36 +491,36 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
                 )
         return expr, ty
 
-    def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, GuppyType]:
+    def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType([ty], TupleType([BoolType(), ty]))
+        exp_sig = FunctionType([ty], TupleType([bool_type(), ty]))
         return self._synthesize_instance_func(
             node.value, [], "__hasnext__", "not an iterator", exp_sig, True
         )
 
-    def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, GuppyType]:
+    def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType(
-            [ty], TupleType([ExistentialTypeVar.new("T", False), ty])
+            [ty], TupleType([ExistentialTypeVar.fresh("T", False), ty])
         )
         return self._synthesize_instance_func(
             node.value, [], "__next__", "not an iterator", exp_sig, True
         )
 
-    def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, GuppyType]:
+    def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType([ty], NoneType())
         return self._synthesize_instance_func(
             node.value, [], "__end__", "not an iterator", exp_sig, True
         )
 
-    def visit_ListComp(self, node: ast.ListComp) -> tuple[ast.expr, GuppyType]:
+    def visit_ListComp(self, node: ast.ListComp) -> tuple[ast.expr, Type]:
         raise InternalGuppyError(
             "BB contains `ListComp`. Should have been removed during CFG"
             f"construction: `{ast.unparse(node)}`"
         )
 
-    def visit_PyExpr(self, node: PyExpr) -> tuple[ast.expr, GuppyType]:
+    def visit_PyExpr(self, node: PyExpr) -> tuple[ast.expr, Type]:
         python_val = eval_py_expr(node, self.ctx)
         if ty := python_value_to_guppy_type(python_val, node, self.ctx.globals):
             return with_loc(node, ast.Constant(value=python_val)), ty
@@ -522,19 +530,19 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             node,
         )
 
-    def visit_NamedExpr(self, node: ast.NamedExpr) -> tuple[ast.expr, GuppyType]:
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> tuple[ast.expr, Type]:
         raise InternalGuppyError(
             "BB contains `NamedExpr`. Should have been removed during CFG"
             f"construction: `{ast.unparse(node)}`"
         )
 
-    def visit_BoolOp(self, node: ast.BoolOp) -> tuple[ast.expr, GuppyType]:
+    def visit_BoolOp(self, node: ast.BoolOp) -> tuple[ast.expr, Type]:
         raise InternalGuppyError(
             "BB contains `BoolOp`. Should have been removed during CFG construction: "
             f"`{ast.unparse(node)}`"
         )
 
-    def visit_IfExp(self, node: ast.IfExp) -> tuple[ast.expr, GuppyType]:
+    def visit_IfExp(self, node: ast.IfExp) -> tuple[ast.expr, Type]:
         raise InternalGuppyError(
             "BB contains `IfExp`. Should have been removed during CFG construction: "
             f"`{ast.unparse(node)}`"
@@ -542,42 +550,42 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
 
 def check_type_against(
-    act: GuppyType, exp: GuppyType, node: AstNode, kind: str = "expression"
+    act: Type, exp: Type, node: AstNode, kind: str = "expression"
 ) -> tuple[Subst, Inst]:
     """Checks a type against another type.
 
     Returns a substitution for the free variables the expected type and an instantiation
-    for the quantified variables in the actual type. Note that the expected type may not
-    be quantified and the actual type may not contain free unification variables.
+    for the parameters in the actual type. Note that the expected type may not be
+    parametrised and the actual type may not contain free unification variables.
     """
-    assert not isinstance(exp, FunctionType) or not exp.quantified
+    assert not isinstance(exp, FunctionType) or not exp.parametrized
     assert not act.unsolved_vars
 
-    # The actual type may be quantified. In that case, we have to find an instantiation
-    # to avoid higher-rank types.
+    # The actual type may be parametrised. In that case, we have to find an
+    # instantiation to avoid higher-rank types.
     subst: Subst | None
-    if isinstance(act, FunctionType) and act.quantified:
+    if isinstance(act, FunctionType) and act.parametrized:
         unquantified, free_vars = act.unquantified()
         subst = unify(exp, unquantified, {})
         if subst is None:
             raise GuppyTypeError(f"Expected {kind} of type `{exp}`, got `{act}`", node)
-        # Check that we have found a valid instantiation for all quantified vars
+        # Check that we have found a valid instantiation for all params
         for i, v in enumerate(free_vars):
             if v not in subst:
                 raise GuppyTypeInferenceError(
                     f"Expected {kind} of type `{exp}`, got `{act}`. Couldn't infer an "
-                    f"instantiation for type variable `{act.quantified[i]}` (higher-"
-                    "rank polymorphic types are not supported)",
+                    f"instantiation for parameter `{act.params[i].name}` (higher-rank "
+                    "polymorphic types are not supported)",
                     node,
                 )
             if subst[v].unsolved_vars:
                 raise GuppyTypeError(
                     f"Expected {kind} of type `{exp}`, got `{act}`. Can't instantiate "
-                    f"type variable `{act.quantified[i]}` with type `{subst[v]}` "
-                    "containing free variables",
+                    f"parameter `{act.params[i]}` with type `{subst[v]}` containing "
+                    "free variables",
                     node,
                 )
-        inst = [subst[v] for v in free_vars]
+        inst = [TypeArg(subst[v]) for v in free_vars]
         subst = {v: t for v, t in subst.items() if v in exp.unsolved_vars}
 
         # Finally, check that the instantiation respects the linearity requirements
@@ -608,7 +616,7 @@ def check_num_args(exp: int, act: int, node: AstNode) -> None:
 
 
 def type_check_args(
-    args: list[ast.expr],
+    inputs: list[ast.expr],
     func_ty: FunctionType,
     subst: Subst,
     ctx: Context,
@@ -616,27 +624,27 @@ def type_check_args(
 ) -> tuple[list[ast.expr], Subst]:
     """Checks the arguments of a function call and infers free type variables.
 
-    We expect that quantified variables have been replaced with free unification
-    variables. Checks that all unification variables can be inferred.
+    We expect that parameters have been replaced with free unification variables.
+    Checks that all unification variables can be inferred.
     """
-    assert not func_ty.quantified
-    check_num_args(len(func_ty.args), len(args), node)
+    assert not func_ty.parametrized
+    check_num_args(len(func_ty.inputs), len(inputs), node)
 
     new_args: list[ast.expr] = []
-    for arg, ty in zip(args, func_ty.args):
-        a, s = ExprChecker(ctx).check(arg, ty.substitute(subst), "argument")
+    for inp, ty in zip(inputs, func_ty.inputs):
+        a, s = ExprChecker(ctx).check(inp, ty.substitute(subst), "argument")
         new_args.append(a)
         subst |= s
 
     # If the argument check succeeded, this means that we must have found instantiations
-    # for all unification variables occurring in the argument types
-    assert all(set.issubset(arg.unsolved_vars, subst.keys()) for arg in func_ty.args)
+    # for all unification variables occurring in the input types
+    assert all(set.issubset(inp.unsolved_vars, subst.keys()) for inp in func_ty.inputs)
 
     # We also have to check that we found instantiations for all vars in the return type
-    if not set.issubset(func_ty.returns.unsolved_vars, subst.keys()):
+    if not set.issubset(func_ty.output.unsolved_vars, subst.keys()):
         raise GuppyTypeInferenceError(
             f"Cannot infer type variable in expression of type "
-            f"`{func_ty.returns.substitute(subst)}`",
+            f"`{func_ty.output.substitute(subst)}`",
             node,
         )
 
@@ -645,14 +653,14 @@ def type_check_args(
 
 def synthesize_call(
     func_ty: FunctionType, args: list[ast.expr], node: AstNode, ctx: Context
-) -> tuple[list[ast.expr], GuppyType, Inst]:
+) -> tuple[list[ast.expr], Type, Inst]:
     """Synthesizes the return type of a function call.
 
     Returns an annotated argument list, the synthesized return type, and an
     instantiation for the quantifiers in the function type.
     """
     assert not func_ty.unsolved_vars
-    check_num_args(len(func_ty.args), len(args), node)
+    check_num_args(len(func_ty.inputs), len(args), node)
 
     # Replace quantified variables with free unification variables and try to infer an
     # instantiation by checking the arguments
@@ -661,18 +669,18 @@ def synthesize_call(
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
-    inst = [subst[v] for v in free_vars]
+    inst = [TypeArg(subst[v]) for v in free_vars]
 
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
 
-    return args, unquantified.returns.substitute(subst), inst
+    return args, unquantified.output.substitute(subst), inst
 
 
 def check_call(
     func_ty: FunctionType,
-    args: list[ast.expr],
-    ty: GuppyType,
+    inputs: list[ast.expr],
+    ty: Type,
     node: AstNode,
     ctx: Context,
     kind: str = "expression",
@@ -683,7 +691,7 @@ def check_call(
     expected type, and an instantiation for the quantifiers in the function type.
     """
     assert not func_ty.unsolved_vars
-    check_num_args(len(func_ty.args), len(args), node)
+    check_num_args(len(func_ty.inputs), len(inputs), node)
 
     # When checking, we can use the information from the expected return type to infer
     # some type arguments. However, this pushes errors inwards. For example, given a
@@ -705,9 +713,9 @@ def check_call(
     #  in practice. Can we do better than that?
 
     # First, try to synthesize
-    res: tuple[GuppyType, Inst] | None = None
+    res: tuple[Type, Inst] | None = None
     try:
-        args, synth, inst = synthesize_call(func_ty, args, node, ctx)
+        inputs, synth, inst = synthesize_call(func_ty, inputs, node, ctx)
         res = synth, inst
     except GuppyTypeInferenceError:
         pass
@@ -716,38 +724,38 @@ def check_call(
         subst = unify(ty, synth, {})
         if subst is None:
             raise GuppyTypeError(f"Expected {kind} of type `{ty}`, got `{synth}`", node)
-        return args, subst, inst
+        return inputs, subst, inst
 
     # If synthesis fails, we try again, this time also using information from the
     # expected return type
     unquantified, free_vars = func_ty.unquantified()
-    subst = unify(ty, unquantified.returns, {})
+    subst = unify(ty, unquantified.output, {})
     if subst is None:
         raise GuppyTypeError(
-            f"Expected {kind} of type `{ty}`, got `{unquantified.returns}`", node
+            f"Expected {kind} of type `{ty}`, got `{unquantified.output}`", node
         )
 
     # Try to infer more by checking against the arguments
-    args, subst = type_check_args(args, unquantified, subst, ctx, node)
+    inputs, subst = type_check_args(inputs, unquantified, subst, ctx, node)
 
     # Also make sure we found an instantiation for all free vars in the type we're
     # checking against
     if not set.issubset(ty.unsolved_vars, subst.keys()):
         raise GuppyTypeInferenceError(
             f"Expected expression of type `{ty}`, got "
-            f"`{func_ty.returns.substitute(subst)}`. Couldn't infer type variables",
+            f"`{func_ty.output.substitute(subst)}`. Couldn't infer type variables",
             node,
         )
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
-    inst = [subst[v] for v in free_vars]
+    inst = [TypeArg(subst[v]) for v in free_vars]
     subst = {v: t for v, t in subst.items() if v in ty.unsolved_vars}
 
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
 
-    return args, subst, inst
+    return inputs, subst, inst
 
 
 def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
@@ -755,29 +763,35 @@ def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
 
     Makes sure that the linearity requirements are satisfied.
     """
-    for var, ty in zip(func_ty.quantified, inst):
-        if not var.linear and ty.linear:
+    for param, arg in zip(func_ty.params, inst, strict=True):
+        # Give a more informative error message for linearity issues
+        if (
+            isinstance(param, TypeParam)
+            and isinstance(arg, TypeArg)
+            and arg.ty.linear
+            and not param.can_be_linear
+        ):
             raise GuppyTypeError(
-                f"Cannot instantiate non-linear type variable `{var}` in type "
-                f"`{func_ty}` with linear type `{ty}`",
+                f"Cannot instantiate non-linear type variable `{param.name}` in type "
+                f"`{func_ty}` with linear type `{arg.ty}`",
                 node,
             )
+        # For everything else, we fall back to the default checking implementation
+        param.check_arg(arg, node)
 
 
 def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
     """Instantiates quantified type arguments in a function."""
-    assert len(ty.quantified) == len(inst)
+    assert len(ty.params) == len(inst)
     if len(inst) > 0:
-        node = with_loc(node, TypeApply(value=with_type(ty, node), tys=inst))
+        node = with_loc(node, TypeApply(value=with_type(ty, node), inst=inst))
         return with_type(ty.instantiate(inst), node)
     return node
 
 
-def to_bool(
-    node: ast.expr, node_ty: GuppyType, ctx: Context
-) -> tuple[ast.expr, GuppyType]:
+def to_bool(node: ast.expr, node_ty: Type, ctx: Context) -> tuple[ast.expr, Type]:
     """Tries to turn a node into a bool"""
-    if isinstance(node_ty, BoolType):
+    if is_bool_type(node_ty):
         return node, node_ty
 
     func = ctx.globals.get_instance_func(node_ty, "__bool__")
@@ -790,7 +804,7 @@ def to_bool(
     # We could check the return type against bool, but we can give a better error
     # message if we synthesise and compare to bool by hand
     call, return_ty = func.synthesize_call([node], node, ctx)
-    if not isinstance(return_ty, BoolType):
+    if not is_bool_type(return_ty):
         raise GuppyTypeError(
             f"`__bool__` on type `{node_ty}` returns `{return_ty}` instead of `bool`",
             node,
@@ -800,7 +814,7 @@ def to_bool(
 
 def synthesize_comprehension(
     node: DesugaredListComp, gens: list[DesugaredGenerator], ctx: Context
-) -> tuple[DesugaredListComp, GuppyType]:
+) -> tuple[DesugaredListComp, Type]:
     """Helper function to synthesise the element type of a list comprehension."""
     from guppylang.checker.stmt_checker import StmtChecker
 
@@ -919,25 +933,23 @@ def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
     return python_val
 
 
-def python_value_to_guppy_type(
-    v: Any, node: ast.expr, globals: Globals
-) -> GuppyType | None:
+def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type | None:
     """Turns a primitive Python value into a Guppy type.
 
     Returns `None` if the Python value cannot be represented in Guppy.
     """
     match v:
         case bool():
-            return globals.types["bool"].build(node=node)
+            return globals.type_defs["bool"].check_instantiate([])
         case int():
-            return globals.types["int"].build(node=node)
+            return globals.type_defs["int"].check_instantiate([])
         case float():
-            return globals.types["float"].build(node=node)
+            return globals.type_defs["float"].check_instantiate([])
         case tuple(elts):
             tys = [python_value_to_guppy_type(elt, node, globals) for elt in elts]
             if any(ty is None for ty in tys):
                 return None
-            return TupleType(cast(list[GuppyType], tys))
+            return TupleType(cast(list[Type], tys))
         case list():
             return _python_list_to_guppy_type(v, node, globals)
         case _:
@@ -950,10 +962,12 @@ def python_value_to_guppy_type(
                     try:
                         import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
-                        qubit = globals.types["qubit"].build()
+                        qubit = globals.type_defs["qubit"].check_instantiate([])
                         return FunctionType(
                             [qubit] * v.n_qubits,
-                            row_to_type([qubit] * v.n_qubits + [BoolType()] * v.n_bits),
+                            row_to_type(
+                                [qubit] * v.n_qubits + [bool_type()] * v.n_bits
+                            ),
                         )
                     except ImportError:
                         raise GuppyError(
@@ -968,14 +982,14 @@ def python_value_to_guppy_type(
 
 def _python_list_to_guppy_type(
     vs: list[Any], node: ast.expr, globals: Globals
-) -> ListType | None:
+) -> OpaqueType | None:
     """Turns a Python list into a Guppy type.
 
     Returns `None` if the list contains different types or types that are not
     representable in Guppy.
     """
     if len(vs) == 0:
-        return ListType(ExistentialTypeVar.new("T", False))
+        return list_type(ExistentialTypeVar.fresh("T", False))
 
     # All the list elements must have a unifiable types
     v, *rest = vs
@@ -989,4 +1003,4 @@ def _python_list_to_guppy_type(
         if (subst := unify(ty, el_ty, {})) is None:
             raise GuppyError("Python list contains elements with different types", node)
         el_ty = el_ty.substitute(subst)
-    return ListType(el_ty)
+    return list_type(el_ty)

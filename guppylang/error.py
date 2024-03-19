@@ -10,8 +10,6 @@ from types import TracebackType
 from typing import Any, TypeVar, cast
 
 from guppylang.ast_util import AstNode, get_file, get_line_offset, get_source
-from guppylang.gtypes import BoundTypeVar, ExistentialTypeVar, FunctionType, GuppyType
-from guppylang.hugr.hugr import Node, OutPortV
 
 
 @dataclass(frozen=True)
@@ -82,58 +80,6 @@ class MissingModuleError(GuppyError):
 
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
-
-
-class UndefinedPort(OutPortV):
-    """Dummy port for undefined variables.
-
-    Raises an `InternalGuppyError` if one tries to access one of its properties.
-    """
-
-    def __init__(self, ty: GuppyType):
-        self._ty = ty
-
-    @property
-    def ty(self) -> GuppyType:
-        return self._ty
-
-    @property
-    def node(self) -> Node:
-        raise InternalGuppyError("Tried to access undefined Port")
-
-    @property
-    def offset(self) -> int:
-        raise InternalGuppyError("Tried to access undefined Port")
-
-
-class UnknownFunctionType(FunctionType):
-    """Dummy function type for custom functions without an expressible type.
-
-    Raises an `InternalGuppyError` if one tries to access one of its members.
-    """
-
-    def __init__(self) -> None:
-        pass
-
-    @property
-    def args(self) -> Sequence[GuppyType]:
-        raise InternalGuppyError("Tried to access unknown function type")
-
-    @property
-    def returns(self) -> GuppyType:
-        raise InternalGuppyError("Tried to access unknown function type")
-
-    @property
-    def args_names(self) -> Sequence[str] | None:
-        raise InternalGuppyError("Tried to access unknown function type")
-
-    @property
-    def quantified(self) -> Sequence[BoundTypeVar]:
-        raise InternalGuppyError("Tried to access unknown function type")
-
-    @property
-    def unsolved_vars(self) -> set[ExistentialTypeVar]:
-        return set()
 
 
 ExceptHook = Callable[[type[BaseException], BaseException, TracebackType | None], Any]

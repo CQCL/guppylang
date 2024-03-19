@@ -13,17 +13,6 @@ from guppylang.compiler.core import (
     PortVariable,
 )
 from guppylang.error import GuppyError, InternalGuppyError
-from guppylang.gtypes import (
-    BoolType,
-    BoundTypeVar,
-    FunctionType,
-    GuppyType,
-    Inst,
-    ListType,
-    NoneType,
-    TupleType,
-    type_to_row,
-)
 from guppylang.hugr import ops, val
 from guppylang.hugr.hugr import DFContainingNode, OutPortV, VNode
 from guppylang.nodes import (
@@ -34,6 +23,16 @@ from guppylang.nodes import (
     LocalCall,
     LocalName,
     TypeApply,
+)
+from guppylang.tys.definition import bool_type, get_element_type, is_list_type
+from guppylang.tys.subst import Inst
+from guppylang.tys.ty import (
+    BoundTypeVar,
+    FunctionType,
+    NoneType,
+    TupleType,
+    Type,
+    type_to_row,
 )
 
 
@@ -175,7 +174,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 
         args = [self.visit(arg) for arg in node.args]
         call = self.graph.add_indirect_call(func, args)
-        rets = [call.out_port(i) for i in range(len(type_to_row(func.ty.returns)))]
+        rets = [call.out_port(i) for i in range(len(type_to_row(func.ty.output)))]
         return self._pack_returns(rets)
 
     def visit_GlobalCall(self, node: GlobalCall) -> OutPortV:
@@ -194,7 +193,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
     def visit_TypeApply(self, node: TypeApply) -> OutPortV:
         func = self.visit(node.value)
         assert isinstance(func.ty, FunctionType)
-        ta = self.graph.add_type_apply(func, node.tys, self.dfg.node).out_port(0)
+        ta = self.graph.add_type_apply(func, node.inst, self.dfg.node).out_port(0)
 
         # We have to be very careful here: If we instantiate `foo: forall T. T -> T`
         # with a tuple type `tuple[A, B]`, we get the type `tuple[A, B] -> tuple[A, B]`.
@@ -203,7 +202,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         # function with a single output port typed `tuple[A, B]`.
         # TODO: We would need to do manual monomorphisation in that case to obtain a
         #  function that returns two ports as expected
-        if instantiation_needs_unpacking(func.ty, node.tys):
+        if instantiation_needs_unpacking(func.ty, node.inst):
             raise GuppyError(
                 "Generic function instantiations returning rows are not supported yet",
                 node,
@@ -218,7 +217,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             arg = self.visit(node.operand)
             return self.graph.add_node(
                 ops.CustomOp(extension="logic", op_name="Not", args=[]), inputs=[arg]
-            ).add_out_port(BoolType())
+            ).add_out_port(bool_type())
 
         raise InternalGuppyError("Node should have been removed during type checking.")
 
@@ -291,13 +290,13 @@ def expr_to_row(expr: ast.expr) -> list[ast.expr]:
 
 def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
     """Checks if instantiating a polymorphic makes it return a row."""
-    if isinstance(func_ty.returns, BoundTypeVar):
-        return_ty = inst[func_ty.returns.idx]
+    if isinstance(func_ty.output, BoundTypeVar):
+        return_ty = inst[func_ty.output.idx]
         return isinstance(return_ty, TupleType | NoneType)
     return False
 
 
-def python_value_to_hugr(v: Any, exp_ty: GuppyType) -> val.Value | None:
+def python_value_to_hugr(v: Any, exp_ty: Type) -> val.Value | None:
     """Turns a Python value into a Hugr value.
 
     Returns None if the Python value cannot be represented in Guppy.
@@ -326,9 +325,9 @@ def python_value_to_hugr(v: Any, exp_ty: GuppyType) -> val.Value | None:
                 return None
             return val.Tuple(vs=vs)
         case list(elts):
-            assert isinstance(exp_ty, ListType)
+            assert is_list_type(exp_ty)
             return list_value(
-                [python_value_to_hugr(elt, exp_ty.element_type) for elt in elts]
+                [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
             )
         case _:
             # Pytket conversion is an optional feature
