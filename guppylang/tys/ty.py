@@ -7,15 +7,15 @@ from typing import TYPE_CHECKING, TypeAlias, cast
 from guppylang.error import InternalGuppyError
 from guppylang.hugr import tys
 from guppylang.hugr.tys import TypeBound
-from guppylang.tys.arg import Argument, TypeArg, ConstArg
-from guppylang.tys.common import ToHugr, Visitor, Transformable, Transformer
-from guppylang.tys.const import BoundConstVar, ExistentialConstVar
-from guppylang.tys.param import Parameter, TypeParam
-from guppylang.tys.var import ExistentialVar, BoundVar
+from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
+from guppylang.tys.const import ExistentialConstVar
+from guppylang.tys.param import Parameter
+from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
     from guppylang.tys.definition import OpaqueTypeDef
-    from guppylang.tys.subst import Subst, Inst
+    from guppylang.tys.subst import Inst, Subst
 
 
 @dataclass(frozen=True)
@@ -237,7 +237,13 @@ class FunctionType(ParametrizedTypeBase):
     intrinsically_linear: bool = field(default=False, init=False)
     hugr_bound: tys.TypeBound = field(default=TypeBound.Copyable, init=False)
 
-    def __init__(self, inputs: Sequence["Type"], output: "Type", input_names: Sequence[str] | None = None, params: Sequence[Parameter] | None = None) -> None:
+    def __init__(
+        self,
+        inputs: Sequence["Type"],
+        output: "Type",
+        input_names: Sequence[str] | None = None,
+        params: Sequence[Parameter] | None = None,
+    ) -> None:
         # We need a custom __init__ to set the args
         args = [TypeArg(ty) for ty in inputs]
         args.append(TypeArg(output))
@@ -257,9 +263,7 @@ class FunctionType(ParametrizedTypeBase):
         ins = [t.to_hugr() for t in self.inputs]
         outs = [t.to_hugr() for t in type_to_row(self.output)]
         func_ty = tys.FunctionType(input=ins, output=outs, extension_reqs=[])
-        return tys.PolyFuncType(
-            params=[p.to_hugr() for p in self.params], body=func_ty
-        )
+        return tys.PolyFuncType(params=[p.to_hugr() for p in self.params], body=func_ty)
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -483,7 +487,9 @@ def _unify_var(var: ExistentialTypeVar, t: Type, subst: "Subst") -> "Subst | Non
     return {var: t, **subst}
 
 
-def _unify_args(s: ParametrizedType, t: ParametrizedType, subst: "Subst") -> "Subst | None":
+def _unify_args(
+    s: ParametrizedType, t: ParametrizedType, subst: "Subst"
+) -> "Subst | None":
     """Helper function for unification of type arguments of parametrised types."""
     if len(s.args) != len(t.args):
         return None
@@ -495,7 +501,7 @@ def _unify_args(s: ParametrizedType, t: ParametrizedType, subst: "Subst") -> "Su
                     return None
                 subst = res
             case ConstArg(), ConstArg():
-                raise NotImplemented
+                raise NotImplementedError
             case _:
                 return None
     return subst

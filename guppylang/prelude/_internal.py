@@ -13,12 +13,12 @@ from guppylang.custom import (
     DefaultCallChecker,
 )
 from guppylang.error import GuppyError, GuppyTypeError
-from guppylang.tys.definition import bool_type
-from guppylang.tys.subst import Subst
-from guppylang.tys.ty import FunctionType, Type, unify, OpaqueType
 from guppylang.hugr import ops, tys, val
 from guppylang.hugr.hugr import OutPortV
 from guppylang.nodes import GlobalCall
+from guppylang.tys.definition import bool_type
+from guppylang.tys.subst import Subst
+from guppylang.tys.ty import FunctionType, OpaqueType, Type, unify
 
 INT_WIDTH = 6  # 2^6 = 64 bit
 
@@ -110,12 +110,17 @@ class CoercingChecker(DefaultCallChecker):
 
         for i in range(len(args)):
             args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
-            if isinstance(ty, OpaqueType) and ty.defn == self.ctx.globals.type_defs["int"]:
+            if (
+                isinstance(ty, OpaqueType)
+                and ty.defn == self.ctx.globals.type_defs["int"]
+            ):
                 call = with_loc(
                     self.node,
                     GlobalCall(func=Int.__float__, args=[args[i]], type_args=[]),
                 )
-                args[i] = with_type(self.ctx.globals.type_defs["float"].check_instantiate([]), call)
+                args[i] = with_type(
+                    self.ctx.globals.type_defs["float"].check_instantiate([]), call
+                )
         return super().synthesize(args)
 
 

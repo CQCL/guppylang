@@ -7,13 +7,11 @@ from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Any, TypeVar, cast, TYPE_CHECKING
+from typing import Any, TypeVar, cast
 
 from guppylang.ast_util import AstNode, get_file, get_line_offset, get_source
-# from guppylang.hugr.hugr import Node, OutPortV
 
-if TYPE_CHECKING:
-    from guppylang.tys.ty import Type, FunctionType
+# from guppylang.hugr.hugr import Node, OutPortV
 
 
 @dataclass(frozen=True)

@@ -1,15 +1,14 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Sequence, Callable, Literal
-from typing_extensions import assert_never
+from typing import Literal
 
 from guppylang.ast_util import AstNode
 from guppylang.error import GuppyError
 from guppylang.hugr import tys
-from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.param import Parameter, TypeParam
-
-from guppylang.tys.ty import Type, OpaqueType, TupleType, NoneType, FunctionType
+from guppylang.tys.ty import FunctionType, NoneType, OpaqueType, TupleType, Type
 
 
 @dataclass(frozen=True)
@@ -19,7 +18,9 @@ class TypeDef(ABC):
     name: str
 
     @abstractmethod
-    def check_instantiate(self, args: Sequence[Argument], loc: AstNode | None = None) -> Type:
+    def check_instantiate(
+        self, args: Sequence[Argument], loc: AstNode | None = None
+    ) -> Type:
         """Checks if the type definition can be instantiated with the given arguments.
 
         Returns the resulting concrete type or raises a user error if the arguments are
@@ -36,7 +37,9 @@ class OpaqueTypeDef(TypeDef):
     to_hugr: Callable[[Sequence[Argument]], tys.Type]
     bound: tys.TypeBound | None = None
 
-    def check_instantiate(self, args: Sequence[Argument], loc: AstNode | None = None) -> OpaqueType:
+    def check_instantiate(
+        self, args: Sequence[Argument], loc: AstNode | None = None
+    ) -> OpaqueType:
         """Checks if the type definition can be instantiated with the given arguments.
 
         Returns the resulting concrete type or raises a user error if the arguments are
@@ -67,7 +70,9 @@ class _CallableTypeDef(TypeDef):
 
     name: Literal["Callable"] = field(default="Callable", init=False)
 
-    def check_instantiate(self, args: Sequence[Argument], loc: AstNode | None = None) -> FunctionType:
+    def check_instantiate(
+        self, args: Sequence[Argument], loc: AstNode | None = None
+    ) -> FunctionType:
         # We get the inputs/output as a flattened list: `args = [*inputs, output]`.
         if not args:
             raise GuppyError(f"Missing parameter for type `{self.name}`", loc)
@@ -89,7 +94,9 @@ class _TupleTypeDef(TypeDef):
 
     name: Literal["tuple"] = field(default="tuple", init=False)
 
-    def check_instantiate(self, args: Sequence[Argument], loc: AstNode | None = None) -> TupleType:
+    def check_instantiate(
+        self, args: Sequence[Argument], loc: AstNode | None = None
+    ) -> TupleType:
         # We accept any number of arguments. If users just write `tuple`, we give them
         # the empty tuple type. We just have to make sure that the args are of kind type
         args = [
@@ -109,9 +116,11 @@ class _NoneTypeDef(TypeDef):
 
     name: Literal["tuple"] = field(default="tuple", init=False)
 
-    def check_instantiate(self, args: Sequence[Argument], loc: AstNode | None = None) -> NoneType:
+    def check_instantiate(
+        self, args: Sequence[Argument], loc: AstNode | None = None
+    ) -> NoneType:
         if args:
-            raise GuppyError(f"Type `None` is not parameterized", loc)
+            raise GuppyError("Type `None` is not parameterized", loc)
         return NoneType()
 
 
@@ -123,7 +132,9 @@ class _ListTypeDef(OpaqueTypeDef):
     linear data into a regular list.
     """
 
-    def check_instantiate(self, args: Sequence[Argument], loc: AstNode | None = None) -> OpaqueType:
+    def check_instantiate(
+        self, args: Sequence[Argument], loc: AstNode | None = None
+    ) -> OpaqueType:
         if len(args) == 1:
             [arg] = args
             if isinstance(arg, TypeArg) and arg.ty.linear:
@@ -157,13 +168,13 @@ linst_type_def = OpaqueTypeDef(
     name="linst",
     params=[TypeParam(0, "T", can_be_linear=True)],
     always_linear=False,
-    to_hugr=_list_to_hugr
+    to_hugr=_list_to_hugr,
 )
 list_type_def = _ListTypeDef(
     name="list",
     params=[TypeParam(0, "T", can_be_linear=False)],
     always_linear=False,
-    to_hugr=_list_to_hugr
+    to_hugr=_list_to_hugr,
 )
 
 
@@ -192,10 +203,8 @@ def is_linst_type(ty: Type) -> bool:
 
 
 def get_element_type(ty: Type) -> Type:
-    assert isinstance(ty, OpaqueType) and ty.defn in (list_type_def, linst_type_def)
-    arg, = ty.args
+    assert isinstance(ty, OpaqueType)
+    assert ty.defn in (list_type_def, linst_type_def)
+    (arg,) = ty.args
     assert isinstance(arg, TypeArg)
     return arg.ty
-
-
-

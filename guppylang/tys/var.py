@@ -1,7 +1,8 @@
 import itertools
 from abc import ABC
-from dataclasses import dataclass, field
-from typing import Sequence, Iterator, ClassVar
+from collections.abc import Iterator
+from dataclasses import dataclass
+from typing import ClassVar
 
 # Type of de Bruijn indicies
 DeBruijn = int
@@ -46,4 +47,3 @@ class ExistentialVar(Var, ABC):
 
     # Generator of fresh unique ids
     _fresh_id: ClassVar[Iterator[UniqueId]] = itertools.count()
-

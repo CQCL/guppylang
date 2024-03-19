@@ -1,9 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic, Any, Protocol
-
-from guppylang.hugr import tys
-from guppylang.hugr.tys import TypeBound
-
+from typing import Any, Protocol, TypeVar
 
 T = TypeVar("T", covariant=True)
 T_co = TypeVar("T_co", covariant=True)
@@ -63,4 +59,3 @@ class Transformable(Visitable, Protocol[T]):
         itself. If the visitor doesn't handle the object, the visitor should be used to
         transform all relevant members of the object.
         """
-

@@ -1,13 +1,17 @@
 from functools import singledispatchmethod
-from typing import Any
 
 from guppylang.error import InternalGuppyError
-from guppylang.tys.arg import TypeArg, ConstArg
-from guppylang.tys.common import Visitor
-from guppylang.tys.param import TypeParam, ConstParam
-from guppylang.tys.ty import Type, BoundTypeVar, FunctionType, OpaqueType, \
-    TupleType, SumType, NoneType, TypeBase
-from guppylang.tys.var import Var, BoundVar, UniqueId, ExistentialVar
+from guppylang.tys.arg import ConstArg, TypeArg
+from guppylang.tys.param import ConstParam, TypeParam
+from guppylang.tys.ty import (
+    FunctionType,
+    NoneType,
+    OpaqueType,
+    SumType,
+    TupleType,
+    Type,
+)
+from guppylang.tys.var import BoundVar, ExistentialVar, UniqueId
 
 
 class TypePrinter:
@@ -61,7 +65,7 @@ class TypePrinter:
 
     @singledispatchmethod
     def _visit(self, ty: Type, inside_row: bool) -> str:
-        raise InternalGuppyError(f"Tried to pretty-print unknown type: {repr(ty)}")
+        raise InternalGuppyError(f"Tried to pretty-print unknown type: {ty!r}")
 
     @_visit.register
     def _visit_BoundVar(self, var: BoundVar, inside_row: bool) -> str:
@@ -84,7 +88,7 @@ class TypePrinter:
         output = self._visit(ty.output, True)
         if ty.parametrized:
             quantified = ", ".join([self._visit(param, False) for param in ty.params])
-            del self.bound_names[:-len(ty.params)]
+            del self.bound_names[: -len(ty.params)]
             return _wrap(f"forall {quantified}. {inputs} -> {output}", inside_row)
         return _wrap(f"{inputs} -> {output}", inside_row)
 

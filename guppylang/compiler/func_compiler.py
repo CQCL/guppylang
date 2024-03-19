@@ -9,10 +9,10 @@ from guppylang.compiler.core import (
     DFContainer,
     PortVariable,
 )
-from guppylang.tys.subst import Inst
-from guppylang.tys.ty import FunctionType, type_to_row
 from guppylang.hugr.hugr import DFContainingVNode, Hugr, OutPortV
 from guppylang.nodes import CheckedNestedFunctionDef
+from guppylang.tys.subst import Inst
+from guppylang.tys.ty import FunctionType, type_to_row
 
 
 @dataclass
@@ -84,7 +84,9 @@ def compile_local_func_def(
     )
 
     def_node = graph.add_def(closure_ty, dfg.node, func.name)
-    def_input, input_ports = graph.add_input_with_ports(list(closure_ty.inputs), def_node)
+    def_input, input_ports = graph.add_input_with_ports(
+        list(closure_ty.inputs), def_node
+    )
 
     # If we have captured variables and the body contains a recursive occurrence of
     # the function itself, then we provide the partially applied function as a local

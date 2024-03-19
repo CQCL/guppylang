@@ -16,10 +16,10 @@ from guppylang.cfg.bb import BB, BBStatement
 from guppylang.checker.core import Context, Variable
 from guppylang.checker.expr_checker import ExprChecker, ExprSynthesizer
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
+from guppylang.nodes import NestedFunctionDef
 from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.subst import Subst
-from guppylang.tys.ty import Type, NoneType, TupleType
-from guppylang.nodes import NestedFunctionDef
+from guppylang.tys.ty import NoneType, TupleType, Type
 
 
 class StmtChecker(AstVisitor[BBStatement]):

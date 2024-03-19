@@ -1,7 +1,6 @@
 from abc import ABC
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import TYPE_CHECKING, Literal
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from guppylang.error import InternalGuppyError
 from guppylang.hugr import val
@@ -61,4 +60,3 @@ class ExistentialConstVar(ExistentialVar, Const):
     @classmethod
     def fresh(cls, display_name: str, ty: "Type") -> "ExistentialConstVar":
         return ExistentialConstVar(ty, display_name, next(cls._fresh_id))
-

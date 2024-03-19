@@ -7,6 +7,7 @@ node straight from the Python AST. We build a CFG, check it, and return a
 
 import ast
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from guppylang.ast_util import AstNode, return_nodes_in_ast, with_loc
 from guppylang.cfg.bb import BB
@@ -15,11 +16,13 @@ from guppylang.checker.cfg_checker import CheckedCFG, check_cfg
 from guppylang.checker.core import CallableVariable, Context, Globals, Variable
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.error import GuppyError
-from guppylang.tys.param import TypeParam, Parameter
+from guppylang.nodes import CheckedNestedFunctionDef, GlobalCall, NestedFunctionDef
 from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.subst import Subst
-from guppylang.tys.ty import BoundTypeVar, FunctionType, Type, NoneType
-from guppylang.nodes import CheckedNestedFunctionDef, GlobalCall, NestedFunctionDef
+from guppylang.tys.ty import FunctionType, NoneType, Type
+
+if TYPE_CHECKING:
+    from guppylang.tys.param import Parameter
 
 
 @dataclass
@@ -184,7 +187,7 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         raise GuppyError("Return type must be annotated", func_def)
 
     # TODO: Prepopulate mapping when using Python 3.12 style generic functions
-    type_var_mapping: dict[str, Parameter] = {}
+    type_var_mapping: dict[str, "Parameter"] = {}
     input_tys = []
     input_names = []
     for _i, inp in enumerate(func_def.args.args):

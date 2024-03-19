@@ -13,16 +13,6 @@ from guppylang.compiler.core import (
     PortVariable,
 )
 from guppylang.error import GuppyError, InternalGuppyError
-from guppylang.tys.definition import bool_type, is_list_type, get_element_type
-from guppylang.tys.subst import Inst
-from guppylang.tys.ty import (
-    BoundTypeVar,
-    FunctionType,
-    Type,
-    NoneType,
-    TupleType,
-    type_to_row,
-)
 from guppylang.hugr import ops, val
 from guppylang.hugr.hugr import DFContainingNode, OutPortV, VNode
 from guppylang.nodes import (
@@ -33,6 +23,16 @@ from guppylang.nodes import (
     LocalCall,
     LocalName,
     TypeApply,
+)
+from guppylang.tys.definition import bool_type, get_element_type, is_list_type
+from guppylang.tys.subst import Inst
+from guppylang.tys.ty import (
+    BoundTypeVar,
+    FunctionType,
+    NoneType,
+    TupleType,
+    Type,
+    type_to_row,
 )
 
 

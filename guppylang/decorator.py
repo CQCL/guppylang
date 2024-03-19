@@ -1,12 +1,12 @@
 import functools
 import inspect
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
-from typing import Any, ClassVar, TypeVar
+from typing import Any, TypeVar
 
-from guppylang.ast_util import AstNode, has_empty_body
+from guppylang.ast_util import has_empty_body
 from guppylang.custom import (
     CustomCallChecker,
     CustomCallCompiler,
@@ -16,11 +16,10 @@ from guppylang.custom import (
     OpCompiler,
 )
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
-from guppylang.tys.definition import OpaqueTypeDef, TypeDef
-from guppylang.tys.ty import Type
 from guppylang.hugr import ops, tys
 from guppylang.hugr.hugr import Hugr
 from guppylang.module import GuppyModule, PyFunc, parse_py_func
+from guppylang.tys.definition import OpaqueTypeDef, TypeDef
 
 FuncDecorator = Callable[[PyFunc], PyFunc | Hugr]
 CustomFuncDecorator = Callable[[PyFunc], CustomFunction]

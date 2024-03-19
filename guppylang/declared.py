@@ -7,10 +7,10 @@ from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledFunction, CompiledGlobals, DFContainer
 from guppylang.error import GuppyError
-from guppylang.tys.subst import Subst, Inst
-from guppylang.tys.ty import Type, type_to_row
 from guppylang.hugr.hugr import Hugr, Node, OutPortV, VNode
 from guppylang.nodes import GlobalCall
+from guppylang.tys.subst import Inst, Subst
+from guppylang.tys.ty import Type, type_to_row
 
 
 @dataclass

@@ -1,17 +1,16 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import TYPE_CHECKING, TypeAlias
 
 from typing_extensions import Self
 
 from guppylang.ast_util import AstNode
-from guppylang.error import GuppyTypeError, GuppyError, InternalGuppyError
+from guppylang.error import GuppyTypeError, InternalGuppyError
 from guppylang.hugr import tys
 from guppylang.hugr.tys import TypeBound
-from guppylang.tys.arg import Argument, TypeArg, ConstArg
-from guppylang.tys.common import ToHugr, Transformable
-from guppylang.tys.var import ExistentialVar, BoundVar
+from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.common import ToHugr
+from guppylang.tys.var import ExistentialVar
 
 if TYPE_CHECKING:
     from guppylang.tys.ty import Type
@@ -51,7 +50,7 @@ class ParameterBase(ToHugr[tys.TypeParam], ABC):
         """Returns a copy of the parameter with a new index."""
 
     @abstractmethod
-    def check_arg(self, arg: Argument, loc: AstNode| None = None) -> Argument:
+    def check_arg(self, arg: Argument, loc: AstNode | None = None) -> Argument:
         """Checks that this parameter can be instantiated with a given argument.
 
         Raises a user error if the argument is not valid.
@@ -95,8 +94,7 @@ class TypeParam(ParameterBase):
             case TypeArg(ty):
                 if not self.can_be_linear and ty.linear:
                     raise GuppyTypeError(
-                        f"Expected a non-linear type, got value of type {ty}",
-                        loc
+                        f"Expected a non-linear type, got value of type {ty}", loc
                     )
                 return arg
 
@@ -152,7 +150,7 @@ class ConstParam(ParameterBase):
 
         Raises a user error if the argument is not valid.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def to_existential(self) -> tuple[Argument, ExistentialVar]:
         """Creates a fresh existential variable that can be instantiated for this
@@ -160,15 +158,14 @@ class ConstParam(ParameterBase):
 
         Returns both the argument and the created variable.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def to_bound(self, idx: int | None = None) -> Argument:
         """Creates a bound variable with a given index that can be instantiated for this
         parameter.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def to_hugr(self) -> tys.TypeParam:
         """Computes the Hugr representation of the parameter."""
-        raise NotImplemented
-
+        raise NotImplementedError

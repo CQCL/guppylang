@@ -7,7 +7,7 @@ from types import ModuleType
 from typing import Any, Union
 
 from guppylang.ast_util import AstNode, annotate_location
-from guppylang.checker.core import Globals, PyScope, TypeVarDecl, qualified_name
+from guppylang.checker.core import Globals, PyScope, qualified_name
 from guppylang.checker.func_checker import DefinedFunction, check_global_func_def
 from guppylang.compiler.core import CompiledGlobals
 from guppylang.compiler.func_compiler import (
@@ -17,10 +17,9 @@ from guppylang.compiler.func_compiler import (
 from guppylang.custom import CustomFunction
 from guppylang.declared import DeclaredFunction
 from guppylang.error import GuppyError, pretty_errors
-from guppylang.tys.definition import OpaqueTypeDef, TypeDef
-from guppylang.tys.param import TypeParam
-from guppylang.tys.ty import Type
 from guppylang.hugr.hugr import Hugr
+from guppylang.tys.definition import TypeDef
+from guppylang.tys.param import TypeParam
 
 PyFunc = Callable[..., Any]
 PyFuncDefOrDecl = tuple[bool, PyFunc]
@@ -94,9 +93,7 @@ class GuppyModule:
                 if isinstance(val, GuppyModule):
                     self.load(val)
 
-    def register_func_def(
-        self, f: PyFunc, instance: TypeDef | None = None
-    ) -> None:
+    def register_func_def(self, f: PyFunc, instance: TypeDef | None = None) -> None:
         """Registers a Python function definition as belonging to this Guppy module."""
         self._check_not_yet_compiled()
         func_ast = parse_py_func(f)
@@ -109,9 +106,7 @@ class GuppyModule:
             self._check_name_available(name, func_ast)
             self._func_defs[name] = func_ast, get_py_scope(f)
 
-    def register_func_decl(
-        self, f: PyFunc, instance: TypeDef | None = None
-    ) -> None:
+    def register_func_decl(self, f: PyFunc, instance: TypeDef | None = None) -> None:
         """Registers a Python function declaration as belonging to this Guppy module."""
         self._check_not_yet_compiled()
         func_ast = parse_py_func(f)
@@ -147,7 +142,9 @@ class GuppyModule:
         """Registers a new type variable"""
         self._check_not_yet_compiled()
         self._check_type_name_available(name, None)
-        self._globals.param_vars[name] = TypeParam(len(self._globals.param_vars), name, linear)
+        self._globals.param_vars[name] = TypeParam(
+            len(self._globals.param_vars), name, linear
+        )
 
     def _register_buffered_instance_funcs(self, defn: TypeDef) -> None:
         assert self._instance_func_buffer is not None

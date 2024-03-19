@@ -9,16 +9,16 @@ import networkx as nx  # type: ignore[import-untyped]
 
 import guppylang.hugr.ops as ops
 import guppylang.hugr.raw as raw
+from guppylang.hugr import val
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     FunctionType,
-    Type,
     SumType,
     TupleType,
+    Type,
     row_to_type,
     type_to_row,
 )
-from guppylang.hugr import tys, val
 
 NodeIdx = int
 PortOffset = int
@@ -521,9 +521,9 @@ class Hugr:
         assert len(def_port.ty.inputs) >= len(inputs)
         assert [p.ty for p in inputs] == def_port.ty.inputs[: len(inputs)]
         new_ty = FunctionType(
-            def_port.ty.inputs[len(inputs):],
+            def_port.ty.inputs[len(inputs) :],
             def_port.ty.output,
-            def_port.ty.input_names[len(inputs):]
+            def_port.ty.input_names[len(inputs) :]
             if def_port.ty.input_names is not None
             else None,
         )

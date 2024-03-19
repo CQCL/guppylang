@@ -15,7 +15,6 @@ from guppylang.cfg.bb import BB, BBStatement
 from guppylang.cfg.cfg import CFG
 from guppylang.checker.core import Globals
 from guppylang.error import GuppyError, InternalGuppyError
-from guppylang.tys.ty import NoneType
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
@@ -26,6 +25,7 @@ from guppylang.nodes import (
     NestedFunctionDef,
     PyExpr,
 )
+from guppylang.tys.ty import NoneType
 
 # In order to build expressions, need an endless stream of unique temporary variables
 # to store intermediate results

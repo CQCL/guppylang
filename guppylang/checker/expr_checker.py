@@ -49,20 +49,6 @@ from guppylang.error import (
     GuppyTypeInferenceError,
     InternalGuppyError,
 )
-from guppylang.tys.arg import TypeArg
-from guppylang.tys.definition import is_list_type, is_linst_type, linst_type, list_type, \
-    get_element_type, bool_type, is_bool_type
-from guppylang.tys.param import TypeParam
-from guppylang.tys.subst import Subst, Inst
-from guppylang.tys.ty import (
-    ExistentialTypeVar,
-    FunctionType,
-    Type,
-    NoneType,
-    TupleType,
-    row_to_type,
-    unify, OpaqueType, TypeBase,
-)
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
@@ -75,6 +61,29 @@ from guppylang.nodes import (
     MakeIter,
     PyExpr,
     TypeApply,
+)
+from guppylang.tys.arg import TypeArg
+from guppylang.tys.definition import (
+    bool_type,
+    get_element_type,
+    is_bool_type,
+    is_linst_type,
+    is_list_type,
+    linst_type,
+    list_type,
+)
+from guppylang.tys.param import TypeParam
+from guppylang.tys.subst import Inst, Subst
+from guppylang.tys.ty import (
+    ExistentialTypeVar,
+    FunctionType,
+    NoneType,
+    OpaqueType,
+    TupleType,
+    Type,
+    TypeBase,
+    row_to_type,
+    unify,
 )
 
 # Mapping from unary AST op to dunder method and display name
@@ -329,9 +338,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         node.elts[1:] = [self._check(el, el_ty)[0] for el in node.elts[1:]]
         return node, linst_type(el_ty) if el_ty.linear else list_type(el_ty)
 
-    def visit_DesugaredListComp(
-        self, node: DesugaredListComp
-    ) -> tuple[ast.expr, Type]:
+    def visit_DesugaredListComp(self, node: DesugaredListComp) -> tuple[ast.expr, Type]:
         node, elt_ty = synthesize_comprehension(node, node.generators, self.ctx)
         result_ty = linst_type(elt_ty) if elt_ty.linear else list_type(elt_ty)
         return node, result_ty
@@ -758,7 +765,12 @@ def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
     """
     for param, arg in zip(func_ty.params, inst, strict=True):
         # Give a more informative error message for linearity issues
-        if isinstance(param, TypeParam) and isinstance(arg, TypeArg) and arg.ty.linear and not param.can_be_linear:
+        if (
+            isinstance(param, TypeParam)
+            and isinstance(arg, TypeArg)
+            and arg.ty.linear
+            and not param.can_be_linear
+        ):
             raise GuppyTypeError(
                 f"Cannot instantiate non-linear type variable `{param.name}` in type "
                 f"`{func_ty}` with linear type `{arg.ty}`",
@@ -777,9 +789,7 @@ def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
     return node
 
 
-def to_bool(
-    node: ast.expr, node_ty: Type, ctx: Context
-) -> tuple[ast.expr, Type]:
+def to_bool(node: ast.expr, node_ty: Type, ctx: Context) -> tuple[ast.expr, Type]:
     """Tries to turn a node into a bool"""
     if is_bool_type(node_ty):
         return node, node_ty
@@ -923,9 +933,7 @@ def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
     return python_val
 
 
-def python_value_to_guppy_type(
-    v: Any, node: ast.expr, globals: Globals
-) -> Type | None:
+def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type | None:
     """Turns a primitive Python value into a Guppy type.
 
     Returns `None` if the Python value cannot be represented in Guppy.
@@ -957,7 +965,9 @@ def python_value_to_guppy_type(
                         qubit = globals.type_defs["qubit"].check_instantiate([])
                         return FunctionType(
                             [qubit] * v.n_qubits,
-                            row_to_type([qubit] * v.n_qubits + [bool_type()] * v.n_bits),
+                            row_to_type(
+                                [qubit] * v.n_qubits + [bool_type()] * v.n_bits
+                            ),
                         )
                     except ImportError:
                         raise GuppyError(

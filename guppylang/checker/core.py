@@ -9,15 +9,26 @@ from typing import Any, NamedTuple
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, name_nodes_in_ast
-from guppylang.tys.definition import TypeDef, callable_type_def, list_type_def, \
-    tuple_type_def, none_type_def, linst_type_def, bool_type_def
+from guppylang.tys.definition import (
+    TypeDef,
+    bool_type_def,
+    callable_type_def,
+    linst_type_def,
+    list_type_def,
+    none_type_def,
+    tuple_type_def,
+)
 from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Subst
 from guppylang.tys.ty import (
+    BoundTypeVar,
+    ExistentialTypeVar,
     FunctionType,
-    Type,
     NoneType,
-    TupleType, BoundTypeVar, ExistentialTypeVar, OpaqueType, SumType,
+    OpaqueType,
+    SumType,
+    TupleType,
+    Type,
 )
 
 

@@ -1,13 +1,11 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
-from dataclasses import dataclass, field
-from functools import cached_property
-from typing import TYPE_CHECKING, Protocol, TypeAlias, TypeVar
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, TypeAlias
 
-from guppylang.hugr import val, tys
-from guppylang.tys.const import Const
+from guppylang.hugr import tys
 from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
-from guppylang.tys.var import ExistentialVar, BoundVar
+from guppylang.tys.const import Const
+from guppylang.tys.var import ExistentialVar
 
 if TYPE_CHECKING:
     from guppylang.tys.ty import Type
@@ -74,18 +72,16 @@ class ConstArg(ArgumentBase):
     @property
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this argument."""
-        raise NotImplemented
+        raise NotImplementedError
 
     def to_hugr(self) -> tys.TypeArg:
         """Computes the Hugr representation of the argument."""
-        raise NotImplemented
+        raise NotImplementedError
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this argument."""
-        raise NotImplemented
+        raise NotImplementedError
 
     def transform(self, transformer: Transformer) -> Argument:
         """Accepts a transformer on this argument."""
-        raise NotImplemented
-
-
+        raise NotImplementedError

@@ -3,10 +3,10 @@ from collections.abc import Sequence
 
 from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals
-from guppylang.error import GuppyError, GuppyTypeError
+from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, TypeArg
-from guppylang.tys.param import Parameter, TypeParam, ConstParam
-from guppylang.tys.ty import BoundTypeVar, Type, NoneType, TupleType, FunctionType
+from guppylang.tys.param import Parameter, TypeParam
+from guppylang.tys.ty import NoneType, TupleType, Type
 
 
 def arg_from_ast(
@@ -45,8 +45,9 @@ def arg_from_ast(
             # we turn `Callable[[int, int], bool]` into `Callable[int, int, bool]`.
             # TODO: We can get rid of this once we added support for variadic params
             arg_nodes = [
-                n for arg in arg_nodes
-                for n in (arg.elts if isinstance(arg, ast.List) else (arg, ))
+                n
+                for arg in arg_nodes
+                for n in (arg.elts if isinstance(arg, ast.List) else (arg,))
             ]
             args = [
                 arg_from_ast(arg_node, globals, param_var_mapping)
@@ -59,7 +60,7 @@ def arg_from_ast(
             raise GuppyError(
                 f"Variable `{x}` is not parameterized. Higher-kinded types are not "
                 f"supported",
-                node
+                node,
             )
 
     # We allow tuple types to be written as `(int, bool)`
@@ -113,4 +114,3 @@ def type_row_from_ast(node: ast.expr, globals: "Globals") -> Sequence[Type]:
         return ty.element_types
     else:
         return [ty]
-

@@ -1,15 +1,13 @@
 import functools
-from collections.abc import Sequence, Iterator
-from contextlib import contextmanager
+from collections.abc import Sequence
 from typing import Any
 
 from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument, TypeArg
-from guppylang.tys.ty import Type, ExistentialTypeVar, BoundTypeVar, FunctionType
 from guppylang.tys.common import Transformer
-from guppylang.tys.const import ExistentialConstVar, BoundConstVar
+from guppylang.tys.const import BoundConstVar, ExistentialConstVar
+from guppylang.tys.ty import BoundTypeVar, ExistentialTypeVar, FunctionType, Type
 from guppylang.tys.var import ExistentialVar
-
 
 Subst = dict[ExistentialVar, Type]  # TODO: `GuppyType | Const` or `Argument` ??
 Inst = Sequence[Argument]
@@ -22,7 +20,7 @@ class Substituter(Transformer):
         self.subst = subst
 
     @functools.singledispatchmethod
-    def transform(self, ty: Any) -> Any | None:   # type: ignore[override]
+    def transform(self, ty: Any) -> Any | None:  # type: ignore[override]
         return None
 
     @transform.register
@@ -64,4 +62,3 @@ class Instantiator(Transformer):
         if ty.parametrized:
             raise InternalGuppyError("Tried to instantiate under binder")
         return None
-
