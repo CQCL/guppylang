@@ -17,6 +17,15 @@ if TYPE_CHECKING:
     from guppylang.tys.ty import GuppyType
 
 
+# We define the `Parameter` type as a union of all `ParameterBase` subclasses defined
+# below. This models an algebraic data type and enables exhaustiveness checking in
+# pattern matches etc.
+# Note that this might become obsolete in case the `@sealed` decorator is added:
+#  * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
+#  * https://github.com/johnthagen/sealed-typing-pep
+Parameter: TypeAlias = "TypeParam | ConstParam"
+
+
 @dataclass(frozen=True)
 class ParameterBase(ToHugr[tys.TypeParam], ABC):
     """Abstract base class for parameters used in function and type definitions.
@@ -61,15 +70,6 @@ class ParameterBase(ToHugr[tys.TypeParam], ABC):
         """Creates a bound variable with a given index that can be instantiated for this
         parameter.
         """
-
-
-# We define the `Parameter` type as a union of all `ParameterBase` subclasses defined
-# below. This models an algebraic data type and enables exhaustiveness checking in
-# pattern matches etc.
-# Note that this might become obsolete in case the `@sealed` decorator is added:
-#  * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
-#  * https://github.com/johnthagen/sealed-typing-pep
-Parameter: TypeAlias = "TypeParam | ConstParam"
 
 
 @dataclass(frozen=True)

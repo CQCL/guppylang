@@ -13,6 +13,15 @@ if TYPE_CHECKING:
     from guppylang.tys.ty import GuppyType
 
 
+# We define the `Argument` type as a union of all `ArgumentBase` subclasses defined
+# below. This models an algebraic data type and enables exhaustiveness checking in
+# pattern matches etc.
+# Note that this might become obsolete in case the `@sealed` decorator is added:
+#  * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
+#  * https://github.com/johnthagen/sealed-typing-pep
+Argument: TypeAlias = "TypeArg | ConstArg"
+
+
 @dataclass(frozen=True)
 class ArgumentBase(ToHugr[tys.TypeArg], Transformable["Argument"], ABC):
     """Abstract base class for arguments of parametrized types.
@@ -24,15 +33,6 @@ class ArgumentBase(ToHugr[tys.TypeArg], Transformable["Argument"], ABC):
     @abstractmethod
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this argument."""
-
-
-# We define the `Argument` type as a union of all `ArgumentBase` subclasses defined
-# below. This models an algebraic data type and enables exhaustiveness checking in
-# pattern matches etc.
-# Note that this might become obsolete in case the `@sealed` decorator is added:
-#  * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
-#  * https://github.com/johnthagen/sealed-typing-pep
-Argument: TypeAlias = "TypeArg | ConstArg"
 
 
 @dataclass(frozen=True)

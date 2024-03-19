@@ -61,7 +61,7 @@ from guppylang.tys.ty import (
     NoneType,
     TupleType,
     row_to_type,
-    unify, OpaqueType,
+    unify, OpaqueType, GuppyTypeBase,
 )
 from guppylang.nodes import (
     DesugaredGenerator,
@@ -133,7 +133,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         loc: AstNode | None = None,
     ) -> NoReturn:
         """Raises a type error indicating that the type doesn't match."""
-        if not isinstance(actual, GuppyType):
+        if not isinstance(actual, GuppyTypeBase):
             loc = loc or actual
             _, actual = self._synthesize(actual, allow_free_vars=True)
         if loc is None:

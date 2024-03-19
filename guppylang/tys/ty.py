@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias, cast
 
 from guppylang.error import InternalGuppyError
 from guppylang.hugr import tys
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class GuppyType(ToHugr[tys.Type], Transformable["GuppyType"], ABC):
+class GuppyTypeBase(ToHugr[tys.Type], Transformable["GuppyType"], ABC):
     """Abstract base class for all Guppy types.
 
     Note that all subclasses are expected to be immutable.
@@ -57,97 +57,17 @@ class GuppyType(ToHugr[tys.Type], Transformable["GuppyType"], ABC):
 
         # We use a custom printer that takes care of inserting parentheses and choosing
         # unique names
-        return TypePrinter().visit(self)
+        return TypePrinter().visit(cast(GuppyType, self))
 
 
 @dataclass(frozen=True)
-class BoundTypeVar(GuppyType, BoundVar):
-    """Bound type variable, referencing a parameter of kind `Type`.
-
-    For example, in the function type `forall T. list[T] -> T` we represent `T` as a
-    `BoundTypeVar(idx=0)`.
-
-    A bound type variables can be instantiated with a `TypeArg` argument.
-    """
-
-    linear: bool
-
-    @cached_property
-    def hugr_bound(self) -> tys.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
-        if self.linear:
-            return TypeBound.Any
-        # We're conservative and don't require equatability for non-linear variables.
-        # This is fine since Guppy doesn't use the equatable feature anyways.
-        return TypeBound.Copyable
-
-    def to_hugr(self) -> tys.Type:
-        """Computes the Hugr representation of the type."""
-        return tys.Variable(i=self.idx, b=self.hugr_bound)
-
-    def visit(self, visitor: Visitor) -> None:
-        """Accepts a visitor on this type."""
-        visitor.visit(self)
-
-    def transform(self, transformer: Transformer) -> GuppyType:
-        """Accepts a transformer on this type."""
-        return transformer.transform(self) or self
-
-    def __str__(self) -> str:
-        """Returns a human-readable representation of the type."""
-        return self.display_name
-
-
-@dataclass(frozen=True)
-class ExistentialTypeVar(ExistentialVar, GuppyType):
-    """Existential type variable, referencing a parameter of kind `Type`.
-
-    For example, the empty list literal `[]` is typed as `list[?T]` where `?T` stands
-    for an existential type variable.
-
-    During type checking we try to solve all existential type variables and substitute
-    them with concrete types.
-    """
-
-    linear: bool
-
-    @classmethod
-    def fresh(cls, display_name: str, linear: bool) -> "ExistentialTypeVar":
-        return ExistentialTypeVar(display_name, next(cls._fresh_id), linear)
-
-    @cached_property
-    def unsolved_vars(self) -> set[ExistentialVar]:
-        """The existential type variables contained in this type."""
-        return {self}
-
-    @cached_property
-    def hugr_bound(self) -> tys.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
-        raise InternalGuppyError(
-            "Tried to compute bound of unsolved existential type variable"
-        )
-
-    def to_hugr(self) -> tys.Type:
-        """Computes the Hugr representation of the type."""
-        raise InternalGuppyError(
-            "Tried to convert unsolved existential type variable to Hugr"
-        )
-
-    def visit(self, visitor: Visitor) -> None:
-        """Accepts a visitor on this type."""
-        visitor.visit(self)
-
-    def transform(self, transformer: Transformer) -> GuppyType:
-        """Accepts a transformer on this type."""
-        return transformer.transform(self) or self
-
-
-@dataclass(frozen=True)
-class ParametrizedType(GuppyType, ABC):
+class ParametrizedTypeBase(GuppyTypeBase, ABC):
     """Abstract base class for types that depend on parameters.
 
     For example, `list`, `tuple`, etc. require arguments in order to be turned into a
     proper type.
+
+    Note that all subclasses are expected to be immutable.
     """
 
     args: Sequence[Argument]
@@ -196,12 +116,119 @@ class ParametrizedType(GuppyType, ABC):
                 visitor.visit(arg)
 
 
+@dataclass(frozen=True)
+class BoundTypeVar(GuppyTypeBase, BoundVar):
+    """Bound type variable, referencing a parameter of kind `Type`.
+
+    For example, in the function type `forall T. list[T] -> T` we represent `T` as a
+    `BoundTypeVar(idx=0)`.
+
+    A bound type variables can be instantiated with a `TypeArg` argument.
+    """
+
+    linear: bool
+
+    @cached_property
+    def hugr_bound(self) -> tys.TypeBound:
+        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
+        if self.linear:
+            return TypeBound.Any
+        # We're conservative and don't require equatability for non-linear variables.
+        # This is fine since Guppy doesn't use the equatable feature anyways.
+        return TypeBound.Copyable
+
+    def to_hugr(self) -> tys.Type:
+        """Computes the Hugr representation of the type."""
+        return tys.Variable(i=self.idx, b=self.hugr_bound)
+
+    def visit(self, visitor: Visitor) -> None:
+        """Accepts a visitor on this type."""
+        visitor.visit(self)
+
+    def transform(self, transformer: Transformer) -> "GuppyType":
+        """Accepts a transformer on this type."""
+        return transformer.transform(self) or self
+
+    def __str__(self) -> str:
+        """Returns a human-readable representation of the type."""
+        return self.display_name
+
+
+@dataclass(frozen=True)
+class ExistentialTypeVar(ExistentialVar, GuppyTypeBase):
+    """Existential type variable, referencing a parameter of kind `Type`.
+
+    For example, the empty list literal `[]` is typed as `list[?T]` where `?T` stands
+    for an existential type variable.
+
+    During type checking we try to solve all existential type variables and substitute
+    them with concrete types.
+    """
+
+    linear: bool
+
+    @classmethod
+    def fresh(cls, display_name: str, linear: bool) -> "ExistentialTypeVar":
+        return ExistentialTypeVar(display_name, next(cls._fresh_id), linear)
+
+    @cached_property
+    def unsolved_vars(self) -> set[ExistentialVar]:
+        """The existential type variables contained in this type."""
+        return {self}
+
+    @cached_property
+    def hugr_bound(self) -> tys.TypeBound:
+        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
+        raise InternalGuppyError(
+            "Tried to compute bound of unsolved existential type variable"
+        )
+
+    def to_hugr(self) -> tys.Type:
+        """Computes the Hugr representation of the type."""
+        raise InternalGuppyError(
+            "Tried to convert unsolved existential type variable to Hugr"
+        )
+
+    def visit(self, visitor: Visitor) -> None:
+        """Accepts a visitor on this type."""
+        visitor.visit(self)
+
+    def transform(self, transformer: Transformer) -> "GuppyType":
+        """Accepts a transformer on this type."""
+        return transformer.transform(self) or self
+
+
+@dataclass(frozen=True)
+class NoneType(GuppyTypeBase):
+    """Type of tuples."""
+
+    linear: bool = field(default=False, init=False)
+    hugr_bound: tys.TypeBound = field(default=tys.TypeBound.Eq, init=False)
+
+    # Flag to avoid turning the type into a row when calling `type_to_row()`. This is
+    # used to make sure that type vars instantiated to Nones are not broken up into
+    # empty rows when generating a Hugr
+    preserve: bool = field(default=False, compare=False)
+
+    def to_hugr(self) -> tys.Type:
+        """Computes the Hugr representation of the type."""
+        return tys.TupleType(inner=[])
+
+    def visit(self, visitor: Visitor) -> None:
+        """Accepts a visitor on this type."""
+        visitor.visit(self)
+
+    def transform(self, transformer: Transformer) -> "GuppyType":
+        """Accepts a transformer on this type."""
+        return transformer.transform(self) or self
+
+
 @dataclass(frozen=True, init=False)
-class FunctionType(ParametrizedType):
+class FunctionType(ParametrizedTypeBase):
     """Type of (potentially generic) functions."""
 
-    inputs: Sequence[GuppyType]
-    output: GuppyType
+    inputs: Sequence["GuppyType"]
+    output: "GuppyType"
     params: Sequence[Parameter]
     input_names: Sequence[str] | None
 
@@ -210,7 +237,7 @@ class FunctionType(ParametrizedType):
     intrinsically_linear: bool = field(default=False, init=False)
     hugr_bound: tys.TypeBound = field(default=TypeBound.Copyable, init=False)
 
-    def __init__(self, inputs: Sequence[GuppyType], output: GuppyType, input_names: Sequence[str] | None = None, params: Sequence[Parameter] | None = None) -> None:
+    def __init__(self, inputs: Sequence["GuppyType"], output: "GuppyType", input_names: Sequence[str] | None = None, params: Sequence[Parameter] | None = None) -> None:
         # We need a custom __init__ to set the args
         args = [TypeArg(ty) for ty in inputs]
         args.append(TypeArg(output))
@@ -243,7 +270,7 @@ class FunctionType(ParametrizedType):
             for param in self.params:
                 visitor.visit(param)
 
-    def transform(self, transformer: Transformer) -> GuppyType:
+    def transform(self, transformer: Transformer) -> "GuppyType":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or FunctionType(
             [inp.transform(transformer) for inp in self.inputs],
@@ -281,8 +308,77 @@ class FunctionType(ParametrizedType):
         return self.instantiate([arg for arg, _ in exs]), [var for _, var in exs]
 
 
+@dataclass(frozen=True, init=False)
+class TupleType(ParametrizedTypeBase):
+    """Type of tuples."""
+
+    element_types: Sequence["GuppyType"]
+
+    # Flag to avoid turning the tuple into a row when calling `type_to_row()`. This is
+    # used to make sure that type vars instantiated to tuples are not broken up into
+    # rows when generating a Hugr
+    preserve: bool = field(default=False, compare=False)
+
+    def __init__(self, element_types: Sequence["GuppyType"], preserve: bool = False) -> None:
+        # We need a custom __init__ to set the args
+        args = [TypeArg(ty) for ty in element_types]
+        object.__setattr__(self, "args", args)
+        object.__setattr__(self, "element_types", element_types)
+        object.__setattr__(self, "preserve", preserve)
+
+    @property
+    def intrinsically_linear(self) -> bool:
+        return False
+
+    def to_hugr(self) -> tys.Type:
+        """Computes the Hugr representation of the type."""
+        return tys.TupleType(inner=[ty.to_hugr() for ty in self.element_types])
+
+    def transform(self, transformer: Transformer) -> "GuppyType":
+        """Accepts a transformer on this type."""
+        return transformer.transform(self) or TupleType(
+            [ty.transform(transformer) for ty in self.element_types], self.preserve
+        )
+
+
+@dataclass(frozen=True, init=False)
+class SumType(ParametrizedTypeBase):
+    """Type of sums.
+
+    Note that this type is only used internally when constructing the Hugr. Users cannot
+    write down this type.
+    """
+
+    element_types: Sequence["GuppyType"]
+
+    def __init__(self, element_types: Sequence["GuppyType"]) -> None:
+        # We need a custom __init__ to set the args
+        args = [TypeArg(ty) for ty in element_types]
+        object.__setattr__(self, "args", args)
+        object.__setattr__(self, "element_types", element_types)
+
+    @property
+    def intrinsically_linear(self) -> bool:
+        return False
+
+    def to_hugr(self) -> tys.Type:
+        """Computes the Hugr representation of the type."""
+        if all(
+            isinstance(e, TupleType) and len(e.element_types) == 0
+            for e in self.element_types
+        ):
+            return tys.UnitSum(size=len(self.element_types))
+        return tys.GeneralSum(row=[t.to_hugr() for t in self.element_types])
+
+    def transform(self, transformer: Transformer) -> "GuppyType":
+        """Accepts a transformer on this type."""
+        return transformer.transform(self) or SumType(
+            [ty.transform(transformer) for ty in self.element_types]
+        )
+
+
 @dataclass(frozen=True)
-class OpaqueType(ParametrizedType):
+class OpaqueType(ParametrizedTypeBase):
     """Type that is directly backed by a Hugr opaque type.
 
     For example, many builtin types like `int`, `float`, `list` etc. are directly backed
@@ -307,108 +403,23 @@ class OpaqueType(ParametrizedType):
         """Computes the Hugr representation of the type."""
         return self.defn.to_hugr(self.args)
 
-    def transform(self, transformer: Transformer) -> GuppyType:
+    def transform(self, transformer: Transformer) -> "GuppyType":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or OpaqueType(
             [arg.transform(transformer) for arg in self.args], self.defn
         )
 
 
-@dataclass(frozen=True, init=False)
-class TupleType(ParametrizedType):
-    """Type of tuples."""
+# We define the `GuppyType` type as a union of all `GuppyTypeBase` subclasses defined
+# above. This models an algebraic data type and enables exhaustiveness checking in
+# pattern matches etc.
+# Note that this might become obsolete in case the `@sealed` decorator is added:
+#  * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
+#  * https://github.com/johnthagen/sealed-typing-pep
+ParametrizedType: TypeAlias = FunctionType | TupleType | SumType | OpaqueType
+GuppyType: TypeAlias = BoundTypeVar | ExistentialTypeVar | NoneType | ParametrizedType
 
-    element_types: Sequence[GuppyType]
-
-    # Flag to avoid turning the tuple into a row when calling `type_to_row()`. This is
-    # used to make sure that type vars instantiated to tuples are not broken up into
-    # rows when generating a Hugr
-    preserve: bool = field(default=False, compare=False)
-
-    def __init__(self, element_types: Sequence[GuppyType], preserve: bool = False) -> None:
-        # We need a custom __init__ to set the args
-        args = [TypeArg(ty) for ty in element_types]
-        object.__setattr__(self, "args", args)
-        object.__setattr__(self, "element_types", element_types)
-        object.__setattr__(self, "preserve", preserve)
-
-    @property
-    def intrinsically_linear(self) -> bool:
-        return False
-
-    def to_hugr(self) -> tys.Type:
-        """Computes the Hugr representation of the type."""
-        return tys.TupleType(inner=[ty.to_hugr() for ty in self.element_types])
-
-    def transform(self, transformer: Transformer) -> GuppyType:
-        """Accepts a transformer on this type."""
-        return transformer.transform(self) or TupleType(
-            [ty.transform(transformer) for ty in self.element_types], self.preserve
-        )
-
-
-@dataclass(frozen=True, init=False)
-class SumType(ParametrizedType):
-    """Type of sums.
-
-    Note that this type is only used internally when constructing the Hugr. Users cannot
-    write down this type.
-    """
-
-    element_types: Sequence[GuppyType]
-
-    def __init__(self, element_types: Sequence[GuppyType]) -> None:
-        # We need a custom __init__ to set the args
-        args = [TypeArg(ty) for ty in element_types]
-        object.__setattr__(self, "args", args)
-        object.__setattr__(self, "element_types", element_types)
-
-    @property
-    def intrinsically_linear(self) -> bool:
-        return False
-
-    def to_hugr(self) -> tys.Type:
-        """Computes the Hugr representation of the type."""
-        if all(
-            isinstance(e, TupleType) and len(e.element_types) == 0
-            for e in self.element_types
-        ):
-            return tys.UnitSum(size=len(self.element_types))
-        return tys.GeneralSum(row=[t.to_hugr() for t in self.element_types])
-
-    def transform(self, transformer: Transformer) -> GuppyType:
-        """Accepts a transformer on this type."""
-        return transformer.transform(self) or SumType(
-            [ty.transform(transformer) for ty in self.element_types]
-        )
-
-
-@dataclass(frozen=True)
-class NoneType(GuppyType):
-    """Type of tuples."""
-
-    linear: bool = field(default=False, init=False)
-    hugr_bound: tys.TypeBound = field(default=tys.TypeBound.Eq, init=False)
-
-    # Flag to avoid turning the type into a row when calling `type_to_row()`. This is
-    # used to make sure that type vars instantiated to Nones are not broken up into
-    # empty rows when generating a Hugr
-    preserve: bool = field(default=False, compare=False)
-
-    def to_hugr(self) -> tys.Type:
-        """Computes the Hugr representation of the type."""
-        return tys.TupleType(inner=[])
-
-    def visit(self, visitor: Visitor) -> None:
-        """Accepts a visitor on this type."""
-        visitor.visit(self)
-
-    def transform(self, transformer: Transformer) -> GuppyType:
-        """Accepts a transformer on this type."""
-        return transformer.transform(self) or self
-
-
-TypeRow = Sequence[GuppyType]
+TypeRow: TypeAlias = Sequence[GuppyType]
 
 
 def row_to_type(row: TypeRow) -> GuppyType:
@@ -438,30 +449,25 @@ def unify(s: GuppyType, t: GuppyType, subst: "Subst | None") -> "Subst | None":
     """
     if subst is None:
         return None
-    if s == t:
-        # In particular, this case handles bound variables and None types
-        return subst
     match s, t:
+        case ExistentialTypeVar(id=s_id), ExistentialTypeVar(id=t_id) if s_id == t_id:
+            return subst
         case ExistentialTypeVar() as s, t:
             return _unify_var(s, t, subst)
         case s, ExistentialTypeVar() as t:
             return _unify_var(t, s, subst)
-        case ParametrizedType() as s, ParametrizedType() as t if len(s.args) == len(t.args):
-            # We need some extra checks for function parameters and opaque types
-            match s, t:
-                case FunctionType() as s, FunctionType() as t if s.params != t.params:
-                    return None
-                case OpaqueType() as s, OpaqueType() as t if s.defn != t.defn:
-                    return None
-                case _:
-                    # Otherwise, we can unify the arguments
-                    for sa, ta in zip(s.args, t.args):
-                        if isinstance(sa, TypeArg) and isinstance(ta, TypeArg):
-                            subst = unify(sa.ty, ta.ty, subst)
-                        else:
-                            # TODO: Unify constants
-                            raise NotImplemented
-                    return subst
+        case BoundTypeVar(idx=s_idx), BoundTypeVar(idx=t_idx) if s_idx == t_idx:
+            return subst
+        case NoneType(), NoneType():
+            return subst
+        case FunctionType() as s, FunctionType() as t if s.params == t.params:
+            return _unify_args(s, t, subst)
+        case TupleType() as s, TupleType() as t:
+            return _unify_args(s, t, subst)
+        case SumType() as s, SumType() as t:
+            return _unify_args(s, t, subst)
+        case OpaqueType() as s, OpaqueType() as t if s.defn == t.defn:
+            return _unify_args(s, t, subst)
         case _:
             return None
 
@@ -476,3 +482,20 @@ def _unify_var(var: ExistentialTypeVar, t: GuppyType, subst: "Subst") -> "Subst 
         return None
     return {var: t, **subst}
 
+
+def _unify_args(s: ParametrizedType, t: ParametrizedType, subst: "Subst") -> "Subst | None":
+    """Helper function for unification of type arguments of parametrised types."""
+    if len(s.args) != len(t.args):
+        return None
+    for sa, ta in zip(s.args, t.args, strict=True):
+        match sa, ta:
+            case TypeArg(ty=sa_ty), TypeArg(ty=ta_ty):
+                res = unify(sa_ty, ta_ty, subst)
+                if res is None:
+                    return None
+                subst = res
+            case ConstArg(), ConstArg():
+                raise NotImplemented
+            case _:
+                return None
+    return subst

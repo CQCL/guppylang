@@ -294,11 +294,11 @@ def with_type(ty: "GuppyType", node: A) -> A:
 
 def get_type_opt(node: AstNode) -> Optional["GuppyType"]:
     """Tries to retrieve a type annotation from an AST node."""
-    from guppylang.tys.ty import GuppyType
+    from guppylang.tys.ty import GuppyType, GuppyTypeBase
 
     try:
         ty = node.type  # type: ignore[union-attr]
-        return ty if isinstance(ty, GuppyType) else None
+        return cast(GuppyType, ty) if isinstance(ty, GuppyTypeBase) else None
     except AttributeError:
         return None
 

@@ -6,7 +6,7 @@ from guppylang.tys.arg import TypeArg, ConstArg
 from guppylang.tys.common import Visitor
 from guppylang.tys.param import TypeParam, ConstParam
 from guppylang.tys.ty import GuppyType, BoundTypeVar, FunctionType, OpaqueType, \
-    TupleType, SumType, NoneType
+    TupleType, SumType, NoneType, GuppyTypeBase
 from guppylang.tys.var import Var, BoundVar, UniqueId, ExistentialVar
 
 
