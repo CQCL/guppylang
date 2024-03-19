@@ -422,7 +422,6 @@ OpType = TypeAliasType(
         (
             Module
             | Case
-            | Module
             | FuncDefn
             | FuncDecl
             | Const
