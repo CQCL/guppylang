@@ -17,7 +17,7 @@ from guppylang.custom import (
 )
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
 from guppylang.tys.definition import OpaqueTypeDef, TypeDef
-from guppylang.tys.ty import GuppyType
+from guppylang.tys.ty import Type
 from guppylang.hugr import ops, tys
 from guppylang.hugr.hugr import Hugr
 from guppylang.module import GuppyModule, PyFunc, parse_py_func

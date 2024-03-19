@@ -13,7 +13,7 @@ from guppylang.ast_util import AstNode, get_file, get_line_offset, get_source
 # from guppylang.hugr.hugr import Node, OutPortV
 
 if TYPE_CHECKING:
-    from guppylang.tys.ty import GuppyType, FunctionType
+    from guppylang.tys.ty import Type, FunctionType
 
 
 @dataclass(frozen=True)

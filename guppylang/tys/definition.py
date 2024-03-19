@@ -9,7 +9,7 @@ from guppylang.hugr import tys
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.param import Parameter, TypeParam
 
-from guppylang.tys.ty import GuppyType, OpaqueType, TupleType, NoneType, FunctionType
+from guppylang.tys.ty import Type, OpaqueType, TupleType, NoneType, FunctionType
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,7 @@ class TypeDef(ABC):
     name: str
 
     @abstractmethod
-    def check_instantiate(self, args: Sequence[Argument], loc: AstNode | None = None) -> GuppyType:
+    def check_instantiate(self, args: Sequence[Argument], loc: AstNode | None = None) -> Type:
         """Checks if the type definition can be instantiated with the given arguments.
 
         Returns the resulting concrete type or raises a user error if the arguments are
@@ -171,27 +171,27 @@ def bool_type() -> OpaqueType:
     return OpaqueType([], bool_type_def)
 
 
-def list_type(element_ty: GuppyType) -> OpaqueType:
+def list_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], list_type_def)
 
 
-def linst_type(element_ty: GuppyType) -> OpaqueType:
+def linst_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], linst_type_def)
 
 
-def is_bool_type(ty: GuppyType) -> bool:
+def is_bool_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == bool_type_def
 
 
-def is_list_type(ty: GuppyType) -> bool:
+def is_list_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == list_type_def
 
 
-def is_linst_type(ty: GuppyType) -> bool:
+def is_linst_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == linst_type_def
 
 
-def get_element_type(ty: GuppyType) -> GuppyType:
+def get_element_type(ty: Type) -> Type:
     assert isinstance(ty, OpaqueType) and ty.defn in (list_type_def, linst_type_def)
     arg, = ty.args
     assert isinstance(arg, TypeArg)

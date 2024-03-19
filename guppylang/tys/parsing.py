@@ -6,7 +6,7 @@ from guppylang.checker.core import Globals
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.param import Parameter, TypeParam, ConstParam
-from guppylang.tys.ty import BoundTypeVar, GuppyType, NoneType, TupleType, FunctionType
+from guppylang.tys.ty import BoundTypeVar, Type, NoneType, TupleType, FunctionType
 
 
 def arg_from_ast(
@@ -93,14 +93,14 @@ def type_from_ast(
     node: AstNode,
     globals: Globals,
     param_var_mapping: dict[str, Parameter] | None = None,
-) -> GuppyType:
+) -> Type:
     """Turns an AST expression into a Guppy type."""
     # Parse an argument and check that it's valid for a `TypeParam`
     arg = arg_from_ast(node, globals, param_var_mapping)
     return _type_param.check_arg(arg, node).ty
 
 
-def type_row_from_ast(node: ast.expr, globals: "Globals") -> Sequence[GuppyType]:
+def type_row_from_ast(node: ast.expr, globals: "Globals") -> Sequence[Type]:
     """Turns an AST expression into a Guppy type row.
 
     This is needed to interpret the return type annotation of functions.

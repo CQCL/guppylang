@@ -18,17 +18,17 @@ from guppylang.checker.expr_checker import ExprChecker, ExprSynthesizer
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.subst import Subst
-from guppylang.tys.ty import GuppyType, NoneType, TupleType
+from guppylang.tys.ty import Type, NoneType, TupleType
 from guppylang.nodes import NestedFunctionDef
 
 
 class StmtChecker(AstVisitor[BBStatement]):
     ctx: Context
     bb: BB | None
-    return_ty: GuppyType | None
+    return_ty: Type | None
 
     def __init__(
-        self, ctx: Context, bb: BB | None = None, return_ty: GuppyType | None = None
+        self, ctx: Context, bb: BB | None = None, return_ty: Type | None = None
     ) -> None:
         assert not return_ty or not return_ty.unsolved_vars
         self.ctx = ctx
@@ -38,15 +38,15 @@ class StmtChecker(AstVisitor[BBStatement]):
     def check_stmts(self, stmts: Sequence[BBStatement]) -> list[BBStatement]:
         return [self.visit(s) for s in stmts]
 
-    def _synth_expr(self, node: ast.expr) -> tuple[ast.expr, GuppyType]:
+    def _synth_expr(self, node: ast.expr) -> tuple[ast.expr, Type]:
         return ExprSynthesizer(self.ctx).synthesize(node)
 
     def _check_expr(
-        self, node: ast.expr, ty: GuppyType, kind: str = "expression"
+        self, node: ast.expr, ty: Type, kind: str = "expression"
     ) -> tuple[ast.expr, Subst]:
         return ExprChecker(self.ctx).check(node, ty, kind)
 
-    def _check_assign(self, lhs: ast.expr, ty: GuppyType, node: ast.stmt) -> None:
+    def _check_assign(self, lhs: ast.expr, ty: Type, node: ast.stmt) -> None:
         """Helper function to check assignments with patterns."""
         match lhs:
             # Easiest case is if the LHS pattern is a single variable.

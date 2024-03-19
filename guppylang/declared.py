@@ -8,7 +8,7 @@ from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledFunction, CompiledGlobals, DFContainer
 from guppylang.error import GuppyError
 from guppylang.tys.subst import Subst, Inst
-from guppylang.tys.ty import GuppyType, type_to_row
+from guppylang.tys.ty import Type, type_to_row
 from guppylang.hugr.hugr import Hugr, Node, OutPortV, VNode
 from guppylang.nodes import GlobalCall
 
@@ -31,7 +31,7 @@ class DeclaredFunction(CompiledFunction):
         return DeclaredFunction(name, ty, func_def, None)
 
     def check_call(
-        self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context
+        self, args: list[ast.expr], ty: Type, node: AstNode, ctx: Context
     ) -> tuple[ast.expr, Subst]:
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.ty, args, ty, node, ctx)
@@ -39,7 +39,7 @@ class DeclaredFunction(CompiledFunction):
 
     def synthesize_call(
         self, args: list[ast.expr], node: AstNode, ctx: Context
-    ) -> tuple[GlobalCall, GuppyType]:
+    ) -> tuple[GlobalCall, Type]:
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.ty, args, node, ctx)
         return with_loc(node, GlobalCall(func=self, args=args, type_args=inst)), ty

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, cast
 
 if TYPE_CHECKING:
-    from guppylang.tys.ty import GuppyType
+    from guppylang.tys.ty import Type
 
 AstNode = (
     ast.AST
@@ -286,24 +286,24 @@ def with_loc(loc: ast.AST, node: A) -> A:
     return node
 
 
-def with_type(ty: "GuppyType", node: A) -> A:
+def with_type(ty: "Type", node: A) -> A:
     """Annotates an AST node with a type."""
     node.type = ty  # type: ignore[attr-defined]
     return node
 
 
-def get_type_opt(node: AstNode) -> Optional["GuppyType"]:
+def get_type_opt(node: AstNode) -> Optional["Type"]:
     """Tries to retrieve a type annotation from an AST node."""
-    from guppylang.tys.ty import GuppyType, GuppyTypeBase
+    from guppylang.tys.ty import Type, TypeBase
 
     try:
         ty = node.type  # type: ignore[union-attr]
-        return cast(GuppyType, ty) if isinstance(ty, GuppyTypeBase) else None
+        return cast(Type, ty) if isinstance(ty, TypeBase) else None
     except AttributeError:
         return None
 
 
-def get_type(node: AstNode) -> "GuppyType":
+def get_type(node: AstNode) -> "Type":
     """Retrieve a type annotation from an AST node.
 
     Fails if the node is not annotated.

@@ -8,7 +8,7 @@ from guppylang.hugr import val
 from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
-    from guppylang.tys.ty import GuppyType
+    from guppylang.tys.ty import Type
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ class Const(ABC):
     we could have struct constants etc.
     """
 
-    ty: "GuppyType"
+    ty: "Type"
 
     def __post_init__(self) -> None:
         if self.ty.unsolved_vars:
@@ -59,6 +59,6 @@ class ExistentialConstVar(ExistentialVar, Const):
     """
 
     @classmethod
-    def fresh(cls, display_name: str, ty: "GuppyType") -> "ExistentialConstVar":
+    def fresh(cls, display_name: str, ty: "Type") -> "ExistentialConstVar":
         return ExistentialConstVar(ty, display_name, next(cls._fresh_id))
 

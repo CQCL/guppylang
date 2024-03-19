@@ -5,8 +5,8 @@ from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import TypeArg, ConstArg
 from guppylang.tys.common import Visitor
 from guppylang.tys.param import TypeParam, ConstParam
-from guppylang.tys.ty import GuppyType, BoundTypeVar, FunctionType, OpaqueType, \
-    TupleType, SumType, NoneType, GuppyTypeBase
+from guppylang.tys.ty import Type, BoundTypeVar, FunctionType, OpaqueType, \
+    TupleType, SumType, NoneType, TypeBase
 from guppylang.tys.var import Var, BoundVar, UniqueId, ExistentialVar
 
 
@@ -56,11 +56,11 @@ class TypePrinter:
         self.used_names.add(indexed)
         return indexed
 
-    def visit(self, ty: GuppyType) -> str:
+    def visit(self, ty: Type) -> str:
         return self._visit(ty, False)
 
     @singledispatchmethod
-    def _visit(self, ty: GuppyType, inside_row: bool) -> str:
+    def _visit(self, ty: Type, inside_row: bool) -> str:
         raise InternalGuppyError(f"Tried to pretty-print unknown type: {repr(ty)}")
 
     @_visit.register

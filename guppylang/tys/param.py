@@ -14,7 +14,7 @@ from guppylang.tys.common import ToHugr, Transformable
 from guppylang.tys.var import ExistentialVar, BoundVar
 
 if TYPE_CHECKING:
-    from guppylang.tys.ty import GuppyType
+    from guppylang.tys.ty import Type
 
 
 # We define the `Parameter` type as a union of all `ParameterBase` subclasses defined
@@ -135,7 +135,7 @@ class ConstParam(ParameterBase):
     Note that support for this kind is not implemented yet.
     """
 
-    ty: "GuppyType"
+    ty: "Type"
 
     def __post_init__(self) -> None:
         if self.ty.unsolved_vars:

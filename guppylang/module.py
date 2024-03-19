@@ -19,7 +19,7 @@ from guppylang.declared import DeclaredFunction
 from guppylang.error import GuppyError, pretty_errors
 from guppylang.tys.definition import OpaqueTypeDef, TypeDef
 from guppylang.tys.param import TypeParam
-from guppylang.tys.ty import GuppyType
+from guppylang.tys.ty import Type
 from guppylang.hugr.hugr import Hugr
 
 PyFunc = Callable[..., Any]

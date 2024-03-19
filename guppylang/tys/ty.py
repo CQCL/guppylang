@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class GuppyTypeBase(ToHugr[tys.Type], Transformable["GuppyType"], ABC):
+class TypeBase(ToHugr[tys.Type], Transformable["Type"], ABC):
     """Abstract base class for all Guppy types.
 
     Note that all subclasses are expected to be immutable.
@@ -45,7 +45,7 @@ class GuppyTypeBase(ToHugr[tys.Type], Transformable["GuppyType"], ABC):
         """The existential type variables contained in this type."""
         return set()
 
-    def substitute(self, subst: "Subst") -> "GuppyType":
+    def substitute(self, subst: "Subst") -> "Type":
         """Substitutes existential variables in this type."""
         from guppylang.tys.subst import Substituter
 
@@ -57,11 +57,11 @@ class GuppyTypeBase(ToHugr[tys.Type], Transformable["GuppyType"], ABC):
 
         # We use a custom printer that takes care of inserting parentheses and choosing
         # unique names
-        return TypePrinter().visit(cast(GuppyType, self))
+        return TypePrinter().visit(cast(Type, self))
 
 
 @dataclass(frozen=True)
-class ParametrizedTypeBase(GuppyTypeBase, ABC):
+class ParametrizedTypeBase(TypeBase, ABC):
     """Abstract base class for types that depend on parameters.
 
     For example, `list`, `tuple`, etc. require arguments in order to be turned into a
@@ -117,7 +117,7 @@ class ParametrizedTypeBase(GuppyTypeBase, ABC):
 
 
 @dataclass(frozen=True)
-class BoundTypeVar(GuppyTypeBase, BoundVar):
+class BoundTypeVar(TypeBase, BoundVar):
     """Bound type variable, referencing a parameter of kind `Type`.
 
     For example, in the function type `forall T. list[T] -> T` we represent `T` as a
@@ -145,7 +145,7 @@ class BoundTypeVar(GuppyTypeBase, BoundVar):
         """Accepts a visitor on this type."""
         visitor.visit(self)
 
-    def transform(self, transformer: Transformer) -> "GuppyType":
+    def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or self
 
@@ -155,7 +155,7 @@ class BoundTypeVar(GuppyTypeBase, BoundVar):
 
 
 @dataclass(frozen=True)
-class ExistentialTypeVar(ExistentialVar, GuppyTypeBase):
+class ExistentialTypeVar(ExistentialVar, TypeBase):
     """Existential type variable, referencing a parameter of kind `Type`.
 
     For example, the empty list literal `[]` is typed as `list[?T]` where `?T` stands
@@ -193,13 +193,13 @@ class ExistentialTypeVar(ExistentialVar, GuppyTypeBase):
         """Accepts a visitor on this type."""
         visitor.visit(self)
 
-    def transform(self, transformer: Transformer) -> "GuppyType":
+    def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or self
 
 
 @dataclass(frozen=True)
-class NoneType(GuppyTypeBase):
+class NoneType(TypeBase):
     """Type of tuples."""
 
     linear: bool = field(default=False, init=False)
@@ -218,7 +218,7 @@ class NoneType(GuppyTypeBase):
         """Accepts a visitor on this type."""
         visitor.visit(self)
 
-    def transform(self, transformer: Transformer) -> "GuppyType":
+    def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or self
 
@@ -227,8 +227,8 @@ class NoneType(GuppyTypeBase):
 class FunctionType(ParametrizedTypeBase):
     """Type of (potentially generic) functions."""
 
-    inputs: Sequence["GuppyType"]
-    output: "GuppyType"
+    inputs: Sequence["Type"]
+    output: "Type"
     params: Sequence[Parameter]
     input_names: Sequence[str] | None
 
@@ -237,7 +237,7 @@ class FunctionType(ParametrizedTypeBase):
     intrinsically_linear: bool = field(default=False, init=False)
     hugr_bound: tys.TypeBound = field(default=TypeBound.Copyable, init=False)
 
-    def __init__(self, inputs: Sequence["GuppyType"], output: "GuppyType", input_names: Sequence[str] | None = None, params: Sequence[Parameter] | None = None) -> None:
+    def __init__(self, inputs: Sequence["Type"], output: "Type", input_names: Sequence[str] | None = None, params: Sequence[Parameter] | None = None) -> None:
         # We need a custom __init__ to set the args
         args = [TypeArg(ty) for ty in inputs]
         args.append(TypeArg(output))
@@ -270,7 +270,7 @@ class FunctionType(ParametrizedTypeBase):
             for param in self.params:
                 visitor.visit(param)
 
-    def transform(self, transformer: Transformer) -> "GuppyType":
+    def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or FunctionType(
             [inp.transform(transformer) for inp in self.inputs],
@@ -312,14 +312,14 @@ class FunctionType(ParametrizedTypeBase):
 class TupleType(ParametrizedTypeBase):
     """Type of tuples."""
 
-    element_types: Sequence["GuppyType"]
+    element_types: Sequence["Type"]
 
     # Flag to avoid turning the tuple into a row when calling `type_to_row()`. This is
     # used to make sure that type vars instantiated to tuples are not broken up into
     # rows when generating a Hugr
     preserve: bool = field(default=False, compare=False)
 
-    def __init__(self, element_types: Sequence["GuppyType"], preserve: bool = False) -> None:
+    def __init__(self, element_types: Sequence["Type"], preserve: bool = False) -> None:
         # We need a custom __init__ to set the args
         args = [TypeArg(ty) for ty in element_types]
         object.__setattr__(self, "args", args)
@@ -334,7 +334,7 @@ class TupleType(ParametrizedTypeBase):
         """Computes the Hugr representation of the type."""
         return tys.TupleType(inner=[ty.to_hugr() for ty in self.element_types])
 
-    def transform(self, transformer: Transformer) -> "GuppyType":
+    def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or TupleType(
             [ty.transform(transformer) for ty in self.element_types], self.preserve
@@ -349,9 +349,9 @@ class SumType(ParametrizedTypeBase):
     write down this type.
     """
 
-    element_types: Sequence["GuppyType"]
+    element_types: Sequence["Type"]
 
-    def __init__(self, element_types: Sequence["GuppyType"]) -> None:
+    def __init__(self, element_types: Sequence["Type"]) -> None:
         # We need a custom __init__ to set the args
         args = [TypeArg(ty) for ty in element_types]
         object.__setattr__(self, "args", args)
@@ -370,7 +370,7 @@ class SumType(ParametrizedTypeBase):
             return tys.UnitSum(size=len(self.element_types))
         return tys.GeneralSum(row=[t.to_hugr() for t in self.element_types])
 
-    def transform(self, transformer: Transformer) -> "GuppyType":
+    def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or SumType(
             [ty.transform(transformer) for ty in self.element_types]
@@ -403,26 +403,26 @@ class OpaqueType(ParametrizedTypeBase):
         """Computes the Hugr representation of the type."""
         return self.defn.to_hugr(self.args)
 
-    def transform(self, transformer: Transformer) -> "GuppyType":
+    def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or OpaqueType(
             [arg.transform(transformer) for arg in self.args], self.defn
         )
 
 
-# We define the `GuppyType` type as a union of all `GuppyTypeBase` subclasses defined
-# above. This models an algebraic data type and enables exhaustiveness checking in
-# pattern matches etc.
+# We define the `Type` type as a union of all `TypeBase` subclasses defined above. This
+# models an algebraic data type and enables exhaustiveness checking in pattern matches
+# etc.
 # Note that this might become obsolete in case the `@sealed` decorator is added:
 #  * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
 #  * https://github.com/johnthagen/sealed-typing-pep
 ParametrizedType: TypeAlias = FunctionType | TupleType | SumType | OpaqueType
-GuppyType: TypeAlias = BoundTypeVar | ExistentialTypeVar | NoneType | ParametrizedType
+Type: TypeAlias = BoundTypeVar | ExistentialTypeVar | NoneType | ParametrizedType
 
-TypeRow: TypeAlias = Sequence[GuppyType]
+TypeRow: TypeAlias = Sequence[Type]
 
 
-def row_to_type(row: TypeRow) -> GuppyType:
+def row_to_type(row: TypeRow) -> Type:
     """Turns a row of types into a single type by packing into a tuple."""
     if len(row) == 0:
         return NoneType()
@@ -432,7 +432,7 @@ def row_to_type(row: TypeRow) -> GuppyType:
         return TupleType(row)
 
 
-def type_to_row(ty: GuppyType) -> TypeRow:
+def type_to_row(ty: Type) -> TypeRow:
     """Turns a type into a row of types by unpacking top-level tuples."""
     if isinstance(ty, NoneType) and not ty.preserve:
         return []
@@ -441,7 +441,7 @@ def type_to_row(ty: GuppyType) -> TypeRow:
     return [ty]
 
 
-def unify(s: GuppyType, t: GuppyType, subst: "Subst | None") -> "Subst | None":
+def unify(s: Type, t: Type, subst: "Subst | None") -> "Subst | None":
     """Computes a most general unifier for two types.
 
     Return a substitutions `subst` such that `s[subst] == t[subst]` or `None` if this
@@ -472,7 +472,7 @@ def unify(s: GuppyType, t: GuppyType, subst: "Subst | None") -> "Subst | None":
             return None
 
 
-def _unify_var(var: ExistentialTypeVar, t: GuppyType, subst: "Subst") -> "Subst | None":
+def _unify_var(var: ExistentialTypeVar, t: Type, subst: "Subst") -> "Subst | None":
     """Helper function for unification of type variables."""
     if var in subst:
         return unify(subst[var], t, subst)

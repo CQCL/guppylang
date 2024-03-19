@@ -5,7 +5,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import FunctionType, GuppyType
+from guppylang.tys.ty import FunctionType, Type
 
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import CFG

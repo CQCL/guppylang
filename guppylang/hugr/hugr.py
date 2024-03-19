@@ -12,7 +12,7 @@ import guppylang.hugr.raw as raw
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     FunctionType,
-    GuppyType,
+    Type,
     SumType,
     TupleType,
     row_to_type,
@@ -44,7 +44,7 @@ class OutPort(Port, ABC):
 class InPortV(InPort):
     """A typed value input port."""
 
-    ty: GuppyType
+    ty: Type
     offset: PortOffset
 
 
@@ -52,7 +52,7 @@ class InPortV(InPort):
 class OutPortV(OutPort):
     """A typed value output port."""
 
-    ty: GuppyType
+    ty: Type
     offset: PortOffset
 
 
@@ -70,7 +70,7 @@ class OutPortCF(OutPort):
 
 Edge = tuple[OutPort, InPort]
 
-TypeList = list[GuppyType]
+TypeList = list[Type]
 
 
 @dataclass
@@ -138,13 +138,13 @@ class VNode(Node):
         """The number of output ports on this node."""
         return len(self.out_port_types)
 
-    def add_in_port(self, ty: GuppyType) -> InPortV:
+    def add_in_port(self, ty: Type) -> InPortV:
         """Adds an input port at the end of the node and returns the port."""
         p = InPortV(self, self.num_in_ports, ty)
         self.in_port_types.append(ty)
         return p
 
-    def add_out_port(self, ty: GuppyType) -> OutPortV:
+    def add_out_port(self, ty: Type) -> OutPortV:
         """Adds an output port at the end of the node and returns the port."""
         p = OutPortV(self, self.num_out_ports, ty)
         self.out_port_types.append(ty)
@@ -354,7 +354,7 @@ class Hugr:
         return self.root
 
     def add_constant(
-        self, value: val.Value, ty: GuppyType, parent: Node | None = None
+        self, value: val.Value, ty: Type, parent: Node | None = None
     ) -> VNode:
         """Adds a constant node holding a given value to the graph."""
         return self.add_node(
@@ -372,7 +372,7 @@ class Hugr:
         return node
 
     def add_input_with_ports(
-        self, output_tys: Sequence[GuppyType], parent: Node | None = None
+        self, output_tys: Sequence[Type], parent: Node | None = None
     ) -> tuple[VNode, list[OutPortV]]:
         """Adds an `Input` node to the graph."""
         node = self.add_input(None, parent)

@@ -16,7 +16,7 @@ from guppylang.checker.core import Context, Globals, Locals, Variable
 from guppylang.checker.expr_checker import ExprSynthesizer, to_bool
 from guppylang.checker.stmt_checker import StmtChecker
 from guppylang.error import GuppyError
-from guppylang.tys.ty import GuppyType
+from guppylang.tys.ty import Type
 
 VarRow = Sequence[Variable]
 
@@ -44,17 +44,17 @@ class CheckedBB(BB):
 
 
 class CheckedCFG(BaseCFG[CheckedBB]):
-    input_tys: list[GuppyType]
-    output_ty: GuppyType
+    input_tys: list[Type]
+    output_ty: Type
 
-    def __init__(self, input_tys: list[GuppyType], output_ty: GuppyType) -> None:
+    def __init__(self, input_tys: list[Type], output_ty: Type) -> None:
         super().__init__([])
         self.input_tys = input_tys
         self.output_ty = output_ty
 
 
 def check_cfg(
-    cfg: CFG, inputs: VarRow, return_ty: GuppyType, globals: Globals
+    cfg: CFG, inputs: VarRow, return_ty: Type, globals: Globals
 ) -> CheckedCFG:
     """Type checks a control-flow graph.
 
@@ -121,7 +121,7 @@ def check_bb(
     bb: BB,
     checked_cfg: CheckedCFG,
     inputs: VarRow,
-    return_ty: GuppyType,
+    return_ty: Type,
     globals: Globals,
 ) -> CheckedBB:
     cfg = bb.containing_cfg

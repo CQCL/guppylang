@@ -15,7 +15,7 @@ from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Subst
 from guppylang.tys.ty import (
     FunctionType,
-    GuppyType,
+    Type,
     NoneType,
     TupleType, BoundTypeVar, ExistentialTypeVar, OpaqueType, SumType,
 )
@@ -26,7 +26,7 @@ class Variable:
     """Class holding data associated with a variable."""
 
     name: str
-    ty: GuppyType
+    ty: Type
     defined_at: AstNode | None
     used: AstNode | None
 
@@ -39,14 +39,14 @@ class CallableVariable(ABC, Variable):
 
     @abstractmethod
     def check_call(
-        self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: "Context"
+        self, args: list[ast.expr], ty: Type, node: AstNode, ctx: "Context"
     ) -> tuple[ast.expr, Subst]:
         """Checks the return type of a function call against a given type."""
 
     @abstractmethod
     def synthesize_call(
         self, args: list[ast.expr], node: AstNode, ctx: "Context"
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         """Synthesizes the return type of a function call."""
 
 
@@ -86,7 +86,7 @@ class Globals(NamedTuple):
         }
         return Globals({}, type_defs, {}, {})
 
-    def get_instance_func(self, ty: GuppyType, name: str) -> CallableVariable | None:
+    def get_instance_func(self, ty: Type, name: str) -> CallableVariable | None:
         """Looks up an instance function with a given name for a type.
 
         Returns `None` if the name doesn't exist or isn't a function.

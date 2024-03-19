@@ -10,7 +10,7 @@ from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
 from guppylang.tys.var import ExistentialVar, BoundVar
 
 if TYPE_CHECKING:
-    from guppylang.tys.ty import GuppyType
+    from guppylang.tys.ty import Type
 
 
 # We define the `Argument` type as a union of all `ArgumentBase` subclasses defined
@@ -40,7 +40,7 @@ class TypeArg(ArgumentBase):
     """Argument that can be instantiated for a `TypeParameter`."""
 
     # The type to instantiate
-    ty: "GuppyType"
+    ty: "Type"
 
     @property
     def unsolved_vars(self) -> set[ExistentialVar]:

@@ -57,11 +57,11 @@ from guppylang.tys.subst import Subst, Inst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
     FunctionType,
-    GuppyType,
+    Type,
     NoneType,
     TupleType,
     row_to_type,
-    unify, OpaqueType, GuppyTypeBase,
+    unify, OpaqueType, TypeBase,
 )
 from guppylang.nodes import (
     DesugaredGenerator,
@@ -128,12 +128,12 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
     def _fail(
         self,
-        expected: GuppyType,
-        actual: ast.expr | GuppyType,
+        expected: Type,
+        actual: ast.expr | Type,
         loc: AstNode | None = None,
     ) -> NoReturn:
         """Raises a type error indicating that the type doesn't match."""
-        if not isinstance(actual, GuppyTypeBase):
+        if not isinstance(actual, TypeBase):
             loc = loc or actual
             _, actual = self._synthesize(actual, allow_free_vars=True)
         if loc is None:
@@ -143,7 +143,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         )
 
     def check(
-        self, expr: ast.expr, ty: GuppyType, kind: str = "expression"
+        self, expr: ast.expr, ty: Type, kind: str = "expression"
     ) -> tuple[ast.expr, Subst]:
         """Checks an expression against a type.
 
@@ -173,11 +173,11 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
     def _synthesize(
         self, node: ast.expr, allow_free_vars: bool
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         """Invokes the type synthesiser"""
         return ExprSynthesizer(self.ctx).synthesize(node, allow_free_vars)
 
-    def visit_Tuple(self, node: ast.Tuple, ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def visit_Tuple(self, node: ast.Tuple, ty: Type) -> tuple[ast.expr, Subst]:
         if not isinstance(ty, TupleType) or len(ty.element_types) != len(node.elts):
             return self._fail(ty, node)
         subst: Subst = {}
@@ -186,7 +186,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             subst |= s
         return node, subst
 
-    def visit_List(self, node: ast.List, ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def visit_List(self, node: ast.List, ty: Type) -> tuple[ast.expr, Subst]:
         if not is_list_type(ty) and not is_linst_type(ty):
             return self._fail(ty, node)
         el_ty = get_element_type(ty)
@@ -197,7 +197,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         return node, subst
 
     def visit_DesugaredListComp(
-        self, node: DesugaredListComp, ty: GuppyType
+        self, node: DesugaredListComp, ty: Type
     ) -> tuple[ast.expr, Subst]:
         if not is_list_type(ty) and not is_linst_type(ty):
             return self._fail(ty, node)
@@ -208,7 +208,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             return self._fail(ty, actual, node)
         return node, subst
 
-    def visit_Call(self, node: ast.Call, ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def visit_Call(self, node: ast.Call, ty: Type) -> tuple[ast.expr, Subst]:
         if len(node.keywords) > 0:
             raise GuppyError(
                 "Argument passing by keyword is not supported", node.keywords[0]
@@ -232,7 +232,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         else:
             raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
 
-    def visit_PyExpr(self, node: PyExpr, ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def visit_PyExpr(self, node: PyExpr, ty: Type) -> tuple[ast.expr, Subst]:
         python_val = eval_py_expr(node, self.ctx)
         if act := python_value_to_guppy_type(python_val, node, self.ctx.globals):
             subst = unify(ty, act, {})
@@ -247,7 +247,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             node,
         )
 
-    def generic_visit(self, node: ast.expr, ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def generic_visit(self, node: ast.expr, ty: Type) -> tuple[ast.expr, Subst]:
         # Try to synthesize and then check if we can unify it with the given type
         node, synth = self._synthesize(node, allow_free_vars=False)
         subst, inst = check_type_against(synth, ty, node, self._kind)
@@ -259,7 +259,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         return node, subst
 
 
-class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
+class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
     ctx: Context
 
     def __init__(self, ctx: Context) -> None:
@@ -267,7 +267,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def synthesize(
         self, node: ast.expr, allow_free_vars: bool = False
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         """Tries to synthesise a type for the given expression.
 
         Also returns a new desugared expression with type annotations.
@@ -282,18 +282,18 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         return with_type(ty, node), ty
 
     def _check(
-        self, expr: ast.expr, ty: GuppyType, kind: str = "expression"
+        self, expr: ast.expr, ty: Type, kind: str = "expression"
     ) -> tuple[ast.expr, Subst]:
         """Checks an expression against a given type"""
         return ExprChecker(self.ctx).check(expr, ty, kind)
 
-    def visit_Constant(self, node: ast.Constant) -> tuple[ast.expr, GuppyType]:
+    def visit_Constant(self, node: ast.Constant) -> tuple[ast.expr, Type]:
         ty = python_value_to_guppy_type(node.value, node, self.ctx.globals)
         if ty is None:
             raise GuppyError("Unsupported constant", node)
         return node, ty
 
-    def visit_Name(self, node: ast.Name) -> tuple[ast.Name, GuppyType]:
+    def visit_Name(self, node: ast.Name) -> tuple[ast.Name, Type]:
         x = node.id
         if x in self.ctx.locals:
             var = self.ctx.locals[x]
@@ -315,12 +315,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             f"been caught by program analysis!"
         )
 
-    def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, GuppyType]:
+    def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, Type]:
         elems = [self.synthesize(elem) for elem in node.elts]
         node.elts = [n for n, _ in elems]
         return node, TupleType([ty for _, ty in elems])
 
-    def visit_List(self, node: ast.List) -> tuple[ast.expr, GuppyType]:
+    def visit_List(self, node: ast.List) -> tuple[ast.expr, Type]:
         if len(node.elts) == 0:
             raise GuppyTypeInferenceError(
                 "Cannot infer type variable in expression of type `list[?T]`", node
@@ -331,12 +331,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def visit_DesugaredListComp(
         self, node: DesugaredListComp
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         node, elt_ty = synthesize_comprehension(node, node.generators, self.ctx)
         result_ty = linst_type(elt_ty) if elt_ty.linear else list_type(elt_ty)
         return node, result_ty
 
-    def visit_UnaryOp(self, node: ast.UnaryOp) -> tuple[ast.expr, GuppyType]:
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> tuple[ast.expr, Type]:
         # We need to synthesise the argument type, so we can look up dunder methods
         node.operand, op_ty = self.synthesize(node.operand)
 
@@ -359,7 +359,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
     def _synthesize_binary(
         self, left_expr: ast.expr, right_expr: ast.expr, op: AstOp, node: ast.expr
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         """Helper method to compile binary operators by calling out to dunder methods.
 
         For example, first try calling `__add__` on the left operand. If that fails, try
@@ -393,7 +393,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         err: str,
         exp_sig: FunctionType | None = None,
         give_reason: bool = False,
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         """Helper method for expressions that are implemented via instance methods.
 
         Raises a `GuppyTypeError` if the given instance method is not defined. The error
@@ -419,10 +419,10 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             )
         return func.synthesize_call([node, *args], node, self.ctx)
 
-    def visit_BinOp(self, node: ast.BinOp) -> tuple[ast.expr, GuppyType]:
+    def visit_BinOp(self, node: ast.BinOp) -> tuple[ast.expr, Type]:
         return self._synthesize_binary(node.left, node.right, node.op, node)
 
-    def visit_Compare(self, node: ast.Compare) -> tuple[ast.expr, GuppyType]:
+    def visit_Compare(self, node: ast.Compare) -> tuple[ast.expr, Type]:
         if len(node.comparators) != 1 or len(node.ops) != 1:
             raise InternalGuppyError(
                 "BB contains chained comparison. Should have been removed during CFG "
@@ -431,7 +431,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         left_expr, [op], [right_expr] = node.left, node.ops, node.comparators
         return self._synthesize_binary(left_expr, right_expr, op, node)
 
-    def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, GuppyType]:
+    def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType(
             [ty, ExistentialTypeVar.fresh("Key", False)],
@@ -441,7 +441,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             node.value, [node.slice], "__getitem__", "not subscriptable", exp_sig
         )
 
-    def visit_Call(self, node: ast.Call) -> tuple[ast.expr, GuppyType]:
+    def visit_Call(self, node: ast.Call) -> tuple[ast.expr, Type]:
         if len(node.keywords) > 0:
             raise GuppyError("Keyword arguments are not supported", node.keywords[0])
         node.func, ty = self.synthesize(node.func)
@@ -462,7 +462,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
         else:
             raise GuppyTypeError(f"Expected function type, got `{ty}`", node.func)
 
-    def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, GuppyType]:
+    def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType([ty], ExistentialTypeVar.fresh("Iter", False))
         expr, ty = self._synthesize_instance_func(
@@ -484,14 +484,14 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
                 )
         return expr, ty
 
-    def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, GuppyType]:
+    def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType([ty], TupleType([bool_type(), ty]))
         return self._synthesize_instance_func(
             node.value, [], "__hasnext__", "not an iterator", exp_sig, True
         )
 
-    def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, GuppyType]:
+    def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType(
             [ty], TupleType([ExistentialTypeVar.fresh("T", False), ty])
@@ -500,20 +500,20 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             node.value, [], "__next__", "not an iterator", exp_sig, True
         )
 
-    def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, GuppyType]:
+    def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType([ty], NoneType())
         return self._synthesize_instance_func(
             node.value, [], "__end__", "not an iterator", exp_sig, True
         )
 
-    def visit_ListComp(self, node: ast.ListComp) -> tuple[ast.expr, GuppyType]:
+    def visit_ListComp(self, node: ast.ListComp) -> tuple[ast.expr, Type]:
         raise InternalGuppyError(
             "BB contains `ListComp`. Should have been removed during CFG"
             f"construction: `{ast.unparse(node)}`"
         )
 
-    def visit_PyExpr(self, node: PyExpr) -> tuple[ast.expr, GuppyType]:
+    def visit_PyExpr(self, node: PyExpr) -> tuple[ast.expr, Type]:
         python_val = eval_py_expr(node, self.ctx)
         if ty := python_value_to_guppy_type(python_val, node, self.ctx.globals):
             return with_loc(node, ast.Constant(value=python_val)), ty
@@ -523,19 +523,19 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
             node,
         )
 
-    def visit_NamedExpr(self, node: ast.NamedExpr) -> tuple[ast.expr, GuppyType]:
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> tuple[ast.expr, Type]:
         raise InternalGuppyError(
             "BB contains `NamedExpr`. Should have been removed during CFG"
             f"construction: `{ast.unparse(node)}`"
         )
 
-    def visit_BoolOp(self, node: ast.BoolOp) -> tuple[ast.expr, GuppyType]:
+    def visit_BoolOp(self, node: ast.BoolOp) -> tuple[ast.expr, Type]:
         raise InternalGuppyError(
             "BB contains `BoolOp`. Should have been removed during CFG construction: "
             f"`{ast.unparse(node)}`"
         )
 
-    def visit_IfExp(self, node: ast.IfExp) -> tuple[ast.expr, GuppyType]:
+    def visit_IfExp(self, node: ast.IfExp) -> tuple[ast.expr, Type]:
         raise InternalGuppyError(
             "BB contains `IfExp`. Should have been removed during CFG construction: "
             f"`{ast.unparse(node)}`"
@@ -543,7 +543,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, GuppyType]]):
 
 
 def check_type_against(
-    act: GuppyType, exp: GuppyType, node: AstNode, kind: str = "expression"
+    act: Type, exp: Type, node: AstNode, kind: str = "expression"
 ) -> tuple[Subst, Inst]:
     """Checks a type against another type.
 
@@ -646,7 +646,7 @@ def type_check_args(
 
 def synthesize_call(
     func_ty: FunctionType, args: list[ast.expr], node: AstNode, ctx: Context
-) -> tuple[list[ast.expr], GuppyType, Inst]:
+) -> tuple[list[ast.expr], Type, Inst]:
     """Synthesizes the return type of a function call.
 
     Returns an annotated argument list, the synthesized return type, and an
@@ -673,7 +673,7 @@ def synthesize_call(
 def check_call(
     func_ty: FunctionType,
     inputs: list[ast.expr],
-    ty: GuppyType,
+    ty: Type,
     node: AstNode,
     ctx: Context,
     kind: str = "expression",
@@ -706,7 +706,7 @@ def check_call(
     #  in practice. Can we do better than that?
 
     # First, try to synthesize
-    res: tuple[GuppyType, Inst] | None = None
+    res: tuple[Type, Inst] | None = None
     try:
         inputs, synth, inst = synthesize_call(func_ty, inputs, node, ctx)
         res = synth, inst
@@ -778,8 +778,8 @@ def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
 
 
 def to_bool(
-    node: ast.expr, node_ty: GuppyType, ctx: Context
-) -> tuple[ast.expr, GuppyType]:
+    node: ast.expr, node_ty: Type, ctx: Context
+) -> tuple[ast.expr, Type]:
     """Tries to turn a node into a bool"""
     if is_bool_type(node_ty):
         return node, node_ty
@@ -804,7 +804,7 @@ def to_bool(
 
 def synthesize_comprehension(
     node: DesugaredListComp, gens: list[DesugaredGenerator], ctx: Context
-) -> tuple[DesugaredListComp, GuppyType]:
+) -> tuple[DesugaredListComp, Type]:
     """Helper function to synthesise the element type of a list comprehension."""
     from guppylang.checker.stmt_checker import StmtChecker
 
@@ -925,7 +925,7 @@ def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
 
 def python_value_to_guppy_type(
     v: Any, node: ast.expr, globals: Globals
-) -> GuppyType | None:
+) -> Type | None:
     """Turns a primitive Python value into a Guppy type.
 
     Returns `None` if the Python value cannot be represented in Guppy.
@@ -941,7 +941,7 @@ def python_value_to_guppy_type(
             tys = [python_value_to_guppy_type(elt, node, globals) for elt in elts]
             if any(ty is None for ty in tys):
                 return None
-            return TupleType(cast(list[GuppyType], tys))
+            return TupleType(cast(list[Type], tys))
         case list():
             return _python_list_to_guppy_type(v, node, globals)
         case _:

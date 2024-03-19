@@ -15,7 +15,7 @@ from guppylang.custom import (
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.tys.definition import bool_type
 from guppylang.tys.subst import Subst
-from guppylang.tys.ty import FunctionType, GuppyType, unify, OpaqueType
+from guppylang.tys.ty import FunctionType, Type, unify, OpaqueType
 from guppylang.hugr import ops, tys, val
 from guppylang.hugr.hugr import OutPortV
 from guppylang.nodes import GlobalCall
@@ -105,7 +105,7 @@ def float_op(op_name: str, ext: str = "arithmetic.float") -> ops.OpType:
 class CoercingChecker(DefaultCallChecker):
     """Function call type checker that automatically coerces arguments to float."""
 
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         from .builtins import Int
 
         for i in range(len(args)):
@@ -131,13 +131,13 @@ class ReversingChecker(CustomCallChecker):
         super()._setup(ctx, node, func)
         self.base_checker._setup(ctx, node, func)
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         expr, subst = self.base_checker.check(args, ty)
         if isinstance(expr, GlobalCall):
             expr.args = list(reversed(args))
         return expr, subst
 
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         expr, ty = self.base_checker.synthesize(args)
         if isinstance(expr, GlobalCall):
             expr.args = list(reversed(args))
@@ -153,10 +153,10 @@ class FailingChecker(CustomCallChecker):
     def __init__(self, msg: str) -> None:
         self.msg = msg
 
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         raise GuppyError(self.msg, self.node)
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         raise GuppyError(self.msg, self.node)
 
 
@@ -166,12 +166,12 @@ class UnsupportedChecker(CustomCallChecker):
     Gives the uses a nicer error message when they try to use an unsupported feature.
     """
 
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         raise GuppyError(
             f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
         )
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         raise GuppyError(
             f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
         )
@@ -203,11 +203,11 @@ class DunderChecker(CustomCallChecker):
             )
         return [fst, *rest], func
 
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         args, func = self._get_func(args)
         return func.synthesize_call(args, self.node, self.ctx)
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         args, func = self._get_func(args)
         return func.check_call(args, ty, self.node, self.ctx)
 
@@ -215,7 +215,7 @@ class DunderChecker(CustomCallChecker):
 class CallableChecker(CustomCallChecker):
     """Call checker for the builtin `callable` function"""
 
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(1, len(args), self.node)
         [arg] = args
         arg, ty = ExprSynthesizer(self.ctx).synthesize(arg)
@@ -226,7 +226,7 @@ class CallableChecker(CustomCallChecker):
         const = with_loc(self.node, ast.Constant(value=is_callable))
         return const, bool_type()
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         args, _ = self.synthesize(args)
         subst = unify(ty, bool_type(), {})
         if subst is None:

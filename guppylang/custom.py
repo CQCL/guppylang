@@ -8,7 +8,7 @@ from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledFunction, CompiledGlobals, DFContainer
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.tys.subst import Subst, Inst
-from guppylang.tys.ty import FunctionType, GuppyType, type_to_row, NoneType
+from guppylang.tys.ty import FunctionType, Type, type_to_row, NoneType
 from guppylang.hugr import ops
 from guppylang.hugr.hugr import DFContainingVNode, Hugr, Node, OutPortV
 from guppylang.nodes import GlobalCall
@@ -83,7 +83,7 @@ class CustomFunction(CompiledFunction):
                 raise
 
     def check_call(
-        self, args: list[ast.expr], ty: GuppyType, node: AstNode, ctx: Context
+        self, args: list[ast.expr], ty: Type, node: AstNode, ctx: Context
     ) -> tuple[ast.expr, Subst]:
         self.call_checker._setup(ctx, node, self)
         new_node, subst = self.call_checker.check(args, ty)
@@ -91,7 +91,7 @@ class CustomFunction(CompiledFunction):
 
     def synthesize_call(
         self, args: list[ast.expr], node: AstNode, ctx: "Context"
-    ) -> tuple[ast.expr, GuppyType]:
+    ) -> tuple[ast.expr, Type]:
         self.call_checker._setup(ctx, node, self)
         new_node, ty = self.call_checker.synthesize(args)
         return with_type(ty, with_loc(node, new_node)), ty
@@ -169,14 +169,14 @@ class CustomCallChecker(ABC):
         self.func = func
 
     @abstractmethod
-    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         """Checks the return value against a given type.
 
         Returns a (possibly) transformed and annotated AST node for the call.
         """
 
     @abstractmethod
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         """Synthesizes a type for the return value of a call.
 
         Also returns a (possibly) transformed and annotated argument list.
@@ -214,12 +214,12 @@ class CustomCallCompiler(ABC):
 class DefaultCallChecker(CustomCallChecker):
     """Checks function calls by comparing to a type signature."""
 
-    def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
         return GlobalCall(func=self.func, args=args, type_args=inst), subst
 
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, GuppyType]:
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
         return GlobalCall(func=self.func, args=args, type_args=inst), ty

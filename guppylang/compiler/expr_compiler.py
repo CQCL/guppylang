@@ -18,7 +18,7 @@ from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
     FunctionType,
-    GuppyType,
+    Type,
     NoneType,
     TupleType,
     type_to_row,
@@ -296,7 +296,7 @@ def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
     return False
 
 
-def python_value_to_hugr(v: Any, exp_ty: GuppyType) -> val.Value | None:
+def python_value_to_hugr(v: Any, exp_ty: Type) -> val.Value | None:
     """Turns a Python value into a Hugr value.
 
     Returns None if the Python value cannot be represented in Guppy.
