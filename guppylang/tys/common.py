@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any, Protocol, TypeVar
+from typing import Any, Generic, TypeVar
 
-T = TypeVar("T", covariant=True)
-T_co = TypeVar("T_co", covariant=True)
+T = TypeVar("T")
 
 
-class ToHugr(Protocol[T]):
+class ToHugr(ABC, Generic[T]):
     """Abstract base class for objects that have a Hugr representation."""
 
     @abstractmethod
@@ -35,7 +34,7 @@ class Transformer(ABC):
         """
 
 
-class Visitable(Protocol):
+class Visitable(ABC):
     """Abstract base class for objects that can be recursively visited."""
 
     @abstractmethod
@@ -48,7 +47,7 @@ class Visitable(Protocol):
         """
 
 
-class Transformable(Visitable, Protocol[T]):
+class Transformable(Visitable, ABC, Generic[T]):
     """Abstract base class for objects that can be recursively transformed."""
 
     @abstractmethod
