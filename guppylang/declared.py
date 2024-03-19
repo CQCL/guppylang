@@ -7,7 +7,8 @@ from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledFunction, CompiledGlobals, DFContainer
 from guppylang.error import GuppyError
-from guppylang.gtypes import GuppyType, Inst, Subst, type_to_row
+from guppylang.tys.subst import Subst, Inst
+from guppylang.tys.ty import GuppyType, type_to_row
 from guppylang.hugr.hugr import Hugr, Node, OutPortV, VNode
 from guppylang.nodes import GlobalCall
 
@@ -70,4 +71,4 @@ class DeclaredFunction(CompiledFunction):
             call = graph.add_indirect_call(func.out_port(0), args, dfg.node)
         else:
             call = graph.add_call(self.node.out_port(0), args, dfg.node)
-        return [call.out_port(i) for i in range(len(type_to_row(self.ty.returns)))]
+        return [call.out_port(i) for i in range(len(type_to_row(self.ty.output)))]

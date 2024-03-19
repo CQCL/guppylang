@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, cast
 
 if TYPE_CHECKING:
-    from guppylang.gtypes import GuppyType
+    from guppylang.tys.ty import GuppyType
 
 AstNode = (
     ast.AST
@@ -294,7 +294,7 @@ def with_type(ty: "GuppyType", node: A) -> A:
 
 def get_type_opt(node: AstNode) -> Optional["GuppyType"]:
     """Tries to retrieve a type annotation from an AST node."""
-    from guppylang.gtypes import GuppyType
+    from guppylang.tys.ty import GuppyType
 
     try:
         ty = node.type  # type: ignore[union-attr]

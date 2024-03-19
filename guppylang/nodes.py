@@ -4,7 +4,8 @@ import ast
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
-from guppylang.gtypes import FunctionType, GuppyType, Inst
+from guppylang.tys.subst import Inst
+from guppylang.tys.ty import FunctionType, GuppyType
 
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import CFG
@@ -52,11 +53,11 @@ class GlobalCall(ast.expr):
 
 class TypeApply(ast.expr):
     value: ast.expr
-    tys: Sequence[GuppyType]
+    inst: Inst
 
     _fields = (
         "value",
-        "tys",
+        "inst",
     )
 
 

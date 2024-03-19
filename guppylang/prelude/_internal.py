@@ -13,7 +13,9 @@ from guppylang.custom import (
     DefaultCallChecker,
 )
 from guppylang.error import GuppyError, GuppyTypeError
-from guppylang.gtypes import BoolType, FunctionType, GuppyType, Subst, unify
+from guppylang.tys.definition import bool_type
+from guppylang.tys.subst import Subst
+from guppylang.tys.ty import FunctionType, GuppyType, unify, OpaqueType
 from guppylang.hugr import ops, tys, val
 from guppylang.hugr.hugr import OutPortV
 from guppylang.nodes import GlobalCall
@@ -108,12 +110,12 @@ class CoercingChecker(DefaultCallChecker):
 
         for i in range(len(args)):
             args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
-            if isinstance(ty, self.ctx.globals.types["int"]):
+            if isinstance(ty, OpaqueType) and ty.defn == self.ctx.globals.type_defs["int"]:
                 call = with_loc(
                     self.node,
                     GlobalCall(func=Int.__float__, args=[args[i]], type_args=[]),
                 )
-                args[i] = with_type(self.ctx.globals.types["float"].build(), call)
+                args[i] = with_type(self.ctx.globals.type_defs["float"].check_instantiate([]), call)
         return super().synthesize(args)
 
 
@@ -222,11 +224,11 @@ class CallableChecker(CustomCallChecker):
             or self.ctx.globals.get_instance_func(ty, "__call__") is not None
         )
         const = with_loc(self.node, ast.Constant(value=is_callable))
-        return const, BoolType()
+        return const, bool_type()
 
     def check(self, args: list[ast.expr], ty: GuppyType) -> tuple[ast.expr, Subst]:
         args, _ = self.synthesize(args)
-        subst = unify(ty, BoolType(), {})
+        subst = unify(ty, bool_type(), {})
         if subst is None:
             raise GuppyTypeError(
                 f"Expected expression of type `{ty}`, got `bool`", self.node
@@ -336,4 +338,4 @@ class MeasureCompiler(CustomCallCompiler):
         self.graph.add_node(
             quantum_op("QFree"), inputs=[measure.add_out_port(qubit.ty)]
         )
-        return [measure.add_out_port(BoolType())]
+        return [measure.add_out_port(bool_type())]

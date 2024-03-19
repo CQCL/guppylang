@@ -9,10 +9,10 @@ import networkx as nx  # type: ignore[import-untyped]
 
 import guppylang.hugr.ops as ops
 import guppylang.hugr.raw as raw
-from guppylang.gtypes import (
+from guppylang.tys.subst import Inst
+from guppylang.tys.ty import (
     FunctionType,
     GuppyType,
-    Inst,
     SumType,
     TupleType,
     row_to_type,
@@ -495,7 +495,7 @@ class Hugr:
         return self.add_node(
             ops.Call(),
             None,
-            list(type_to_row(def_port.ty.returns)),
+            list(type_to_row(def_port.ty.output)),
             parent,
             [*args, def_port],
         )
@@ -508,27 +508,27 @@ class Hugr:
         return self.add_node(
             ops.CallIndirect(),
             None,
-            list(type_to_row(fun_port.ty.returns)),
+            list(type_to_row(fun_port.ty.output)),
             parent,
             [fun_port, *args],
         )
 
     def add_partial(
-        self, def_port: OutPortV, args: list[OutPortV], parent: Node | None = None
+        self, def_port: OutPortV, inputs: list[OutPortV], parent: Node | None = None
     ) -> VNode:
         """Adds a `Partial` evaluation node to the graph."""
         assert isinstance(def_port.ty, FunctionType)
-        assert len(def_port.ty.args) >= len(args)
-        assert [p.ty for p in args] == def_port.ty.args[: len(args)]
+        assert len(def_port.ty.inputs) >= len(inputs)
+        assert [p.ty for p in inputs] == def_port.ty.inputs[: len(inputs)]
         new_ty = FunctionType(
-            def_port.ty.args[len(args) :],
-            def_port.ty.returns,
-            def_port.ty.arg_names[len(args) :]
-            if def_port.ty.arg_names is not None
+            def_port.ty.inputs[len(inputs):],
+            def_port.ty.output,
+            def_port.ty.input_names[len(inputs):]
+            if def_port.ty.input_names is not None
             else None,
         )
         return self.add_node(
-            ops.DummyOp(name="partial"), None, [new_ty], parent, [*args, def_port]
+            ops.DummyOp(name="partial"), None, [new_ty], parent, [*inputs, def_port]
         )
 
     def add_type_apply(
@@ -536,11 +536,11 @@ class Hugr:
     ) -> VNode:
         """Adds a `TypeApply` node to the graph."""
         assert isinstance(func_port.ty, FunctionType)
-        assert len(func_port.ty.quantified) == len(args)
+        assert len(func_port.ty.params) == len(args)
         result_ty = func_port.ty.instantiate(args)
         ta = ops.TypeApplication(
             input=func_port.ty.to_hugr(),
-            args=[tys.TypeTypeArg(ty=ty.to_hugr()) for ty in args],
+            args=[arg.to_hugr() for arg in args],
             output=result_ty.to_hugr(),
         )
         return self.add_node(

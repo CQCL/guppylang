@@ -4,7 +4,6 @@
 
 from guppylang.custom import DefaultCallChecker, NoopCompiler
 from guppylang.decorator import guppy
-from guppylang.gtypes import BoolType, LinstType, ListType
 from guppylang.hugr import ops, tys
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal import (
@@ -25,6 +24,7 @@ from guppylang.prelude._internal import (
     int_op,
     logic_op,
 )
+from guppylang.tys.definition import bool_type_def, list_type_def, linst_type_def
 
 builtins = GuppyModule("builtins", import_builtins=False)
 
@@ -32,7 +32,7 @@ T = guppy.type_var(builtins, "T")
 L = guppy.type_var(builtins, "L", linear=True)
 
 
-@guppy.extend_type(builtins, BoolType)
+@guppy.extend_type(builtins, bool_type_def)
 class Bool:
     @guppy.hugr_op(builtins, logic_op("And", [tys.BoundedNatArg(n=2)]))
     def __and__(self: bool, other: bool) -> bool: ...
@@ -290,7 +290,7 @@ class Float:
     def __trunc__(self: float) -> float: ...
 
 
-@guppy.extend_type(builtins, ListType)
+@guppy.extend_type(builtins, list_type_def)
 class List:
     @guppy.hugr_op(builtins, ops.DummyOp(name="Concat"))
     def __add__(self: list[T], other: list[T]) -> list[T]: ...
@@ -365,7 +365,7 @@ class List:
 linst = list
 
 
-@guppy.extend_type(builtins, LinstType)
+@guppy.extend_type(builtins, linst_type_def)
 class Linst:
     @guppy.hugr_op(builtins, ops.DummyOp(name="Append"))
     def __add__(self: linst[L], other: linst[L]) -> linst[L]: ...

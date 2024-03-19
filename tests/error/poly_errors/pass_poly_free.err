@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:24
 23:    def main() -> None:
 24:        foo(bar)
                ^^^
-GuppyTypeInferenceError: Expected argument of type `?T -> ?T`, got `forall T. T -> T`. Couldn't infer an instantiation for type variable `T` (higher-rank polymorphic types are not supported)
+GuppyTypeInferenceError: Expected argument of type `?T -> ?T`, got `forall T. T -> T`. Couldn't infer an instantiation for parameter `T` (higher-rank polymorphic types are not supported)

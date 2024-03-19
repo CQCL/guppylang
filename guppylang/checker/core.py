@@ -6,17 +6,18 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Any, NamedTuple
 
+from typing_extensions import assert_never
+
 from guppylang.ast_util import AstNode, name_nodes_in_ast
-from guppylang.gtypes import (
-    BoolType,
+from guppylang.tys.definition import TypeDef, callable_type_def, list_type_def, \
+    tuple_type_def, none_type_def, linst_type_def, bool_type_def
+from guppylang.tys.param import Parameter
+from guppylang.tys.subst import Subst
+from guppylang.tys.ty import (
     FunctionType,
     GuppyType,
-    LinstType,
-    ListType,
     NoneType,
-    Subst,
-    SumType,
-    TupleType,
+    TupleType, BoundTypeVar, ExistentialTypeVar, OpaqueType, SumType,
 )
 
 
@@ -68,30 +69,44 @@ class Globals(NamedTuple):
     """
 
     values: dict[str, Variable]
-    types: dict[str, type[GuppyType]]
-    type_vars: dict[str, TypeVarDecl]
+    type_defs: dict[str, TypeDef]
+    param_vars: dict[str, Parameter]
     python_scope: PyScope
 
     @staticmethod
     def default() -> "Globals":
         """Generates a `Globals` instance that is populated with all core types"""
-        tys: dict[str, type[GuppyType]] = {
-            FunctionType.name: FunctionType,
-            TupleType.name: TupleType,
-            SumType.name: SumType,
-            NoneType.name: NoneType,
-            BoolType.name: BoolType,
-            ListType.name: ListType,
-            LinstType.name: LinstType,
+        type_defs = {
+            "Callable": callable_type_def,
+            "tuple": tuple_type_def,
+            "None": none_type_def,
+            "bool": bool_type_def,
+            "list": list_type_def,
+            "linst": linst_type_def,
         }
-        return Globals({}, tys, {}, {})
+        return Globals({}, type_defs, {}, {})
 
     def get_instance_func(self, ty: GuppyType, name: str) -> CallableVariable | None:
         """Looks up an instance function with a given name for a type.
 
         Returns `None` if the name doesn't exist or isn't a function.
         """
-        qualname = qualified_name(ty.__class__, name)
+        defn: TypeDef
+        match ty:
+            case BoundTypeVar() | ExistentialTypeVar() | SumType():
+                return None
+            case FunctionType():
+                defn = callable_type_def
+            case OpaqueType() as ty:
+                defn = ty.defn
+            case TupleType():
+                defn = tuple_type_def
+            case NoneType():
+                defn = none_type_def
+            case _:
+                assert_never(ty)
+
+        qualname = qualified_name(defn.name, name)
         if qualname in self.values:
             val = self.values[qualname]
             if isinstance(val, CallableVariable):
@@ -101,15 +116,15 @@ class Globals(NamedTuple):
     def __or__(self, other: "Globals") -> "Globals":
         return Globals(
             self.values | other.values,
-            self.types | other.types,
-            self.type_vars | other.type_vars,
+            self.type_defs | other.type_defs,
+            self.param_vars | other.param_vars,
             self.python_scope | other.python_scope,
         )
 
     def __ior__(self, other: "Globals") -> "Globals":  # noqa: PYI034
         self.values.update(other.values)
-        self.types.update(other.types)
-        self.type_vars.update(other.type_vars)
+        self.type_defs.update(other.type_defs)
+        self.param_vars.update(other.param_vars)
         return self
 
 
@@ -203,7 +218,7 @@ class DummyEvalDict(PyScope):
         return super().__contains__(key)
 
 
-def qualified_name(ty: type[GuppyType] | str, name: str) -> str:
+def qualified_name(ty: TypeDef | str, name: str) -> str:
     """Returns a qualified name for an instance function on a type."""
     ty_name = ty if isinstance(ty, str) else ty.name
     return f"{ty_name}.{name}"

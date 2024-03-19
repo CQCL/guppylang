@@ -16,7 +16,8 @@ from guppylang.custom import (
     OpCompiler,
 )
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
-from guppylang.gtypes import GuppyType, TypeTransformer
+from guppylang.tys.definition import OpaqueTypeDef, TypeDef
+from guppylang.tys.ty import GuppyType
 from guppylang.hugr import ops, tys
 from guppylang.hugr.hugr import Hugr
 from guppylang.module import GuppyModule, PyFunc, parse_py_func
@@ -113,12 +114,12 @@ class _Guppy:
         return ModuleIdentifier(Path(filename), module)
 
     @pretty_errors
-    def extend_type(self, module: GuppyModule, ty: type[GuppyType]) -> ClassDecorator:
+    def extend_type(self, module: GuppyModule, defn: TypeDef) -> ClassDecorator:
         """Decorator to add new instance functions to a type."""
         module._instance_func_buffer = {}
 
         def dec(c: type) -> type:
-            module._register_buffered_instance_funcs(ty)
+            module._register_buffered_instance_funcs(defn)
             return c
 
         return dec
@@ -142,48 +143,9 @@ class _Guppy:
 
         def dec(c: type) -> type:
             _name = name or c.__name__
-
-            @dataclass(frozen=True)
-            class NewType(GuppyType):
-                args: Sequence[GuppyType]
-                name: ClassVar[str] = _name
-
-                @staticmethod
-                def build(*args: GuppyType, node: AstNode | None = None) -> "GuppyType":
-                    # At the moment, custom types don't support type arguments.
-                    if len(args) > 0:
-                        raise GuppyError(
-                            f"Type `{_name}` does not accept type parameters.", node
-                        )
-                    return NewType([])
-
-                @property
-                def type_args(self) -> Iterator[GuppyType]:
-                    return iter(self.args)
-
-                @property
-                def linear(self) -> bool:
-                    return linear
-
-                def to_hugr(self) -> tys.Type:
-                    return hugr_ty
-
-                def hugr_bound(self) -> tys.TypeBound:
-                    return bound or super().hugr_bound()
-
-                def transform(self, transformer: TypeTransformer) -> GuppyType:
-                    return transformer.transform(self) or NewType(
-                        [ty.transform(transformer) for ty in self.args]
-                    )
-
-                def __str__(self) -> str:
-                    return _name
-
-            NewType.__name__ = name
-            NewType.__qualname__ = _name
-            module.register_type(_name, NewType)
-            module._register_buffered_instance_funcs(NewType)
-            c._guppy_type = NewType  # type: ignore[attr-defined]
+            defn = OpaqueTypeDef(_name, [], linear, lambda _: hugr_ty, bound)
+            module.register_type(_name, defn)
+            module._register_buffered_instance_funcs(defn)
             return c
 
         return dec

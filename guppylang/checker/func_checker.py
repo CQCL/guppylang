@@ -15,14 +15,10 @@ from guppylang.checker.cfg_checker import CheckedCFG, check_cfg
 from guppylang.checker.core import CallableVariable, Context, Globals, Variable
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.error import GuppyError
-from guppylang.gtypes import (
-    BoundTypeVar,
-    FunctionType,
-    GuppyType,
-    NoneType,
-    Subst,
-    type_from_ast,
-)
+from guppylang.tys.param import TypeParam, Parameter
+from guppylang.tys.parsing import type_from_ast
+from guppylang.tys.subst import Subst
+from guppylang.tys.ty import BoundTypeVar, FunctionType, GuppyType, NoneType
 from guppylang.nodes import CheckedNestedFunctionDef, GlobalCall, NestedFunctionDef
 
 
@@ -38,7 +34,7 @@ class DefinedFunction(CallableVariable):
         func_def: ast.FunctionDef, name: str, globals: Globals
     ) -> "DefinedFunction":
         ty = check_signature(func_def, globals)
-        if ty.quantified:
+        if ty.parametrized:
             raise GuppyError(
                 "Generic function definitions are not supported yet", func_def
             )
@@ -70,15 +66,15 @@ def check_global_func_def(func: DefinedFunction, globals: Globals) -> CheckedFun
     """Type checks a top-level function definition."""
     func_def = func.defined_at
     args = func_def.args.args
-    returns_none = isinstance(func.ty.returns, NoneType)
-    assert func.ty.arg_names is not None
+    returns_none = isinstance(func.ty.output, NoneType)
+    assert func.ty.input_names is not None
 
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
     inputs = [
         Variable(x, ty, loc, None)
-        for x, ty, loc in zip(func.ty.arg_names, func.ty.args, args)
+        for x, ty, loc in zip(func.ty.input_names, func.ty.inputs, args)
     ]
-    cfg = check_cfg(cfg, inputs, func.ty.returns, globals)
+    cfg = check_cfg(cfg, inputs, func.ty.output, globals)
     return CheckedFunction(func_def.name, func.ty, func_def, None, cfg)
 
 
@@ -87,7 +83,7 @@ def check_nested_func_def(
 ) -> CheckedNestedFunctionDef:
     """Type checks a local (nested) function definition."""
     func_ty = check_signature(func_def, ctx.globals)
-    assert func_ty.arg_names is not None
+    assert func_ty.input_names is not None
 
     # We've already built the CFG for this function while building the CFG of the
     # enclosing function
@@ -95,13 +91,13 @@ def check_nested_func_def(
 
     # Find captured variables
     parent_cfg = bb.containing_cfg
-    def_ass_before = set(func_ty.arg_names) | ctx.locals.keys()
+    def_ass_before = set(func_ty.input_names) | ctx.locals.keys()
     maybe_ass_before = def_ass_before | parent_cfg.maybe_ass_before[bb]
     cfg.analyze(def_ass_before, maybe_ass_before)
     captured = {
         x: ctx.locals[x]
         for x in cfg.live_before[cfg.entry_bb]
-        if x not in func_ty.arg_names and x in ctx.locals
+        if x not in func_ty.input_names and x in ctx.locals
     }
 
     # Captured variables may not be linear
@@ -131,7 +127,7 @@ def check_nested_func_def(
     # Construct inputs for checking the body CFG
     inputs = list(captured.values()) + [
         Variable(x, ty, func_def.args.args[i], None)
-        for i, (x, ty) in enumerate(zip(func_ty.arg_names, func_ty.args))
+        for i, (x, ty) in enumerate(zip(func_ty.input_names, func_ty.inputs))
     ]
     globals = ctx.globals
 
@@ -148,7 +144,7 @@ def check_nested_func_def(
             # Otherwise, we treat it like a local name
             inputs.append(Variable(func_def.name, func_def.ty, func_def, None))
 
-    checked_cfg = check_cfg(cfg, inputs, func_ty.returns, globals)
+    checked_cfg = check_cfg(cfg, inputs, func_ty.output, globals)
     checked_def = CheckedNestedFunctionDef(
         checked_cfg,
         func_ty,
@@ -188,20 +184,20 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         raise GuppyError("Return type must be annotated", func_def)
 
     # TODO: Prepopulate mapping when using Python 3.12 style generic functions
-    type_var_mapping: dict[str, BoundTypeVar] = {}
-    arg_tys = []
-    arg_names = []
-    for _i, arg in enumerate(func_def.args.args):
-        if arg.annotation is None:
-            raise GuppyError("Argument type must be annotated", arg)
-        ty = type_from_ast(arg.annotation, globals, type_var_mapping)
-        arg_tys.append(ty)
-        arg_names.append(arg.arg)
-
+    type_var_mapping: dict[str, Parameter] = {}
+    input_tys = []
+    input_names = []
+    for _i, inp in enumerate(func_def.args.args):
+        if inp.annotation is None:
+            raise GuppyError("Argument type must be annotated", inp)
+        ty = type_from_ast(inp.annotation, globals, type_var_mapping)
+        input_tys.append(ty)
+        input_names.append(inp.arg)
     ret_type = type_from_ast(func_def.returns, globals, type_var_mapping)
+
     return FunctionType(
-        arg_tys,
+        input_tys,
         ret_type,
-        arg_names,
+        input_names,
         sorted(type_var_mapping.values(), key=lambda v: v.idx),
     )

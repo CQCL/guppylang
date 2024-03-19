@@ -6,12 +6,9 @@ from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledFunction, CompiledGlobals, DFContainer
-from guppylang.error import (
-    GuppyError,
-    InternalGuppyError,
-    UnknownFunctionType,
-)
-from guppylang.gtypes import FunctionType, GuppyType, Inst, Subst, type_to_row
+from guppylang.error import GuppyError, InternalGuppyError
+from guppylang.tys.subst import Subst, Inst
+from guppylang.tys.ty import FunctionType, GuppyType, type_to_row, NoneType
 from guppylang.hugr import ops
 from guppylang.hugr.hugr import DFContainingVNode, Hugr, Node, OutPortV
 from guppylang.nodes import GlobalCall
@@ -53,7 +50,10 @@ class CustomFunction(CompiledFunction):
     @property  # type: ignore[override]
     def ty(self) -> FunctionType:
         if self._ty is None:
-            return UnknownFunctionType()
+            # If we don't have a specified type, then the extension writer has to
+            # provide their own type-checking code. Therefore, it doesn't matter which
+            # type we return here since it will never be inspected.
+            return FunctionType([], NoneType())
         return self._ty
 
     @ty.setter
@@ -123,7 +123,7 @@ class CustomFunction(CompiledFunction):
                 node,
             )
 
-        if self._ty.quantified:
+        if self._ty.parametrized:
             raise InternalGuppyError(
                 "Can't yet generate higher-order versions of custom functions. This "
                 "requires generic function *definitions*"
@@ -143,7 +143,7 @@ class CustomFunction(CompiledFunction):
         # to the function, and returns the results.
         if module not in self._defined:
             def_node = graph.add_def(self.ty, module, self.name)
-            _, inp_ports = graph.add_input_with_ports(list(self.ty.args), def_node)
+            _, inp_ports = graph.add_input_with_ports(list(self.ty.inputs), def_node)
             returns = self.compile_call(
                 inp_ports, [], DFContainer(def_node, {}), graph, globals, node
             )

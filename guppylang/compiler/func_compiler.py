@@ -9,7 +9,8 @@ from guppylang.compiler.core import (
     DFContainer,
     PortVariable,
 )
-from guppylang.gtypes import FunctionType, Inst, type_to_row
+from guppylang.tys.subst import Inst
+from guppylang.tys.ty import FunctionType, type_to_row
 from guppylang.hugr.hugr import DFContainingVNode, Hugr, OutPortV
 from guppylang.nodes import CheckedNestedFunctionDef
 
@@ -40,7 +41,7 @@ class CompiledFunctionDef(DefinedFunction, CompiledFunction):
             call = graph.add_indirect_call(func.out_port(0), args, dfg.node)
         else:
             call = graph.add_call(self.node.out_port(0), args, dfg.node)
-        return [call.out_port(i) for i in range(len(type_to_row(self.ty.returns)))]
+        return [call.out_port(i) for i in range(len(type_to_row(self.ty.output)))]
 
 
 def compile_global_func_def(
@@ -50,7 +51,7 @@ def compile_global_func_def(
     globals: CompiledGlobals,
 ) -> CompiledFunctionDef:
     """Compiles a top-level function definition to Hugr."""
-    _, ports = graph.add_input_with_ports(list(func.ty.args), def_node)
+    _, ports = graph.add_input_with_ports(list(func.ty.inputs), def_node)
     cfg_node = graph.add_cfg(def_node, ports)
     compile_cfg(func.cfg, graph, cfg_node, globals)
 
@@ -70,20 +71,20 @@ def compile_local_func_def(
     globals: CompiledGlobals,
 ) -> PortVariable:
     """Compiles a local (nested) function definition to Hugr."""
-    assert func.ty.arg_names is not None
+    assert func.ty.input_names is not None
 
     # Pick an order for the captured variables
     captured = list(func.captured.values())
 
     # Prepend captured variables to the function arguments
     closure_ty = FunctionType(
-        [v.ty for v in captured] + list(func.ty.args),
-        func.ty.returns,
-        [v.name for v in captured] + list(func.ty.arg_names),
+        [v.ty for v in captured] + list(func.ty.inputs),
+        func.ty.output,
+        [v.name for v in captured] + list(func.ty.input_names),
     )
 
     def_node = graph.add_def(closure_ty, dfg.node, func.name)
-    def_input, input_ports = graph.add_input_with_ports(list(closure_ty.args), def_node)
+    def_input, input_ports = graph.add_input_with_ports(list(closure_ty.inputs), def_node)
 
     # If we have captured variables and the body contains a recursive occurrence of
     # the function itself, then we provide the partially applied function as a local
