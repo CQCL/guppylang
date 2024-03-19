@@ -29,35 +29,24 @@ class TypePrinter:
     bound_names: list[str]
     existential_names: dict[UniqueId, str]
 
-    used_names: set[str]
-
+    # Count how often the user has picked the same name to stand for different variables
     counter: dict[str, int]
 
     def __init__(self) -> None:
         self.used = {}
         self.bound_names = []
         self.existential_names = {}
-        self.used_names = set()
         self.counter = {}
 
     def _fresh_name(self, display_name: str) -> str:
-        if display_name not in self.used_names:
+        if display_name not in self.counter:
             self.counter[display_name] = 1
-            self.used_names.add(display_name)
             return display_name
 
         # If the display name `T` has already been used, we start adding indices: `T`,
-        # `T1`, `T2`, ...
-        indexed = f"{display_name}{self.counter[display_name]}"
-
-        # However, it could be the case that `T1` is a name that the user has already
-        # chosen
-        if indexed in self.used_names:
-            return self._fresh_name(indexed)
-
-        # Otherwise, we can use the indexed name
+        # `T'1`, `T'2`, ...
+        indexed = f"{display_name}'{self.counter[display_name]}"
         self.counter[display_name] += 1
-        self.used_names.add(indexed)
         return indexed
 
     def visit(self, ty: Type) -> str:
