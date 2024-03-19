@@ -114,7 +114,7 @@ class _NoneTypeDef(TypeDef):
     Any impls on None can be registered with this definition.
     """
 
-    name: Literal["tuple"] = field(default="tuple", init=False)
+    name: Literal["None"] = field(default="None", init=False)
 
     def check_instantiate(
         self, args: Sequence[Argument], loc: AstNode | None = None
