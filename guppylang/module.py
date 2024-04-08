@@ -123,7 +123,9 @@ class GuppyModule:
     ) -> RawFunctionDef:
         """Registers a Python function definition as belonging to this Guppy module."""
         func_ast = parse_py_func(f)
-        defn = RawFunctionDef(DefId.fresh(), func_ast.name, func_ast, get_py_scope(f))
+        defn = RawFunctionDef(
+            DefId.fresh(self), func_ast.name, func_ast, get_py_scope(f)
+        )
         self.register_def(defn, instance)
         return defn
 
@@ -132,7 +134,7 @@ class GuppyModule:
     ) -> RawFunctionDecl:
         """Registers a Python function declaration as belonging to this Guppy module."""
         func_ast = parse_py_func(f)
-        decl = RawFunctionDecl(DefId.fresh(), func_ast.name, func_ast)
+        decl = RawFunctionDecl(DefId.fresh(self), func_ast.name, func_ast)
         self.register_def(decl, instance)
         return decl
 

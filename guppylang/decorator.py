@@ -134,7 +134,7 @@ class _Guppy:
 
         def dec(c: type) -> type:
             defn = OpaqueTypeDef(
-                DefId.fresh(),
+                DefId.fresh(module),
                 name or c.__name__,
                 None,
                 [],
@@ -151,7 +151,7 @@ class _Guppy:
     @pretty_errors
     def type_var(self, module: GuppyModule, name: str, linear: bool = False) -> TypeVar:
         """Creates a new type variable in a module."""
-        defn = TypeVarDef(DefId.fresh(), name, None, linear)
+        defn = TypeVarDef(DefId.fresh(module), name, None, linear)
         module.register_def(defn)
         # Return an actual Python `TypeVar` so it can be used as an actual type in code
         # that is executed by interpreter before handing it to Guppy.
@@ -182,7 +182,7 @@ class _Guppy:
                 )
             call_checker = checker or DefaultCallChecker()
             func = RawCustomFunctionDef(
-                DefId.fresh(),
+                DefId.fresh(module),
                 name or func_ast.name,
                 func_ast,
                 call_checker,
