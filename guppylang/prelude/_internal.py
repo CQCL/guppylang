@@ -12,12 +12,13 @@ from guppylang.definition.custom import (
     CustomFunctionDef,
     DefaultCallChecker,
 )
+from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.hugr import ops, tys, val
 from guppylang.hugr.hugr import OutPortV
 from guppylang.nodes import GlobalCall
-from guppylang.tys.definition import TypeDef, bool_type
+from guppylang.tys.builtin import bool_type
 from guppylang.tys.subst import Subst
 from guppylang.tys.ty import FunctionType, OpaqueType, Type, unify
 

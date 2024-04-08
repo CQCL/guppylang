@@ -42,6 +42,7 @@ from guppylang.checker.core import (
     Globals,
     Locals,
 )
+from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef, ValueDef
 from guppylang.error import (
     GuppyError,
@@ -63,8 +64,7 @@ from guppylang.nodes import (
     TypeApply,
 )
 from guppylang.tys.arg import TypeArg
-from guppylang.tys.definition import (
-    TypeDef,
+from guppylang.tys.builtin import (
     bool_type,
     get_element_type,
     is_bool_type,

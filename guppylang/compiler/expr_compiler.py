@@ -24,7 +24,7 @@ from guppylang.nodes import (
     LocalName,
     TypeApply,
 )
-from guppylang.tys.definition import bool_type, get_element_type, is_list_type
+from guppylang.tys.builtin import bool_type, get_element_type, is_list_type
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,

@@ -24,7 +24,7 @@ from guppylang.prelude._internal import (
     int_op,
     logic_op,
 )
-from guppylang.tys.definition import bool_type_def, linst_type_def, list_type_def
+from guppylang.tys.builtin import bool_type_def, linst_type_def, list_type_def
 
 builtins = GuppyModule("builtins", import_builtins=False)
 

@@ -9,9 +9,9 @@ from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, name_nodes_in_ast
 from guppylang.definition.common import DefId, Definition
+from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
-from guppylang.tys.definition import (
-    TypeDef,
+from guppylang.tys.builtin import (
     bool_type_def,
     callable_type_def,
     linst_type_def,

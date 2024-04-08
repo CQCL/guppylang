@@ -5,9 +5,9 @@ from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals
 from guppylang.definition.common import DefId
 from guppylang.definition.parameter import ParamDef
+from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, TypeArg
-from guppylang.tys.definition import TypeDef
 from guppylang.tys.param import Parameter, TypeParam
 from guppylang.tys.ty import NoneType, TupleType, Type
 
