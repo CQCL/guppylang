@@ -1,14 +1,15 @@
 import ast
 import copy
 import itertools
-from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any, NamedTuple
 
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, name_nodes_in_ast
+from guppylang.definition.common import DefId, Definition
+from guppylang.definition.value import CallableDef
 from guppylang.tys.definition import (
     TypeDef,
     bool_type_def,
@@ -18,8 +19,6 @@ from guppylang.tys.definition import (
     none_type_def,
     tuple_type_def,
 )
-from guppylang.tys.param import Parameter
-from guppylang.tys.subst import Subst
 from guppylang.tys.ty import (
     BoundTypeVar,
     ExistentialTypeVar,
@@ -34,7 +33,7 @@ from guppylang.tys.ty import (
 
 @dataclass
 class Variable:
-    """Class holding data associated with a variable."""
+    """Class holding data associated with a local variable."""
 
     name: str
     ty: Type
@@ -42,101 +41,104 @@ class Variable:
     used: AstNode | None
 
 
-@dataclass
-class CallableVariable(ABC, Variable):
-    """Abstract base class for global variables that can be called."""
-
-    ty: FunctionType
-
-    @abstractmethod
-    def check_call(
-        self, args: list[ast.expr], ty: Type, node: AstNode, ctx: "Context"
-    ) -> tuple[ast.expr, Subst]:
-        """Checks the return type of a function call against a given type."""
-
-    @abstractmethod
-    def synthesize_call(
-        self, args: list[ast.expr], node: AstNode, ctx: "Context"
-    ) -> tuple[ast.expr, Type]:
-        """Synthesizes the return type of a function call."""
-
-
-@dataclass
-class TypeVarDecl:
-    """A declared type variable."""
-
-    name: str
-    linear: bool
-
-
 PyScope = dict[str, Any]
 
 
-class Globals(NamedTuple):
-    """Collection of names that are available on module-level.
+@dataclass(frozen=True)
+class Globals:
+    """Collection of definitions that are available on module-level.
 
-    Separately stores names that are bound to values (i.e. module-level functions or
-    constants), to types, or to instance functions belonging to types.
+    Stores a mapping from global ids to their definition together with a mapping of
+    user names to definition id and instance implementation id.
     """
 
-    values: dict[str, Variable]
-    type_defs: dict[str, TypeDef]
-    param_vars: dict[str, Parameter]
+    defs: Mapping[DefId, Definition]
+
+    names: dict[str, DefId]
+    impls: dict[DefId, dict[str, DefId]]
     python_scope: PyScope
 
     @staticmethod
     def default() -> "Globals":
         """Generates a `Globals` instance that is populated with all core types"""
-        type_defs = {
-            "Callable": callable_type_def,
-            "tuple": tuple_type_def,
-            "None": none_type_def,
-            "bool": bool_type_def,
-            "list": list_type_def,
-            "linst": linst_type_def,
-        }
-        return Globals({}, type_defs, {}, {})
+        builtins: list[Definition] = [
+            callable_type_def,
+            tuple_type_def,
+            none_type_def,
+            bool_type_def,
+            list_type_def,
+            linst_type_def,
+        ]
+        defs = {defn.id: defn for defn in builtins}
+        names = {defn.name: defn.id for defn in builtins}
+        return Globals(defs, names, {}, {})
 
-    def get_instance_func(self, ty: Type, name: str) -> CallableVariable | None:
+    def get_instance_func(self, ty: Type | TypeDef, name: str) -> CallableDef | None:
         """Looks up an instance function with a given name for a type.
 
         Returns `None` if the name doesn't exist or isn't a function.
         """
-        defn: TypeDef
+        type_defn: TypeDef
         match ty:
+            case TypeDef() as type_defn:
+                pass
             case BoundTypeVar() | ExistentialTypeVar() | SumType():
                 return None
             case FunctionType():
-                defn = callable_type_def
+                type_defn = callable_type_def
             case OpaqueType() as ty:
-                defn = ty.defn
+                type_defn = ty.defn
             case TupleType():
-                defn = tuple_type_def
+                type_defn = tuple_type_def
             case NoneType():
-                defn = none_type_def
+                type_defn = none_type_def
             case _:
-                assert_never(ty)
+                return assert_never(ty)
 
-        qualname = qualified_name(defn.name, name)
-        if qualname in self.values:
-            val = self.values[qualname]
-            if isinstance(val, CallableVariable):
-                return val
+        if type_defn.id in self.impls and name in self.impls[type_defn.id]:
+            def_id = self.impls[type_defn.id][name]
+            defn = self.defs[def_id]
+            if isinstance(defn, CallableDef):
+                return defn
         return None
 
+    def update_defs(self, defs: Mapping[DefId, Definition]) -> "Globals":
+        """Returns a new `Globals` instance with updated definitions.
+
+        This method is needed since in-place definition updates are impossible as the
+        definition map is immutable.
+        """
+        return Globals({**self.defs, **defs}, self.names, self.impls, self.python_scope)
+
     def __or__(self, other: "Globals") -> "Globals":
+        impls = {
+            def_id: self.impls.get(def_id, {}) | other.impls.get(def_id, {})
+            for def_id in self.impls.keys() | other.impls.keys()
+        }
         return Globals(
-            self.values | other.values,
-            self.type_defs | other.type_defs,
-            self.param_vars | other.param_vars,
+            {**self.defs, **other.defs},
+            self.names | other.names,
+            impls,
             self.python_scope | other.python_scope,
         )
 
-    def __ior__(self, other: "Globals") -> "Globals":  # noqa: PYI034
-        self.values.update(other.values)
-        self.type_defs.update(other.type_defs)
-        self.param_vars.update(other.param_vars)
-        return self
+    def __contains__(self, item: DefId | str) -> bool:
+        match item:
+            case DefId() as def_id:
+                return def_id in self.defs
+            case str(name):
+                return name in self.names
+            case x:
+                return assert_never(x)
+
+    def __getitem__(self, item: DefId | str) -> Definition:
+        match item:
+            case DefId() as def_id:
+                return self.defs[def_id]
+            case str(name):
+                return self.defs[self.names[name]]
+            case x:
+                return assert_never(x)
 
 
 @dataclass
@@ -227,9 +229,3 @@ class DummyEvalDict(PyScope):
         if isinstance(key, str) and key in self.ctx.locals:
             return True
         return super().__contains__(key)
-
-
-def qualified_name(ty: TypeDef | str, name: str) -> str:
-    """Returns a qualified name for an instance function on a type."""
-    ty_name = ty if isinstance(ty, str) else ty.name
-    return f"{ty_name}.{name}"

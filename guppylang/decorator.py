@@ -1,4 +1,3 @@
-import functools
 import inspect
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -7,22 +6,27 @@ from types import ModuleType
 from typing import Any, TypeVar
 
 from guppylang.ast_util import has_empty_body
-from guppylang.custom import (
+from guppylang.definition.common import DefId
+from guppylang.definition.custom import (
     CustomCallChecker,
     CustomCallCompiler,
-    CustomFunction,
     DefaultCallChecker,
-    DefaultCallCompiler,
+    NotImplementedCallCompiler,
     OpCompiler,
+    RawCustomFunctionDef,
 )
+from guppylang.definition.declaration import RawFunctionDecl
+from guppylang.definition.function import RawFunctionDef
+from guppylang.definition.parameter import TypeVarDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
 from guppylang.hugr import ops, tys
 from guppylang.hugr.hugr import Hugr
 from guppylang.module import GuppyModule, PyFunc, parse_py_func
 from guppylang.tys.definition import OpaqueTypeDef, TypeDef
 
-FuncDecorator = Callable[[PyFunc], PyFunc | Hugr]
-CustomFuncDecorator = Callable[[PyFunc], CustomFunction]
+FuncDefDecorator = Callable[[PyFunc], RawFunctionDef]
+FuncDeclDecorator = Callable[[PyFunc], RawFunctionDecl]
+CustomFuncDecorator = Callable[[PyFunc], RawCustomFunctionDef]
 ClassDecorator = Callable[[type], type]
 
 
@@ -56,22 +60,12 @@ class _Guppy:
         self._modules = {}
 
     @pretty_errors
-    def __call__(self, arg: PyFunc | GuppyModule) -> FuncDecorator:
+    def __call__(self, arg: PyFunc | GuppyModule) -> FuncDefDecorator | RawFunctionDef:
         """Decorator to annotate Python functions as Guppy code.
 
         Optionally, the `GuppyModule` in which the function should be placed can
         be passed to the decorator.
         """
-
-        def make_dummy(wraps: PyFunc) -> Callable[..., Any]:
-            @functools.wraps(wraps)
-            def dummy(*args: Any, **kwargs: Any) -> Any:
-                raise GuppyError(
-                    "Guppy functions can only be called in a Guppy context"
-                )
-
-            return dummy
-
         if not isinstance(arg, GuppyModule):
             # Decorator used without any arguments.
             # We default to a module associated with the caller of the decorator.
@@ -81,14 +75,12 @@ class _Guppy:
             if caller not in self._modules:
                 self._modules[caller] = GuppyModule(caller.name)
             module = self._modules[caller]
-            module.register_func_def(f)
-            return make_dummy(f)
+            return module.register_func_def(f)
 
         if isinstance(arg, GuppyModule):
             # Module passed.
-            def dec(f: Callable[..., Any]) -> Callable[..., Any]:
-                arg.register_func_def(f)
-                return make_dummy(f)
+            def dec(f: Callable[..., Any]) -> RawFunctionDef:
+                return arg.register_func_def(f)
 
             return dec
 
@@ -141,9 +133,16 @@ class _Guppy:
         module._instance_func_buffer = {}
 
         def dec(c: type) -> type:
-            _name = name or c.__name__
-            defn = OpaqueTypeDef(_name, [], linear, lambda _: hugr_ty, bound)
-            module.register_type(_name, defn)
+            defn = OpaqueTypeDef(
+                DefId.fresh(),
+                name or c.__name__,
+                None,
+                [],
+                linear,
+                lambda _: hugr_ty,
+                bound,
+            )
+            module.register_def(defn)
             module._register_buffered_instance_funcs(defn)
             return c
 
@@ -152,7 +151,10 @@ class _Guppy:
     @pretty_errors
     def type_var(self, module: GuppyModule, name: str, linear: bool = False) -> TypeVar:
         """Creates a new type variable in a module."""
-        module.register_type_var(name, linear)
+        defn = TypeVarDef(DefId.fresh(), name, None, linear)
+        module.register_def(defn)
+        # Return an actual Python `TypeVar` so it can be used as an actual type in code
+        # that is executed by interpreter before handing it to Guppy.
         return TypeVar(name)
 
     @pretty_errors
@@ -171,7 +173,7 @@ class _Guppy:
         provided.
         """
 
-        def dec(f: PyFunc) -> CustomFunction:
+        def dec(f: PyFunc) -> RawCustomFunctionDef:
             func_ast = parse_py_func(f)
             if not has_empty_body(func_ast):
                 raise GuppyError(
@@ -179,15 +181,15 @@ class _Guppy:
                     func_ast.body[0],
                 )
             call_checker = checker or DefaultCallChecker()
-            func = CustomFunction(
+            func = RawCustomFunctionDef(
+                DefId.fresh(),
                 name or func_ast.name,
                 func_ast,
-                compiler or DefaultCallCompiler(),
                 call_checker,
+                compiler or NotImplementedCallCompiler(),
                 higher_order_value,
             )
-            call_checker.func = func
-            module.register_custom_func(func)
+            module.register_def(func)
             return func
 
         return dec
@@ -203,19 +205,11 @@ class _Guppy:
         """Decorator to annotate function declarations as HUGR ops."""
         return self.custom(module, OpCompiler(op), checker, higher_order_value, name)
 
-    def declare(self, module: GuppyModule) -> FuncDecorator:
+    def declare(self, module: GuppyModule) -> FuncDeclDecorator:
         """Decorator to declare functions"""
 
-        def dec(f: Callable[..., Any]) -> Callable[..., Any]:
-            module.register_func_decl(f)
-
-            @functools.wraps(f)
-            def dummy(*args: Any, **kwargs: Any) -> Any:
-                raise GuppyError(
-                    "Guppy functions can only be called in a Guppy context"
-                )
-
-            return dummy
+        def dec(f: Callable[..., Any]) -> RawFunctionDecl:
+            return module.register_func_decl(f)
 
         return dec
 

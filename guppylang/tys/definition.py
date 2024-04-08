@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from guppylang.ast_util import AstNode
+from guppylang.definition.common import CompiledDef, DefId, Definition
 from guppylang.error import GuppyError
 from guppylang.hugr import tys
 from guppylang.tys.arg import Argument, TypeArg
@@ -12,10 +13,10 @@ from guppylang.tys.ty import FunctionType, NoneType, OpaqueType, TupleType, Type
 
 
 @dataclass(frozen=True)
-class TypeDef(ABC):
+class TypeDef(Definition, ABC):
     """Abstract base class for type definitions."""
 
-    name: str
+    description: str = field(default="type", init=False)
 
     @abstractmethod
     def check_instantiate(
@@ -29,7 +30,7 @@ class TypeDef(ABC):
 
 
 @dataclass(frozen=True)
-class OpaqueTypeDef(TypeDef):
+class OpaqueTypeDef(TypeDef, CompiledDef):
     """An opaque type definition that is backed by some Hugr type."""
 
     params: Sequence[Parameter]
@@ -155,23 +156,29 @@ def _list_to_hugr(args: Sequence[Argument]) -> tys.Opaque:
     )
 
 
-callable_type_def = _CallableTypeDef()
-tuple_type_def = _TupleTypeDef()
-none_type_def = _NoneTypeDef()
+callable_type_def = _CallableTypeDef(DefId.fresh(), None)
+tuple_type_def = _TupleTypeDef(DefId.fresh(), None)
+none_type_def = _NoneTypeDef(DefId.fresh(), None)
 bool_type_def = OpaqueTypeDef(
+    id=DefId.fresh(),
     name="bool",
+    defined_at=None,
     params=[],
     always_linear=False,
     to_hugr=lambda _: tys.UnitSum(size=2),
 )
 linst_type_def = OpaqueTypeDef(
+    id=DefId.fresh(),
     name="linst",
+    defined_at=None,
     params=[TypeParam(0, "T", can_be_linear=True)],
     always_linear=False,
     to_hugr=_list_to_hugr,
 )
 list_type_def = _ListTypeDef(
+    id=DefId.fresh(),
     name="list",
+    defined_at=None,
     params=[TypeParam(0, "T", can_be_linear=False)],
     always_linear=False,
     to_hugr=_list_to_hugr,

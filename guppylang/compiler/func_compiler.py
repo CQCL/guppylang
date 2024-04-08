@@ -1,55 +1,25 @@
-from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from guppylang.ast_util import AstNode
-from guppylang.checker.func_checker import CheckedFunction, DefinedFunction
 from guppylang.compiler.cfg_compiler import compile_cfg
 from guppylang.compiler.core import (
-    CompiledFunction,
     CompiledGlobals,
     DFContainer,
     PortVariable,
 )
-from guppylang.hugr.hugr import DFContainingVNode, Hugr, OutPortV
+from guppylang.hugr.hugr import DFContainingVNode, Hugr
 from guppylang.nodes import CheckedNestedFunctionDef
-from guppylang.tys.subst import Inst
 from guppylang.tys.ty import FunctionType, type_to_row
 
-
-@dataclass
-class CompiledFunctionDef(DefinedFunction, CompiledFunction):
-    node: DFContainingVNode
-
-    def load(
-        self, dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode
-    ) -> OutPortV:
-        return graph.add_load_constant(self.node.out_port(0), dfg.node).out_port(0)
-
-    def compile_call(
-        self,
-        args: list[OutPortV],
-        type_args: Inst,
-        dfg: DFContainer,
-        graph: Hugr,
-        globals: CompiledGlobals,
-        node: AstNode,
-    ) -> list[OutPortV]:
-        # TODO: Hugr should probably allow us to pass type args to `Call`, so we can
-        #   avoid loading the function to manually add a `TypeApply`
-        if type_args:
-            func = graph.add_load_constant(self.node.out_port(0), dfg.node)
-            func = graph.add_type_apply(func.out_port(0), type_args, dfg.node)
-            call = graph.add_indirect_call(func.out_port(0), args, dfg.node)
-        else:
-            call = graph.add_call(self.node.out_port(0), args, dfg.node)
-        return [call.out_port(i) for i in range(len(type_to_row(self.ty.output)))]
+if TYPE_CHECKING:
+    from guppylang.definition.function import CheckedFunctionDef
 
 
 def compile_global_func_def(
-    func: CheckedFunction,
+    func: "CheckedFunctionDef",
     def_node: DFContainingVNode,
     graph: Hugr,
     globals: CompiledGlobals,
-) -> CompiledFunctionDef:
+) -> None:
     """Compiles a top-level function definition to Hugr."""
     _, ports = graph.add_input_with_ports(list(func.ty.inputs), def_node)
     cfg_node = graph.add_cfg(def_node, ports)
@@ -60,8 +30,6 @@ def compile_global_func_def(
         inputs=[cfg_node.add_out_port(ty) for ty in type_to_row(func.cfg.output_ty)],
         parent=def_node,
     )
-
-    return CompiledFunctionDef(func.name, func.ty, func.defined_at, None, def_node)
 
 
 def compile_local_func_def(
@@ -100,8 +68,12 @@ def compile_local_func_def(
         func.cfg.input_tys.append(func.ty)
     else:
         # Otherwise, we treat the function like a normal global variable
+        from guppylang.definition.function import CompiledFunctionDef
+
         globals = globals | {
-            func.name: CompiledFunctionDef(func.name, func.ty, func, None, def_node)
+            func.def_id: CompiledFunctionDef(
+                func.def_id, func.name, func, func.ty, {}, func.cfg, def_node
+            )
         }
 
     # Compile the CFG

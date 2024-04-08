@@ -1,12 +1,11 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Iterator
 from dataclasses import dataclass
 
 from guppylang.ast_util import AstNode
-from guppylang.checker.core import CallableVariable, Variable
+from guppylang.checker.core import Variable
+from guppylang.definition.common import CompiledDef, DefId
 from guppylang.hugr.hugr import DFContainingNode, Hugr, OutPortV
-from guppylang.tys.subst import Inst
-from guppylang.tys.ty import FunctionType
 
 
 @dataclass
@@ -29,35 +28,7 @@ class PortVariable(Variable):
         object.__setattr__(self, "port", port)
 
 
-class CompiledVariable(ABC, Variable):
-    """Abstract base class for compiled global module-level variables."""
-
-    @abstractmethod
-    def load(
-        self, dfg: "DFContainer", graph: Hugr, globals: "CompiledGlobals", node: AstNode
-    ) -> OutPortV:
-        """Loads the variable as a value into a local dataflow graph."""
-
-
-class CompiledFunction(CompiledVariable, CallableVariable):
-    """Abstract base class a global module-level function."""
-
-    ty: FunctionType
-
-    @abstractmethod
-    def compile_call(
-        self,
-        args: list[OutPortV],
-        type_args: Inst,
-        dfg: "DFContainer",
-        graph: Hugr,
-        globals: "CompiledGlobals",
-        node: AstNode,
-    ) -> list[OutPortV]:
-        """Compiles a call to the function."""
-
-
-CompiledGlobals = dict[str, CompiledVariable]
+CompiledGlobals = dict[DefId, CompiledDef]
 CompiledLocals = dict[str, PortVariable]
 
 

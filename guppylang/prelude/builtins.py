@@ -2,8 +2,8 @@
 
 # mypy: disable-error-code="empty-body, misc, override, valid-type, no-untyped-def"
 
-from guppylang.custom import DefaultCallChecker, NoopCompiler
 from guppylang.decorator import guppy
+from guppylang.definition.custom import DefaultCallChecker, NoopCompiler
 from guppylang.hugr import ops, tys
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal import (
@@ -42,6 +42,9 @@ class Bool:
 
     @guppy.hugr_op(builtins, int_op("ifrombool"))
     def __int__(self: bool) -> int: ...
+
+    @guppy.custom(builtins, checker=DunderChecker("__bool__"), higher_order_value=False)
+    def __new__(x): ...
 
     @guppy.hugr_op(builtins, logic_op("Or", [tys.BoundedNatArg(n=2)]))
     def __or__(self: bool, other: bool) -> bool: ...
@@ -111,6 +114,9 @@ class Int:
 
     @guppy.hugr_op(builtins, int_op("ineg"))
     def __neg__(self: int) -> int: ...
+
+    @guppy.custom(builtins, checker=DunderChecker("__int__"), higher_order_value=False)
+    def __new__(x): ...
 
     @guppy.hugr_op(builtins, int_op("ior"))
     def __or__(self: int, other: int) -> int: ...
@@ -241,6 +247,11 @@ class Float:
     @guppy.hugr_op(builtins, float_op("fneg"), CoercingChecker())
     def __neg__(self: float, other: float) -> float: ...
 
+    @guppy.custom(
+        builtins, checker=DunderChecker("__float__"), higher_order_value=False
+    )
+    def __new__(x): ...
+
     @guppy.custom(builtins, NoopCompiler(), CoercingChecker())
     def __pos__(self: float) -> float: ...
 
@@ -322,6 +333,9 @@ class List:
     @guppy.hugr_op(builtins, ops.DummyOp(name="Pop"))
     def __next__(self: list[T]) -> tuple[T, list[T]]: ...
 
+    @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+    def __new__(x): ...
+
     @guppy.custom(builtins, checker=FailingChecker("Guppy lists are immutable"))
     def __setitem__(self: list[T], idx: int, value: T) -> None: ...
 
@@ -385,6 +399,9 @@ class Linst:
     @guppy.hugr_op(builtins, ops.DummyOp(name="Pop"))
     def __next__(self: linst[L]) -> tuple[L, linst[L]]: ...
 
+    @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
+    def __new__(x): ...
+
     @guppy.hugr_op(builtins, ops.DummyOp(name="Append"), ReversingChecker())
     def __radd__(self: linst[L], other: linst[L]) -> linst[L]: ...
 
@@ -408,12 +425,6 @@ class Linst:
 def abs(x): ...
 
 
-@guppy.custom(
-    builtins, name="bool", checker=DunderChecker("__bool__"), higher_order_value=False
-)
-def _bool(x): ...
-
-
 @guppy.custom(builtins, checker=CallableChecker(), higher_order_value=False)
 def callable(x): ...
 
@@ -422,18 +433,6 @@ def callable(x): ...
     builtins, checker=DunderChecker("__divmod__", num_args=2), higher_order_value=False
 )
 def divmod(x, y): ...
-
-
-@guppy.custom(
-    builtins, name="float", checker=DunderChecker("__float__"), higher_order_value=False
-)
-def _float(x, y): ...
-
-
-@guppy.custom(
-    builtins, name="int", checker=DunderChecker("__int__"), higher_order_value=False
-)
-def _int(x): ...
 
 
 @guppy.custom(builtins, checker=DunderChecker("__len__"), higher_order_value=False)
@@ -581,12 +580,6 @@ def issubclass(x): ...
 def iter(x): ...
 
 
-@guppy.custom(
-    builtins, checker=UnsupportedChecker(), name="list", higher_order_value=False
-)
-def _list(x): ...
-
-
 @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
 def locals(x): ...
 
@@ -677,12 +670,6 @@ def sum(x): ...
 
 @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
 def super(x): ...
-
-
-@guppy.custom(
-    builtins, name="tuple", checker=UnsupportedChecker(), higher_order_value=False
-)
-def _tuple(x): ...
 
 
 @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
