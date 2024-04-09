@@ -58,7 +58,7 @@ class ListValue(BaseModel):
     """Hugr representation of floats in the arithmetic extension."""
 
     c: Literal["ListValue"] = "ListValue"
-    value: list[Any]
+    value: tuple[list[Any], tys.Type]
 
 
 def bool_value(b: bool) -> val.Value:
@@ -76,9 +76,9 @@ def float_value(f: float) -> val.Value:
     return val.ExtensionVal(c=(ConstF64(value=f),))
 
 
-def list_value(v: list[val.Value]) -> val.Value:
+def list_value(v: list[val.Value], ty: tys.Type) -> val.Value:
     """Returns the Hugr representation of a list value."""
-    return val.ExtensionVal(c=(ListValue(value=v),))
+    return val.ExtensionVal(c=(ListValue(value=(v, ty)),))
 
 
 def logic_op(op_name: str, args: list[tys.TypeArg] | None = None) -> ops.OpType:
