@@ -52,7 +52,11 @@ class Definition(ABC):
     @property
     @abstractmethod
     def description(self) -> str:
-        """ """
+        """Description of this definition to be used in messages to the user.
+
+        The returned text should fit into messages of the following form: "expected
+        a function, but got {description of this definition} instead".
+        """
 
 
 class ParsableDef(Definition):
