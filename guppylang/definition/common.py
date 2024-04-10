@@ -100,13 +100,13 @@ class CompilableDef(Definition):
     """
 
     @abstractmethod
-    def compile(self, graph: Hugr, parent: Node) -> "CompiledDef":
+    def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledDef":
         """Adds a Hugr node for the definition to the provided graph.
 
         Note that is not required to fill in the contents of the node. At this point,
         we don't have access to the globals since they have not all been compiled yet.
 
-        See `CompiledDef.compile_contents()` for the hook to compile the inside of the
+        See `CompiledDef.compile_inner()` for the hook to compile the inside of the
         node. This two-step process enables things like mutual recursion.
         """
 
@@ -114,7 +114,7 @@ class CompilableDef(Definition):
 class CompiledDef(Definition):
     """Abstract base class for definitions that have been added to a Hugr."""
 
-    def compile_contents(self, graph: Hugr, globals: "CompiledGlobals") -> None:
+    def compile_inner(self, graph: Hugr, globals: "CompiledGlobals") -> None:
         """Optional hook that is called to fill in the content of the Hugr node.
 
         Opposed to `CompilableDef.compile()`, we have access to all other compiled

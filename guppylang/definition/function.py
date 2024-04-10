@@ -91,12 +91,12 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
 
     cfg: CheckedCFG
 
-    def compile(self, graph: Hugr, parent: Node) -> "CompiledFunctionDef":
+    def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledFunctionDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr.
 
         Note that we don't compile the function body at this point since we don't have
         access to the other compiled functions yet. The body is compiled later in
-        `CompiledFunctionDef.compile_contents()`.
+        `CompiledFunctionDef.compile_inner()`.
         """
         def_node = graph.add_def(self.ty, parent, self.name)
         return CompiledFunctionDef(
@@ -142,6 +142,6 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
             call = graph.add_call(self.hugr_node.out_port(0), args, dfg.node)
         return [call.out_port(i) for i in range(len(type_to_row(self.ty.output)))]
 
-    def compile_contents(self, graph: Hugr, globals: CompiledGlobals) -> None:
+    def compile_inner(self, graph: Hugr, globals: CompiledGlobals) -> None:
         """Compiles the body of the function."""
         compile_global_func_def(self, self.hugr_node, graph, globals)

@@ -193,7 +193,7 @@ class GuppyModule:
         # Compile definitions to Hugr
         self._compiled_globals = {
             defn.id: (
-                defn.compile(graph, module_node)
+                defn.compile_outer(graph, module_node)
                 if isinstance(defn, CompilableDef)
                 else defn
             )
@@ -204,7 +204,7 @@ class GuppyModule:
         # Finally, compile the definition contents to Hugr. For example, this compiles
         # the bodies of functions.
         for defn in self._compiled_globals.values():
-            defn.compile_contents(graph, all_compiled_globals)
+            defn.compile_inner(graph, all_compiled_globals)
 
         self._compiled = True
         return graph
