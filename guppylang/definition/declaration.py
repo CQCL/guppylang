@@ -7,6 +7,7 @@ from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
+from guppylang.definition.function import PyFunc, parse_py_func
 from guppylang.definition.value import CallableDef, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.hugr.hugr import Hugr, Node, OutPortV, VNode
@@ -23,18 +24,18 @@ class RawFunctionDecl(ParsableDef):
     any additional checking or parsing.
     """
 
-    defined_at: ast.FunctionDef
-
+    python_func: PyFunc
     description: str = field(default="function", init=False)
 
     def parse(self, globals: Globals) -> "CheckedFunctionDecl":
         """Parses and checks the user-provided signature of the function."""
-        ty = check_signature(self.defined_at, globals)
-        if not has_empty_body(self.defined_at):
+        func_ast = parse_py_func(self.python_func)
+        ty = check_signature(func_ast, globals)
+        if not has_empty_body(func_ast):
             raise GuppyError(
-                "Body of function declaration must be empty", self.defined_at.body[0]
+                "Body of function declaration must be empty", func_ast.body[0]
             )
-        return CheckedFunctionDecl(self.id, self.name, self.defined_at, ty)
+        return CheckedFunctionDecl(self.id, self.name, func_ast, ty, self.python_func)
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,8 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
 
     In particular, this means that we have determined a type for the function.
     """
+
+    defined_at: ast.FunctionDef
 
     def check_call(
         self, args: list[ast.expr], ty: Type, node: AstNode, ctx: Context
@@ -65,7 +68,9 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
     def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledFunctionDecl":
         """Adds a Hugr `FuncDecl` node for this funciton to the Hugr."""
         node = graph.add_declare(self.ty, parent, self.name)
-        return CompiledFunctionDecl(self.id, self.name, self.defined_at, self.ty, node)
+        return CompiledFunctionDecl(
+            self.id, self.name, self.defined_at, self.ty, self.python_func, node
+        )
 
 
 @dataclass(frozen=True)

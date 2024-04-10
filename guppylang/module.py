@@ -1,13 +1,11 @@
-import ast
 import inspect
 import itertools
 import sys
-import textwrap
 from collections.abc import Callable, Mapping
 from types import ModuleType
 from typing import Any, Union
 
-from guppylang.ast_util import AstNode, annotate_location
+from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals, PyScope
 from guppylang.compiler.core import CompiledGlobals
 from guppylang.definition.common import (
@@ -122,10 +120,7 @@ class GuppyModule:
         self, f: PyFunc, instance: TypeDef | None = None
     ) -> RawFunctionDef:
         """Registers a Python function definition as belonging to this Guppy module."""
-        func_ast = parse_py_func(f)
-        defn = RawFunctionDef(
-            DefId.fresh(self), func_ast.name, func_ast, get_py_scope(f)
-        )
+        defn = RawFunctionDef(DefId.fresh(self), f.__name__, None, f, get_py_scope(f))
         self.register_def(defn, instance)
         return defn
 
@@ -133,8 +128,7 @@ class GuppyModule:
         self, f: PyFunc, instance: TypeDef | None = None
     ) -> RawFunctionDecl:
         """Registers a Python function declaration as belonging to this Guppy module."""
-        func_ast = parse_py_func(f)
-        decl = RawFunctionDecl(DefId.fresh(self), func_ast.name, func_ast)
+        decl = RawFunctionDecl(DefId.fresh(self), f.__name__, None, f)
         self.register_def(decl, instance)
         return decl
 
@@ -223,20 +217,6 @@ class GuppyModule:
                 f"Module `{self.name}` already contains a definition named `{name}`",
                 node,
             )
-
-
-def parse_py_func(f: PyFunc) -> ast.FunctionDef:
-    source_lines, line_offset = inspect.getsourcelines(f)
-    source = "".join(source_lines)  # Lines already have trailing \n's
-    source = textwrap.dedent(source)
-    func_ast = ast.parse(source).body[0]
-    file = inspect.getsourcefile(f)
-    if file is None:
-        raise GuppyError("Couldn't determine source file for function")
-    annotate_location(func_ast, source, file, line_offset)
-    if not isinstance(func_ast, ast.FunctionDef):
-        raise GuppyError("Expected a function definition", func_ast)
-    return func_ast
 
 
 def get_py_scope(f: PyFunc) -> PyScope:

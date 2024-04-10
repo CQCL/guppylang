@@ -72,7 +72,17 @@ def compile_local_func_def(
 
         globals = globals | {
             func.def_id: CompiledFunctionDef(
-                func.def_id, func.name, func, func.ty, {}, func.cfg, def_node
+                func.def_id,
+                func.name,
+                func,
+                func.ty,
+                # We don't have a Python function for nested definitions, so we insert a
+                # dummy function here. This should be fine since this should never be
+                # inspected after parsing and this definition is not leaked to the user.
+                lambda: None,
+                {},
+                func.cfg,
+                def_node,
             )
         }
 
