@@ -329,7 +329,8 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> val.Value | None:
         case list(elts):
             assert is_list_type(exp_ty)
             return list_value(
-                [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
+                [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts],
+                get_element_type(exp_ty).to_hugr(),
             )
         case _:
             # Pytket conversion is an optional feature
