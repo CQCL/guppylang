@@ -14,7 +14,7 @@ class ParamDef(Definition):
 
 
 @dataclass(frozen=True)
-class TypeVarDef(ParamDef, CompiledDef):  # Inherit from
+class TypeVarDef(ParamDef, CompiledDef):
     """A type variable definition."""
 
     can_be_linear: bool
