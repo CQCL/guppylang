@@ -11,7 +11,7 @@ repository = "https://github.com/CQCL/guppy"
 python = "^3.10"
 graphviz = "^0.20.1"
 networkx = "^3.2.1"
-pydantic = "^2.5.3"
+pydantic = "^2.7.0b1"
 typing-extensions = "^4.9.0"
 
 [tool.poetry.group.dev.dependencies]
