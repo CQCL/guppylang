@@ -1,11 +1,11 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from dataclasses import dataclass, field
 
 from guppylang.definition.common import CompiledDef, Definition
 from guppylang.tys.param import Parameter, TypeParam
 
 
-class ParamDef(Definition, ABC):
+class ParamDef(Definition):
     """Abstract base class for type parameter definitions."""
 
     @abstractmethod

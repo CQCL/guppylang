@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
@@ -13,7 +13,7 @@ from guppylang.tys.ty import OpaqueType
 
 
 @dataclass(frozen=True)
-class TypeDef(Definition, ABC):
+class TypeDef(Definition):
     """Abstract base class for type definitions."""
 
     description: str = field(default="type", init=False)

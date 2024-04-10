@@ -1,5 +1,5 @@
 import ast
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class ValueDef(Definition, ABC):
+class ValueDef(Definition):
     """Abstract base class for definitions that represent values."""
 
     ty: Type
@@ -25,7 +25,7 @@ class ValueDef(Definition, ABC):
 
 
 @dataclass(frozen=True)
-class CompiledValueDef(ValueDef, CompiledDef, ABC):
+class CompiledValueDef(ValueDef, CompiledDef):
     """Abstract base class for compiled definitions that represent values."""
 
     @abstractmethod
@@ -36,7 +36,7 @@ class CompiledValueDef(ValueDef, CompiledDef, ABC):
 
 
 @dataclass(frozen=True)
-class CallableDef(ValueDef, ABC):
+class CallableDef(ValueDef):
     """Abstract base class for definitions that represent functions."""
 
     ty: FunctionType

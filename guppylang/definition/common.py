@@ -55,7 +55,7 @@ class Definition(ABC):
         """ """
 
 
-class ParsableDef(Definition, ABC):
+class ParsableDef(Definition):
     """Abstract base class for raw definitions that still require parsing.
 
     For example, raw function definitions first need to parse their signature and check
@@ -71,7 +71,7 @@ class ParsableDef(Definition, ABC):
         """
 
 
-class CheckableDef(Definition, ABC):
+class CheckableDef(Definition):
     """Abstract base class for definitions that still need to be checked.
 
     The result of checking should be a definition that is ready to be compiled to Hugr.
@@ -88,7 +88,7 @@ class CheckableDef(Definition, ABC):
         """
 
 
-class CompilableDef(Definition, ABC):
+class CompilableDef(Definition):
     """Abstract base class for definitions that still need to be compiled to Hugr.
 
     The result of compilation should be a `CompiledDef` with a pointer to the Hugr node
@@ -107,7 +107,7 @@ class CompilableDef(Definition, ABC):
         """
 
 
-class CompiledDef(Definition, ABC):
+class CompiledDef(Definition):
     """Abstract base class for definitions that have been added to a Hugr."""
 
     def compile_contents(self, graph: Hugr, globals: "CompiledGlobals") -> None:
