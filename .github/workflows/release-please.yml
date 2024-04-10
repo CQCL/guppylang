@@ -16,5 +16,4 @@ jobs:
       - uses: google-github-actions/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Should update changelog, tag commit, and create a github release
-          release-type: simple
+          config-file: release-please-config.json
