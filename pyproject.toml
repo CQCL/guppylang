@@ -38,6 +38,14 @@ pytket = { version = "^1.24.0" }
 tket2-py = { git = "https://github.com/CQCL/tket2.git", rev = "9e941f3" }
 
 
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^7.2.6"
+sphinx-book-theme = "^1.1.2"
+
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
