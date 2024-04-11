@@ -81,15 +81,15 @@ def rz(q: qubit, angle: float) -> qubit: ...
 def rx(q: qubit, angle: float) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("RzF64"))
+@guppy.hugr_op(quantum, quantum_op("PhasedX"))
 def phased_x(q: qubit, angle1: float, angle2: float) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("RzF64"))
+@guppy.hugr_op(quantum, quantum_op("ZZPhase"))
 def zz_phase(q1: qubit, q2: qubit, angle: float) -> tuple[qubit, qubit]: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("RzF64"))
+@guppy.hugr_op(quantum, quantum_op("TK1"))
 def tk1(q: qubit, angle1: float, angle2: float, angle3: float) -> qubit: ...
 
 
