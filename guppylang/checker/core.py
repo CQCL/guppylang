@@ -23,6 +23,7 @@ from guppylang.tys.subst import Subst
 from guppylang.tys.ty import (
     BoundTypeVar,
     ExistentialTypeVar,
+    FunctionTensorType,
     FunctionType,
     NoneType,
     OpaqueType,
@@ -89,6 +90,7 @@ class Globals(NamedTuple):
         """Generates a `Globals` instance that is populated with all core types"""
         type_defs = {
             "Callable": callable_type_def,
+            "tensor": callable_type_def,
             "tuple": tuple_type_def,
             "None": none_type_def,
             "bool": bool_type_def,
@@ -106,6 +108,8 @@ class Globals(NamedTuple):
         match ty:
             case BoundTypeVar() | ExistentialTypeVar() | SumType():
                 return None
+            case FunctionTensorType():
+                defn = callable_type_def
             case FunctionType():
                 defn = callable_type_def
             case OpaqueType() as ty:

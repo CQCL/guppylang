@@ -5,7 +5,11 @@ from pydantic import BaseModel
 
 from guppylang.ast_util import AstNode, get_type, with_loc, with_type
 from guppylang.checker.core import CallableVariable, Context
-from guppylang.checker.expr_checker import ExprSynthesizer, check_num_args
+from guppylang.checker.expr_checker import (
+    ExprSynthesizer,
+    check_leftovers_nil,
+    check_num_args_sufficient,
+)
 from guppylang.custom import (
     CustomCallChecker,
     CustomCallCompiler,
@@ -21,6 +25,11 @@ from guppylang.tys.subst import Subst
 from guppylang.tys.ty import FunctionType, OpaqueType, Type, unify
 
 INT_WIDTH = 6  # 2^6 = 64 bit
+
+
+def check_num_args(exp: int, args: list[ast.expr], node: AstNode) -> None:
+    check_num_args_sufficient(exp, len(args), node)
+    check_leftovers_nil(exp, args[exp:], node)
 
 
 hugr_int_type = tys.Opaque(
@@ -196,7 +205,7 @@ class DunderChecker(CustomCallChecker):
     def _get_func(
         self, args: list[ast.expr]
     ) -> tuple[list[ast.expr], CallableVariable]:
-        check_num_args(self.num_args, len(args), self.node)
+        check_num_args(self.num_args, args, self.node)
         fst, *rest = args
         fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
         func = self.ctx.globals.get_instance_func(ty, self.dunder_name)
@@ -221,7 +230,7 @@ class CallableChecker(CustomCallChecker):
     """Call checker for the builtin `callable` function"""
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        check_num_args(1, len(args), self.node)
+        check_num_args(1, args, self.node)
         [arg] = args
         arg, ty = ExprSynthesizer(self.ctx).synthesize(arg)
         is_callable = (
