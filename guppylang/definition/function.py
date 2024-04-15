@@ -1,7 +1,11 @@
 import ast
+import inspect
+import textwrap
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
-from guppylang.ast_util import AstNode, with_loc
+from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
 from guppylang.checker.core import Context, Globals, PyScope
 from guppylang.checker.expr_checker import check_call, synthesize_call
@@ -16,6 +20,8 @@ from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type, type_to_row
 
+PyFunc = Callable[..., Any]
+
 
 @dataclass(frozen=True)
 class RawFunctionDef(ParsableDef):
@@ -26,32 +32,35 @@ class RawFunctionDef(ParsableDef):
     variables in scope at the point of definition.
     """
 
-    defined_at: ast.FunctionDef
+    python_func: PyFunc
     python_scope: PyScope
 
     description: str = field(default="function", init=False)
 
     def parse(self, globals: Globals) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
-        ty = check_signature(self.defined_at, globals)
+        func_ast = parse_py_func(self.python_func)
+        ty = check_signature(func_ast, globals)
         if ty.parametrized:
             raise GuppyError(
-                "Generic function definitions are not supported yet", self.defined_at
+                "Generic function definitions are not supported yet", func_ast
             )
-        return ParsedFunctionDef(
-            self.id, self.name, self.defined_at, ty, self.python_scope
-        )
+        return ParsedFunctionDef(self.id, self.name, func_ast, ty, self.python_scope)
 
 
 @dataclass(frozen=True)
-class ParsedFunctionDef(RawFunctionDef, CheckableDef, CallableDef):
+class ParsedFunctionDef(CheckableDef, CallableDef):
     """A function definition with parsed and checked signature.
 
     In particular, this means that we have determined a type for the function and are
     ready to check the function body.
     """
 
+    python_scope: PyScope
+    defined_at: ast.FunctionDef
     ty: FunctionType
+
+    description: str = field(default="function", init=False)
 
     def check(self, globals: Globals) -> "CheckedFunctionDef":
         """Type checks the body of the function."""
@@ -59,7 +68,12 @@ class ParsedFunctionDef(RawFunctionDef, CheckableDef, CallableDef):
         globals = globals | Globals({}, {}, {}, self.python_scope)
         cfg = check_global_func_def(self.defined_at, self.ty, globals)
         return CheckedFunctionDef(
-            self.id, self.name, self.defined_at, self.ty, self.python_scope, cfg
+            self.id,
+            self.name,
+            self.defined_at,
+            self.ty,
+            self.python_scope,
+            cfg,
         )
 
     def check_call(
@@ -145,3 +159,17 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
     def compile_inner(self, graph: Hugr, globals: CompiledGlobals) -> None:
         """Compiles the body of the function."""
         compile_global_func_def(self, self.hugr_node, graph, globals)
+
+
+def parse_py_func(f: PyFunc) -> ast.FunctionDef:
+    source_lines, line_offset = inspect.getsourcelines(f)
+    source = "".join(source_lines)  # Lines already have trailing \n's
+    source = textwrap.dedent(source)
+    func_ast = ast.parse(source).body[0]
+    file = inspect.getsourcefile(f)
+    if file is None:
+        raise GuppyError("Couldn't determine source file for function")
+    annotate_location(func_ast, source, file, line_offset)
+    if not isinstance(func_ast, ast.FunctionDef):
+        raise GuppyError("Expected a function definition", func_ast)
+    return func_ast

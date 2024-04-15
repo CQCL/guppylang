@@ -16,13 +16,13 @@ from guppylang.definition.custom import (
     RawCustomFunctionDef,
 )
 from guppylang.definition.declaration import RawFunctionDecl
-from guppylang.definition.function import RawFunctionDef
+from guppylang.definition.function import RawFunctionDef, parse_py_func
 from guppylang.definition.parameter import TypeVarDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
 from guppylang.hugr import ops, tys
 from guppylang.hugr.hugr import Hugr
-from guppylang.module import GuppyModule, PyFunc, parse_py_func
+from guppylang.module import GuppyModule, PyFunc
 
 FuncDefDecorator = Callable[[PyFunc], RawFunctionDef]
 FuncDeclDecorator = Callable[[PyFunc], RawFunctionDecl]

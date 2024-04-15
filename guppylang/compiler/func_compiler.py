@@ -72,7 +72,13 @@ def compile_local_func_def(
 
         globals = globals | {
             func.def_id: CompiledFunctionDef(
-                func.def_id, func.name, func, func.ty, {}, func.cfg, def_node
+                func.def_id,
+                func.name,
+                func,
+                func.ty,
+                {},
+                func.cfg,
+                def_node,
             )
         }
 
