@@ -423,15 +423,21 @@ class OpaqueType(ParametrizedTypeBase):
         )
 
 
-# We define the `Type` type as a union of all `TypeBase` subclasses defined above. This
-# models an algebraic data type and enables exhaustiveness checking in pattern matches
-# etc.
-# Note that this might become obsolete in case the `@sealed` decorator is added:
-#  * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
-#  * https://github.com/johnthagen/sealed-typing-pep
+#: The type of parametrized Guppy types.
 ParametrizedType: TypeAlias = FunctionType | TupleType | SumType | OpaqueType
+
+#: The type of Guppy types.
+#:
+#: This is a type alias for a union of all Guppy types defined in this module. This
+#: models an algebraic data type and enables exhaustiveness checking in pattern matches
+#: etc.
+#:
+#: This might become obsolete in case the @sealed decorator is added:
+#:   * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
+#:   * https://github.com/johnthagen/sealed-typing-pep
 Type: TypeAlias = BoundTypeVar | ExistentialTypeVar | NoneType | ParametrizedType
 
+#: An immutable row of Guppy types.
 TypeRow: TypeAlias = Sequence[Type]
 
 
