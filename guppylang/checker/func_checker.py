@@ -102,15 +102,7 @@ def check_nested_func_def(
             from guppylang.definition.function import ParsedFunctionDef
 
             func = ParsedFunctionDef(
-                def_id,
-                func_def.name,
-                func_def,
-                func_ty,
-                # We don't have a Python function for nested definitions, so we insert a
-                # dummy function here. This should be fine since this should never be
-                # inspected after parsing and this definition is not leaked to the user.
-                lambda: None,
-                globals.python_scope,
+                def_id, func_def.name, func_def, func_ty, globals.python_scope
             )
             globals = ctx.globals | Globals(
                 {func.id: func}, {func_def.name: func.id}, {}, {}

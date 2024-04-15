@@ -45,21 +45,22 @@ class RawFunctionDef(ParsableDef):
             raise GuppyError(
                 "Generic function definitions are not supported yet", func_ast
             )
-        return ParsedFunctionDef(
-            self.id, self.name, func_ast, ty, self.python_func, self.python_scope
-        )
+        return ParsedFunctionDef(self.id, self.name, func_ast, ty, self.python_scope)
 
 
 @dataclass(frozen=True)
-class ParsedFunctionDef(RawFunctionDef, CheckableDef, CallableDef):
+class ParsedFunctionDef(CheckableDef, CallableDef):
     """A function definition with parsed and checked signature.
 
     In particular, this means that we have determined a type for the function and are
     ready to check the function body.
     """
 
+    python_scope: PyScope
     defined_at: ast.FunctionDef
     ty: FunctionType
+
+    description: str = field(default="function", init=False)
 
     def check(self, globals: Globals) -> "CheckedFunctionDef":
         """Type checks the body of the function."""
@@ -71,7 +72,6 @@ class ParsedFunctionDef(RawFunctionDef, CheckableDef, CallableDef):
             self.name,
             self.defined_at,
             self.ty,
-            self.python_func,
             self.python_scope,
             cfg,
         )
@@ -118,7 +118,6 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
             self.name,
             self.defined_at,
             self.ty,
-            self.python_func,
             self.python_scope,
             self.cfg,
             def_node,
