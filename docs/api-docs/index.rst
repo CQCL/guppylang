@@ -8,7 +8,7 @@ See TODO for the language documentation.
 
 .. autosummary::
    :toctree: generated
-   :template: custom-module-template.rst
+   :template: autosummary/module.rst
    :recursive:
 
    guppylang

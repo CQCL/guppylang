@@ -2,7 +2,7 @@
    Custom class template to make sphinx-autosummary list the full API doc after
    the summary. See https://github.com/sphinx-doc/sphinx/issues/7912
 
-{{ fullname | escape | underline}}
+{{ name | escape | underline}}
 
 .. currentmodule:: {{ module }}
 
@@ -10,7 +10,6 @@
    :members:
    :show-inheritance:
    :inherited-members:
-   :special-members: __call__, __add__, __mul__
 
    {% block methods %}
    {% if methods %}

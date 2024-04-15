@@ -2,7 +2,7 @@
    Custom module template to make sphinx-autosummary list the full API doc after
    the summary. See https://github.com/sphinx-doc/sphinx/issues/7912
 
-{{ fullname | escape | underline}}
+{{ name | escape | underline}}
 
 .. automodule:: {{ fullname }}
 
@@ -37,7 +37,6 @@
 
    .. autosummary::
       :toctree:
-      :template: custom-class-template.rst
       :nosignatures:
    {% for item in classes %}
       {{ item }}
@@ -61,7 +60,6 @@
 {% if modules %}
 .. autosummary::
    :toctree:
-   :template: custom-module-template.rst
    :recursive:
 {% for item in modules %}
    {{ item }}
