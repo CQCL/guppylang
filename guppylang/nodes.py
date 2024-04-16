@@ -4,7 +4,6 @@ import ast
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from guppylang.error import GuppyError
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import FunctionType
 
@@ -205,11 +204,3 @@ class FunctionTensor(ast.expr):
     elts: list[ast.expr]
 
     _fields = ("elts",)
-
-    def node_for_input(self, n: int, func_tys: list[FunctionType]) -> ast.expr:
-        for expr, func_ty in zip(self.elts, func_tys):
-            if n < len(func_ty.inputs):
-                return expr
-            else:
-                n -= len(func_ty.inputs)
-        raise GuppyError("Invalid call to node_for_input")
