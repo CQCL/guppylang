@@ -149,8 +149,8 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         # TODO: Hugr should probably allow us to pass type args to `Call`, so we can
         #   avoid loading the function to manually add a `TypeApply`
         if type_args:
-            func = graph.add_load_constant(self.hugr_node.out_port(0), dfg.node)
-            func = graph.add_type_apply(func.out_port(0), type_args, dfg.node)
+            func = self.load(dfg, graph, globals, node)
+            func = graph.add_type_apply(func, type_args, dfg.node)
             call = graph.add_indirect_call(func.out_port(0), args, dfg.node)
         else:
             call = graph.add_call(self.hugr_node.out_port(0), args, dfg.node)
