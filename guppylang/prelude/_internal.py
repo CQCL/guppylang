@@ -4,19 +4,21 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from guppylang.ast_util import AstNode, get_type, with_loc, with_type
-from guppylang.checker.core import CallableVariable, Context
+from guppylang.checker.core import Context
 from guppylang.checker.expr_checker import ExprSynthesizer, check_num_args
-from guppylang.custom import (
+from guppylang.definition.custom import (
     CustomCallChecker,
     CustomCallCompiler,
-    CustomFunction,
+    CustomFunctionDef,
     DefaultCallChecker,
 )
+from guppylang.definition.ty import TypeDef
+from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.hugr import ops, tys, val
 from guppylang.hugr.hugr import OutPortV
 from guppylang.nodes import GlobalCall
-from guppylang.tys.definition import bool_type
+from guppylang.tys.builtin import bool_type
 from guppylang.tys.subst import Subst
 from guppylang.tys.ty import FunctionType, OpaqueType, Type, unify
 
@@ -110,17 +112,14 @@ class CoercingChecker(DefaultCallChecker):
 
         for i in range(len(args)):
             args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
-            if (
-                isinstance(ty, OpaqueType)
-                and ty.defn == self.ctx.globals.type_defs["int"]
-            ):
+            if isinstance(ty, OpaqueType) and ty.defn == self.ctx.globals["int"]:
                 call = with_loc(
                     self.node,
-                    GlobalCall(func=Int.__float__, args=[args[i]], type_args=[]),
+                    GlobalCall(def_id=Int.__float__.id, args=[args[i]], type_args=[]),
                 )
-                args[i] = with_type(
-                    self.ctx.globals.type_defs["float"].check_instantiate([]), call
-                )
+                float_defn = self.ctx.globals["float"]
+                assert isinstance(float_defn, TypeDef)
+                args[i] = with_type(float_defn.check_instantiate([]), call)
         return super().synthesize(args)
 
 
@@ -132,7 +131,7 @@ class ReversingChecker(CustomCallChecker):
     def __init__(self, base_checker: CustomCallChecker | None = None):
         self.base_checker = base_checker or DefaultCallChecker()
 
-    def _setup(self, ctx: Context, node: AstNode, func: CustomFunction) -> None:
+    def _setup(self, ctx: Context, node: AstNode, func: CustomFunctionDef) -> None:
         super()._setup(ctx, node, func)
         self.base_checker._setup(ctx, node, func)
 
@@ -193,9 +192,7 @@ class DunderChecker(CustomCallChecker):
         self.dunder_name = dunder_name
         self.num_args = num_args
 
-    def _get_func(
-        self, args: list[ast.expr]
-    ) -> tuple[list[ast.expr], CallableVariable]:
+    def _get_func(self, args: list[ast.expr]) -> tuple[list[ast.expr], CallableDef]:
         check_num_args(self.num_args, len(args), self.node)
         fst, *rest = args
         fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
@@ -255,9 +252,10 @@ class IntTruedivCompiler(CustomCallCompiler):
         [right] = Int.__float__.compile_call(
             [right], [], self.dfg, self.graph, self.globals, self.node
         )
-        return Float.__truediv__.compile_call(
+        [out] = Float.__truediv__.compile_call(
             [left, right], [], self.dfg, self.graph, self.globals, self.node
         )
+        return [out]
 
 
 class FloatBoolCompiler(CustomCallCompiler):
@@ -271,7 +269,7 @@ class FloatBoolCompiler(CustomCallCompiler):
             float_value(0.0), get_type(self.node), self.dfg.node
         )
         zero = self.graph.add_load_constant(zero_const.out_port(0), self.dfg.node)
-        return Float.__ne__.compile_call(
+        [out] = Float.__ne__.compile_call(
             [args[0], zero.out_port(0)],
             [],
             self.dfg,
@@ -279,6 +277,7 @@ class FloatBoolCompiler(CustomCallCompiler):
             self.globals,
             self.node,
         )
+        return [out]
 
 
 class FloatFloordivCompiler(CustomCallCompiler):

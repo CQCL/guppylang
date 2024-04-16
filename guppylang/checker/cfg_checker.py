@@ -131,7 +131,7 @@ def check_bb(
     if bb == cfg.entry_bb:
         assert len(bb.predecessors) == 0
         for x, use in bb.vars.used.items():
-            if x not in cfg.ass_before[bb] and x not in globals.values:
+            if x not in cfg.ass_before[bb] and x not in globals:
                 raise GuppyError(f"Variable `{x}` is not defined", use)
 
     # Check the basic block
@@ -147,7 +147,7 @@ def check_bb(
     for succ in bb.successors:
         for x, use_bb in cfg.live_before[succ].items():
             # Check that the variables requested by the successor are defined
-            if x not in ctx.locals and x not in ctx.globals.values:
+            if x not in ctx.locals and x not in ctx.globals:
                 # If the variable is defined on *some* paths, we can give a more
                 # informative error message
                 if x in cfg.maybe_ass_before[use_bb]:

@@ -7,11 +7,11 @@ from typing import Any
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
 from guppylang.compiler.core import (
-    CompiledFunction,
     CompilerBase,
     DFContainer,
     PortVariable,
 )
+from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.hugr import ops, val
 from guppylang.hugr.hugr import DFContainingNode, OutPortV, VNode
@@ -24,7 +24,7 @@ from guppylang.nodes import (
     LocalName,
     TypeApply,
 )
-from guppylang.tys.definition import bool_type, get_element_type, is_list_type
+from guppylang.tys.builtin import bool_type, get_element_type, is_list_type
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
@@ -146,7 +146,9 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         return self.dfg[node.id].port
 
     def visit_GlobalName(self, node: GlobalName) -> OutPortV:
-        return self.globals[node.id].load(self.dfg, self.graph, self.globals, node)
+        defn = self.globals[node.def_id]
+        assert isinstance(defn, CompiledValueDef)
+        return defn.load(self.dfg, self.graph, self.globals, node)
 
     def visit_Name(self, node: ast.Name) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
@@ -178,8 +180,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         return self._pack_returns(rets)
 
     def visit_GlobalCall(self, node: GlobalCall) -> OutPortV:
-        func = self.globals[node.func.name]
-        assert isinstance(func, CompiledFunction)
+        func = self.globals[node.def_id]
+        assert isinstance(func, CompiledCallableDef)
 
         args = [self.visit(arg) for arg in node.args]
         rets = func.compile_call(

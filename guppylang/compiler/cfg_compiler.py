@@ -13,7 +13,7 @@ from guppylang.compiler.core import (
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
 from guppylang.hugr.hugr import CFNode, Hugr, Node, OutPortV
-from guppylang.tys.definition import is_bool_type
+from guppylang.tys.builtin import is_bool_type
 from guppylang.tys.ty import SumType, TupleType, type_to_row
 
 if TYPE_CHECKING:

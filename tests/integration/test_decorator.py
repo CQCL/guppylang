@@ -19,13 +19,13 @@ def test_decorator():
 
     default_module = guppy.take_module()
 
-    assert not module.contains_function("a")
-    assert module.contains_function("b")
-    assert not module.contains_function("c")
+    assert not module.contains("a")
+    assert module.contains("b")
+    assert not module.contains("c")
 
-    assert default_module.contains_function("a")
-    assert not default_module.contains_function("b")
-    assert default_module.contains_function("c")
+    assert default_module.contains("a")
+    assert not default_module.contains("b")
+    assert default_module.contains("c")
 
 
 def test_nested():
@@ -39,5 +39,5 @@ def test_nested():
     module_a = make_module()
     module_b = make_module()
 
-    assert module_a.contains_function("a")
-    assert module_b.contains_function("a")
+    assert module_a.contains("a")
+    assert module_b.contains("a")
