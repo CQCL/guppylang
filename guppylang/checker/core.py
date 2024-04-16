@@ -116,7 +116,7 @@ class Globals:
             for def_id in self.impls.keys() | other.impls.keys()
         }
         return Globals(
-            {**self.defs, **other.defs},
+            {**self.defs, **other.defs},  # Can't use `|` since it's a Mapping
             self.names | other.names,
             impls,
             self.python_scope | other.python_scope,
