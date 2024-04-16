@@ -150,15 +150,15 @@ class GuppyModule:
         """Helper method to parse and check raw definitions."""
         raw_globals = globals | Globals(raw_defs, {}, {}, {})
         parsed = {
-            defn.id: defn.parse(raw_globals) if isinstance(defn, ParsableDef) else defn
-            for defn in raw_defs.values()
+            def_id: defn.parse(raw_globals) if isinstance(defn, ParsableDef) else defn
+            for def_id, defn in raw_defs.items()
         }
         parsed_globals = globals | Globals(parsed, {}, {}, {})
         return {
-            defn.id: (
+            def_id: (
                 defn.check(parsed_globals) if isinstance(defn, CheckableDef) else defn
             )
-            for defn in parsed.values()
+            for def_id, defn in parsed.items()
         }
 
     @pretty_errors
