@@ -1,4 +1,4 @@
-from guppylang.tys.definition import bool_type
+from guppylang.tys.builtin import bool_type
 from guppylang.tys.ty import FunctionType, TupleType
 from guppylang.hugr import ops
 from guppylang.hugr.hugr import Hugr

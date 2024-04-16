@@ -1,6 +1,6 @@
 """Guppy standard module for quantum operations."""
 
-# mypy: disable-error-code=empty-body
+# mypy: disable-error-code="empty-body, misc"
 
 from guppylang.decorator import guppy
 from guppylang.hugr import ops, tys
@@ -22,7 +22,8 @@ def quantum_op(op_name: str) -> ops.OpType:
     linear=True,
 )
 class qubit:
-    pass
+    @guppy.hugr_op(quantum, quantum_op("QAlloc"))
+    def __new__() -> "qubit": ...
 
 
 @guppy.hugr_op(quantum, quantum_op("H"))
@@ -91,10 +92,6 @@ def zz_phase(q1: qubit, q2: qubit, angle: float) -> tuple[qubit, qubit]: ...
 
 @guppy.hugr_op(quantum, quantum_op("TK1"))
 def tk1(q: qubit, angle1: float, angle2: float, angle3: float) -> qubit: ...
-
-
-@guppy.hugr_op(quantum, quantum_op("QAlloc"), name="qubit")
-def _qubit() -> qubit: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("QFree"))

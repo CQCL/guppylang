@@ -37,12 +37,13 @@ from guppylang.ast_util import (
     with_type,
 )
 from guppylang.checker.core import (
-    CallableVariable,
     Context,
     DummyEvalDict,
     Globals,
     Locals,
 )
+from guppylang.definition.ty import TypeDef
+from guppylang.definition.value import CallableDef, ValueDef
 from guppylang.error import (
     GuppyError,
     GuppyTypeError,
@@ -63,7 +64,7 @@ from guppylang.nodes import (
     TypeApply,
 )
 from guppylang.tys.arg import TypeArg
-from guppylang.tys.definition import (
+from guppylang.tys.builtin import (
     bool_type,
     get_element_type,
     is_bool_type,
@@ -225,10 +226,10 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         node.func, func_ty = self._synthesize(node.func, allow_free_vars=False)
 
         # First handle direct calls of user-defined functions and extension functions
-        if isinstance(node.func, GlobalName) and isinstance(
-            node.func.value, CallableVariable
-        ):
-            return node.func.value.check_call(node.args, ty, node, self.ctx)
+        if isinstance(node.func, GlobalName):
+            defn = self.ctx.globals[node.func.def_id]
+            if isinstance(defn, CallableDef):
+                return defn.check_call(node.args, ty, node, self.ctx)
 
         # Otherwise, it must be a function as a higher-order value
         if isinstance(func_ty, FunctionType):
@@ -315,10 +316,20 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 )
             var.used = node
             return with_loc(node, LocalName(id=x)), var.ty
-        elif x in self.ctx.globals.values:
-            # Cache value in the AST
-            value = self.ctx.globals.values[x]
-            return with_loc(node, GlobalName(id=x, value=value)), value.ty
+        elif x in self.ctx.globals:
+            # Look-up what kind of definition it is
+            match self.ctx.globals[x]:
+                case ValueDef() as defn:
+                    return with_loc(node, GlobalName(id=x, def_id=defn.id)), defn.ty
+                # For types, we return their `__new__` constructor
+                case TypeDef() as defn if constr := self.ctx.globals.get_instance_func(
+                    defn, "__new__"
+                ):
+                    return with_loc(node, GlobalName(id=x, def_id=constr.id)), constr.ty
+                case defn:
+                    raise GuppyError(
+                        f"Expected a value, got {defn.description} `{x}`", node
+                    )
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in `TypeSynthesiser`. This should have "
             f"been caught by program analysis!"
@@ -454,10 +465,10 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         node.func, ty = self.synthesize(node.func)
 
         # First handle direct calls of user-defined functions and extension functions
-        if isinstance(node.func, GlobalName) and isinstance(
-            node.func.value, CallableVariable
-        ):
-            return node.func.value.synthesize_call(node.args, node, self.ctx)
+        if isinstance(node.func, GlobalName):
+            defn = self.ctx.globals[node.func.def_id]
+            if isinstance(defn, CallableDef):
+                return defn.synthesize_call(node.args, node, self.ctx)
 
         # Otherwise, it must be a function as a higher-order value
         if isinstance(ty, FunctionType):
@@ -940,11 +951,11 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
     """
     match v:
         case bool():
-            return globals.type_defs["bool"].check_instantiate([])
+            return bool_type()
         case int():
-            return globals.type_defs["int"].check_instantiate([])
+            return cast(TypeDef, globals["int"]).check_instantiate([])
         case float():
-            return globals.type_defs["float"].check_instantiate([])
+            return cast(TypeDef, globals["float"]).check_instantiate([])
         case tuple(elts):
             tys = [python_value_to_guppy_type(elt, node, globals) for elt in elts]
             if any(ty is None for ty in tys):
@@ -962,7 +973,7 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
                     try:
                         import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
-                        qubit = globals.type_defs["qubit"].check_instantiate([])
+                        qubit = cast(TypeDef, globals["qubit"]).check_instantiate([])
                         return FunctionType(
                             [qubit] * v.n_qubits,
                             row_to_type(

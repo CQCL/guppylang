@@ -14,7 +14,7 @@ from guppylang.tys.param import Parameter
 from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
-    from guppylang.tys.definition import OpaqueTypeDef
+    from guppylang.definition.ty import OpaqueTypeDef
     from guppylang.tys.subst import Inst, Subst
 
 

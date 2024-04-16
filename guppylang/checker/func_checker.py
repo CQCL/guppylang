@@ -6,79 +6,37 @@ node straight from the Python AST. We build a CFG, check it, and return a
 """
 
 import ast
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from guppylang.ast_util import AstNode, return_nodes_in_ast, with_loc
+from guppylang.ast_util import return_nodes_in_ast, with_loc
 from guppylang.cfg.bb import BB
 from guppylang.cfg.builder import CFGBuilder
 from guppylang.checker.cfg_checker import CheckedCFG, check_cfg
-from guppylang.checker.core import CallableVariable, Context, Globals, Variable
-from guppylang.checker.expr_checker import check_call, synthesize_call
+from guppylang.checker.core import Context, Globals, Variable
+from guppylang.definition.common import DefId
 from guppylang.error import GuppyError
-from guppylang.nodes import CheckedNestedFunctionDef, GlobalCall, NestedFunctionDef
+from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
 from guppylang.tys.parsing import type_from_ast
-from guppylang.tys.subst import Subst
-from guppylang.tys.ty import FunctionType, NoneType, Type
+from guppylang.tys.ty import FunctionType, NoneType
 
 if TYPE_CHECKING:
     from guppylang.tys.param import Parameter
 
 
-@dataclass
-class DefinedFunction(CallableVariable):
-    """A user-defined function"""
-
-    ty: FunctionType
-    defined_at: ast.FunctionDef
-
-    @staticmethod
-    def from_ast(
-        func_def: ast.FunctionDef, name: str, globals: Globals
-    ) -> "DefinedFunction":
-        ty = check_signature(func_def, globals)
-        if ty.parametrized:
-            raise GuppyError(
-                "Generic function definitions are not supported yet", func_def
-            )
-        return DefinedFunction(name, ty, func_def, None)
-
-    def check_call(
-        self, args: list[ast.expr], ty: Type, node: AstNode, ctx: Context
-    ) -> tuple[ast.expr, Subst]:
-        # Use default implementation from the expression checker
-        args, subst, inst = check_call(self.ty, args, ty, node, ctx)
-        return with_loc(node, GlobalCall(func=self, args=args, type_args=inst)), subst
-
-    def synthesize_call(
-        self, args: list[ast.expr], node: AstNode, ctx: Context
-    ) -> tuple[GlobalCall, Type]:
-        # Use default implementation from the expression checker
-        args, ty, inst = synthesize_call(self.ty, args, node, ctx)
-        return with_loc(node, GlobalCall(func=self, args=args, type_args=inst)), ty
-
-
-@dataclass
-class CheckedFunction(DefinedFunction):
-    """Type checked version of a user-defined function"""
-
-    cfg: CheckedCFG
-
-
-def check_global_func_def(func: DefinedFunction, globals: Globals) -> CheckedFunction:
+def check_global_func_def(
+    func_def: ast.FunctionDef, ty: FunctionType, globals: Globals
+) -> CheckedCFG:
     """Type checks a top-level function definition."""
-    func_def = func.defined_at
     args = func_def.args.args
-    returns_none = isinstance(func.ty.output, NoneType)
-    assert func.ty.input_names is not None
+    returns_none = isinstance(ty.output, NoneType)
+    assert ty.input_names is not None
 
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
     inputs = [
         Variable(x, ty, loc, None)
-        for x, ty, loc in zip(func.ty.input_names, func.ty.inputs, args)
+        for x, ty, loc in zip(ty.input_names, ty.inputs, args)
     ]
-    cfg = check_cfg(cfg, inputs, func.ty.output, globals)
-    return CheckedFunction(func_def.name, func.ty, func_def, None, cfg)
+    return check_cfg(cfg, inputs, ty.output, globals)
 
 
 def check_nested_func_def(
@@ -132,6 +90,7 @@ def check_nested_func_def(
         Variable(x, ty, func_def.args.args[i], None)
         for i, (x, ty) in enumerate(zip(func_ty.input_names, func_ty.inputs))
     ]
+    def_id = DefId.fresh()
     globals = ctx.globals
 
     # Check if the body contains a free (recursive) occurrence of the function name.
@@ -140,15 +99,21 @@ def check_nested_func_def(
     if func_def.name in cfg.live_before[cfg.entry_bb]:
         if not captured:
             # If there are no captured vars, we treat the function like a global name
-            func = DefinedFunction(func_def.name, func_ty, func_def, None)
-            globals = ctx.globals | Globals({func_def.name: func}, {}, {}, {})
+            from guppylang.definition.function import ParsedFunctionDef
 
+            func = ParsedFunctionDef(
+                def_id, func_def.name, func_def, func_ty, globals.python_scope
+            )
+            globals = ctx.globals | Globals(
+                {func.id: func}, {func_def.name: func.id}, {}, {}
+            )
         else:
             # Otherwise, we treat it like a local name
             inputs.append(Variable(func_def.name, func_def.ty, func_def, None))
 
     checked_cfg = check_cfg(cfg, inputs, func_ty.output, globals)
     checked_def = CheckedNestedFunctionDef(
+        def_id,
         checked_cfg,
         func_ty,
         captured,
@@ -187,7 +152,7 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         raise GuppyError("Return type must be annotated", func_def)
 
     # TODO: Prepopulate mapping when using Python 3.12 style generic functions
-    type_var_mapping: dict[str, "Parameter"] = {}
+    type_var_mapping: dict[DefId, "Parameter"] = {}
     input_tys = []
     input_names = []
     for inp in func_def.args.args:

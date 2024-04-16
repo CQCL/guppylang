@@ -10,7 +10,8 @@ from guppylang.tys.ty import FunctionType
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import CFG
     from guppylang.checker.cfg_checker import CheckedCFG
-    from guppylang.checker.core import CallableVariable, Variable
+    from guppylang.checker.core import Variable
+    from guppylang.definition.common import DefId
 
 
 class LocalName(ast.Name):
@@ -21,11 +22,11 @@ class LocalName(ast.Name):
 
 class GlobalName(ast.Name):
     id: str
-    value: "Variable"
+    def_id: "DefId"
 
     _fields = (
         "id",
-        "value",
+        "def_id",
     )
 
 
@@ -40,12 +41,12 @@ class LocalCall(ast.expr):
 
 
 class GlobalCall(ast.expr):
-    func: "CallableVariable"
+    def_id: "DefId"
     args: list[ast.expr]
     type_args: Inst  # Inferred type arguments
 
     _fields = (
-        "func",
+        "def_id",
         "args",
         "type_args",
     )
@@ -167,12 +168,14 @@ class NestedFunctionDef(ast.FunctionDef):
 
 
 class CheckedNestedFunctionDef(ast.FunctionDef):
+    def_id: "DefId"
     cfg: "CheckedCFG"
     ty: FunctionType
     captured: Mapping[str, "Variable"]
 
     def __init__(
         self,
+        def_id: "DefId",
         cfg: "CheckedCFG",
         ty: FunctionType,
         captured: Mapping[str, "Variable"],
@@ -180,6 +183,7 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
+        self.def_id = def_id
         self.cfg = cfg
         self.ty = ty
         self.captured = captured
