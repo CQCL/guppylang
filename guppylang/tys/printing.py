@@ -4,6 +4,7 @@ from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import ConstArg, TypeArg
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
+    FunctionTensorType,
     FunctionType,
     NoneType,
     OpaqueType,
@@ -80,6 +81,12 @@ class TypePrinter:
             del self.bound_names[: -len(ty.params)]
             return _wrap(f"forall {quantified}. {inputs} -> {output}", inside_row)
         return _wrap(f"{inputs} -> {output}", inside_row)
+
+    @_visit.register
+    def _visit_FunctionTensorType(
+        self, ty: FunctionTensorType, inside_row: bool
+    ) -> str:
+        return f"tensor[{ty.inputs()}\n -> \n{ty.outputs()}]"
 
     @_visit.register
     def _visit_OpaqueType(self, ty: OpaqueType, inside_row: bool) -> str:

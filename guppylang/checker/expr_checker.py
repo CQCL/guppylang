@@ -53,6 +53,8 @@ from guppylang.error import (
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
+    FunctionTensor,
+    GlobalCall,
     GlobalName,
     IterEnd,
     IterHasNext,
@@ -61,6 +63,7 @@ from guppylang.nodes import (
     LocalName,
     MakeIter,
     PyExpr,
+    TensorCall,
     TypeApply,
 )
 from guppylang.tys.arg import TypeArg
@@ -77,6 +80,7 @@ from guppylang.tys.param import TypeParam
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
+    FunctionTensorType,
     FunctionType,
     NoneType,
     OpaqueType,
@@ -237,8 +241,46 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             check_inst(func_ty, inst, node)
             node.func = instantiate_poly(node.func, func_ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
-        elif f := self.ctx.globals.get_instance_func(func_ty, "__call__"):
-            return f.check_call(node.args, ty, node, self.ctx)
+        elif isinstance(func_ty, FunctionTensorType):
+            assert isinstance(node.func, FunctionTensor)
+            remaining_args: list[ast.expr] = node.args
+            call_nodes: list[GlobalCall | LocalCall] = []
+            big_subst: Subst = {}
+            for f, f_ty in zip(node.func.elts, func_ty.element_types):
+                # Use the concrete output type of the function, we'll try to
+                # unify all of the results with `ty` at the end
+                processed_args, subst, inst, remaining_args = check_call_with_leftovers(
+                    f_ty, remaining_args, f_ty.output, f, self.ctx
+                )
+                f_processed = instantiate_poly(f, f_ty, inst)
+
+                check_inst(f_ty, inst, node)
+                # Expect that each function is a `CallableDef`
+                # TODO: What if it's a tensor?
+                if isinstance(f_processed, LocalName):
+                    call_nodes.append(LocalCall(func=f_processed, args=processed_args))
+                elif isinstance(f_processed, GlobalName):
+                    assert isinstance(self.ctx.globals[f_processed.def_id], CallableDef)
+                    call_nodes.append(
+                        GlobalCall(
+                            def_id=f_processed.def_id,
+                            args=processed_args,
+                            type_args=inst,
+                        )
+                    )
+                else:
+                    raise GuppyError(f"Tensor isn't defined for {ast.dump(f)}")
+
+                big_subst |= subst
+            assert all(isinstance(ty, FunctionType) for ty in func_ty.element_types)
+
+            # If the substitution isn't empty, ...
+            subst = unify(ty, TupleType(func_ty.outputs()), big_subst) or big_subst
+
+            return with_loc(node, TensorCall(call_nodes=call_nodes)), subst
+
+        elif callee := self.ctx.globals.get_instance_func(func_ty, "__call__"):
+            return callee.check_call(node.args, ty, node, self.ctx)
         else:
             raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
 
@@ -332,7 +374,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                     )
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in `TypeSynthesiser`. This should have "
-            f"been caught by program analysis!"
+            "been caught by program analysis!"
         )
 
     def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, Type]:
@@ -470,11 +512,35 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             if isinstance(defn, CallableDef):
                 return defn.synthesize_call(node.args, node, self.ctx)
 
-        # Otherwise, it must be a function as a higher-order value
+        # Otherwise, it must be a function as a higher-order value, or a tensor
         if isinstance(ty, FunctionType):
             args, return_ty, inst = synthesize_call(ty, node.args, node, self.ctx)
             node.func = instantiate_poly(node.func, ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
+        elif isinstance(ty, FunctionTensorType):
+            assert isinstance(node.func, FunctionTensor)
+            # Note: The FunctionTensorType is made up of FunctionTypes, none of which
+            # should have overlapping type arguments.
+            func_ty = FunctionType(ty.inputs(), TupleType(element_types=ty.outputs()))
+            new_elt_tys = []
+            remaining_args = node.args
+            return_tys: list[Type] = []
+            processed_args: list[ast.expr] = []
+            for i, elt in enumerate(node.func.elts):
+                node.func.elts[i], new_elt_ty = self.visit(elt)
+                new_elt_tys.append(new_elt_ty)
+                args, return_ty, inst, remaining_args = synthesize_call_with_leftovers(
+                    func_ty, remaining_args, node, self.ctx
+                )
+                processed_args.extend(args)
+                if isinstance(return_ty, TupleType):
+                    return_tys.extend(return_ty.element_types)
+                else:
+                    return_tys.append(return_ty)
+
+            call_node = TensorCall(func=node.func, args=processed_args)
+            return with_loc(node, call_node), TupleType(return_tys)
+
         elif f := self.ctx.globals.get_instance_func(ty, "__call__"):
             return f.synthesize_call(node.args, node, self.ctx)
         else:
@@ -559,6 +625,21 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             f"`{ast.unparse(node)}`"
         )
 
+    def visit_FunctionTensor(self, node: ast.expr) -> tuple[ast.expr, Type]:
+        assert isinstance(node, FunctionTensor)
+        new_elts = []
+        elt_tys = []
+        for elt in node.elts:
+            new_elt, new_elt_ty = self.visit(elt)
+            if isinstance(new_elt_ty, FunctionType):
+                elt_tys.append(new_elt_ty)
+            else:
+                raise GuppyError("Expected function type for function tensor", node)
+            new_elts.append(new_elt)
+        node.elts = new_elts
+        ty = FunctionTensorType(elt_tys)
+        return with_type(ty, node), ty
+
 
 def check_type_against(
     act: Type, exp: Type, node: AstNode, kind: str = "expression"
@@ -612,18 +693,23 @@ def check_type_against(
     return subst, []
 
 
-def check_num_args(exp: int, act: int, node: AstNode) -> None:
-    """Checks that the correct number of arguments have been passed to a function."""
+def check_num_args_sufficient(exp: int, act: int, node: AstNode) -> None:
+    """Checks that enough arguments have been passed to a function."""
     if act < exp:
         raise GuppyTypeError(
             f"Not enough arguments passed (expected {exp}, got {act})", node
         )
-    if exp < act:
+
+
+def check_leftovers_nil(
+    args_checked: int, leftovers: list[ast.expr], node: AstNode
+) -> None:
+    if len(leftovers) > 0:
         if isinstance(node, ast.Call):
-            raise GuppyTypeError("Unexpected argument", node.args[exp])
-        raise GuppyTypeError(
-            f"Too many arguments passed (expected {exp}, got {act})", node
-        )
+            raise GuppyTypeError("Unexpected argument", leftovers[0])
+        total_args = args_checked + len(leftovers)
+        msg = f"Too many arguments passed (expected {args_checked}, got {total_args})"
+        raise GuppyTypeError(msg, node)
 
 
 def type_check_args(
@@ -638,14 +724,35 @@ def type_check_args(
     We expect that parameters have been replaced with free unification variables.
     Checks that all unification variables can be inferred.
     """
+    exprs, subst, leftovers = type_check_args_with_leftovers(
+        inputs, func_ty, subst, ctx, node
+    )
+    check_leftovers_nil(len(exprs), leftovers, node)
+    return exprs, subst
+
+
+def type_check_args_with_leftovers(
+    inputs: list[ast.expr],
+    func_ty: FunctionType,
+    subst: Subst,
+    ctx: Context,
+    node: AstNode,
+) -> tuple[list[ast.expr], Subst, list[ast.expr]]:
+    """Checks the arguments of a function call and infers free type variables.
+
+    We expect that parameters have been replaced with free unification variables.
+    Checks that all unification variables can be inferred.
+    """
     assert not func_ty.parametrized
-    check_num_args(len(func_ty.inputs), len(inputs), node)
+    check_num_args_sufficient(len(func_ty.inputs), len(inputs), node)
 
     new_args: list[ast.expr] = []
-    for inp, ty in zip(inputs, func_ty.inputs):
+    for ty, inp in zip(func_ty.inputs, inputs):
         a, s = ExprChecker(ctx).check(inp, ty.substitute(subst), "argument")
         new_args.append(a)
         subst |= s
+
+    leftovers = inputs[len(func_ty.inputs) :]
 
     # If the argument check succeeded, this means that we must have found instantiations
     # for all unification variables occurring in the input types
@@ -659,24 +766,37 @@ def type_check_args(
             node,
         )
 
-    return new_args, subst
+    return new_args, subst, leftovers
 
 
 def synthesize_call(
     func_ty: FunctionType, args: list[ast.expr], node: AstNode, ctx: Context
 ) -> tuple[list[ast.expr], Type, Inst]:
+    exprs, tys, inst, leftovers = synthesize_call_with_leftovers(
+        func_ty, args, node, ctx
+    )
+    check_leftovers_nil(len(exprs), leftovers, node)
+    return exprs, tys, inst
+
+
+def synthesize_call_with_leftovers(
+    func_ty: FunctionType, args: list[ast.expr], node: AstNode, ctx: Context
+) -> tuple[list[ast.expr], Type, Inst, list[ast.expr]]:
     """Synthesizes the return type of a function call.
 
     Returns an annotated argument list, the synthesized return type, and an
     instantiation for the quantifiers in the function type.
     """
     assert not func_ty.unsolved_vars
-    check_num_args(len(func_ty.inputs), len(args), node)
+    check_num_args_sufficient(len(func_ty.inputs), len(args), node)
 
     # Replace quantified variables with free unification variables and try to infer an
     # instantiation by checking the arguments
     unquantified, free_vars = func_ty.unquantified()
-    args, subst = type_check_args(args, unquantified, {}, ctx, node)
+
+    args, subst, leftovers = type_check_args_with_leftovers(
+        args, unquantified, {}, ctx, node
+    )
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
@@ -685,7 +805,7 @@ def synthesize_call(
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
 
-    return args, unquantified.output.substitute(subst), inst
+    return args, unquantified.output.substitute(subst), inst, leftovers
 
 
 def check_call(
@@ -696,13 +816,28 @@ def check_call(
     ctx: Context,
     kind: str = "expression",
 ) -> tuple[list[ast.expr], Subst, Inst]:
+    exprs, subst, inst, leftovers = check_call_with_leftovers(
+        func_ty, inputs, ty, node, ctx, kind
+    )
+    check_leftovers_nil(len(exprs), leftovers, node)
+    return exprs, subst, inst
+
+
+def check_call_with_leftovers(
+    func_ty: FunctionType,
+    inputs: list[ast.expr],
+    ty: Type,
+    node: AstNode,
+    ctx: Context,
+    kind: str = "expression",
+) -> tuple[list[ast.expr], Subst, Inst, list[ast.expr]]:
     """Checks the return type of a function call against a given type.
 
     Returns an annotated argument list, a substitution for the free variables in the
     expected type, and an instantiation for the quantifiers in the function type.
     """
     assert not func_ty.unsolved_vars
-    check_num_args(len(func_ty.inputs), len(inputs), node)
+    check_num_args_sufficient(len(func_ty.inputs), len(inputs), node)
 
     # When checking, we can use the information from the expected return type to infer
     # some type arguments. However, this pushes errors inwards. For example, given a
@@ -724,18 +859,20 @@ def check_call(
     #  in practice. Can we do better than that?
 
     # First, try to synthesize
-    res: tuple[Type, Inst] | None = None
+    res: tuple[Type, Inst, list[ast.expr]] | None = None
     try:
-        inputs, synth, inst = synthesize_call(func_ty, inputs, node, ctx)
-        res = synth, inst
+        inputs, synth, inst, leftovers = synthesize_call_with_leftovers(
+            func_ty, inputs, node, ctx
+        )
+        res = synth, inst, leftovers
     except GuppyTypeInferenceError:
         pass
     if res is not None:
-        synth, inst = res
+        synth, inst, leftovers = res
         subst = unify(ty, synth, {})
         if subst is None:
             raise GuppyTypeError(f"Expected {kind} of type `{ty}`, got `{synth}`", node)
-        return inputs, subst, inst
+        return inputs, subst, inst, leftovers
 
     # If synthesis fails, we try again, this time also using information from the
     # expected return type
@@ -747,7 +884,9 @@ def check_call(
         )
 
     # Try to infer more by checking against the arguments
-    inputs, subst = type_check_args(inputs, unquantified, subst, ctx, node)
+    inputs, subst, leftovers = type_check_args_with_leftovers(
+        inputs, unquantified, subst, ctx, node
+    )
 
     # Also make sure we found an instantiation for all free vars in the type we're
     # checking against
@@ -766,7 +905,7 @@ def check_call(
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
 
-    return inputs, subst, inst
+    return inputs, subst, inst, leftovers
 
 
 def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
@@ -797,7 +936,7 @@ def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
     if len(inst) > 0:
         node = with_loc(node, TypeApply(value=with_type(ty, node), inst=inst))
         return with_type(ty.instantiate(inst), node)
-    return node
+    return with_type(ty, node)
 
 
 def to_bool(node: ast.expr, node_ty: Type, ctx: Context) -> tuple[ast.expr, Type]:

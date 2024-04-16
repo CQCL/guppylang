@@ -390,6 +390,62 @@ class SumType(ParametrizedTypeBase):
         )
 
 
+@dataclass(frozen=True, init=False)
+class FunctionTensorType(ParametrizedTypeBase):
+    params: list[Parameter]
+    element_types: list[FunctionType]
+
+    def __init__(self, element_types: Sequence["FunctionType"]) -> None:
+        # We need a custom __init__ to set the args
+        params: list[Parameter] = []
+        args: list[Argument] = []
+        for func_ty in element_types:
+            params.extend(func_ty.params)
+            args += func_ty.args
+            params += func_ty.params
+        object.__setattr__(self, "args", args)
+        object.__setattr__(self, "params", params)
+        object.__setattr__(self, "element_types", element_types)
+
+    def inputs(self) -> "TypeRow":
+        input_row: list[Type] = []
+        for fn_ty in self.element_types:
+            assert isinstance(fn_ty, FunctionType)
+            input_row.extend(fn_ty.inputs)
+        return input_row
+
+    def outputs(self) -> "TypeRow":
+        outputs: list[Type] = []
+        for fn_ty in self.element_types:
+            if isinstance(fn_ty.output, TupleType):
+                outputs.extend(fn_ty.output.element_types)
+            else:
+                outputs.append(fn_ty.output)
+        return outputs
+
+    @property
+    def intrinsically_linear(self) -> bool:
+        return False
+
+    def visit(self, visitor: Visitor) -> None:
+        visitor.visit(self)
+
+    def to_hugr(self) -> tys.Type:
+        """Computes the Hugr representation of the type."""
+        if all(
+            isinstance(e, TupleType) and len(e.element_types) == 0
+            for e in self.element_types
+        ):
+            return tys.UnitSum(size=len(self.element_types))
+        return tys.GeneralSum(row=[t.to_hugr() for t in self.element_types])
+
+    def transform(self, transformer: Transformer) -> "Type":
+        """Accepts a transformer on this type."""
+        return transformer.transform(self) or SumType(
+            [ty.transform(transformer) for ty in self.element_types]
+        )
+
+
 @dataclass(frozen=True)
 class OpaqueType(ParametrizedTypeBase):
     """Type that is directly backed by a Hugr opaque type.
@@ -429,7 +485,9 @@ class OpaqueType(ParametrizedTypeBase):
 # Note that this might become obsolete in case the `@sealed` decorator is added:
 #  * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
 #  * https://github.com/johnthagen/sealed-typing-pep
-ParametrizedType: TypeAlias = FunctionType | TupleType | SumType | OpaqueType
+ParametrizedType: TypeAlias = (
+    FunctionType | TupleType | SumType | OpaqueType | FunctionTensorType
+)
 Type: TypeAlias = BoundTypeVar | ExistentialTypeVar | NoneType | ParametrizedType
 
 TypeRow: TypeAlias = Sequence[Type]

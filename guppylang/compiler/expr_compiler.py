@@ -22,6 +22,7 @@ from guppylang.nodes import (
     GlobalName,
     LocalCall,
     LocalName,
+    TensorCall,
     TypeApply,
 )
 from guppylang.tys.builtin import bool_type, get_element_type, is_list_type
@@ -164,6 +165,10 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             ops.DummyOp(name="MakeList"), inputs=[self.visit(e) for e in node.elts]
         ).add_out_port(get_type(node))
 
+    def _unpack_tuple(self, wire: OutPortV) -> list[OutPortV]:
+        unpack_node = self.graph.add_unpack_tuple(wire, self.dfg.node)
+        return list(unpack_node.out_ports)
+
     def _pack_returns(self, returns: list[OutPortV]) -> OutPortV:
         """Groups function return values into a tuple"""
         if len(returns) != 1:
@@ -188,6 +193,16 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             args, list(node.type_args), self.dfg, self.graph, self.globals, node
         )
         return self._pack_returns(rets)
+
+    def visit_TensorCall(self, node: TensorCall) -> OutPortV:
+        outputs = []
+        for call in node.call_nodes:
+            output = self.visit(call)
+            if isinstance(output.ty, TupleType):
+                outputs.extend(self._unpack_tuple(output))
+            else:
+                outputs.append(output)
+        return self._pack_returns(outputs)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")

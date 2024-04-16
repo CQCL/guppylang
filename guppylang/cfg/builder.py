@@ -18,6 +18,7 @@ from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
+    FunctionTensor,
     IterEnd,
     IterHasNext,
     IterNext,
@@ -345,6 +346,11 @@ class ExprBuilder(ast.NodeTransformer):
                 case args:
                     arg = with_loc(node, ast.Tuple(elts=args, ctx=ast.Load))
             return with_loc(node, PyExpr(value=arg))
+        elif isinstance(node.func, ast.Tuple):
+            new_elts = [self.visit(elt) for elt in node.func.elts]
+            node.func = FunctionTensor(new_elts)
+            return node
+
         return self.generic_visit(node)
 
     def generic_visit(self, node: ast.AST) -> ast.AST:

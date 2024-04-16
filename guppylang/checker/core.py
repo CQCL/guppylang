@@ -22,6 +22,7 @@ from guppylang.tys.builtin import (
 from guppylang.tys.ty import (
     BoundTypeVar,
     ExistentialTypeVar,
+    FunctionTensorType,
     FunctionType,
     NoneType,
     OpaqueType,
@@ -84,6 +85,8 @@ class Globals:
                 pass
             case BoundTypeVar() | ExistentialTypeVar() | SumType():
                 return None
+            case FunctionTensorType():
+                type_defn = callable_type_def
             case FunctionType():
                 type_defn = callable_type_def
             case OpaqueType() as ty:
