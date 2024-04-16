@@ -23,7 +23,7 @@ html_theme = "sphinx_book_theme"
 html_title = "Guppy compiler development docs"
 
 html_theme_options = {
-    "repository_url": "https://github.com/CQCL/guppy",
+    "repository_url": "https://github.com/CQCL/guppylang",
     "use_repository_button": True,
     "navigation_with_keys": True,
     "logo": {
