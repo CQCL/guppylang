@@ -53,7 +53,6 @@ from guppylang.error import (
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
-    FunctionTensor,
     GlobalCall,
     GlobalName,
     IterEnd,
@@ -192,13 +191,31 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         return ExprSynthesizer(self.ctx).synthesize(node, allow_free_vars)
 
     def visit_Tuple(self, node: ast.Tuple, ty: Type) -> tuple[ast.expr, Subst]:
-        if not isinstance(ty, TupleType) or len(ty.element_types) != len(node.elts):
-            return self._fail(ty, node)
-        subst: Subst = {}
-        for i, el in enumerate(node.elts):
-            node.elts[i], s = self.check(el, ty.element_types[i].substitute(subst))
-            subst |= s
-        return node, subst
+        # Data tuples should be checkable
+        if isinstance(ty, TupleType) and len(ty.element_types) == len(node.elts):
+            subst: Subst = {}
+            for i, el in enumerate(node.elts):
+                node.elts[i], s = self.check(el, ty.element_types[i].substitute(subst))
+                subst |= s
+            return node, subst
+        else:
+            nodes: list[ast.expr] = []
+            elem_tys: list[FunctionType] = []
+            for elt in node.elts:
+                ann_node, fun_ty = self._synthesize(elt, allow_free_vars=True)
+                assert isinstance(fun_ty, FunctionType)
+                nodes.append(ann_node)
+                elem_tys.append(fun_ty)
+
+            if all(isinstance(ty, FunctionType) for ty in elem_tys):
+                tensor_ty = FunctionTensorType(elem_tys)
+                func_ty = FunctionType(
+                    tensor_ty.inputs(), TupleType(tensor_ty.outputs())
+                )
+                subst = unify(func_ty, ty, {}) or {}
+                return with_type(tensor_ty, node), subst
+            else:
+                return self._fail(ty, node)
 
     def visit_List(self, node: ast.List, ty: Type) -> tuple[ast.expr, Subst]:
         if not is_list_type(ty) and not is_linst_type(ty):
@@ -242,7 +259,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             node.func = instantiate_poly(node.func, func_ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
         elif isinstance(func_ty, FunctionTensorType):
-            assert isinstance(node.func, FunctionTensor)
+            assert isinstance(node.func, ast.Tuple)
             remaining_args: list[ast.expr] = node.args
             call_nodes: list[GlobalCall | LocalCall] = []
             big_subst: Subst = {}
@@ -378,9 +395,31 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         )
 
     def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, Type]:
-        elems = [self.synthesize(elem) for elem in node.elts]
-        node.elts = [n for n, _ in elems]
-        return node, TupleType([ty for _, ty in elems])
+        elems: list[tuple[ast.expr, Type]] = [
+            self.synthesize(elem) for elem in node.elts
+        ]
+
+        if all(isinstance(ty, FunctionType) for _, ty in elems):
+            input_row: list[Type] = []
+            output_row: list[Type] = []
+            func_tys: list[FunctionType] = []
+            for i, (func_node, func_ty) in enumerate(elems):
+                assert isinstance(func_node.type, FunctionType)  # type: ignore[attr-defined]
+                assert isinstance(func_ty, FunctionType)
+                node.elts[i] = func_node
+                func_tys.append(func_ty)
+                input_row.extend(func_ty.inputs)
+                if isinstance(func_ty.output, TupleType):
+                    output_row.extend(func_ty.output.element_types)
+                else:
+                    output_row.append(func_ty.output)
+
+            tensor_ty = FunctionTensorType(func_tys)
+            tuple_node = ast.Tuple([node for node, _ in elems])
+            return with_type(tensor_ty, tuple_node), tensor_ty
+        else:
+            node.elts = [n for n, _ in elems]
+            return node, TupleType([ty for _, ty in elems])
 
     def visit_List(self, node: ast.List) -> tuple[ast.expr, Type]:
         if len(node.elts) == 0:
@@ -518,7 +557,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             node.func = instantiate_poly(node.func, ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
         elif isinstance(ty, FunctionTensorType):
-            assert isinstance(node.func, FunctionTensor)
+            assert isinstance(node.func, ast.Tuple)
             # Note: The FunctionTensorType is made up of FunctionTypes, none of which
             # should have overlapping type arguments.
             func_ty = FunctionType(ty.inputs(), TupleType(element_types=ty.outputs()))
@@ -624,21 +663,6 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             "BB contains `IfExp`. Should have been removed during CFG construction: "
             f"`{ast.unparse(node)}`"
         )
-
-    def visit_FunctionTensor(self, node: ast.expr) -> tuple[ast.expr, Type]:
-        assert isinstance(node, FunctionTensor)
-        new_elts = []
-        elt_tys = []
-        for elt in node.elts:
-            new_elt, new_elt_ty = self.visit(elt)
-            if isinstance(new_elt_ty, FunctionType):
-                elt_tys.append(new_elt_ty)
-            else:
-                raise GuppyError("Expected function type for function tensor", node)
-            new_elts.append(new_elt)
-        node.elts = new_elts
-        ty = FunctionTensorType(elt_tys)
-        return with_type(ty, node), ty
 
 
 def check_type_against(

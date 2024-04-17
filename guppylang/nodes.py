@@ -196,11 +196,3 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
         self.cfg = cfg
         self.ty = ty
         self.captured = captured
-
-
-class FunctionTensor(ast.expr):
-    """A tensor product of one or more functions"""
-
-    elts: list[ast.expr]
-
-    _fields = ("elts",)
