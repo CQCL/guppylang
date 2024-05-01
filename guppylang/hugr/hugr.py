@@ -16,6 +16,7 @@ from guppylang.tys.ty import (
     SumType,
     TupleType,
     Type,
+    is_function,
     row_to_type,
     type_to_row,
 )
@@ -491,11 +492,13 @@ class Hugr:
         self, def_port: OutPortV, args: list[OutPortV], parent: Node | None = None
     ) -> VNode:
         """Adds a `Call` node to the graph."""
-        assert isinstance(def_port.ty, FunctionType)
+        func_ty = is_function(def_port.ty)
+        assert isinstance(func_ty, FunctionType)
+
         return self.add_node(
             ops.Call(),
             None,
-            list(type_to_row(def_port.ty.output)),
+            list(type_to_row(func_ty.output)),
             parent,
             [*args, def_port],
         )
@@ -504,11 +507,13 @@ class Hugr:
         self, fun_port: OutPortV, args: list[OutPortV], parent: Node | None = None
     ) -> VNode:
         """Adds an `IndirectCall` node to the graph."""
-        assert isinstance(fun_port.ty, FunctionType)
+        func_ty = is_function(fun_port.ty)
+        assert isinstance(func_ty, FunctionType)
+
         return self.add_node(
             ops.CallIndirect(),
             None,
-            list(type_to_row(fun_port.ty.output)),
+            list(type_to_row(func_ty.output)),
             parent,
             [fun_port, *args],
         )
@@ -535,11 +540,12 @@ class Hugr:
         self, func_port: OutPortV, args: Inst, parent: Node | None = None
     ) -> VNode:
         """Adds a `TypeApply` node to the graph."""
-        assert isinstance(func_port.ty, FunctionType)
-        assert len(func_port.ty.params) == len(args)
-        result_ty = func_port.ty.instantiate(args)
+        func_ty = is_function(func_port.ty)
+        assert isinstance(func_ty, FunctionType)
+        assert len(func_ty.params) == len(args)
+        result_ty = func_ty.instantiate(args)
         ta = ops.TypeApplication(
-            input=func_port.ty.to_hugr(),
+            input=func_ty.to_hugr(),
             args=[arg.to_hugr() for arg in args],
             output=result_ty.to_hugr(),
         )

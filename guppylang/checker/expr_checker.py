@@ -79,13 +79,14 @@ from guppylang.tys.param import TypeParam
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
-    FunctionTensorType,
     FunctionType,
     NoneType,
     OpaqueType,
     TupleType,
     Type,
     TypeBase,
+    function_tensor_signature,
+    parse_function_tensor,
     row_to_type,
     unify,
 )
@@ -192,30 +193,24 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
     def visit_Tuple(self, node: ast.Tuple, ty: Type) -> tuple[ast.expr, Subst]:
         # Data tuples should be checkable
-        if isinstance(ty, TupleType) and len(ty.element_types) == len(node.elts):
+        if not (isinstance(ty, TupleType) and len(ty.element_types) == len(node.elts)):
+            return self._fail(ty, node)
+
+        if not parse_function_tensor(ty):
             subst: Subst = {}
             for i, el in enumerate(node.elts):
                 node.elts[i], s = self.check(el, ty.element_types[i].substitute(subst))
                 subst |= s
             return node, subst
         else:
-            nodes: list[ast.expr] = []
             elem_tys: list[FunctionType] = []
-            for elt in node.elts:
-                ann_node, fun_ty = self._synthesize(elt, allow_free_vars=True)
+            for i, (elt, elt_ty) in enumerate(zip(node.elts, ty.element_types)):
+                node.elts[i], fun_ty = self._synthesize(elt, allow_free_vars=True)
                 assert isinstance(fun_ty, FunctionType)
-                nodes.append(ann_node)
                 elem_tys.append(fun_ty)
+                subst = unify(fun_ty, elt_ty, {}) or {}
 
-            if all(isinstance(ty, FunctionType) for ty in elem_tys):
-                tensor_ty = FunctionTensorType(elem_tys)
-                func_ty = FunctionType(
-                    tensor_ty.inputs(), TupleType(tensor_ty.outputs())
-                )
-                subst = unify(func_ty, ty, {}) or {}
-                return with_type(tensor_ty, node), subst
-            else:
-                return self._fail(ty, node)
+            return node, subst
 
     def visit_List(self, node: ast.List, ty: Type) -> tuple[ast.expr, Subst]:
         if not is_list_type(ty) and not is_linst_type(ty):
@@ -258,43 +253,67 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             check_inst(func_ty, inst, node)
             node.func = instantiate_poly(node.func, func_ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
-        elif isinstance(func_ty, FunctionTensorType):
-            assert isinstance(node.func, ast.Tuple)
+
+        if isinstance(func_ty, TupleType) and parse_function_tensor(func_ty):
+            function_elements = parse_function_tensor(func_ty)
+            assert isinstance(function_elements, list)
+            tensor_ty = function_tensor_signature(function_elements)
+
             remaining_args: list[ast.expr] = node.args
             call_nodes: list[GlobalCall | LocalCall] = []
             big_subst: Subst = {}
-            for f, f_ty in zip(node.func.elts, func_ty.element_types):
-                # Use the concrete output type of the function, we'll try to
-                # unify all of the results with `ty` at the end
-                processed_args, subst, inst, remaining_args = check_call_with_leftovers(
-                    f_ty, remaining_args, f_ty.output, f, self.ctx
-                )
-                f_processed = instantiate_poly(f, f_ty, inst)
-
-                check_inst(f_ty, inst, node)
-                # Expect that each function is a `CallableDef`
-                # TODO: What if it's a tensor?
-                if isinstance(f_processed, LocalName):
-                    call_nodes.append(LocalCall(func=f_processed, args=processed_args))
-                elif isinstance(f_processed, GlobalName):
-                    assert isinstance(self.ctx.globals[f_processed.def_id], CallableDef)
-                    call_nodes.append(
-                        GlobalCall(
-                            def_id=f_processed.def_id,
-                            args=processed_args,
-                            type_args=inst,
+            if isinstance(node.func, ast.Tuple):
+                for f, f_ty in zip(node.func.elts, func_ty.element_types):
+                    assert isinstance(f_ty, FunctionType)
+                    # Use the concrete output type of the function, we'll try to
+                    # unify all of the results with `ty` at the end
+                    processed_args, subst, inst, remaining_args = (
+                        check_call_with_leftovers(
+                            f_ty, remaining_args, f_ty.output, f, self.ctx
                         )
                     )
-                else:
-                    raise GuppyError(f"Tensor isn't defined for {ast.dump(f)}")
+                    f_processed = instantiate_poly(f, f_ty, inst)
 
-                big_subst |= subst
-            assert all(isinstance(ty, FunctionType) for ty in func_ty.element_types)
+                    check_inst(f_ty, inst, node)
+                    # Expect that each function is a `CallableDef`
+                    # TODO: What if it's a tensor?
+                    if isinstance(f_processed, GlobalName):
+                        assert isinstance(
+                            self.ctx.globals[f_processed.def_id], CallableDef
+                        )
+                        call_nodes.append(
+                            GlobalCall(
+                                def_id=f_processed.def_id,
+                                args=processed_args,
+                                type_args=inst,
+                            )
+                        )
+                    else:
+                        call_nodes.append(
+                            LocalCall(func=f_processed, args=processed_args)
+                        )
 
-            # If the substitution isn't empty, ...
-            subst = unify(ty, TupleType(func_ty.outputs()), big_subst) or big_subst
+                    big_subst |= subst
 
-            return with_loc(node, TensorCall(call_nodes=call_nodes)), subst
+                    # If the substitution isn't empty, ...
+                    subst = unify(ty, tensor_ty.output, big_subst) or big_subst
+
+                return with_loc(node, TensorCall(call_nodes=call_nodes)), subst
+
+            else:
+                # The func isn't a tuple, it could be a call or whatever
+                # we should do a check_call or something
+                processed_args, big_subst, inst = check_call(
+                    tensor_ty, node.args, tensor_ty.output, node.func, self.ctx
+                )
+                # f_processed = instantiate_poly(node.func, tensor_ty, inst)
+
+                # If the substitution isn't empty, ...
+                subst = unify(ty, tensor_ty.output, big_subst) or big_subst
+
+                return with_loc(
+                    node, LocalCall(func=node.func, args=processed_args)
+                ), subst
 
         elif callee := self.ctx.globals.get_instance_func(func_ty, "__call__"):
             return callee.check_call(node.args, ty, node, self.ctx)
@@ -414,9 +433,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 else:
                     output_row.append(func_ty.output)
 
-            tensor_ty = FunctionTensorType(func_tys)
+            tensor_ty = TupleType(func_tys)
             tuple_node = ast.Tuple([node for node, _ in elems])
-            return with_type(tensor_ty, tuple_node), tensor_ty
+            return tuple_node, tensor_ty
         else:
             node.elts = [n for n, _ in elems]
             return node, TupleType([ty for _, ty in elems])
@@ -556,18 +575,21 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             args, return_ty, inst = synthesize_call(ty, node.args, node, self.ctx)
             node.func = instantiate_poly(node.func, ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
-        elif isinstance(ty, FunctionTensorType):
-            assert isinstance(node.func, ast.Tuple)
-            # Note: The FunctionTensorType is made up of FunctionTypes, none of which
-            # should have overlapping type arguments.
-            func_ty = FunctionType(ty.inputs(), TupleType(element_types=ty.outputs()))
-            new_elt_tys = []
+        elif (
+            isinstance(ty, TupleType)
+            and parse_function_tensor(ty)
+            and isinstance(node.func, ast.Tuple)
+        ):
+            # Note: None of the function types in a tuple of functions will have
+            # overlapping type arguments.
+            function_elems = parse_function_tensor(ty)
+            assert isinstance(function_elems, list)
+            func_ty = function_tensor_signature(function_elems)
             remaining_args = node.args
             return_tys: list[Type] = []
             processed_args: list[ast.expr] = []
-            for i, elt in enumerate(node.func.elts):
-                node.func.elts[i], new_elt_ty = self.visit(elt)
-                new_elt_tys.append(new_elt_ty)
+            call_nodes: list[ast.expr] = []
+            for func in node.func.elts:
                 args, return_ty, inst, remaining_args = synthesize_call_with_leftovers(
                     func_ty, remaining_args, node, self.ctx
                 )
@@ -577,7 +599,15 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 else:
                     return_tys.append(return_ty)
 
-            call_node = TensorCall(func=node.func, args=processed_args)
+                if isinstance(func, GlobalName):
+                    assert isinstance(self.ctx.globals[func.def_id], CallableDef)
+                    call_nodes.append(
+                        GlobalCall(def_id=func.def_id, args=args, type_args=inst)
+                    )
+                else:
+                    call_nodes.append(LocalCall(func=func, args=args))
+
+            call_node = TensorCall(call_nodes)
             return with_loc(node, call_node), TupleType(return_tys)
 
         elif f := self.ctx.globals.get_instance_func(ty, "__call__"):

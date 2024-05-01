@@ -33,6 +33,8 @@ from guppylang.tys.ty import (
     NoneType,
     TupleType,
     Type,
+    function_tensor_signature,
+    parse_function_tensor,
     type_to_row,
 )
 
@@ -177,21 +179,62 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 
     def visit_LocalCall(self, node: LocalCall) -> OutPortV:
         func = self.visit(node.func)
-        assert isinstance(func.ty, FunctionType)
+
+        assert isinstance(func.ty, FunctionType) or (
+            isinstance(func.ty, TupleType) and parse_function_tensor(func.ty)
+        )
+        if isinstance(func.ty, FunctionType):
+            output = func.ty.output
+        elif isinstance(func.ty, TupleType):
+            funcs = parse_function_tensor(func.ty)
+            assert isinstance(funcs, list)
+            output = function_tensor_signature(funcs).output
 
         args = [self.visit(arg) for arg in node.args]
-        call = self.graph.add_indirect_call(func, args)
-        rets = [call.out_port(i) for i in range(len(type_to_row(func.ty.output)))]
+
+        rets: list[OutPortV] = []
+        if isinstance(func.ty, FunctionType):
+            call = self.graph.add_indirect_call(func, args)
+            rets = [call.out_port(i) for i in range(len(type_to_row(output)))]
+        elif isinstance(func.ty, TupleType) and parse_function_tensor(func.ty):
+            func_ports = self._unpack_tuple(func)
+            # Now we have to manage this hand-off
+            remaining_args = args
+            for func in func_ports:
+                outs, remaining_args = self._compile_tensor_with_leftovers(func, args)
+                rets.extend(outs)
+        else:
+            raise InternalGuppyError("Local call of something without a callable type")
+
         return self._pack_returns(rets)
+
+    def _compile_tensor_with_leftovers(
+        self, func: OutPortV, args: list[OutPortV]
+    ) -> tuple[
+        list[OutPortV],  # Compiled outputs
+        list[OutPortV],
+    ]:  # Leftover args
+        assert isinstance(func.ty, FunctionType)
+        input_len = len(func.ty.inputs)
+        call = self.graph.add_indirect_call(func, args[0:input_len])
+
+        return [
+            call.out_port(i) for i in range(len(type_to_row(func.ty.output)))
+        ], args[input_len:]
 
     def visit_GlobalCall(self, node: GlobalCall) -> OutPortV:
         func = self.globals[node.def_id]
         assert isinstance(func, CompiledCallableDef)
 
         args = [self.visit(arg) for arg in node.args]
-        rets = func.compile_call(
-            args, list(node.type_args), self.dfg, self.graph, self.globals, node
-        )
+
+        if isinstance(func.ty, FunctionType):
+            rets = func.compile_call(
+                args, list(node.type_args), self.dfg, self.graph, self.globals, node
+            )
+        else:
+            raise InternalGuppyError("Local call of something without a callable type")
+
         return self._pack_returns(rets)
 
     def visit_TensorCall(self, node: TensorCall) -> OutPortV:
