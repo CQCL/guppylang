@@ -933,7 +933,7 @@ def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
             "`py(...)` expression",
             e.node or node,
         ) from None
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         # Remove the top frame pointing to the `eval` call from the stack trace
         tb = e.__traceback__.tb_next if e.__traceback__ else None
         raise GuppyError(

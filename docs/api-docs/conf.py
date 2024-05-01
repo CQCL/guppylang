@@ -2,8 +2,9 @@
 # See https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import inspect
-import guppylang
 from types import GenericAlias, UnionType
+
+import guppylang
 
 project = "Guppy Compiler"
 copyright = "2024, Quantinuum"
@@ -37,8 +38,8 @@ html_css_files = ["custom.css"]
 
 autosummary_generate = True
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
@@ -100,6 +101,7 @@ def resolve_type_aliases(app, env, node, contnode):
             env, node["refdoc"], app.builder, "data", node["reftarget"], node, contnode
         )
         return ref
+
 
 def setup(app):
     app.connect("missing-reference", resolve_type_aliases)
