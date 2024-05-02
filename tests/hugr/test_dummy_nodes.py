@@ -23,7 +23,9 @@ def test_single_dummy():
 def test_unique_names():
     g = Hugr()
     defn = g.add_def(
-        FunctionType([bool_type()], TupleType([bool_type(), bool_type()])), g.root, "test"
+        FunctionType([bool_type()], TupleType([bool_type(), bool_type()])),
+        g.root,
+        "test",
     )
     dfg = g.add_dfg(defn)
     inp = g.add_input([bool_type()], dfg).out_port(0)

@@ -340,7 +340,7 @@ test = ["coverage", "pytest (>=7,<8.1)", "pytest-cov", "pytest-mock (>=3)"]
 
 [[package]]
 name = "guppyval"
-version = "0.3.0"
+version = "0.2.0"
 description = ""
 optional = false
 python-versions = ">=3.10"
@@ -1442,4 +1442,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "5462a21737ebc3b2ddc10137a6245326925fbe16c7b2ab71d49fb808dd1d950f"
+content-hash = "c8081cd61a26c8748913f893f06f69071a6983c80b140298e476a1f0a0e13c8b"
