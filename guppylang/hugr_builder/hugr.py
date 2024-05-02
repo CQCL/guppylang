@@ -9,7 +9,6 @@ import networkx as nx  # type: ignore[import-untyped]
 from hugr.serialization import SerialHugr, ops, tys
 from hugr.serialization import serial_hugr as raw
 from hugr.serialization.ops import OpType
-from typing_extensions import assert_never
 
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
@@ -116,8 +115,7 @@ class Node(ABC):
     def out_port(self, offset: PortOffset | None) -> OutPort:
         """Returns the output port at the given offset."""
 
-    @abstractmethod
-    def update_op(self) -> None:
+    def update_op(self) -> None:  # noqa: B027
         """Updates the op type associated with this node with additional information.
 
         This should be called before serialisation.
@@ -865,4 +863,3 @@ class Hugr:
     def serialize(self) -> str:
         """Serialize this Hugr in JSON format."""
         return self.to_raw().to_json()
-
