@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
 from guppylang.error import GuppyError
-from guppylang.hugr.hugr import Hugr, OutPortV
+from guppylang.hugr_builder.hugr import Hugr, OutPortV
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type
 
@@ -73,3 +73,23 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
         node: AstNode,
     ) -> list[OutPortV]:
         """Compiles a call to the function."""
+
+    @abstractmethod
+    def load_with_args(
+        self,
+        type_args: Inst,
+        dfg: "DFContainer",
+        graph: Hugr,
+        globals: "CompiledGlobals",
+        node: AstNode,
+    ) -> OutPortV:
+        """Loads the function into a local Hugr dataflow graph.
+
+        Requires an instantiation for all function parameters.
+        """
+
+    def load(
+        self, dfg: "DFContainer", graph: Hugr, globals: "CompiledGlobals", node: AstNode
+    ) -> OutPortV:
+        """Loads the defined value into a local Hugr dataflow graph."""
+        return self.load_with_args([], dfg, graph, globals, node)

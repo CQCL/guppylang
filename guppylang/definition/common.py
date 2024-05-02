@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
-from guppylang.hugr.hugr import Hugr, Node
+from guppylang.hugr_builder.hugr import Hugr, Node
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals

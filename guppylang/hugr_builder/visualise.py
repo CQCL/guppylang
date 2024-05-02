@@ -12,7 +12,7 @@ from guppylang.cfg.analysis import (
     MaybeAssignmentDomain,
 )
 from guppylang.cfg.bb import BB
-from guppylang.hugr.hugr import Hugr, InPort, Node, OutPort, OutPortV
+from guppylang.hugr_builder.hugr import DummyOp, Hugr, InPort, Node, OutPort, OutPortV
 
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import CFG
@@ -63,13 +63,8 @@ _HTML_LABEL_TEMPLATE = """
   <TR>
     <TD>
       <TABLE BORDER="0" CELLBORDER="0">
-        <TR>
-          <TD>
-            <FONT POINT-SIZE="{fontsize}" FACE="{fontface}" COLOR="{label_color}">
-              <B>{node_label}</B>{node_data}
-            </FONT>
-          </TD>
-        </TR>
+        <TR><TD><FONT POINT-SIZE="{fontsize}" FACE="{fontface}"
+            COLOR="{label_color}"><B>{node_label}</B>{node_data}</FONT></TD></TR>
       </TABLE>
     </TD>
   </TR>
@@ -172,7 +167,7 @@ def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph) -> None:
                 viz_node(child, hugr, sub)
             html_label = _format_html_label(
                 node_back_color=_COLOURS["edge"],
-                node_label=node.op.display_name(),
+                node_label=node.op.root.display_name(),
                 node_data=data,
                 border_colour=_COLOURS["port_border"],
                 inputs_row=_html_ports(in_ports, _INPUT_PREFIX)
@@ -187,7 +182,9 @@ def viz_node(node: Node, hugr: Hugr, graph: gv.Digraph) -> None:
     else:
         html_label = _format_html_label(
             node_back_color=_COLOURS["node"],
-            node_label=node.op.display_name(),
+            node_label=node.op.name
+            if isinstance(node.op, DummyOp)
+            else node.op.root.display_name(),
             node_data=data,
             inputs_row=_html_ports(in_ports, _INPUT_PREFIX)
             if len(in_ports) > 0

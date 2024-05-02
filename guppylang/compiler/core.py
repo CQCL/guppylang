@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from guppylang.ast_util import AstNode
 from guppylang.checker.core import Variable
 from guppylang.definition.common import CompiledDef, DefId
-from guppylang.hugr.hugr import DFContainingNode, Hugr, OutPortV
+from guppylang.hugr_builder.hugr import DFContainingNode, Hugr, OutPortV
 
 
 @dataclass

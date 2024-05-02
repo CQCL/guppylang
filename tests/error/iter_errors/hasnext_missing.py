@@ -1,12 +1,12 @@
 from guppylang.decorator import guppy
-from guppylang.hugr import tys
 from guppylang.module import GuppyModule
+from guppylang.tys.ty import NoneType
 
 
 module = GuppyModule("test")
 
 
-@guppy.type(module, tys.TupleType(inner=[]))
+@guppy.type(module, NoneType().to_hugr())
 class MyIter:
     """An iterator that is missing the `__hasnext__` method."""
 
@@ -19,7 +19,7 @@ class MyIter:
         ...
 
 
-@guppy.type(module, tys.TupleType(inner=[]))
+@guppy.type(module, NoneType().to_hugr())
 class MyType:
     """Type that produces the iterator above."""
 

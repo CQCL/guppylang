@@ -15,7 +15,7 @@ from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import CheckableDef, CompilableDef, ParsableDef
 from guppylang.definition.value import CallableDef, CompiledCallableDef
 from guppylang.error import GuppyError
-from guppylang.hugr.hugr import DFContainingVNode, Hugr, Node, OutPortV
+from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr, Node, OutPortV
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type, type_to_row
@@ -130,11 +130,18 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
 
     hugr_node: DFContainingVNode
 
-    def load(
-        self, dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode
+    def load_with_args(
+        self,
+        type_args: Inst,
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: CompiledGlobals,
+        node: AstNode,
     ) -> OutPortV:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        return graph.add_load_constant(self.hugr_node.out_port(0)).out_port(0)
+        return graph.add_load_function(
+            self.hugr_node.out_port(0), type_args, dfg.node
+        ).out_port(0)
 
     def compile_call(
         self,
@@ -146,14 +153,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         node: AstNode,
     ) -> list[OutPortV]:
         """Compiles a call to the function."""
-        # TODO: Hugr should probably allow us to pass type args to `Call`, so we can
-        #   avoid loading the function to manually add a `TypeApply`
-        if type_args:
-            func = self.load(dfg, graph, globals, node)
-            func = graph.add_type_apply(func, type_args, dfg.node)
-            call = graph.add_indirect_call(func.out_port(0), args, dfg.node)
-        else:
-            call = graph.add_call(self.hugr_node.out_port(0), args, dfg.node)
+        call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
         return [call.out_port(i) for i in range(len(type_to_row(self.ty.output)))]
 
     def compile_inner(self, graph: Hugr, globals: CompiledGlobals) -> None:

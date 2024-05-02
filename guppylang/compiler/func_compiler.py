@@ -6,7 +6,7 @@ from guppylang.compiler.core import (
     DFContainer,
     PortVariable,
 )
-from guppylang.hugr.hugr import DFContainingVNode, Hugr
+from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr
 from guppylang.nodes import CheckedNestedFunctionDef
 from guppylang.tys.ty import FunctionType, type_to_row
 
@@ -60,7 +60,7 @@ def compile_local_func_def(
     # the function itself, then we provide the partially applied function as a local
     # variable
     if len(captured) > 0 and func.name in func.cfg.live_before[func.cfg.entry_bb]:
-        loaded = graph.add_load_constant(def_node.out_port(0), def_node).out_port(0)
+        loaded = graph.add_load_function(def_node.out_port(0), [], def_node).out_port(0)
         partial = graph.add_partial(
             loaded, [def_input.out_port(i) for i in range(len(captured))], def_node
         )
@@ -93,7 +93,7 @@ def compile_local_func_def(
     )
 
     # Finally, load the function into the local data-flow graph
-    loaded = graph.add_load_constant(def_node.out_port(0), dfg.node).out_port(0)
+    loaded = graph.add_load_function(def_node.out_port(0), [], dfg.node).out_port(0)
     if len(captured) > 0:
         loaded = graph.add_partial(
             loaded, [dfg[v.name].port for v in captured], dfg.node

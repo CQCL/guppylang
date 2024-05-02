@@ -1,12 +1,12 @@
 from guppylang.decorator import guppy
-from guppylang.hugr import tys
 from guppylang.module import GuppyModule
+from guppylang.tys.ty import NoneType
 
 
 module = GuppyModule("test")
 
 
-@guppy.type(module, tys.TupleType(inner=[]))
+@guppy.type(module, NoneType())
 class MyType:
     """A non-iterable type."""
 

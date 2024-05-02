@@ -1,5 +1,5 @@
 import guppylang
-from guppylang.hugr.hugr import Hugr
+from guppylang.hugr_builder.hugr import Hugr
 from guppylang.module import GuppyModule
 
 

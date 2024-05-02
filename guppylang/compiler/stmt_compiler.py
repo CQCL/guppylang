@@ -11,7 +11,7 @@ from guppylang.compiler.core import (
 )
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.error import InternalGuppyError
-from guppylang.hugr.hugr import Hugr, OutPortV
+from guppylang.hugr_builder.hugr import Hugr, OutPortV
 from guppylang.nodes import CheckedNestedFunctionDef
 from guppylang.tys.ty import TupleType
 

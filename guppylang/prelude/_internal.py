@@ -1,6 +1,7 @@
 import ast
 from typing import Any, Literal
 
+from hugr.serialization import ops, tys
 from pydantic import BaseModel
 
 from guppylang.ast_util import AstNode, get_type, with_loc, with_type
@@ -15,8 +16,7 @@ from guppylang.definition.custom import (
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
-from guppylang.hugr import ops, tys, val
-from guppylang.hugr.hugr import OutPortV
+from guppylang.hugr_builder.hugr import UNDEFINED, OutPortV
 from guppylang.nodes import GlobalCall
 from guppylang.tys.builtin import bool_type
 from guppylang.tys.subst import Subst
@@ -25,26 +25,30 @@ from guppylang.tys.ty import FunctionType, OpaqueType, Type, unify
 INT_WIDTH = 6  # 2^6 = 64 bit
 
 
-hugr_int_type = tys.Opaque(
-    extension="arithmetic.int.types",
-    id="int",
-    args=[tys.BoundedNatArg(n=INT_WIDTH)],
-    bound=tys.TypeBound.Eq,
+hugr_int_type = tys.Type(
+    tys.Opaque(
+        extension="arithmetic.int.types",
+        id="int",
+        args=[tys.TypeArg(tys.BoundedNatArg(n=INT_WIDTH))],
+        bound=tys.TypeBound.Eq,
+    )
 )
 
 
-hugr_float_type = tys.Opaque(
-    extension="arithmetic.float.types",
-    id="float64",
-    args=[],
-    bound=tys.TypeBound.Copyable,
+hugr_float_type = tys.Type(
+    tys.Opaque(
+        extension="arithmetic.float.types",
+        id="float64",
+        args=[],
+        bound=tys.TypeBound.Copyable,
+    )
 )
 
 
-class ConstIntS(BaseModel):
+class ConstInt(BaseModel):
     """Hugr representation of signed integers in the arithmetic extension."""
 
-    c: Literal["ConstIntS"] = "ConstIntS"
+    c: Literal["ConstInt"] = "ConstInt"
     log_width: int
     value: int
 
@@ -63,45 +67,57 @@ class ListValue(BaseModel):
     value: tuple[list[Any], tys.Type]
 
 
-def bool_value(b: bool) -> val.Value:
+def bool_value(b: bool) -> ops.Value:
     """Returns the Hugr representation of a boolean value."""
-    return val.Sum(tag=int(b), value=val.Tuple(vs=[]))
+    unit = ops.Value(ops.TupleValue(vs=[]))
+    return ops.Value(
+        ops.SumValue(tag=int(b), typ=tys.SumType(tys.UnitSum(size=2)), vs=[unit])
+    )
 
 
-def int_value(i: int) -> val.Value:
+def int_value(i: int) -> ops.Value:
     """Returns the Hugr representation of an integer value."""
-    return val.ExtensionVal(c=(ConstIntS(log_width=INT_WIDTH, value=i),))
+    return ops.Value(ops.ExtensionValue(e=ConstInt(log_width=INT_WIDTH, value=i)))
 
 
-def float_value(f: float) -> val.Value:
+def float_value(f: float) -> ops.Value:
     """Returns the Hugr representation of a float value."""
-    return val.ExtensionVal(c=(ConstF64(value=f),))
+    return ops.Value(ops.ExtensionValue(e=ConstF64(value=f)))
 
 
-def list_value(v: list[val.Value], ty: tys.Type) -> val.Value:
+def list_value(v: list[ops.Value], ty: tys.Type) -> ops.Value:
     """Returns the Hugr representation of a list value."""
-    return val.ExtensionVal(c=(ListValue(value=(v, ty)),))
+    return ops.Value(ops.ExtensionValue(e=ListValue(value=(v, ty))))
 
 
 def logic_op(op_name: str, args: list[tys.TypeArg] | None = None) -> ops.OpType:
     """Utility method to create Hugr logic ops."""
-    return ops.CustomOp(extension="logic", op_name=op_name, args=args or [])
+    return ops.OpType(
+        ops.CustomOp(
+            extension="logic", op_name=op_name, args=args or [], parent=UNDEFINED
+        )
+    )
 
 
 def int_op(
     op_name: str, ext: str = "arithmetic.int", num_params: int = 1
 ) -> ops.OpType:
     """Utility method to create Hugr integer arithmetic ops."""
-    return ops.CustomOp(
-        extension=ext,
-        op_name=op_name,
-        args=num_params * [tys.BoundedNatArg(n=INT_WIDTH)],
+    return ops.OpType(
+        ops.CustomOp(
+            extension=ext,
+            op_name=op_name,
+            args=num_params * [tys.TypeArg(tys.BoundedNatArg(n=INT_WIDTH))],
+            parent=UNDEFINED,
+        )
     )
 
 
 def float_op(op_name: str, ext: str = "arithmetic.float") -> ops.OpType:
     """Utility method to create Hugr integer arithmetic ops."""
-    return ops.CustomOp(extension=ext, op_name=op_name, args=[])
+    return ops.OpType(
+        ops.CustomOp(extension=ext, op_name=op_name, args=[], parent=UNDEFINED)
+    )
 
 
 class CoercingChecker(DefaultCallChecker):

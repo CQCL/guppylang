@@ -10,7 +10,7 @@ from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.function import PyFunc, parse_py_func
 from guppylang.definition.value import CallableDef, CompiledCallableDef
 from guppylang.error import GuppyError
-from guppylang.hugr.hugr import Hugr, Node, OutPortV, VNode
+from guppylang.hugr_builder.hugr import Hugr, Node, OutPortV, VNode
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import Type, type_to_row
@@ -79,12 +79,18 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
 
     hugr_node: VNode
 
-    def load(
-        self, dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode
+    def load_with_args(
+        self,
+        type_args: Inst,
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: CompiledGlobals,
+        node: AstNode,
     ) -> OutPortV:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        assert self.hugr_node is not None
-        return graph.add_load_constant(self.hugr_node.out_port(0), dfg.node).out_port(0)
+        return graph.add_load_function(
+            self.hugr_node.out_port(0), type_args, dfg.node
+        ).out_port(0)
 
     def compile_call(
         self,
@@ -96,13 +102,5 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         node: AstNode,
     ) -> list[OutPortV]:
         """Compiles a call to the function."""
-        assert self.hugr_node is not None
-        # TODO: Hugr should probably allow us to pass type args to `Call`, so we can
-        #   avoid loading the function to manually add a `TypeApply`
-        if type_args:
-            func = self.load(dfg, graph, globals, node)
-            func = graph.add_type_apply(func, type_args, dfg.node)
-            call = graph.add_indirect_call(func.out_port(0), args, dfg.node)
-        else:
-            call = graph.add_call(self.hugr_node.out_port(0), args, dfg.node)
+        call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
         return [call.out_port(i) for i in range(len(type_to_row(self.ty.output)))]

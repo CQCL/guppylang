@@ -6,10 +6,10 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from guppylang.hugr.raw import RawHugr
+from hugr.serialization.serial_hugr import SerialHugr
 
 if __name__ == "__main__":
     out_dir = Path(sys.argv[-1])
 
     with (out_dir / "hugr_schema_v0.json").open("w") as f:
-        json.dump(TypeAdapter(RawHugr).json_schema(), f)
+        json.dump(TypeAdapter(SerialHugr).json_schema(), f)

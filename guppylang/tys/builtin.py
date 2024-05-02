@@ -2,11 +2,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Literal
 
+from hugr.serialization import tys
+
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError
-from guppylang.hugr import tys
 from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.param import TypeParam
 from guppylang.tys.ty import FunctionType, NoneType, OpaqueType, TupleType, Type
@@ -95,8 +96,8 @@ class _ListTypeDef(OpaqueTypeDef):
         return super().check_instantiate(args, loc)
 
 
-def _list_to_hugr(args: Sequence[Argument]) -> tys.Opaque:
-    return tys.Opaque(
+def _list_to_hugr(args: Sequence[Argument]) -> tys.Type:
+    ty = tys.Opaque(
         extension="Collections",
         id="List",
         args=[arg.to_hugr() for arg in args],
@@ -104,6 +105,7 @@ def _list_to_hugr(args: Sequence[Argument]) -> tys.Opaque:
             *(arg.ty.hugr_bound for arg in args if isinstance(arg, TypeArg))
         ),
     )
+    return tys.Type(ty)
 
 
 callable_type_def = _CallableTypeDef(DefId.fresh(), None)
@@ -115,7 +117,7 @@ bool_type_def = OpaqueTypeDef(
     defined_at=None,
     params=[],
     always_linear=False,
-    to_hugr=lambda _: tys.UnitSum(size=2),
+    to_hugr=lambda _: tys.Type(tys.TaggedSumType(st=tys.SumType(tys.UnitSum(size=2)))),
 )
 linst_type_def = OpaqueTypeDef(
     id=DefId.fresh(),

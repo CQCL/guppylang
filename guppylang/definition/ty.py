@@ -2,14 +2,14 @@ from abc import abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
+from hugr.serialization import tys
+
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
 from guppylang.error import GuppyError
-from guppylang.hugr import tys
-from guppylang.hugr.tys import Type
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter
-from guppylang.tys.ty import OpaqueType
+from guppylang.tys.ty import OpaqueType, Type
 
 
 @dataclass(frozen=True)

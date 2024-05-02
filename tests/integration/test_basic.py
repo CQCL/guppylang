@@ -1,5 +1,6 @@
+from hugr.serialization import ops
+
 from guppylang.decorator import guppy
-from guppylang.hugr import ops
 from guppylang.module import GuppyModule
 from tests.util import compile_guppy
 
@@ -67,7 +68,9 @@ def test_func_def_name():
     def func_name() -> None:
         return
 
-    [def_op] = [n.op for n in func_name.nodes() if isinstance(n.op, ops.FuncDefn)]
+    [def_op] = [
+        n.op.root for n in func_name.nodes() if isinstance(n.op.root, ops.FuncDefn)
+    ]
     assert def_op.name == "func_name"
 
 
@@ -78,6 +81,7 @@ def test_func_decl_name():
     def func_name() -> None: ...
 
     [def_op] = [
-        n.op for n in module.compile().nodes() if isinstance(n.op, ops.FuncDecl)
+        n.op.root for n in module.compile().nodes()
+        if isinstance(n.op.root, ops.FuncDecl)
     ]
     assert def_op.name == "func_name"

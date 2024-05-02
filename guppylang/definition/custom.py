@@ -2,6 +2,8 @@ import ast
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
+from hugr.serialization import ops
+
 from guppylang.ast_util import AstNode, get_type, with_loc, with_type
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
@@ -10,8 +12,7 @@ from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.definition.common import ParsableDef
 from guppylang.definition.value import CompiledCallableDef
 from guppylang.error import GuppyError, InternalGuppyError
-from guppylang.hugr import ops
-from guppylang.hugr.hugr import Hugr, Node, OutPortV
+from guppylang.hugr_builder.hugr import Hugr, Node, OutPortV
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, NoneType, Type, type_to_row
@@ -123,8 +124,13 @@ class CustomFunctionDef(RawCustomFunctionDef, CompiledCallableDef):
         new_node, ty = self.call_checker.synthesize(args)
         return with_type(ty, with_loc(node, new_node)), ty
 
-    def load(
-        self, dfg: "DFContainer", graph: Hugr, globals: CompiledGlobals, node: AstNode
+    def load_with_args(
+        self,
+        type_args: Inst,
+        dfg: "DFContainer",
+        graph: Hugr,
+        globals: CompiledGlobals,
+        node: AstNode,
     ) -> OutPortV:
         """Loads the custom function as a value into a local dataflow graph.
 
@@ -138,12 +144,7 @@ class CustomFunctionDef(RawCustomFunctionDef, CompiledCallableDef):
                 "This function does not support usage in a higher-order context",
                 node,
             )
-
-        if self.ty.parametrized:
-            raise InternalGuppyError(
-                "Can't yet generate higher-order versions of custom functions. This "
-                "requires generic function *definitions*"
-            )
+        assert len(self.ty.params) == len(type_args)
 
         # Find the module node by walking up the hierarchy
         module: Node = dfg.node
@@ -159,7 +160,7 @@ class CustomFunctionDef(RawCustomFunctionDef, CompiledCallableDef):
         def_node = graph.add_def(self.ty, module, self.name)
         _, inp_ports = graph.add_input_with_ports(list(self.ty.inputs), def_node)
         returns = self.compile_call(
-            inp_ports, [], DFContainer(def_node, {}), graph, globals, node
+            inp_ports, type_args, DFContainer(def_node, {}), graph, globals, node
         )
         graph.add_output(returns, parent=def_node)
 
@@ -251,14 +252,14 @@ class NotImplementedCallCompiler(CustomCallCompiler):
 class OpCompiler(CustomCallCompiler):
     """Call compiler for functions that are directly implemented via Hugr ops."""
 
-    op: ops.BaseOp
+    op: ops.OpType
 
-    def __init__(self, op: ops.BaseOp) -> None:
+    def __init__(self, op: ops.OpType) -> None:
         self.op = op
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         node = self.graph.add_node(
-            self.op.model_copy(), inputs=args, parent=self.dfg.node
+            self.op.model_copy(deep=True), inputs=args, parent=self.dfg.node
         )
         return_ty = get_type(self.node)
         return [node.add_out_port(ty) for ty in type_to_row(return_ty)]

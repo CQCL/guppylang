@@ -142,6 +142,7 @@ def test_pytket_multi_qubit(validate):
     validate(module.compile())
 
 
+@pytest.mark.skip("Requires Tket2 upgrade")
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
 def test_pytket_measure(validate):
     from pytket import Circuit
