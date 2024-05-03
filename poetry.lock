@@ -366,8 +366,8 @@ pydantic = "~2.7.0"
 [package.source]
 type = "git"
 url = "https://github.com/CQCL/hugr.git"
-reference = "HEAD"
-resolved_reference = "c3d16e7a6939d63240d72d7cc6b30bbab6916f48"
+reference = "acca7bfb4a074c7feb3b4b5758f589941632bc5a"
+resolved_reference = "acca7bfb4a074c7feb3b4b5758f589941632bc5a"
 subdirectory = "hugr-py"
 
 [[package]]
@@ -1442,4 +1442,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "c8081cd61a26c8748913f893f06f69071a6983c80b140298e476a1f0a0e13c8b"
+content-hash = "ef37a450560faf531c5c671443f57f349f525b3d1b738c2a053e58c0c0033dff"

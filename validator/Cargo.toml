@@ -10,6 +10,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.19.0"
-hugr = { git = "https://github.com/CQCL/hugr.git", rev = "4b9d3daa29ea98e3d64d2f407cbb128287854011" }
+hugr = { git = "https://github.com/CQCL/hugr.git", rev = "acca7bfb4a074c7feb3b4b5758f589941632bc5a" }
 lazy_static = "1.4.0"
 serde_json = "1.0.111"
