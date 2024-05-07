@@ -345,12 +345,6 @@ class ExprBuilder(ast.NodeTransformer):
                 case args:
                     arg = with_loc(node, ast.Tuple(elts=args, ctx=ast.Load))
             return with_loc(node, PyExpr(value=arg))
-        # Unlike python, we can call a tuple of callable things
-        elif isinstance(node.func, ast.Tuple):
-            new_elts = [self.visit(elt) for elt in node.func.elts]
-            node.func = ast.Tuple(new_elts)
-            return node
-
         return self.generic_visit(node)
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
