@@ -192,7 +192,6 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         return ExprSynthesizer(self.ctx).synthesize(node, allow_free_vars)
 
     def visit_Tuple(self, node: ast.Tuple, ty: Type) -> tuple[ast.expr, Subst]:
-        # Data tuples should be checkable
         if not (isinstance(ty, TupleType) and len(ty.element_types) == len(node.elts)):
             return self._fail(ty, node)
 
@@ -259,7 +258,8 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             if isinstance(defn, CallableDef):
                 return defn.check_call(node.args, ty, node, self.ctx)
 
-        # Otherwise, it must be a function as a higher-order value
+        # Otherwise, it must be a function as a higher-order value - something
+        # whose type is either a FunctionType or a Tuple of FunctionTypes
         if isinstance(func_ty, FunctionType):
             args, return_ty, inst = check_call(func_ty, node.args, ty, node, self.ctx)
             check_inst(func_ty, inst, node)
@@ -288,7 +288,6 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
                     check_inst(f_ty, inst, node)
                     # Expect that each function is a `CallableDef`
-                    # TODO: What if it's a tensor?
                     if isinstance(f_processed, GlobalName):
                         assert isinstance(
                             self.ctx.globals[f_processed.def_id], CallableDef
@@ -313,14 +312,19 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                 return with_loc(node, TensorCall(call_nodes=call_nodes)), subst
 
             else:
-                # The func isn't a tuple, it could be a call or whatever
-                # we should do a check_call or something
+                # The func isn't a tuple, it could be a call or a variable.
+                # Here, the return type we expect has the outputs of all the
+                # function types merged together, i.e.
+                # f : Callable([A], tuple[B, C])
+                # g : Callable([D], E)
+                # (f, g)(a, d) : tuple[B, C, E]
                 processed_args, big_subst, inst = check_call(
                     tensor_ty, node.args, tensor_ty.output, node.func, self.ctx
                 )
+
+                # TODO: instantiate a tuple of functions
                 # f_processed = instantiate_poly(node.func, tensor_ty, inst)
 
-                # If the substitution isn't empty, ...
                 subst = unify(ty, tensor_ty.output, big_subst) or big_subst
 
                 return with_loc(
