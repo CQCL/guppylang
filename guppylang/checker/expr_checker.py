@@ -430,31 +430,10 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         )
 
     def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, Type]:
-        elems: list[tuple[ast.expr, Type]] = [
-            self.synthesize(elem) for elem in node.elts
-        ]
+        elems = [self.synthesize(elem) for elem in node.elts]
 
-        if all(isinstance(ty, FunctionType) for _, ty in elems):
-            input_row: list[Type] = []
-            output_row: list[Type] = []
-            func_tys: list[FunctionType] = []
-            for i, (func_node, func_ty) in enumerate(elems):
-                assert isinstance(func_node.type, FunctionType)  # type: ignore[attr-defined]
-                assert isinstance(func_ty, FunctionType)
-                node.elts[i] = func_node
-                func_tys.append(func_ty)
-                input_row.extend(func_ty.inputs)
-                if isinstance(func_ty.output, TupleType):
-                    output_row.extend(func_ty.output.element_types)
-                else:
-                    output_row.append(func_ty.output)
-
-            tensor_ty = TupleType(func_tys)
-            tuple_node = ast.Tuple([node for node, _ in elems])
-            return tuple_node, tensor_ty
-        else:
-            node.elts = [n for n, _ in elems]
-            return node, TupleType([ty for _, ty in elems])
+        node.elts = [n for n, _ in elems]
+        return node, TupleType([ty for _, ty in elems])
 
     def visit_List(self, node: ast.List) -> tuple[ast.expr, Type]:
         if len(node.elts) == 0:
