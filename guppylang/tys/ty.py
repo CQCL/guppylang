@@ -551,13 +551,3 @@ def function_tensor_signature(tys: list[FunctionType]) -> FunctionType:
         else:
             outputs.append(fun_ty.output)
     return FunctionType(inputs, TupleType(outputs))
-
-
-def is_function(ty: Type) -> FunctionType | None:
-    if isinstance(ty, FunctionType):
-        return ty
-    elif isinstance(ty, TupleType):
-        funcs = parse_function_tensor(ty)
-        if isinstance(funcs, list):
-            return function_tensor_signature(funcs)
-    return None
