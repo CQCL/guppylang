@@ -546,8 +546,5 @@ def function_tensor_signature(tys: list[FunctionType]) -> FunctionType:
     outputs: list[Type] = []
     for fun_ty in tys:
         inputs.extend(fun_ty.inputs)
-        if isinstance(fun_ty.output, TupleType):
-            outputs.extend(fun_ty.output.element_types)
-        else:
-            outputs.append(fun_ty.output)
-    return FunctionType(inputs, TupleType(outputs))
+        outputs.extend(type_to_row(fun_ty.output))
+    return FunctionType(inputs, row_to_type(outputs))
