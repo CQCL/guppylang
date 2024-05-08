@@ -214,12 +214,17 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             big_subst: Subst = {}
             for i, (elt, elt_ty) in enumerate(zip(node.elts, function_types)):
                 node.elts[i], fun_ty = self._synthesize(elt, allow_free_vars=True)
-                assert isinstance(fun_ty, FunctionType)
-                elem_tys.append(fun_ty)
-                # Start with an empty substitution because the function types
-                # should have independent variables
-                subst = unify(fun_ty, elt_ty, {}) or {}
-                big_subst |= {}
+                if not isinstance(fun_ty, FunctionType):
+                    return self._fail(elt_ty, fun_ty, node.elts[i])
+                else:
+                    elem_tys.append(fun_ty)
+                    # Start with an empty substitution because the function types
+                    # should have independent variables
+                    subst = unify(fun_ty, elt_ty, {}) or {}
+                    if subst is None:
+                        return self._fail(elt_ty, fun_ty, node.elts[i])
+                    else:
+                        big_subst |= subst
 
             return node, big_subst
 
@@ -308,7 +313,11 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                     big_subst |= subst
 
                     # If the substitution isn't empty, ...
-                    subst = unify(ty, tensor_ty.output, big_subst) or big_subst
+                    subst = unify(ty, tensor_ty.output, big_subst)
+                    if subst is None:
+                        return self._fail(ty, tensor_ty.output, call_nodes[-1])
+                    else:
+                        big_subst |= subst
 
                 return with_loc(node, TensorCall(call_nodes=call_nodes)), big_subst
 
@@ -326,7 +335,9 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                 # TODO: instantiate a tuple of functions
                 # f_processed = instantiate_poly(node.func, tensor_ty, inst)
 
-                subst = unify(ty, tensor_ty.output, big_subst) or big_subst
+                subst = unify(ty, tensor_ty.output, big_subst)
+                if subst is None:
+                    return self._fail(ty, tensor_ty.output, node)
 
                 return with_loc(
                     node, LocalCall(func=node.func, args=processed_args)
