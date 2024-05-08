@@ -310,7 +310,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                     # If the substitution isn't empty, ...
                     subst = unify(ty, tensor_ty.output, big_subst) or big_subst
 
-                return with_loc(node, TensorCall(call_nodes=call_nodes)), subst
+                return with_loc(node, TensorCall(call_nodes=call_nodes)), big_subst
 
             else:
                 # The func isn't a tuple, it could be a call or a variable.
