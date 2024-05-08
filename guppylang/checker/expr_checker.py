@@ -266,8 +266,9 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             node.func = instantiate_poly(node.func, func_ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
 
-        if isinstance(func_ty, TupleType) and parse_function_tensor(func_ty):
-            function_elements = parse_function_tensor(func_ty)
+        if isinstance(func_ty, TupleType) and (
+            function_elements := parse_function_tensor(func_ty)
+        ):
             assert isinstance(function_elements, list)
             tensor_ty = function_tensor_signature(function_elements)
 
@@ -572,12 +573,11 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
         elif (
             isinstance(ty, TupleType)
-            and parse_function_tensor(ty)
+            and (function_elems := parse_function_tensor(ty))
             and isinstance(node.func, ast.Tuple)
         ):
             # Note: None of the function types in a tuple of functions will have
             # overlapping type arguments.
-            function_elems = parse_function_tensor(ty)
             assert isinstance(function_elems, list)
             func_ty = function_tensor_signature(function_elems)
             remaining_args = node.args
