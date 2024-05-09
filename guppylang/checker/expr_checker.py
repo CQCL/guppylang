@@ -657,23 +657,18 @@ def check_type_against(
     return subst, []
 
 
-def check_num_args_sufficient(exp: int, act: int, node: AstNode) -> None:
-    """Checks that enough arguments have been passed to a function."""
+def check_num_args(exp: int, act: int, node: AstNode) -> None:
+    """Checks that the correct number of arguments have been passed to a function."""
     if act < exp:
         raise GuppyTypeError(
             f"Not enough arguments passed (expected {exp}, got {act})", node
         )
-
-
-def check_leftovers_nil(
-    args_checked: int, leftovers: list[ast.expr], node: AstNode
-) -> None:
-    if len(leftovers) > 0:
+    if exp < act:
         if isinstance(node, ast.Call):
-            raise GuppyTypeError("Unexpected argument", leftovers[0])
-        total_args = args_checked + len(leftovers)
-        msg = f"Too many arguments passed (expected {args_checked}, got {total_args})"
-        raise GuppyTypeError(msg, node)
+            raise GuppyTypeError("Unexpected argument", node.args[exp])
+        raise GuppyTypeError(
+            f"Too many arguments passed (expected {exp}, got {act})", node
+        )
 
 
 def type_check_args(
@@ -688,35 +683,14 @@ def type_check_args(
     We expect that parameters have been replaced with free unification variables.
     Checks that all unification variables can be inferred.
     """
-    exprs, subst, leftovers = type_check_args_with_leftovers(
-        inputs, func_ty, subst, ctx, node
-    )
-    check_leftovers_nil(len(exprs), leftovers, node)
-    return exprs, subst
-
-
-def type_check_args_with_leftovers(
-    inputs: list[ast.expr],
-    func_ty: FunctionType,
-    subst: Subst,
-    ctx: Context,
-    node: AstNode,
-) -> tuple[list[ast.expr], Subst, list[ast.expr]]:
-    """Checks the arguments of a function call and infers free type variables.
-
-    We expect that parameters have been replaced with free unification variables.
-    Checks that all unification variables can be inferred.
-    """
     assert not func_ty.parametrized
-    check_num_args_sufficient(len(func_ty.inputs), len(inputs), node)
+    check_num_args(len(func_ty.inputs), len(inputs), node)
 
     new_args: list[ast.expr] = []
-    for ty, inp in zip(func_ty.inputs, inputs):
+    for inp, ty in zip(inputs, func_ty.inputs):
         a, s = ExprChecker(ctx).check(inp, ty.substitute(subst), "argument")
         new_args.append(a)
         subst |= s
-
-    leftovers = inputs[len(func_ty.inputs) :]
 
     # If the argument check succeeded, this means that we must have found instantiations
     # for all unification variables occurring in the input types
@@ -730,37 +704,24 @@ def type_check_args_with_leftovers(
             node,
         )
 
-    return new_args, subst, leftovers
+    return new_args, subst
 
 
 def synthesize_call(
     func_ty: FunctionType, args: list[ast.expr], node: AstNode, ctx: Context
 ) -> tuple[list[ast.expr], Type, Inst]:
-    exprs, tys, inst, leftovers = synthesize_call_with_leftovers(
-        func_ty, args, node, ctx
-    )
-    check_leftovers_nil(len(exprs), leftovers, node)
-    return exprs, tys, inst
-
-
-def synthesize_call_with_leftovers(
-    func_ty: FunctionType, args: list[ast.expr], node: AstNode, ctx: Context
-) -> tuple[list[ast.expr], Type, Inst, list[ast.expr]]:
     """Synthesizes the return type of a function call.
 
     Returns an annotated argument list, the synthesized return type, and an
     instantiation for the quantifiers in the function type.
     """
     assert not func_ty.unsolved_vars
-    check_num_args_sufficient(len(func_ty.inputs), len(args), node)
+    check_num_args(len(func_ty.inputs), len(args), node)
 
     # Replace quantified variables with free unification variables and try to infer an
     # instantiation by checking the arguments
     unquantified, free_vars = func_ty.unquantified()
-
-    args, subst, leftovers = type_check_args_with_leftovers(
-        args, unquantified, {}, ctx, node
-    )
+    args, subst = type_check_args(args, unquantified, {}, ctx, node)
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
@@ -769,7 +730,7 @@ def synthesize_call_with_leftovers(
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
 
-    return args, unquantified.output.substitute(subst), inst, leftovers
+    return args, unquantified.output.substitute(subst), inst
 
 
 def check_call(
@@ -780,28 +741,13 @@ def check_call(
     ctx: Context,
     kind: str = "expression",
 ) -> tuple[list[ast.expr], Subst, Inst]:
-    exprs, subst, inst, leftovers = check_call_with_leftovers(
-        func_ty, inputs, ty, node, ctx, kind
-    )
-    check_leftovers_nil(len(exprs), leftovers, node)
-    return exprs, subst, inst
-
-
-def check_call_with_leftovers(
-    func_ty: FunctionType,
-    inputs: list[ast.expr],
-    ty: Type,
-    node: AstNode,
-    ctx: Context,
-    kind: str = "expression",
-) -> tuple[list[ast.expr], Subst, Inst, list[ast.expr]]:
     """Checks the return type of a function call against a given type.
 
     Returns an annotated argument list, a substitution for the free variables in the
     expected type, and an instantiation for the quantifiers in the function type.
     """
     assert not func_ty.unsolved_vars
-    check_num_args_sufficient(len(func_ty.inputs), len(inputs), node)
+    check_num_args(len(func_ty.inputs), len(inputs), node)
 
     # When checking, we can use the information from the expected return type to infer
     # some type arguments. However, this pushes errors inwards. For example, given a
@@ -823,20 +769,18 @@ def check_call_with_leftovers(
     #  in practice. Can we do better than that?
 
     # First, try to synthesize
-    res: tuple[Type, Inst, list[ast.expr]] | None = None
+    res: tuple[Type, Inst] | None = None
     try:
-        inputs, synth, inst, leftovers = synthesize_call_with_leftovers(
-            func_ty, inputs, node, ctx
-        )
-        res = synth, inst, leftovers
+        inputs, synth, inst = synthesize_call(func_ty, inputs, node, ctx)
+        res = synth, inst
     except GuppyTypeInferenceError:
         pass
     if res is not None:
-        synth, inst, leftovers = res
+        synth, inst = res
         subst = unify(ty, synth, {})
         if subst is None:
             raise GuppyTypeError(f"Expected {kind} of type `{ty}`, got `{synth}`", node)
-        return inputs, subst, inst, leftovers
+        return inputs, subst, inst
 
     # If synthesis fails, we try again, this time also using information from the
     # expected return type
@@ -848,9 +792,7 @@ def check_call_with_leftovers(
         )
 
     # Try to infer more by checking against the arguments
-    inputs, subst, leftovers = type_check_args_with_leftovers(
-        inputs, unquantified, subst, ctx, node
-    )
+    inputs, subst = type_check_args(inputs, unquantified, subst, ctx, node)
 
     # Also make sure we found an instantiation for all free vars in the type we're
     # checking against
@@ -869,7 +811,7 @@ def check_call_with_leftovers(
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
 
-    return inputs, subst, inst, leftovers
+    return inputs, subst, inst
 
 
 def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
