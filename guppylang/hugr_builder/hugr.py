@@ -615,12 +615,12 @@ class Hugr:
     def add_def(
         self, fun_ty: FunctionType, parent: Node | None, name: str
     ) -> DFContainingVNode:
-        """Adds a `Def` node to the graph."""
+        """Adds a `FucnDefn` node to the graph."""
         op = ops.FuncDefn(name=name, signature=fun_ty.to_hugr_poly(), parent=UNDEFINED)
         return self._add_dfg_node(ops.OpType(op), [], [fun_ty], parent, None)
 
     def add_declare(self, fun_ty: FunctionType, parent: Node, name: str) -> VNode:
-        """Adds a `Declare` node to the graph."""
+        """Adds a `FuncDecl` node to the graph."""
         op = ops.FuncDecl(name=name, signature=fun_ty.to_hugr_poly(), parent=UNDEFINED)
         return self.add_node(ops.OpType(op), [], [fun_ty], parent, None)
 
