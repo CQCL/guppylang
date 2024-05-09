@@ -97,13 +97,14 @@ class _ListTypeDef(OpaqueTypeDef):
 
 
 def _list_to_hugr(args: Sequence[Argument]) -> tys.Type:
+    # Type checker ensures that we get a single arg of kind type
+    [arg] = args
+    assert isinstance(arg, TypeArg)
     ty = tys.Opaque(
         extension="Collections",
         id="List",
-        args=[arg.to_hugr() for arg in args],
-        bound=tys.TypeBound.join(
-            *(arg.ty.hugr_bound for arg in args if isinstance(arg, TypeArg))
-        ),
+        args=[arg.to_hugr()],
+        bound=arg.ty.hugr_bound,
     )
     return tys.Type(ty)
 
