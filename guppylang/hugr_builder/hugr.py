@@ -18,6 +18,7 @@ from guppylang.tys.ty import (
     Type,
     TypeRow,
     row_to_type,
+    rows_to_hugr,
     type_to_row,
 )
 
@@ -518,7 +519,7 @@ class Hugr:
     ) -> VNode:
         """Adds a `Tag` node to the graph."""
         assert all(inp.ty == ty for inp, ty in zip(inputs, variants[tag]))
-        hugr_variants = [[ty.to_hugr() for ty in row] for row in variants]
+        hugr_variants = rows_to_hugr(variants)
         out_ty = SumType([row_to_type(row) for row in variants])
         return self.add_node(
             ops.OpType(ops.Tag(tag=tag, variants=hugr_variants, parent=UNDEFINED)),

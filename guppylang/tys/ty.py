@@ -400,12 +400,12 @@ class SumType(ParametrizedTypeBase):
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         rows = [type_to_row(ty) for ty in self.element_types]
+        sum_inner: tys.UnitSum | tys.GeneralSum
         if all(len(row) == 0 for row in rows):
-            return tys.Type(
-                tys.TaggedSumType(st=tys.SumType(tys.UnitSum(size=len(rows))))
-            )
-        rows = [[ty.to_hugr() for ty in row] for row in rows]
-        return tys.Type(tys.TaggedSumType(st=tys.SumType(tys.GeneralSum(rows=rows))))
+            sum_inner = tys.UnitSum(size=len(rows))
+        else:
+            sum_inner = tys.GeneralSum(rows=rows_to_hugr(rows))
+        return tys.Type(tys.TaggedSumType(st=tys.SumType(sum_inner)))
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
@@ -482,6 +482,16 @@ def type_to_row(ty: Type) -> TypeRow:
     if isinstance(ty, TupleType) and not ty.preserve:
         return ty.element_types
     return [ty]
+
+
+def row_to_hugr(row: TypeRow) -> tys.TypeRow:
+    """Computes the Hugr representation of a type row."""
+    return [ty.to_hugr() for ty in row]
+
+
+def rows_to_hugr(rows: Sequence[TypeRow]) -> list[tys.TypeRow]:
+    """Computes the Hugr representation of a sequence of rows."""
+    return [row_to_hugr(row) for row in rows]
 
 
 def unify(s: Type, t: Type, subst: "Subst | None") -> "Subst | None":
