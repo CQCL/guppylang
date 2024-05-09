@@ -191,9 +191,12 @@ class VNode(Node):
         Feeds type information from the in- and out-ports to the operation class to
         update signature information. This function must be called before serialisation.
         """
-        if isinstance(self.op.root, ops.BaseOp) and not isinstance(
+        # We can't call `to_hugr()` on polymorphic function types, so we have to skip
+        # ops that have connected `Function` edges.
+        has_poly_func_edge = isinstance(
             self.op.root, ops.FuncDecl | ops.FuncDefn | ops.Call | ops.LoadFunction
-        ):
+        )
+        if isinstance(self.op.root, ops.BaseOp) and not has_poly_func_edge:
             in_types = [t.to_hugr() for t in self.in_port_types]
             out_types = [t.to_hugr() for t in self.out_port_types]
             self.op.root.insert_port_types(in_types, out_types)
