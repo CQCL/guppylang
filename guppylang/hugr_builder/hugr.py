@@ -546,7 +546,7 @@ class Hugr:
     def add_load_function(
         self, def_port: OutPortV, inst: Inst, parent: Node | None = None
     ) -> VNode:
-        """Adds a `LoadConstant` node to the graph."""
+        """Adds a `LoadFunction` node to the graph."""
         assert isinstance(def_port.ty, FunctionType)
         assert len(def_port.ty.params) == len(inst)
         instantiation = def_port.ty.instantiate(inst)
