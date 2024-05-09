@@ -248,9 +248,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             assert isinstance(function_elements, list)
             tensor_ty = function_tensor_signature(function_elements)
 
-            big_subst: Subst = {}
-
-            processed_args, big_subst, inst = check_call(
+            processed_args, subst, inst = check_call(
                 tensor_ty, node.args, tensor_ty.output, node.func, self.ctx
             )
 
@@ -259,7 +257,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                     "Polymorphic functions in tuples are not supported"
                 )
 
-            result_subst = unify(ty, tensor_ty.output, big_subst)
+            result_subst = unify(ty, tensor_ty.output, subst)
             if result_subst is None:
                 return self._fail(ty, tensor_ty.output, node)
             else:
