@@ -793,6 +793,11 @@ class Hugr:
                 output_nodes.append(n)
             elif (
                 isinstance(n.op.root, ops.DataflowBlock)
+                # We can detect entry BBs by looking for BBs without incoming edges
+                # since Guppy will never generate an edge pointing back to the entry.
+                # Also, Guppy errors on unreachable code, so we will never generate
+                # interior BBs without incoming edges. Hence, there are also no false
+                # positives.
                 and next(self.in_edges(n.in_port(None)), None) is None
             ):
                 entry_nodes.append(n)
