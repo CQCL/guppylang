@@ -745,37 +745,11 @@ class Hugr:
         return self
 
     def insert_order_edges(self) -> "Hugr":
-        """Adds state edges to all dataflow ops without inputs outputs.
+        """Adds order edges to the source and target inter-graph edges.
 
-        We add state edges connecting them to the input or output node of the DFG.
-        This action must be performed before serialisation.
+        This ensures that the source is executed before the target. This action must be
+        performed before serialisation.
         """
-        for n in self.nodes():
-            if isinstance(n.op.root, ops.DataflowOp) and isinstance(
-                n.parent, DFContainingNode
-            ):
-                if all(
-                    next(self.in_edges(p), None) is None for p in n.in_ports
-                ) and not isinstance(n.op.root, ops.Input):
-                    assert n.parent.input_child is not None
-                    self.add_order_edge(n.parent.input_child, n)
-                if all(
-                    next(self.out_edges(p), None) is None for p in n.out_ports
-                ) and not isinstance(n.op.root, ops.Output):
-                    assert n.parent.output_child is not None
-                    self.add_order_edge(n, n.parent.output_child)
-                # Special case: Call ops for functions without any arguments are
-                # only connected to the top-level def/declare and also need an
-                # order edge
-                if isinstance(n.op.root, ops.Call) and n.num_in_ports == 1:  # noqa: SIM114
-                    assert n.parent.input_child is not None
-                    self.add_order_edge(n.parent.input_child, n)
-                # Special case: Load constant ops always need an order edge
-                elif isinstance(n.op.root, ops.LoadConstant):
-                    assert n.parent.input_child is not None
-                    self.add_order_edge(n.parent.input_child, n)
-
-        # Also add order edges for non-local edges
         for src, tgt in list(self.edges()):
             # Exclude CF and constant edges
             if isinstance(src, OutPortCF) or isinstance(
