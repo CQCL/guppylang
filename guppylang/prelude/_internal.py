@@ -46,7 +46,14 @@ hugr_float_type = tys.Type(
 
 
 class ConstInt(BaseModel):
-    """Hugr representation of signed integers in the arithmetic extension."""
+    """Hugr representation of signed and unsigned integers in the arithmetic extension.
+
+    Hugr always uses a u64 for the value. The interpretation is:
+      - as an unsigned integer, (value mod `2^N`);
+      - as a signed integer, (value mod `2^(N-1) - 2^(N-1)*a`)
+    where `N = 2^log_width` and `a` is the (N-1)th bit of `x` (counting from 0 = least
+    significant bit).
+    """
 
     c: Literal["ConstInt"] = "ConstInt"
     log_width: int
