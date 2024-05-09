@@ -201,7 +201,9 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             # Now we have to manage this hand-off
             remaining_args = args
             for func in func_ports:
-                outs, remaining_args = self._compile_tensor_with_leftovers(func, args)
+                outs, remaining_args = self._compile_tensor_with_leftovers(
+                    func, remaining_args
+                )
                 rets.extend(outs)
         else:
             raise InternalGuppyError("Local call of something without a callable type")
