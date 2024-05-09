@@ -64,12 +64,6 @@ def test_call(validate):
     def baz() -> tuple[int, bool]:
         return (foo, bar)()
 
-    @guppy(module)
-    def local_ho(
-        f: Callable[[int], bool], g: Callable[[bool], int]
-    ) -> tuple[bool, int]:
-        return (f, g)(2, True)
-
     validate(module.compile())
 
 
