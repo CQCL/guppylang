@@ -312,14 +312,13 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
                     big_subst |= subst
 
-                    # If the substitution isn't empty, ...
-                    subst = unify(ty, tensor_ty.output, big_subst)
-                    if subst is None:
-                        return self._fail(ty, tensor_ty.output, call_nodes[-1])
-                    else:
-                        big_subst |= subst
-
-                return with_loc(node, TensorCall(call_nodes=call_nodes)), big_subst
+                # If the substitution isn't empty, ...
+                if result_subst := unify(ty, tensor_ty.output, big_subst):
+                    return with_loc(
+                        node, TensorCall(call_nodes=call_nodes)
+                    ), result_subst
+                else:
+                    return self._fail(ty, tensor_ty.output, call_nodes[-1])
 
             else:
                 # The func isn't a tuple, it could be a call or a variable.
@@ -335,13 +334,12 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                 # TODO: instantiate a tuple of functions
                 # f_processed = instantiate_poly(node.func, tensor_ty, inst)
 
-                subst = unify(ty, tensor_ty.output, big_subst)
-                if subst is None:
+                if result_subst := unify(ty, tensor_ty.output, big_subst):
+                    return with_loc(
+                        node, LocalCall(func=node.func, args=processed_args)
+                    ), result_subst
+                else:
                     return self._fail(ty, tensor_ty.output, node)
-
-                return with_loc(
-                    node, LocalCall(func=node.func, args=processed_args)
-                ), subst
 
         elif callee := self.ctx.globals.get_instance_func(func_ty, "__call__"):
             return callee.check_call(node.args, ty, node, self.ctx)
