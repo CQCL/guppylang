@@ -278,7 +278,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             tensor_ty = function_tensor_signature(function_elements)
 
             remaining_args: list[ast.expr] = node.args
-            call_nodes: list[GlobalCall | LocalCall] = []
+            call_nodes: list[ast.expr] = []
             big_subst: Subst = {}
             if isinstance(node.func, ast.Tuple):
                 for f, f_ty in zip(node.func.elts, func_ty.element_types):
@@ -295,16 +295,12 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                     check_inst(f_ty, inst, node)
                     # Expect that each function is a `CallableDef`
                     if isinstance(f_processed, GlobalName):
-                        assert isinstance(
-                            self.ctx.globals[f_processed.def_id], CallableDef
+                        defn = self.ctx.globals[f_processed.def_id]
+                        assert isinstance(defn, CallableDef)
+                        call_node, subst = defn.check_call(
+                            processed_args, f_ty.output, f_processed, self.ctx
                         )
-                        call_nodes.append(
-                            GlobalCall(
-                                def_id=f_processed.def_id,
-                                args=processed_args,
-                                type_args=inst,
-                            )
-                        )
+                        call_nodes.append(call_node)
                     else:
                         call_nodes.append(
                             LocalCall(func=f_processed, args=processed_args)
