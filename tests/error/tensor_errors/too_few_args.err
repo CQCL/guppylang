@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:12
+
+10:    @guppy(module)
+11:    def main() -> int:
+12:        return (foo, foo)(42)
+                  ^^^^^^^^^^
+GuppyTypeError: Not enough arguments passed (expected 2, got 1)
