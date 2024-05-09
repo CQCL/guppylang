@@ -775,6 +775,9 @@ class Hugr:
 
     def to_raw(self) -> SerialHugr:
         """Returns the raw representation of this HUGR for serialisation."""
+        if self.root is None:
+            raise ValueError("Serial Hugr requires a root node")
+
         self.remove_dummy_nodes()
         self.insert_order_edges()
         # Hugr requires that Input/Output nodes are the first/second children in a DFG.
@@ -789,9 +792,10 @@ class Hugr:
         indices = itertools.count()
         raw_index: dict[int, ops.NodeID] = {}
         all_nodes = self.nodes()
-        root_node = next(all_nodes)
         for n in all_nodes:
-            if isinstance(n.op.root, ops.Input):
+            if n is self.root:
+                pass
+            elif isinstance(n.op.root, ops.Input):
                 input_nodes.append(n)
             elif isinstance(n.op.root, ops.Output):
                 output_nodes.append(n)
@@ -810,7 +814,7 @@ class Hugr:
             else:
                 remaining_nodes.append(n)
         for n in itertools.chain(
-            iter([root_node]),
+            iter([self.root]),
             iter(entry_nodes),
             iter(exit_nodes),
             iter(input_nodes),
@@ -842,8 +846,6 @@ class Hugr:
         for src, tgt in self.order_edges():
             edges.append(((raw_index[src.idx], None), (raw_index[tgt.idx], None)))
 
-        if self.root is None:
-            raise ValueError("Raw Hugr requires a root node")
         return SerialHugr(nodes=nodes, edges=edges)
 
     def serialize(self) -> str:
