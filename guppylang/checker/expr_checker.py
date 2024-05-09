@@ -53,7 +53,6 @@ from guppylang.error import (
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
-    GlobalCall,
     GlobalName,
     IterEnd,
     IterHasNext,
@@ -62,7 +61,6 @@ from guppylang.nodes import (
     LocalName,
     MakeIter,
     PyExpr,
-    TensorCall,
     TypeApply,
 )
 from guppylang.tys.arg import TypeArg
@@ -256,8 +254,10 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                 tensor_ty, node.args, tensor_ty.output, node.func, self.ctx
             )
 
-            # TODO: instantiate a tuple of functions
-            # f_processed = instantiate_poly(node.func, tensor_ty, inst)
+            if len(inst) > 0:
+                raise GuppyTypeError(
+                    "Polymorphic functions in tuples are not supported"
+                )
 
             result_subst = unify(ty, tensor_ty.output, big_subst)
             if result_subst is None:
@@ -506,39 +506,19 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             args, return_ty, inst = synthesize_call(ty, node.args, node, self.ctx)
             node.func = instantiate_poly(node.func, ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
-        elif (
-            isinstance(ty, TupleType)
-            and (function_elems := parse_function_tensor(ty))
-            and isinstance(node.func, ast.Tuple)
+        elif isinstance(ty, TupleType) and (
+            function_elems := parse_function_tensor(ty)
         ):
-            # Note: None of the function types in a tuple of functions will have
-            # overlapping type arguments.
-            assert isinstance(function_elems, list)
-            func_ty = function_tensor_signature(function_elems)
-            remaining_args = node.args
-            return_tys: list[Type] = []
-            processed_args: list[ast.expr] = []
-            call_nodes: list[ast.expr] = []
-            for func in node.func.elts:
-                args, return_ty, inst, remaining_args = synthesize_call_with_leftovers(
-                    func_ty, remaining_args, node, self.ctx
+            tensor_ty = function_tensor_signature(function_elems)
+            args, return_ty, inst = synthesize_call(
+                tensor_ty, node.args, node, self.ctx
+            )
+            if len(inst) > 0:
+                raise GuppyTypeError(
+                    "Polymorphic functions in tuples are not supported"
                 )
-                processed_args.extend(args)
-                if isinstance(return_ty, TupleType):
-                    return_tys.extend(return_ty.element_types)
-                else:
-                    return_tys.append(return_ty)
 
-                if isinstance(func, GlobalName):
-                    assert isinstance(self.ctx.globals[func.def_id], CallableDef)
-                    call_nodes.append(
-                        GlobalCall(def_id=func.def_id, args=args, type_args=inst)
-                    )
-                else:
-                    call_nodes.append(LocalCall(func=func, args=args))
-
-            call_node = TensorCall(call_nodes)
-            return with_loc(node, call_node), TupleType(return_tys)
+            return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
 
         elif f := self.ctx.globals.get_instance_func(ty, "__call__"):
             return f.synthesize_call(node.args, node, self.ctx)
