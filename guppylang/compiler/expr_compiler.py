@@ -229,9 +229,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             input_len = len(func.ty.inputs)
             call = self.graph.add_indirect_call(func, args[0:input_len])
 
-            return [
-                call.out_port(i) for i in range(len(type_to_row(func.ty.output)))
-            ], args[input_len:]
+            return list(call.out_ports), args[input_len:]
         else:
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
