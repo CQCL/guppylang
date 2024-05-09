@@ -70,7 +70,11 @@ class OutPortCF(OutPort):
 
 
 class DummyOp(OpType):
-    """A dummy Hugr op that is replaced with an extern call during serialisation."""
+    """A dummy Hugr op that is replaced with a call to a dummy function declaration
+    during serialisation.
+
+    This is a placeholder for ops that aren't yet available in Hugr.
+    """
 
     root: str  # type: ignore[assignment]
 
