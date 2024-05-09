@@ -405,7 +405,7 @@ class SumType(ParametrizedTypeBase):
             sum_inner = tys.UnitSum(size=len(rows))
         else:
             sum_inner = tys.GeneralSum(rows=rows_to_hugr(rows))
-        return tys.Type(tys.TaggedSumType(st=tys.SumType(sum_inner)))
+        return tys.Type(tys.SumType(sum_inner))
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""

@@ -427,7 +427,7 @@ class Hugr:
         """Adds a `Block` node to the graph."""
         node = BlockNode(
             idx=self._graph.number_of_nodes(),
-            op=ops.OpType(ops.DataflowBlock(parent=UNDEFINED)),
+            op=ops.OpType(ops.DataflowBlock(parent=UNDEFINED, sum_rows=[])),
             parent=parent,
             meta_data={},
         )

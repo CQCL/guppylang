@@ -117,7 +117,7 @@ bool_type_def = OpaqueTypeDef(
     defined_at=None,
     params=[],
     always_linear=False,
-    to_hugr=lambda _: tys.Type(tys.TaggedSumType(st=tys.SumType(tys.UnitSum(size=2)))),
+    to_hugr=lambda _: tys.Type(tys.SumType(tys.UnitSum(size=2))),
 )
 linst_type_def = OpaqueTypeDef(
     id=DefId.fresh(),

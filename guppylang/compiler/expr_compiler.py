@@ -347,7 +347,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> ops.Value | None:
             assert is_list_type(exp_ty)
             vs = [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
             if doesnt_contain_none(vs):
-                return list_value(vs, get_element_type(exp_ty).to_hugr())
+                return list_value(vs, get_element_type(exp_ty))
         case _:
             # Pytket conversion is an optional feature
             try:

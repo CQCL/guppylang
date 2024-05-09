@@ -183,7 +183,7 @@ dependencies = [
 [[package]]
 name = "hugr"
 version = "0.3.1"
-source = "git+https://github.com/CQCL/hugr.git?rev=acca7bfb4a074c7feb3b4b5758f589941632bc5a#acca7bfb4a074c7feb3b4b5758f589941632bc5a"
+source = "git+https://github.com/CQCL/hugr.git?rev=1d09946deaa96dfa0304590508849091d3eede37#1d09946deaa96dfa0304590508849091d3eede37"
 dependencies = [
  "bitvec",
  "cgmath",

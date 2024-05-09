@@ -1,5 +1,4 @@
 import ast
-from typing import Any, Literal
 
 from hugr.serialization import ops, tys
 from pydantic import BaseModel
@@ -18,7 +17,7 @@ from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.hugr_builder.hugr import UNDEFINED, OutPortV
 from guppylang.nodes import GlobalCall
-from guppylang.tys.builtin import bool_type
+from guppylang.tys.builtin import bool_type, list_type
 from guppylang.tys.subst import Subst
 from guppylang.tys.ty import FunctionType, OpaqueType, Type, unify
 
@@ -55,23 +54,8 @@ class ConstInt(BaseModel):
     significant bit).
     """
 
-    c: Literal["ConstInt"] = "ConstInt"
     log_width: int
     value: int
-
-
-class ConstF64(BaseModel):
-    """Hugr representation of floats in the arithmetic extension."""
-
-    c: Literal["ConstF64"] = "ConstF64"
-    value: float
-
-
-class ListValue(BaseModel):
-    """Hugr representation of floats in the arithmetic extension."""
-
-    c: Literal["ListValue"] = "ListValue"
-    value: tuple[list[Any], tys.Type]
 
 
 def bool_value(b: bool) -> ops.Value:
@@ -84,17 +68,37 @@ def bool_value(b: bool) -> ops.Value:
 
 def int_value(i: int) -> ops.Value:
     """Returns the Hugr representation of an integer value."""
-    return ops.Value(ops.ExtensionValue(e=ConstInt(log_width=INT_WIDTH, value=i)))
+    return ops.Value(
+        ops.ExtensionValue(
+            extensions=["arithmetic.int.types"],
+            typ=hugr_int_type,
+            value=ops.CustomConst(
+                c="ConstInt", v=ConstInt(log_width=INT_WIDTH, value=i)
+            ),
+        )
+    )
 
 
 def float_value(f: float) -> ops.Value:
     """Returns the Hugr representation of a float value."""
-    return ops.Value(ops.ExtensionValue(e=ConstF64(value=f)))
+    return ops.Value(
+        ops.ExtensionValue(
+            extensions=["arithmetic.float.types"],
+            typ=hugr_float_type,
+            value=ops.CustomConst(c="ConstF64", v=f),
+        )
+    )
 
 
-def list_value(v: list[ops.Value], ty: tys.Type) -> ops.Value:
+def list_value(v: list[ops.Value], ty: Type) -> ops.Value:
     """Returns the Hugr representation of a list value."""
-    return ops.Value(ops.ExtensionValue(e=ListValue(value=(v, ty))))
+    return ops.Value(
+        ops.ExtensionValue(
+            extensions=["Collections"],
+            typ=list_type(ty).to_hugr(),
+            value=ops.CustomConst(c="ListValue", v=(v, ty.to_hugr())),
+        )
+    )
 
 
 def logic_op(op_name: str, args: list[tys.TypeArg] | None = None) -> ops.OpType:
