@@ -363,9 +363,12 @@ class TupleType(ParametrizedTypeBase):
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
-        inner = [ty.to_hugr() for ty in self.element_types]
-        # Tuples are encoded as a unary sum
-        return tys.Type(tys.TaggedSumType(st=tys.SumType(tys.GeneralSum(rows=[inner]))))
+        # Tuples are encoded as a unary sum. Note that we need to make a copy of this
+        # tuple with `preserve=False` to ensure that it can be broken up into a row (if
+        # this tuple was created by instantiating a type variable, it is still
+        # represented as a *row* sum).
+        tuple_ty = TupleType(self.element_types, preserve=False)
+        return SumType([tuple_ty]).to_hugr()
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
