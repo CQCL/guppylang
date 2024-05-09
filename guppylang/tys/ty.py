@@ -275,16 +275,22 @@ class FunctionType(ParametrizedTypeBase):
                 "Tried to convert parametrised function type to Hugr. Use "
                 "`to_hugr_poly` instead"
             )
-        ins = [t.to_hugr() for t in self.inputs]
-        outs = [t.to_hugr() for t in type_to_row(self.output)]
-        return tys.Type(tys.FunctionType(input=ins, output=outs))
+        return tys.Type(self._to_hugr_function_type())
 
     def to_hugr_poly(self) -> tys.PolyFuncType:
         """Computes the Hugr `PolyFuncType` representation of the type."""
+        func_ty = self._to_hugr_function_type()
+        return tys.PolyFuncType(params=[p.to_hugr() for p in self.params], body=func_ty)
+
+    def _to_hugr_function_type(self) -> tys.FunctionType:
+        """Helper method to compute the Hugr `FunctionType` representation of the type.
+
+        The resulting `FunctionType` can then be embedded into a Hugr `Type` or a Hugr
+        `PolyFuncType`.
+        """
         ins = [t.to_hugr() for t in self.inputs]
         outs = [t.to_hugr() for t in type_to_row(self.output)]
-        func_ty = tys.FunctionType(input=ins, output=outs)
-        return tys.PolyFuncType(params=[p.to_hugr() for p in self.params], body=func_ty)
+        return tys.FunctionType(input=ins, output=outs)
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
