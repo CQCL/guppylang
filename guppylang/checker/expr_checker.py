@@ -195,38 +195,11 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         if not (isinstance(ty, TupleType) and len(ty.element_types) == len(node.elts)):
             return self._fail(ty, node)
 
-        # Tuples can either be inert python tuples or tuples of functions which
-        # can be called in guppy. The former thing is checkable, but in the
-        # latter case we should be able to synthesise function types for the
-        # elements. Check here whether the given type is a tuple of function
-        # types to work out which case we're in.
-        function_types = parse_function_tensor(ty)
-        if not function_types:
-            subst: Subst = {}
-            for i, el in enumerate(node.elts):
-                node.elts[i], s = self.check(el, ty.element_types[i].substitute(subst))
-                subst |= s
-            return node, subst
-        else:
-            assert isinstance(function_types, list)
-            elem_tys: list[FunctionType] = []
-            # The substitution for the whole tuple of function types
-            big_subst: Subst = {}
-            for i, (elt, elt_ty) in enumerate(zip(node.elts, function_types)):
-                node.elts[i], fun_ty = self._synthesize(elt, allow_free_vars=True)
-                if not isinstance(fun_ty, FunctionType):
-                    return self._fail(elt_ty, fun_ty, node.elts[i])
-                else:
-                    elem_tys.append(fun_ty)
-                    # Start with an empty substitution because the function types
-                    # should have independent variables
-                    subst = unify(fun_ty, elt_ty, {}) or {}
-                    if subst is None:
-                        return self._fail(elt_ty, fun_ty, node.elts[i])
-                    else:
-                        big_subst |= subst
-
-            return node, big_subst
+        subst: Subst = {}
+        for i, el in enumerate(node.elts):
+            node.elts[i], s = self.check(el, ty.element_types[i].substitute(subst))
+            subst |= s
+        return node, subst
 
     def visit_List(self, node: ast.List, ty: Type) -> tuple[ast.expr, Subst]:
         if not is_list_type(ty) and not is_linst_type(ty):

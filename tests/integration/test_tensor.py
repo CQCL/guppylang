@@ -20,7 +20,7 @@ def test_bug(validate):
 
     @guppy(module)
     def baz(x: int) -> tuple[bool]:
-        return (bar,)(is_42)(x)
+        return bar(is_42)(x)
 
     validate(module.compile())
 
@@ -41,15 +41,15 @@ def test_check_callable(validate):
         return x == 42
 
     @guppy(module)
-    def baz(x: int) -> tuple[bool]:
+    def baz(x: int) -> bool:
         return foo(is_42)(x)
 
     @guppy(module)
     def baz1() -> tuple[Callable[[int], bool]]:
-        return (foo,)(is_42)
+        return foo(is_42)
 
     @guppy(module)
-    def baz2(x: int) -> tuple[bool]:
+    def baz2(x: int) -> bool:
         return (foo,)(is_42)(x)
 
     validate(module.compile())
