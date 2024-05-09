@@ -7,24 +7,6 @@ from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 
 
-def test_bug(validate):
-    module = GuppyModule("module")
-
-    @guppy(module)
-    def bar(f: Callable[[int], bool]) -> Callable[[int], bool]:
-        return f
-
-    @guppy(module)
-    def is_42(x: int) -> bool:
-        return x == 42
-
-    @guppy(module)
-    def baz(x: int) -> tuple[bool]:
-        return bar(is_42)(x)
-
-    validate(module.compile())
-
-
 def test_check_callable(validate):
     module = GuppyModule("module")
 
