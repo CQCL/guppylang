@@ -151,3 +151,22 @@ def test_higher_order(validate):
     #         return apply(baz, args)
 
     validate(module.compile())
+
+
+def test_nesting(validate):
+    module = GuppyModule("module")
+
+    @guppy(module)
+    def foo(x: int, y: int) -> int:
+        return x + y
+
+    @guppy(module)
+    def bar(x: int) -> int:
+        return -x
+
+    @guppy(module)
+    def call(x: int) -> tuple[int, int, int]:
+        f = bar, (bar, foo)
+        return f(x, x, x, x)
+
+    validate(module.compile())

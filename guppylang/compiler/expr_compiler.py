@@ -216,13 +216,25 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         list[OutPortV],  # Compiled outputs
         list[OutPortV],
     ]:  # Leftover args
-        assert isinstance(func.ty, FunctionType)
-        input_len = len(func.ty.inputs)
-        call = self.graph.add_indirect_call(func, args[0:input_len])
+        if isinstance(func.ty, TupleType):
+            remaining_args = args
+            all_outs = []
+            for elem in self._unpack_tuple(func):
+                outs, remaining_args = self._compile_tensor_with_leftovers(
+                    elem, remaining_args
+                )
+                all_outs.extend(outs)
+            return all_outs, remaining_args
 
-        return [
-            call.out_port(i) for i in range(len(type_to_row(func.ty.output)))
-        ], args[input_len:]
+        elif isinstance(func.ty, FunctionType):
+            input_len = len(func.ty.inputs)
+            call = self.graph.add_indirect_call(func, args[0:input_len])
+
+            return [
+                call.out_port(i) for i in range(len(type_to_row(func.ty.output)))
+            ], args[input_len:]
+        else:
+            raise InternalGuppyError("Tensor element wasn't function or tuple")
 
     def visit_GlobalCall(self, node: GlobalCall) -> OutPortV:
         func = self.globals[node.def_id]
