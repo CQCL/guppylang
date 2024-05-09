@@ -517,11 +517,11 @@ class Hugr:
         parent: Node | None = None,
     ) -> VNode:
         """Adds a `Tag` node to the graph."""
-        types = [[ty.to_hugr() for ty in row] for row in variants]
         assert all(inp.ty == ty for inp, ty in zip(inputs, variants[tag]))
+        hugr_variants = [[ty.to_hugr() for ty in row] for row in variants]
         out_ty = SumType([row_to_type(row) for row in variants])
         return self.add_node(
-            ops.OpType(ops.Tag(tag=tag, variants=types, parent=UNDEFINED)),
+            ops.OpType(ops.Tag(tag=tag, variants=hugr_variants, parent=UNDEFINED)),
             None,
             [out_ty],
             parent,
