@@ -64,6 +64,12 @@ def test_call(validate):
     def baz() -> tuple[int, bool]:
         return (foo, bar)()
 
+    @guppy(module)
+    def call_var() -> tuple[int, bool, int]:
+        f = foo
+        g = (foo, bar, f)
+        return g()
+
     validate(module.compile())
 
 
@@ -91,6 +97,11 @@ def test_call_back(validate):
     @guppy(module)
     def baz(x: int, y: int) -> tuple[int, int]:
         return (foo, bar)(x, y)
+
+    @guppy(module)
+    def call_var(x: int) -> tuple[int, int, int]:
+        f = foo, baz
+        return f(x, x, x)
 
     validate(module.compile())
 
