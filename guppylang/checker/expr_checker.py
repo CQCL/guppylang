@@ -61,6 +61,7 @@ from guppylang.nodes import (
     LocalName,
     MakeIter,
     PyExpr,
+    TensorCall,
     TypeApply,
 )
 from guppylang.tys.arg import TypeArg
@@ -190,9 +191,8 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         return ExprSynthesizer(self.ctx).synthesize(node, allow_free_vars)
 
     def visit_Tuple(self, node: ast.Tuple, ty: Type) -> tuple[ast.expr, Subst]:
-        if not (isinstance(ty, TupleType) and len(ty.element_types) == len(node.elts)):
+        if not isinstance(ty, TupleType) or len(ty.element_types) != len(node.elts):
             return self._fail(ty, node)
-
         subst: Subst = {}
         for i, el in enumerate(node.elts):
             node.elts[i], s = self.check(el, ty.element_types[i].substitute(subst))
@@ -264,7 +264,8 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                 return self._fail(ty, tensor_ty.output, node)
             else:
                 return with_loc(
-                    node, LocalCall(func=node.func, args=processed_args)
+                    node,
+                    TensorCall(func=node.func, args=processed_args),
                 ), result_subst
 
         elif callee := self.ctx.globals.get_instance_func(func_ty, "__call__"):
@@ -520,7 +521,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             )
             assert len(inst) == 0
 
-            return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
+            return with_loc(node, TensorCall(func=node.func, args=args)), return_ty
 
         elif f := self.ctx.globals.get_instance_func(ty, "__call__"):
             return f.synthesize_call(node.args, node, self.ctx)

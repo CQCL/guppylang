@@ -53,12 +53,16 @@ class GlobalCall(ast.expr):
 
 
 class TensorCall(ast.expr):
-    """A call to a tuple of functions. Stores a call node for each function in the
-    tuple"""
+    """A call to a tuple of functions. Behaves like a local call, but more
+    unpacking of tuples is required at compilation"""
 
-    call_nodes: list[ast.expr]
+    func: ast.expr
+    args: list[ast.expr]
 
-    _fields = ("call_nodes",)
+    _fields = (
+        "func",
+        "args",
+    )
 
 
 class TypeApply(ast.expr):

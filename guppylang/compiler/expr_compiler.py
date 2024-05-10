@@ -33,8 +33,6 @@ from guppylang.tys.ty import (
     NoneType,
     TupleType,
     Type,
-    function_tensor_signature,
-    parse_function_tensor,
     type_to_row,
 )
 
@@ -179,36 +177,32 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 
     def visit_LocalCall(self, node: LocalCall) -> OutPortV:
         func = self.visit(node.func)
-
-        assert isinstance(func.ty, FunctionType) or (
-            isinstance(func.ty, TupleType) and parse_function_tensor(func.ty)
-        )
-        if isinstance(func.ty, FunctionType):
-            output = func.ty.output
-        elif isinstance(func.ty, TupleType):
-            funcs = parse_function_tensor(func.ty)
-            assert isinstance(funcs, list)
-            output = function_tensor_signature(funcs).output
+        assert isinstance(func.ty, FunctionType)
 
         args = [self.visit(arg) for arg in node.args]
+        call = self.graph.add_indirect_call(func, args)
+        rets = [call.out_port(i) for i in range(len(type_to_row(func.ty.output)))]
+        return self._pack_returns(rets)
+
+    def visit_TensorCall(self, node: TensorCall) -> OutPortV:
+        func = self.visit(node.func)
+        args = [self.visit(arg) for arg in node.args]
+
+        assert isinstance(func.ty, TupleType)
 
         rets: list[OutPortV] = []
-        if isinstance(func.ty, FunctionType):
-            call = self.graph.add_indirect_call(func, args)
-            rets = [call.out_port(i) for i in range(len(type_to_row(output)))]
-        elif isinstance(func.ty, TupleType) and parse_function_tensor(func.ty):
-            func_ports = self._unpack_tuple(func)
-            # Now we have to manage this hand-off
-            remaining_args = args
-            for func in func_ports:
-                outs, remaining_args = self._compile_tensor_with_leftovers(
-                    func, remaining_args
-                )
-                rets.extend(outs)
-        else:
-            raise InternalGuppyError("Local call of something without a callable type")
+        remaining_args = args
+        for elem in self._unpack_tuple(func):
+            outs, remaining_args = self._compile_tensor_with_leftovers(
+                elem, remaining_args
+            )
+            rets.extend(outs)
+        assert remaining_args == []
 
-        return self._pack_returns(rets)
+        if len(rets) == 1:
+            return rets[0]
+        else:
+            return self._pack_returns(rets)
 
     def _compile_tensor_with_leftovers(
         self, func: OutPortV, args: list[OutPortV]
@@ -239,25 +233,10 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         assert isinstance(func, CompiledCallableDef)
 
         args = [self.visit(arg) for arg in node.args]
-
-        if isinstance(func.ty, FunctionType):
-            rets = func.compile_call(
-                args, list(node.type_args), self.dfg, self.graph, self.globals, node
-            )
-        else:
-            raise InternalGuppyError("Local call of something without a callable type")
-
+        rets = func.compile_call(
+            args, list(node.type_args), self.dfg, self.graph, self.globals, node
+        )
         return self._pack_returns(rets)
-
-    def visit_TensorCall(self, node: TensorCall) -> OutPortV:
-        outputs = []
-        for call in node.call_nodes:
-            output = self.visit(call)
-            if isinstance(output.ty, TupleType):
-                outputs.extend(self._unpack_tuple(output))
-            else:
-                outputs.append(output)
-        return self._pack_returns(outputs)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
