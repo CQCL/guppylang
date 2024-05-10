@@ -22,6 +22,7 @@ from guppylang.nodes import (
     GlobalName,
     LocalCall,
     LocalName,
+    TensorCall,
     TypeApply,
 )
 from guppylang.tys.builtin import bool_type, get_element_type, is_list_type
@@ -247,6 +248,16 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             raise InternalGuppyError("Local call of something without a callable type")
 
         return self._pack_returns(rets)
+
+    def visit_TensorCall(self, node: TensorCall) -> OutPortV:
+        outputs = []
+        for call in node.call_nodes:
+            output = self.visit(call)
+            if isinstance(output.ty, TupleType):
+                outputs.extend(self._unpack_tuple(output))
+            else:
+                outputs.append(output)
+        return self._pack_returns(outputs)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
