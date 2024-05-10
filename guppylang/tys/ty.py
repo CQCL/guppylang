@@ -545,6 +545,7 @@ def function_tensor_signature(tys: list[FunctionType]) -> FunctionType:
     inputs: list[Type] = []
     outputs: list[Type] = []
     for fun_ty in tys:
+        assert not fun_ty.parametrized
         inputs.extend(fun_ty.inputs)
         outputs.extend(type_to_row(fun_ty.output))
     return FunctionType(inputs, row_to_type(outputs))

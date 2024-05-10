@@ -246,16 +246,18 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             function_elements := parse_function_tensor(func_ty)
         ):
             assert isinstance(function_elements, list)
+            if any(f.parametrized for f in function_elements):
+                raise GuppyTypeError(
+                    "Polymorphic functions in tuples are not supported"
+                )
+
             tensor_ty = function_tensor_signature(function_elements)
 
             processed_args, subst, inst = check_call(
                 tensor_ty, node.args, tensor_ty.output, node.func, self.ctx
             )
 
-            if len(inst) > 0:
-                raise GuppyTypeError(
-                    "Polymorphic functions in tuples are not supported"
-                )
+            assert len(inst) == 0
 
             result_subst = unify(ty, tensor_ty.output, subst)
             if result_subst is None:
@@ -507,14 +509,16 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         elif isinstance(ty, TupleType) and (
             function_elems := parse_function_tensor(ty)
         ):
+            if any(f.parametrized for f in function_elems):
+                raise GuppyTypeError(
+                    "Polymorphic functions in tuples are not supported"
+                )
+
             tensor_ty = function_tensor_signature(function_elems)
             args, return_ty, inst = synthesize_call(
                 tensor_ty, node.args, node, self.ctx
             )
-            if len(inst) > 0:
-                raise GuppyTypeError(
-                    "Polymorphic functions in tuples are not supported"
-                )
+            assert len(inst) == 0
 
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
 
