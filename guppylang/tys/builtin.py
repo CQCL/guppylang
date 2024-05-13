@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
@@ -10,6 +10,9 @@ from guppylang.hugr import tys
 from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.param import TypeParam
 from guppylang.tys.ty import FunctionType, NoneType, OpaqueType, TupleType, Type
+
+if TYPE_CHECKING:
+    from guppylang.checker.core import Globals
 
 
 @dataclass(frozen=True)
@@ -22,7 +25,7 @@ class _CallableTypeDef(TypeDef):
     name: Literal["Callable"] = field(default="Callable", init=False)
 
     def check_instantiate(
-        self, args: Sequence[Argument], loc: AstNode | None = None
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> FunctionType:
         # We get the inputs/output as a flattened list: `args = [*inputs, output]`.
         if not args:
@@ -46,7 +49,7 @@ class _TupleTypeDef(TypeDef):
     name: Literal["tuple"] = field(default="tuple", init=False)
 
     def check_instantiate(
-        self, args: Sequence[Argument], loc: AstNode | None = None
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> TupleType:
         # We accept any number of arguments. If users just write `tuple`, we give them
         # the empty tuple type. We just have to make sure that the args are of kind type
@@ -68,7 +71,7 @@ class _NoneTypeDef(TypeDef):
     name: Literal["None"] = field(default="None", init=False)
 
     def check_instantiate(
-        self, args: Sequence[Argument], loc: AstNode | None = None
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> NoneType:
         if args:
             raise GuppyError("Type `None` is not parameterized", loc)
@@ -84,7 +87,7 @@ class _ListTypeDef(OpaqueTypeDef):
     """
 
     def check_instantiate(
-        self, args: Sequence[Argument], loc: AstNode | None = None
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> OpaqueType:
         if len(args) == 1:
             [arg] = args
@@ -92,7 +95,7 @@ class _ListTypeDef(OpaqueTypeDef):
                 raise GuppyError(
                     "Type `list` cannot store linear data, use `linst` instead", loc
                 )
-        return super().check_instantiate(args, loc)
+        return super().check_instantiate(args, globals, loc)
 
 
 def _list_to_hugr(args: Sequence[Argument]) -> tys.Opaque:
