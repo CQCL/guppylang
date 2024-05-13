@@ -1,7 +1,11 @@
 import ast
 from collections.abc import Sequence
 
-from guppylang.ast_util import AstNode
+from guppylang.ast_util import (
+    AstNode,
+    set_location_from,
+    shift_loc,
+)
 from guppylang.checker.core import Globals
 from guppylang.definition.common import DefId
 from guppylang.definition.parameter import ParamDef
@@ -92,6 +96,12 @@ def arg_from_ast(
             [stmt] = ast.parse(node.value).body
             if not isinstance(stmt, ast.Expr):
                 raise GuppyError("Invalid Guppy type", node)
+            set_location_from(stmt, loc=node)
+            shift_loc(
+                stmt,
+                delta_lineno=node.lineno - 1,  # -1 since lines start at 1
+                delta_col_offset=node.col_offset + 1,  # +1 to remove the `"`
+            )
             return arg_from_ast(stmt.value, globals, param_var_mapping)
         except (SyntaxError, ValueError):
             raise GuppyError("Invalid Guppy type", node) from None
