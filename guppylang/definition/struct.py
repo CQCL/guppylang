@@ -85,7 +85,7 @@ class RawStructDef(TypeDef, ParsableDef):
                     v = getattr(self.python_class, name)
                     if not isinstance(v, Definition):
                         raise GuppyError(
-                            "Add an `@guppy` decorator to this function to add it to "
+                            "Add a `@guppy` decorator to this function to add it to "
                             f"the struct `{self.name}`",
                             node,
                         )
