@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:12
+
+10:    x: int
+11:    
+12:    def f(self: "MyStruct") -> None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+GuppyError: Add an `@guppy` decorator to this function to add it to the struct `MyStruct`

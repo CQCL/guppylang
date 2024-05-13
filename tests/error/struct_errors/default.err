@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:10
+
+8:     @guppy.struct(module)
+9:     class MyStruct:
+10:        x: int = 42
+                    ^^
+GuppyError: Default struct values are not supported
