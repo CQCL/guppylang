@@ -14,6 +14,7 @@ from guppylang.tys.param import Parameter
 from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
+    from guppylang.definition.struct import CheckedStructDef, StructField
     from guppylang.definition.ty import OpaqueTypeDef
     from guppylang.tys.subst import Inst, Subst
 
@@ -423,8 +424,42 @@ class OpaqueType(ParametrizedTypeBase):
         )
 
 
+@dataclass(frozen=True)
+class StructType(ParametrizedTypeBase):
+    """A struct type."""
+
+    defn: "CheckedStructDef"
+
+    @cached_property
+    def fields(self) -> list["StructField"]:
+        """The fields of this struct type."""
+        from guppylang.definition.struct import StructField
+        from guppylang.tys.subst import Instantiator
+
+        inst = Instantiator(self.args)
+        return [StructField(f.name, f.ty.transform(inst)) for f in self.defn.fields]
+
+    @cached_property
+    def intrinsically_linear(self) -> bool:
+        """Whether this type is linear, independent of the arguments."""
+        return any(f.ty.linear for f in self.defn.fields)
+
+    def to_hugr(self) -> tys.Type:
+        """Computes the Hugr representation of the type."""
+
+        return tys.TupleType(inner=[f.ty.to_hugr() for f in self.fields])
+
+    def transform(self, transformer: Transformer) -> "Type":
+        """Accepts a transformer on this type."""
+        return transformer.transform(self) or StructType(
+            [arg.transform(transformer) for arg in self.args], self.defn
+        )
+
+
 #: The type of parametrized Guppy types.
-ParametrizedType: TypeAlias = FunctionType | TupleType | SumType | OpaqueType
+ParametrizedType: TypeAlias = (
+    FunctionType | TupleType | SumType | OpaqueType | StructType
+)
 
 #: The type of Guppy types.
 #:
@@ -486,6 +521,8 @@ def unify(s: Type, t: Type, subst: "Subst | None") -> "Subst | None":
         case SumType() as s, SumType() as t:
             return _unify_args(s, t, subst)
         case OpaqueType() as s, OpaqueType() as t if s.defn == t.defn:
+            return _unify_args(s, t, subst)
+        case StructType() as s, StructType() as t if s.defn == t.defn:
             return _unify_args(s, t, subst)
         case _:
             return None

@@ -25,6 +25,7 @@ from guppylang.tys.ty import (
     FunctionType,
     NoneType,
     OpaqueType,
+    StructType,
     SumType,
     TupleType,
     Type,
@@ -87,6 +88,8 @@ class Globals:
             case FunctionType():
                 type_defn = callable_type_def
             case OpaqueType() as ty:
+                type_defn = ty.defn
+            case StructType() as ty:
                 type_defn = ty.defn
             case TupleType():
                 type_defn = tuple_type_def
