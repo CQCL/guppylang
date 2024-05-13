@@ -72,16 +72,16 @@ class RawStructDef(TypeDef, ParsableDef):
 
         fields: list[UncheckedStructField] = []
         used_field_names: set[str] = set()
-        for node in cls_def.body:
-            match node:
+        for i, node in enumerate(cls_def.body):
+            match i, node:
                 # We allow `pass` statements to define empty structs
-                case ast.Pass():
+                case _, ast.Pass():
                     pass
-                # Docstrings are also fine
-                case ast.Expr(value=ast.Constant(value=v)) if isinstance(v, str):
+                # Docstrings are also fine if they occur at the start
+                case 0, ast.Expr(value=ast.Constant(value=v)) if isinstance(v, str):
                     pass
                 # Ensure that all function definitions are Guppy functions
-                case ast.FunctionDef(name=name):
+                case _, ast.FunctionDef(name=name):
                     v = getattr(self.python_class, name)
                     if not isinstance(v, Definition):
                         raise GuppyError(
@@ -90,7 +90,7 @@ class RawStructDef(TypeDef, ParsableDef):
                             node,
                         )
                 # Struct fields are declared via annotated assignments without value
-                case ast.AnnAssign(target=ast.Name(id=field_name)) as node:
+                case _, ast.AnnAssign(target=ast.Name(id=field_name)) as node:
                     if node.value:
                         raise GuppyError(
                             "Default struct values are not supported", node.value
@@ -103,7 +103,7 @@ class RawStructDef(TypeDef, ParsableDef):
                         )
                     fields.append(UncheckedStructField(field_name, node.annotation))
                     used_field_names.add(field_name)
-                case node:
+                case _, node:
                     raise GuppyError("Unexpected statement in struct", node)
 
         return ParsedStructDef(self.id, self.name, cls_def, params, fields)
