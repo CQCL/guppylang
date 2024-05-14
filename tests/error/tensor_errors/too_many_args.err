@@ -3,5 +3,5 @@ Guppy compilation failed. Error in file $FILE:12
 10:    @guppy(module)
 11:    def main() -> int:
 12:        return (foo, foo)(1, 2, 3)
-                  ^^^^^^^^^^
-GuppyTypeError: Too many arguments passed (expected 2, got 3)
+                                   ^
+GuppyTypeError: Unexpected argument

@@ -253,7 +253,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             tensor_ty = function_tensor_signature(function_elements)
 
             processed_args, subst, inst = check_call(
-                tensor_ty, node.args, ty, node.func, self.ctx
+                tensor_ty, node.args, ty, node, self.ctx
             )
             assert len(inst) == 0
             return with_loc(
