@@ -26,7 +26,7 @@ def arg_from_ast(
         match globals[x]:
             # Either a defined type (e.g. `int`, `bool`, ...)
             case TypeDef() as defn:
-                return TypeArg(defn.check_instantiate([], node))
+                return TypeArg(defn.check_instantiate([], globals, node))
             # Or a parameter (e.g. `T`, `n`, ...)
             case ParamDef() as defn:
                 if param_var_mapping is None:
@@ -65,7 +65,7 @@ def arg_from_ast(
                     arg_from_ast(arg_node, globals, param_var_mapping)
                     for arg_node in arg_nodes
                 ]
-                ty = defn.check_instantiate(args, node)
+                ty = defn.check_instantiate(args, globals, node)
                 return TypeArg(ty)
             # We don't allow parametrised variables like `T[int]`
             if isinstance(defn, ParamDef):

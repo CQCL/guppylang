@@ -146,7 +146,9 @@ class CoercingChecker(DefaultCallChecker):
                 )
                 float_defn = self.ctx.globals["float"]
                 assert isinstance(float_defn, TypeDef)
-                args[i] = with_type(float_defn.check_instantiate([]), call)
+                args[i] = with_type(
+                    float_defn.check_instantiate([], self.ctx.globals), call
+                )
         return super().synthesize(args)
 
 
