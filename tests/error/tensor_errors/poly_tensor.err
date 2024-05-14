@@ -1,4 +1,4 @@
-Guppy compilation failed. Error in file /Users/croy/work/guppy/tests/error/tensor_errors/poly_tensor.py:14
+Guppy compilation failed. Error in file $FILE:14
 
 12:    @guppy(module)
 13:    def main() -> int:
