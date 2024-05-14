@@ -182,8 +182,9 @@ dependencies = [
 
 [[package]]
 name = "hugr"
-version = "0.3.1"
-source = "git+https://github.com/CQCL/hugr.git?rev=c45e6fc67334768ea55c4bd5223af0b7b0cc47ec#c45e6fc67334768ea55c4bd5223af0b7b0cc47ec"
+version = "0.4.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fb1716e110d2d9d0ca23f79812e90486098ffee9aff5eac0a16346c23a609cc"
 dependencies = [
  "bitvec",
  "cgmath",

@@ -353,22 +353,17 @@ url = "validator"
 
 [[package]]
 name = "hugr"
-version = "0.1.0"
+version = "0.2.0a1"
 description = "Quantinuum's common representation for quantum programs"
 optional = false
 python-versions = ">=3.10"
-files = []
-develop = false
+files = [
+    {file = "hugr-0.2.0a1-py3-none-any.whl", hash = "sha256:1cb599e33aa12d3bee475bdf2304b38fcbdf05059bc32fc7cdcfaa596a6dde7f"},
+    {file = "hugr-0.2.0a1.tar.gz", hash = "sha256:82d708f39615a345f1e10ea9560883734b93d91bda9ec878aeb8c33db0bbd712"},
+]
 
 [package.dependencies]
-pydantic = "~2.7.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/CQCL/hugr.git"
-reference = "c45e6fc67334768ea55c4bd5223af0b7b0cc47ec"
-resolved_reference = "c45e6fc67334768ea55c4bd5223af0b7b0cc47ec"
-subdirectory = "hugr-py"
+pydantic = ">=2.7.0,<2.8.0"
 
 [[package]]
 name = "identify"
@@ -1441,4 +1436,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "c67aa4f5b52910c22b8dfecc68b860d610a9a63cba960c71f038bcea9501c646"
+content-hash = "db872a9164caca4fde94ff334afb075b1493f15a1fbfa2d47a6757b78c49508d"

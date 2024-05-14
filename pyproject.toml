@@ -13,7 +13,7 @@ graphviz = "^0.20.1"
 networkx = "^3.2.1"
 pydantic = "^2.7.0b1"
 typing-extensions = "^4.9.0"
-hugr = { git = "https://github.com/CQCL/hugr.git", rev = "c45e6fc67334768ea55c4bd5223af0b7b0cc47ec", subdirectory = "hugr-py" }
+hugr = "~0.2.0a1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"
