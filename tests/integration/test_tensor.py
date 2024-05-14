@@ -83,6 +83,20 @@ def test_call_inplace(validate):
     validate(module.compile())
 
 
+def test_singleton(validate):
+    module = GuppyModule("module")
+
+    @guppy(module)
+    def foo(x: int, y: int) -> tuple[int, int]:
+        return y, x
+
+    @guppy(module)
+    def baz(x: int) -> tuple[int, int]:
+        return (foo,)(x, x)
+
+    validate(module.compile())
+
+
 def test_call_back(validate):
     module = GuppyModule("module")
 
