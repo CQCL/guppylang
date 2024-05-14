@@ -1001,9 +1001,9 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
         case bool():
             return bool_type()
         case int():
-            return cast(TypeDef, globals["int"]).check_instantiate([])
+            return cast(TypeDef, globals["int"]).check_instantiate([], globals)
         case float():
-            return cast(TypeDef, globals["float"]).check_instantiate([])
+            return cast(TypeDef, globals["float"]).check_instantiate([], globals)
         case tuple(elts):
             tys = [python_value_to_guppy_type(elt, node, globals) for elt in elts]
             if any(ty is None for ty in tys):
@@ -1021,7 +1021,9 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
                     try:
                         import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
-                        qubit = cast(TypeDef, globals["qubit"]).check_instantiate([])
+                        qubit = cast(TypeDef, globals["qubit"]).check_instantiate(
+                            [], globals
+                        )
                         return FunctionType(
                             [qubit] * v.n_qubits,
                             row_to_type(

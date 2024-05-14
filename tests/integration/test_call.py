@@ -51,3 +51,18 @@ def test_mutual_recursion(validate):
         return foo(x)
 
     validate(module.compile())
+
+
+def test_unary_tuple(validate):
+    module = GuppyModule("module")
+
+    @guppy(module)
+    def foo(x: int) -> tuple[int]:
+        return x,
+
+    @guppy(module)
+    def bar(x: int) -> int:
+        y, = foo(x)
+        return y
+
+    validate(module.compile())
