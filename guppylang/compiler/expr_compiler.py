@@ -164,10 +164,14 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             ops.DummyOp(name="MakeList"), inputs=[self.visit(e) for e in node.elts]
         ).add_out_port(get_type(node))
 
-    def _pack_returns(self, returns: list[OutPortV]) -> OutPortV:
+    def _pack_returns(self, returns: list[OutPortV], return_ty: Type) -> OutPortV:
         """Groups function return values into a tuple"""
-        if len(returns) != 1:
+        if isinstance(return_ty, TupleType | NoneType) and not return_ty.preserve:
+            assert len(returns) == (
+                len(return_ty.element_types) if isinstance(return_ty, TupleType) else 0
+            )
             return self.graph.add_make_tuple(inputs=returns).out_port(0)
+        assert len(returns) == 1
         return returns[0]
 
     def visit_LocalCall(self, node: LocalCall) -> OutPortV:
@@ -177,7 +181,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         args = [self.visit(arg) for arg in node.args]
         call = self.graph.add_indirect_call(func, args)
         rets = [call.out_port(i) for i in range(len(type_to_row(func.ty.output)))]
-        return self._pack_returns(rets)
+        return self._pack_returns(rets, func.ty.output)
 
     def visit_GlobalCall(self, node: GlobalCall) -> OutPortV:
         func = self.globals[node.def_id]
@@ -187,7 +191,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         rets = func.compile_call(
             args, list(node.type_args), self.dfg, self.graph, self.globals, node
         )
-        return self._pack_returns(rets)
+        return self._pack_returns(rets, func.ty.output)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
