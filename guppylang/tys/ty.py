@@ -520,3 +520,32 @@ def _unify_args(
             case _:
                 return None
     return subst
+
+
+### Helpers for working with tuples of functions
+
+
+def parse_function_tensor(ty: TupleType) -> list[FunctionType] | None:
+    """Parses a nested tuple of function types into a flat list of functions."""
+    result = []
+    for el in ty.element_types:
+        if isinstance(el, FunctionType):
+            result.append(el)
+        elif isinstance(el, TupleType):
+            funcs = parse_function_tensor(el)
+            if funcs:
+                result.extend(funcs)
+            else:
+                return None
+    return result
+
+
+def function_tensor_signature(tys: list[FunctionType]) -> FunctionType:
+    """Compute the combined function signature of a list of functions"""
+    inputs: list[Type] = []
+    outputs: list[Type] = []
+    for fun_ty in tys:
+        assert not fun_ty.parametrized
+        inputs.extend(fun_ty.inputs)
+        outputs.extend(type_to_row(fun_ty.output))
+    return FunctionType(inputs, row_to_type(outputs))

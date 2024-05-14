@@ -61,6 +61,7 @@ from guppylang.nodes import (
     LocalName,
     MakeIter,
     PyExpr,
+    TensorCall,
     TypeApply,
 )
 from guppylang.tys.arg import TypeArg
@@ -83,6 +84,8 @@ from guppylang.tys.ty import (
     TupleType,
     Type,
     TypeBase,
+    function_tensor_signature,
+    parse_function_tensor,
     row_to_type,
     unify,
 )
@@ -231,14 +234,37 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             if isinstance(defn, CallableDef):
                 return defn.check_call(node.args, ty, node, self.ctx)
 
-        # Otherwise, it must be a function as a higher-order value
+        # Otherwise, it must be a function as a higher-order value - something
+        # whose type is either a FunctionType or a Tuple of FunctionTypes
         if isinstance(func_ty, FunctionType):
             args, return_ty, inst = check_call(func_ty, node.args, ty, node, self.ctx)
             check_inst(func_ty, inst, node)
             node.func = instantiate_poly(node.func, func_ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
-        elif f := self.ctx.globals.get_instance_func(func_ty, "__call__"):
-            return f.check_call(node.args, ty, node, self.ctx)
+
+        if isinstance(func_ty, TupleType) and (
+            function_elements := parse_function_tensor(func_ty)
+        ):
+            if any(f.parametrized for f in function_elements):
+                raise GuppyTypeError(
+                    "Polymorphic functions in tuples are not supported", node.func
+                )
+
+            tensor_ty = function_tensor_signature(function_elements)
+
+            processed_args, subst, inst = check_call(
+                tensor_ty, node.args, ty, node, self.ctx
+            )
+            assert len(inst) == 0
+            return with_loc(
+                node,
+                TensorCall(
+                    func=node.func, args=processed_args, out_tys=tensor_ty.output
+                ),
+            ), subst
+
+        elif callee := self.ctx.globals.get_instance_func(func_ty, "__call__"):
+            return callee.check_call(node.args, ty, node, self.ctx)
         else:
             raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
 
@@ -332,11 +358,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                     )
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in `TypeSynthesiser`. This should have "
-            f"been caught by program analysis!"
+            "been caught by program analysis!"
         )
 
     def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, Type]:
         elems = [self.synthesize(elem) for elem in node.elts]
+
         node.elts = [n for n, _ in elems]
         return node, TupleType([ty for _, ty in elems])
 
@@ -470,11 +497,29 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             if isinstance(defn, CallableDef):
                 return defn.synthesize_call(node.args, node, self.ctx)
 
-        # Otherwise, it must be a function as a higher-order value
+        # Otherwise, it must be a function as a higher-order value, or a tensor
         if isinstance(ty, FunctionType):
             args, return_ty, inst = synthesize_call(ty, node.args, node, self.ctx)
             node.func = instantiate_poly(node.func, ty, inst)
             return with_loc(node, LocalCall(func=node.func, args=args)), return_ty
+        elif isinstance(ty, TupleType) and (
+            function_elems := parse_function_tensor(ty)
+        ):
+            if any(f.parametrized for f in function_elems):
+                raise GuppyTypeError(
+                    "Polymorphic functions in tuples are not supported", node.func
+                )
+
+            tensor_ty = function_tensor_signature(function_elems)
+            args, return_ty, inst = synthesize_call(
+                tensor_ty, node.args, node, self.ctx
+            )
+            assert len(inst) == 0
+
+            return with_loc(
+                node, TensorCall(func=node.func, args=args, out_tys=tensor_ty.output)
+            ), return_ty
+
         elif f := self.ctx.globals.get_instance_func(ty, "__call__"):
             return f.synthesize_call(node.args, node, self.ctx)
         else:
@@ -797,7 +842,7 @@ def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
     if len(inst) > 0:
         node = with_loc(node, TypeApply(value=with_type(ty, node), inst=inst))
         return with_type(ty.instantiate(inst), node)
-    return node
+    return with_type(ty, node)
 
 
 def to_bool(node: ast.expr, node_ty: Type, ctx: Context) -> tuple[ast.expr, Type]:

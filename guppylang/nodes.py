@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import FunctionType
+from guppylang.tys.ty import FunctionType, Type
 
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import CFG
@@ -49,6 +49,21 @@ class GlobalCall(ast.expr):
         "def_id",
         "args",
         "type_args",
+    )
+
+
+class TensorCall(ast.expr):
+    """A call to a tuple of functions. Behaves like a local call, but more
+    unpacking of tuples is required at compilation"""
+
+    func: ast.expr
+    args: list[ast.expr]
+    out_tys: Type
+
+    _fields = (
+        "func",
+        "args",
+        "out_tys",
     )
 
 
