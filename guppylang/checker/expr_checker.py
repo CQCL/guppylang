@@ -265,7 +265,9 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             else:
                 return with_loc(
                     node,
-                    TensorCall(func=node.func, args=processed_args),
+                    TensorCall(
+                        func=node.func, args=processed_args, out_tys=tensor_ty.output
+                    ),
                 ), result_subst
 
         elif callee := self.ctx.globals.get_instance_func(func_ty, "__call__"):

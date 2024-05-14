@@ -58,11 +58,11 @@ def test_unary_tuple(validate):
 
     @guppy(module)
     def foo(x: int) -> tuple[int]:
-        return x,
+        return (x,)
 
     @guppy(module)
     def bar(x: int) -> int:
-        y, = foo(x)
+        (y,) = foo(x)
         return y
 
     validate(module.compile())

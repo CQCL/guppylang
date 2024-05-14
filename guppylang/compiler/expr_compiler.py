@@ -206,7 +206,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         if len(rets) == 1:
             return rets[0]
         else:
-            return self._pack_returns(rets, func.ty)
+            return self._pack_returns(rets, node.out_tys)
 
     def _compile_tensor_with_leftovers(
         self, func: OutPortV, args: list[OutPortV]
