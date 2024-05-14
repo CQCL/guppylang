@@ -245,7 +245,6 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         if isinstance(func_ty, TupleType) and (
             function_elements := parse_function_tensor(func_ty)
         ):
-            assert isinstance(function_elements, list)
             if any(f.parametrized for f in function_elements):
                 raise GuppyTypeError(
                     "Polymorphic functions in tuples are not supported", node.func
