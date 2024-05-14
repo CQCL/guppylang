@@ -516,7 +516,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             )
             assert len(inst) == 0
 
-            return with_loc(node, TensorCall(func=node.func, args=args)), return_ty
+            return with_loc(
+                node, TensorCall(func=node.func, args=args, out_tys=tensor_ty.output)
+            ), return_ty
 
         elif f := self.ctx.globals.get_instance_func(ty, "__call__"):
             return f.synthesize_call(node.args, node, self.ctx)
