@@ -248,7 +248,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             assert isinstance(function_elements, list)
             if any(f.parametrized for f in function_elements):
                 raise GuppyTypeError(
-                    "Polymorphic functions in tuples are not supported"
+                    "Polymorphic functions in tuples are not supported", node.func
                 )
 
             tensor_ty = function_tensor_signature(function_elements)
@@ -514,7 +514,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         ):
             if any(f.parametrized for f in function_elems):
                 raise GuppyTypeError(
-                    "Polymorphic functions in tuples are not supported"
+                    "Polymorphic functions in tuples are not supported", node.func
                 )
 
             tensor_ty = function_tensor_signature(function_elems)
