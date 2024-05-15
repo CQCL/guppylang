@@ -1,6 +1,6 @@
 import inspect
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
 from typing import Any, TypeVar
@@ -37,17 +37,11 @@ class ModuleIdentifier:
     """Identifier for the Python file/module that called the decorator."""
 
     filename: Path
-    module: ModuleType | None
 
-    @property
-    def name(self) -> str:
-        """Returns a user-friendly name for the caller.
-
-        If the called is not a function, uses the file name.
-        """
-        if self.module is not None:
-            return str(self.module.__name__)
-        return self.filename.name
+    #: The name of the module. We only store this to have nice name to report back to
+    #: the user. When determining whether two `ModuleIdentifier`s correspond to the same
+    #: module, we only take the module path into account.
+    name: str = field(compare=False)
 
 
 class _Guppy:
@@ -104,7 +98,10 @@ class _Guppy:
                     break
             else:
                 raise GuppyError("Could not find a caller for the `@guppy` decorator")
-        return ModuleIdentifier(Path(filename), module)
+        module_path = Path(filename)
+        return ModuleIdentifier(
+            module_path, module.__name__ if module else module_path.name
+        )
 
     @pretty_errors
     def extend_type(self, module: GuppyModule, defn: TypeDef) -> ClassDecorator:
