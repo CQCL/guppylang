@@ -1,0 +1,6 @@
+Guppy compilation failed. Error in file $FILE:9
+
+7:    @guppy.struct(module)
+8:    class MyStruct(int):
+                     ^^^
+GuppyError: Struct inheritance is not supported

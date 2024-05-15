@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:15
+
+13:    @guppy.struct(module)
+14:    class StructB:
+15:        y: "StructA"
+               ^^^^^^^
+GuppyError: Recursive structs are not supported
