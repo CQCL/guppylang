@@ -250,6 +250,25 @@ def annotate_location(
                 annotate_location(value, source, file, line_offset, recurse)
 
 
+def shift_loc(node: ast.AST, delta_lineno: int, delta_col_offset: int) -> None:
+    """Shifts all line and column number in the AST node by the given amount."""
+    if hasattr(node, "lineno"):
+        node.lineno += delta_lineno
+    if hasattr(node, "end_lineno") and node.end_lineno is not None:
+        node.end_lineno += delta_lineno
+    if hasattr(node, "col_offset"):
+        node.col_offset += delta_col_offset
+    if hasattr(node, "end_col_offset") and node.end_col_offset is not None:
+        node.end_col_offset += delta_col_offset
+    for _, value in ast.iter_fields(node):
+        if isinstance(value, list):
+            for item in value:
+                if isinstance(item, ast.AST):
+                    shift_loc(item, delta_lineno, delta_col_offset)
+        elif isinstance(value, ast.AST):
+            shift_loc(value, delta_lineno, delta_col_offset)
+
+
 def get_file(node: AstNode) -> str | None:
     """Tries to retrieve a file annotation from an AST node."""
     try:

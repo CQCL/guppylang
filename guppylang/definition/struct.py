@@ -1,16 +1,22 @@
 import ast
+import inspect
+import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from guppylang.ast_util import AstNode
+from guppylang.ast_util import AstNode, annotate_location
 from guppylang.checker.core import Globals
 from guppylang.definition.common import (
     CheckableDef,
     CompiledDef,
+    DefId,
+    Definition,
     ParsableDef,
 )
+from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
+from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter
 from guppylang.tys.ty import Type
@@ -49,7 +55,58 @@ class RawStructDef(TypeDef, ParsableDef):
 
     def parse(self, globals: Globals) -> "ParsedStructDef":
         """Parses the raw class object into an AST and checks that it is well-formed."""
-        raise NotImplementedError
+        cls_def = parse_py_class(self.python_class)
+        if cls_def.keywords:
+            raise GuppyError("Unexpected keyword", cls_def.keywords[0])
+
+        # The only base we allow is `Generic[...]` to specify generic parameters
+        # TODO: This will become obsolete once we have Python 3.12 style generic classes
+        params: list[Parameter]
+        match cls_def.bases:
+            case []:
+                params = []
+            case [base] if elems := try_parse_generic_base(base):
+                params = params_from_ast(elems, globals)
+            case bases:
+                raise GuppyError("Struct inheritance is not supported", bases[0])
+
+        fields: list[UncheckedStructField] = []
+        used_field_names: set[str] = set()
+        for i, node in enumerate(cls_def.body):
+            match i, node:
+                # We allow `pass` statements to define empty structs
+                case _, ast.Pass():
+                    pass
+                # Docstrings are also fine if they occur at the start
+                case 0, ast.Expr(value=ast.Constant(value=v)) if isinstance(v, str):
+                    pass
+                # Ensure that all function definitions are Guppy functions
+                case _, ast.FunctionDef(name=name):
+                    v = getattr(self.python_class, name)
+                    if not isinstance(v, Definition):
+                        raise GuppyError(
+                            "Add a `@guppy` decorator to this function to add it to "
+                            f"the struct `{self.name}`",
+                            node,
+                        )
+                # Struct fields are declared via annotated assignments without value
+                case _, ast.AnnAssign(target=ast.Name(id=field_name)) as node:
+                    if node.value:
+                        raise GuppyError(
+                            "Default struct values are not supported", node.value
+                        )
+                    if field_name in used_field_names:
+                        raise GuppyError(
+                            f"Struct `{self.name}` already contains a field named "
+                            f"`{field_name}`",
+                            node.target,
+                        )
+                    fields.append(UncheckedStructField(field_name, node.annotation))
+                    used_field_names.add(field_name)
+                case _, node:
+                    raise GuppyError("Unexpected statement in struct", node)
+
+        return ParsedStructDef(self.id, self.name, cls_def, params, fields)
 
     def check_instantiate(
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
@@ -89,3 +146,53 @@ class CheckedStructDef(TypeDef, CompiledDef):
     ) -> Type:
         """Checks if the struct can be instantiated with the given arguments."""
         raise NotImplementedError
+
+
+def parse_py_class(cls: type) -> ast.ClassDef:
+    """Parses a Python class object into an AST."""
+    source_lines, line_offset = inspect.getsourcelines(cls)
+    source = "".join(source_lines)  # Lines already have trailing \n's
+    source = textwrap.dedent(source)
+    cls_ast = ast.parse(source).body[0]
+    file = inspect.getsourcefile(cls)
+    if file is None:
+        raise GuppyError("Couldn't determine source file for class")
+    annotate_location(cls_ast, source, file, line_offset)
+    if not isinstance(cls_ast, ast.ClassDef):
+        raise GuppyError("Expected a class definition", cls_ast)
+    return cls_ast
+
+
+def try_parse_generic_base(node: ast.expr) -> list[ast.expr] | None:
+    """Checks if an AST node corresponds to a `Generic[T1, ..., Tn]` base class.
+
+    Returns the generic parameters or `None` if the AST has a different shape
+    """
+    match node:
+        case ast.Subscript(value=ast.Name(id="Generic"), slice=elem):
+            return elem.elts if isinstance(elem, ast.Tuple) else [elem]
+        case _:
+            return None
+
+
+def params_from_ast(nodes: Sequence[ast.expr], globals: Globals) -> list[Parameter]:
+    """Parses a list of AST nodes into unique type parameters.
+
+    Raises user errors if the AST nodes don't correspond to parameters or parameters
+    occur multiple times.
+    """
+    params: list[Parameter] = []
+    params_set: set[DefId] = set()
+    for node in nodes:
+        if isinstance(node, ast.Name) and node.id in globals:
+            defn = globals[node.id]
+            if isinstance(defn, ParamDef):
+                if defn.id in params_set:
+                    raise GuppyError(
+                        f"Parameter `{node.id}` cannot be used multiple times", node
+                    )
+                params.append(defn.to_param(len(params)))
+                params_set.add(defn.id)
+                continue
+        raise GuppyError("Not a parameter", node)
+    return params
