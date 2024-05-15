@@ -16,10 +16,11 @@ from guppylang.definition.common import (
 )
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
-from guppylang.error import GuppyError
+from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.tys.arg import Argument
-from guppylang.tys.param import Parameter
-from guppylang.tys.ty import Type
+from guppylang.tys.param import Parameter, check_all_args
+from guppylang.tys.parsing import type_from_ast
+from guppylang.tys.ty import StructType, Type
 
 
 @dataclass(frozen=True)
@@ -111,7 +112,7 @@ class RawStructDef(TypeDef, ParsableDef):
     def check_instantiate(
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> Type:
-        raise NotImplementedError
+        raise InternalGuppyError("Tried to instantiate raw struct definition")
 
 
 @dataclass(frozen=True)
@@ -124,13 +125,34 @@ class ParsedStructDef(TypeDef, CheckableDef):
 
     def check(self, globals: Globals) -> "CheckedStructDef":
         """Checks that all struct fields have valid types."""
-        raise NotImplementedError
+        # Before checking the fields, make sure that this definition is not recursive,
+        # otherwise the code below would not terminate.
+        # TODO: This is not ideal (see todo in `check_instantiate`)
+        check_not_recursive(self, globals)
+
+        param_var_mapping = {p.name: p for p in self.params}
+        fields = [
+            StructField(f.name, type_from_ast(f.type_ast, globals, param_var_mapping))
+            for f in self.fields
+        ]
+        return CheckedStructDef(
+            self.id, self.name, self.defined_at, self.params, fields
+        )
 
     def check_instantiate(
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> Type:
         """Checks if the struct can be instantiated with the given arguments."""
-        raise NotImplementedError
+        check_all_args(self.params, args, self.name, loc)
+        # Obtain a checked version of this struct definition so we can construct a
+        # `StructType` instance
+        # TODO: This is quite bad: If we have a cyclic definition this will not
+        #  terminate, so we have to check for cycles in every call to `check`. The
+        #  proper way to deal with this is changing `StructType` such that it only
+        #  takes a `DefId` instead of a `CheckedStructDef`. But this will be a bigger
+        #  refactor...
+        checked_def = self.check(globals)
+        return StructType(args, checked_def)
 
 
 @dataclass(frozen=True)
@@ -142,10 +164,94 @@ class CheckedStructDef(TypeDef, CompiledDef):
     fields: Sequence[StructField]
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+            self, args: Sequence[Argument], globals: "Globals",
+            loc: AstNode | None = None
     ) -> Type:
         """Checks if the struct can be instantiated with the given arguments."""
-        raise NotImplementedError
+        check_all_args(self.params, args, self.name, loc)
+        return StructType(args, self)
+
+
+def parse_py_class(cls: type) -> ast.ClassDef:
+    """Parses a Python class object into an AST."""
+    source_lines, line_offset = inspect.getsourcelines(cls)
+    source = "".join(source_lines)  # Lines already have trailing \n's
+    source = textwrap.dedent(source)
+    cls_ast = ast.parse(source).body[0]
+    file = inspect.getsourcefile(cls)
+    if file is None:
+        raise GuppyError("Couldn't determine source file for class")
+    annotate_location(cls_ast, source, file, line_offset)
+    if not isinstance(cls_ast, ast.ClassDef):
+        raise GuppyError("Expected a class definition", cls_ast)
+    return cls_ast
+
+
+def try_parse_generic_base(node: ast.expr) -> list[ast.expr] | None:
+    """Checks if an AST node corresponds to a `Generic[T1, ..., Tn]` base class.
+
+    Returns the generic parameters or `None` if the AST has a different shape
+    """
+    match node:
+        case ast.Subscript(value=ast.Name(id="Generic"), slice=elem):
+            return elem.elts if isinstance(elem, ast.Tuple) else [elem]
+        case _:
+            return None
+
+
+def params_from_ast(nodes: Sequence[ast.expr], globals: Globals) -> list[Parameter]:
+    """Parses a list of AST nodes into unique type parameters.
+
+    Raises user errors if the AST nodes don't correspond to parameters or parameters
+    occur multiple times.
+    """
+    params: list[Parameter] = []
+    params_set: set[DefId] = set()
+    for node in nodes:
+        if isinstance(node, ast.Name) and node.id in globals:
+            defn = globals[node.id]
+            if isinstance(defn, ParamDef):
+                if defn.id in params_set:
+                    raise GuppyError(
+                        f"Parameter `{node.id}` cannot be used multiple times", node
+                    )
+                params.append(defn.to_param(len(params)))
+                params_set.add(defn.id)
+                continue
+        raise GuppyError("Not a parameter", node)
+    return params
+
+
+def check_not_recursive(defn: ParsedStructDef, globals: Globals) -> None:
+    """Throws a user error if the given struct definition is recursive."""
+
+    # TODO: The implementation below hijacks the type parsing logic to detect recursive
+    #  structs. This is not great since it repeats the work done during checking. We can
+    #  get rid of this after resolving the todo in `ParsedStructDef.check_instantiate()`
+
+    @dataclass(frozen=True)
+    class DummyStructDef(TypeDef):
+        """Dummy definition that throws an error when trying to instantiate it.
+
+        By replacing the defn with this, we can detect recursive occurrences during
+        type parsing.
+        """
+
+        def check_instantiate(
+            self,
+            args: Sequence[Argument],
+            globals: "Globals",
+            loc: AstNode | None = None,
+        ) -> Type:
+            raise GuppyError("Recursive structs are not supported", loc)
+
+    dummy_defs = {
+        **globals.defs,
+        defn.id: DummyStructDef(defn.id, defn.name, defn.defined_at),
+    }
+    dummy_globals = globals.update_defs(dummy_defs)
+    for field in defn.fields:
+        type_from_ast(field.type_ast, dummy_globals, {})
 
 
 def parse_py_class(cls: type) -> ast.ClassDef:
