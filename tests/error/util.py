@@ -12,11 +12,9 @@ import guppylang.decorator as decorator
 
 def run_error_test(file, capsys):
     file = pathlib.Path(file)
-    spec = importlib.util.spec_from_file_location("test_module", file)
-    py_module = importlib.util.module_from_spec(spec)
 
     with pytest.raises(GuppyError):
-        spec.loader.exec_module(py_module)
+        importlib.import_module(f"tests.error.{file.parent.name}.{file.name}")
 
     err = capsys.readouterr().err
 

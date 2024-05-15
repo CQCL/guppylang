@@ -106,7 +106,7 @@ class GuppyModule:
             self._instance_func_buffer[defn.name] = defn
         else:
             self._check_name_available(defn.name, defn.defined_at)
-            if isinstance(defn, TypeDef):
+            if isinstance(defn, TypeDef | TypeVarDef):
                 self._raw_type_defs[defn.id] = defn
             else:
                 self._raw_defs[defn.id] = defn

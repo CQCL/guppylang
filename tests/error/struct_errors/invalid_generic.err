@@ -1,0 +1,6 @@
+Guppy compilation failed. Error in file $FILE:14
+
+12:    @guppy.struct(module)
+13:    class MyStruct(Generic[X]):
+                              ^
+GuppyError: Not a parameter

@@ -7,6 +7,7 @@ from guppylang.tys.ty import (
     FunctionType,
     NoneType,
     OpaqueType,
+    StructType,
     SumType,
     TupleType,
     Type,
@@ -81,8 +82,11 @@ class TypePrinter:
             return _wrap(f"forall {quantified}. {inputs} -> {output}", inside_row)
         return _wrap(f"{inputs} -> {output}", inside_row)
 
-    @_visit.register
-    def _visit_OpaqueType(self, ty: OpaqueType, inside_row: bool) -> str:
+    @_visit.register(OpaqueType)
+    @_visit.register(StructType)
+    def _visit_OpaqueType_StructType(
+        self, ty: OpaqueType | StructType, inside_row: bool
+    ) -> str:
         if ty.args:
             args = ", ".join(self._visit(arg, True) for arg in ty.args)
             return f"{ty.defn.name}[{args}]"

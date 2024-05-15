@@ -18,6 +18,7 @@ from guppylang.definition.custom import (
 from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.function import RawFunctionDef, parse_py_func
 from guppylang.definition.parameter import TypeVarDef
+from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
 from guppylang.hugr import ops, tys
@@ -28,6 +29,7 @@ FuncDefDecorator = Callable[[PyFunc], RawFunctionDef]
 FuncDeclDecorator = Callable[[PyFunc], RawFunctionDecl]
 CustomFuncDecorator = Callable[[PyFunc], RawCustomFunctionDef]
 ClassDecorator = Callable[[type], type]
+StructDecorator = Callable[[type], RawStructDef]
 
 
 @dataclass(frozen=True)
@@ -142,6 +144,19 @@ class _Guppy:
             module.register_def(defn)
             module._register_buffered_instance_funcs(defn)
             return c
+
+        return dec
+
+    @pretty_errors
+    def struct(self, module: GuppyModule) -> StructDecorator:
+        """Decorator to define a new struct."""
+        module._instance_func_buffer = {}
+
+        def dec(cls: type) -> RawStructDef:
+            defn = RawStructDef(DefId.fresh(module), cls.__name__, None, cls)
+            module.register_def(defn)
+            module._register_buffered_instance_funcs(defn)
+            return defn
 
         return dec
 

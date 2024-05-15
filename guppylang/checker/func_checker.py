@@ -152,20 +152,20 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         raise GuppyError("Return type must be annotated", func_def)
 
     # TODO: Prepopulate mapping when using Python 3.12 style generic functions
-    type_var_mapping: dict[DefId, "Parameter"] = {}
+    param_var_mapping: dict[str, "Parameter"] = {}
     input_tys = []
     input_names = []
     for inp in func_def.args.args:
         if inp.annotation is None:
             raise GuppyError("Argument type must be annotated", inp)
-        ty = type_from_ast(inp.annotation, globals, type_var_mapping)
+        ty = type_from_ast(inp.annotation, globals, param_var_mapping)
         input_tys.append(ty)
         input_names.append(inp.arg)
-    ret_type = type_from_ast(func_def.returns, globals, type_var_mapping)
+    ret_type = type_from_ast(func_def.returns, globals, param_var_mapping)
 
     return FunctionType(
         input_tys,
         ret_type,
         input_names,
-        sorted(type_var_mapping.values(), key=lambda v: v.idx),
+        sorted(param_var_mapping.values(), key=lambda v: v.idx),
     )
