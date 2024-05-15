@@ -36,7 +36,7 @@ optional = true
 
 [tool.poetry.group.pytket.dependencies]
 pytket = { version = "^1.24.0" }
-tket2-py = { git = "https://github.com/CQCL/tket2.git", rev = "15904f94151b9b4095713c401ed18ab695dc8142" }
+tket2-py = { git = "https://github.com/CQCL/tket2.git", rev = "9f0de7bdecf8958f2ec3b42cf49ce79c4da605c9" }
 
 
 [tool.poetry.group.docs]

@@ -2,6 +2,7 @@ use hugr::extension::{ExtensionRegistry, PRELUDE};
 use hugr::std_extensions::arithmetic::{float_ops, float_types, int_ops, int_types};
 use hugr::std_extensions::collections;
 use hugr::std_extensions::logic;
+use tket2::extension::{TKET1_EXTENSION, TKET2_EXTENSION};
 use lazy_static::lazy_static;
 use pyo3::prelude::*;
 
@@ -14,6 +15,8 @@ lazy_static! {
         float_types::EXTENSION.to_owned(),
         float_ops::EXTENSION.to_owned(),
         collections::EXTENSION.to_owned(),
+        TKET1_EXTENSION.to_owned(),
+        TKET2_EXTENSION.to_owned(),
     ])
     .unwrap();
 }

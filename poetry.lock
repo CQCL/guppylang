@@ -1357,11 +1357,14 @@ python-versions = ">=3.10"
 files = []
 develop = false
 
+[package.dependencies]
+pytket = "1.27"
+
 [package.source]
 type = "git"
 url = "https://github.com/CQCL/tket2.git"
-reference = "15904f94151b9b4095713c401ed18ab695dc8142"
-resolved_reference = "15904f94151b9b4095713c401ed18ab695dc8142"
+reference = "9f0de7bdecf8958f2ec3b42cf49ce79c4da605c9"
+resolved_reference = "9f0de7bdecf8958f2ec3b42cf49ce79c4da605c9"
 
 [[package]]
 name = "tomli"
@@ -1436,4 +1439,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "db872a9164caca4fde94ff334afb075b1493f15a1fbfa2d47a6757b78c49508d"
+content-hash = "6cfb734694f5d0d842ccab47fe9238abe31f3179504def16cdbfe706df48e970"
