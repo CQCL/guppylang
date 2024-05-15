@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:14
+
+12:    @guppy(module)
+13:    def main() -> int:
+14:        return (foo, foo)(42, 42)
+                  ^^^^^^^^^^
+GuppyTypeError: Polymorphic functions in tuples are not supported

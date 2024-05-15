@@ -22,6 +22,7 @@ from guppylang.nodes import (
     GlobalName,
     LocalCall,
     LocalName,
+    TensorCall,
     TypeApply,
 )
 from guppylang.tys.builtin import bool_type, get_element_type, is_list_type
@@ -164,10 +165,18 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             ops.DummyOp(name="MakeList"), inputs=[self.visit(e) for e in node.elts]
         ).add_out_port(get_type(node))
 
-    def _pack_returns(self, returns: list[OutPortV]) -> OutPortV:
+    def _unpack_tuple(self, wire: OutPortV) -> list[OutPortV]:
+        unpack_node = self.graph.add_unpack_tuple(wire, self.dfg.node)
+        return list(unpack_node.out_ports)
+
+    def _pack_returns(self, returns: list[OutPortV], return_ty: Type) -> OutPortV:
         """Groups function return values into a tuple"""
-        if len(returns) != 1:
+        if isinstance(return_ty, TupleType | NoneType) and not return_ty.preserve:
+            assert len(returns) == (
+                len(return_ty.element_types) if isinstance(return_ty, TupleType) else 0
+            )
             return self.graph.add_make_tuple(inputs=returns).out_port(0)
+        assert len(returns) == 1
         return returns[0]
 
     def visit_LocalCall(self, node: LocalCall) -> OutPortV:
@@ -177,7 +186,48 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         args = [self.visit(arg) for arg in node.args]
         call = self.graph.add_indirect_call(func, args)
         rets = [call.out_port(i) for i in range(len(type_to_row(func.ty.output)))]
-        return self._pack_returns(rets)
+        return self._pack_returns(rets, func.ty.output)
+
+    def visit_TensorCall(self, node: TensorCall) -> OutPortV:
+        func = self.visit(node.func)
+        args = [self.visit(arg) for arg in node.args]
+
+        assert isinstance(func.ty, TupleType)
+
+        rets: list[OutPortV] = []
+        remaining_args = args
+        for elem in self._unpack_tuple(func):
+            outs, remaining_args = self._compile_tensor_with_leftovers(
+                elem, remaining_args
+            )
+            rets.extend(outs)
+        assert remaining_args == []
+
+        return self._pack_returns(rets, node.out_tys)
+
+    def _compile_tensor_with_leftovers(
+        self, func: OutPortV, args: list[OutPortV]
+    ) -> tuple[
+        list[OutPortV],  # Compiled outputs
+        list[OutPortV],
+    ]:  # Leftover args
+        if isinstance(func.ty, TupleType):
+            remaining_args = args
+            all_outs = []
+            for elem in self._unpack_tuple(func):
+                outs, remaining_args = self._compile_tensor_with_leftovers(
+                    elem, remaining_args
+                )
+                all_outs.extend(outs)
+            return all_outs, remaining_args
+
+        elif isinstance(func.ty, FunctionType):
+            input_len = len(func.ty.inputs)
+            call = self.graph.add_indirect_call(func, args[0:input_len])
+
+            return list(call.out_ports), args[input_len:]
+        else:
+            raise InternalGuppyError("Tensor element wasn't function or tuple")
 
     def visit_GlobalCall(self, node: GlobalCall) -> OutPortV:
         func = self.globals[node.def_id]
@@ -187,7 +237,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         rets = func.compile_call(
             args, list(node.type_args), self.dfg, self.graph, self.globals, node
         )
-        return self._pack_returns(rets)
+        return self._pack_returns(rets, func.ty.output)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")

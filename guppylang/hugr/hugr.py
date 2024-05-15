@@ -492,6 +492,7 @@ class Hugr:
     ) -> VNode:
         """Adds a `Call` node to the graph."""
         assert isinstance(def_port.ty, FunctionType)
+
         return self.add_node(
             ops.Call(),
             None,
@@ -505,6 +506,7 @@ class Hugr:
     ) -> VNode:
         """Adds an `IndirectCall` node to the graph."""
         assert isinstance(fun_port.ty, FunctionType)
+
         return self.add_node(
             ops.CallIndirect(),
             None,

@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:12
+
+10:    @guppy(module)
+11:    def main() -> int:
+12:        return (foo, foo)(42, False)
+                                 ^^^^^
+GuppyTypeError: Expected argument of type `int`, got `bool`
