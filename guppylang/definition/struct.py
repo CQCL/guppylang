@@ -73,6 +73,7 @@ class RawStructDef(TypeDef, ParsableDef):
 
         fields: list[UncheckedStructField] = []
         used_field_names: set[str] = set()
+        used_func_names: dict[str, ast.FunctionDef] = {}
         for i, node in enumerate(cls_def.body):
             match i, node:
                 # We allow `pass` statements to define empty structs
@@ -82,12 +83,19 @@ class RawStructDef(TypeDef, ParsableDef):
                 case 0, ast.Expr(value=ast.Constant(value=v)) if isinstance(v, str):
                     pass
                 # Ensure that all function definitions are Guppy functions
-                case _, ast.FunctionDef(name=name):
+                case _, ast.FunctionDef(name=name) as node:
                     v = getattr(self.python_class, name)
                     if not isinstance(v, Definition):
                         raise GuppyError(
                             "Add a `@guppy` decorator to this function to add it to "
                             f"the struct `{self.name}`",
+                            node,
+                        )
+                    used_func_names[name] = node
+                    if name in used_field_names:
+                        raise GuppyError(
+                            f"Struct `{self.name}` already contains a field named "
+                            f"`{name}`",
                             node,
                         )
                 # Struct fields are declared via annotated assignments without value
@@ -106,6 +114,14 @@ class RawStructDef(TypeDef, ParsableDef):
                     used_field_names.add(field_name)
                 case _, node:
                     raise GuppyError("Unexpected statement in struct", node)
+
+        # Ensure that functions don't override struct fields
+        if overriden := used_field_names.intersection(used_func_names.keys()):
+            x = overriden.pop()
+            raise GuppyError(
+                f"Struct `{self.name}` already contains a field named `{x}`",
+                used_func_names[x],
+            )
 
         return ParsedStructDef(self.id, self.name, cls_def, params, fields)
 
