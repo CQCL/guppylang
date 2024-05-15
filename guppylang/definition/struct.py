@@ -73,25 +73,25 @@ class RawStructDef(TypeDef, ParsableDef):
 
         fields: list[UncheckedStructField] = []
         used_field_names: set[str] = set()
-        for node in cls_def.body:
-            match node:
+        for i, node in enumerate(cls_def.body):
+            match i, node:
                 # We allow `pass` statements to define empty structs
-                case ast.Pass():
+                case _, ast.Pass():
                     pass
-                # Docstrings are also fine
-                case ast.Expr(value=ast.Constant(value=v)) if isinstance(v, str):
+                # Docstrings are also fine if they occur at the start
+                case 0, ast.Expr(value=ast.Constant(value=v)) if isinstance(v, str):
                     pass
                 # Ensure that all function definitions are Guppy functions
-                case ast.FunctionDef(name=name):
+                case _, ast.FunctionDef(name=name):
                     v = getattr(self.python_class, name)
                     if not isinstance(v, Definition):
                         raise GuppyError(
-                            "Add an `@guppy` decorator to this function to add it to "
+                            "Add a `@guppy` decorator to this function to add it to "
                             f"the struct `{self.name}`",
                             node,
                         )
                 # Struct fields are declared via annotated assignments without value
-                case ast.AnnAssign(target=ast.Name(id=field_name)) as node:
+                case _, ast.AnnAssign(target=ast.Name(id=field_name)) as node:
                     if node.value:
                         raise GuppyError(
                             "Default struct values are not supported", node.value
@@ -104,7 +104,7 @@ class RawStructDef(TypeDef, ParsableDef):
                         )
                     fields.append(UncheckedStructField(field_name, node.annotation))
                     used_field_names.add(field_name)
-                case node:
+                case _, node:
                     raise GuppyError("Unexpected statement in struct", node)
 
         return ParsedStructDef(self.id, self.name, cls_def, params, fields)
@@ -252,3 +252,53 @@ def check_not_recursive(defn: ParsedStructDef, globals: Globals) -> None:
     dummy_globals = globals.update_defs(dummy_defs)
     for field in defn.fields:
         type_from_ast(field.type_ast, dummy_globals, {})
+
+
+def parse_py_class(cls: type) -> ast.ClassDef:
+    """Parses a Python class object into an AST."""
+    source_lines, line_offset = inspect.getsourcelines(cls)
+    source = "".join(source_lines)  # Lines already have trailing \n's
+    source = textwrap.dedent(source)
+    cls_ast = ast.parse(source).body[0]
+    file = inspect.getsourcefile(cls)
+    if file is None:
+        raise GuppyError("Couldn't determine source file for class")
+    annotate_location(cls_ast, source, file, line_offset)
+    if not isinstance(cls_ast, ast.ClassDef):
+        raise GuppyError("Expected a class definition", cls_ast)
+    return cls_ast
+
+
+def try_parse_generic_base(node: ast.expr) -> list[ast.expr] | None:
+    """Checks if an AST node corresponds to a `Generic[T1, ..., Tn]` base class.
+
+    Returns the generic parameters or `None` if the AST has a different shape
+    """
+    match node:
+        case ast.Subscript(value=ast.Name(id="Generic"), slice=elem):
+            return elem.elts if isinstance(elem, ast.Tuple) else [elem]
+        case _:
+            return None
+
+
+def params_from_ast(nodes: Sequence[ast.expr], globals: Globals) -> list[Parameter]:
+    """Parses a list of AST nodes into unique type parameters.
+
+    Raises user errors if the AST nodes don't correspond to parameters or parameters
+    occur multiple times.
+    """
+    params: list[Parameter] = []
+    params_set: set[DefId] = set()
+    for node in nodes:
+        if isinstance(node, ast.Name) and node.id in globals:
+            defn = globals[node.id]
+            if isinstance(defn, ParamDef):
+                if defn.id in params_set:
+                    raise GuppyError(
+                        f"Parameter `{node.id}` cannot be used multiple times", node
+                    )
+                params.append(defn.to_param(len(params)))
+                params_set.add(defn.id)
+                continue
+        raise GuppyError("Not a parameter", node)
+    return params
