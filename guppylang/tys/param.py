@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeAlias
 
@@ -7,7 +8,7 @@ from hugr.serialization.tys import TypeBound
 from typing_extensions import Self
 
 from guppylang.ast_util import AstNode
-from guppylang.error import GuppyTypeError, InternalGuppyError
+from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr
 from guppylang.tys.var import ExistentialVar
@@ -171,3 +172,29 @@ class ConstParam(ParameterBase):
     def to_hugr(self) -> tys.TypeParam:
         """Computes the Hugr representation of the parameter."""
         raise NotImplementedError
+
+
+def check_all_args(
+    params: Sequence[Parameter],
+    args: Sequence[Argument],
+    type_name: str,
+    loc: AstNode | None = None,
+) -> None:
+    """Checks a list of arguments against the given parameters.
+
+    Raises a user error if number of arguments doesn't match or one of the argument is
+    invalid.
+    """
+    exp, act = len(params), len(args)
+    if exp > act:
+        raise GuppyError(f"Missing parameter for type `{type_name}`", loc)
+    elif 0 == exp < act:
+        raise GuppyError(f"Type `{type_name}` is not parameterized", loc)
+    elif 0 < exp < act:
+        raise GuppyError(f"Too many parameters for type `{type_name}`", loc)
+
+    # Now check that the kinds match up
+    for param, arg in zip(params, args, strict=True):
+        # TODO: The error location is bad. We want the location of `arg`, not of the
+        #  whole thing.
+        param.check_arg(arg, loc)

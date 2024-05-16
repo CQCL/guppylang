@@ -1,0 +1,6 @@
+Guppy compilation failed. Error in file $FILE:17
+
+15:    @guppy(module)
+16:    def foo(s: MyStruct) -> None:
+                  ^^^^^^^^
+GuppyError: Missing parameter for type `MyStruct`

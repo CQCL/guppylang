@@ -47,7 +47,7 @@ class Definition(ABC):
 
     id: DefId
     name: str
-    defined_at: ast.FunctionDef | None
+    defined_at: ast.AST | None
 
     @property
     @abstractmethod

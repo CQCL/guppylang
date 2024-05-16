@@ -7,9 +7,8 @@ from hugr.serialization import tys
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
-from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument
-from guppylang.tys.param import Parameter
+from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.ty import OpaqueType, Type
 
 if TYPE_CHECKING:
@@ -50,17 +49,5 @@ class OpaqueTypeDef(TypeDef, CompiledDef):
         Returns the resulting concrete type or raises a user error if the arguments are
         invalid.
         """
-        exp, act = len(self.params), len(args)
-        if exp > act:
-            raise GuppyError(f"Missing parameter for type `{self.name}`", loc)
-        elif 0 == exp < act:
-            raise GuppyError(f"Type `{self.name}` is not parameterized", loc)
-        elif 0 < exp < act:
-            raise GuppyError(f"Too many parameters for type `{self.name}`", loc)
-
-        # Now check that the kinds match up
-        for param, arg in zip(self.params, args, strict=True):
-            # TODO: The error location is bad. We want the location of `arg`, not of the
-            #  whole thing.
-            param.check_arg(arg, loc)
+        check_all_args(self.params, args, self.name, loc)
         return OpaqueType(args, self)

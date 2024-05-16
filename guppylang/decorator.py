@@ -1,6 +1,6 @@
 import inspect
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
 from typing import Any, TypeVar
@@ -20,6 +20,7 @@ from guppylang.definition.custom import (
 from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.function import RawFunctionDef, parse_py_func
 from guppylang.definition.parameter import TypeVarDef
+from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
 from guppylang.hugr_builder.hugr import Hugr
@@ -29,6 +30,7 @@ FuncDefDecorator = Callable[[PyFunc], RawFunctionDef]
 FuncDeclDecorator = Callable[[PyFunc], RawFunctionDecl]
 CustomFuncDecorator = Callable[[PyFunc], RawCustomFunctionDef]
 ClassDecorator = Callable[[type], type]
+StructDecorator = Callable[[type], RawStructDef]
 
 
 @dataclass(frozen=True)
@@ -36,17 +38,11 @@ class ModuleIdentifier:
     """Identifier for the Python file/module that called the decorator."""
 
     filename: Path
-    module: ModuleType | None
 
-    @property
-    def name(self) -> str:
-        """Returns a user-friendly name for the caller.
-
-        If the called is not a function, uses the file name.
-        """
-        if self.module is not None:
-            return str(self.module.__name__)
-        return self.filename.name
+    #: The name of the module. We only store this to have nice name to report back to
+    #: the user. When determining whether two `ModuleIdentifier`s correspond to the same
+    #: module, we only take the module path into account.
+    name: str = field(compare=False)
 
 
 class _Guppy:
@@ -103,7 +99,10 @@ class _Guppy:
                     break
             else:
                 raise GuppyError("Could not find a caller for the `@guppy` decorator")
-        return ModuleIdentifier(Path(filename), module)
+        module_path = Path(filename)
+        return ModuleIdentifier(
+            module_path, module.__name__ if module else module_path.name
+        )
 
     @pretty_errors
     def extend_type(self, module: GuppyModule, defn: TypeDef) -> ClassDecorator:
@@ -146,6 +145,19 @@ class _Guppy:
             module.register_def(defn)
             module._register_buffered_instance_funcs(defn)
             return c
+
+        return dec
+
+    @pretty_errors
+    def struct(self, module: GuppyModule) -> StructDecorator:
+        """Decorator to define a new struct."""
+        module._instance_func_buffer = {}
+
+        def dec(cls: type) -> RawStructDef:
+            defn = RawStructDef(DefId.fresh(module), cls.__name__, None, cls)
+            module.register_def(defn)
+            module._register_buffered_instance_funcs(defn)
+            return defn
 
         return dec
 

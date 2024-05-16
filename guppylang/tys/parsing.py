@@ -1,9 +1,12 @@
 import ast
 from collections.abc import Sequence
 
-from guppylang.ast_util import AstNode
+from guppylang.ast_util import (
+    AstNode,
+    set_location_from,
+    shift_loc,
+)
 from guppylang.checker.core import Globals
-from guppylang.definition.common import DefId
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError
@@ -15,7 +18,7 @@ from guppylang.tys.ty import NoneType, TupleType, Type
 def arg_from_ast(
     node: AstNode,
     globals: Globals,
-    param_var_mapping: dict[DefId, Parameter] | None = None,
+    param_var_mapping: dict[str, Parameter] | None = None,
 ) -> Argument:
     """Turns an AST expression into an argument."""
     # A single identifier
@@ -33,9 +36,9 @@ def arg_from_ast(
                     raise GuppyError(
                         "Free type variable. Only function types can be generic", node
                     )
-                if defn.id not in param_var_mapping:
-                    param_var_mapping[defn.id] = defn.to_param(len(param_var_mapping))
-                return param_var_mapping[defn.id].to_bound()
+                if x not in param_var_mapping:
+                    param_var_mapping[x] = defn.to_param(len(param_var_mapping))
+                return param_var_mapping[x].to_bound()
             case defn:
                 raise GuppyError(
                     f"Expected a type, got {defn.description} `{defn.name}`", node
@@ -92,6 +95,12 @@ def arg_from_ast(
             [stmt] = ast.parse(node.value).body
             if not isinstance(stmt, ast.Expr):
                 raise GuppyError("Invalid Guppy type", node)
+            set_location_from(stmt, loc=node)
+            shift_loc(
+                stmt,
+                delta_lineno=node.lineno - 1,  # -1 since lines start at 1
+                delta_col_offset=node.col_offset + 1,  # +1 to remove the `"`
+            )
             return arg_from_ast(stmt.value, globals, param_var_mapping)
         except (SyntaxError, ValueError):
             raise GuppyError("Invalid Guppy type", node) from None
@@ -105,7 +114,7 @@ _type_param = TypeParam(0, "T", True)
 def type_from_ast(
     node: AstNode,
     globals: Globals,
-    param_var_mapping: dict[DefId, Parameter] | None = None,
+    param_var_mapping: dict[str, Parameter] | None = None,
 ) -> Type:
     """Turns an AST expression into a Guppy type."""
     # Parse an argument and check that it's valid for a `TypeParam`

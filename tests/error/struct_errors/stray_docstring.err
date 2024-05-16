@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:11
+
+9:     class MyStruct:
+10:        x: int
+11:        """Docstring in wrong position"""
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+GuppyError: Unexpected statement in struct

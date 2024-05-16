@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:13
+
+11:    @guppy.struct(module)
+12:    class MyStruct:
+13:        x
+           ^
+GuppyError: Unexpected statement in struct

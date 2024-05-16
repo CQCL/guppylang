@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:11
+
+9:     class MyStruct:
+10:        @guppy(module)
+11:        def x(self: "MyStruct") -> int:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+GuppyError: Struct `MyStruct` already contains a field named `x`
