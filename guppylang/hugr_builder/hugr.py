@@ -796,25 +796,25 @@ class Hugr:
         all_nodes = self.nodes()
         for n in all_nodes:
             if n is self.root:
-                pass
-            elif isinstance(n.op.root, ops.Input):
-                input_nodes.append(n)
-            elif isinstance(n.op.root, ops.Output):
-                output_nodes.append(n)
-            elif (
-                isinstance(n.op.root, ops.DataflowBlock)
+                continue
+            match n.op.root:
+                case ops.Input():
+                    input_nodes.append(n)
+                case ops.Output():
+                    output_nodes.append(n)
                 # We can detect entry BBs by looking for BBs without incoming edges
                 # since Guppy will never generate an edge pointing back to the entry.
                 # Also, Guppy errors on unreachable code, so we will never generate
                 # interior BBs without incoming edges. Hence, there are also no false
                 # positives.
-                and next(self.in_edges(n.in_port(None)), None) is None
-            ):
-                entry_nodes.append(n)
-            elif isinstance(n.op.root, ops.ExitBlock):
-                exit_nodes.append(n)
-            else:
-                remaining_nodes.append(n)
+                case ops.DataflowBlock() if next(
+                    self.in_edges(n.in_port(None)), None
+                ) is None:
+                    entry_nodes.append(n)
+                case ops.ExitBlock():
+                    exit_nodes.append(n)
+                case _:
+                    remaining_nodes.append(n)
         for n in itertools.chain(
             iter([self.root]),
             iter(entry_nodes),
