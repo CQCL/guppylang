@@ -470,8 +470,7 @@ class StructType(ParametrizedTypeBase):
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
-
-        return tys.TupleType(inner=[f.ty.to_hugr() for f in self.fields])
+        return TupleType([f.ty for f in self.fields]).to_hugr()
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
