@@ -37,7 +37,7 @@ class ConstValue(Const):
 
     # Hugr encoding of the value
     # TODO: We might need a Guppy representation of this...
-    value: ops.Const
+    value: ops.Value
 
 
 @dataclass(frozen=True)
