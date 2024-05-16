@@ -13,6 +13,7 @@ graphviz = "^0.20.1"
 networkx = "^3.2.1"
 pydantic = "^2.7.0b1"
 typing-extensions = "^4.9.0"
+hugr = "~0.2.0a1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"
@@ -35,7 +36,7 @@ optional = true
 
 [tool.poetry.group.pytket.dependencies]
 pytket = { version = "^1.24.0" }
-tket2-py = { git = "https://github.com/CQCL/tket2.git", rev = "9e941f3" }
+tket2-py = { git = "https://github.com/CQCL/tket2.git", rev = "9f0de7bdecf8958f2ec3b42cf49ce79c4da605c9" }
 
 
 [tool.poetry.group.docs]
@@ -54,6 +55,3 @@ build-backend = "poetry.core.masonry.api"
 plugins = ["pydantic.mypy"]
 strict = true
 allow_redefinition = true
-# mypy doesn't support TypeAliasType fully yet
-# https://github.com/python/mypy/issues/16614
-disable_error_code = "valid-type"

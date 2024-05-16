@@ -2,7 +2,9 @@ import ast
 import json
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, TypeGuard, TypeVar
+
+from hugr.serialization import ops
 
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
@@ -13,8 +15,13 @@ from guppylang.compiler.core import (
 )
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.error import GuppyError, InternalGuppyError
-from guppylang.hugr import ops, val
-from guppylang.hugr.hugr import DFContainingNode, OutPortV, VNode
+from guppylang.hugr_builder.hugr import (
+    UNDEFINED,
+    DFContainingNode,
+    DummyOp,
+    OutPortV,
+    VNode,
+)
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
@@ -149,6 +156,12 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
     def visit_GlobalName(self, node: GlobalName) -> OutPortV:
         defn = self.globals[node.def_id]
         assert isinstance(defn, CompiledValueDef)
+        if isinstance(defn, CompiledCallableDef) and defn.ty.parametrized:
+            raise GuppyError(
+                "Usage of polymorphic functions as dynamic higher-order values is not "
+                "supported yet",
+                node,
+            )
         return defn.load(self.dfg, self.graph, self.globals, node)
 
     def visit_Name(self, node: ast.Name) -> OutPortV:
@@ -162,7 +175,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
     def visit_List(self, node: ast.List) -> OutPortV:
         # Note that this is a list literal (i.e. `[e1, e2, ...]`), not a comprehension
         return self.graph.add_node(
-            ops.DummyOp(name="MakeList"), inputs=[self.visit(e) for e in node.elts]
+            DummyOp("MakeList"), inputs=[self.visit(e) for e in node.elts]
         ).add_out_port(get_type(node))
 
     def _unpack_tuple(self, wire: OutPortV) -> list[OutPortV]:
@@ -243,9 +256,11 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         raise InternalGuppyError("Node should have been removed during type checking.")
 
     def visit_TypeApply(self, node: TypeApply) -> OutPortV:
-        func = self.visit(node.value)
-        assert isinstance(func.ty, FunctionType)
-        ta = self.graph.add_type_apply(func, node.inst, self.dfg.node).out_port(0)
+        # For now, we can only TypeApply global FunctionDefs/Decls.
+        if not isinstance(node.value, GlobalName):
+            raise InternalGuppyError("Dynamic TypeApply not supported yet!")
+        defn = self.globals[node.value.def_id]
+        assert isinstance(defn, CompiledCallableDef)
 
         # We have to be very careful here: If we instantiate `foo: forall T. T -> T`
         # with a tuple type `tuple[A, B]`, we get the type `tuple[A, B] -> tuple[A, B]`.
@@ -254,22 +269,25 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         # function with a single output port typed `tuple[A, B]`.
         # TODO: We would need to do manual monomorphisation in that case to obtain a
         #  function that returns two ports as expected
-        if instantiation_needs_unpacking(func.ty, node.inst):
+        if instantiation_needs_unpacking(defn.ty, node.inst):
             raise GuppyError(
                 "Generic function instantiations returning rows are not supported yet",
                 node,
             )
 
-        return ta
+        return defn.load_with_args(node.inst, self.dfg, self.graph, self.globals, node)
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> OutPortV:
         # The only case that is not desugared by the type checker is the `not` operation
         # since it is not implemented via a dunder method
         if isinstance(node.op, ast.Not):
             arg = self.visit(node.operand)
-            return self.graph.add_node(
-                ops.CustomOp(extension="logic", op_name="Not", args=[]), inputs=[arg]
-            ).add_out_port(bool_type())
+            op = ops.CustomOp(
+                extension="logic", op_name="Not", args=[], parent=UNDEFINED
+            )
+            return self.graph.add_node(ops.OpType(op), inputs=[arg]).add_out_port(
+                bool_type()
+            )
 
         raise InternalGuppyError("Node should have been removed during type checking.")
 
@@ -281,7 +299,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         # Make up a name for the list under construction and bind it to an empty list
         list_ty = get_type(node)
         list_name = with_type(list_ty, with_loc(node, LocalName(id=next(tmp_vars))))
-        empty_list = self.graph.add_node(ops.DummyOp(name="MakeList"))
+        empty_list = self.graph.add_node(DummyOp("MakeList"))
         self.dfg[list_name.id] = PortVariable(
             list_name.id, empty_list.add_out_port(list_ty), node, None
         )
@@ -292,7 +310,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             if not gens:
                 list_port, elt_port = self.visit(list_name), self.visit(elt)
                 push = self.graph.add_node(
-                    ops.DummyOp(name="Push"), inputs=[list_port, elt_port]
+                    DummyOp("Push"), inputs=[list_port, elt_port]
                 )
                 self.dfg[list_name.id].port = push.add_out_port(list_port.ty)
                 return
@@ -348,7 +366,7 @@ def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
     return False
 
 
-def python_value_to_hugr(v: Any, exp_ty: Type) -> val.Value | None:
+def python_value_to_hugr(v: Any, exp_ty: Type) -> ops.Value | None:
     """Turns a Python value into a Hugr value.
 
     Returns None if the Python value cannot be represented in Guppy.
@@ -373,15 +391,13 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> val.Value | None:
                 python_value_to_hugr(elt, ty)
                 for elt, ty in zip(elts, exp_ty.element_types)
             ]
-            if any(value is None for value in vs):
-                return None
-            return val.Tuple(vs=vs)
+            if doesnt_contain_none(vs):
+                return ops.Value(ops.TupleValue(vs=vs))
         case list(elts):
             assert is_list_type(exp_ty)
-            return list_value(
-                [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts],
-                get_element_type(exp_ty).to_hugr(),
-            )
+            vs = [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
+            if doesnt_contain_none(vs):
+                return list_value(vs, get_element_type(exp_ty))
         case _:
             # Pytket conversion is an optional feature
             try:
@@ -393,7 +409,15 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> val.Value | None:
                     )
 
                     hugr = json.loads(Tk2Circuit(v).to_hugr_json())
-                    return val.FunctionVal(hugr=hugr)
+                    return ops.Value(ops.FunctionValue(hugr=hugr))
             except ImportError:
                 pass
-            return None
+    return None
+
+
+T = TypeVar("T")
+
+
+def doesnt_contain_none(xs: list[T | None]) -> TypeGuard[list[T]]:
+    """Checks if a list contains `None`."""
+    return all(x is not None for x in xs)

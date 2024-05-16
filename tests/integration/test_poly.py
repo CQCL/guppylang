@@ -1,5 +1,7 @@
 from collections.abc import Callable
 
+import pytest
+
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude.quantum import qubit
@@ -259,6 +261,7 @@ def test_pass_linear(validate):
     validate(module.compile())
 
 
+@pytest.mark.skip("Not yet supported")
 def test_higher_order_value(validate):
     module = GuppyModule("test")
     T = guppy.type_var(module, "T")

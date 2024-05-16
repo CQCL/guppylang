@@ -2,8 +2,9 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from hugr.serialization import ops
+
 from guppylang.error import InternalGuppyError
-from guppylang.hugr import val
 from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
@@ -36,7 +37,7 @@ class ConstValue(Const):
 
     # Hugr encoding of the value
     # TODO: We might need a Guppy representation of this...
-    value: val.Value
+    value: ops.Value
 
 
 @dataclass(frozen=True)

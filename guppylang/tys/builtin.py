@@ -2,11 +2,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
+from hugr.serialization import tys
+
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError
-from guppylang.hugr import tys
 from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.param import TypeParam
 from guppylang.tys.ty import FunctionType, NoneType, OpaqueType, TupleType, Type
@@ -98,15 +99,17 @@ class _ListTypeDef(OpaqueTypeDef):
         return super().check_instantiate(args, globals, loc)
 
 
-def _list_to_hugr(args: Sequence[Argument]) -> tys.Opaque:
-    return tys.Opaque(
+def _list_to_hugr(args: Sequence[Argument]) -> tys.Type:
+    # Type checker ensures that we get a single arg of kind type
+    [arg] = args
+    assert isinstance(arg, TypeArg)
+    ty = tys.Opaque(
         extension="Collections",
         id="List",
-        args=[arg.to_hugr() for arg in args],
-        bound=tys.TypeBound.join(
-            *(arg.ty.hugr_bound for arg in args if isinstance(arg, TypeArg))
-        ),
+        args=[arg.to_hugr()],
+        bound=arg.ty.hugr_bound,
     )
+    return tys.Type(ty)
 
 
 callable_type_def = _CallableTypeDef(DefId.fresh(), None)
@@ -118,7 +121,7 @@ bool_type_def = OpaqueTypeDef(
     defined_at=None,
     params=[],
     always_linear=False,
-    to_hugr=lambda _: tys.UnitSum(size=2),
+    to_hugr=lambda _: tys.Type(tys.SumType(tys.UnitSum(size=2))),
 )
 linst_type_def = OpaqueTypeDef(
     id=DefId.fresh(),

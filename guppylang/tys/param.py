@@ -3,12 +3,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeAlias
 
+from hugr.serialization import tys
+from hugr.serialization.tys import TypeBound
 from typing_extensions import Self
 
 from guppylang.ast_util import AstNode
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
-from guppylang.hugr import tys
-from guppylang.hugr.tys import TypeBound
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr
 from guppylang.tys.var import ExistentialVar
@@ -122,8 +122,10 @@ class TypeParam(ParameterBase):
 
     def to_hugr(self) -> tys.TypeParam:
         """Computes the Hugr representation of the parameter."""
-        return tys.TypeTypeParam(
-            b=tys.TypeBound.Any if self.can_be_linear else TypeBound.Copyable
+        return tys.TypeParam(
+            tys.TypeTypeParam(
+                b=tys.TypeBound.Any if self.can_be_linear else TypeBound.Copyable
+            )
         )
 
 

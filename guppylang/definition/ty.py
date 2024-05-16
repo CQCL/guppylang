@@ -3,13 +3,13 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from hugr.serialization import tys
+
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
-from guppylang.hugr import tys
-from guppylang.hugr.tys import Type
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
-from guppylang.tys.ty import OpaqueType
+from guppylang.tys.ty import OpaqueType, Type
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals

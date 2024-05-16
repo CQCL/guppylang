@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeAlias
 
-from guppylang.hugr import tys
+from hugr.serialization import tys
+
 from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
 from guppylang.tys.const import Const
 from guppylang.tys.var import ExistentialVar
@@ -47,7 +48,7 @@ class TypeArg(ArgumentBase):
 
     def to_hugr(self) -> tys.TypeArg:
         """Computes the Hugr representation of the argument."""
-        return tys.TypeTypeArg(ty=self.ty.to_hugr())
+        return tys.TypeArg(tys.TypeTypeArg(ty=self.ty.to_hugr()))
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this argument."""

@@ -4,9 +4,10 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, TypeAlias, cast
 
+from hugr.serialization import tys
+from hugr.serialization.tys import TypeBound
+
 from guppylang.error import InternalGuppyError
-from guppylang.hugr import tys
-from guppylang.hugr.tys import TypeBound
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
 from guppylang.tys.const import ExistentialConstVar
@@ -149,7 +150,7 @@ class BoundTypeVar(TypeBase, BoundVar):
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
-        return tys.Variable(i=self.idx, b=self.hugr_bound)
+        return tys.Type(tys.Variable(i=self.idx, b=self.hugr_bound))
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -222,7 +223,7 @@ class NoneType(TypeBase):
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
-        return tys.TupleType(inner=[])
+        return TupleType([]).to_hugr()
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -270,10 +271,27 @@ class FunctionType(ParametrizedTypeBase):
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
+        if self.parametrized:
+            raise InternalGuppyError(
+                "Tried to convert parametrised function type to Hugr. Use "
+                "`to_hugr_poly` instead"
+            )
+        return tys.Type(self._to_hugr_function_type())
+
+    def to_hugr_poly(self) -> tys.PolyFuncType:
+        """Computes the Hugr `PolyFuncType` representation of the type."""
+        func_ty = self._to_hugr_function_type()
+        return tys.PolyFuncType(params=[p.to_hugr() for p in self.params], body=func_ty)
+
+    def _to_hugr_function_type(self) -> tys.FunctionType:
+        """Helper method to compute the Hugr `FunctionType` representation of the type.
+
+        The resulting `FunctionType` can then be embedded into a Hugr `Type` or a Hugr
+        `PolyFuncType`.
+        """
         ins = [t.to_hugr() for t in self.inputs]
         outs = [t.to_hugr() for t in type_to_row(self.output)]
-        func_ty = tys.FunctionType(input=ins, output=outs, extension_reqs=[])
-        return tys.PolyFuncType(params=[p.to_hugr() for p in self.params], body=func_ty)
+        return tys.FunctionType(input=ins, output=outs)
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -346,7 +364,12 @@ class TupleType(ParametrizedTypeBase):
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
-        return tys.TupleType(inner=[ty.to_hugr() for ty in self.element_types])
+        # Tuples are encoded as a unary sum. Note that we need to make a copy of this
+        # tuple with `preserve=False` to ensure that it can be broken up into a row (if
+        # this tuple was created by instantiating a type variable, it is still
+        # represented as a *row* sum).
+        tuple_ty = TupleType(self.element_types, preserve=False)
+        return SumType([tuple_ty]).to_hugr()
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
@@ -377,12 +400,13 @@ class SumType(ParametrizedTypeBase):
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
-        if all(
-            isinstance(e, TupleType) and len(e.element_types) == 0
-            for e in self.element_types
-        ):
-            return tys.UnitSum(size=len(self.element_types))
-        return tys.GeneralSum(row=[t.to_hugr() for t in self.element_types])
+        rows = [type_to_row(ty) for ty in self.element_types]
+        sum_inner: tys.UnitSum | tys.GeneralSum
+        if all(len(row) == 0 for row in rows):
+            sum_inner = tys.UnitSum(size=len(rows))
+        else:
+            sum_inner = tys.GeneralSum(rows=rows_to_hugr(rows))
+        return tys.Type(tys.SumType(sum_inner))
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
@@ -446,8 +470,7 @@ class StructType(ParametrizedTypeBase):
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
-
-        return tys.TupleType(inner=[f.ty.to_hugr() for f in self.fields])
+        return TupleType([f.ty for f in self.fields]).to_hugr()
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
@@ -493,6 +516,16 @@ def type_to_row(ty: Type) -> TypeRow:
     if isinstance(ty, TupleType) and not ty.preserve:
         return ty.element_types
     return [ty]
+
+
+def row_to_hugr(row: TypeRow) -> tys.TypeRow:
+    """Computes the Hugr representation of a type row."""
+    return [ty.to_hugr() for ty in row]
+
+
+def rows_to_hugr(rows: Sequence[TypeRow]) -> list[tys.TypeRow]:
+    """Computes the Hugr representation of a sequence of rows."""
+    return [row_to_hugr(row) for row in rows]
 
 
 def unify(s: Type, t: Type, subst: "Subst | None") -> "Subst | None":

@@ -12,9 +12,9 @@ from guppylang.compiler.core import (
 )
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
-from guppylang.hugr.hugr import CFNode, Hugr, Node, OutPortV
+from guppylang.hugr_builder.hugr import CFNode, Hugr, Node, OutPortV
 from guppylang.tys.builtin import is_bool_type
-from guppylang.tys.ty import SumType, TupleType, type_to_row
+from guppylang.tys.ty import SumType, row_to_type, type_to_row
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -65,9 +65,8 @@ def compile_bb(
         branch_port = ExprCompiler(graph, globals).compile(bb.branch_pred, dfg)
     else:
         # Even if we don't branch, we still have to add a `Sum(())` predicates
-        unit = graph.add_make_tuple([], parent=block).out_port(0)
         branch_port = graph.add_tag(
-            variants=[TupleType([])], tag=0, inp=unit, parent=block
+            variants=[[]], tag=0, inputs=[], parent=block
         ).out_port(0)
 
     # Finally, we have to add the block output.
@@ -92,7 +91,11 @@ def compile_bb(
                 graph=graph,
                 unit_sum=branch_port,
                 output_vars=[
-                    [v for v in row if not v.ty.linear or is_return_var(v.name)]
+                    [
+                        v
+                        for v in sort_vars(row)
+                        if not v.ty.linear or is_return_var(v.name)
+                    ]
                     for row in bb.sig.output_rows
                 ],
                 dfg=dfg,
@@ -133,30 +136,23 @@ def choose_vars_for_tuple_sum(
 ) -> OutPortV:
     """Selects an output based on a TupleSum.
 
-    Given `unit_sum: Sum((), (), ...)` and output variable sets `#s1, #s2, ...`,
-    constructs a TupleSum value of type `Sum(Tuple(#s1), Tuple(#s2), ...)`.
+    Given `unit_sum: Sum(*(), *(), ...)` and output variable rows `#s1, #s2, ...`,
+    constructs a TupleSum value of type `Sum(#s1, #s2, ...)`.
     """
     assert isinstance(unit_sum.ty, SumType) or is_bool_type(unit_sum.ty)
     assert len(output_vars) == (
         len(unit_sum.ty.element_types) if isinstance(unit_sum.ty, SumType) else 2
     )
-    tuples = [
-        graph.add_make_tuple(
-            inputs=[dfg[v.name].port for v in sort_vars(vs) if v.name in dfg],
-            parent=dfg.node,
-        ).out_port(0)
-        for vs in output_vars
-    ]
-    tys = [t.ty for t in tuples]
-    conditional = graph.add_conditional(
-        cond_input=unit_sum, inputs=tuples, parent=dfg.node
-    )
-    for i, _ty in enumerate(tys):
+    assert all(not v.ty.linear for var_row in output_vars for v in var_row)
+    conditional = graph.add_conditional(cond_input=unit_sum, inputs=[], parent=dfg.node)
+    tys = [[v.ty for v in var_row] for var_row in output_vars]
+    for i, var_row in enumerate(output_vars):
         case = graph.add_case(conditional)
-        inp = graph.add_input(output_tys=tys, parent=case).out_port(i)
-        tag = graph.add_tag(variants=tys, tag=i, inp=inp, parent=case).out_port(0)
+        graph.add_input(output_tys=[], parent=case)
+        inputs = [dfg[v.name].port for v in var_row]
+        tag = graph.add_tag(variants=tys, tag=i, inputs=inputs, parent=case).out_port(0)
         graph.add_output(inputs=[tag], parent=case)
-    return conditional.add_out_port(SumType(tys))
+    return conditional.add_out_port(SumType([row_to_type(row) for row in tys]))
 
 
 def compare_var(x: Variable, y: Variable) -> int:

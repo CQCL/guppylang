@@ -1,11 +1,11 @@
 from guppylang.decorator import guppy
-from guppylang.hugr import tys
 from guppylang.module import GuppyModule
 from guppylang.prelude.builtins import linst
 from guppylang.prelude.quantum import qubit
 
 import guppylang.prelude.quantum as quantum
 from guppylang.prelude.quantum import h, cx, measure_return, measure, t
+from guppylang.tys.ty import NoneType
 
 
 def test_id(validate):
@@ -235,7 +235,7 @@ def test_for_nonlinear_break(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy.type(module, tys.TupleType(inner=[]))
+    @guppy.type(module, NoneType().to_hugr())
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
@@ -248,7 +248,7 @@ def test_for_nonlinear_break(validate):
         @guppy.declare(module)
         def __end__(self: "MyIter") -> None: ...
 
-    @guppy.type(module, tys.TupleType(inner=[]))
+    @guppy.type(module, NoneType().to_hugr())
     class MyType:
         """Type that produces the iterator above."""
 

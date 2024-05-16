@@ -5,6 +5,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, TypeVar
 
+from hugr.serialization import ops, tys
+
 from guppylang.ast_util import has_empty_body
 from guppylang.definition.common import DefId
 from guppylang.definition.custom import (
@@ -21,8 +23,7 @@ from guppylang.definition.parameter import TypeVarDef
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
-from guppylang.hugr import ops, tys
-from guppylang.hugr.hugr import Hugr
+from guppylang.hugr_builder.hugr import Hugr
 from guppylang.module import GuppyModule, PyFunc
 
 FuncDefDecorator = Callable[[PyFunc], RawFunctionDef]

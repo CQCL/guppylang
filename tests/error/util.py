@@ -1,10 +1,10 @@
 import importlib.util
 import pathlib
 import pytest
+from hugr.serialization import tys
+from hugr.serialization.tys import TypeBound
 
 from guppylang.error import GuppyError
-from guppylang.hugr import tys
-from guppylang.hugr.tys import TypeBound
 from guppylang.module import GuppyModule
 
 import guppylang.decorator as decorator
@@ -29,7 +29,7 @@ util = GuppyModule("test")
 
 
 @decorator.guppy.type(
-    util, tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable)
+    util, tys.Type(tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable))
 )
 class NonBool:
     pass

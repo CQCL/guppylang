@@ -6,17 +6,19 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 import networkx as nx  # type: ignore[import-untyped]
+from hugr.serialization import SerialHugr, ops, tys
+from hugr.serialization import serial_hugr as raw
+from hugr.serialization.ops import OpType
 
-import guppylang.hugr.ops as ops
-import guppylang.hugr.raw as raw
-from guppylang.hugr import val
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     FunctionType,
     SumType,
     TupleType,
     Type,
+    TypeRow,
     row_to_type,
+    rows_to_hugr,
     type_to_row,
 )
 
@@ -68,6 +70,21 @@ class OutPortCF(OutPort):
     """A control-flow output port."""
 
 
+class DummyOp(OpType):
+    """A dummy Hugr op that is replaced with a call to a dummy function declaration
+    during serialisation.
+
+    This is a placeholder for ops that aren't yet available in Hugr.
+    """
+
+    root: str  # type: ignore[assignment]
+
+    @property
+    def name(self) -> str:
+        """The name of the dummy op."""
+        return self.root
+
+
 Edge = tuple[OutPort, InPort]
 
 TypeList = list[Type]
@@ -81,7 +98,7 @@ class Node(ABC):
     """
 
     idx: NodeIdx
-    op: ops.BaseOp
+    op: ops.OpType
     parent: Optional["Node"]
     meta_data: dict[str, Any]
 
@@ -103,8 +120,7 @@ class Node(ABC):
     def out_port(self, offset: PortOffset | None) -> OutPort:
         """Returns the output port at the given offset."""
 
-    @abstractmethod
-    def update_op(self) -> None:
+    def update_op(self) -> None:  # noqa: B027
         """Updates the op type associated with this node with additional information.
 
         This should be called before serialisation.
@@ -180,9 +196,15 @@ class VNode(Node):
         Feeds type information from the in- and out-ports to the operation class to
         update signature information. This function must be called before serialisation.
         """
-        in_types = [t.to_hugr() for t in self.in_port_types]
-        out_types = [t.to_hugr() for t in self.out_port_types]
-        self.op.insert_port_types(in_types, out_types)
+        # We can't call `to_hugr()` on polymorphic function types, so we have to skip
+        # ops that have connected `Function` edges.
+        has_poly_func_edge = isinstance(
+            self.op.root, ops.FuncDecl | ops.FuncDefn | ops.Call | ops.LoadFunction
+        )
+        if isinstance(self.op.root, ops.BaseOp) and not has_poly_func_edge:
+            in_types = [t.to_hugr() for t in self.in_port_types]
+            out_types = [t.to_hugr() for t in self.out_port_types]
+            self.op.root.insert_port_types(in_types, out_types)
         super().update_op()
 
 
@@ -243,11 +265,12 @@ class DFContainingNode(Node, ABC):
         """
         assert self.input_child is not None
         assert self.output_child is not None
+        assert isinstance(self.op.root, ops.BaseOp)
         # Input and output node may have extra order edges connected, so we filter
         # `None`s here
         ins = [ty.to_hugr() for ty in self.input_child.out_port_types]
         outs = [ty.to_hugr() for ty in self.output_child.in_port_types]
-        self.op.insert_child_dfg_signature(inputs=ins, outputs=outs)
+        self.op.root.insert_child_dfg_signature(inputs=ins, outputs=outs)
         super().update_op()
 
 
@@ -261,6 +284,8 @@ class BlockNode(DFContainingNode, CFNode):
 
 OrderEdge = tuple["Node", "Node"]
 ORDER_EDGE_KEY = (-1, -1)
+
+UNDEFINED: ops.NodeID = -1
 
 
 class Hugr:
@@ -279,7 +304,9 @@ class Hugr:
         self._graph = nx.MultiDiGraph()
         self._children = {-1: []}
         self.root = self.add_node(
-            op=ops.Module(), meta_data={"name": name}, parent=None
+            op=ops.OpType(ops.Module(parent=UNDEFINED)),
+            meta_data={"name": name},
+            parent=None,
         )
 
     @contextmanager
@@ -301,7 +328,7 @@ class Hugr:
 
     def add_node(
         self,
-        op: ops.BaseOp,
+        op: ops.OpType,
         input_types: TypeList | None = None,
         output_types: TypeList | None = None,
         parent: Node | None = None,
@@ -354,11 +381,11 @@ class Hugr:
         return self.root
 
     def add_constant(
-        self, value: val.Value, ty: Type, parent: Node | None = None
+        self, value: ops.Value, ty: Type, parent: Node | None = None
     ) -> VNode:
         """Adds a constant node holding a given value to the graph."""
         return self.add_node(
-            ops.Const(value=value, typ=ty.to_hugr()), [], [ty], parent, None
+            ops.OpType(ops.Const(v=value, parent=UNDEFINED)), [], [ty], parent, None
         )
 
     def add_input(
@@ -366,7 +393,9 @@ class Hugr:
     ) -> VNode:
         """Adds an `Input` node to the graph."""
         parent = parent or self._default_parent
-        node = self.add_node(ops.Input(), [], output_tys, parent)
+        node = self.add_node(
+            ops.OpType(ops.Input(parent=UNDEFINED)), [], output_tys, parent
+        )
         if isinstance(parent, DFContainingNode):
             parent.input_child = node
         return node
@@ -387,7 +416,9 @@ class Hugr:
     ) -> VNode:
         """Adds an `Output` node to the graph."""
         parent = parent or self._default_parent
-        node = self.add_node(ops.Output(), input_tys, [], parent, inputs)
+        node = self.add_node(
+            ops.OpType(ops.Output(parent=UNDEFINED)), input_tys, [], parent, inputs
+        )
         if isinstance(parent, DFContainingNode):
             parent.output_child = node
         return node
@@ -396,7 +427,7 @@ class Hugr:
         """Adds a `Block` node to the graph."""
         node = BlockNode(
             idx=self._graph.number_of_nodes(),
-            op=ops.DataflowBlock(),
+            op=ops.OpType(ops.DataflowBlock(parent=UNDEFINED, sum_rows=[])),
             parent=parent,
             meta_data={},
         )
@@ -410,7 +441,7 @@ class Hugr:
         outputs = [ty.to_hugr() for ty in output_tys]
         node = CFNode(
             idx=self._graph.number_of_nodes(),
-            op=ops.ExitBlock(cfg_outputs=outputs),
+            op=ops.OpType(ops.ExitBlock(cfg_outputs=outputs, parent=UNDEFINED)),
             parent=parent,
             meta_data={},
         )
@@ -419,15 +450,19 @@ class Hugr:
 
     def add_dfg(self, parent: Node) -> DFContainingVNode:
         """Adds a nested dataflow `DFG` node to the graph."""
-        return self._add_dfg_node(ops.DFG(), [], [], parent)
+        return self._add_dfg_node(ops.OpType(ops.DFG(parent=UNDEFINED)), [], [], parent)
 
     def add_case(self, parent: Node) -> DFContainingVNode:
         """Adds a `Case` node to the graph."""
-        return self._add_dfg_node(ops.Case(), [], [], parent)
+        return self._add_dfg_node(
+            ops.OpType(ops.Case(parent=UNDEFINED)), [], [], parent
+        )
 
     def add_cfg(self, parent: Node, inputs: list[OutPortV]) -> VNode:
         """Adds a nested control-flow `CFG` node to the graph."""
-        return self.add_node(ops.CFG(), [], [], parent, inputs)
+        return self.add_node(
+            ops.OpType(ops.CFG(parent=UNDEFINED)), [], [], parent, inputs
+        )
 
     def add_conditional(
         self,
@@ -437,20 +472,30 @@ class Hugr:
     ) -> VNode:
         """Adds a `Conditional` node to the graph."""
         inputs = [cond_input, *inputs]
-        return self.add_node(ops.Conditional(), None, None, parent, inputs)
+        return self.add_node(
+            ops.OpType(ops.Conditional(sum_rows=[], parent=UNDEFINED)),
+            None,
+            None,
+            parent,
+            inputs,
+        )
 
     def add_tail_loop(
         self, inputs: list[OutPortV], parent: Node | None = None
     ) -> DFContainingVNode:
         """Adds a `TailLoop` node to the graph."""
-        return self._add_dfg_node(ops.TailLoop(), None, None, parent, inputs)
+        return self._add_dfg_node(
+            ops.OpType(ops.TailLoop(parent=UNDEFINED)), None, None, parent, inputs
+        )
 
     def add_make_tuple(
         self, inputs: list[OutPortV], parent: Node | None = None
     ) -> VNode:
         """Adds a `MakeTuple` node to the graph."""
         ty = TupleType([port.ty for port in inputs])
-        return self.add_node(ops.MakeTuple(), None, [ty], parent, inputs)
+        return self.add_node(
+            ops.OpType(ops.MakeTuple(parent=UNDEFINED)), None, [ty], parent, inputs
+        )
 
     def add_unpack_tuple(
         self, input_tuple: OutPortV, parent: Node | None = None
@@ -458,7 +503,7 @@ class Hugr:
         """Adds an `UnpackTuple` node to the graph."""
         assert isinstance(input_tuple.ty, TupleType)
         return self.add_node(
-            ops.UnpackTuple(),
+            ops.OpType(ops.UnpackTuple(parent=UNDEFINED)),
             None,
             list(input_tuple.ty.element_types),
             parent,
@@ -466,13 +511,22 @@ class Hugr:
         )
 
     def add_tag(
-        self, variants: TypeList, tag: int, inp: OutPortV, parent: Node | None = None
+        self,
+        variants: Sequence[TypeRow],
+        tag: int,
+        inputs: list[OutPortV],
+        parent: Node | None = None,
     ) -> VNode:
         """Adds a `Tag` node to the graph."""
-        types = [ty.to_hugr() for ty in variants]
-        assert inp.ty == variants[tag]
+        assert all(inp.ty == ty for inp, ty in zip(inputs, variants[tag]))
+        hugr_variants = rows_to_hugr(variants)
+        out_ty = SumType([row_to_type(row) for row in variants])
         return self.add_node(
-            ops.Tag(tag=tag, variants=types), None, [SumType(variants)], parent, [inp]
+            ops.OpType(ops.Tag(tag=tag, variants=hugr_variants, parent=UNDEFINED)),
+            None,
+            [out_ty],
+            parent,
+            inputs,
         )
 
     def add_load_constant(
@@ -480,23 +534,50 @@ class Hugr:
     ) -> VNode:
         """Adds a `LoadConstant` node to the graph."""
         return self.add_node(
-            ops.LoadConstant(datatype=const_port.ty.to_hugr()),
+            ops.OpType(
+                ops.LoadConstant(datatype=const_port.ty.to_hugr(), parent=UNDEFINED)
+            ),
             None,
             [const_port.ty],
             parent,
             [const_port],
         )
 
+    def add_load_function(
+        self, def_port: OutPortV, inst: Inst, parent: Node | None = None
+    ) -> VNode:
+        """Adds a `LoadFunction` node to the graph."""
+        assert isinstance(def_port.ty, FunctionType)
+        assert len(def_port.ty.params) == len(inst)
+        instantiation = def_port.ty.instantiate(inst)
+        op = ops.LoadFunction(
+            func_sig=def_port.ty.to_hugr_poly(),
+            type_args=[arg.to_hugr() for arg in inst],
+            signature=tys.FunctionType(input=[], output=[instantiation.to_hugr()]),
+            parent=UNDEFINED,
+        )
+        return self.add_node(ops.OpType(op), None, [instantiation], parent, [def_port])
+
     def add_call(
-        self, def_port: OutPortV, args: list[OutPortV], parent: Node | None = None
+        self,
+        def_port: OutPortV,
+        args: list[OutPortV],
+        inst: Inst,
+        parent: Node | None = None,
     ) -> VNode:
         """Adds a `Call` node to the graph."""
         assert isinstance(def_port.ty, FunctionType)
-
+        instantiation = def_port.ty.instantiate(inst)
+        op = ops.Call(
+            func_sig=def_port.ty.to_hugr_poly(),
+            type_args=[arg.to_hugr() for arg in inst],
+            instantiation=instantiation.to_hugr().root,
+            parent=UNDEFINED,
+        )
         return self.add_node(
-            ops.Call(),
+            ops.OpType(op),
             None,
-            list(type_to_row(def_port.ty.output)),
+            list(type_to_row(instantiation.output)),
             parent,
             [*args, def_port],
         )
@@ -508,7 +589,7 @@ class Hugr:
         assert isinstance(fun_port.ty, FunctionType)
 
         return self.add_node(
-            ops.CallIndirect(),
+            ops.OpType(ops.CallIndirect(parent=UNDEFINED)),
             None,
             list(type_to_row(fun_port.ty.output)),
             parent,
@@ -530,37 +611,20 @@ class Hugr:
             else None,
         )
         return self.add_node(
-            ops.DummyOp(name="partial"), None, [new_ty], parent, [*inputs, def_port]
-        )
-
-    def add_type_apply(
-        self, func_port: OutPortV, args: Inst, parent: Node | None = None
-    ) -> VNode:
-        """Adds a `TypeApply` node to the graph."""
-        assert isinstance(func_port.ty, FunctionType)
-        assert len(func_port.ty.params) == len(args)
-        result_ty = func_port.ty.instantiate(args)
-        ta = ops.TypeApplication(
-            input=func_port.ty.to_hugr(),
-            args=[arg.to_hugr() for arg in args],
-            output=result_ty.to_hugr(),
-        )
-        return self.add_node(
-            ops.TypeApply(ta=ta),
-            inputs=[func_port],
-            output_types=[result_ty],
-            parent=parent,
+            DummyOp("partial"), None, [new_ty], parent, [*inputs, def_port]
         )
 
     def add_def(
         self, fun_ty: FunctionType, parent: Node | None, name: str
     ) -> DFContainingVNode:
-        """Adds a `Def` node to the graph."""
-        return self._add_dfg_node(ops.FuncDefn(name=name), [], [fun_ty], parent, None)
+        """Adds a `FucnDefn` node to the graph."""
+        op = ops.FuncDefn(name=name, signature=fun_ty.to_hugr_poly(), parent=UNDEFINED)
+        return self._add_dfg_node(ops.OpType(op), [], [fun_ty], parent, None)
 
     def add_declare(self, fun_ty: FunctionType, parent: Node, name: str) -> VNode:
-        """Adds a `Declare` node to the graph."""
-        return self.add_node(ops.FuncDecl(name=name), [], [fun_ty], parent, None)
+        """Adds a `FuncDecl` node to the graph."""
+        op = ops.FuncDecl(name=name, signature=fun_ty.to_hugr_poly(), parent=UNDEFINED)
+        return self.add_node(ops.OpType(op), [], [fun_ty], parent, None)
 
     def add_edge(self, src_port: OutPort, tgt_port: InPort) -> None:
         """Adds an edge between two ports."""
@@ -664,7 +728,7 @@ class Hugr:
             raise ValueError("Dummy node removal requires a module root node")
         used_names: dict[str, int] = {}
         for n in list(self.nodes()):
-            if isinstance(n, VNode) and isinstance(n.op, ops.DummyOp):
+            if isinstance(n, VNode) and isinstance(n.op, DummyOp):
                 name = n.op.name
                 fun_ty = FunctionType(
                     list(n.in_port_types), row_to_type(n.out_port_types)
@@ -675,46 +739,27 @@ class Hugr:
                 else:
                     used_names[name] = 0
                 decl = self.add_declare(fun_ty, self.root, name)
-                n.op = ops.Call()
+                n.op = ops.OpType(
+                    ops.Call(
+                        func_sig=fun_ty.to_hugr_poly(),
+                        type_args=[],
+                        instantiation=fun_ty.to_hugr().root,
+                        parent=UNDEFINED,
+                    )
+                )
                 self.add_edge(decl.out_port(0), n.add_in_port(fun_ty))
         return self
 
     def insert_order_edges(self) -> "Hugr":
-        """Adds state edges to all dataflow ops without inputs outputs.
+        """Adds order edges to the source and target inter-graph edges.
 
-        We add state edges connecting them to the input or output node of the DFG.
-        This action must be performed before serialisation.
+        This ensures that the source is executed before the target. This action must be
+        performed before serialisation.
         """
-        for n in self.nodes():
-            if isinstance(n.op, ops.DataflowOp) and isinstance(
-                n.parent, DFContainingNode
-            ):
-                if all(
-                    next(self.in_edges(p), None) is None for p in n.in_ports
-                ) and not isinstance(n.op, ops.Input):
-                    assert n.parent.input_child is not None
-                    self.add_order_edge(n.parent.input_child, n)
-                if all(
-                    next(self.out_edges(p), None) is None for p in n.out_ports
-                ) and not isinstance(n.op, ops.Output):
-                    assert n.parent.output_child is not None
-                    self.add_order_edge(n, n.parent.output_child)
-                # Special case: Call ops for functions without any arguments are
-                # only connected to the top-level def/declare and also need an
-                # order edge
-                if isinstance(n.op, ops.Call) and n.num_in_ports == 1:  # noqa: SIM114
-                    assert n.parent.input_child is not None
-                    self.add_order_edge(n.parent.input_child, n)
-                # Special case: Load constant ops always need an order edge
-                elif isinstance(n.op, ops.LoadConstant):
-                    assert n.parent.input_child is not None
-                    self.add_order_edge(n.parent.input_child, n)
-
-        # Also add order edges for non-local edges
         for src, tgt in list(self.edges()):
             # Exclude CF and constant edges
             if isinstance(src, OutPortCF) or isinstance(
-                src.node.op, ops.FuncDecl | ops.FuncDefn | ops.Const
+                src.node.op.root, ops.FuncDecl | ops.FuncDefn | ops.Const
             ):
                 continue
 
@@ -730,8 +775,11 @@ class Hugr:
                 self.add_order_edge(src.node, node)
         return self
 
-    def to_raw(self) -> raw.RawHugr:
+    def to_raw(self) -> SerialHugr:
         """Returns the raw representation of this HUGR for serialisation."""
+        if self.root is None:
+            raise ValueError("Serial Hugr requires a root node")
+
         self.remove_dummy_nodes()
         self.insert_order_edges()
         # Hugr requires that Input/Output nodes are the first/second children in a DFG.
@@ -746,23 +794,29 @@ class Hugr:
         indices = itertools.count()
         raw_index: dict[int, ops.NodeID] = {}
         all_nodes = self.nodes()
-        root_node = next(all_nodes)
         for n in all_nodes:
-            if isinstance(n.op, ops.Input):
-                input_nodes.append(n)
-            elif isinstance(n.op, ops.Output):
-                output_nodes.append(n)
-            elif (
-                isinstance(n.op, ops.DataflowBlock)
-                and next(self.in_edges(n.in_port(None)), None) is None
-            ):
-                entry_nodes.append(n)
-            elif isinstance(n.op, ops.ExitBlock):
-                exit_nodes.append(n)
-            else:
-                remaining_nodes.append(n)
+            if n is self.root:
+                continue
+            match n.op.root:
+                case ops.Input():
+                    input_nodes.append(n)
+                case ops.Output():
+                    output_nodes.append(n)
+                # We can detect entry BBs by looking for BBs without incoming edges
+                # since Guppy will never generate an edge pointing back to the entry.
+                # Also, Guppy errors on unreachable code, so we will never generate
+                # interior BBs without incoming edges. Hence, there are also no false
+                # positives.
+                case ops.DataflowBlock() if next(
+                    self.in_edges(n.in_port(None)), None
+                ) is None:
+                    entry_nodes.append(n)
+                case ops.ExitBlock():
+                    exit_nodes.append(n)
+                case _:
+                    remaining_nodes.append(n)
         for n in itertools.chain(
-            iter([root_node]),
+            iter([self.root]),
             iter(entry_nodes),
             iter(exit_nodes),
             iter(input_nodes),
@@ -771,13 +825,15 @@ class Hugr:
         ):
             raw_index[n.idx] = next(indices)
 
-        nodes: list[ops.OpType] = [ops.Module()] * self._graph.number_of_nodes()
+        nodes: list[ops.OpType] = [
+            ops.OpType(ops.Module(parent=UNDEFINED))
+        ] * self._graph.number_of_nodes()
         for n in self.nodes():
             idx = raw_index[n.idx]
             # Nodes without parent have themselves as parent in the serialised format
             parent = n.parent or n
             n.update_op()
-            n.op.parent = raw_index[parent.idx]
+            n.op.root.parent = raw_index[parent.idx]
             nodes[idx] = n.op
 
         edges: list[raw.Edge] = []
@@ -792,9 +848,7 @@ class Hugr:
         for src, tgt in self.order_edges():
             edges.append(((raw_index[src.idx], None), (raw_index[tgt.idx], None)))
 
-        if self.root is None:
-            raise ValueError("Raw Hugr requires a root node")
-        return raw.RawHugr(nodes=nodes, edges=edges)
+        return SerialHugr(nodes=nodes, edges=edges)
 
     def serialize(self) -> str:
         """Serialize this Hugr in JSON format."""

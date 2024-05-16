@@ -1,10 +1,12 @@
+from hugr.serialization import tys
+
 from guppylang.decorator import guppy
-from guppylang.hugr import tys
 from guppylang.module import GuppyModule
 from guppylang.prelude.builtins import linst
 from guppylang.prelude.quantum import qubit, h, cx
 
 import guppylang.prelude.quantum as quantum
+from guppylang.tys.ty import NoneType
 from tests.util import compile_guppy
 
 
@@ -185,7 +187,7 @@ def test_linear_next_nonlinear_iter(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
-    @guppy.type(module, tys.TupleType(inner=[]))
+    @guppy.type(module, NoneType().to_hugr())
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
@@ -198,7 +200,7 @@ def test_linear_next_nonlinear_iter(validate):
         @guppy.declare(module)
         def __end__(self: "MyIter") -> None: ...
 
-    @guppy.type(module, tys.TupleType(inner=[]))
+    @guppy.type(module, NoneType().to_hugr())
     class MyType:
         """Type that produces the iterator above."""
 
@@ -219,7 +221,11 @@ def test_nonlinear_next_linear_iter(validate):
 
     @guppy.type(
         module,
-        tys.Opaque(extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Any),
+        tys.Type(
+            tys.Opaque(
+                extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Any
+            )
+        ),
         linear=True,
     )
     class MyIter:
@@ -234,7 +240,7 @@ def test_nonlinear_next_linear_iter(validate):
         @guppy.declare(module)
         def __end__(self: "MyIter") -> None: ...
 
-    @guppy.type(module, tys.TupleType(inner=[]))
+    @guppy.type(module, NoneType().to_hugr())
     class MyType:
         """Type that produces the iterator above."""
 

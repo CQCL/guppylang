@@ -22,7 +22,7 @@ from guppylang.definition.function import RawFunctionDef
 from guppylang.definition.parameter import TypeVarDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, pretty_errors
-from guppylang.hugr.hugr import Hugr
+from guppylang.hugr_builder.hugr import Hugr
 
 PyFunc = Callable[..., Any]
 PyFuncDefOrDecl = tuple[bool, PyFunc]

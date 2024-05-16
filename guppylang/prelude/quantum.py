@@ -2,9 +2,11 @@
 
 # mypy: disable-error-code="empty-body, misc"
 
+from hugr.serialization import ops, tys
+from hugr.serialization.tys import TypeBound
+
 from guppylang.decorator import guppy
-from guppylang.hugr import ops, tys
-from guppylang.hugr.tys import TypeBound
+from guppylang.hugr_builder.hugr import UNDEFINED
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal import MeasureCompiler
 
@@ -13,12 +15,16 @@ quantum = GuppyModule("quantum")
 
 def quantum_op(op_name: str) -> ops.OpType:
     """Utility method to create Hugr quantum ops."""
-    return ops.CustomOp(extension="quantum.tket2", op_name=op_name, args=[])
+    return ops.OpType(
+        ops.CustomOp(
+            extension="quantum.tket2", op_name=op_name, args=[], parent=UNDEFINED
+        )
+    )
 
 
 @guppy.type(
     quantum,
-    tys.Opaque(extension="prelude", id="qubit", args=[], bound=TypeBound.Any),
+    tys.Type(tys.Opaque(extension="prelude", id="qubit", args=[], bound=TypeBound.Any)),
     linear=True,
 )
 class qubit:
