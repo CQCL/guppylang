@@ -58,6 +58,12 @@ class ConstInt(BaseModel):
     value: int
 
 
+class ConstF64(BaseModel):
+    """Hugr representation of float values."""
+
+    value: float
+
+
 def bool_value(b: bool) -> ops.Value:
     """Returns the Hugr representation of a boolean value."""
     unit = ops.Value(ops.TupleValue(vs=[]))
@@ -85,7 +91,7 @@ def float_value(f: float) -> ops.Value:
         ops.ExtensionValue(
             extensions=["arithmetic.float.types"],
             typ=hugr_float_type,
-            value=ops.CustomConst(c="ConstF64", v=f),
+            value=ops.CustomConst(c="ConstF64", v=ConstF64(value=f)),
         )
     )
 
