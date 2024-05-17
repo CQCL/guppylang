@@ -408,7 +408,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> ops.Value | None:
                         Tk2Circuit,
                     )
 
-                    hugr = json.loads(Tk2Circuit(v).to_hugr_json())
+                    hugr = json.loads(Tk2Circuit(v).to_hugr_json())  # type: ignore[attr-defined]
                     return ops.Value(ops.FunctionValue(hugr=hugr))
             except ImportError:
                 pass
