@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.19.0"
-hugr = "0.4.0-alpha.1"
+hugr = "0.4.0"
 lazy_static = "1.4.0"
 serde_json = "1.0.111"
-tket2 = { git = "https://github.com/CQCL/tket2.git", rev = "9f0de7bdecf8958f2ec3b42cf49ce79c4da605c9" }
+tket2 = { git = "https://github.com/CQCL/tket2.git", rev = "8aff57a65d42aae631c89ee86f6f1fc7bb1b4da8" }

@@ -306,9 +306,9 @@ dependencies = [
 
 [[package]]
 name = "hugr"
-version = "0.4.0-alpha.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fb1716e110d2d9d0ca23f79812e90486098ffee9aff5eac0a16346c23a609cc"
+checksum = "e8e15eaffd64f1cceac13429e5ceaf20017691e647cc56b8b7c53d73ad9f8714"
 dependencies = [
  "bitvec",
  "cgmath",
@@ -318,7 +318,7 @@ dependencies = [
  "downcast-rs",
  "enum_dispatch",
  "html-escape",
- "itertools",
+ "itertools 0.12.0",
  "lazy_static",
  "num-rational",
  "paste",
@@ -385,6 +385,15 @@ name = "itertools"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25db6b064527c5d482d0423354fcd07a89a2dfe07b67892e62411946db7f07b0"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -897,7 +906,7 @@ dependencies = [
 [[package]]
 name = "tket2"
 version = "0.0.0-alpha.1"
-source = "git+https://github.com/CQCL/tket2.git?rev=9f0de7bdecf8958f2ec3b42cf49ce79c4da605c9#9f0de7bdecf8958f2ec3b42cf49ce79c4da605c9"
+source = "git+https://github.com/CQCL/tket2.git?rev=8aff57a65d42aae631c89ee86f6f1fc7bb1b4da8#8aff57a65d42aae631c89ee86f6f1fc7bb1b4da8"
 dependencies = [
  "bytemuck",
  "cgmath",
@@ -909,7 +918,7 @@ dependencies = [
  "downcast-rs",
  "fxhash",
  "hugr",
- "itertools",
+ "itertools 0.13.0",
  "lazy_static",
  "num-rational",
  "petgraph",
