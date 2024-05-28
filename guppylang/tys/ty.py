@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, TypeAlias, cast
+from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
 from hugr.serialization import tys
 from hugr.serialization.tys import TypeBound
@@ -224,6 +225,69 @@ class NoneType(TypeBase):
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         return TupleType([]).to_hugr()
+
+    def visit(self, visitor: Visitor) -> None:
+        """Accepts a visitor on this type."""
+        visitor.visit(self)
+
+    def transform(self, transformer: Transformer) -> "Type":
+        """Accepts a transformer on this type."""
+        return transformer.transform(self) or self
+
+
+@dataclass(frozen=True)
+class NumericType(TypeBase):
+    """Numeric types like `int` and `float`."""
+
+    kind: "Kind"
+
+    class Kind(Enum):
+        """The different kinds of numeric types."""
+
+        Bool = "bool"
+        Nat = "nat"
+        Int = "int"
+        Float = "float"
+
+    INT_WIDTH: ClassVar[int] = 6
+
+    @property
+    def linear(self) -> bool:
+        """Whether this type should be treated linearly."""
+        return False
+
+    def to_hugr(self) -> tys.Type:
+        """Computes the Hugr representation of the type."""
+        match self.kind:
+            case NumericType.Kind.Bool:
+                return SumType([NoneType(), NoneType()]).to_hugr()
+            case NumericType.Kind.Nat | NumericType.Kind.Int:
+                return tys.Type(
+                    tys.Opaque(
+                        extension="arithmetic.int.types",
+                        id="int",
+                        args=[tys.TypeArg(tys.BoundedNatArg(n=NumericType.INT_WIDTH))],
+                        bound=tys.TypeBound.Eq,
+                    )
+                )
+            case NumericType.Kind.Float:
+                return tys.Type(
+                    tys.Opaque(
+                        extension="arithmetic.float.types",
+                        id="float64",
+                        args=[],
+                        bound=tys.TypeBound.Copyable,
+                    )
+                )
+
+    @property
+    def hugr_bound(self) -> tys.TypeBound:
+        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
+        match self.kind:
+            case NumericType.Kind.Float:
+                return tys.TypeBound.Copyable
+            case _:
+                return tys.TypeBound.Eq
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -493,7 +557,9 @@ ParametrizedType: TypeAlias = (
 #: This might become obsolete in case the @sealed decorator is added:
 #:   * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
 #:   * https://github.com/johnthagen/sealed-typing-pep
-Type: TypeAlias = BoundTypeVar | ExistentialTypeVar | NoneType | ParametrizedType
+Type: TypeAlias = (
+    BoundTypeVar | ExistentialTypeVar | NumericType | NoneType | ParametrizedType
+)
 
 #: An immutable row of Guppy types.
 TypeRow: TypeAlias = Sequence[Type]
@@ -544,6 +610,8 @@ def unify(s: Type, t: Type, subst: "Subst | None") -> "Subst | None":
         case s, ExistentialTypeVar() as t:
             return _unify_var(t, s, subst)
         case BoundTypeVar(idx=s_idx), BoundTypeVar(idx=t_idx) if s_idx == t_idx:
+            return subst
+        case NumericType(kind=s_kind), NumericType(kind=t_kind) if s_kind == t_kind:
             return subst
         case NoneType(), NoneType():
             return subst

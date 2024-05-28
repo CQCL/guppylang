@@ -12,36 +12,13 @@ from guppylang.definition.custom import (
     CustomFunctionDef,
     DefaultCallChecker,
 )
-from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.hugr_builder.hugr import UNDEFINED, OutPortV
 from guppylang.nodes import GlobalCall
 from guppylang.tys.builtin import bool_type, list_type
 from guppylang.tys.subst import Subst
-from guppylang.tys.ty import FunctionType, OpaqueType, Type, unify
-
-INT_WIDTH = 6  # 2^6 = 64 bit
-
-
-hugr_int_type = tys.Type(
-    tys.Opaque(
-        extension="arithmetic.int.types",
-        id="int",
-        args=[tys.TypeArg(tys.BoundedNatArg(n=INT_WIDTH))],
-        bound=tys.TypeBound.Eq,
-    )
-)
-
-
-hugr_float_type = tys.Type(
-    tys.Opaque(
-        extension="arithmetic.float.types",
-        id="float64",
-        args=[],
-        bound=tys.TypeBound.Copyable,
-    )
-)
+from guppylang.tys.ty import FunctionType, NumericType, Type, unify
 
 
 class ConstInt(BaseModel):
@@ -77,9 +54,9 @@ def int_value(i: int) -> ops.Value:
     return ops.Value(
         ops.ExtensionValue(
             extensions=["arithmetic.int.types"],
-            typ=hugr_int_type,
+            typ=NumericType(NumericType.Kind.Nat).to_hugr(),
             value=ops.CustomConst(
-                c="ConstInt", v=ConstInt(log_width=INT_WIDTH, value=i)
+                c="ConstInt", v=ConstInt(log_width=NumericType.INT_WIDTH, value=i)
             ),
         )
     )
@@ -90,7 +67,7 @@ def float_value(f: float) -> ops.Value:
     return ops.Value(
         ops.ExtensionValue(
             extensions=["arithmetic.float.types"],
-            typ=hugr_float_type,
+            typ=NumericType(NumericType.Kind.Float).to_hugr(),
             value=ops.CustomConst(c="ConstF64", v=ConstF64(value=f)),
         )
     )
@@ -124,7 +101,7 @@ def int_op(
         ops.CustomOp(
             extension=ext,
             op_name=op_name,
-            args=num_params * [tys.TypeArg(tys.BoundedNatArg(n=INT_WIDTH))],
+            args=num_params * [tys.TypeArg(tys.BoundedNatArg(n=NumericType.INT_WIDTH))],
             parent=UNDEFINED,
         )
     )
@@ -145,16 +122,12 @@ class CoercingChecker(DefaultCallChecker):
 
         for i in range(len(args)):
             args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
-            if isinstance(ty, OpaqueType) and ty.defn == self.ctx.globals["int"]:
+            if isinstance(ty, NumericType) and ty.kind == NumericType.Kind.Int:
                 call = with_loc(
                     self.node,
                     GlobalCall(def_id=Int.__float__.id, args=[args[i]], type_args=[]),
                 )
-                float_defn = self.ctx.globals["float"]
-                assert isinstance(float_defn, TypeDef)
-                args[i] = with_type(
-                    float_defn.check_instantiate([], self.ctx.globals), call
-                )
+                args[i] = with_type(NumericType(NumericType.Kind.Float), call)
         return super().synthesize(args)
 
 

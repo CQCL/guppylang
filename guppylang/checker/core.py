@@ -14,8 +14,11 @@ from guppylang.definition.value import CallableDef
 from guppylang.tys.builtin import (
     bool_type_def,
     callable_type_def,
+    float_type_def,
+    int_type_def,
     linst_type_def,
     list_type_def,
+    nat_type_def,
     none_type_def,
     tuple_type_def,
 )
@@ -24,6 +27,7 @@ from guppylang.tys.ty import (
     ExistentialTypeVar,
     FunctionType,
     NoneType,
+    NumericType,
     OpaqueType,
     StructType,
     SumType,
@@ -67,6 +71,9 @@ class Globals:
             tuple_type_def,
             none_type_def,
             bool_type_def,
+            nat_type_def,
+            int_type_def,
+            float_type_def,
             list_type_def,
             linst_type_def,
         ]
@@ -85,6 +92,18 @@ class Globals:
                 pass
             case BoundTypeVar() | ExistentialTypeVar() | SumType():
                 return None
+            case NumericType(kind):
+                match kind:
+                    case NumericType.Kind.Bool:
+                        type_defn = bool_type_def
+                    case NumericType.Kind.Nat:
+                        type_defn = nat_type_def
+                    case NumericType.Kind.Int:
+                        type_defn = int_type_def
+                    case NumericType.Kind.Float:
+                        type_defn = float_type_def
+                    case kind:
+                        return assert_never(kind)
             case FunctionType():
                 type_defn = callable_type_def
             case OpaqueType() as ty:

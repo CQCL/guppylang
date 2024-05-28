@@ -10,7 +10,14 @@ from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.param import TypeParam
-from guppylang.tys.ty import FunctionType, NoneType, OpaqueType, TupleType, Type
+from guppylang.tys.ty import (
+    FunctionType,
+    NoneType,
+    NumericType,
+    OpaqueType,
+    TupleType,
+    Type,
+)
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -80,6 +87,23 @@ class _NoneTypeDef(TypeDef):
 
 
 @dataclass(frozen=True)
+class _NumericTypeDef(TypeDef):
+    """Type definition associated with the builtin `None` type.
+
+    Any impls on None can be registered with this definition.
+    """
+
+    ty: NumericType
+
+    def check_instantiate(
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+    ) -> NumericType:
+        if args:
+            raise GuppyError(f"Type `{self.name}` is not parameterized", loc)
+        return self.ty
+
+
+@dataclass(frozen=True)
 class _ListTypeDef(OpaqueTypeDef):
     """Type definition associated with the builtin `list` type.
 
@@ -115,13 +139,17 @@ def _list_to_hugr(args: Sequence[Argument]) -> tys.Type:
 callable_type_def = _CallableTypeDef(DefId.fresh(), None)
 tuple_type_def = _TupleTypeDef(DefId.fresh(), None)
 none_type_def = _NoneTypeDef(DefId.fresh(), None)
-bool_type_def = OpaqueTypeDef(
-    id=DefId.fresh(),
-    name="bool",
-    defined_at=None,
-    params=[],
-    always_linear=False,
-    to_hugr=lambda _: tys.Type(tys.SumType(tys.UnitSum(size=2))),
+bool_type_def = _NumericTypeDef(
+    DefId.fresh(), "bool", None, NumericType(NumericType.Kind.Bool)
+)
+nat_type_def = _NumericTypeDef(
+    DefId.fresh(), "nat", None, NumericType(NumericType.Kind.Nat)
+)
+int_type_def = _NumericTypeDef(
+    DefId.fresh(), "int", None, NumericType(NumericType.Kind.Int)
+)
+float_type_def = _NumericTypeDef(
+    DefId.fresh(), "float", None, NumericType(NumericType.Kind.Float)
 )
 linst_type_def = OpaqueTypeDef(
     id=DefId.fresh(),
@@ -141,8 +169,8 @@ list_type_def = _ListTypeDef(
 )
 
 
-def bool_type() -> OpaqueType:
-    return OpaqueType([], bool_type_def)
+def bool_type() -> NumericType:
+    return NumericType(NumericType.Kind.Bool)
 
 
 def list_type(element_ty: Type) -> OpaqueType:
@@ -154,7 +182,7 @@ def linst_type(element_ty: Type) -> OpaqueType:
 
 
 def is_bool_type(ty: Type) -> bool:
-    return isinstance(ty, OpaqueType) and ty.defn == bool_type_def
+    return isinstance(ty, NumericType) and ty.kind == NumericType.Kind.Bool
 
 
 def is_list_type(ty: Type) -> bool:
