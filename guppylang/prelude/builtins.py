@@ -37,7 +37,7 @@ T = guppy.type_var(builtins, "T")
 L = guppy.type_var(builtins, "L", linear=True)
 
 
-def py(_x: Any) -> Any:
+def py(*_args: Any) -> Any:
     """Function to tag compile-time evaluated Python expressions in a Guppy context.
 
     This function throws an error when execute in a Python context. It is only intended
