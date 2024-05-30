@@ -4,8 +4,8 @@ import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.prelude.builtins import py
 from guppylang.prelude.quantum import qubit, quantum
-from tests.integration.util import py
 from tests.util import compile_guppy
 
 tket2_installed = find_spec("tket2") is not None
