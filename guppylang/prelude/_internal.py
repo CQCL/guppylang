@@ -118,16 +118,12 @@ class CoercingChecker(DefaultCallChecker):
     """Function call type checker that automatically coerces arguments to float."""
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        from .builtins import Int
-
         for i in range(len(args)):
             args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
-            if isinstance(ty, NumericType) and ty.kind == NumericType.Kind.Int:
-                call = with_loc(
-                    self.node,
-                    GlobalCall(def_id=Int.__float__.id, args=[args[i]], type_args=[]),
-                )
-                args[i] = with_type(NumericType(NumericType.Kind.Float), call)
+            if isinstance(ty, NumericType) and ty.kind != NumericType.Kind.Float:
+                to_float = self.ctx.globals.get_instance_func(ty, "__float__")
+                assert to_float is not None
+                args[i], _ = to_float.synthesize_call([args[i]], self.node, self.ctx)
         return super().synthesize(args)
 
 
