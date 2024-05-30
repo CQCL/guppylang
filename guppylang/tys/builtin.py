@@ -88,9 +88,9 @@ class _NoneTypeDef(TypeDef):
 
 @dataclass(frozen=True)
 class _NumericTypeDef(TypeDef):
-    """Type definition associated with the builtin `None` type.
+    """Type definition associated with the builtin numeric types.
 
-    Any impls on None can be registered with this definition.
+    Any impls on numerics can be registered with these definitions.
     """
 
     ty: NumericType
