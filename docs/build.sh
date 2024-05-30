@@ -1,3 +1,5 @@
+#!/bin/sh
+
 mkdir build
 
 touch build/.nojekyll  # Disable jekyll to keep files starting with underscores

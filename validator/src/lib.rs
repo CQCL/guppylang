@@ -2,9 +2,9 @@ use hugr::extension::{ExtensionRegistry, PRELUDE};
 use hugr::std_extensions::arithmetic::{float_ops, float_types, int_ops, int_types};
 use hugr::std_extensions::collections;
 use hugr::std_extensions::logic;
-use tket2::extension::{TKET1_EXTENSION, TKET2_EXTENSION};
 use lazy_static::lazy_static;
 use pyo3::prelude::*;
+use tket2::extension::{TKET1_EXTENSION, TKET2_EXTENSION};
 
 lazy_static! {
     pub static ref REGISTRY: ExtensionRegistry = ExtensionRegistry::try_new([

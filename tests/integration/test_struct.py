@@ -27,7 +27,9 @@ def test_basic_defs(validate):
         x: int
 
     @guppy(module)
-    def main(a: EmptyStruct, b: OneMemberStruct, c: TwoMemberStruct, d: DocstringStruct) -> None:
+    def main(
+        a: EmptyStruct, b: OneMemberStruct, c: TwoMemberStruct, d: DocstringStruct
+    ) -> None:
         pass
 
     validate(module.compile())
@@ -94,4 +96,3 @@ def test_generic(validate):
         pass
 
     validate(module.compile())
-
