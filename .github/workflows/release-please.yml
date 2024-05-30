@@ -1,4 +1,8 @@
+# Automatic changelog and version bumping with release-please for python projects
+name: Release-please 🐍
+
 on:
+  workflow_dispatch: {}
   push:
     branches:
       - main
@@ -7,13 +11,13 @@ permissions:
   contents: write
   pull-requests: write
 
-name: release-please
-
 jobs:
   release-please:
+    name: Create release PR
     runs-on: ubuntu-latest
     steps:
-      - uses: google-github-actions/release-please-action@v4
+      - uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config-file: release-please-config.json
+            # Using a personal access token so releases created by this workflow can trigger the deployment workflow
+            token: ${{ secrets.HUGRBOT_PAT }}
+            config-file: release-please-config.json
