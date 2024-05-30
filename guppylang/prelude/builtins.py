@@ -30,17 +30,12 @@ from guppylang.tys.builtin import (
     int_type_def,
     linst_type_def,
     list_type_def,
-    nat_type_def,
 )
 
 builtins = GuppyModule("builtins", import_builtins=False)
 
 T = guppy.type_var(builtins, "T")
 L = guppy.type_var(builtins, "L", linear=True)
-
-
-# Define the nat type so scripts can import it
-nat = nat_type_def
 
 
 @guppy.extend_type(builtins, bool_type_def)

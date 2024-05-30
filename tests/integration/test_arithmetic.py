@@ -1,4 +1,3 @@
-from guppylang.prelude.builtins import nat
 from tests.util import compile_guppy
 
 
@@ -83,11 +82,3 @@ def test_shortcircuit_assign4(validate):
         return z
 
     validate(foo)
-
-
-def test_nat(validate):
-    @compile_guppy
-    def add(x: nat) -> nat:
-        return x
-
-    validate(add)

@@ -54,7 +54,7 @@ def int_value(i: int) -> ops.Value:
     return ops.Value(
         ops.ExtensionValue(
             extensions=["arithmetic.int.types"],
-            typ=NumericType(NumericType.Kind.Nat).to_hugr(),
+            typ=NumericType(NumericType.Kind.Int).to_hugr(),
             value=ops.CustomConst(
                 c="ConstInt", v=ConstInt(log_width=NumericType.INT_WIDTH, value=i)
             ),
