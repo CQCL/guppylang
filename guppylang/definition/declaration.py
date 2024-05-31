@@ -66,7 +66,7 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
         return node, ty
 
     def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledFunctionDecl":
-        """Adds a Hugr `FuncDecl` node for this funciton to the Hugr."""
+        """Adds a Hugr `FuncDecl` node for this function to the Hugr."""
         node = graph.add_declare(self.ty, parent, self.name)
         return CompiledFunctionDecl(
             self.id, self.name, self.defined_at, self.ty, self.python_func, node

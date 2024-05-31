@@ -116,8 +116,8 @@ class RawStructDef(TypeDef, ParsableDef):
                     raise GuppyError("Unexpected statement in struct", node)
 
         # Ensure that functions don't override struct fields
-        if overriden := used_field_names.intersection(used_func_names.keys()):
-            x = overriden.pop()
+        if overridden := used_field_names.intersection(used_func_names.keys()):
+            x = overridden.pop()
             raise GuppyError(
                 f"Struct `{self.name}` already contains a field named `{x}`",
                 used_func_names[x],
