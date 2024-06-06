@@ -231,9 +231,9 @@ class _Guppy:
     def extern(
         self,
         module: GuppyModule,
-        name: str,
+        symbol: str,
         ty: str,
-        symbol: str | None = None,
+        name: str | None = None,
         constant: bool = True,
     ) -> RawExternDef:
         """Adds an extern symbol to a module."""
@@ -260,7 +260,7 @@ class _Guppy:
                         node.end_col_offset = len(source_lines[info.lineno - 1])
 
         defn = RawExternDef(
-            DefId.fresh(module), name, None, symbol or name, constant, type_ast
+            DefId.fresh(module), name or symbol, None, symbol, constant, type_ast
         )
         module.register_def(defn)
         return defn

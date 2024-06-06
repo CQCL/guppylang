@@ -25,3 +25,15 @@ def test_extern_tuple(validate):
         return x + y
 
     validate(module.compile())
+
+
+def test_extern_name(validate):
+    module = GuppyModule("module")
+
+    ext = guppy.extern(module, "1$weird%symbol", ty="int", name="ext")
+
+    @guppy(module)
+    def main() -> int:
+        return ext
+
+    validate(module.compile())
