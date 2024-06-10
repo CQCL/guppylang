@@ -1,3 +1,4 @@
+import ast
 import inspect
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -7,7 +8,7 @@ from typing import Any, TypeVar
 
 from hugr.serialization import ops, tys
 
-from guppylang.ast_util import has_empty_body
+from guppylang.ast_util import annotate_location, has_empty_body
 from guppylang.definition.common import DefId
 from guppylang.definition.custom import (
     CustomCallChecker,
@@ -18,6 +19,7 @@ from guppylang.definition.custom import (
     RawCustomFunctionDef,
 )
 from guppylang.definition.declaration import RawFunctionDecl
+from guppylang.definition.extern import RawExternDef
 from guppylang.definition.function import RawFunctionDef, parse_py_func
 from guppylang.definition.parameter import TypeVarDef
 from guppylang.definition.struct import RawStructDef
@@ -225,6 +227,43 @@ class _Guppy:
             return module.register_func_decl(f)
 
         return dec
+
+    def extern(
+        self,
+        module: GuppyModule,
+        name: str,
+        ty: str,
+        symbol: str | None = None,
+        constant: bool = True,
+    ) -> RawExternDef:
+        """Adds an extern symbol to a module."""
+        try:
+            type_ast = ast.parse(ty, mode="eval").body
+        except SyntaxError:
+            err = f"Not a valid Guppy type: `{ty}`"
+            raise GuppyError(err) from None
+
+        # Try to annotate the type AST with source information. This requires us to
+        # inspect the stack frame of the caller
+        if frame := inspect.currentframe():  # noqa: SIM102
+            if caller_frame := frame.f_back:  # noqa: SIM102
+                if caller_module := inspect.getmodule(caller_frame):
+                    info = inspect.getframeinfo(caller_frame)
+                    source_lines, _ = inspect.getsourcelines(caller_module)
+                    source = "".join(source_lines)
+                    annotate_location(type_ast, source, info.filename, 0)
+                    # Modify the AST so that all sub-nodes span the entire line. We
+                    # can't give a better location since we don't know the column
+                    # offset of the `ty` argument
+                    for node in [type_ast, *ast.walk(type_ast)]:
+                        node.lineno, node.col_offset = info.lineno, 0
+                        node.end_col_offset = len(source_lines[info.lineno - 1])
+
+        defn = RawExternDef(
+            DefId.fresh(module), name, None, symbol or name, constant, type_ast
+        )
+        module.register_def(defn)
+        return defn
 
     def load(self, m: ModuleType | GuppyModule) -> None:
         caller = self._get_python_caller()
