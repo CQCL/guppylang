@@ -66,9 +66,8 @@ class ConstF64(BaseModel):
 
 def bool_value(b: bool) -> ops.Value:
     """Returns the Hugr representation of a boolean value."""
-    unit = ops.Value(ops.TupleValue(vs=[]))
     return ops.Value(
-        ops.SumValue(tag=int(b), typ=tys.SumType(tys.UnitSum(size=2)), vs=[unit])
+        ops.SumValue(tag=int(b), typ=tys.SumType(tys.UnitSum(size=2)), vs=[])
     )
 
 
