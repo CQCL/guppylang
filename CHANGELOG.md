@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/CQCL/guppylang/compare/v0.5.0...v0.5.1) (2024-06-12)
+
+
+### Bug Fixes
+
+* Serialisation of bool values ([#239](https://github.com/CQCL/guppylang/issues/239)) ([16a77db](https://github.com/CQCL/guppylang/commit/16a77dbd4c5905eff6c4ddabe66b5ef1b8a7e15b))
+
 ## [0.5.0](https://github.com/CQCL/guppylang/compare/v0.4.0...v0.5.0) (2024-06-10)
 
 
