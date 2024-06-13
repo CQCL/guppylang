@@ -28,17 +28,17 @@ def compile_cfg(
 
     blocks: dict[CheckedBB, CFNode] = {}
     for bb in cfg.bbs:
-        blocks[bb] = compile_bb(bb, graph, parent, globals)
+        blocks[bb] = compile_bb(bb, graph, parent, bb == cfg.entry_bb, globals)
     for bb in cfg.bbs:
         for succ in bb.successors:
             graph.add_edge(blocks[bb].add_out_port(), blocks[succ].in_port(None))
 
 
 def compile_bb(
-    bb: CheckedBB, graph: Hugr, parent: Node, globals: CompiledGlobals
+    bb: CheckedBB, graph: Hugr, parent: Node, is_entry: bool, globals: CompiledGlobals
 ) -> CFNode:
     """Compiles a single basic block to Hugr."""
-    inputs = sort_vars(bb.sig.input_row)
+    inputs = bb.sig.input_row if is_entry else sort_vars(bb.sig.input_row)
 
     # The exit BB is completely empty
     if len(bb.successors) == 0:
