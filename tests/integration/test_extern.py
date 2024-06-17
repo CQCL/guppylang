@@ -37,6 +37,7 @@ def test_extern_alt_symbol(validate):
     assert isinstance(c.v.root, ops.ExtensionValue)
     assert c.v.root.value.v["symbol"] == "foo"
 
+
 def test_extern_tuple(validate):
     module = GuppyModule("module")
 

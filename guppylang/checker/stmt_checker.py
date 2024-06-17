@@ -71,7 +71,7 @@ class StmtChecker(AstVisitor[BBStatement]):
                         f"(expected {n}, got {m})",
                         node,
                     )
-                for pat, el_ty in zip(elts, tys):
+                for pat, el_ty in zip(elts, tys, strict=True):
                     self._check_assign(pat, el_ty, node)
 
             # TODO: Python also supports assignments like `[a, b] = [1, 2]` or
