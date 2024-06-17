@@ -88,7 +88,9 @@ def check_nested_func_def(
     # Construct inputs for checking the body CFG
     inputs = list(captured.values()) + [
         Variable(x, ty, func_def.args.args[i], None)
-        for i, (x, ty) in enumerate(zip(func_ty.input_names, func_ty.inputs, strict=True))
+        for i, (x, ty) in enumerate(
+            zip(func_ty.input_names, func_ty.inputs, strict=True)
+        )
     ]
     def_id = DefId.fresh()
     globals = ctx.globals
