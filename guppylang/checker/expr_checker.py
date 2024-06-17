@@ -687,7 +687,7 @@ def type_check_args(
     check_num_args(len(func_ty.inputs), len(inputs), node)
 
     new_args: list[ast.expr] = []
-    for inp, ty in zip(inputs, func_ty.inputs):
+    for inp, ty in zip(inputs, func_ty.inputs, strict=True):
         a, s = ExprChecker(ctx).check(inp, ty.substitute(subst), "argument")
         new_args.append(a)
         subst |= s

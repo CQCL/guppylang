@@ -237,7 +237,7 @@ def get_py_scope(f: PyFunc) -> PyScope:
 
     nonlocals: PyScope = {}
     if f.__closure__ is not None:
-        for var, cell in zip(code.co_freevars, f.__closure__):
+        for var, cell in zip(code.co_freevars, f.__closure__, strict=True):
             try:
                 value = cell.cell_contents
             except ValueError:
