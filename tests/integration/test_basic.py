@@ -86,3 +86,16 @@ def test_func_decl_name():
         if isinstance(n.op.root, ops.FuncDecl)
     ]
     assert def_op.name == "func_name"
+
+
+def test_compile_again():
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def identity(x: int) -> int:
+        return x
+
+    hugr = module.compile()
+
+    # Compiling again should return the same Hugr
+    assert hugr is module.compile()
