@@ -261,7 +261,7 @@ class BoolArithChecker(DefaultCallChecker):
         return [to_int.synthesize_call([arg], arg, self.ctx)[0] for arg in args]
 
     def _get_func(self) -> CallableDef:
-        # Get the int function with the same
+        # Get the int function with the same name
         func = self.ctx.globals.get_instance_func(int_type(), self.func.name)
         assert func is not None
         return func
