@@ -115,7 +115,7 @@ class ParametrizedTypeBase(TypeBase, ABC):
     @cached_property
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this type."""
-        return set.union(*(arg.unsolved_vars for arg in self.args))
+        return set().union(*(arg.unsolved_vars for arg in self.args))
 
     @cached_property
     def hugr_bound(self) -> tys.TypeBound:
