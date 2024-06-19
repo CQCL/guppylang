@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:17
+
+15:    @guppy(module)
+16:    def main(x: "array[int, 42]", y: "array[int, 43]") -> None:
+17:        foo(x, y)
+                  ^
+GuppyTypeError: Expected argument of type `array[int, 42]`, got `array[int, 43]`

@@ -1,0 +1,6 @@
+Guppy compilation failed. Error in file $FILE:9
+
+7:    @guppy(module)
+8:    def main(x: "array[int, bool]") -> None:
+                   ^^^^^^^^^^^^^^^^
+GuppyTypeError: Expected argument of type `nat`, got type
