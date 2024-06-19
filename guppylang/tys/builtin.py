@@ -8,8 +8,8 @@ from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError
-from guppylang.tys.arg import Argument, TypeArg
-from guppylang.tys.param import TypeParam
+from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
     FunctionType,
     NoneType,
@@ -136,6 +136,20 @@ def _list_to_hugr(args: Sequence[Argument]) -> tys.Type:
     return tys.Type(ty)
 
 
+def _array_to_hugr(args: Sequence[Argument]) -> tys.Type:
+    # Type checker ensures that we get a two args
+    [ty_arg, len_arg] = args
+    assert isinstance(ty_arg, TypeArg)
+    assert isinstance(len_arg, ConstArg)
+    ty = tys.Opaque(
+        extension="prelude",
+        id="array",
+        args=[len_arg.to_hugr(), ty_arg.to_hugr()],
+        bound=ty_arg.ty.hugr_bound,
+    )
+    return tys.Type(ty)
+
+
 callable_type_def = _CallableTypeDef(DefId.fresh(), None)
 tuple_type_def = _TupleTypeDef(DefId.fresh(), None)
 none_type_def = _NoneTypeDef(DefId.fresh(), None)
@@ -166,6 +180,17 @@ list_type_def = _ListTypeDef(
     params=[TypeParam(0, "T", can_be_linear=False)],
     always_linear=False,
     to_hugr=_list_to_hugr,
+)
+array_type_def = OpaqueTypeDef(
+    id=DefId.fresh(),
+    name="array",
+    defined_at=None,
+    params=[
+        TypeParam(0, "T", can_be_linear=True),
+        ConstParam(1, "n", NumericType(NumericType.Kind.Nat)),
+    ],
+    always_linear=False,
+    to_hugr=_array_to_hugr,
 )
 
 
