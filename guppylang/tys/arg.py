@@ -73,7 +73,7 @@ class ConstArg(ArgumentBase):
     @property
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this argument."""
-        raise NotImplementedError
+        return self.const.unsolved_vars
 
     def to_hugr(self) -> tys.TypeArg:
         """Computes the Hugr representation of the argument."""

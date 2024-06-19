@@ -35,6 +35,11 @@ class ConstBase(ABC):
         `Const` union type.
         """
 
+    @property
+    def unsolved_vars(self) -> set[ExistentialVar]:
+        """The existential type variables contained in this constant."""
+        return set()
+
     def to_arg(self) -> "ConstArg":
         """Wraps this constant into a type argument."""
         from guppylang.tys.arg import ConstArg
@@ -84,6 +89,11 @@ class ExistentialConstVar(ExistentialVar, ConstBase):
     @classmethod
     def fresh(cls, display_name: str, ty: "Type") -> "ExistentialConstVar":
         return ExistentialConstVar(ty, display_name, next(cls._fresh_id))
+
+    @property
+    def unsolved_vars(self) -> set[ExistentialVar]:
+        """The existential type variables contained in this constant."""
+        return {self}
 
     def cast(self) -> "Const":
         """Casts an implementor of `ConstBase` into a `Const`."""
