@@ -3,13 +3,19 @@ from collections.abc import Sequence
 from typing import Any
 
 from guppylang.error import InternalGuppyError
-from guppylang.tys.arg import Argument, TypeArg
+from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import Transformer
-from guppylang.tys.const import BoundConstVar, ExistentialConstVar
-from guppylang.tys.ty import BoundTypeVar, ExistentialTypeVar, FunctionType, Type
+from guppylang.tys.const import BoundConstVar, Const, ConstBase, ExistentialConstVar
+from guppylang.tys.ty import (
+    BoundTypeVar,
+    ExistentialTypeVar,
+    FunctionType,
+    Type,
+    TypeBase,
+)
 from guppylang.tys.var import ExistentialVar
 
-Subst = dict[ExistentialVar, Type]  # TODO: `GuppyType | Const` or `Argument` ??
+Subst = dict[ExistentialVar, Type | Const]
 Inst = Sequence[Argument]
 
 
@@ -25,11 +31,15 @@ class Substituter(Transformer):
 
     @transform.register
     def _transform_ExistentialTypeVar(self, ty: ExistentialTypeVar) -> Type | None:
-        return self.subst.get(ty, None)
+        s = self.subst.get(ty, None)
+        assert not isinstance(s, ConstBase)
+        return s
 
     @transform.register
-    def _transform_ExistentialConstVar(self, ty: ExistentialConstVar) -> Type | None:
-        raise NotImplementedError
+    def _transform_ExistentialConstVar(self, c: ExistentialConstVar) -> Const | None:
+        s = self.subst.get(c, None)
+        assert not isinstance(s, TypeBase)
+        return s
 
 
 class Instantiator(Transformer):
@@ -54,8 +64,15 @@ class Instantiator(Transformer):
         return BoundTypeVar(ty.display_name, ty.idx - len(self.inst), ty.linear)
 
     @transform.register
-    def _transform_BoundConstVar(self, ty: BoundConstVar) -> Type | None:
-        raise NotImplementedError
+    def _transform_BoundConstVar(self, c: BoundConstVar) -> Const | None:
+        # Instantiate if type for the index is available
+        if c.idx < len(self.inst):
+            arg = self.inst[c.idx]
+            assert isinstance(arg, ConstArg)
+            return arg.const
+
+        # Otherwise, lower the de Bruijn index
+        return BoundConstVar(c.ty, c.display_name, c.idx - len(self.inst))
 
     @transform.register
     def _transform_FunctionType(self, ty: FunctionType) -> Type | None:

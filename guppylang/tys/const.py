@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 from guppylang.error import InternalGuppyError
+from guppylang.tys.common import Transformable, Transformer, Visitor
 from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class ConstBase(ABC):
+class ConstBase(Transformable["Const"], ABC):
     """Abstract base class for constants arguments in the type system.
 
     In principle, we can allow constants of any type representable in the type system.
@@ -37,6 +38,14 @@ class ConstBase(ABC):
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this constant."""
         return set()
+
+    def visit(self, visitor: Visitor) -> None:
+        """Accepts a visitor on this constant."""
+        visitor.visit(self)
+
+    def transform(self, transformer: Transformer, /) -> "Const":
+        """Accepts a transformer on this argument."""
+        return transformer.transform(self) or self.cast()
 
     def to_arg(self) -> "ConstArg":
         """Wraps this constant into a type argument."""
