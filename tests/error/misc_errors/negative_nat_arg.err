@@ -1,6 +1,6 @@
-Guppy compilation failed. Error in file $FILE:5
+Guppy compilation failed. Error in file $FILE:6
 
-3:    @compile_guppy
-4:    def foo(x: "array[int, -5]") -> None:
-                             ^^
+4:    @compile_guppy
+5:    def foo(x: array[int, -5]) -> None:
+                            ^^
 GuppyError: Not a valid type argument

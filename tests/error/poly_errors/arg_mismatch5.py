@@ -6,7 +6,7 @@ module = GuppyModule("test")
 
 
 @guppy(module)
-def main(x: "list[42]") -> None:
+def main(x: list[42]) -> None:
     pass
 
 
