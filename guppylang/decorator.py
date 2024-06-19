@@ -21,12 +21,13 @@ from guppylang.definition.custom import (
 from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.extern import RawExternDef
 from guppylang.definition.function import RawFunctionDef, parse_py_func
-from guppylang.definition.parameter import TypeVarDef
+from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
 from guppylang.hugr_builder.hugr import Hugr
 from guppylang.module import GuppyModule, PyFunc
+from guppylang.tys.ty import NumericType
 
 FuncDefDecorator = Callable[[PyFunc], RawFunctionDef]
 FuncDeclDecorator = Callable[[PyFunc], RawFunctionDecl]
@@ -171,6 +172,15 @@ class _Guppy:
         # Return an actual Python `TypeVar` so it can be used as an actual type in code
         # that is executed by interpreter before handing it to Guppy.
         return TypeVar(name)
+
+    @pretty_errors
+    def nat_var(self, module: GuppyModule, name: str) -> ConstVarDef:
+        """Creates a new const nat variable in a module."""
+        defn = ConstVarDef(
+            DefId.fresh(module), name, None, NumericType(NumericType.Kind.Nat)
+        )
+        module.register_def(defn)
+        return defn
 
     @pretty_errors
     def custom(
