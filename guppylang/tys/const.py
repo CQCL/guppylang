@@ -1,6 +1,6 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from hugr.serialization import ops
 
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class Const(ABC):
+class ConstBase(ABC):
     """Abstract base class for constants arguments in the type system.
 
     In principle, we can allow constants of any type representable in the type system.
@@ -26,9 +26,17 @@ class Const(ABC):
         if self.ty.unsolved_vars:
             raise InternalGuppyError("Attempted to create constant with unsolved type")
 
+    @abstractmethod
+    def cast(self) -> "Const":
+        """Casts an implementor of `ConstBase` into a `Const`.
+
+        This enforces that all implementors of `ConstBase` can be embedded into the
+        `Const` union type.
+        """
+
 
 @dataclass(frozen=True)
-class ConstValue(Const):
+class ConstValue(ConstBase):
     """A constant value in the type system.
 
     For example, in the type `array[int, 5]` the second argument is a `ConstArg`  that
@@ -39,9 +47,13 @@ class ConstValue(Const):
     # TODO: We might need a Guppy representation of this...
     value: ops.Value
 
+    def cast(self) -> "Const":
+        """Casts an implementor of `ConstBase` into a `Const`."""
+        return self
+
 
 @dataclass(frozen=True)
-class BoundConstVar(BoundVar, Const):
+class BoundConstVar(BoundVar, ConstBase):
     """Bound variable referencing a `ConstParam`.
 
     For example, in the function type `forall n: int. array[float, n] -> array[int, n]`,
@@ -49,9 +61,13 @@ class BoundConstVar(BoundVar, Const):
     `BoundConstVar(idx=0)`.
     """
 
+    def cast(self) -> "Const":
+        """Casts an implementor of `ConstBase` into a `Const`."""
+        return self
+
 
 @dataclass(frozen=True)
-class ExistentialConstVar(ExistentialVar, Const):
+class ExistentialConstVar(ExistentialVar, ConstBase):
     """Existential constant variable.
 
     During type checking we try to solve all existential constant variables and
@@ -61,3 +77,10 @@ class ExistentialConstVar(ExistentialVar, Const):
     @classmethod
     def fresh(cls, display_name: str, ty: "Type") -> "ExistentialConstVar":
         return ExistentialConstVar(ty, display_name, next(cls._fresh_id))
+
+    def cast(self) -> "Const":
+        """Casts an implementor of `ConstBase` into a `Const`."""
+        return self
+
+
+Const: TypeAlias = ConstValue | BoundConstVar | ExistentialConstVar
