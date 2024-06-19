@@ -10,9 +10,10 @@ from guppylang.checker.core import Globals
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError
-from guppylang.tys.arg import Argument, TypeArg
+from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.const import ConstValue
 from guppylang.tys.param import Parameter, TypeParam
-from guppylang.tys.ty import NoneType, TupleType, Type
+from guppylang.tys.ty import NoneType, NumericType, TupleType, Type
 
 
 def arg_from_ast(
@@ -88,6 +89,13 @@ def arg_from_ast(
     # `None` is represented as a `ast.Constant` node with value `None`
     if isinstance(node, ast.Constant) and node.value is None:
         return TypeArg(NoneType())
+
+    # Integer literals are turned into nat args since these are the only ones we support
+    # right now.
+    # TODO: Once we also have int args etc, we need proper inference logic here
+    if isinstance(node, ast.Constant) and isinstance(node.value, int):
+        nat_ty = NumericType(NumericType.Kind.Nat)
+        return ConstArg(ConstValue(nat_ty, node.value))
 
     # Finally, we also support delayed annotations in strings
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
