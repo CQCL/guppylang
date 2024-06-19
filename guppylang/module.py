@@ -36,6 +36,10 @@ class GuppyModule:
     # Whether the module has already been compiled
     _compiled: bool
 
+    # If the hugr has already been compiled, keeps a reference that can be returned
+    # from `compile`.
+    _compiled_hugr: Hugr | None
+
     # Map of raw definitions in this module
     _raw_defs: dict[DefId, RawDef]
     _raw_type_defs: dict[DefId, RawDef]
@@ -61,6 +65,7 @@ class GuppyModule:
         self._imported_globals = Globals.default()
         self._imported_compiled_globals = {}
         self._compiled = False
+        self._compiled_hugr = None
         self._instance_func_buffer = None
         self._raw_defs = {}
         self._raw_type_defs = {}
@@ -162,10 +167,11 @@ class GuppyModule:
         }
 
     @pretty_errors
-    def compile(self) -> Hugr | None:
+    def compile(self) -> Hugr:
         """Compiles the module and returns the final Hugr."""
         if self.compiled:
-            raise GuppyError("Module has already been compiled")
+            assert self._compiled_hugr is not None, "Module is compiled but has no Hugr"
+            return self._compiled_hugr
 
         # Type definitions need to be checked first so that we can use them when parsing
         # function signatures etc.
@@ -201,6 +207,7 @@ class GuppyModule:
             defn.compile_inner(graph, all_compiled_globals)
 
         self._compiled = True
+        self._compiled_hugr = graph
         return graph
 
     def contains(self, name: str) -> bool:
@@ -237,7 +244,7 @@ def get_py_scope(f: PyFunc) -> PyScope:
 
     nonlocals: PyScope = {}
     if f.__closure__ is not None:
-        for var, cell in zip(code.co_freevars, f.__closure__):
+        for var, cell in zip(code.co_freevars, f.__closure__, strict=True):
             try:
                 value = cell.cell_contents
             except ValueError:

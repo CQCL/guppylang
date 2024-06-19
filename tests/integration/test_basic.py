@@ -81,7 +81,21 @@ def test_func_decl_name():
     def func_name() -> None: ...
 
     [def_op] = [
-        n.op.root for n in module.compile().nodes()
+        n.op.root
+        for n in module.compile().nodes()
         if isinstance(n.op.root, ops.FuncDecl)
     ]
     assert def_op.name == "func_name"
+
+
+def test_compile_again():
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def identity(x: int) -> int:
+        return x
+
+    hugr = module.compile()
+
+    # Compiling again should return the same Hugr
+    assert hugr is module.compile()

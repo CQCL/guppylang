@@ -2,10 +2,13 @@
 
 # mypy: disable-error-code="empty-body, misc, override, valid-type, no-untyped-def"
 
+from typing import Any
+
 from hugr.serialization import tys
 
 from guppylang.decorator import guppy
 from guppylang.definition.custom import DefaultCallChecker, NoopCompiler
+from guppylang.error import GuppyError
 from guppylang.hugr_builder.hugr import DummyOp
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal import (
@@ -37,6 +40,15 @@ builtins = GuppyModule("builtins", import_builtins=False)
 
 T = guppy.type_var(builtins, "T")
 L = guppy.type_var(builtins, "L", linear=True)
+
+
+def py(*_args: Any) -> Any:
+    """Function to tag compile-time evaluated Python expressions in a Guppy context.
+
+    This function throws an error when execute in a Python context. It is only intended
+    to be used inside Guppy functions.
+    """
+    raise GuppyError("`py` can only by used in a Guppy context")
 
 
 @guppy.extend_type(builtins, bool_type_def)

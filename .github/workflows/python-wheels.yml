@@ -1,12 +1,22 @@
 name: Build and publish python wheels
+# Builds and publishes the wheels on pypi.
+#
+# When running on a push-to-main event, or as a workflow dispatch on a branch,
+# this workflow will do a dry-run publish to test-pypi.
+#
+# When running on a release event or as a workflow dispatch for a tag,
+# and if the tag matches `hugr-py-v*`,
+# this workflow will publish the wheels to pypi.
+# If the version is already published, pypi just ignores it.
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-    tags:
-        - 'v**'
+  release:
+    types:
+      - published
 
 jobs:
   build-publish:
@@ -26,7 +36,7 @@ jobs:
           cache: "poetry"
 
       - name: Build sdist and wheels
-        run: poetry build
+        run: poetry build -o dist
 
       - name: Upload the built packages as artifacts
         uses: actions/upload-artifact@v4
@@ -37,14 +47,23 @@ jobs:
             dist/*.whl
 
       - name: Publish to test instance of PyPI (dry-run)
-        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref_type == 'branch' ) }}
+        if: |
+          ${{ github.event_name == 'push' && github.ref_type == 'branch' }} ||
+          ${{ github.event_name == 'workflow_dispatch' && github.ref_type == 'branch'}}
         run: |
+          echo "Doing a dry-run publish to test-pypi..."
+          echo "Based on the following workflow variables, this is not a hugr-py version tag push:"
+          echo "  - event_name: ${{ github.event_name }}"
+          echo "  - ref_type: ${{ github.ref_type }}"
+          echo "  - ref: ${{ github.ref }}"
           poetry config repositories.test-pypi https://test.pypi.org/legacy/
           poetry config pypi-token.test-pypi ${{ secrets.PYPI_TEST_PUBLISH }}
-          poetry publish -r test-pypi --skip-existing --dry-run
+          poetry publish -r test-pypi --dist-dir dist --skip-existing --dry-run
 
       - name: Publish to PyPI
-        if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+        if: |
+          ${{ (github.event_name == 'release' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v'))}} ||
+          ${{ (github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v'))}} ||
         run: |
           poetry config pypi-token.pypi ${{ secrets.PYPI_PUBLISH }}
-          poetry publish --skip-existing
+          poetry publish --dist-dir dist --skip-existing

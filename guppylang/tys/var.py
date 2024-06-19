@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import ClassVar
 
-# Type of de Bruijn indicies
+# Type of de Bruijn indices
 DeBruijn = int
 
 # Type of unique variable identifiers

@@ -389,7 +389,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> ops.Value | None:
             assert isinstance(exp_ty, TupleType)
             vs = [
                 python_value_to_hugr(elt, ty)
-                for elt, ty in zip(elts, exp_ty.element_types)
+                for elt, ty in zip(elts, exp_ty.element_types, strict=True)
             ]
             if doesnt_contain_none(vs):
                 return ops.Value(ops.TupleValue(vs=vs))

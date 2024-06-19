@@ -440,7 +440,9 @@ class BranchBuilder(AstVisitor[None]):
                     end_lineno=right.end_lineno,
                     end_col_offset=right.end_col_offset,
                 )
-                for left, op, right in zip(comparators[:-1], node.ops, comparators[1:])
+                for left, op, right in zip(
+                    comparators[:-1], node.ops, comparators[1:], strict=True
+                )
             ]
             conj = ast.BoolOp(op=ast.And(), values=values)
             set_location_from(conj, node)
