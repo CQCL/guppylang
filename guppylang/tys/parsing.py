@@ -94,6 +94,9 @@ def arg_from_ast(
     # right now.
     # TODO: Once we also have int args etc, we need proper inference logic here
     if isinstance(node, ast.Constant) and isinstance(node.value, int):
+        # Fun fact: int ast.Constant values are never negative since e.g. `-5` is a
+        # `ast.UnaryOp` negation of a `ast.Constant(5)`
+        assert node.value >= 0
         nat_ty = NumericType(NumericType.Kind.Nat)
         return ConstArg(ConstValue(nat_ty, node.value))
 
