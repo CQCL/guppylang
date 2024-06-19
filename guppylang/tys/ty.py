@@ -11,7 +11,7 @@ from hugr.serialization.tys import TypeBound
 from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
-from guppylang.tys.const import ExistentialConstVar
+from guppylang.tys.const import Const, ConstValue, ExistentialConstVar
 from guppylang.tys.param import Parameter
 from guppylang.tys.var import BoundVar, ExistentialVar
 
@@ -635,22 +635,26 @@ def rows_to_hugr(rows: Sequence[TypeRow]) -> list[tys.TypeRow]:
     return [row_to_hugr(row) for row in rows]
 
 
-def unify(s: Type, t: Type, subst: "Subst | None") -> "Subst | None":
-    """Computes a most general unifier for two types.
+def unify(s: Type | Const, t: Type | Const, subst: "Subst | None") -> "Subst | None":
+    """Computes a most general unifier for two types or constants.
 
     Return a substitutions `subst` such that `s[subst] == t[subst]` or `None` if this
     not possible.
     """
+    # Make sure that s and t are either both constants or both types
+    assert isinstance(s, TypeBase) == isinstance(t, TypeBase)
     if subst is None:
         return None
     match s, t:
-        case ExistentialTypeVar(id=s_id), ExistentialTypeVar(id=t_id) if s_id == t_id:
+        case ExistentialVar(id=s_id), ExistentialVar(id=t_id) if s_id == t_id:
             return subst
-        case ExistentialTypeVar() as s, t:
-            return _unify_var(s, t, subst)
-        case s, ExistentialTypeVar() as t:
-            return _unify_var(t, s, subst)
-        case BoundTypeVar(idx=s_idx), BoundTypeVar(idx=t_idx) if s_idx == t_idx:
+        case ExistentialVar() as s_var, t:
+            return _unify_var(s_var, t, subst)
+        case s, ExistentialVar() as t_var:
+            return _unify_var(t_var, s, subst)
+        case BoundVar(idx=s_idx), BoundVar(idx=t_idx) if s_idx == t_idx:
+            return subst
+        case ConstValue(value=c_value), ConstValue(value=d_value) if c_value == d_value:
             return subst
         case NumericType(kind=s_kind), NumericType(kind=t_kind) if s_kind == t_kind:
             return subst
@@ -670,8 +674,9 @@ def unify(s: Type, t: Type, subst: "Subst | None") -> "Subst | None":
             return None
 
 
-def _unify_var(var: ExistentialTypeVar, t: Type, subst: "Subst") -> "Subst | None":
-    """Helper function for unification of type variables."""
+def _unify_var(var: ExistentialVar, t: Type | Const, subst: "Subst") -> "Subst | None":
+    """Helper function for unification of type or const variables."""
+    assert isinstance(var, ExistentialTypeVar | ExistentialConstVar)
     if var in subst:
         return unify(subst[var], t, subst)
     if isinstance(t, ExistentialTypeVar) and t in subst:
@@ -694,8 +699,11 @@ def _unify_args(
                 if res is None:
                     return None
                 subst = res
-            case ConstArg(), ConstArg():
-                raise NotImplementedError
+            case ConstArg(const=sa_const), ConstArg(const=ta_const):
+                res = unify(sa_const, ta_const, subst)
+                if res is None:
+                    return None
+                subst = res
             case _:
                 return None
     return subst
