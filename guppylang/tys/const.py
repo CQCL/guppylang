@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeAlias
-
-from hugr.serialization import ops
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from guppylang.error import InternalGuppyError
 from guppylang.tys.var import BoundVar, ExistentialVar
@@ -55,9 +53,8 @@ class ConstValue(ConstBase):
     contains a `ConstValue(5)`.
     """
 
-    # Hugr encoding of the value
-    # TODO: We might need a Guppy representation of this...
-    value: ops.Value
+    # TODO: We will need a proper Guppy representation of this in the future
+    value: Any
 
     def cast(self) -> "Const":
         """Casts an implementor of `ConstBase` into a `Const`."""
