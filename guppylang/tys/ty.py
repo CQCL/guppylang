@@ -43,6 +43,14 @@ class TypeBase(ToHugr[tys.Type], Transformable["Type"], ABC):
         bound exactly right during serialisation, the Hugr validator will complain.
         """
 
+    @abstractmethod
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`.
+
+        This enforces that all implementors of `TypeBase` can be embedded into the
+        `Type` union type.
+        """
+
     @cached_property
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this type."""
@@ -149,6 +157,10 @@ class BoundTypeVar(TypeBase, BoundVar):
         # This is fine since Guppy doesn't use the equatable feature anyways.
         return TypeBound.Copyable
 
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
+
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         return tys.Type(tys.Variable(i=self.idx, b=self.hugr_bound))
@@ -195,6 +207,10 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
             "Tried to compute bound of unsolved existential type variable"
         )
 
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
+
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         raise InternalGuppyError(
@@ -221,6 +237,10 @@ class NoneType(TypeBase):
     # used to make sure that type vars instantiated to Nones are not broken up into
     # empty rows when generating a Hugr
     preserve: bool = field(default=False, compare=False)
+
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
@@ -255,6 +275,10 @@ class NumericType(TypeBase):
     def linear(self) -> bool:
         """Whether this type should be treated linearly."""
         return False
+
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
@@ -332,6 +356,10 @@ class FunctionType(ParametrizedTypeBase):
     def parametrized(self) -> bool:
         """Whether the function is parametrized."""
         return len(self.params) > 0
+
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
@@ -426,6 +454,10 @@ class TupleType(ParametrizedTypeBase):
     def intrinsically_linear(self) -> bool:
         return False
 
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
+
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         # Tuples are encoded as a unary sum. Note that we need to make a copy of this
@@ -461,6 +493,10 @@ class SumType(ParametrizedTypeBase):
     @property
     def intrinsically_linear(self) -> bool:
         return False
+
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
@@ -501,6 +537,10 @@ class OpaqueType(ParametrizedTypeBase):
             return self.defn.bound
         return super().hugr_bound
 
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
+
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         return self.defn.to_hugr(self.args)
@@ -531,6 +571,10 @@ class StructType(ParametrizedTypeBase):
     def intrinsically_linear(self) -> bool:
         """Whether this type is linear, independent of the arguments."""
         return any(f.ty.linear for f in self.defn.fields)
+
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
