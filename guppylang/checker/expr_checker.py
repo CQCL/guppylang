@@ -641,7 +641,7 @@ def check_type_against(
                     "free variables",
                     node,
                 )
-        inst = [TypeArg(subst[v]) for v in free_vars]
+        inst = [subst[v].to_arg() for v in free_vars]
         subst = {v: t for v, t in subst.items() if v in exp.unsolved_vars}
 
         # Finally, check that the instantiation respects the linearity requirements
@@ -725,7 +725,7 @@ def synthesize_call(
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
-    inst = [TypeArg(subst[v]) for v in free_vars]
+    inst = [subst[v].to_arg() for v in free_vars]
 
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
@@ -805,7 +805,7 @@ def check_call(
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
-    inst = [TypeArg(subst[v]) for v in free_vars]
+    inst = [subst[v].to_arg() for v in free_vars]
     subst = {v: t for v, t in subst.items() if v in ty.unsolved_vars}
 
     # Finally, check that the instantiation respects the linearity requirements

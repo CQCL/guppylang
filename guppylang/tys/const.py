@@ -8,6 +8,7 @@ from guppylang.error import InternalGuppyError
 from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
+    from guppylang.tys.arg import ConstArg
     from guppylang.tys.ty import Type
 
 
@@ -33,6 +34,12 @@ class ConstBase(ABC):
         This enforces that all implementors of `ConstBase` can be embedded into the
         `Const` union type.
         """
+
+    def to_arg(self) -> "ConstArg":
+        """Wraps this constant into a type argument."""
+        from guppylang.tys.arg import ConstArg
+
+        return ConstArg(self.cast())
 
 
 @dataclass(frozen=True)

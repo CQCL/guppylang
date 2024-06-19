@@ -62,6 +62,10 @@ class TypeBase(ToHugr[tys.Type], Transformable["Type"], ABC):
 
         return self.transform(Substituter(subst))
 
+    def to_arg(self) -> TypeArg:
+        """Wraps this constant into a type argument."""
+        return TypeArg(self.cast())
+
     def __str__(self) -> str:
         """Returns a human-readable representation of the type."""
         from guppylang.tys.printing import TypePrinter
