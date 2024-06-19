@@ -142,6 +142,9 @@ none_type_def = _NoneTypeDef(DefId.fresh(), None)
 bool_type_def = _NumericTypeDef(
     DefId.fresh(), "bool", None, NumericType(NumericType.Kind.Bool)
 )
+nat_type_def = _NumericTypeDef(
+    DefId.fresh(), "nat", None, NumericType(NumericType.Kind.Nat)
+)
 int_type_def = _NumericTypeDef(
     DefId.fresh(), "int", None, NumericType(NumericType.Kind.Int)
 )
