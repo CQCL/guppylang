@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
+from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast, TypeVar
 
 from hugr.serialization import tys
 from hugr.serialization.tys import TypeBound
@@ -648,9 +648,9 @@ def unify(s: Type | Const, t: Type | Const, subst: "Subst | None") -> "Subst | N
     match s, t:
         case ExistentialVar(id=s_id), ExistentialVar(id=t_id) if s_id == t_id:
             return subst
-        case ExistentialVar() as s_var, t:
+        case ExistentialTypeVar() | ExistentialConstVar() as s_var, t:
             return _unify_var(s_var, t, subst)
-        case s, ExistentialVar() as t_var:
+        case s, ExistentialTypeVar() | ExistentialConstVar() as t_var:
             return _unify_var(t_var, s, subst)
         case BoundVar(idx=s_idx), BoundVar(idx=t_idx) if s_idx == t_idx:
             return subst
@@ -674,9 +674,10 @@ def unify(s: Type | Const, t: Type | Const, subst: "Subst | None") -> "Subst | N
             return None
 
 
-def _unify_var(var: ExistentialVar, t: Type | Const, subst: "Subst") -> "Subst | None":
+def _unify_var(
+    var: ExistentialTypeVar | ExistentialConstVar, t: Type | Const, subst: "Subst"
+) -> "Subst | None":
     """Helper function for unification of type or const variables."""
-    assert isinstance(var, ExistentialTypeVar | ExistentialConstVar)
     if var in subst:
         return unify(subst[var], t, subst)
     if isinstance(t, ExistentialTypeVar) and t in subst:
