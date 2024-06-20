@@ -132,10 +132,7 @@ class TypeParam(ParameterBase):
 
 @dataclass(frozen=True)
 class ConstParam(ParameterBase):
-    """A parameter of kind constant. Used to define fixed-size arrays etc.
-
-    Note that support for this kind is not implemented yet.
-    """
+    """A parameter of kind constant. Used to define fixed-size arrays etc."""
 
     ty: "Type"
 

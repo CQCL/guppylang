@@ -44,7 +44,7 @@ class ConstBase(Transformable["Const"], ABC):
         visitor.visit(self)
 
     def transform(self, transformer: Transformer, /) -> "Const":
-        """Accepts a transformer on this argument."""
+        """Accepts a transformer on this constant."""
         return transformer.transform(self) or self.cast()
 
     def to_arg(self) -> "ConstArg":

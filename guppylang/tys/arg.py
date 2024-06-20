@@ -63,16 +63,13 @@ class TypeArg(ArgumentBase):
 
 @dataclass(frozen=True)
 class ConstArg(ArgumentBase):
-    """Argument that can be substituted for a `ConstParam`.
-
-    Note that support for this kind is not implemented yet.
-    """
+    """Argument that can be substituted for a `ConstParam`."""
 
     const: Const
 
     @property
     def unsolved_vars(self) -> set[ExistentialVar]:
-        """The existential type variables contained in this argument."""
+        """The existential const variables contained in this argument."""
         return self.const.unsolved_vars
 
     def to_hugr(self) -> tys.TypeArg:

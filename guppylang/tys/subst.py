@@ -65,7 +65,7 @@ class Instantiator(Transformer):
 
     @transform.register
     def _transform_BoundConstVar(self, c: BoundConstVar) -> Const | None:
-        # Instantiate if type for the index is available
+        # Instantiate if const value for the index is available
         if c.idx < len(self.inst):
             arg = self.inst[c.idx]
             assert isinstance(arg, ConstArg)
