@@ -244,7 +244,6 @@ class NumericType(TypeBase):
     class Kind(Enum):
         """The different kinds of numeric types."""
 
-        Bool = "bool"
         Nat = "nat"
         Int = "int"
         Float = "float"
@@ -259,8 +258,6 @@ class NumericType(TypeBase):
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         match self.kind:
-            case NumericType.Kind.Bool:
-                return SumType([NoneType(), NoneType()]).to_hugr()
             case NumericType.Kind.Nat | NumericType.Kind.Int:
                 return tys.Type(
                     tys.Opaque(
