@@ -6,6 +6,7 @@ from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
     FunctionType,
     NoneType,
+    NumericType,
     OpaqueType,
     StructType,
     SumType,
@@ -105,6 +106,10 @@ class TypePrinter:
     @_visit.register
     def _visit_NoneType(self, ty: NoneType, inside_row: bool) -> str:
         return "None"
+
+    @_visit.register
+    def _visit_NumericType(self, ty: NumericType, inside_row: bool) -> str:
+        return ty.kind.value
 
     @_visit.register
     def _visit_TypeParam(self, param: TypeParam, inside_row: bool) -> str:

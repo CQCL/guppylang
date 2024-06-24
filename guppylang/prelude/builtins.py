@@ -24,12 +24,16 @@ from guppylang.prelude._internal import (
     ReversingChecker,
     UnsupportedChecker,
     float_op,
-    hugr_float_type,
-    hugr_int_type,
     int_op,
     logic_op,
 )
-from guppylang.tys.builtin import bool_type_def, linst_type_def, list_type_def
+from guppylang.tys.builtin import (
+    bool_type_def,
+    float_type_def,
+    int_type_def,
+    linst_type_def,
+    list_type_def,
+)
 
 builtins = GuppyModule("builtins", import_builtins=False)
 
@@ -64,7 +68,7 @@ class Bool:
     def __or__(self: bool, other: bool) -> bool: ...
 
 
-@guppy.type(builtins, hugr_int_type, name="int")
+@guppy.extend_type(builtins, int_type_def)
 class Int:
     @guppy.hugr_op(builtins, int_op("iabs"))  # TODO: Maybe wrong? (signed vs unsigned!)
     def __abs__(self: int) -> int: ...
@@ -106,7 +110,7 @@ class Int:
     def __int__(self: int) -> int: ...
 
     @guppy.hugr_op(builtins, int_op("inot"))
-    def __invert__(self: int) -> bool: ...
+    def __invert__(self: int) -> int: ...
 
     @guppy.hugr_op(builtins, int_op("ile_s"))
     def __le__(self: int, other: int) -> bool: ...
@@ -203,7 +207,7 @@ class Int:
     def __xor__(self: int, other: int) -> int: ...
 
 
-@guppy.type(builtins, hugr_float_type, name="float", bound=tys.TypeBound.Copyable)
+@guppy.extend_type(builtins, float_type_def)
 class Float:
     @guppy.hugr_op(builtins, float_op("fabs"), CoercingChecker())
     def __abs__(self: float) -> float: ...

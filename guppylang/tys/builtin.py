@@ -10,7 +10,14 @@ from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.param import TypeParam
-from guppylang.tys.ty import FunctionType, NoneType, OpaqueType, TupleType, Type
+from guppylang.tys.ty import (
+    FunctionType,
+    NoneType,
+    NumericType,
+    OpaqueType,
+    TupleType,
+    Type,
+)
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -80,6 +87,23 @@ class _NoneTypeDef(TypeDef):
 
 
 @dataclass(frozen=True)
+class _NumericTypeDef(TypeDef):
+    """Type definition associated with the builtin numeric types.
+
+    Any impls on numerics can be registered with these definitions.
+    """
+
+    ty: NumericType
+
+    def check_instantiate(
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+    ) -> NumericType:
+        if args:
+            raise GuppyError(f"Type `{self.name}` is not parameterized", loc)
+        return self.ty
+
+
+@dataclass(frozen=True)
 class _ListTypeDef(OpaqueTypeDef):
     """Type definition associated with the builtin `list` type.
 
@@ -122,6 +146,12 @@ bool_type_def = OpaqueTypeDef(
     params=[],
     always_linear=False,
     to_hugr=lambda _: tys.Type(tys.SumType(tys.UnitSum(size=2))),
+)
+int_type_def = _NumericTypeDef(
+    DefId.fresh(), "int", None, NumericType(NumericType.Kind.Int)
+)
+float_type_def = _NumericTypeDef(
+    DefId.fresh(), "float", None, NumericType(NumericType.Kind.Float)
 )
 linst_type_def = OpaqueTypeDef(
     id=DefId.fresh(),
