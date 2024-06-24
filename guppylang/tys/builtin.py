@@ -175,10 +175,6 @@ def bool_type() -> OpaqueType:
     return OpaqueType([], bool_type_def)
 
 
-def int_type() -> NumericType:
-    return NumericType(NumericType.Kind.Int)
-
-
 def list_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], list_type_def)
 
