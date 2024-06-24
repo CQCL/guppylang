@@ -147,6 +147,9 @@ bool_type_def = OpaqueTypeDef(
     always_linear=False,
     to_hugr=lambda _: tys.Type(tys.SumType(tys.UnitSum(size=2))),
 )
+nat_type_def = _NumericTypeDef(
+    DefId.fresh(), "nat", None, NumericType(NumericType.Kind.Nat)
+)
 int_type_def = _NumericTypeDef(
     DefId.fresh(), "int", None, NumericType(NumericType.Kind.Int)
 )
@@ -173,6 +176,10 @@ list_type_def = _ListTypeDef(
 
 def bool_type() -> OpaqueType:
     return OpaqueType([], bool_type_def)
+
+
+def int_type() -> NumericType:
+    return NumericType(NumericType.Kind.Int)
 
 
 def list_type(element_ty: Type) -> OpaqueType:

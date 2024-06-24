@@ -18,6 +18,7 @@ from guppylang.tys.builtin import (
     int_type_def,
     linst_type_def,
     list_type_def,
+    nat_type_def,
     none_type_def,
     tuple_type_def,
 )
@@ -70,6 +71,7 @@ class Globals:
             tuple_type_def,
             none_type_def,
             bool_type_def,
+            nat_type_def,
             int_type_def,
             float_type_def,
             list_type_def,
@@ -92,6 +94,8 @@ class Globals:
                 return None
             case NumericType(kind):
                 match kind:
+                    case NumericType.Kind.Nat:
+                        type_defn = nat_type_def
                     case NumericType.Kind.Int:
                         type_defn = int_type_def
                     case NumericType.Kind.Float:

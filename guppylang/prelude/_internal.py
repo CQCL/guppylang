@@ -241,6 +241,26 @@ class CallableChecker(CustomCallChecker):
         return args, subst
 
 
+class NatTruedivCompiler(CustomCallCompiler):
+    """Compiler for the `nat.__truediv__` method."""
+
+    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+        from .builtins import Float, Nat
+
+        # Compile `truediv` using float arithmetic
+        [left, right] = args
+        [left] = Nat.__float__.compile_call(
+            [left], [], self.dfg, self.graph, self.globals, self.node
+        )
+        [right] = Nat.__float__.compile_call(
+            [right], [], self.dfg, self.graph, self.globals, self.node
+        )
+        [out] = Float.__truediv__.compile_call(
+            [left, right], [], self.dfg, self.graph, self.globals, self.node
+        )
+        return [out]
+
+
 class IntTruedivCompiler(CustomCallCompiler):
     """Compiler for the `int.__truediv__` method."""
 

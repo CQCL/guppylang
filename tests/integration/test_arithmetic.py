@@ -1,3 +1,4 @@
+from guppylang.prelude.builtins import nat
 from tests.util import compile_guppy
 
 
@@ -24,6 +25,19 @@ def test_aug_assign(validate):
         return x
 
     validate(add)
+
+
+def test_nat(validate):
+    @compile_guppy
+    def foo(
+        a: nat, b: nat, c: bool, d: int, e: float
+    ) -> tuple[nat, bool, int, float, float]:
+        b, c, d, e = nat(b), nat(c), nat(d), nat(e)
+        x = a + b * c // d - e
+        y = e / b
+        return x, bool(x), int(x), float(x), y
+
+    validate(foo)
 
 
 def test_float_coercion(validate):
