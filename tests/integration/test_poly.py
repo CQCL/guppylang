@@ -3,6 +3,8 @@ from collections.abc import Callable
 import pytest
 
 from guppylang.decorator import guppy
+from guppylang.definition.custom import CustomCallCompiler
+from guppylang.hugr_builder.hugr import OutPortV
 from guppylang.module import GuppyModule
 from guppylang.prelude.quantum import qubit
 
@@ -259,6 +261,23 @@ def test_pass_linear(validate):
         foo(bar)
 
     validate(module.compile())
+
+
+def test_custom_higher_order():
+    class CustomCompiler(CustomCallCompiler):
+        def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+            return args
+
+    module = GuppyModule("test")
+    T = guppy.type_var(module, "T")
+
+    @guppy.custom(module, CustomCompiler())
+    def foo(x: T) -> T: ...
+
+    @guppy(module)
+    def main(x: int) -> int:
+        f: Callable[[int], int] = foo
+        return f(x)
 
 
 @pytest.mark.skip("Not yet supported")
