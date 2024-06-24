@@ -1,7 +1,10 @@
-from typing import Generic
+from typing import Generic, TYPE_CHECKING
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def test_basic_defs(validate):
@@ -30,7 +33,10 @@ def test_basic_defs(validate):
     def main(
         a: EmptyStruct, b: OneMemberStruct, c: TwoMemberStruct, d: DocstringStruct
     ) -> None:
-        pass
+        EmptyStruct()
+        OneMemberStruct(42)
+        TwoMemberStruct((True, 0), 1.0)
+        DocstringStruct(-1)
 
     validate(module.compile())
 
@@ -48,7 +54,7 @@ def test_backward_ref(validate):
 
     @guppy(module)
     def main(a: StructA, b: StructB) -> None:
-        pass
+        StructB(a)
 
     validate(module.compile())
 
@@ -66,7 +72,7 @@ def test_forward_ref(validate):
 
     @guppy(module)
     def main(a: StructA, b: StructB) -> None:
-        pass
+        StructA(b)
 
     validate(module.compile())
 
@@ -92,7 +98,30 @@ def test_generic(validate):
         y: StructA[T]
 
     @guppy(module)
-    def main(a: StructA[StructA[float]], b: StructB[int, bool], c: StructC) -> None:
-        pass
+    def main(a: StructA[StructA[float]], b: StructB[bool, int], c: StructC) -> None:
+        x = StructA((0, False))
+        y = StructA((0, -5))
+        StructA((0, x))
+        StructB(x, a)
+        StructC(y, StructA((0, [])), StructB(42.0, StructA((4, b))))
+
+    validate(module.compile())
+
+
+def test_higher_order(validate):
+    module = GuppyModule("module")
+    T = guppy.type_var(module, "T")
+
+    @guppy.struct(module)
+    class Struct(Generic[T]):
+        x: T
+
+    @guppy(module)
+    def factory(mk_struct: "Callable[[int], Struct[int]]", x: int) -> Struct[int]:
+        return mk_struct(x)
+
+    @guppy(module)
+    def main() -> None:
+        factory(Struct, 42)
 
     validate(module.compile())
