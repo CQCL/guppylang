@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast, TypeVar
+from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
 from hugr.serialization import tys
 from hugr.serialization.tys import TypeBound
@@ -261,7 +261,6 @@ class NumericType(TypeBase):
     class Kind(Enum):
         """The different kinds of numeric types."""
 
-        Bool = "bool"
         Nat = "nat"
         Int = "int"
         Float = "float"
@@ -280,8 +279,6 @@ class NumericType(TypeBase):
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         match self.kind:
-            case NumericType.Kind.Bool:
-                return SumType([NoneType(), NoneType()]).to_hugr()
             case NumericType.Kind.Nat | NumericType.Kind.Int:
                 return tys.Type(
                     tys.Opaque(

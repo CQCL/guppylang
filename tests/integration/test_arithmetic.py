@@ -27,14 +27,6 @@ def test_aug_assign(validate):
     validate(add)
 
 
-def test_bool(validate):
-    @compile_guppy
-    def add(x: bool, y: bool) -> int:
-        return x + y
-
-    validate(add)
-
-
 def test_nat(validate):
     @compile_guppy
     def foo(
@@ -50,8 +42,8 @@ def test_nat(validate):
 
 def test_float_coercion(validate):
     @compile_guppy
-    def coerce(x: int, y: float, z: bool) -> float:
-        return x * y + z
+    def coerce(x: int, y: float) -> float:
+        return x * y
 
     validate(coerce)
 
