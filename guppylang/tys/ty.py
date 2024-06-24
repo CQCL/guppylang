@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast, TypeVar
+from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
 from hugr.serialization import tys
 from hugr.serialization.tys import TypeBound

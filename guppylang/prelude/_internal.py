@@ -18,11 +18,13 @@ from guppylang.definition.custom import (
     DefaultCallChecker,
 )
 from guppylang.definition.value import CallableDef
-from guppylang.error import GuppyError, GuppyTypeError
+from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.hugr_builder.hugr import UNDEFINED, OutPortV
 from guppylang.nodes import GlobalCall
+from guppylang.tys.arg import ConstArg
 from guppylang.tys.builtin import bool_type, int_type, list_type
-from guppylang.tys.subst import Subst
+from guppylang.tys.const import ConstValue
+from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, NumericType, Type, unify
 
 
@@ -276,6 +278,28 @@ class BoolArithChecker(DefaultCallChecker):
         assert not inst  # `self.func.ty` is not generic
         args = self._prepare_args(args)
         return self._get_func().check_call(args, ty, self.node, self.ctx)
+
+
+class ArrayLenChecker(CustomCallChecker):
+    """Function call checker for the `array.__len__` function."""
+
+    @staticmethod
+    def _get_const_len(inst: Inst) -> ast.expr:
+        """Helper function to extract the static length from the inferred type args."""
+        # TODO: This will stop working once we allow generic function defs. Then, the
+        #  argument could also just be variable instead of a concrete number.
+        match inst:
+            case [_, ConstArg(const=ConstValue(value=int(n)))]:
+                return ast.Constant(value=n)
+        raise InternalGuppyError(f"array.__len__: Invalid instantiation: {inst}")
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        _, _, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
+        return self._get_const_len(inst), int_type()
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        _, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
+        return self._get_const_len(inst), subst
 
 
 class NatTruedivCompiler(CustomCallCompiler):
