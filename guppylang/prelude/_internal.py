@@ -248,38 +248,6 @@ class CallableChecker(CustomCallChecker):
         return args, subst
 
 
-class BoolArithChecker(DefaultCallChecker):
-    """Function call checker for arithmetic operations on bools.
-
-    Converts all bools into ints and calls the corresponding int arithmetic method with
-    the same name.
-    """
-
-    def _prepare_args(self, args: list[ast.expr]) -> list[ast.expr]:
-        # Cast all inputs to int
-        to_int = self.ctx.globals.get_instance_func(bool_type(), "__int__")
-        assert to_int is not None
-        return [to_int.synthesize_call([arg], arg, self.ctx)[0] for arg in args]
-
-    def _get_func(self) -> CallableDef:
-        # Get the int function with the same name
-        func = self.ctx.globals.get_instance_func(int_type(), self.func.name)
-        assert func is not None
-        return func
-
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        args, _, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
-        assert not inst  # `self.func.ty` is not generic
-        args = self._prepare_args(args)
-        return self._get_func().synthesize_call(args, self.node, self.ctx)
-
-    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        args, _, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
-        assert not inst  # `self.func.ty` is not generic
-        args = self._prepare_args(args)
-        return self._get_func().check_call(args, ty, self.node, self.ctx)
-
-
 class ArrayLenChecker(CustomCallChecker):
     """Function call checker for the `array.__len__` function."""
 
