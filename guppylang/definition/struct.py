@@ -3,6 +3,7 @@ import inspect
 import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Any
 
 from guppylang.ast_util import AstNode, annotate_location
@@ -14,13 +15,19 @@ from guppylang.definition.common import (
     Definition,
     ParsableDef,
 )
+from guppylang.definition.custom import (
+    CustomCallCompiler,
+    CustomFunctionDef,
+    DefaultCallChecker,
+)
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
+from guppylang.hugr_builder.hugr import OutPortV
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.parsing import type_from_ast
-from guppylang.tys.ty import StructType, Type
+from guppylang.tys.ty import FunctionType, StructType, Type
 
 
 @dataclass(frozen=True)
@@ -185,6 +192,35 @@ class CheckedStructDef(TypeDef, CompiledDef):
         """Checks if the struct can be instantiated with the given arguments."""
         check_all_args(self.params, args, self.name, loc)
         return StructType(args, self)
+
+    @cached_property
+    def generated_methods(self) -> list[CustomFunctionDef]:
+        """Auto-generated methods for this struct."""
+
+        class ConstructorCompiler(CustomCallCompiler):
+            """Compiler for the `__new__` constructor method of a struct."""
+
+            def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+                return [self.graph.add_make_tuple(args).out_port(0)]
+
+        constructor_sig = FunctionType(
+            inputs=[f.ty for f in self.fields],
+            output=StructType(
+                defn=self, args=[p.to_bound(i) for i, p in enumerate(self.params)]
+            ),
+            input_names=[f.name for f in self.fields],
+            params=self.params,
+        )
+        constructor_def = CustomFunctionDef(
+            id=DefId.fresh(self.id.module),
+            name="__new__",
+            defined_at=self.defined_at,
+            ty=constructor_sig,
+            call_checker=DefaultCallChecker(),
+            call_compiler=ConstructorCompiler(),
+            higher_order_value=True,
+        )
+        return [constructor_def]
 
 
 def parse_py_class(cls: type) -> ast.ClassDef:

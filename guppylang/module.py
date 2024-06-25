@@ -20,6 +20,7 @@ from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.function import RawFunctionDef
 from guppylang.definition.parameter import ParamDef
+from guppylang.definition.struct import CheckedStructDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, pretty_errors
 from guppylang.hugr_builder.hugr import Hugr
@@ -180,9 +181,18 @@ class GuppyModule:
         )
         self._globals = self._globals.update_defs(type_defs)
 
+        # Collect auto-generated methods
+        generated: dict[DefId, RawDef] = {}
+        for defn in type_defs.values():
+            if isinstance(defn, CheckedStructDef):
+                self._globals.impls.setdefault(defn.id, {})
+                for method_def in defn.generated_methods:
+                    generated[method_def.id] = method_def
+                    self._globals.impls[defn.id][method_def.name] = method_def.id
+
         # Now, we can check all other definitions
         other_defs = self._check_defs(
-            self._raw_defs, self._imported_globals | self._globals
+            self._raw_defs | generated, self._imported_globals | self._globals
         )
         self._globals = self._globals.update_defs(other_defs)
 

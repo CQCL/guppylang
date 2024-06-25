@@ -97,10 +97,16 @@ class RawCustomFunctionDef(ParsableDef):
 
 
 @dataclass(frozen=True)
-class CustomFunctionDef(RawCustomFunctionDef, CompiledCallableDef):
+class CustomFunctionDef(CompiledCallableDef):
     """A custom function with parsed and checked signature."""
 
+    defined_at: AstNode
+    call_checker: "CustomCallChecker"
+    call_compiler: "CustomCallCompiler"
     ty: FunctionType
+    higher_order_value: bool
+
+    description: str = field(default="function", init=False)
 
     def check_call(
         self, args: list[ast.expr], ty: Type, node: AstNode, ctx: Context
@@ -162,6 +168,19 @@ class CustomFunctionDef(RawCustomFunctionDef, CompiledCallableDef):
         # Finally, load the function into the local DFG. We already monomorphised, so we
         # can load with empty type args
         return graph.add_load_function(def_node.out_port(0), [], dfg.node).out_port(0)
+
+    def compile_call(
+        self,
+        args: list[OutPortV],
+        type_args: Inst,
+        dfg: DFContainer,
+        graph: Hugr,
+        globals: CompiledGlobals,
+        node: AstNode,
+    ) -> list[OutPortV]:
+        """Compiles a call to the function."""
+        self.call_compiler._setup(type_args, dfg, graph, globals, node)
+        return self.call_compiler.compile(args)
 
 
 class CustomCallChecker(ABC):

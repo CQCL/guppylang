@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:15
+
+13:    @guppy(module)
+14:    def main() -> None:
+15:        MyStruct(0)
+                    ^
+GuppyTypeError: Expected argument of type `(int, int)`, got `int`
