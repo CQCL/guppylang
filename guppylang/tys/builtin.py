@@ -8,9 +8,16 @@ from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError
-from guppylang.tys.arg import Argument, TypeArg
-from guppylang.tys.param import TypeParam
-from guppylang.tys.ty import FunctionType, NoneType, OpaqueType, TupleType, Type
+from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.param import ConstParam, TypeParam
+from guppylang.tys.ty import (
+    FunctionType,
+    NoneType,
+    NumericType,
+    OpaqueType,
+    TupleType,
+    Type,
+)
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -80,6 +87,23 @@ class _NoneTypeDef(TypeDef):
 
 
 @dataclass(frozen=True)
+class _NumericTypeDef(TypeDef):
+    """Type definition associated with the builtin numeric types.
+
+    Any impls on numerics can be registered with these definitions.
+    """
+
+    ty: NumericType
+
+    def check_instantiate(
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+    ) -> NumericType:
+        if args:
+            raise GuppyError(f"Type `{self.name}` is not parameterized", loc)
+        return self.ty
+
+
+@dataclass(frozen=True)
 class _ListTypeDef(OpaqueTypeDef):
     """Type definition associated with the builtin `list` type.
 
@@ -112,6 +136,20 @@ def _list_to_hugr(args: Sequence[Argument]) -> tys.Type:
     return tys.Type(ty)
 
 
+def _array_to_hugr(args: Sequence[Argument]) -> tys.Type:
+    # Type checker ensures that we get a two args
+    [ty_arg, len_arg] = args
+    assert isinstance(ty_arg, TypeArg)
+    assert isinstance(len_arg, ConstArg)
+    ty = tys.Opaque(
+        extension="prelude",
+        id="array",
+        args=[len_arg.to_hugr(), ty_arg.to_hugr()],
+        bound=ty_arg.ty.hugr_bound,
+    )
+    return tys.Type(ty)
+
+
 callable_type_def = _CallableTypeDef(DefId.fresh(), None)
 tuple_type_def = _TupleTypeDef(DefId.fresh(), None)
 none_type_def = _NoneTypeDef(DefId.fresh(), None)
@@ -122,6 +160,15 @@ bool_type_def = OpaqueTypeDef(
     params=[],
     always_linear=False,
     to_hugr=lambda _: tys.Type(tys.SumType(tys.UnitSum(size=2))),
+)
+nat_type_def = _NumericTypeDef(
+    DefId.fresh(), "nat", None, NumericType(NumericType.Kind.Nat)
+)
+int_type_def = _NumericTypeDef(
+    DefId.fresh(), "int", None, NumericType(NumericType.Kind.Int)
+)
+float_type_def = _NumericTypeDef(
+    DefId.fresh(), "float", None, NumericType(NumericType.Kind.Float)
 )
 linst_type_def = OpaqueTypeDef(
     id=DefId.fresh(),
@@ -139,10 +186,25 @@ list_type_def = _ListTypeDef(
     always_linear=False,
     to_hugr=_list_to_hugr,
 )
+array_type_def = OpaqueTypeDef(
+    id=DefId.fresh(),
+    name="array",
+    defined_at=None,
+    params=[
+        TypeParam(0, "T", can_be_linear=True),
+        ConstParam(1, "n", NumericType(NumericType.Kind.Nat)),
+    ],
+    always_linear=False,
+    to_hugr=_array_to_hugr,
+)
 
 
 def bool_type() -> OpaqueType:
     return OpaqueType([], bool_type_def)
+
+
+def int_type() -> NumericType:
+    return NumericType(NumericType.Kind.Int)
 
 
 def list_type(element_ty: Type) -> OpaqueType:

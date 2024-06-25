@@ -151,19 +151,22 @@ class CustomFunctionDef(CompiledCallableDef):
                 node,
             )
         assert len(self.ty.params) == len(type_args)
-        ty = self.ty.instantiate(type_args)
 
         # We create a `FunctionDef` that takes some inputs, compiles a call to the
-        # function, and returns the results.
-        def_node = graph.add_def(ty, dfg.node, self.name)
+        # function, and returns the results. If the function signature is polymorphic,
+        # we explicitly monomorphise here and invoke the call compiler with the
+        # inferred type args.
+        fun_ty = self.ty.instantiate(type_args)
+        def_node = graph.add_def(fun_ty, dfg.node, self.name)
         with graph.parent(def_node):
-            _, inp_ports = graph.add_input_with_ports(list(ty.inputs))
+            _, inp_ports = graph.add_input_with_ports(list(fun_ty.inputs))
             returns = self.compile_call(
                 inp_ports, type_args, DFContainer(def_node, {}), graph, globals, node
             )
             graph.add_output(returns)
 
-        # Finally, load the function into the local DFG
+        # Finally, load the function into the local DFG. We already monomorphised, so we
+        # can load with empty type args
         return graph.add_load_function(def_node.out_port(0), [], dfg.node).out_port(0)
 
     def compile_call(

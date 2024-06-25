@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, TypeAlias, cast
+from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
 from hugr.serialization import tys
 from hugr.serialization.tys import TypeBound
@@ -10,7 +11,7 @@ from hugr.serialization.tys import TypeBound
 from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
-from guppylang.tys.const import ExistentialConstVar
+from guppylang.tys.const import Const, ConstValue, ExistentialConstVar
 from guppylang.tys.param import Parameter
 from guppylang.tys.var import BoundVar, ExistentialVar
 
@@ -42,6 +43,14 @@ class TypeBase(ToHugr[tys.Type], Transformable["Type"], ABC):
         bound exactly right during serialisation, the Hugr validator will complain.
         """
 
+    @abstractmethod
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`.
+
+        This enforces that all implementors of `TypeBase` can be embedded into the
+        `Type` union type.
+        """
+
     @cached_property
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this type."""
@@ -52,6 +61,10 @@ class TypeBase(ToHugr[tys.Type], Transformable["Type"], ABC):
         from guppylang.tys.subst import Substituter
 
         return self.transform(Substituter(subst))
+
+    def to_arg(self) -> TypeArg:
+        """Wraps this constant into a type argument."""
+        return TypeArg(self.cast())
 
     def __str__(self) -> str:
         """Returns a human-readable representation of the type."""
@@ -102,14 +115,7 @@ class ParametrizedTypeBase(TypeBase, ABC):
     @cached_property
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this type."""
-        unsolved = set()
-        for arg in self.args:
-            match arg:
-                case TypeArg(ty):
-                    unsolved |= ty.unsolved_vars
-                case ConstArg(c) if isinstance(c, ExistentialConstVar):
-                    unsolved.add(c)
-        return unsolved
+        return set().union(*(arg.unsolved_vars for arg in self.args))
 
     @cached_property
     def hugr_bound(self) -> tys.TypeBound:
@@ -147,6 +153,10 @@ class BoundTypeVar(TypeBase, BoundVar):
         # We're conservative and don't require equatability for non-linear variables.
         # This is fine since Guppy doesn't use the equatable feature anyways.
         return TypeBound.Copyable
+
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
@@ -194,6 +204,10 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
             "Tried to compute bound of unsolved existential type variable"
         )
 
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
+
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         raise InternalGuppyError(
@@ -221,9 +235,77 @@ class NoneType(TypeBase):
     # empty rows when generating a Hugr
     preserve: bool = field(default=False, compare=False)
 
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
+
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         return TupleType([]).to_hugr()
+
+    def visit(self, visitor: Visitor) -> None:
+        """Accepts a visitor on this type."""
+        visitor.visit(self)
+
+    def transform(self, transformer: Transformer) -> "Type":
+        """Accepts a transformer on this type."""
+        return transformer.transform(self) or self
+
+
+@dataclass(frozen=True)
+class NumericType(TypeBase):
+    """Numeric types like `int` and `float`."""
+
+    kind: "Kind"
+
+    class Kind(Enum):
+        """The different kinds of numeric types."""
+
+        Nat = "nat"
+        Int = "int"
+        Float = "float"
+
+    INT_WIDTH: ClassVar[int] = 6
+
+    @property
+    def linear(self) -> bool:
+        """Whether this type should be treated linearly."""
+        return False
+
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
+
+    def to_hugr(self) -> tys.Type:
+        """Computes the Hugr representation of the type."""
+        match self.kind:
+            case NumericType.Kind.Nat | NumericType.Kind.Int:
+                return tys.Type(
+                    tys.Opaque(
+                        extension="arithmetic.int.types",
+                        id="int",
+                        args=[tys.TypeArg(tys.BoundedNatArg(n=NumericType.INT_WIDTH))],
+                        bound=tys.TypeBound.Eq,
+                    )
+                )
+            case NumericType.Kind.Float:
+                return tys.Type(
+                    tys.Opaque(
+                        extension="arithmetic.float.types",
+                        id="float64",
+                        args=[],
+                        bound=tys.TypeBound.Copyable,
+                    )
+                )
+
+    @property
+    def hugr_bound(self) -> tys.TypeBound:
+        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
+        match self.kind:
+            case NumericType.Kind.Float:
+                return tys.TypeBound.Copyable
+            case _:
+                return tys.TypeBound.Eq
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -268,6 +350,10 @@ class FunctionType(ParametrizedTypeBase):
     def parametrized(self) -> bool:
         """Whether the function is parametrized."""
         return len(self.params) > 0
+
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
@@ -362,6 +448,10 @@ class TupleType(ParametrizedTypeBase):
     def intrinsically_linear(self) -> bool:
         return False
 
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
+
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         # Tuples are encoded as a unary sum. Note that we need to make a copy of this
@@ -397,6 +487,10 @@ class SumType(ParametrizedTypeBase):
     @property
     def intrinsically_linear(self) -> bool:
         return False
+
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
 
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
@@ -437,6 +531,10 @@ class OpaqueType(ParametrizedTypeBase):
             return self.defn.bound
         return super().hugr_bound
 
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
+
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         return self.defn.to_hugr(self.args)
@@ -468,6 +566,10 @@ class StructType(ParametrizedTypeBase):
         """Whether this type is linear, independent of the arguments."""
         return any(f.ty.linear for f in self.defn.fields)
 
+    def cast(self) -> "Type":
+        """Casts an implementor of `TypeBase` into a `Type`."""
+        return self
+
     def to_hugr(self) -> tys.Type:
         """Computes the Hugr representation of the type."""
         return TupleType([f.ty for f in self.fields]).to_hugr()
@@ -493,7 +595,9 @@ ParametrizedType: TypeAlias = (
 #: This might become obsolete in case the @sealed decorator is added:
 #:   * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
 #:   * https://github.com/johnthagen/sealed-typing-pep
-Type: TypeAlias = BoundTypeVar | ExistentialTypeVar | NoneType | ParametrizedType
+Type: TypeAlias = (
+    BoundTypeVar | ExistentialTypeVar | NumericType | NoneType | ParametrizedType
+)
 
 #: An immutable row of Guppy types.
 TypeRow: TypeAlias = Sequence[Type]
@@ -528,22 +632,28 @@ def rows_to_hugr(rows: Sequence[TypeRow]) -> list[tys.TypeRow]:
     return [row_to_hugr(row) for row in rows]
 
 
-def unify(s: Type, t: Type, subst: "Subst | None") -> "Subst | None":
-    """Computes a most general unifier for two types.
+def unify(s: Type | Const, t: Type | Const, subst: "Subst | None") -> "Subst | None":
+    """Computes a most general unifier for two types or constants.
 
     Return a substitutions `subst` such that `s[subst] == t[subst]` or `None` if this
     not possible.
     """
+    # Make sure that s and t are either both constants or both types
+    assert isinstance(s, TypeBase) == isinstance(t, TypeBase)
     if subst is None:
         return None
     match s, t:
-        case ExistentialTypeVar(id=s_id), ExistentialTypeVar(id=t_id) if s_id == t_id:
+        case ExistentialVar(id=s_id), ExistentialVar(id=t_id) if s_id == t_id:
             return subst
-        case ExistentialTypeVar() as s, t:
-            return _unify_var(s, t, subst)
-        case s, ExistentialTypeVar() as t:
-            return _unify_var(t, s, subst)
-        case BoundTypeVar(idx=s_idx), BoundTypeVar(idx=t_idx) if s_idx == t_idx:
+        case ExistentialTypeVar() | ExistentialConstVar() as s_var, t:
+            return _unify_var(s_var, t, subst)
+        case s, ExistentialTypeVar() | ExistentialConstVar() as t_var:
+            return _unify_var(t_var, s, subst)
+        case BoundVar(idx=s_idx), BoundVar(idx=t_idx) if s_idx == t_idx:
+            return subst
+        case ConstValue(value=c_value), ConstValue(value=d_value) if c_value == d_value:
+            return subst
+        case NumericType(kind=s_kind), NumericType(kind=t_kind) if s_kind == t_kind:
             return subst
         case NoneType(), NoneType():
             return subst
@@ -561,8 +671,10 @@ def unify(s: Type, t: Type, subst: "Subst | None") -> "Subst | None":
             return None
 
 
-def _unify_var(var: ExistentialTypeVar, t: Type, subst: "Subst") -> "Subst | None":
-    """Helper function for unification of type variables."""
+def _unify_var(
+    var: ExistentialTypeVar | ExistentialConstVar, t: Type | Const, subst: "Subst"
+) -> "Subst | None":
+    """Helper function for unification of type or const variables."""
     if var in subst:
         return unify(subst[var], t, subst)
     if isinstance(t, ExistentialTypeVar) and t in subst:
@@ -585,8 +697,11 @@ def _unify_args(
                 if res is None:
                     return None
                 subst = res
-            case ConstArg(), ConstArg():
-                raise NotImplementedError
+            case ConstArg(const=sa_const), ConstArg(const=ta_const):
+                res = unify(sa_const, ta_const, subst)
+                if res is None:
+                    return None
+                subst = res
             case _:
                 return None
     return subst

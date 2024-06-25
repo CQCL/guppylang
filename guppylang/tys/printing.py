@@ -2,10 +2,12 @@ from functools import singledispatchmethod
 
 from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import ConstArg, TypeArg
+from guppylang.tys.const import ConstValue
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
     FunctionType,
     NoneType,
+    NumericType,
     OpaqueType,
     StructType,
     SumType,
@@ -107,6 +109,10 @@ class TypePrinter:
         return "None"
 
     @_visit.register
+    def _visit_NumericType(self, ty: NumericType, inside_row: bool) -> str:
+        return ty.kind.value
+
+    @_visit.register
     def _visit_TypeParam(self, param: TypeParam, inside_row: bool) -> str:
         # TODO: Print linearity?
         return self.bound_names[-param.idx - 1]
@@ -124,6 +130,10 @@ class TypePrinter:
     @_visit.register
     def _visit_ConstArg(self, arg: ConstArg, inside_row: bool) -> str:
         return self._visit(arg.const, inside_row)
+
+    @_visit.register
+    def _visit_ConstValue(self, c: ConstValue, inside_row: bool) -> str:
+        return str(c.value)
 
 
 def _wrap(s: str, inside_row: bool) -> str:

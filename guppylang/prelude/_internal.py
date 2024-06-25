@@ -3,45 +3,29 @@ import ast
 from hugr.serialization import ops, tys
 from pydantic import BaseModel
 
-from guppylang.ast_util import AstNode, get_type, with_loc, with_type
+from guppylang.ast_util import AstNode, get_type, with_loc
 from guppylang.checker.core import Context
-from guppylang.checker.expr_checker import ExprSynthesizer, check_num_args
+from guppylang.checker.expr_checker import (
+    ExprSynthesizer,
+    check_call,
+    check_num_args,
+    synthesize_call,
+)
 from guppylang.definition.custom import (
     CustomCallChecker,
     CustomCallCompiler,
     CustomFunctionDef,
     DefaultCallChecker,
 )
-from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
-from guppylang.error import GuppyError, GuppyTypeError
+from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.hugr_builder.hugr import UNDEFINED, OutPortV
 from guppylang.nodes import GlobalCall
-from guppylang.tys.builtin import bool_type, list_type
-from guppylang.tys.subst import Subst
-from guppylang.tys.ty import FunctionType, OpaqueType, Type, unify
-
-INT_WIDTH = 6  # 2^6 = 64 bit
-
-
-hugr_int_type = tys.Type(
-    tys.Opaque(
-        extension="arithmetic.int.types",
-        id="int",
-        args=[tys.TypeArg(tys.BoundedNatArg(n=INT_WIDTH))],
-        bound=tys.TypeBound.Eq,
-    )
-)
-
-
-hugr_float_type = tys.Type(
-    tys.Opaque(
-        extension="arithmetic.float.types",
-        id="float64",
-        args=[],
-        bound=tys.TypeBound.Copyable,
-    )
-)
+from guppylang.tys.arg import ConstArg
+from guppylang.tys.builtin import bool_type, int_type, list_type
+from guppylang.tys.const import ConstValue
+from guppylang.tys.subst import Inst, Subst
+from guppylang.tys.ty import FunctionType, NumericType, Type, unify
 
 
 class ConstInt(BaseModel):
@@ -76,9 +60,9 @@ def int_value(i: int) -> ops.Value:
     return ops.Value(
         ops.ExtensionValue(
             extensions=["arithmetic.int.types"],
-            typ=hugr_int_type,
+            typ=NumericType(NumericType.Kind.Int).to_hugr(),
             value=ops.CustomConst(
-                c="ConstInt", v=ConstInt(log_width=INT_WIDTH, value=i)
+                c="ConstInt", v=ConstInt(log_width=NumericType.INT_WIDTH, value=i)
             ),
         )
     )
@@ -89,7 +73,7 @@ def float_value(f: float) -> ops.Value:
     return ops.Value(
         ops.ExtensionValue(
             extensions=["arithmetic.float.types"],
-            typ=hugr_float_type,
+            typ=NumericType(NumericType.Kind.Float).to_hugr(),
             value=ops.CustomConst(c="ConstF64", v=ConstF64(value=f)),
         )
     )
@@ -116,16 +100,16 @@ def logic_op(op_name: str, args: list[tys.TypeArg] | None = None) -> ops.OpType:
 
 
 def int_op(
-    op_name: str, ext: str = "arithmetic.int", num_params: int = 1
+    op_name: str,
+    ext: str = "arithmetic.int",
+    args: list[tys.TypeArg] | None = None,
+    num_params: int = 1,
 ) -> ops.OpType:
     """Utility method to create Hugr integer arithmetic ops."""
+    if args is None:
+        args = num_params * [tys.TypeArg(tys.BoundedNatArg(n=NumericType.INT_WIDTH))]
     return ops.OpType(
-        ops.CustomOp(
-            extension=ext,
-            op_name=op_name,
-            args=num_params * [tys.TypeArg(tys.BoundedNatArg(n=INT_WIDTH))],
-            parent=UNDEFINED,
-        )
+        ops.CustomOp(extension=ext, op_name=op_name, args=args, parent=UNDEFINED)
     )
 
 
@@ -140,20 +124,12 @@ class CoercingChecker(DefaultCallChecker):
     """Function call type checker that automatically coerces arguments to float."""
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        from .builtins import Int
-
         for i in range(len(args)):
             args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
-            if isinstance(ty, OpaqueType) and ty.defn == self.ctx.globals["int"]:
-                call = with_loc(
-                    self.node,
-                    GlobalCall(def_id=Int.__float__.id, args=[args[i]], type_args=[]),
-                )
-                float_defn = self.ctx.globals["float"]
-                assert isinstance(float_defn, TypeDef)
-                args[i] = with_type(
-                    float_defn.check_instantiate([], self.ctx.globals), call
-                )
+            if isinstance(ty, NumericType) and ty.kind != NumericType.Kind.Float:
+                to_float = self.ctx.globals.get_instance_func(ty, "__float__")
+                assert to_float is not None
+                args[i], _ = to_float.synthesize_call([args[i]], self.node, self.ctx)
         return super().synthesize(args)
 
 
@@ -270,6 +246,48 @@ class CallableChecker(CustomCallChecker):
                 f"Expected expression of type `{ty}`, got `bool`", self.node
             )
         return args, subst
+
+
+class ArrayLenChecker(CustomCallChecker):
+    """Function call checker for the `array.__len__` function."""
+
+    @staticmethod
+    def _get_const_len(inst: Inst) -> ast.expr:
+        """Helper function to extract the static length from the inferred type args."""
+        # TODO: This will stop working once we allow generic function defs. Then, the
+        #  argument could also just be variable instead of a concrete number.
+        match inst:
+            case [_, ConstArg(const=ConstValue(value=int(n)))]:
+                return ast.Constant(value=n)
+        raise InternalGuppyError(f"array.__len__: Invalid instantiation: {inst}")
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        _, _, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
+        return self._get_const_len(inst), int_type()
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        _, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
+        return self._get_const_len(inst), subst
+
+
+class NatTruedivCompiler(CustomCallCompiler):
+    """Compiler for the `nat.__truediv__` method."""
+
+    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+        from .builtins import Float, Nat
+
+        # Compile `truediv` using float arithmetic
+        [left, right] = args
+        [left] = Nat.__float__.compile_call(
+            [left], [], self.dfg, self.graph, self.globals, self.node
+        )
+        [right] = Nat.__float__.compile_call(
+            [right], [], self.dfg, self.graph, self.globals, self.node
+        )
+        [out] = Float.__truediv__.compile_call(
+            [left, right], [], self.dfg, self.graph, self.globals, self.node
+        )
+        return [out]
 
 
 class IntTruedivCompiler(CustomCallCompiler):

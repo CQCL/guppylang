@@ -3,7 +3,7 @@ import pytest
 
 from tests.error.util import run_error_test
 
-path = pathlib.Path(__file__).parent.resolve() / "comprehension_errors"
+path = pathlib.Path(__file__).parent.resolve() / "array_errors"
 files = [
     x
     for x in path.iterdir()
@@ -15,5 +15,5 @@ files = [str(f) for f in files]
 
 
 @pytest.mark.parametrize("file", files)
-def test_comprehension_errors(file, capsys):
+def test_array_errors(file, capsys):
     run_error_test(file, capsys)
