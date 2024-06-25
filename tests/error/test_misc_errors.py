@@ -9,8 +9,7 @@ path = pathlib.Path(__file__).parent.resolve() / "misc_errors"
 files = [
     x
     for x in path.iterdir()
-    if x.is_file()
-    if x.suffix == ".py" and x.name != "__init__.py"
+    if x.is_file() and x.suffix == ".py" and x.name != "__init__.py"
 ]
 
 # TODO: Skip functional tests for now

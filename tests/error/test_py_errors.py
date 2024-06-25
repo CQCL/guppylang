@@ -14,7 +14,8 @@ files = [
     x
     for x in path.iterdir()
     if x.is_file()
-    if x.suffix == ".py" and x.name not in ("__init__.py", "tket2_not_installed.py")
+    and x.suffix == ".py"
+    and x.name not in ("__init__.py", "tket2_not_installed.py")
 ]
 
 # Turn paths into strings, otherwise pytest doesn't display the names
@@ -28,5 +29,7 @@ def test_py_errors(file, capsys):
 
 @pytest.mark.skipif(tket2_installed, reason="tket2 is installed")
 def test_tket2_not_installed(capsys):
-    path = pathlib.Path(__file__).parent.resolve() / "py_errors" / "tket2_not_installed.py"
+    path = (
+        pathlib.Path(__file__).parent.resolve() / "py_errors" / "tket2_not_installed.py"
+    )
     run_error_test(str(path), capsys)
