@@ -205,7 +205,9 @@ class CheckedStructDef(TypeDef, CompiledDef):
 
         constructor_sig = FunctionType(
             inputs=[f.ty for f in self.fields],
-            output=StructType([p.to_bound(i) for i, p in enumerate(self.params)], self),
+            output=StructType(
+                defn=self, args=[p.to_bound(i) for i, p in enumerate(self.params)]
+            ),
             input_names=[f.name for f in self.fields],
             params=self.params,
         )
