@@ -58,11 +58,11 @@ class nat:
     """Class to import in order to use nats."""
 
 
-_S = TypeVar("_S")
 _T = TypeVar("_T")
+_n = TypeVar("_n")
 
 
-class array(Generic[_S, _T]):
+class array(Generic[_T, _n]):
     """Class to import in order to use arrays."""
 
 
