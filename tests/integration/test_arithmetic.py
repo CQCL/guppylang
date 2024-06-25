@@ -27,6 +27,19 @@ def test_aug_assign(validate):
     validate(add)
 
 
+def test_nat(validate):
+    @compile_guppy
+    def foo(
+        a: nat, b: nat, c: bool, d: int, e: float
+    ) -> tuple[nat, bool, int, float, float]:
+        b, c, d, e = nat(b), nat(c), nat(d), nat(e)
+        x = a + b * c // d - e
+        y = e / b
+        return x, bool(x), int(x), float(x), y
+
+    validate(foo)
+
+
 def test_float_coercion(validate):
     @compile_guppy
     def coerce(x: int, y: float) -> float:
