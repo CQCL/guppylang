@@ -2,7 +2,7 @@
 
 # mypy: disable-error-code="empty-body, misc, override, valid-type, no-untyped-def"
 
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from hugr.serialization import tys
 
@@ -12,6 +12,7 @@ from guppylang.error import GuppyError
 from guppylang.hugr_builder.hugr import DummyOp
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal import (
+    ArrayLenChecker,
     CallableChecker,
     CoercingChecker,
     DunderChecker,
@@ -29,6 +30,7 @@ from guppylang.prelude._internal import (
     logic_op,
 )
 from guppylang.tys.builtin import (
+    array_type_def,
     bool_type_def,
     float_type_def,
     int_type_def,
@@ -56,11 +58,12 @@ class nat:
     """Class to import in order to use nats."""
 
 
-class array:
-    """Class to import in order to use arrays."""
+_T = TypeVar("_T")
+_n = TypeVar("_n")
 
-    def __class_getitem__(cls, item):
-        return cls
+
+class array(Generic[_T, _n]):
+    """Class to import in order to use arrays."""
 
 
 @guppy.extend_type(builtins, bool_type_def)
@@ -594,6 +597,18 @@ class Linst:
 
     @guppy.custom(builtins, checker=FailingChecker("Guppy lists are immutable"))
     def sort(self: list[T]) -> None: ...
+
+
+n = guppy.nat_var(builtins, "n")
+
+
+@guppy.extend_type(builtins, array_type_def)
+class Array:
+    @guppy.hugr_op(builtins, DummyOp("ArrayGet"))
+    def __getitem__(self: array[T, n], idx: int) -> T: ...
+
+    @guppy.custom(builtins, checker=ArrayLenChecker())
+    def __len__(self: array[T, n]) -> int: ...
 
 
 @guppy.custom(builtins, checker=DunderChecker("__abs__"), higher_order_value=False)

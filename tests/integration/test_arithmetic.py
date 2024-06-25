@@ -48,6 +48,19 @@ def test_float_coercion(validate):
     validate(coerce)
 
 
+def test_nat(validate):
+    @compile_guppy
+    def foo(
+        a: nat, b: nat, c: bool, d: int, e: float
+    ) -> tuple[nat, bool, int, float, float]:
+        b, c, d, e = nat(b), nat(c), nat(d), nat(e)
+        x = a + b * c // d - e
+        y = e / b
+        return x, bool(x), int(x), float(x), y
+
+    validate(foo)
+
+
 def test_arith_big(validate):
     @compile_guppy
     def arith(x: int, y: float, z: int) -> bool:
