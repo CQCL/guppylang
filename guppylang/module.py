@@ -19,7 +19,7 @@ from guppylang.definition.common import (
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.function import RawFunctionDef
-from guppylang.definition.parameter import TypeVarDef
+from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, pretty_errors
 from guppylang.hugr_builder.hugr import Hugr
@@ -86,7 +86,7 @@ class GuppyModule:
 
             # For now, we can only import custom functions
             if any(
-                not isinstance(v, CustomFunctionDef | TypeDef | TypeVarDef)
+                not isinstance(v, CustomFunctionDef | TypeDef | ParamDef)
                 for v in m._compiled_globals.values()
             ):
                 raise GuppyError(
@@ -111,7 +111,7 @@ class GuppyModule:
             self._instance_func_buffer[defn.name] = defn
         else:
             self._check_name_available(defn.name, defn.defined_at)
-            if isinstance(defn, TypeDef | TypeVarDef):
+            if isinstance(defn, TypeDef | ParamDef):
                 self._raw_type_defs[defn.id] = defn
             else:
                 self._raw_defs[defn.id] = defn

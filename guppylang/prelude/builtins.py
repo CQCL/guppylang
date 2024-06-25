@@ -56,6 +56,13 @@ class nat:
     """Class to import in order to use nats."""
 
 
+class array:
+    """Class to import in order to use arrays."""
+
+    def __class_getitem__(cls, item):
+        return cls
+
+
 @guppy.extend_type(builtins, bool_type_def)
 class Bool:
     @guppy.hugr_op(builtins, logic_op("And", [tys.TypeArg(tys.BoundedNatArg(n=2))]))

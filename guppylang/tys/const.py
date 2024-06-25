@@ -1,18 +1,18 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-from hugr.serialization import ops
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from guppylang.error import InternalGuppyError
+from guppylang.tys.common import Transformable, Transformer, Visitor
 from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
+    from guppylang.tys.arg import ConstArg
     from guppylang.tys.ty import Type
 
 
 @dataclass(frozen=True)
-class Const(ABC):
+class ConstBase(Transformable["Const"], ABC):
     """Abstract base class for constants arguments in the type system.
 
     In principle, we can allow constants of any type representable in the type system.
@@ -26,22 +26,52 @@ class Const(ABC):
         if self.ty.unsolved_vars:
             raise InternalGuppyError("Attempted to create constant with unsolved type")
 
+    @abstractmethod
+    def cast(self) -> "Const":
+        """Casts an implementor of `ConstBase` into a `Const`.
+
+        This enforces that all implementors of `ConstBase` can be embedded into the
+        `Const` union type.
+        """
+
+    @property
+    def unsolved_vars(self) -> set[ExistentialVar]:
+        """The existential type variables contained in this constant."""
+        return set()
+
+    def visit(self, visitor: Visitor) -> None:
+        """Accepts a visitor on this constant."""
+        visitor.visit(self)
+
+    def transform(self, transformer: Transformer, /) -> "Const":
+        """Accepts a transformer on this constant."""
+        return transformer.transform(self) or self.cast()
+
+    def to_arg(self) -> "ConstArg":
+        """Wraps this constant into a type argument."""
+        from guppylang.tys.arg import ConstArg
+
+        return ConstArg(self.cast())
+
 
 @dataclass(frozen=True)
-class ConstValue(Const):
+class ConstValue(ConstBase):
     """A constant value in the type system.
 
     For example, in the type `array[int, 5]` the second argument is a `ConstArg`  that
     contains a `ConstValue(5)`.
     """
 
-    # Hugr encoding of the value
-    # TODO: We might need a Guppy representation of this...
-    value: ops.Value
+    # TODO: We will need a proper Guppy representation of this in the future
+    value: Any
+
+    def cast(self) -> "Const":
+        """Casts an implementor of `ConstBase` into a `Const`."""
+        return self
 
 
 @dataclass(frozen=True)
-class BoundConstVar(BoundVar, Const):
+class BoundConstVar(BoundVar, ConstBase):
     """Bound variable referencing a `ConstParam`.
 
     For example, in the function type `forall n: int. array[float, n] -> array[int, n]`,
@@ -49,9 +79,13 @@ class BoundConstVar(BoundVar, Const):
     `BoundConstVar(idx=0)`.
     """
 
+    def cast(self) -> "Const":
+        """Casts an implementor of `ConstBase` into a `Const`."""
+        return self
+
 
 @dataclass(frozen=True)
-class ExistentialConstVar(ExistentialVar, Const):
+class ExistentialConstVar(ExistentialVar, ConstBase):
     """Existential constant variable.
 
     During type checking we try to solve all existential constant variables and
@@ -61,3 +95,15 @@ class ExistentialConstVar(ExistentialVar, Const):
     @classmethod
     def fresh(cls, display_name: str, ty: "Type") -> "ExistentialConstVar":
         return ExistentialConstVar(ty, display_name, next(cls._fresh_id))
+
+    @property
+    def unsolved_vars(self) -> set[ExistentialVar]:
+        """The existential type variables contained in this constant."""
+        return {self}
+
+    def cast(self) -> "Const":
+        """Casts an implementor of `ConstBase` into a `Const`."""
+        return self
+
+
+Const: TypeAlias = ConstValue | BoundConstVar | ExistentialConstVar
