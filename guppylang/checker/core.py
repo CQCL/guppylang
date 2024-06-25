@@ -12,6 +12,7 @@ from guppylang.definition.common import DefId, Definition
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
 from guppylang.tys.builtin import (
+    array_type_def,
     bool_type_def,
     callable_type_def,
     float_type_def,
@@ -76,6 +77,7 @@ class Globals:
             float_type_def,
             list_type_def,
             linst_type_def,
+            array_type_def,
         ]
         defs = {defn.id: defn for defn in builtins}
         names = {defn.name: defn.id for defn in builtins}

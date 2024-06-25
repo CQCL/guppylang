@@ -4,6 +4,7 @@ import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.prelude.builtins import array
 from guppylang.prelude.quantum import qubit
 
 import guppylang.prelude.quantum as quantum
@@ -112,6 +113,18 @@ def test_different_args(validate):
         return foo(x, y, (x, y)) + foo(y, 42.0, (0.0, y))
 
     validate(module.compile())
+
+
+def test_nat_args(validate):
+    module = GuppyModule("test")
+    n = guppy.nat_var(module, "n")
+
+    @guppy.declare(module)
+    def foo(x: array[int, n]) -> array[int, n]: ...
+
+    @guppy(module)
+    def main(x: array[int, 42]) -> array[int, 42]:
+        return foo(x)
 
 
 def test_infer_basic(validate):

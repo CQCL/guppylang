@@ -11,6 +11,7 @@ from guppylang.ast_util import AstNode
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr
+from guppylang.tys.const import BoundConstVar, ExistentialConstVar
 from guppylang.tys.var import ExistentialVar
 
 if TYPE_CHECKING:
@@ -131,10 +132,7 @@ class TypeParam(ParameterBase):
 
 @dataclass(frozen=True)
 class ConstParam(ParameterBase):
-    """A parameter of kind constant. Used to define fixed-size arrays etc.
-
-    Note that support for this kind is not implemented yet.
-    """
+    """A parameter of kind constant. Used to define fixed-size arrays etc."""
 
     ty: "Type"
 
@@ -153,7 +151,17 @@ class ConstParam(ParameterBase):
 
         Raises a user error if the argument is not valid.
         """
-        raise NotImplementedError
+        match arg:
+            case ConstArg(const):
+                if const.ty != self.ty:
+                    raise GuppyTypeError(
+                        f"Expected argument of type `{self.ty}`, got {const.ty}", loc
+                    )
+                return arg
+            case TypeArg():
+                raise GuppyTypeError(
+                    f"Expected argument of type `{self.ty}`, got type", loc
+                )
 
     def to_existential(self) -> tuple[Argument, ExistentialVar]:
         """Creates a fresh existential variable that can be instantiated for this
@@ -161,17 +169,28 @@ class ConstParam(ParameterBase):
 
         Returns both the argument and the created variable.
         """
-        raise NotImplementedError
+        var = ExistentialConstVar.fresh(self.name, self.ty)
+        return ConstArg(var), var
 
     def to_bound(self, idx: int | None = None) -> Argument:
         """Creates a bound variable with a given index that can be instantiated for this
         parameter.
         """
-        raise NotImplementedError
+        if idx is None:
+            idx = self.idx
+        return ConstArg(BoundConstVar(self.ty, self.name, idx))
 
     def to_hugr(self) -> tys.TypeParam:
         """Computes the Hugr representation of the parameter."""
-        raise NotImplementedError
+        from guppylang.tys.ty import NumericType
+
+        match self.ty:
+            case NumericType(kind=NumericType.Kind.Nat):
+                return tys.TypeParam(tys.BoundedNatParam(bound=None))
+            case _:
+                hugr_ty = self.ty.to_hugr()
+                assert isinstance(hugr_ty.root, tys.Opaque)
+                return tys.TypeParam(tys.OpaqueParam(ty=hugr_ty.root))
 
 
 def check_all_args(
