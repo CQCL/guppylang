@@ -185,9 +185,9 @@ class GuppyModule:
         generated: dict[DefId, RawDef] = {}
         for defn in type_defs.values():
             if isinstance(defn, CheckedStructDef):
+                self._globals.impls.setdefault(defn.id, {})
                 for method_def in defn.generated_methods:
                     generated[method_def.id] = method_def
-                    self._globals.impls.setdefault(defn.id, {})
                     self._globals.impls[defn.id][method_def.name] = method_def.id
 
         # Now, we can check all other definitions
