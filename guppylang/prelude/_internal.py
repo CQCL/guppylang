@@ -9,6 +9,7 @@ from guppylang.checker.expr_checker import (
     ExprSynthesizer,
     check_call,
     check_num_args,
+    check_type_against,
     synthesize_call,
 )
 from guppylang.definition.custom import (
@@ -21,11 +22,11 @@ from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.hugr_builder.hugr import UNDEFINED, OutPortV
 from guppylang.nodes import GlobalCall
-from guppylang.tys.arg import ConstArg
+from guppylang.tys.arg import ConstArg, TypeArg
 from guppylang.tys.builtin import bool_type, int_type, list_type
 from guppylang.tys.const import ConstValue
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import FunctionType, NumericType, Type, unify
+from guppylang.tys.ty import FunctionType, NoneType, NumericType, Type, unify
 
 
 class ConstInt(BaseModel):
@@ -268,6 +269,46 @@ class ArrayLenChecker(CustomCallChecker):
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         _, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
         return self._get_const_len(inst), subst
+
+
+class ResultChecker(CustomCallChecker):
+    """Call checker for the `result` function."""
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        check_num_args(2, len(args), self.node)
+        [tag, value] = args
+        if not isinstance(tag, ast.Constant) or not isinstance(tag.value, int):
+            raise GuppyTypeError("Expected an int literal", tag)
+        value, ty = ExprSynthesizer(self.ctx).synthesize(value)
+        if ty.linear:
+            raise GuppyTypeError(
+                f"Cannot use value with linear type `{ty}` as a result", value
+            )
+        type_args = [
+            TypeArg(ty),
+            ConstArg(ConstValue(value=tag.value, ty=NumericType(NumericType.Kind.Nat))),
+        ]
+        call = GlobalCall(def_id=self.func.id, args=[value], type_args=type_args)
+        return with_loc(self.node, call), NoneType()
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        expr, res_ty = self.synthesize(args)
+        subst, _ = check_type_against(res_ty, ty, self.node)
+        return expr, subst
+
+
+class ResultCompiler(CustomCallCompiler):
+    """Call compiler for the `result` function."""
+
+    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+        op = ops.CustomOp(
+            extension="Results",
+            op_name="Result",
+            args=[arg.to_hugr() for arg in self.type_args],
+            parent=UNDEFINED,
+        )
+        self.graph.add_node(ops.OpType(op), inputs=args)
+        return []
 
 
 class NatTruedivCompiler(CustomCallCompiler):

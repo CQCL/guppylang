@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:7
+
+5:    @compile_guppy
+6:    def foo(x: int, y: bool) -> None:
+7:        result(x, y)
+                 ^
+GuppyTypeError: Expected an int literal
