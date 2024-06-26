@@ -272,7 +272,10 @@ class ArrayLenChecker(CustomCallChecker):
 
 
 class ResultChecker(CustomCallChecker):
-    """Call checker for the `result` function."""
+    """Call checker for the `result` function.
+
+    This is a temporary hack until we have implemented the proper results mechanism.
+    """
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(2, len(args), self.node)
@@ -298,7 +301,10 @@ class ResultChecker(CustomCallChecker):
 
 
 class ResultCompiler(CustomCallCompiler):
-    """Call compiler for the `result` function."""
+    """Call compiler for the `result` function.
+
+    This is a temporary hack until we have implemented the proper results mechanism.
+    """
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         op = ops.CustomOp(
