@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:14
+
+12:    @guppy(module)
+13:    def foo(q: qubit) -> None:
+14:        result(0, q)
+                     ^
+GuppyTypeError: Cannot use value with linear type `qubit` as a result

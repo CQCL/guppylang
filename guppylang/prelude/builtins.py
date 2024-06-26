@@ -23,6 +23,8 @@ from guppylang.prelude._internal import (
     FloatModCompiler,
     IntTruedivCompiler,
     NatTruedivCompiler,
+    ResultChecker,
+    ResultCompiler,
     ReversingChecker,
     UnsupportedChecker,
     float_op,
@@ -609,6 +611,11 @@ class Array:
 
     @guppy.custom(builtins, checker=ArrayLenChecker())
     def __len__(self: array[T, n]) -> int: ...
+
+
+# TODO: This is a temporary hack until we have implemented the proper results mechanism.
+@guppy.custom(builtins, ResultCompiler(), ResultChecker(), higher_order_value=False)
+def result(tag, value): ...
 
 
 @guppy.custom(builtins, checker=DunderChecker("__abs__"), higher_order_value=False)
