@@ -55,3 +55,18 @@ build-backend = "poetry.core.masonry.api"
 plugins = ["pydantic.mypy"]
 strict = true
 allow_redefinition = true
+
+
+[tool.coverage.report]
+exclude_also = [
+    # Don't complain about missing coverage on typing imports
+    "if TYPE_CHECKING:",
+
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "raise InternalGuppyError",
+
+    # Don't complain about abstract methods, they aren't run:
+    "@abstractmethod",
+]
