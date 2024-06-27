@@ -37,14 +37,13 @@ from guppylang.tys.ty import (
 )
 
 
-@dataclass
+@dataclass(frozen=True)
 class Variable:
     """Class holding data associated with a local variable."""
 
     name: str
     ty: Type
     defined_at: AstNode | None
-    used: AstNode | None
 
 
 PyScope = dict[str, Any]

@@ -85,7 +85,7 @@ def check_cfg(
     while len(queue) > 0:
         pred, num_output, bb = queue.popleft()
         input_row = [
-            Variable(v.name, v.ty, v.defined_at, None)
+            Variable(v.name, v.ty, v.defined_at)
             for v in pred.sig.output_rows[num_output]
         ]
 

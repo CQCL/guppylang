@@ -8,7 +8,7 @@ from guppylang.definition.common import CompiledDef, DefId
 from guppylang.hugr_builder.hugr import DFContainingNode, Hugr, OutPortV
 
 
-@dataclass
+@dataclass(frozen=True)
 class PortVariable(Variable):
     """Represents a local variable in a dataflow graph.
 
@@ -22,10 +22,13 @@ class PortVariable(Variable):
         name: str,
         port: OutPortV,
         defined_at: AstNode | None,
-        used: AstNode | None = None,
     ) -> None:
-        super().__init__(name, port.ty, defined_at, used)
+        super().__init__(name, port.ty, defined_at)
         object.__setattr__(self, "port", port)
+
+    def with_port(self, port: OutPortV) -> "PortVariable":
+        """Returns a copy of with variable backed by a different port."""
+        return PortVariable(self.name, port, self.defined_at)
 
 
 CompiledGlobals = dict[DefId, CompiledDef]
