@@ -14,6 +14,7 @@ from guppylang.cfg.bb import BB
 from guppylang.cfg.cfg import CFG, BaseCFG
 from guppylang.checker.core import Context, Globals, Locals, Variable
 from guppylang.checker.expr_checker import ExprSynthesizer, to_bool
+from guppylang.checker.linearity_checker import check_cfg_linearity
 from guppylang.checker.stmt_checker import StmtChecker
 from guppylang.error import GuppyError
 from guppylang.tys.ty import Type
@@ -114,6 +115,10 @@ def check_cfg(
     checked_cfg.maybe_ass_before = {
         compiled[bb]: cfg.maybe_ass_before[bb] for bb in cfg.bbs
     }
+
+    # Finally, run the linearity check
+    check_cfg_linearity(checked_cfg)
+
     return checked_cfg
 
 
@@ -159,29 +164,6 @@ def check_bb(
                         use_bb.vars.used[x],
                     )
                 raise GuppyError(f"Variable `{x}` is not defined", use_bb.vars.used[x])
-
-            # We have to check that used linear variables are not being outputted
-            if x in ctx.locals:
-                var = ctx.locals[x]
-                if var.ty.linear and var.used:
-                    raise GuppyError(
-                        f"Variable `{x}` with linear type `{var.ty}` was "
-                        "already used (at {0})",
-                        cfg.live_before[succ][x].vars.used[x],
-                        [var.used],
-                    )
-
-        # On the other hand, unused linear variables *must* be outputted
-        for x, var in ctx.locals.items():
-            if var.ty.linear and not var.used and x not in cfg.live_before[succ]:
-                # TODO: This should be "Variable x with linear type ty is not
-                #  used in {bb}". But for this we need a way to associate BBs with
-                #  source locations.
-                raise GuppyError(
-                    f"Variable `{x}` with linear type `{var.ty}` is "
-                    "not used on all control-flow paths",
-                    var.defined_at,
-                )
 
     # Finally, we need to compute the signature of the basic block
     outputs = [

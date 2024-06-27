@@ -11,7 +11,7 @@ annotated.
 import ast
 from collections.abc import Sequence
 
-from guppylang.ast_util import AstVisitor, with_loc
+from guppylang.ast_util import AstVisitor, with_loc, with_type
 from guppylang.cfg.bb import BB, BBStatement
 from guppylang.checker.core import Context, Variable
 from guppylang.checker.expr_checker import ExprChecker, ExprSynthesizer
@@ -51,15 +51,9 @@ class StmtChecker(AstVisitor[BBStatement]):
         match lhs:
             # Easiest case is if the LHS pattern is a single variable.
             case ast.Name(id=x):
-                # Check if we override an unused linear variable
-                if x in self.ctx.locals:
-                    var = self.ctx.locals[x]
-                    if var.ty.linear and var.used is None:
-                        raise GuppyError(
-                            f"Variable `{x}` with linear type `{var.ty}` is not used",
-                            var.defined_at,
-                        )
-                self.ctx.locals[x] = Variable(x, ty, lhs, None)
+                # Store the type in the AST
+                with_type(ty, lhs)
+                self.ctx.locals[x] = Variable(x, ty, lhs)
 
             # The only other thing we support right now are tuples
             case ast.Tuple(elts=elts):

@@ -31,7 +31,6 @@ from guppylang.ast_util import (
     AstVisitor,
     breaks_in_loop,
     get_type_opt,
-    name_nodes_in_ast,
     return_nodes_in_ast,
     with_loc,
     with_type,
@@ -333,14 +332,6 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         x = node.id
         if x in self.ctx.locals:
             var = self.ctx.locals[x]
-            if var.ty.linear and var.used is not None:
-                raise GuppyError(
-                    f"Variable `{x}` with linear type `{var.ty}` was "
-                    "already used (at {0})",
-                    node,
-                    [var.used],
-                )
-            var.used = node
             return with_loc(node, LocalName(id=x)), var.ty
         elif x in self.ctx.globals:
             # Look-up what kind of definition it is
@@ -874,34 +865,14 @@ def synthesize_comprehension(
     """Helper function to synthesise the element type of a list comprehension."""
     from guppylang.checker.stmt_checker import StmtChecker
 
-    def check_linear_use_from_outer_scope(expr: ast.expr, locals: Locals) -> None:
-        """Checks if an expression uses a linear variable from an outer scope.
-
-        Since the expression is executed multiple times in the inner scope, this would
-        mean that the outer linear variable is used multiple times, which is not
-        allowed.
-        """
-        for name in name_nodes_in_ast(expr):
-            x = name.id
-            if x in locals and x not in locals.vars:
-                var = locals[x]
-                if var.ty.linear:
-                    raise GuppyTypeError(
-                        f"Variable `{x}` with linear type `{var.ty}` would be used "
-                        "multiple times when evaluating this comprehension",
-                        name,
-                    )
-
     # If there are no more generators left, we can check the list element
     if not gens:
         node.elt, elt_ty = ExprSynthesizer(ctx).synthesize(node.elt)
-        check_linear_use_from_outer_scope(node.elt, ctx.locals)
         return node, elt_ty
 
     # Check the iterator in the outer context
     gen, *gens = gens
     gen.iter_assign = StmtChecker(ctx).visit_Assign(gen.iter_assign)
-    check_linear_use_from_outer_scope(gen.iter_assign.value, ctx.locals)
 
     # The rest is checked in a new nested context to ensure that variables don't escape
     # their scope
@@ -915,43 +886,15 @@ def synthesize_comprehension(
     gen.iter, iter_ty = expr_sth.visit_Name(gen.iter)
     gen.iter = with_type(iter_ty, gen.iter)
 
-    # `if` guards are generally not allowed when we're iterating over linear variables.
-    # The only exception is if all linear variables are already consumed by the first
-    # guard
-    if gen.ifs:
-        gen.ifs[0], _ = expr_sth.synthesize(gen.ifs[0])
-
-        # Now, check if there are linear iteration variables that have not been used by
-        # the first guard
-        for target in name_nodes_in_ast(gen.next_assign.targets[0]):
-            var = inner_ctx.locals[target.id]
-            if var.ty.linear and not var.used and gen.ifs:
-                raise GuppyTypeError(
-                    f"Variable `{var.name}` with linear type `{var.ty}` is not used on "
-                    "all control-flow paths of the list comprehension",
-                    target,
-                )
-
-        # Now, we can properly check all guards
-        for i in range(len(gen.ifs)):
-            gen.ifs[i], if_ty = expr_sth.synthesize(gen.ifs[i])
-            gen.ifs[i], _ = to_bool(gen.ifs[i], if_ty, inner_ctx)
-            check_linear_use_from_outer_scope(gen.ifs[i], inner_locals)
+    # Check `if` guards
+    for i in range(len(gen.ifs)):
+        gen.ifs[i], if_ty = expr_sth.synthesize(gen.ifs[i])
+        gen.ifs[i], _ = to_bool(gen.ifs[i], if_ty, inner_ctx)
 
     # Check remaining generators
     node, elt_ty = synthesize_comprehension(node, gens, inner_ctx)
 
-    # We have to make sure that all linear variables that were introduced in this scope
-    # have been used
-    for x, var in inner_ctx.locals.vars.items():
-        if var.ty.linear and not var.used:
-            raise GuppyTypeError(
-                f"Variable `{x}` with linear type `{var.ty}` is not used",
-                var.defined_at,
-            )
-
     # The iter finalizer is again checked in the outer context
-    ctx.locals[gen.iter.id].used = None
     gen.iterend, iterend_ty = ExprSynthesizer(ctx).synthesize(gen.iterend)
     gen.iterend = with_type(iterend_ty, gen.iterend)
     return node, elt_ty
