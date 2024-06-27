@@ -1,4 +1,5 @@
 import ast
+import copy
 import itertools
 from collections.abc import Iterator
 from typing import NamedTuple
@@ -270,7 +271,9 @@ class ExprBuilder(ast.NodeTransformer):
         # assignment statement and replace the expression with `x`.
         if not isinstance(node.target, ast.Name):
             raise InternalGuppyError(f"Unexpected assign target: {node.target}")
-        assign = ast.Assign(targets=[node.target], value=self.visit(node.value))
+        assign = ast.Assign(
+            targets=[copy.deepcopy(node.target)], value=self.visit(node.value)
+        )
         set_location_from(assign, node)
         self.bb.statements.append(assign)
         return node.target

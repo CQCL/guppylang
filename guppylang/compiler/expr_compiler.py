@@ -78,7 +78,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         # Check that the input names are unique
         assert len({inp.id for inp in inputs}) == len(inputs), "Inputs are not unique"
         new_locals = {
-            name.id: PortVariable(name.id, inp.add_out_port(get_type(name)), name, None)
+            name.id: PortVariable(name.id, inp.add_out_port(get_type(name)), name)
             for name in inputs
         }
         self.dfg = DFContainer(node, self.dfg.locals | new_locals)
@@ -111,7 +111,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             )
         # Update the DFG with the outputs from the loop
         for name in loop_vars:
-            self.dfg[name.id].port = loop.add_out_port(get_type(name))
+            out_port = loop.add_out_port(get_type(name))
+            self.dfg[name.id] = self.dfg[name.id].with_port(out_port)
 
     @contextmanager
     def _new_case(
@@ -142,7 +143,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             yield
         # Update the DFG with the outputs from the Conditional node
         for name in inputs:
-            self.dfg[name.id].port = cond_node.add_out_port(get_type(name))
+            out_port = cond_node.add_out_port(get_type(name))
+            self.dfg[name.id] = self.dfg[name.id].with_port(out_port)
 
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
         if value := python_value_to_hugr(node.value, get_type(node)):
@@ -301,7 +303,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         list_name = with_type(list_ty, with_loc(node, LocalName(id=next(tmp_vars))))
         empty_list = self.graph.add_node(DummyOp("MakeList"))
         self.dfg[list_name.id] = PortVariable(
-            list_name.id, empty_list.add_out_port(list_ty), node, None
+            list_name.id, empty_list.add_out_port(list_ty), node
         )
 
         def compile_generators(elt: ast.expr, gens: list[DesugaredGenerator]) -> None:
@@ -311,8 +313,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
                 list_port, elt_port = self.visit(list_name), self.visit(elt)
                 push = self.graph.add_node(
                     DummyOp("Push"), inputs=[list_port, elt_port]
-                )
-                self.dfg[list_name.id].port = push.add_out_port(list_port.ty)
+                ).add_out_port(list_port.ty)
+                self.dfg[list_name.id] = self.dfg[list_name.id].with_port(push)
                 return
 
             # Otherwise, compile the first iterator and construct a TailLoop

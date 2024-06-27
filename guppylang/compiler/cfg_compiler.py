@@ -53,7 +53,7 @@ def compile_bb(
     dfg = DFContainer(
         block,
         {
-            v.name: PortVariable(v.name, inp.out_port(i), v.defined_at, None)
+            v.name: PortVariable(v.name, inp.out_port(i), v.defined_at)
             for (i, v) in enumerate(inputs)
         },
     )
@@ -117,7 +117,7 @@ def insert_return_vars(cfg: CheckedCFG) -> None:
     correctly outputted.
     """
     return_vars = [
-        Variable(return_var(i), ty, None, None)
+        Variable(return_var(i), ty, None)
         for i, ty in enumerate(type_to_row(cfg.output_ty))
     ]
     # Before patching, the exit BB shouldn't take any inputs
