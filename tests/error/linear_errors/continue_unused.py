@@ -14,7 +14,7 @@ def new_qubit() -> qubit:
 
 
 @guppy.declare(module)
-def measure() -> bool:
+def measure(q: qubit) -> bool:
     ...
 
 
@@ -26,7 +26,7 @@ def foo(i: int) -> bool:
         if i % 10 == 0:
             break
         i -= 1
-        b ^= measure(q)
+        b &= measure(q)
     return b
 
 

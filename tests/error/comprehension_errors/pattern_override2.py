@@ -9,7 +9,7 @@ module.load(quantum)
 
 
 @guppy(module)
-def foo(qs: linst[qubit], xs: list[int]) -> linst[qubit]:
+def foo(qs: linst[qubit], xs: list[int]) -> list[int]:
     return [q for q in qs for q in xs]
 
 

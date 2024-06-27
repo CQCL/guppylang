@@ -15,7 +15,7 @@ def bar(q: qubit) -> bool:
 
 @guppy(module)
 def foo(qs: linst[tuple[bool, qubit]]) -> list[int]:
-    return [42 for b, q in qs if b if q]
+    return [42 for b, q in qs if b if bar(q)]
 
 
 module.compile()
