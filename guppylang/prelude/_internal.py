@@ -308,7 +308,7 @@ class ResultCompiler(CustomCallCompiler):
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         op = ops.CustomOp(
-            extension="Results",
+            extension="tket2.results",
             op_name="Result",
             args=[arg.to_hugr() for arg in self.type_args],
             parent=UNDEFINED,
