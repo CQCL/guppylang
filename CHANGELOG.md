@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.6.0](https://github.com/CQCL/guppylang/compare/v0.5.2...v0.6.0) (2024-07-02)
+
+
+### Features
+
+* Add array type ([#258](https://github.com/CQCL/guppylang/issues/258)) ([041c621](https://github.com/CQCL/guppylang/commit/041c621a0481f14ee517b0356e0ebb9cae6ddc2e))
+* Add nat type ([#254](https://github.com/CQCL/guppylang/issues/254)) ([a461a9d](https://github.com/CQCL/guppylang/commit/a461a9d5556d7ed68da5a722100c8b3fb449b25e))
+* Add result function ([#271](https://github.com/CQCL/guppylang/issues/271)) ([792fb87](https://github.com/CQCL/guppylang/commit/792fb871cac5b19905e87dd485e11d7488f2fb87)), closes [#270](https://github.com/CQCL/guppylang/issues/270)
+* Allow constant nats as type args ([#255](https://github.com/CQCL/guppylang/issues/255)) ([d706735](https://github.com/CQCL/guppylang/commit/d7067356c71cbcc5352e69ea4eed6bdc1d0c1ec8))
+* Generate constructor methods for structs ([#262](https://github.com/CQCL/guppylang/issues/262)) ([f68d0af](https://github.com/CQCL/guppylang/commit/f68d0afe74c75e40b49babe26091a24d822218f7)), closes [#261](https://github.com/CQCL/guppylang/issues/261)
+* Return already-compiled hugrs from `GuppyModule.compile` ([#247](https://github.com/CQCL/guppylang/issues/247)) ([9d01eae](https://github.com/CQCL/guppylang/commit/9d01eae8e4db21a95ad3e97d4e78fea7b4b32c08))
+* Turn int and float into core types ([#225](https://github.com/CQCL/guppylang/issues/225)) ([99217dc](https://github.com/CQCL/guppylang/commit/99217dcddb16fa7c713b7e5c5d356715a0fc9496))
+
+
+### Bug Fixes
+
+* Add missing test file ([#266](https://github.com/CQCL/guppylang/issues/266)) ([75231fe](https://github.com/CQCL/guppylang/commit/75231fe509c52945d44eadb2aa238d1eecf01b0c))
+* Loading custom polymorphic function defs as values ([#260](https://github.com/CQCL/guppylang/issues/260)) ([d15b2f5](https://github.com/CQCL/guppylang/commit/d15b2f5a2c012924436ecd3ab482099654a1752e)), closes [#259](https://github.com/CQCL/guppylang/issues/259)
+
 ## [0.5.2](https://github.com/CQCL/guppylang/compare/v0.5.1...v0.5.2) (2024-06-13)
 
 
