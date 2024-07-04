@@ -31,10 +31,10 @@ fn parse_hugr(hugr_json: &str) -> PyResult<hugr::Hugr> {
     .map_err(|e| pyerr!("Making extension registry: {}", e))?;
     resolve_extension_ops(&mut hugr, &reg)
         .map_err(|e| pyerr!("Instantiating extension ops: {}", e))
-        .map_err(|e| pyerr!("{}", e))?;
     Ok(hugr)
 }
 
+// Find the FuncDefn node for the function we're trying to execute.
 fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node> {
     let root = hugr.root();
     let sibs: SiblingGraph = SiblingGraph::try_new(&hugr, root).map_err(|e| pyerr!("{}", e))?;
@@ -113,7 +113,6 @@ fn run_function<T>(
     let ee = module
         .create_execution_engine()
         .map_err(|_| pyerr!("Failed to create execution engine"))?;
-    //let fv = ee.get_function_value(&mangled_name).map_err(|_| pyerr!("Couldn't find function {} in execution engine", mangled_name))?;
     let llvm_result = unsafe { ee.run_function(fv, &[]) };
     parse_result(llvm_result)
 }
