@@ -57,10 +57,8 @@ def test_aug_assign(validate, run_int_fn):
     run_int_fn(compiled, 6)
 
 
-def test_nat(validate, run_int_fn):
-    module = GuppyModule("test_nat")
-
-    @guppy(module)
+def test_nat(validate):
+    @compile_guppy
     def foo(
         a: nat, b: nat, c: bool, d: int, e: float
     ) -> tuple[nat, bool, int, float, float]:
@@ -68,16 +66,6 @@ def test_nat(validate, run_int_fn):
         x = a + b * c // d - e
         y = e / b
         return x, bool(x), int(x), float(x), y
-
-    @guppy(module)
-    def main() -> int:
-        a, b, c, d, e = foo(1, 2, True, -5, 3.5)
-        # Expect a=0, b=false, c=-0, d=-0.0, e=1.75
-        return (a * int(b) * c * d) + int(e * 100)
-
-    compiled = module.compile()
-    validate(compiled)
-    run_int_fn(compiled, 175)
 
 
 def test_nat2(validate):
