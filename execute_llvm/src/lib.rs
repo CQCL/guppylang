@@ -30,7 +30,7 @@ fn parse_hugr(hugr_json: &str) -> PyResult<hugr::Hugr> {
     ])
     .map_err(|e| pyerr!("Making extension registry: {}", e))?;
     resolve_extension_ops(&mut hugr, &reg)
-        .map_err(|e| pyerr!("Instantiating extension ops: {}", e))
+        .map_err(|e| pyerr!("Instantiating extension ops: {}", e))?;
     Ok(hugr)
 }
 
