@@ -95,7 +95,6 @@ fn run_function<T>(
     fn_name: &str,
     parse_result: impl FnOnce(GenericValue) -> PyResult<T>,
 ) -> PyResult<T>
-//where F: FnOnce(GenericValue) -> PyResult<T>
 {
     let hugr = parse_hugr(hugr_json)?;
     let ctx = Context::create();
@@ -128,7 +127,6 @@ fn run_int_function(hugr_json: &str, fn_name: &str) -> PyResult<i64> {
     })
 }
 
-/// A Python module implemented in Rust.
 #[pymodule]
 fn execute_llvm(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compile_module_to_string, m)?)?;
