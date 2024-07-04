@@ -1,0 +1,17 @@
+[package]
+name = "execute_llvm"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "execute_llvm"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.19.0"
+hugr = "0.5.1"
+#hugr-llvm = { git = "https://github.com/CQCL/hugr-llvm", rev = "a35ae75fda6c31377c3c672592ede33d5a4c7c66" }
+hugr-llvm = { git = "https://github.com/CQCL/hugr-llvm", branch = "main" }
+serde_json = "1.0.111"
+inkwell = "*"

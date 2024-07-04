@@ -16,3 +16,15 @@ def compile_guppy(fn) -> Hugr:
     module = GuppyModule("module")
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
+
+
+def dump_llvm(hugr: Hugr):
+    try:
+        from execute_llvm import compile_module_to_string
+
+        hugr_json = hugr.serialize()
+        llvm_module = compile_module_to_string(hugr_json)
+        print(llvm_module)  # noqa: T201
+
+    except ImportError:
+        pass
