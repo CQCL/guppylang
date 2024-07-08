@@ -22,6 +22,7 @@ from guppylang.hugr_builder.hugr import (
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
+    FieldAccessAndDrop,
     GlobalCall,
     GlobalName,
     LocalCall,
@@ -147,8 +148,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             return self.graph.add_load_constant(const).out_port(0)
         raise InternalGuppyError("Unsupported constant expression in compiler")
 
-    def visit_LocalName(self, node: LocalName) -> OutPortV:
-        return self.dfg[node.id].port
+    def visit_PlaceNode(self, node: PlaceNode) -> OutPortV:
+        return self.dfg[node.place]
 
     def visit_GlobalName(self, node: GlobalName) -> OutPortV:
         defn = self.globals[node.def_id]
@@ -287,6 +288,11 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             )
 
         raise InternalGuppyError("Node should have been removed during type checking.")
+
+    def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> OutPortV:
+        struct_port = self.visit(node.value)
+        unpack = self.graph.add_unpack_tuple(struct_port)
+        return unpack.out_port(node.struct_ty.fields.index(node.field))
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> OutPortV:
         from guppylang.compiler.stmt_compiler import StmtCompiler
