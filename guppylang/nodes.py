@@ -5,19 +5,20 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import FunctionType, Type
+from guppylang.tys.ty import FunctionType, StructType, Type
 
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import CFG
     from guppylang.checker.cfg_checker import CheckedCFG
-    from guppylang.checker.core import Variable
+    from guppylang.checker.core import Place, Variable
     from guppylang.definition.common import DefId
+    from guppylang.definition.struct import StructField
 
 
-class LocalName(ast.Name):
-    id: str
+class PlaceNode(ast.expr):
+    place: "Place"
 
-    _fields = ("id",)
+    _fields = ("place",)
 
 
 class GlobalName(ast.Name):
@@ -74,6 +75,20 @@ class TypeApply(ast.expr):
     _fields = (
         "value",
         "inst",
+    )
+
+
+class FieldAccessAndDrop(ast.expr):
+    """A field access on a struct, dropping all the remaining other fields."""
+
+    value: ast.expr
+    struct_ty: "StructType"
+    field: "StructField"
+
+    _fields = (
+        "value",
+        "struct_ty",
+        "field",
     )
 
 
@@ -137,8 +152,8 @@ class DesugaredGenerator(ast.expr):
     hasnext_assign: ast.Assign
     next_assign: ast.Assign
     iterend: ast.expr
-    iter: ast.Name
-    hasnext: ast.Name
+    iter: ast.expr
+    hasnext: ast.expr
     ifs: list[ast.expr]
 
     _fields = (
