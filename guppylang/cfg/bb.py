@@ -111,20 +111,29 @@ class VariableVisitor(ast.NodeVisitor):
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
         for t in node.targets:
-            for name in name_nodes_in_ast(t):
-                self.stats.assigned[name.id] = node
+            self._handle_assign_target(t, node)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         self.visit(node.value)
         self._update_used(node.target)  # The target is also used
-        for name in name_nodes_in_ast(node.target):
-            self.stats.assigned[name.id] = node
+        self._handle_assign_target(node.target, node)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         if node.value:
             self.visit(node.value)
-        for name in name_nodes_in_ast(node.target):
-            self.stats.assigned[name.id] = node
+        self._handle_assign_target(node.target, node)
+
+    def _handle_assign_target(self, lhs: ast.expr, node: ast.stmt) -> None:
+        match lhs:
+            case ast.Name(id=name):
+                self.stats.assigned[name] = node
+            case ast.Tuple(elts=elts):
+                for elt in elts:
+                    self._handle_assign_target(elt, node)
+            case ast.Attribute(value=value):
+                # Setting attributes counts as a use of the value, so we do a regular
+                # visit instead of treating it like a LHS
+                self.visit(value)
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> None:
         # Names bound in the comprehension are only available inside, so we shouldn't
