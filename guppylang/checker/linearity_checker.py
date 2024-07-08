@@ -155,6 +155,22 @@ class BBLinearityChecker(ast.NodeVisitor):
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> None:
         self._check_comprehension(node, node.generators)
 
+    def visit_CheckedNestedFunctionDef(self, node: CheckedNestedFunctionDef) -> None:
+        # Linearity of the nested function has already been checked. We just need to
+        # verify that no linear variables are captured
+        # TODO: In the future, we could support capturing of non-linear subplaces
+        for var, use in node.captured.values():
+            if var.ty.linear:
+                raise GuppyError(
+                    f"{var.describe} with linear type `{var.ty}` may not be used here "
+                    f"because it was defined in an outer scope (at {{0}})",
+                    use,
+                    [var.defined_at],
+                )
+            for place in leaf_places(var):
+                self.scope.use(place.id, use)
+        self.scope.assign(Variable(node.name, node.ty, node))
+
     def _check_assign_targets(self, targets: list[ast.expr]) -> None:
         """Helper function to check assignments."""
         # We're not allowed to override an unused linear place
