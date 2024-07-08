@@ -40,13 +40,13 @@ class Scope(Locals[PlaceId, Place]):
     """
 
     parent_scope: "Scope | None"
-    used_local: dict[str, ast.Name]
-    used_parent: dict[str, ast.Name]
+    used_local: dict[PlaceId, AstNode]
+    used_parent: dict[PlaceId, AstNode]
 
-    def __init__(self, assigned: Iterable[Variable], parent: "Scope | None" = None):
+    def __init__(self, parent: "Scope | None" = None):
         self.used_local = {}
         self.used_parent = {}
-        super().__init__({var.name: var for var in assigned}, parent)
+        super().__init__({}, parent)
 
     def used(self, x: PlaceId) -> AstNode | None:
         """Checks whether a place has already been used."""
@@ -76,14 +76,34 @@ class Scope(Locals[PlaceId, Place]):
         if x in self.used_local:
             self.used_local.pop(x)
 
+    def stats(self) -> VariableStats[PlaceId]:
+        assigned = {}
+        for x, place in self.vars.items():
+            assert place.defined_at is not None
+            assigned[x] = place.defined_at
+        return VariableStats(assigned, self.used_parent)
+
 
 class BBLinearityChecker(ast.NodeVisitor):
     """AST visitor that checks linearity for a single basic block."""
 
     scope: Scope
+    stats: VariableStats[PlaceId]
 
-    def check(self, bb: "CheckedBB") -> Scope:
-        self.scope = Scope(bb.sig.input_row)
+    def check(self, bb: "CheckedBB", is_entry: bool) -> Scope:
+        # Manufacture a scope that holds all places that are live at the start
+        # of this BB
+        input_scope = Scope()
+        for var in bb.sig.input_row:
+            for place in leaf_places(var):
+                input_scope.assign(place)
+
+        # Open up a new nested scope to check the BB contents. This way we can track
+        # when we use variables from the outside vs ones assigned in this BB. The only
+        # exception is the entry BB since function arguments should be treated as part
+        # of the entry BB
+        self.scope = input_scope if is_entry else Scope(input_scope)
+
         for stmt in bb.statements:
             self.visit(stmt)
         if bb.branch_pred:
@@ -92,7 +112,7 @@ class BBLinearityChecker(ast.NodeVisitor):
 
     @contextmanager
     def new_scope(self) -> Generator[Scope, None, None]:
-        scope, new_scope = self.scope, Scope({}, self.scope)
+        scope, new_scope = self.scope, Scope(self.scope)
         self.scope = new_scope
         yield new_scope
         self.scope = scope
@@ -217,32 +237,41 @@ def check_cfg_linearity(cfg: "CheckedCFG") -> None:
     Raises a user-error if linearity violations are found.
     """
     bb_checker = BBLinearityChecker()
-    for bb in cfg.bbs:
-        scope = bb_checker.check(bb)
+    scopes: dict[BB, Scope] = {
+        bb: bb_checker.check(bb, is_entry=bb == cfg.entry_bb) for bb in cfg.bbs
+    }
 
+    # Run liveness analysis
+    stats = {bb: scope.stats() for bb, scope in scopes.items()}
+    live_before = LivenessAnalysis(stats).run(cfg.bbs)
+
+    for bb, scope in scopes.items():
         # We have to check that used linear variables are not being outputted
         for succ in bb.successors:
-            live = cfg.live_before[succ]
+            live = live_before[succ]
             for x, use_bb in live.items():
-                if x in scope:
-                    var = scope[x]
-                    if var.ty.linear and (use := scope.used(x)):
-                        raise GuppyError(
-                            f"Variable `{x}` with linear type `{var.ty}` was "
-                            "already used (at {0})",
-                            use_bb.vars.used[x],
-                            [use],
-                        )
+                use_scope = scopes[use_bb]
+                place = use_scope[x]
+                if place.ty.linear and (use := scope.used(x)):
+                    raise GuppyError(
+                        f"{place.describe} with linear type `{place.ty}` was "
+                        "already used (at {0})",
+                        use_scope.used_parent[x],
+                        [use],
+                    )
 
             # On the other hand, unused linear variables *must* be outputted
-            for x, var in scope.vars.items():
-                used_later = x in cfg.live_before[succ]
-                if var.ty.linear and not scope.used(x) and not used_later:
+            for place in scope.vars.values():
+                x = place.id
+                used_later = x in live
+                if place.ty.linear and not scope.used(x) and not used_later:
                     # TODO: This should be "Variable x with linear type ty is not
                     #  used in {bb}". But for this we need a way to associate BBs with
                     #  source locations.
                     raise GuppyError(
-                        f"Variable `{x}` with linear type `{var.ty}` is "
+                        f"{place.describe} with linear type `{place.ty}` is "
                         "not used on all control-flow paths",
-                        var.defined_at,
+                        # Re-lookup defined_at in scope because we might have a
+                        # more precise location
+                        scope[x].defined_at,
                     )

@@ -26,7 +26,7 @@ class VariableStats(Generic[P]):
 
     # The (external) variables used in the BB, i.e. usages of variables that are
     # assigned in the BB are not included here.
-    used: dict[P, ast.Name] = field(default_factory=dict)
+    used: dict[P, AstNode] = field(default_factory=dict)
 
 
 BBStatement = (
