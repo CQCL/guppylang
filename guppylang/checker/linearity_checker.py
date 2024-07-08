@@ -132,6 +132,19 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.visit(node.value)
         self._check_assign_targets(node.targets)
 
+    def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> None:
+        # A field access on a value that is not a place. This means the value can no
+        # longer be accessed after the field has been projected out. Thus, this is only
+        # legal if there are no remaining linear fields on the value
+        self.visit(node.value)
+        for field in node.struct_ty.fields:
+            if field.name != node.field.name and field.ty.linear:
+                raise GuppyTypeError(
+                    f"Linear field `{field.name}` of expression with type "
+                    f"`{node.struct_ty}` is not used",
+                    node.value,
+                )
+
     def visit_Expr(self, node: ast.Expr) -> None:
         # An expression statement where the return value is discarded
         self.visit(node.value)
