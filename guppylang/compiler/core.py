@@ -1,38 +1,12 @@
 from abc import ABC
-from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from guppylang.ast_util import AstNode
-from guppylang.checker.core import Variable
+from guppylang.checker.core import Place, PlaceId
 from guppylang.definition.common import CompiledDef, DefId
 from guppylang.hugr_builder.hugr import DFContainingNode, Hugr, OutPortV
 
-
-@dataclass(frozen=True)
-class PortVariable(Variable):
-    """Represents a local variable in a dataflow graph.
-
-    Local variables are associated with a port in the Hugr.
-    """
-
-    port: OutPortV
-
-    def __init__(
-        self,
-        name: str,
-        port: OutPortV,
-        defined_at: AstNode | None,
-    ) -> None:
-        super().__init__(name, port.ty, defined_at)
-        object.__setattr__(self, "port", port)
-
-    def with_port(self, port: OutPortV) -> "PortVariable":
-        """Returns a copy of with variable backed by a different port."""
-        return PortVariable(self.name, port, self.defined_at)
-
-
 CompiledGlobals = dict[DefId, CompiledDef]
-CompiledLocals = dict[str, PortVariable]
+CompiledLocals = dict[PlaceId, OutPortV]
 
 
 @dataclass
@@ -45,28 +19,20 @@ class DFContainer:
     current compilation state.
     """
 
+    graph: Hugr
     node: DFContainingNode
-    locals: CompiledLocals
+    locals: CompiledLocals = field(default_factory=dict)
 
-    def __getitem__(self, item: str) -> PortVariable:
-        return self.locals[item]
-
-    def __setitem__(self, key: str, value: PortVariable) -> None:
+    def __setitem__(self, key: PlaceId, value: OutPortV) -> None:
         self.locals[key] = value
 
-    def __iter__(self) -> Iterator[PortVariable]:
-        return iter(self.locals.values())
-
-    def __contains__(self, item: str) -> bool:
+    def __contains__(self, item: Place) -> bool:
         return item in self.locals
 
     def __copy__(self) -> "DFContainer":
         # Make a copy of the var map so that mutating the copy doesn't
         # mutate our variable mapping
-        return DFContainer(self.node, self.locals.copy())
-
-    def get_var(self, name: str) -> PortVariable | None:
-        return self.locals.get(name, None)
+        return DFContainer(self.graph, self.node, self.locals.copy())
 
 
 class CompilerBase(ABC):

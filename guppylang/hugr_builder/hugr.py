@@ -501,11 +501,17 @@ class Hugr:
         self, input_tuple: OutPortV, parent: Node | None = None
     ) -> VNode:
         """Adds an `UnpackTuple` node to the graph."""
-        assert isinstance(input_tuple.ty, TupleType)
+        match input_tuple.ty:
+            case TupleType(element_types=elems):
+                tys = list(elems)
+            case StructType(fields=fields):
+                tys = [field.ty for field in fields]
+            case ty:
+                raise AssertionError(f"Cannot unpack `{ty}`")
         return self.add_node(
             ops.OpType(ops.UnpackTuple(parent=UNDEFINED)),
             None,
-            list(input_tuple.ty.element_types),
+            tys,
             parent,
             [input_tuple],
         )
