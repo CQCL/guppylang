@@ -4,23 +4,39 @@ Linearity checking across control-flow is done by the `CFGChecker`.
 """
 
 import ast
-from collections.abc import Generator, Iterable
+from collections import deque
+from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
-from guppylang.ast_util import get_type, name_nodes_in_ast
-from guppylang.checker.core import Locals, Variable
+from guppylang.ast_util import AstNode, find_nodes, get_type
+from guppylang.cfg.analysis import LivenessAnalysis
+from guppylang.cfg.bb import BB, VariableStats
+from guppylang.checker.core import (
+    FieldAccess,
+    Locals,
+    Place,
+    PlaceId,
+    Variable,
+)
 from guppylang.error import GuppyError, GuppyTypeError
-from guppylang.nodes import DesugaredGenerator, DesugaredListComp, LocalName
+from guppylang.nodes import (
+    CheckedNestedFunctionDef,
+    DesugaredGenerator,
+    DesugaredListComp,
+    FieldAccessAndDrop,
+    PlaceNode,
+)
+from guppylang.tys.ty import StructType
 
 if TYPE_CHECKING:
     from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG
 
 
-class Scope(Locals[str, Variable]):
-    """Scoped collection of assigned variables indexed by name.
+class Scope(Locals[PlaceId, Place]):
+    """Scoped collection of assigned places indexed by their id.
 
-    Keeps track of which variables have already been used.
+    Keeps track of which places have already been used.
     """
 
     parent_scope: "Scope | None"
@@ -32,18 +48,17 @@ class Scope(Locals[str, Variable]):
         self.used_parent = {}
         super().__init__({var.name: var for var in assigned}, parent)
 
-    def used(self, x: str) -> ast.Name | None:
-        """Checks whether a variable has already been used."""
+    def used(self, x: PlaceId) -> AstNode | None:
+        """Checks whether a place has already been used."""
         if x in self.vars:
             return self.used_local.get(x, None)
         assert self.parent_scope is not None
         return self.parent_scope.used(x)
 
-    def use(self, x: str, node: ast.Name) -> None:
-        """Records a use of a variable.
+    def use(self, x: PlaceId, node: AstNode) -> None:
+        """Records a use of a place.
 
-        Works for local variables in the current scope as well as variables in any
-        parent scope.
+        Works for places in the current scope as well as places in any parent scope.
         """
         if x in self.vars:
             self.used_local[x] = node
@@ -53,10 +68,11 @@ class Scope(Locals[str, Variable]):
             self.used_parent[x] = node
             self.parent_scope.use(x, node)
 
-    def assign(self, var: Variable) -> None:
-        """Records an assignment of a variable."""
-        x = var.name
-        self.vars[x] = var
+    def assign(self, place: Place) -> None:
+        """Records an assignment of a place."""
+        assert place.defined_at is not None
+        x = place.id
+        self.vars[x] = place
         if x in self.used_local:
             self.used_local.pop(x)
 
@@ -81,18 +97,17 @@ class BBLinearityChecker(ast.NodeVisitor):
         yield new_scope
         self.scope = scope
 
-    def visit_LocalName(self, node: LocalName) -> None:
-        x = node.id
-        if x in self.scope:
-            var = self.scope[x]
-            if (use := self.scope.used(x)) and var.ty.linear:
-                raise GuppyError(
-                    f"Variable `{x}` with linear type `{var.ty}` was already used "
-                    "(at {0})",
-                    node,
-                    [use],
-                )
-            self.scope.use(x, node)
+    def visit_PlaceNode(self, node: PlaceNode) -> None:
+        place = node.place
+        x = place.id
+        if (use := self.scope.used(x)) and place.ty.linear:
+            raise GuppyError(
+                f"{place.describe} with linear type `{place.ty}` was already used "
+                "(at {0})",
+                node,
+                [use],
+            )
+        self.scope.use(x, node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
@@ -110,18 +125,20 @@ class BBLinearityChecker(ast.NodeVisitor):
 
     def _check_assign_targets(self, targets: list[ast.expr]) -> None:
         """Helper function to check assignments."""
-        # We're not allowed to override an unused linear variable
+        # We're not allowed to override an unused linear place
         [target] = targets
-        for name in name_nodes_in_ast(target):
-            x = name.id
+        for tgt in find_nodes(lambda n: isinstance(n, PlaceNode), target):
+            assert isinstance(tgt, PlaceNode)
+            x = tgt.place.id
             if x in self.scope and not self.scope.used(x):
-                var = self.scope[x]
-                if var.ty.linear:
+                place = self.scope[x]
+                if place.ty.linear:
                     raise GuppyError(
-                        f"Variable `{x}` with linear type `{var.ty}` is not used",
-                        var.defined_at,
+                        f"{place.describe} with linear type `{place.ty}` is not "
+                        "used",
+                        place.defined_at,
                     )
-            self.scope.assign(Variable(x, get_type(name), name))
+            self.scope.assign(tgt.place)
 
     def _check_comprehension(
         self, node: DesugaredListComp, gens: list[DesugaredGenerator]
@@ -134,6 +151,7 @@ class BBLinearityChecker(ast.NodeVisitor):
         # Check the iterator expression in the current scope
         gen, *gens = gens
         self.visit(gen.iter_assign.value)
+        assert isinstance(gen.iter, PlaceNode)
 
         # The rest is checked in a new nested scope so we can track which variables
         # are introduced and used inside the loop
@@ -151,16 +169,16 @@ class BBLinearityChecker(ast.NodeVisitor):
                 # Check if there are linear iteration variables that have not been used
                 # by the first guard
                 self.visit(first_if)
-                for x, var in self.scope.vars.items():
+                for x, place in self.scope.vars.items():
                     # The only exception is the iterator variable since we make sure
                     # that it is carried through each iteration during Hugr generation
-                    if x == gen.iter.id:
+                    if place == gen.iter.place:
                         continue
-                    if not self.scope.used(x) and var.ty.linear:
+                    if not self.scope.used(x) and place.ty.linear:
                         raise GuppyTypeError(
-                            f"Variable `{var.name}` with linear type `{var.ty}` is not "
+                            f"{place.describe} with linear type `{place.ty}` is not "
                             "used on all control-flow paths of the list comprehension",
-                            var.defined_at,
+                            place.defined_at,
                         )
                 for expr in other_ifs:
                     self.visit(expr)
@@ -173,21 +191,21 @@ class BBLinearityChecker(ast.NodeVisitor):
 
             # We have to make sure that all linear variables that were introduced in the
             # inner scope have been used
-            for x, var in inner_scope.vars.items():
-                if var.ty.linear and not inner_scope.used(x):
+            for x, place in inner_scope.vars.items():
+                if place.ty.linear and not inner_scope.used(x):
                     raise GuppyTypeError(
-                        f"Variable `{x}` with linear type `{var.ty}` is not used",
-                        var.defined_at,
+                        f"{place.describe} with linear type `{place.ty}` is not used",
+                        place.defined_at,
                     )
 
-            # On the other hand, we have to ensure that no linear variables from the
+            # On the other hand, we have to ensure that no linear places from the
             # outer scope have been used inside the comprehension (they would be used
             # multiple times since the comprehension body is executed repeatedly)
             for x, use in inner_scope.used_parent.items():
-                var = inner_scope[x]
-                if var.ty.linear:
+                place = inner_scope[x]
+                if place.ty.linear:
                     raise GuppyTypeError(
-                        f"Variable `{x}` with linear type `{var.ty}` would be used "
+                        f"{place.describe} with linear type `{place.ty}` would be used "
                         "multiple times when evaluating this comprehension",
                         use,
                     )
