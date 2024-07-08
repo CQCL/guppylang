@@ -73,10 +73,11 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         # We turn returns into assignments of dummy variables, i.e. the statement
         # `return e0, e1, e2` is turned into `%ret0 = e0; %ret1 = e1; %ret2 = e2`.
         if node.value is not None:
+            return_ty = get_type(node.value)
             port = self.expr_compiler.compile(node.value, self.dfg)
-            if isinstance(port.ty, TupleType):
+            if isinstance(return_ty, TupleType):
                 unpack = self.graph.add_unpack_tuple(port, self.dfg.node)
-                row = [unpack.out_port(i) for i in range(len(port.ty.element_types))]
+                row = [unpack.out_port(i) for i in range(len(return_ty.element_types))]
             else:
                 row = [port]
             for i, port in enumerate(row):
