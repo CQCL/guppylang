@@ -3,7 +3,15 @@ import copy
 import itertools
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
-from typing import Any, Generic, NamedTuple, TypeVar
+from functools import cached_property
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    NamedTuple,
+    TypeAlias,
+    TypeVar,
+)
 
 from typing_extensions import assert_never
 
@@ -36,14 +44,103 @@ from guppylang.tys.ty import (
     Type,
 )
 
+if TYPE_CHECKING:
+    from guppylang.definition.struct import StructField
+
+
+#: A "place" is a description for a storage location of a  local value that users
+#: can refer to in their program.
+#:
+#: Roughly, these are values that can be lowered to a static wire within the Hugr
+#: representation. The most basic example of a place is a single local variable. Beyond
+#: that, we also treat some projections of local variables (e.g. nested struct field
+#: accesses) as places.
+#:
+#: All places are equipped with a unique id, a type and an optional definition AST
+#: location. During linearity checking, they are tracked separately.
+Place: TypeAlias = "Variable | FieldAccess"
+
+#: Unique identifier for a `Place`.
+PlaceId: TypeAlias = "Variable.Id | FieldAccess.Id"
+
 
 @dataclass(frozen=True)
 class Variable:
-    """Class holding data associated with a local variable."""
+    """A place identifying a local variable."""
 
     name: str
     ty: Type
     defined_at: AstNode | None
+
+    @dataclass(frozen=True)
+    class Id:
+        """Identifier for variable places."""
+
+        name: str
+
+    @cached_property
+    def id(self) -> "Variable.Id":
+        """The unique `PlaceId` identifier for this place."""
+        return Variable.Id(self.name)
+
+    @property
+    def describe(self) -> str:
+        """A human-readable description of this place for error messages."""
+        return f"Variable `{self}`"
+
+    def __str__(self) -> str:
+        """String representation of this place."""
+        return self.name
+
+
+@dataclass(frozen=True)
+class FieldAccess:
+    """A place identifying a field access on a local struct."""
+
+    parent: Place
+    field: "StructField"
+    exact_defined_at: AstNode | None
+
+    @dataclass(frozen=True)
+    class Id:
+        """Identifier for field places."""
+
+        parent: PlaceId
+        field: str
+
+    def __post_init__(self) -> None:
+        # Check that the field access is consistent
+        assert self.struct_ty.field_dict[self.field.name] == self.field
+
+    @cached_property
+    def id(self) -> "FieldAccess.Id":
+        """The unique `PlaceId` identifier for this place."""
+        return FieldAccess.Id(self.parent.id, self.field.name)
+
+    @property
+    def ty(self) -> Type:
+        """The type of this place."""
+        return self.field.ty
+
+    @cached_property
+    def struct_ty(self) -> StructType:
+        """The type of the struct whose field is accessed."""
+        assert isinstance(self.parent.ty, StructType)
+        return self.parent.ty
+
+    @cached_property
+    def defined_at(self) -> AstNode | None:
+        """Optional location where this place was last assigned to."""
+        return self.exact_defined_at or self.parent.defined_at
+
+    @cached_property
+    def describe(self) -> str:
+        """A human-readable description of this place for error messages."""
+        return f"Field `{self}`"
+
+    def __str__(self) -> str:
+        """String representation of this place."""
+        return f"{self.parent}.{self.field.name}"
 
 
 PyScope = dict[str, Any]
