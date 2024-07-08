@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:15
+
+13:    @guppy(module)
+14:    def foo(s: MyStruct) -> None:
+15:        s.z
+           ^^^
+GuppyTypeError: Expression of type `MyStruct` has no attribute `z`
