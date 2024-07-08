@@ -4,7 +4,6 @@ Linearity checking across control-flow is done by the `CFGChecker`.
 """
 
 import ast
-from collections import deque
 from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
@@ -118,16 +117,16 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.scope = scope
 
     def visit_PlaceNode(self, node: PlaceNode) -> None:
-        place = node.place
-        x = place.id
-        if (use := self.scope.used(x)) and place.ty.linear:
-            raise GuppyError(
-                f"{place.describe} with linear type `{place.ty}` was already used "
-                "(at {0})",
-                node,
-                [use],
-            )
-        self.scope.use(x, node)
+        for place in leaf_places(node.place):
+            x = place.id
+            if (use := self.scope.used(x)) and place.ty.linear:
+                raise GuppyError(
+                    f"{place.describe} with linear type `{place.ty}` was already used "
+                    "(at {0})",
+                    node,
+                    [use],
+                )
+            self.scope.use(x, node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
@@ -149,16 +148,17 @@ class BBLinearityChecker(ast.NodeVisitor):
         [target] = targets
         for tgt in find_nodes(lambda n: isinstance(n, PlaceNode), target):
             assert isinstance(tgt, PlaceNode)
-            x = tgt.place.id
-            if x in self.scope and not self.scope.used(x):
-                place = self.scope[x]
-                if place.ty.linear:
-                    raise GuppyError(
-                        f"{place.describe} with linear type `{place.ty}` is not "
-                        "used",
-                        place.defined_at,
-                    )
-            self.scope.assign(tgt.place)
+            for tgt_place in leaf_places(tgt.place):
+                x = tgt_place.id
+                if x in self.scope and not self.scope.used(x):
+                    place = self.scope[x]
+                    if place.ty.linear:
+                        raise GuppyError(
+                            f"{place.describe} with linear type `{place.ty}` is not "
+                            "used",
+                            place.defined_at,
+                        )
+                self.scope.assign(tgt_place)
 
     def _check_comprehension(
         self, node: DesugaredListComp, gens: list[DesugaredGenerator]
@@ -189,17 +189,20 @@ class BBLinearityChecker(ast.NodeVisitor):
                 # Check if there are linear iteration variables that have not been used
                 # by the first guard
                 self.visit(first_if)
-                for x, place in self.scope.vars.items():
+                for place in self.scope.vars.values():
                     # The only exception is the iterator variable since we make sure
                     # that it is carried through each iteration during Hugr generation
                     if place == gen.iter.place:
                         continue
-                    if not self.scope.used(x) and place.ty.linear:
-                        raise GuppyTypeError(
-                            f"{place.describe} with linear type `{place.ty}` is not "
-                            "used on all control-flow paths of the list comprehension",
-                            place.defined_at,
-                        )
+                    for leaf in leaf_places(place):
+                        x = leaf.id
+                        if not self.scope.used(x) and place.ty.linear:
+                            raise GuppyTypeError(
+                                f"{place.describe} with linear type `{place.ty}` is "
+                                "not used on all control-flow paths of the list "
+                                "comprehension",
+                                place.defined_at,
+                            )
                 for expr in other_ifs:
                     self.visit(expr)
 
@@ -211,12 +214,14 @@ class BBLinearityChecker(ast.NodeVisitor):
 
             # We have to make sure that all linear variables that were introduced in the
             # inner scope have been used
-            for x, place in inner_scope.vars.items():
-                if place.ty.linear and not inner_scope.used(x):
-                    raise GuppyTypeError(
-                        f"{place.describe} with linear type `{place.ty}` is not used",
-                        place.defined_at,
-                    )
+            for place in inner_scope.vars.values():
+                for leaf in leaf_places(place):
+                    x = leaf.id
+                    if leaf.ty.linear and not inner_scope.used(x):
+                        raise GuppyTypeError(
+                            f"{leaf.describe} with linear type `{leaf.ty}` is not used",
+                            leaf.defined_at,
+                        )
 
             # On the other hand, we have to ensure that no linear places from the
             # outer scope have been used inside the comprehension (they would be used
@@ -229,6 +234,18 @@ class BBLinearityChecker(ast.NodeVisitor):
                         "multiple times when evaluating this comprehension",
                         use,
                     )
+
+
+def leaf_places(place: Place) -> Iterator[Place]:
+    """Returns all leaf descendant projections of a place."""
+    stack = [place]
+    while stack:
+        place = stack.pop()
+        if isinstance(place.ty, StructType):
+            for field in place.ty.fields:
+                stack.append(FieldAccess(place, field, place.defined_at))
+        else:
+            yield place
 
 
 def check_cfg_linearity(cfg: "CheckedCFG") -> None:
@@ -262,16 +279,17 @@ def check_cfg_linearity(cfg: "CheckedCFG") -> None:
 
             # On the other hand, unused linear variables *must* be outputted
             for place in scope.vars.values():
-                x = place.id
-                used_later = x in live
-                if place.ty.linear and not scope.used(x) and not used_later:
-                    # TODO: This should be "Variable x with linear type ty is not
-                    #  used in {bb}". But for this we need a way to associate BBs with
-                    #  source locations.
-                    raise GuppyError(
-                        f"{place.describe} with linear type `{place.ty}` is "
-                        "not used on all control-flow paths",
-                        # Re-lookup defined_at in scope because we might have a
-                        # more precise location
-                        scope[x].defined_at,
-                    )
+                for leaf in leaf_places(place):
+                    x = leaf.id
+                    used_later = x in live
+                    if leaf.ty.linear and not scope.used(x) and not used_later:
+                        # TODO: This should be "Variable x with linear type ty is not
+                        #  used in {bb}". But for this we need a way to associate BBs
+                        #  with source locations.
+                        raise GuppyError(
+                            f"{leaf.describe} with linear type `{leaf.ty}` is "
+                            "not used on all control-flow paths",
+                            # Re-lookup defined_at in scope because we might have a
+                            # more precise location
+                            scope[x].defined_at,
+                        )

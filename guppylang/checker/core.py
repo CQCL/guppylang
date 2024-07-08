@@ -297,6 +297,12 @@ class Locals(Generic[K, V]):
         parent_keys = self.parent_scope.keys() if self.parent_scope else set()
         return parent_keys | self.vars.keys()
 
+    def values(self) -> Iterable[V]:
+        parent_values = (
+            iter(self.parent_scope.values()) if self.parent_scope else iter(())
+        )
+        return itertools.chain(self.vars.values(), parent_values)
+
     def items(self) -> Iterable[tuple[K, V]]:
         parent_items = (
             iter(self.parent_scope.items()) if self.parent_scope else iter(())
