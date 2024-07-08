@@ -1,9 +1,11 @@
 from abc import ABC
 from dataclasses import dataclass, field
 
-from guppylang.checker.core import Place, PlaceId
+from guppylang.checker.core import FieldAccess, Place, PlaceId, Variable
 from guppylang.definition.common import CompiledDef, DefId
+from guppylang.error import InternalGuppyError
 from guppylang.hugr_builder.hugr import DFContainingNode, Hugr, OutPortV
+from guppylang.tys.ty import StructType
 
 CompiledGlobals = dict[DefId, CompiledDef]
 CompiledLocals = dict[PlaceId, OutPortV]
@@ -23,11 +25,40 @@ class DFContainer:
     node: DFContainingNode
     locals: CompiledLocals = field(default_factory=dict)
 
-    def __setitem__(self, key: PlaceId, value: OutPortV) -> None:
-        self.locals[key] = value
+    def __getitem__(self, place: Place) -> OutPortV:
+        """Constructs a port for a local place in this DFG.
 
-    def __contains__(self, item: Place) -> bool:
-        return item in self.locals
+        Note that this mutates the Hugr since we might need to pack or unpack some
+        tuples to obtain a port for places that involve struct fields.
+        """
+        # First check, if we already have a wire for this place
+        if place.id in self.locals:
+            return self.locals[place.id]
+        # Otherwise, our only hope is that it's a struct value that we can rebuild by
+        # packing the wires of its constituting fields
+        if not isinstance(place.ty, StructType):
+            raise InternalGuppyError(f"Couldn't obtain a port for `{place}`")
+        children = [FieldAccess(place, field, None) for field in place.ty.fields]
+        child_ports = [self[child] for child in children]
+        port = self.graph.add_make_tuple(child_ports, self.node).out_port(0)
+        for child in children:
+            if child.ty.linear:
+                self.locals.pop(child.id)
+        self.locals[place.id] = port
+        return port
+
+    def __setitem__(self, place: Place, port: OutPortV) -> None:
+        # When assigning a struct value, we immediately unpack it recursively and only
+        # store the leaf wires.
+        is_return = isinstance(place, Variable) and is_return_var(place.name)
+        if isinstance(place.ty, StructType) and not is_return:
+            unpack = self.graph.add_unpack_tuple(port, self.node)
+            for field, field_port in zip(
+                place.ty.fields, unpack.out_ports, strict=False
+            ):
+                self[FieldAccess(place, field, None)] = field_port
+        else:
+            self.locals[place.id] = port
 
     def __copy__(self) -> "DFContainer":
         # Make a copy of the var map so that mutating the copy doesn't
