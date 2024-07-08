@@ -56,8 +56,8 @@ def check_nested_func_def(
     maybe_ass_before = def_ass_before | parent_cfg.maybe_ass_before[bb]
     cfg.analyze(def_ass_before, maybe_ass_before)
     captured = {
-        x: ctx.locals[x]
-        for x in cfg.live_before[cfg.entry_bb]
+        x: (ctx.locals[x], using_bb.vars.used[x])
+        for x, using_bb in cfg.live_before[cfg.entry_bb].items()
         if x not in func_ty.input_names and x in ctx.locals
     }
 
@@ -75,7 +75,7 @@ def check_nested_func_def(
 
     # Captured variables may never be assigned to
     for bb in cfg.bbs:
-        for v in captured.values():
+        for v, _ in captured.values():
             x = v.name
             if x in bb.vars.assigned:
                 raise GuppyError(
@@ -86,7 +86,7 @@ def check_nested_func_def(
                 )
 
     # Construct inputs for checking the body CFG
-    inputs = list(captured.values()) + [
+    inputs = [v for v, _ in captured.values()] + [
         Variable(x, ty, func_def.args.args[i])
         for i, (x, ty) in enumerate(
             zip(func_ty.input_names, func_ty.inputs, strict=True)
