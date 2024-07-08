@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG
 
 
-class Scope(Locals):
+class Scope(Locals[str, Variable]):
     """Scoped collection of assigned variables indexed by name.
 
     Keeps track of which variables have already been used.
