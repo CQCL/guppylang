@@ -203,8 +203,8 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
     cfg: "CheckedCFG"
     ty: FunctionType
 
-    # Mapping from names to variables captured by this function, together with an AST
-    # node witnessing a use of the captured variable in the function body.
+    #: Mapping from names to variables captured by this function, together with an AST
+    #: node witnessing a use of the captured variable in the function body.
     captured: Mapping[str, tuple["Variable", AstNode]]
 
     def __init__(
