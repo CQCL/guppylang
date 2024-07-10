@@ -9,7 +9,6 @@ import networkx as nx  # type: ignore[import-untyped]
 from hugr.serialization import ops, tys
 from hugr.serialization import serial_hugr as raw
 from hugr.serialization.ops import OpType
-from hugr.serialization.serial_hugr import SerialHugr
 
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
@@ -776,7 +775,7 @@ class Hugr:
                 self.add_order_edge(src.node, node)
         return self
 
-    def to_raw(self) -> SerialHugr:
+    def to_raw(self) -> raw.SerialHugr:
         """Returns the raw representation of this HUGR for serialisation."""
         if self.root is None:
             raise ValueError("Serial Hugr requires a root node")
@@ -849,7 +848,7 @@ class Hugr:
         for src, tgt in self.order_edges():
             edges.append(((raw_index[src.idx], None), (raw_index[tgt.idx], None)))
 
-        return SerialHugr(nodes=nodes, edges=edges)
+        return raw.SerialHugr(nodes=nodes, edges=edges)
 
     def serialize(self) -> str:
         """Serialize this Hugr in JSON format."""

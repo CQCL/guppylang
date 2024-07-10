@@ -1,7 +1,3 @@
-from hugr.serialization import ops
-
-from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.prelude.builtins import result
 from tests.util import compile_guppy
 

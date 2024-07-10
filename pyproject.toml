@@ -30,6 +30,11 @@ optional = true
 [tool.poetry.group.validation.dependencies]
 guppyval = { path = "validator" }
 
+[tool.poetry.group.execution]
+optional = true
+
+[tool.poetry.group.execution.dependencies]
+execute_llvm = { path = "execute_llvm" }
 
 [tool.poetry.group.pytket]
 optional = true

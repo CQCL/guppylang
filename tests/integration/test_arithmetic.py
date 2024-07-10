@@ -1,13 +1,35 @@
+from guppylang.decorator import guppy
 from guppylang.prelude.builtins import nat
+from guppylang.module import GuppyModule
 from tests.util import compile_guppy
 
 
-def test_arith_basic(validate):
-    @compile_guppy
+def test_negative(validate, run_int_fn):
+    module = GuppyModule("test_negative")
+
+    @guppy(module)
+    def negative() -> int:
+        return 2 - 42
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=-40, fn_name="negative")
+
+
+def test_arith_basic(validate, run_int_fn):
+    module = GuppyModule("test_arith")
+
+    @guppy(module)
     def add(x: int, y: int) -> int:
         return x + y
 
-    validate(add)
+    @guppy(module)
+    def main() -> int:
+        return add(40, 2)
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, 42)
 
 
 def test_constant(validate):
@@ -18,16 +40,37 @@ def test_constant(validate):
     validate(const)
 
 
-def test_aug_assign(validate):
-    @compile_guppy
+def test_aug_assign(validate, run_int_fn):
+    module = GuppyModule("test_aug_assign")
+
+    @guppy(module)
     def add(x: int) -> int:
         x += 1
         return x
 
-    validate(add)
+    @guppy(module)
+    def main() -> int:
+        return add(5)
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, 6)
 
 
 def test_nat(validate):
+    @compile_guppy
+    def foo(
+        a: nat, b: nat, c: bool, d: int, e: float
+    ) -> tuple[nat, bool, int, float, float]:
+        b, c, d, e = nat(b), nat(c), nat(d), nat(e)
+        x = a + b * c // d - e
+        y = e / b
+        return x, bool(x), int(x), float(x), y
+
+    validate(foo)
+
+
+def test_nat2(validate):
     @compile_guppy
     def foo(
         a: nat, b: nat, c: bool, d: int, e: float
@@ -46,19 +89,6 @@ def test_float_coercion(validate):
         return x * y
 
     validate(coerce)
-
-
-def test_nat(validate):
-    @compile_guppy
-    def foo(
-        a: nat, b: nat, c: bool, d: int, e: float
-    ) -> tuple[nat, bool, int, float, float]:
-        b, c, d, e = nat(b), nat(c), nat(d), nat(e)
-        x = a + b * c // d - e
-        y = e / b
-        return x, bool(x), int(x), float(x), y
-
-    validate(foo)
 
 
 def test_arith_big(validate):
