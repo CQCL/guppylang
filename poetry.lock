@@ -370,13 +370,13 @@ url = "validator"
 
 [[package]]
 name = "hugr"
-version = "0.3.1"
+version = "0.4.0"
 description = "Quantinuum's common representation for quantum programs"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "hugr-0.3.1-py3-none-any.whl", hash = "sha256:f410d3d00c592f3892dd4ecf8eca5ad1b8e3282cceb1157feb2071c31008d55b"},
-    {file = "hugr-0.3.1.tar.gz", hash = "sha256:e37094987fdcc5d23d87ef9c154b21812395ca512234f6e26027a11f24f82fba"},
+    {file = "hugr-0.4.0-py3-none-any.whl", hash = "sha256:284f9a8eba8e638b3c2b0ed54b0cddfa84c527cdcb10bdc468cc70f9cd6c3f4d"},
+    {file = "hugr-0.4.0.tar.gz", hash = "sha256:060693b1bc04a19c433eef262ff9574d909091851e73a4fc442887ee818257b1"},
 ]
 
 [package.dependencies]
@@ -1039,7 +1039,6 @@ files = [
     {file = "PyYAML-6.0.1-cp311-cp311-win_amd64.whl", hash = "sha256:bf07ee2fef7014951eeb99f56f39c9bb4af143d8aa3c21b1677805985307da34"},
     {file = "PyYAML-6.0.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:855fb52b0dc35af121542a76b9a84f8d1cd886ea97c84703eaa6d88e37a2ad28"},
     {file = "PyYAML-6.0.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:40df9b996c2b73138957fe23a16a4f0ba614f4c0efce1e9406a184b6d07fa3a9"},
-    {file = "PyYAML-6.0.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a08c6f0fe150303c1c6b71ebcd7213c2858041a7e01975da3a99aed1e7a378ef"},
     {file = "PyYAML-6.0.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6c22bec3fbe2524cde73d7ada88f6566758a8f7227bfbf93a408a9d86bcc12a0"},
     {file = "PyYAML-6.0.1-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:8d4e9c88387b0f5c7d5f281e55304de64cf7f9c0021a3525bd3b1c542da3b0e4"},
     {file = "PyYAML-6.0.1-cp312-cp312-win32.whl", hash = "sha256:d483d2cdf104e7c9fa60c544d92981f12ad66a457afae824d146093b8c294c54"},
@@ -1180,13 +1179,13 @@ test = ["Cython", "array-api-strict", "asv", "gmpy2", "hypothesis (>=6.30)", "me
 
 [[package]]
 name = "setuptools"
-version = "70.2.0"
+version = "70.3.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "setuptools-70.2.0-py3-none-any.whl", hash = "sha256:b8b8060bb426838fbe942479c90296ce976249451118ef566a5a0b7d8b78fb05"},
-    {file = "setuptools-70.2.0.tar.gz", hash = "sha256:bd63e505105011b25c3c11f753f7e3b8465ea739efddaccef8f0efac2137bac1"},
+    {file = "setuptools-70.3.0-py3-none-any.whl", hash = "sha256:fe384da74336c398e0d956d1cae0669bc02eed936cdb1d49b57de1990dc11ffc"},
+    {file = "setuptools-70.3.0.tar.gz", hash = "sha256:f171bab1dfbc86b132997f26a119f6056a57950d058587841a0082e8830f9dc5"},
 ]
 
 [package.extras]
@@ -1366,17 +1365,20 @@ test = ["pytest"]
 
 [[package]]
 name = "sympy"
-version = "1.12.1"
+version = "1.13.0"
 description = "Computer algebra system (CAS) in Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "sympy-1.12.1-py3-none-any.whl", hash = "sha256:9b2cbc7f1a640289430e13d2a56f02f867a1da0190f2f99d8968c2f74da0e515"},
-    {file = "sympy-1.12.1.tar.gz", hash = "sha256:2877b03f998cd8c08f07cd0de5b767119cd3ef40d09f41c30d722f6686b0fb88"},
+    {file = "sympy-1.13.0-py3-none-any.whl", hash = "sha256:6b0b32a4673fb91bd3cac3b55406c8e01d53ae22780be467301cc452f6680c92"},
+    {file = "sympy-1.13.0.tar.gz", hash = "sha256:3b6af8f4d008b9a1a6a4268b335b984b23835f26d1d60b0526ebc71d48a25f57"},
 ]
 
 [package.dependencies]
-mpmath = ">=1.1.0,<1.4.0"
+mpmath = ">=1.1.0,<1.4"
+
+[package.extras]
+dev = ["hypothesis (>=6.70.0)", "pytest (>=7.1.0)"]
 
 [[package]]
 name = "tket2-py"
@@ -1469,4 +1471,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "f6ff0819d304e7d3cf3a579babcfd80e08709a7866e3f4f76c41457ba3863d71"
+content-hash = "77b07133d8e48e856bd71e8c1b0b0896e1fdcb0f6e2224adc4c169e644b94794"
