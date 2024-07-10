@@ -17,7 +17,7 @@ macro_rules! pyerr {
 fn parse_hugr(hugr_json: &str) -> PyResult<hugr::Hugr> {
     // Deserializing should be a given if we validate before running
     let mut hugr =
-        serde_json::from_str(hugr_json).map_err(|_| pyerr!("Couldn't deserialize hugr"))?;
+        serde_json::from_str(hugr_json).map_err(|e| pyerr!("Couldn't deserialize hugr: {}", e))?;
     let reg = ExtensionRegistry::try_new([
         hugr::extension::PRELUDE.to_owned(),
         std_extensions::arithmetic::int_ops::EXTENSION.to_owned(),
