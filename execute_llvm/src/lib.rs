@@ -70,9 +70,7 @@ fn compile_module<'a>(
         .emit_module(hugr_module)
         .map_err(|e| pyerr!("Error compiling to llvm: {}", e))?;
 
-    let module = emitter.finish();
-
-    Ok(module)
+    Ok(emitter.finish())
 }
 
 #[pyfunction]

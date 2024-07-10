@@ -67,6 +67,8 @@ def test_nat(validate):
         y = e / b
         return x, bool(x), int(x), float(x), y
 
+    validate(foo)
+
 
 def test_nat2(validate):
     @compile_guppy

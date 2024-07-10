@@ -74,6 +74,7 @@ poetry install --with execution,validation
 Note that the `--with execution,validation` flag is optional and only needed to run integration tests.
 
 The `validation` flag allows the tests to validate that the hugrs guppy outputs are well formed, and the `execution` flag allows tests to compile these hugrs to native code using [hugr-llvm](https://github.com/CQCL/hugr-llvm) to check the results are as expected.
+This requires `llvm-14` as described in the `hugr-llvm` repo.
 
 You can then activate the virtual environment and work within it with:
 
