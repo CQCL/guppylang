@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/CQCL/guppylang/compare/v0.6.1...v0.6.2) (2024-07-10)
+
+
+### Features
+
+* update to hugr-python 0.4  ([af770c3](https://github.com/CQCL/guppylang/commit/af770c31536a59c32fd8229579455a309e90058e))
+
 ## [0.6.1](https://github.com/CQCL/guppylang/compare/v0.6.0...v0.6.1) (2024-07-09)
 
 
