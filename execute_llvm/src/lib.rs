@@ -1,9 +1,5 @@
 use hugr::{self, ops::custom::resolve_extension_ops, std_extensions};
-use hugr::{
-    extension::ExtensionRegistry,
-    hugr::views::{HierarchyView, SiblingGraph},
-    ops, HugrView,
-};
+use hugr::{extension::ExtensionRegistry, ops, HugrView};
 use hugr_llvm;
 use hugr_llvm::fat::FatExt;
 use inkwell::{context::Context, module::Module, values::GenericValue};
@@ -37,10 +33,9 @@ fn parse_hugr(hugr_json: &str) -> PyResult<hugr::Hugr> {
 // Find the FuncDefn node for the function we're trying to execute.
 fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node> {
     let root = hugr.root();
-    let sibs: SiblingGraph = SiblingGraph::try_new(&hugr, root).map_err(|e| pyerr!("{}", e))?;
     let mut fn_nodes = Vec::new();
-    for n in sibs.nodes() {
-        let op = sibs.get_optype(n);
+    for n in hugr.children(root) {
+        let op = hugr.get_optype(n);
         if let ops::OpType::FuncDefn(ops::FuncDefn { name, .. }) = op {
             if name == fn_name {
                 fn_nodes.push(n);
@@ -94,8 +89,7 @@ fn run_function<T>(
     hugr_json: &str,
     fn_name: &str,
     parse_result: impl FnOnce(GenericValue) -> PyResult<T>,
-) -> PyResult<T>
-{
+) -> PyResult<T> {
     let hugr = parse_hugr(hugr_json)?;
     let ctx = Context::create();
 
@@ -121,7 +115,8 @@ fn run_int_function(hugr_json: &str, fn_name: &str) -> PyResult<i64> {
     run_function::<i64>(hugr_json, fn_name, |llvm_val| {
         // GenericVal is 64 bits wide
         let int_with_sign = llvm_val.as_int(true);
-        let unsigned_int = u64::try_from(int_with_sign).map_err(|e| pyerr!("Reading back llvm value: {}", e))?;
+        let unsigned_int =
+            u64::try_from(int_with_sign).map_err(|e| pyerr!("Reading back llvm value: {}", e))?;
         let signed_int = unsigned_int as i64;
         Ok(signed_int)
     })
