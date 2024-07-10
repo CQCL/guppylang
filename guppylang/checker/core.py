@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     from guppylang.definition.struct import StructField
 
 
-#: A "place" is a description for a storage location of a  local value that users
+#: A "place" is a description for a storage location of a local value that users
 #: can refer to in their program.
 #:
 #: Roughly, these are values that can be lowered to a static wire within the Hugr
