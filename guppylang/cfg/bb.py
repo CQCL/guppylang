@@ -26,7 +26,7 @@ class VariableStats(Generic[V]):
     assigned: dict[V, AstNode] = field(default_factory=dict)
 
     # The (external) variables used in the BB, i.e. usages of variables that are
-    # assigned in the BB are not included here.
+    # created in the BB are not included here.
     used: dict[V, ast.Name] = field(default_factory=dict)
 
 
