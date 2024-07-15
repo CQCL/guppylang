@@ -13,7 +13,8 @@ if TYPE_CHECKING:
     from guppylang.cfg.cfg import BaseCFG
 
 
-# Type variable for the program variable identifiers
+# Type variable for entities which we may wish to track during program analysis
+# (generally program variables or parts thereof)
 V = TypeVar("V", bound=Hashable)
 
 
