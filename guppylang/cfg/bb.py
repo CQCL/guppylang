@@ -14,19 +14,19 @@ if TYPE_CHECKING:
 
 
 # Type variable for the program variable identifiers
-P = TypeVar("P", bound=Hashable)
+V = TypeVar("P", bound=Hashable)
 
 
 @dataclass
-class VariableStats(Generic[P]):
+class VariableStats(Generic[V]):
     """Stores variable usage information for a basic block."""
 
     # Variables that are assigned in the BB
-    assigned: dict[P, AstNode] = field(default_factory=dict)
+    assigned: dict[V, AstNode] = field(default_factory=dict)
 
     # The (external) variables used in the BB, i.e. usages of variables that are
     # assigned in the BB are not included here.
-    used: dict[P, ast.Name] = field(default_factory=dict)
+    used: dict[V, ast.Name] = field(default_factory=dict)
 
 
 BBStatement = (
