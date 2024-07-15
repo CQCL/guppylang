@@ -83,7 +83,10 @@ class StmtChecker(AstVisitor[BBStatement]):
                     # the mutation cannot be observed. We can start supporting this once
                     # we have proper reference semantics.
                     raise GuppyError(
-                        "Assigning to this expression is not supported yet", value
+                        "Assigning to this expression is not supported yet. Consider "
+                        "binding the expression to variable and mutate that variable "
+                        "instead.",
+                        value
                     )
                 if not field.ty.linear:
                     raise GuppyError(
