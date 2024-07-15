@@ -11,7 +11,7 @@ T = TypeVar("T")
 Result = dict[BB, T]
 
 
-class Analysis(ABC, Generic[T]):
+class Analysis(Generic[T], ABC):
     """Abstract base class for a program analysis pass over the lattice `T`"""
 
     def eq(self, t1: T, t2: T, /) -> bool:
@@ -34,7 +34,7 @@ class Analysis(ABC, Generic[T]):
         """
 
 
-class ForwardAnalysis(Analysis[T], ABC, Generic[T]):
+class ForwardAnalysis(Generic[T], Analysis[T], ABC):
     """Abstract base class for a program analysis pass running in forward direction."""
 
     @abstractmethod
@@ -59,7 +59,7 @@ class ForwardAnalysis(Analysis[T], ABC, Generic[T]):
         return vals_before
 
 
-class BackwardAnalysis(Analysis[T], ABC, Generic[T]):
+class BackwardAnalysis(Generic[T], Analysis[T], ABC):
     """Abstract base class for a program analysis pass running in backward direction."""
 
     @abstractmethod
@@ -88,7 +88,7 @@ class BackwardAnalysis(Analysis[T], ABC, Generic[T]):
 LivenessDomain = dict[V, BB]
 
 
-class LivenessAnalysis(BackwardAnalysis[LivenessDomain[V]], Generic[V]):
+class LivenessAnalysis(Generic[V], BackwardAnalysis[LivenessDomain[V]]):
     """Live variable analysis pass.
 
     Computes the variables that are live before the execution of each BB. The analysis
@@ -132,7 +132,7 @@ MaybeAssignmentDomain = set[V]
 AssignmentDomain = tuple[DefAssignmentDomain[V], MaybeAssignmentDomain[V]]
 
 
-class AssignmentAnalysis(ForwardAnalysis[AssignmentDomain[V]], Generic[V]):
+class AssignmentAnalysis(Generic[V], ForwardAnalysis[AssignmentDomain[V]]):
     """Assigned variable analysis pass.
 
     Computes the set of variable that are definitely assigned at the start of a BB.
