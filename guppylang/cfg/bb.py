@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 # Type variable for the program variable identifiers
-V = TypeVar("P", bound=Hashable)
+V = TypeVar("V", bound=Hashable)
 
 
 @dataclass
