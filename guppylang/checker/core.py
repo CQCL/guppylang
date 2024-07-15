@@ -168,7 +168,12 @@ V = TypeVar("V")
 
 @dataclass
 class Locals(Generic[VId, V]):
-    """Scoped mapping from names to variables"""
+    """Scoped mapping from program variable ids to the corresponding program variable.
+
+    Depending on which checking phase we are in (type checking or linearity checking),
+    we use this either as a mapping from strings to `Variable`s or as a mapping from
+    `PlaceId`s to `Place`s.
+    """
 
     vars: dict[VId, V]
     parent_scope: "Locals[VId, V] | None" = None
