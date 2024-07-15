@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Generic, TypeVar
 
-from guppylang.cfg.bb import BB, V, VariableStats
+from guppylang.cfg.bb import BB, VId, VariableStats
 
 # Type variable for the lattice domain
 T = TypeVar("T")
@@ -85,36 +85,36 @@ class BackwardAnalysis(Generic[T], Analysis[T], ABC):
 
 # For live variable analysis, we also store a BB in which a use occurs as evidence of
 # liveness.
-LivenessDomain = dict[V, BB]
+LivenessDomain = dict[VId, BB]
 
 
-class LivenessAnalysis(Generic[V], BackwardAnalysis[LivenessDomain[V]]):
+class LivenessAnalysis(Generic[VId], BackwardAnalysis[LivenessDomain[VId]]):
     """Live variable analysis pass.
 
     Computes the variables that are live before the execution of each BB. The analysis
     runs over the lattice of mappings from variable names to BBs containing a use.
     """
 
-    stats: dict[BB, VariableStats[V]]
+    stats: dict[BB, VariableStats[VId]]
 
-    def __init__(self, stats: dict[BB, VariableStats[V]]) -> None:
+    def __init__(self, stats: dict[BB, VariableStats[VId]]) -> None:
         self.stats = stats
 
-    def eq(self, live1: LivenessDomain[V], live2: LivenessDomain[V]) -> bool:
+    def eq(self, live1: LivenessDomain[VId], live2: LivenessDomain[VId]) -> bool:
         # Only check that both contain the same variables. We don't care about the BB
         # in which the use occurs, we just need any one, to report to the user.
         return live1.keys() == live2.keys()
 
-    def initial(self) -> LivenessDomain[V]:
+    def initial(self) -> LivenessDomain[VId]:
         return {}
 
-    def join(self, *ts: LivenessDomain[V]) -> LivenessDomain[V]:
-        res: LivenessDomain[V] = {}
+    def join(self, *ts: LivenessDomain[VId]) -> LivenessDomain[VId]:
+        res: LivenessDomain[VId] = {}
         for t in ts:
             res |= t
         return res
 
-    def apply_bb(self, live_after: LivenessDomain[V], bb: BB) -> LivenessDomain[V]:
+    def apply_bb(self, live_after: LivenessDomain[VId], bb: BB) -> LivenessDomain[VId]:
         stats = self.stats[bb]
         return {x: bb for x in stats.used} | {
             x: b for x, b in live_after.items() if x not in stats.assigned
@@ -122,17 +122,17 @@ class LivenessAnalysis(Generic[V], BackwardAnalysis[LivenessDomain[V]]):
 
 
 # Set of variables that are definitely assigned at the start of a BB
-DefAssignmentDomain = set[V]
+DefAssignmentDomain = set[VId]
 
 # Set of variables that are assigned on (at least) some paths to a BB. Definitely
 # assigned variables are a subset of this
-MaybeAssignmentDomain = set[V]
+MaybeAssignmentDomain = set[VId]
 
 # For assignment analysis, we do definite- and maybe-assignment in one pass
-AssignmentDomain = tuple[DefAssignmentDomain[V], MaybeAssignmentDomain[V]]
+AssignmentDomain = tuple[DefAssignmentDomain[VId], MaybeAssignmentDomain[VId]]
 
 
-class AssignmentAnalysis(Generic[V], ForwardAnalysis[AssignmentDomain[V]]):
+class AssignmentAnalysis(Generic[VId], ForwardAnalysis[AssignmentDomain[VId]]):
     """Assigned variable analysis pass.
 
     Computes the set of variables (i.e. `V`s) that are definitely assigned at the start
@@ -140,16 +140,16 @@ class AssignmentAnalysis(Generic[V], ForwardAnalysis[AssignmentDomain[V]]):
     least) some paths to a BB (the definitely assigned variables are a subset of this).
     """
 
-    stats: dict[BB, VariableStats[V]]
-    all_vars: set[V]
-    ass_before_entry: set[V]
-    maybe_ass_before_entry: set[V]
+    stats: dict[BB, VariableStats[VId]]
+    all_vars: set[VId]
+    ass_before_entry: set[VId]
+    maybe_ass_before_entry: set[VId]
 
     def __init__(
         self,
-        stats: dict[BB, VariableStats[V]],
-        ass_before_entry: set[V],
-        maybe_ass_before_entry: set[V],
+        stats: dict[BB, VariableStats[VId]],
+        ass_before_entry: set[VId],
+        maybe_ass_before_entry: set[VId],
     ) -> None:
         """Constructs an `AssignmentAnalysis` pass for a CFG.
 
@@ -165,12 +165,12 @@ class AssignmentAnalysis(Generic[V], ForwardAnalysis[AssignmentDomain[V]]):
             | ass_before_entry
         )
 
-    def initial(self) -> AssignmentDomain[V]:
+    def initial(self) -> AssignmentDomain[VId]:
         # Note that definite assignment must start with `all_vars` instead of only
         # `ass_before_entry` since we want to compute the *greatest* fixpoint.
         return self.all_vars, self.maybe_ass_before_entry
 
-    def join(self, *ts: AssignmentDomain[V]) -> AssignmentDomain[V]:
+    def join(self, *ts: AssignmentDomain[VId]) -> AssignmentDomain[VId]:
         # We always include the variables that are definitely assigned before the entry,
         # even if the join is empty
         if len(ts) == 0:
@@ -180,7 +180,7 @@ class AssignmentAnalysis(Generic[V], ForwardAnalysis[AssignmentDomain[V]]):
         maybe_ass = set.union(*(maybe_ass for _, maybe_ass in ts))
         return def_ass, maybe_ass
 
-    def apply_bb(self, val_before: AssignmentDomain[V], bb: BB) -> AssignmentDomain[V]:
+    def apply_bb(self, val_before: AssignmentDomain[VId], bb: BB) -> AssignmentDomain[VId]:
         stats = self.stats[bb]
         def_ass_before, maybe_ass_before = val_before
         return (
@@ -190,7 +190,7 @@ class AssignmentAnalysis(Generic[V], ForwardAnalysis[AssignmentDomain[V]]):
 
     def run_unpacked(
         self, bbs: Iterable[BB]
-    ) -> tuple[Result[DefAssignmentDomain[V]], Result[MaybeAssignmentDomain[V]]]:
+    ) -> tuple[Result[DefAssignmentDomain[VId]], Result[MaybeAssignmentDomain[VId]]]:
         """Runs the analysis and unpacks the definite- and maybe-assignment results."""
         res = self.run(bbs)
         return {bb: res[bb][0] for bb in res}, {bb: res[bb][1] for bb in res}

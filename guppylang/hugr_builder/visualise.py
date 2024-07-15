@@ -11,7 +11,7 @@ from guppylang.cfg.analysis import (
     LivenessDomain,
     MaybeAssignmentDomain,
 )
-from guppylang.cfg.bb import BB, V
+from guppylang.cfg.bb import BB, VId
 from guppylang.hugr_builder.hugr import DummyOp, Hugr, InPort, Node, OutPort, OutPortV
 
 if TYPE_CHECKING:
@@ -249,9 +249,9 @@ def commas(*args: str) -> str:
 
 def cfg_to_graphviz(
     cfg: "CFG",
-    live_before: dict[BB, LivenessDomain[V]],
-    ass_before: dict[BB, DefAssignmentDomain[V]],
-    maybe_ass_before: dict[BB, MaybeAssignmentDomain[V]],
+    live_before: dict[BB, LivenessDomain[VId]],
+    ass_before: dict[BB, DefAssignmentDomain[VId]],
+    maybe_ass_before: dict[BB, MaybeAssignmentDomain[VId]],
 ) -> gv.Digraph:
     graph = gv.Digraph("CFG", strict=False)
     for bb in cfg.bbs:
@@ -273,9 +273,9 @@ live_before: {commas(*(str(x) for x in live_before[bb]))}
 
 def render_cfg(
     cfg: "CFG",
-    live_before: dict[BB, LivenessDomain[V]],
-    ass_before: dict[BB, DefAssignmentDomain[V]],
-    maybe_ass_before: dict[BB, MaybeAssignmentDomain[V]],
+    live_before: dict[BB, LivenessDomain[VId]],
+    ass_before: dict[BB, DefAssignmentDomain[VId]],
+    maybe_ass_before: dict[BB, MaybeAssignmentDomain[VId]],
     filename: str,
     format_st: str = "svg",
 ) -> None:
