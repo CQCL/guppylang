@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Generic, TypeVar
 
-from guppylang.cfg.bb import BB, VId, VariableStats
+from guppylang.cfg.bb import BB, VariableStats, VId
 
 # Type variable for the lattice domain
 T = TypeVar("T")
@@ -180,7 +180,9 @@ class AssignmentAnalysis(Generic[VId], ForwardAnalysis[AssignmentDomain[VId]]):
         maybe_ass = set.union(*(maybe_ass for _, maybe_ass in ts))
         return def_ass, maybe_ass
 
-    def apply_bb(self, val_before: AssignmentDomain[VId], bb: BB) -> AssignmentDomain[VId]:
+    def apply_bb(
+        self, val_before: AssignmentDomain[VId], bb: BB
+    ) -> AssignmentDomain[VId]:
         stats = self.stats[bb]
         def_ass_before, maybe_ass_before = val_before
         return (
