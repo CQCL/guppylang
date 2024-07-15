@@ -135,9 +135,9 @@ AssignmentDomain = tuple[DefAssignmentDomain[V], MaybeAssignmentDomain[V]]
 class AssignmentAnalysis(Generic[V], ForwardAnalysis[AssignmentDomain[V]]):
     """Assigned variable analysis pass.
 
-    Computes the set of variable that are definitely assigned at the start of a BB.
-    Additionally, we compute the set of variables that are assigned on (at least) some
-    paths to a BB (the definitely assigned variables are a subset of this).
+    Computes the set of variables (i.e. `V`s) that are definitely assigned at the start
+    of a BB. Additionally, we compute the set of variables that are assigned on (at
+    least) some paths to a BB (the definitely assigned variables are a subset of this).
     """
 
     stats: dict[BB, VariableStats[V]]
