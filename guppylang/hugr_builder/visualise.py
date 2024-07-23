@@ -11,7 +11,7 @@ from guppylang.cfg.analysis import (
     LivenessDomain,
     MaybeAssignmentDomain,
 )
-from guppylang.cfg.bb import BB
+from guppylang.cfg.bb import BB, VId
 from guppylang.hugr_builder.hugr import DummyOp, Hugr, InPort, Node, OutPort, OutPortV
 
 if TYPE_CHECKING:
@@ -249,18 +249,18 @@ def commas(*args: str) -> str:
 
 def cfg_to_graphviz(
     cfg: "CFG",
-    live_before: dict[BB, LivenessDomain],
-    ass_before: dict[BB, DefAssignmentDomain],
-    maybe_ass_before: dict[BB, MaybeAssignmentDomain],
+    live_before: dict[BB, LivenessDomain[VId]],
+    ass_before: dict[BB, DefAssignmentDomain[VId]],
+    maybe_ass_before: dict[BB, MaybeAssignmentDomain[VId]],
 ) -> gv.Digraph:
     graph = gv.Digraph("CFG", strict=False)
     for bb in cfg.bbs:
         label = f"""
-assigned: {commas(*bb.vars.assigned)}
-used: {commas(*bb.vars.used)}
-maybe_ass_before: {commas(*maybe_ass_before[bb])}
-ass_before: {commas(*ass_before[bb])}
-live_before: {commas(*live_before[bb])}
+assigned: {commas(*(str(x) for x in bb.vars.assigned))}
+used: {commas(*(str(x) for x in bb.vars.used))}
+maybe_ass_before: {commas(*(str(x) for x in maybe_ass_before[bb]))}
+ass_before: {commas(*(str(x) for x in ass_before[bb]))}
+live_before: {commas(*(str(x) for x in live_before[bb]))}
 --------
 """ + "\n".join(ast.unparse(s) for s in bb.statements)
         if bb.branch_pred is not None:
@@ -273,9 +273,9 @@ live_before: {commas(*live_before[bb])}
 
 def render_cfg(
     cfg: "CFG",
-    live_before: dict[BB, LivenessDomain],
-    ass_before: dict[BB, DefAssignmentDomain],
-    maybe_ass_before: dict[BB, MaybeAssignmentDomain],
+    live_before: dict[BB, LivenessDomain[VId]],
+    ass_before: dict[BB, DefAssignmentDomain[VId]],
+    maybe_ass_before: dict[BB, MaybeAssignmentDomain[VId]],
     filename: str,
     format_st: str = "svg",
 ) -> None:

@@ -40,6 +40,7 @@ from guppylang.checker.core import (
     DummyEvalDict,
     Globals,
     Locals,
+    Variable,
 )
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef, ValueDef
@@ -876,7 +877,7 @@ def synthesize_comprehension(
 
     # The rest is checked in a new nested context to ensure that variables don't escape
     # their scope
-    inner_locals = Locals({}, parent_scope=ctx.locals)
+    inner_locals: Locals[str, Variable] = Locals({}, parent_scope=ctx.locals)
     inner_ctx = Context(ctx.globals, inner_locals)
     expr_sth, stmt_chk = ExprSynthesizer(inner_ctx), StmtChecker(inner_ctx)
     gen.hasnext_assign = stmt_chk.visit_Assign(gen.hasnext_assign)
