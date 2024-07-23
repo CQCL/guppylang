@@ -16,6 +16,7 @@ from typing import (
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, name_nodes_in_ast
+from guppylang.cfg.bb import VId
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
@@ -48,7 +49,7 @@ if TYPE_CHECKING:
     from guppylang.definition.struct import StructField
 
 
-#: A "place" is a description for a storage location of a  local value that users
+#: A "place" is a description for a storage location of a local value that users
 #: can refer to in their program.
 #:
 #: Roughly, these are values that can be lowered to a static wire within the Hugr
@@ -259,41 +260,45 @@ class Globals:
                 return assert_never(x)
 
 
-K = TypeVar("K")
 V = TypeVar("V")
 
 
 @dataclass
-class Locals(Generic[K, V]):
-    """Scoped mapping from names to variables"""
+class Locals(Generic[VId, V]):
+    """Scoped mapping from program variable ids to the corresponding program variable.
 
-    vars: dict[K, V]
-    parent_scope: "Locals[K, V] | None" = None
+    Depending on which checking phase we are in (type checking or linearity checking),
+    we use this either as a mapping from strings to `Variable`s or as a mapping from
+    `PlaceId`s to `Place`s.
+    """
 
-    def __getitem__(self, item: K) -> V:
+    vars: dict[VId, V]
+    parent_scope: "Locals[VId, V] | None" = None
+
+    def __getitem__(self, item: VId) -> V:
         if item not in self.vars and self.parent_scope:
             return self.parent_scope[item]
 
         return self.vars[item]
 
-    def __setitem__(self, key: K, value: V) -> None:
+    def __setitem__(self, key: VId, value: V) -> None:
         self.vars[key] = value
 
-    def __iter__(self) -> Iterator[K]:
+    def __iter__(self) -> Iterator[VId]:
         parent_iter = iter(self.parent_scope) if self.parent_scope else iter(())
         return itertools.chain(iter(self.vars), parent_iter)
 
-    def __contains__(self, item: K) -> bool:
+    def __contains__(self, item: VId) -> bool:
         return (item in self.vars) or (
             self.parent_scope is not None and item in self.parent_scope
         )
 
-    def __copy__(self) -> "Locals[K, V]":
+    def __copy__(self) -> "Locals[VId, V]":
         # Make a copy of the var map so that mutating the copy doesn't
         # mutate our variable mapping
         return Locals(self.vars.copy(), copy.copy(self.parent_scope))
 
-    def keys(self) -> set[K]:
+    def keys(self) -> set[VId]:
         parent_keys = self.parent_scope.keys() if self.parent_scope else set()
         return parent_keys | self.vars.keys()
 
@@ -303,7 +308,7 @@ class Locals(Generic[K, V]):
         )
         return itertools.chain(self.vars.values(), parent_values)
 
-    def items(self) -> Iterable[tuple[K, V]]:
+    def items(self) -> Iterable[tuple[VId, V]]:
         parent_items = (
             iter(self.parent_scope.items()) if self.parent_scope else iter(())
         )
