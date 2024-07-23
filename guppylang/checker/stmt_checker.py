@@ -86,7 +86,7 @@ class StmtChecker(AstVisitor[BBStatement]):
                         "Assigning to this expression is not supported yet. Consider "
                         "binding the expression to variable and mutate that variable "
                         "instead.",
-                        value
+                        value,
                     )
                 if not field.ty.linear:
                     raise GuppyError(

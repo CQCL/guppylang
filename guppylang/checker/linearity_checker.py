@@ -271,8 +271,9 @@ def leaf_places(place: Place) -> Iterator[Place]:
     while stack:
         place = stack.pop()
         if isinstance(place.ty, StructType):
-            for field in place.ty.fields:
-                stack.append(FieldAccess(place, field, place.defined_at))
+            stack += [
+                FieldAccess(place, field, place.defined_at) for field in place.ty.fields
+            ]
         else:
             yield place
 

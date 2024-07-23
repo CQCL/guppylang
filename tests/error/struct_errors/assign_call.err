@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:20
 19:    def bar() -> None:
 20:        foo().x += 1
            ^^^^^
-GuppyError: Assigning to this expression is not supported yet
+GuppyError: Assigning to this expression is not supported yet. Consider binding the expression to variable and mutate that variable instead.
