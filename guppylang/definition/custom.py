@@ -161,7 +161,12 @@ class CustomFunctionDef(CompiledCallableDef):
         with graph.parent(def_node):
             _, inp_ports = graph.add_input_with_ports(list(fun_ty.inputs))
             returns = self.compile_call(
-                inp_ports, type_args, DFContainer(def_node, {}), graph, globals, node
+                inp_ports,
+                type_args,
+                DFContainer(graph, def_node),
+                graph,
+                globals,
+                node,
             )
             graph.add_output(returns)
 

@@ -1,18 +1,18 @@
 import ast
 from collections.abc import Sequence
 
-from guppylang.ast_util import AstVisitor
+from guppylang.ast_util import AstVisitor, get_type
+from guppylang.checker.core import Variable
 from guppylang.compiler.core import (
     CompiledGlobals,
     CompilerBase,
     DFContainer,
-    PortVariable,
     return_var,
 )
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.error import InternalGuppyError
 from guppylang.hugr_builder.hugr import Hugr, OutPortV
-from guppylang.nodes import CheckedNestedFunctionDef
+from guppylang.nodes import CheckedNestedFunctionDef, PlaceNode
 from guppylang.tys.ty import TupleType
 
 
@@ -44,9 +44,8 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
     def _unpack_assign(self, lhs: ast.expr, port: OutPortV, node: ast.stmt) -> None:
         """Updates the local DFG with assignments."""
-        if isinstance(lhs, ast.Name):
-            x = lhs.id
-            self.dfg[x] = PortVariable(x, port, node)
+        if isinstance(lhs, PlaceNode):
+            self.dfg[lhs.place] = port
         elif isinstance(lhs, ast.Tuple):
             unpack = self.graph.add_unpack_tuple(port, self.dfg.node)
             for i, pat in enumerate(lhs.elts):
@@ -74,19 +73,19 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         # We turn returns into assignments of dummy variables, i.e. the statement
         # `return e0, e1, e2` is turned into `%ret0 = e0; %ret1 = e1; %ret2 = e2`.
         if node.value is not None:
+            return_ty = get_type(node.value)
             port = self.expr_compiler.compile(node.value, self.dfg)
-            if isinstance(port.ty, TupleType):
+            if isinstance(return_ty, TupleType):
                 unpack = self.graph.add_unpack_tuple(port, self.dfg.node)
-                row = [unpack.out_port(i) for i in range(len(port.ty.element_types))]
+                row = [unpack.out_port(i) for i in range(len(return_ty.element_types))]
             else:
                 row = [port]
             for i, port in enumerate(row):
-                name = return_var(i)
-                self.dfg[name] = PortVariable(name, port, node)
+                var = Variable(return_var(i), port.ty, node.value)
+                self.dfg[var] = port
 
     def visit_CheckedNestedFunctionDef(self, node: CheckedNestedFunctionDef) -> None:
         from guppylang.compiler.func_compiler import compile_local_func_def
 
-        self.dfg[node.name] = compile_local_func_def(
-            node, self.dfg, self.graph, self.globals
-        )
+        var = Variable(node.name, node.ty, node)
+        self.dfg[var] = compile_local_func_def(node, self.dfg, self.graph, self.globals)

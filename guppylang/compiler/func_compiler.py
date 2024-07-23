@@ -37,7 +37,7 @@ def compile_local_func_def(
     dfg: DFContainer,
     graph: Hugr,
     globals: CompiledGlobals,
-) -> PortVariable:
+) -> OutPortV:
     """Compiles a local (nested) function definition to Hugr."""
     assert func.ty.input_names is not None
 
@@ -99,4 +99,4 @@ def compile_local_func_def(
             loaded, [dfg[v.name].port for v in captured], dfg.node
         ).out_port(0)
 
-    return PortVariable(func.name, loaded, func)
+    return loaded
