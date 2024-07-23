@@ -13,6 +13,7 @@ from hugr.serialization.ops import OpType
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     FunctionType,
+    StructType,
     SumType,
     TupleType,
     Type,
@@ -608,7 +609,9 @@ class Hugr:
         """Adds a `Partial` evaluation node to the graph."""
         assert isinstance(def_port.ty, FunctionType)
         assert len(def_port.ty.inputs) >= len(inputs)
-        assert [p.ty for p in inputs] == def_port.ty.inputs[: len(inputs)]
+        assert [p.ty.to_hugr() for p in inputs] == [
+            ty.to_hugr() for ty in def_port.ty.inputs[: len(inputs)]
+        ]
         new_ty = FunctionType(
             def_port.ty.inputs[len(inputs) :],
             def_port.ty.output,

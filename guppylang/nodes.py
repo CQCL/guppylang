@@ -4,6 +4,7 @@ import ast
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
+from guppylang.ast_util import AstNode
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import FunctionType, StructType, Type
 
@@ -201,14 +202,17 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
     def_id: "DefId"
     cfg: "CheckedCFG"
     ty: FunctionType
-    captured: Mapping[str, "Variable"]
+
+    #: Mapping from names to variables captured by this function, together with an AST
+    #: node witnessing a use of the captured variable in the function body.
+    captured: Mapping[str, tuple["Variable", AstNode]]
 
     def __init__(
         self,
         def_id: "DefId",
         cfg: "CheckedCFG",
         ty: FunctionType,
-        captured: Mapping[str, "Variable"],
+        captured: Mapping[str, tuple["Variable", AstNode]],
         *args: Any,
         **kwargs: Any,
     ) -> None:
