@@ -562,6 +562,11 @@ class StructType(ParametrizedTypeBase):
         return [StructField(f.name, f.ty.transform(inst)) for f in self.defn.fields]
 
     @cached_property
+    def field_dict(self) -> "dict[str, StructField]":
+        """Mapping from names to fields of this struct type."""
+        return {field.name: field for field in self.fields}
+
+    @cached_property
     def intrinsically_linear(self) -> bool:
         """Whether this type is linear, independent of the arguments."""
         return any(f.ty.linear for f in self.defn.fields)

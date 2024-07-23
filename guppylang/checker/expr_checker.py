@@ -38,6 +38,7 @@ from guppylang.ast_util import (
 from guppylang.checker.core import (
     Context,
     DummyEvalDict,
+    FieldAccess,
     Globals,
     Locals,
     Variable,
@@ -53,13 +54,14 @@ from guppylang.error import (
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
+    FieldAccessAndDrop,
     GlobalName,
     IterEnd,
     IterHasNext,
     IterNext,
     LocalCall,
-    LocalName,
     MakeIter,
+    PlaceNode,
     PyExpr,
     TensorCall,
     TypeApply,
@@ -81,6 +83,7 @@ from guppylang.tys.ty import (
     FunctionType,
     NoneType,
     OpaqueType,
+    StructType,
     TupleType,
     Type,
     TypeBase,
@@ -329,11 +332,11 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             raise GuppyError("Unsupported constant", node)
         return node, ty
 
-    def visit_Name(self, node: ast.Name) -> tuple[ast.Name, Type]:
+    def visit_Name(self, node: ast.Name) -> tuple[ast.expr, Type]:
         x = node.id
         if x in self.ctx.locals:
             var = self.ctx.locals[x]
-            return with_loc(node, LocalName(id=x)), var.ty
+            return with_loc(node, PlaceNode(place=var)), var.ty
         elif x in self.ctx.globals:
             # Look-up what kind of definition it is
             match self.ctx.globals[x]:
@@ -351,6 +354,28 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in `TypeSynthesiser`. This should have "
             "been caught by program analysis!"
+        )
+
+    def visit_Attribute(self, node: ast.Attribute) -> tuple[ast.expr, Type]:
+        # A `value.attr` attribute access
+        node.value, ty = self.synthesize(node.value)
+        if isinstance(ty, StructType) and node.attr in ty.field_dict:
+            field = ty.field_dict[node.attr]
+            expr: ast.expr
+            if isinstance(node.value, PlaceNode):
+                # Field access on a place is itself a place
+                expr = PlaceNode(place=FieldAccess(node.value.place, field, None))
+            else:
+                # If the struct is not in a place, then there is no way to address the
+                # other fields after this one has been projected (e.g. `f().a` makes
+                # you loose access to all fields besides `a`).
+                expr = FieldAccessAndDrop(value=node.value, struct_ty=ty, field=field)
+            return with_loc(node, expr), field.ty
+        raise GuppyTypeError(
+            f"Expression of type `{ty}` has no attribute `{node.attr}`",
+            # Unfortunately, `node.attr` doesn't contain source annotations, so we have
+            # to use `node` as the error location
+            node,
         )
 
     def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, Type]:
@@ -882,9 +907,9 @@ def synthesize_comprehension(
     expr_sth, stmt_chk = ExprSynthesizer(inner_ctx), StmtChecker(inner_ctx)
     gen.hasnext_assign = stmt_chk.visit_Assign(gen.hasnext_assign)
     gen.next_assign = stmt_chk.visit_Assign(gen.next_assign)
-    gen.hasnext, hasnext_ty = expr_sth.visit_Name(gen.hasnext)
+    gen.hasnext, hasnext_ty = expr_sth.visit(gen.hasnext)
     gen.hasnext = with_type(hasnext_ty, gen.hasnext)
-    gen.iter, iter_ty = expr_sth.visit_Name(gen.iter)
+    gen.iter, iter_ty = expr_sth.visit(gen.iter)
     gen.iter = with_type(iter_ty, gen.iter)
 
     # Check `if` guards
