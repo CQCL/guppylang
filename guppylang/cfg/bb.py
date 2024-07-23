@@ -13,20 +13,21 @@ if TYPE_CHECKING:
     from guppylang.cfg.cfg import BaseCFG
 
 
-# Type variable for the program variable identifiers
-P = TypeVar("P", bound=Hashable)
+# Type variable for ids of entities which we may wish to track during program analysis
+# (generally ids for program variables or parts thereof)
+VId = TypeVar("VId", bound=Hashable)
 
 
 @dataclass
-class VariableStats(Generic[P]):
+class VariableStats(Generic[VId]):
     """Stores variable usage information for a basic block."""
 
     # Variables that are assigned in the BB
-    assigned: dict[P, AstNode] = field(default_factory=dict)
+    assigned: dict[VId, AstNode] = field(default_factory=dict)
 
     # The (external) variables used in the BB, i.e. usages of variables that are
-    # assigned in the BB are not included here.
-    used: dict[P, AstNode] = field(default_factory=dict)
+    # created in the BB are not included here.
+    used: dict[VId, ast.Name] = field(default_factory=dict)
 
 
 BBStatement = (

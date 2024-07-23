@@ -54,9 +54,12 @@ class DFContainer:
         if isinstance(place.ty, StructType) and not is_return:
             unpack = self.graph.add_unpack_tuple(port, self.node)
             for field, field_port in zip(
-                place.ty.fields, unpack.out_ports, strict=False
+                place.ty.fields, unpack.out_ports, strict=True
             ):
                 self[FieldAccess(place, field, None)] = field_port
+            # If we had a previous wire assigned to this place, we need forget about it.
+            # Otherwise, we might use this old value when looking up the place later
+            self.locals.pop(place.id, None)
         else:
             self.locals[place.id] = port
 

@@ -55,6 +55,7 @@ class StmtChecker(AstVisitor[BBStatement]):
                 self.ctx.locals[x] = var
                 return with_loc(lhs, PlaceNode(place=var))
 
+            # The LHS could also be a field `expr.field`
             case ast.Attribute(value=value, attr=attr):
                 value, struct_ty = self._synth_expr(value)
                 if (
@@ -77,9 +78,15 @@ class StmtChecker(AstVisitor[BBStatement]):
                     )
                 if not isinstance(value, PlaceNode):
                     # For now we complain if someone tries to assign to something that
-                    # is not a place (e.g. `f().a = 4`)
+                    # is not a place, e.g. `f().a = 4`. This would only make sense if
+                    # there is another reference to the return value of `f`, otherwise
+                    # the mutation cannot be observed. We can start supporting this once
+                    # we have proper reference semantics.
                     raise GuppyError(
-                        "Assigning to this expression is not supported yet", value
+                        "Assigning to this expression is not supported yet. Consider "
+                        "binding the expression to variable and mutate that variable "
+                        "instead.",
+                        value
                     )
                 if not field.ty.linear:
                     raise GuppyError(
