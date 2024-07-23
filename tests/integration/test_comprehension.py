@@ -45,6 +45,21 @@ def test_multiple(validate):
     validate(test)
 
 
+def test_multiple_struct(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        qs: linst[qubit]
+
+    @guppy(module)
+    def test(ss: linst[MyStruct]) -> linst[qubit]:
+        return [h(q) for s in ss for q in s.qs]
+
+    validate(module.compile())
+
+
 def test_tuple_pat(validate):
     @compile_guppy
     def test(xs: list[tuple[int, int, float]]) -> list[float]:
@@ -91,6 +106,21 @@ def test_capture(validate):
         return [x + y for x in xs if x > y]
 
     validate(test)
+
+
+def test_capture_struct(validate):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class MyStruct:
+        x: int
+        y: float
+
+    @guppy(module)
+    def test(xs: list[int], s: MyStruct) -> list[int]:
+        return [x + s.x for x in xs if x > s.y]
+
+    validate(module.compile())
 
 
 def test_scope(validate):
@@ -151,6 +181,25 @@ def test_linear_discard(validate):
     @guppy(module)
     def test(qs: linst[qubit]) -> list[None]:
         return [discard(q) for q in qs]
+
+    validate(module.compile())
+
+
+def test_linear_discard_struct(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q1: qubit
+        q2: qubit
+
+    @guppy.declare(module)
+    def discard(q1: qubit, q2: qubit) -> None: ...
+
+    @guppy(module)
+    def test(ss: linst[MyStruct]) -> list[None]:
+        return [discard(s.q1, s.q2) for s in ss]
 
     validate(module.compile())
 
