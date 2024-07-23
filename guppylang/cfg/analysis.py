@@ -170,7 +170,7 @@ class AssignmentAnalysis(Generic[VId], ForwardAnalysis[AssignmentDomain[VId]]):
         # `ass_before_entry` since we want to compute the *greatest* fixpoint.
         return self.all_vars, self.maybe_ass_before_entry
 
-    def join(self, *ts: AssignmentDomain[VId]) -> AssignmentDomain[VId]:
+    def join(self, *ts: AssignmentDomain[P]) -> AssignmentDomain[P]:
         # We always include the variables that are definitely assigned before the entry,
         # even if the join is empty
         if len(ts) == 0:
