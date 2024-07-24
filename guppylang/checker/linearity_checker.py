@@ -13,20 +13,24 @@ from guppylang.cfg.analysis import LivenessAnalysis
 from guppylang.cfg.bb import BB, VariableStats
 from guppylang.checker.core import (
     FieldAccess,
+    Globals,
     Locals,
     Place,
     PlaceId,
     Variable,
 )
+from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
     CheckedNestedFunctionDef,
     DesugaredGenerator,
     DesugaredListComp,
     FieldAccessAndDrop,
+    GlobalCall,
+    LocalCall,
     PlaceNode,
 )
-from guppylang.tys.ty import StructType
+from guppylang.tys.ty import FunctionType, InputFlags, StructType
 
 if TYPE_CHECKING:
     from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG
@@ -88,14 +92,16 @@ class BBLinearityChecker(ast.NodeVisitor):
 
     scope: Scope
     stats: VariableStats[PlaceId]
+    globals: Globals
 
-    def check(self, bb: "CheckedBB", is_entry: bool) -> Scope:
+    def check(self, bb: "CheckedBB", is_entry: bool, globals: Globals) -> Scope:
         # Manufacture a scope that holds all places that are live at the start
         # of this BB
         input_scope = Scope()
         for var in bb.sig.input_row:
             for place in leaf_places(var):
                 input_scope.assign(place)
+        self.globals = globals
 
         # Open up a new nested scope to check the BB contents. This way we can track
         # when we use variables from the outside vs ones assigned in this BB. The only
@@ -119,18 +125,59 @@ class BBLinearityChecker(ast.NodeVisitor):
     def visit_PlaceNode(self, node: PlaceNode) -> None:
         for place in leaf_places(node.place):
             x = place.id
-            if (use := self.scope.used(x)) and place.ty.linear:
-                raise GuppyError(
-                    f"{place.describe} with linear type `{place.ty}` was already used "
-                    "(at {0})",
-                    node,
-                    [use],
-                )
+            if use := self.scope.used(x):
+                if isinstance(place, Variable) and InputFlags.Inout in place.flags:
+                    raise GuppyError(
+                        f"{place.describe} cannot be moved since it is annotated as "
+                        "`@inout`",
+                        node,
+                        [use],
+                    )
+                if place.ty.linear:
+                    raise GuppyError(
+                        f"{place.describe} with linear type `{place.ty}` was already "
+                        "used (at {0})",
+                        node,
+                        [use],
+                    )
             self.scope.use(x, node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
         self._check_assign_targets(node.targets)
+
+    def _reassign_inout_args(self, func_ty: FunctionType, args: list[ast.expr]) -> None:
+        """Helper function to reassign the @inout arguments after a function call."""
+        for (ty, flags), arg in zip(func_ty.inputs, args, strict=True):
+            if InputFlags.Inout in flags:
+                match arg:
+                    case PlaceNode(place=place):
+                        for leaf in leaf_places(place):
+                            leaf = leaf.replace_defined_at(arg)
+                            self.scope.assign(leaf)
+                    case arg if ty.linear:
+                        raise GuppyError(
+                            f"Inout argument with linear type `{ty}` would be dropped "
+                            "after this function call. Consider assigning the "
+                            "expression to a local variable before passing it to the "
+                            "function.",
+                            arg,
+                        )
+
+    def visit_GlobalCall(self, node: GlobalCall) -> None:
+        for arg in node.args:
+            self.visit(arg)
+        func = self.globals[node.def_id]
+        assert isinstance(func, CallableDef)
+        func_ty = func.ty.instantiate(node.type_args)
+        self._reassign_inout_args(func_ty, node.args)
+
+    def visit_LocalCall(self, node: LocalCall) -> None:
+        for arg in node.args:
+            self.visit(arg)
+        func_ty = get_type(node.func)
+        assert isinstance(func_ty, FunctionType)
+        self._reassign_inout_args(func_ty, node.args)
 
     def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> None:
         # A field access on a value that is not a place. This means the value can no
@@ -278,14 +325,15 @@ def leaf_places(place: Place) -> Iterator[Place]:
             yield place
 
 
-def check_cfg_linearity(cfg: "CheckedCFG") -> None:
+def check_cfg_linearity(cfg: "CheckedCFG", globals: Globals) -> None:
     """Checks whether a CFG satisfies the linearity requirements.
 
     Raises a user-error if linearity violations are found.
     """
     bb_checker = BBLinearityChecker()
     scopes: dict[BB, Scope] = {
-        bb: bb_checker.check(bb, is_entry=bb == cfg.entry_bb) for bb in cfg.bbs
+        bb: bb_checker.check(bb, is_entry=bb == cfg.entry_bb, globals=globals)
+        for bb in cfg.bbs
     }
 
     # Run liveness analysis
