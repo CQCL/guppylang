@@ -88,10 +88,29 @@ ExceptHook = Callable[[type[BaseException], BaseException, TracebackType | None]
 @contextmanager
 def exception_hook(hook: ExceptHook) -> Iterator[None]:
     """Sets a custom `excepthook` for the scope of a 'with' block."""
-    old_hook = sys.excepthook
-    sys.excepthook = hook
-    yield
-    sys.excepthook = old_hook
+    try:
+        # Check if we're inside a jupyter notebook since it uses its own exception
+        # hook. If we're in a regular interpreter, this line will raise a `NameError`
+        ipython_shell = get_ipython()  # type: ignore[name-defined]
+
+        def ipython_excepthook(
+            shell: Any,
+            etype: type[BaseException],
+            value: BaseException,
+            tb: TracebackType | None,
+            tb_offset: Any = None,
+        ) -> Any:
+            return hook(etype, value, tb)
+
+        ipython_shell.set_custom_exc((GuppyError,), ipython_excepthook)
+        yield
+        ipython_shell.set_custom_exc((), None)
+    except NameError:
+        # Otherwise, override the regular sys.excepthook
+        old_hook = sys.excepthook
+        sys.excepthook = hook
+        yield
+        sys.excepthook = old_hook
 
 
 def format_source_location(
