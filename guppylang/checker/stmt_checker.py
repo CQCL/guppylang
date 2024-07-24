@@ -11,15 +11,15 @@ annotated.
 import ast
 from collections.abc import Sequence
 
-from guppylang.ast_util import AstVisitor, with_loc, with_type
+from guppylang.ast_util import AstVisitor, with_loc
 from guppylang.cfg.bb import BB, BBStatement
-from guppylang.checker.core import Context, Variable
+from guppylang.checker.core import Context, FieldAccess, Variable
 from guppylang.checker.expr_checker import ExprChecker, ExprSynthesizer
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
-from guppylang.nodes import NestedFunctionDef
+from guppylang.nodes import NestedFunctionDef, PlaceNode
 from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.subst import Subst
-from guppylang.tys.ty import NoneType, TupleType, Type
+from guppylang.tys.ty import NoneType, StructType, TupleType, Type
 
 
 class StmtChecker(AstVisitor[BBStatement]):
@@ -46,17 +46,57 @@ class StmtChecker(AstVisitor[BBStatement]):
     ) -> tuple[ast.expr, Subst]:
         return ExprChecker(self.ctx).check(node, ty, kind)
 
-    def _check_assign(self, lhs: ast.expr, ty: Type, node: ast.stmt) -> None:
+    def _check_assign(self, lhs: ast.expr, ty: Type, node: ast.stmt) -> ast.expr:
         """Helper function to check assignments with patterns."""
         match lhs:
             # Easiest case is if the LHS pattern is a single variable.
             case ast.Name(id=x):
-                # Store the type in the AST
-                with_type(ty, lhs)
-                self.ctx.locals[x] = Variable(x, ty, lhs)
+                var = Variable(x, ty, lhs)
+                self.ctx.locals[x] = var
+                return with_loc(lhs, PlaceNode(place=var))
+
+            # The LHS could also be a field `expr.field`
+            case ast.Attribute(value=value, attr=attr):
+                value, struct_ty = self._synth_expr(value)
+                if (
+                    not isinstance(struct_ty, StructType)
+                    or attr not in struct_ty.field_dict
+                ):
+                    raise GuppyTypeError(
+                        f"Expression of type `{struct_ty}` has no attribute `{attr}`",
+                        # Unfortunately, `attr` doesn't contain source annotations, so
+                        # we have to use `lhs` as the error location
+                        lhs,
+                    )
+                field = struct_ty.field_dict[attr]
+                # TODO: In the future, we could infer some type args here
+                if field.ty != ty:
+                    raise GuppyTypeError(
+                        f"Cannot assign expression of type `{ty}` to field with type "
+                        f"`{field.ty}`",
+                        lhs,
+                    )
+                if not isinstance(value, PlaceNode):
+                    # For now we complain if someone tries to assign to something that
+                    # is not a place, e.g. `f().a = 4`. This would only make sense if
+                    # there is another reference to the return value of `f`, otherwise
+                    # the mutation cannot be observed. We can start supporting this once
+                    # we have proper reference semantics.
+                    raise GuppyError(
+                        "Assigning to this expression is not supported yet. Consider "
+                        "binding the expression to variable and mutate that variable "
+                        "instead.",
+                        value,
+                    )
+                if not field.ty.linear:
+                    raise GuppyError(
+                        "Mutation of classical fields is not supported yet", lhs
+                    )
+                place = FieldAccess(value.place, struct_ty.field_dict[attr], lhs)
+                return with_loc(lhs, PlaceNode(place=place))
 
             # The only other thing we support right now are tuples
-            case ast.Tuple(elts=elts):
+            case ast.Tuple(elts=elts) as lhs:
                 tys = ty.element_types if isinstance(ty, TupleType) else [ty]
                 n, m = len(elts), len(tys)
                 if n != m:
@@ -65,8 +105,11 @@ class StmtChecker(AstVisitor[BBStatement]):
                         f"(expected {n}, got {m})",
                         node,
                     )
-                for pat, el_ty in zip(elts, tys, strict=True):
+                lhs.elts = [
                     self._check_assign(pat, el_ty, node)
+                    for pat, el_ty in zip(elts, tys, strict=True)
+                ]
+                return lhs
 
             # TODO: Python also supports assignments like `[a, b] = [1, 2]` or
             #  `a, *b = ...`. The former would require some runtime checks but
@@ -81,7 +124,7 @@ class StmtChecker(AstVisitor[BBStatement]):
 
         [target] = node.targets
         node.value, ty = self._synth_expr(node.value)
-        self._check_assign(target, ty, node)
+        node.targets = [self._check_assign(target, ty, node)]
         return node
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.stmt:
@@ -93,8 +136,8 @@ class StmtChecker(AstVisitor[BBStatement]):
         node.value, subst = self._check_expr(node.value, ty)
         assert not ty.unsolved_vars  # `ty` must be closed!
         assert len(subst) == 0
-        self._check_assign(node.target, ty, node)
-        return node
+        target = self._check_assign(node.target, ty, node)
+        return with_loc(node, ast.Assign(targets=[target], value=node.value))
 
     def visit_AugAssign(self, node: ast.AugAssign) -> ast.stmt:
         bin_op = with_loc(

@@ -3,11 +3,20 @@ import copy
 import itertools
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
-from typing import Any, NamedTuple
+from functools import cached_property
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    NamedTuple,
+    TypeAlias,
+    TypeVar,
+)
 
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, name_nodes_in_ast
+from guppylang.cfg.bb import VId
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
@@ -36,14 +45,103 @@ from guppylang.tys.ty import (
     Type,
 )
 
+if TYPE_CHECKING:
+    from guppylang.definition.struct import StructField
+
+
+#: A "place" is a description for a storage location of a local value that users
+#: can refer to in their program.
+#:
+#: Roughly, these are values that can be lowered to a static wire within the Hugr
+#: representation. The most basic example of a place is a single local variable. Beyond
+#: that, we also treat some projections of local variables (e.g. nested struct field
+#: accesses) as places.
+#:
+#: All places are equipped with a unique id, a type and an optional definition AST
+#: location. During linearity checking, they are tracked separately.
+Place: TypeAlias = "Variable | FieldAccess"
+
+#: Unique identifier for a `Place`.
+PlaceId: TypeAlias = "Variable.Id | FieldAccess.Id"
+
 
 @dataclass(frozen=True)
 class Variable:
-    """Class holding data associated with a local variable."""
+    """A place identifying a local variable."""
 
     name: str
     ty: Type
     defined_at: AstNode | None
+
+    @dataclass(frozen=True)
+    class Id:
+        """Identifier for variable places."""
+
+        name: str
+
+    @cached_property
+    def id(self) -> "Variable.Id":
+        """The unique `PlaceId` identifier for this place."""
+        return Variable.Id(self.name)
+
+    @property
+    def describe(self) -> str:
+        """A human-readable description of this place for error messages."""
+        return f"Variable `{self}`"
+
+    def __str__(self) -> str:
+        """String representation of this place."""
+        return self.name
+
+
+@dataclass(frozen=True)
+class FieldAccess:
+    """A place identifying a field access on a local struct."""
+
+    parent: Place
+    field: "StructField"
+    exact_defined_at: AstNode | None
+
+    @dataclass(frozen=True)
+    class Id:
+        """Identifier for field places."""
+
+        parent: PlaceId
+        field: str
+
+    def __post_init__(self) -> None:
+        # Check that the field access is consistent
+        assert self.struct_ty.field_dict[self.field.name] == self.field
+
+    @cached_property
+    def id(self) -> "FieldAccess.Id":
+        """The unique `PlaceId` identifier for this place."""
+        return FieldAccess.Id(self.parent.id, self.field.name)
+
+    @property
+    def ty(self) -> Type:
+        """The type of this place."""
+        return self.field.ty
+
+    @cached_property
+    def struct_ty(self) -> StructType:
+        """The type of the struct whose field is accessed."""
+        assert isinstance(self.parent.ty, StructType)
+        return self.parent.ty
+
+    @cached_property
+    def defined_at(self) -> AstNode | None:
+        """Optional location where this place was last assigned to."""
+        return self.exact_defined_at or self.parent.defined_at
+
+    @cached_property
+    def describe(self) -> str:
+        """A human-readable description of this place for error messages."""
+        return f"Field `{self}`"
+
+    def __str__(self) -> str:
+        """String representation of this place."""
+        return f"{self.parent}.{self.field.name}"
 
 
 PyScope = dict[str, Any]
@@ -162,41 +260,55 @@ class Globals:
                 return assert_never(x)
 
 
+V = TypeVar("V")
+
+
 @dataclass
-class Locals:
-    """Scoped mapping from names to variables"""
+class Locals(Generic[VId, V]):
+    """Scoped mapping from program variable ids to the corresponding program variable.
 
-    vars: dict[str, Variable]
-    parent_scope: "Locals | None" = None
+    Depending on which checking phase we are in (type checking or linearity checking),
+    we use this either as a mapping from strings to `Variable`s or as a mapping from
+    `PlaceId`s to `Place`s.
+    """
 
-    def __getitem__(self, item: str) -> Variable:
+    vars: dict[VId, V]
+    parent_scope: "Locals[VId, V] | None" = None
+
+    def __getitem__(self, item: VId) -> V:
         if item not in self.vars and self.parent_scope:
             return self.parent_scope[item]
 
         return self.vars[item]
 
-    def __setitem__(self, key: str, value: Variable) -> None:
+    def __setitem__(self, key: VId, value: V) -> None:
         self.vars[key] = value
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self) -> Iterator[VId]:
         parent_iter = iter(self.parent_scope) if self.parent_scope else iter(())
         return itertools.chain(iter(self.vars), parent_iter)
 
-    def __contains__(self, item: str) -> bool:
+    def __contains__(self, item: VId) -> bool:
         return (item in self.vars) or (
             self.parent_scope is not None and item in self.parent_scope
         )
 
-    def __copy__(self) -> "Locals":
+    def __copy__(self) -> "Locals[VId, V]":
         # Make a copy of the var map so that mutating the copy doesn't
         # mutate our variable mapping
         return Locals(self.vars.copy(), copy.copy(self.parent_scope))
 
-    def keys(self) -> set[str]:
+    def keys(self) -> set[VId]:
         parent_keys = self.parent_scope.keys() if self.parent_scope else set()
         return parent_keys | self.vars.keys()
 
-    def items(self) -> Iterable[tuple[str, Variable]]:
+    def values(self) -> Iterable[V]:
+        parent_values = (
+            iter(self.parent_scope.values()) if self.parent_scope else iter(())
+        )
+        return itertools.chain(self.vars.values(), parent_values)
+
+    def items(self) -> Iterable[tuple[VId, V]]:
         parent_items = (
             iter(self.parent_scope.items()) if self.parent_scope else iter(())
         )
@@ -207,7 +319,7 @@ class Context(NamedTuple):
     """The type checking context."""
 
     globals: Globals
-    locals: Locals
+    locals: Locals[str, Variable]
 
 
 class DummyEvalDict(PyScope):

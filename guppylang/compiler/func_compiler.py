@@ -1,12 +1,8 @@
 from typing import TYPE_CHECKING
 
 from guppylang.compiler.cfg_compiler import compile_cfg
-from guppylang.compiler.core import (
-    CompiledGlobals,
-    DFContainer,
-    PortVariable,
-)
-from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr
+from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr, OutPortV
 from guppylang.nodes import CheckedNestedFunctionDef
 from guppylang.tys.ty import FunctionType, type_to_row
 
@@ -37,7 +33,7 @@ def compile_local_func_def(
     dfg: DFContainer,
     graph: Hugr,
     globals: CompiledGlobals,
-) -> PortVariable:
+) -> OutPortV:
     """Compiles a local (nested) function definition to Hugr."""
     assert func.ty.input_names is not None
 
@@ -46,9 +42,9 @@ def compile_local_func_def(
 
     # Prepend captured variables to the function arguments
     closure_ty = FunctionType(
-        [v.ty for v in captured] + list(func.ty.inputs),
+        [v.ty for v, _ in captured] + list(func.ty.inputs),
         func.ty.output,
-        [v.name for v in captured] + list(func.ty.input_names),
+        [v.name for v, _ in captured] + list(func.ty.input_names),
     )
 
     def_node = graph.add_def(closure_ty, dfg.node, func.name)
@@ -96,7 +92,7 @@ def compile_local_func_def(
     loaded = graph.add_load_function(def_node.out_port(0), [], dfg.node).out_port(0)
     if len(captured) > 0:
         loaded = graph.add_partial(
-            loaded, [dfg[v.name].port for v in captured], dfg.node
+            loaded, [dfg[v] for v, _ in captured], dfg.node
         ).out_port(0)
 
-    return PortVariable(func.name, loaded, func)
+    return loaded

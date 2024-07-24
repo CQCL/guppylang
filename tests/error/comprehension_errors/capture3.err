@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:18
+
+16:    @guppy(module)
+17:    def foo(xs: list[int], s: MyStruct) -> linst[MyStruct]:
+18:        return [s for x in xs]
+                   ^
+GuppyTypeError: Field `s.q` with linear type `qubit` would be used multiple times when evaluating this comprehension

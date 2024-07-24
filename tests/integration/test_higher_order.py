@@ -66,6 +66,23 @@ def test_nested(validate):
     validate(foo)
 
 
+def test_nested_capture_struct(validate):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class MyStruct:
+        x: int
+
+    @guppy(module)
+    def foo(s: MyStruct) -> Callable[[int], bool]:
+        def bar(y: int) -> bool:
+            return s.x > y
+
+        return bar
+
+    validate(module.compile())
+
+
 def test_curry(validate):
     module = GuppyModule("curry")
 

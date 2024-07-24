@@ -1,7 +1,8 @@
 import ast
 from abc import ABC
+from collections.abc import Hashable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from typing_extensions import Self
 
@@ -12,27 +13,21 @@ if TYPE_CHECKING:
     from guppylang.cfg.cfg import BaseCFG
 
 
+# Type variable for ids of entities which we may wish to track during program analysis
+# (generally ids for program variables or parts thereof)
+VId = TypeVar("VId", bound=Hashable)
+
+
 @dataclass
-class VariableStats:
+class VariableStats(Generic[VId]):
     """Stores variable usage information for a basic block."""
 
     # Variables that are assigned in the BB
-    assigned: dict[str, AstNode] = field(default_factory=dict)
+    assigned: dict[VId, AstNode] = field(default_factory=dict)
 
     # The (external) variables used in the BB, i.e. usages of variables that are
-    # assigned in the BB are not included here.
-    used: dict[str, ast.Name] = field(default_factory=dict)
-
-    def update_used(self, node: ast.AST) -> None:
-        """Marks the variables occurring in a statement as used.
-
-        This method should be called whenever an expression is used in the BB.
-        """
-        for name in name_nodes_in_ast(node):
-            # Should point to first use, so also check that the name is not already
-            # contained
-            if name.id not in self.assigned and name.id not in self.used:
-                self.used[name.id] = name
+    # created in the BB are not included here.
+    used: dict[VId, AstNode] = field(default_factory=dict)
 
 
 BBStatement = (
@@ -66,10 +61,10 @@ class BB(ABC):
     branch_pred: ast.expr | None = None
 
     # Information about assigned/used variables in the BB
-    _vars: VariableStats | None = None
+    _vars: VariableStats[str] | None = None
 
     @property
-    def vars(self) -> VariableStats:
+    def vars(self) -> VariableStats[str]:
         """Returns variable usage information for this BB.
 
         Note that `compute_variable_stats` must be called before this property can be
@@ -78,7 +73,7 @@ class BB(ABC):
         assert self._vars is not None
         return self._vars
 
-    def compute_variable_stats(self) -> None:
+    def compute_variable_stats(self) -> VariableStats[str]:
         """Determines which variables are assigned/used in this BB."""
         visitor = VariableVisitor(self)
         for s in self.statements:
@@ -86,38 +81,60 @@ class BB(ABC):
         if self.branch_pred is not None:
             visitor.visit(self.branch_pred)
         self._vars = visitor.stats
+        return visitor.stats
 
 
 class VariableVisitor(ast.NodeVisitor):
     """Visitor that computes used and assigned variables in a BB."""
 
     bb: BB
-    stats: VariableStats
+    stats: VariableStats[str]
 
     def __init__(self, bb: BB):
         self.bb = bb
         self.stats = VariableStats()
 
+    def _update_used(self, node: ast.AST) -> None:
+        """Marks the variables occurring in a statement as used.
+
+        This method should be called whenever an expression is used in the BB.
+        """
+        for name in name_nodes_in_ast(node):
+            # Should point to first use, so also check that the name is not already
+            # contained
+            x = name.id
+            if x not in self.stats.assigned and x not in self.stats.used:
+                self.stats.used[x] = name
+
     def visit_Name(self, node: ast.Name) -> None:
-        self.stats.update_used(node)
+        self._update_used(node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
         for t in node.targets:
-            for name in name_nodes_in_ast(t):
-                self.stats.assigned[name.id] = node
+            self._handle_assign_target(t, node)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         self.visit(node.value)
-        self.stats.update_used(node.target)  # The target is also used
-        for name in name_nodes_in_ast(node.target):
-            self.stats.assigned[name.id] = node
+        self._update_used(node.target)  # The target is also used
+        self._handle_assign_target(node.target, node)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         if node.value:
             self.visit(node.value)
-        for name in name_nodes_in_ast(node.target):
-            self.stats.assigned[name.id] = node
+        self._handle_assign_target(node.target, node)
+
+    def _handle_assign_target(self, lhs: ast.expr, node: ast.stmt) -> None:
+        match lhs:
+            case ast.Name(id=name):
+                self.stats.assigned[name] = node
+            case ast.Tuple(elts=elts):
+                for elt in elts:
+                    self._handle_assign_target(elt, node)
+            case ast.Attribute(value=value):
+                # Setting attributes counts as a use of the value, so we do a regular
+                # visit instead of treating it like a LHS
+                self.visit(value)
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> None:
         # Names bound in the comprehension are only available inside, so we shouldn't
@@ -147,9 +164,8 @@ class VariableVisitor(ast.NodeVisitor):
         # definition, we have to run live variable analysis first
         from guppylang.cfg.analysis import LivenessAnalysis
 
-        for bb in node.cfg.bbs:
-            bb.compute_variable_stats()
-        live = LivenessAnalysis().run(node.cfg.bbs)
+        stats = {bb: bb.compute_variable_stats() for bb in node.cfg.bbs}
+        live = LivenessAnalysis(stats).run(node.cfg.bbs)
 
         # Only store used *external* variables: things defined in the current BB, as
         # well as the function name and argument names should not be included

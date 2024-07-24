@@ -8,11 +8,8 @@ from hugr.serialization import ops
 
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
-from guppylang.compiler.core import (
-    CompilerBase,
-    DFContainer,
-    PortVariable,
-)
+from guppylang.checker.core import Variable
+from guppylang.compiler.core import CompilerBase, DFContainer
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.hugr_builder.hugr import (
@@ -25,10 +22,11 @@ from guppylang.hugr_builder.hugr import (
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
+    FieldAccessAndDrop,
     GlobalCall,
     GlobalName,
     LocalCall,
-    LocalName,
+    PlaceNode,
     TensorCall,
     TypeApply,
 )
@@ -67,7 +65,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 
     @contextmanager
     def _new_dfcontainer(
-        self, inputs: list[ast.Name], node: DFContainingNode
+        self, inputs: list[PlaceNode], node: DFContainingNode
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `DFContainer`.
 
@@ -76,12 +74,12 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         old = self.dfg
         inp = self.graph.add_input(parent=node)
         # Check that the input names are unique
-        assert len({inp.id for inp in inputs}) == len(inputs), "Inputs are not unique"
-        new_locals = {
-            name.id: PortVariable(name.id, inp.add_out_port(get_type(name)), name)
-            for name in inputs
-        }
-        self.dfg = DFContainer(node, self.dfg.locals | new_locals)
+        assert len({inp.place.id for inp in inputs}) == len(
+            inputs
+        ), "Inputs are not unique"
+        self.dfg = DFContainer(self.graph, node, self.dfg.locals.copy())
+        for input_node in inputs:
+            self.dfg[input_node.place] = inp.add_out_port(input_node.place.ty)
         with self.graph.parent(node):
             yield
         self.dfg = old
@@ -89,8 +87,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
     @contextmanager
     def _new_loop(
         self,
-        loop_vars: list[ast.Name],
-        branch: ast.Name,
+        loop_vars: list[PlaceNode],
+        branch: PlaceNode,
         parent: DFContainingNode | None = None,
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `TailLoop` node.
@@ -110,13 +108,12 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
                 [self.visit(branch), *(self.visit(name) for name in loop_vars)]
             )
         # Update the DFG with the outputs from the loop
-        for name in loop_vars:
-            out_port = loop.add_out_port(get_type(name))
-            self.dfg[name.id] = self.dfg[name.id].with_port(out_port)
+        for node in loop_vars:
+            self.dfg[node.place] = loop.add_out_port(node.place.ty)
 
     @contextmanager
     def _new_case(
-        self, inputs: list[ast.Name], outputs: list[ast.Name], cond_node: VNode
+        self, inputs: list[PlaceNode], outputs: list[PlaceNode], cond_node: VNode
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `Case` node.
 
@@ -127,7 +124,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             self.graph.add_output([self.visit(name) for name in outputs])
 
     @contextmanager
-    def _if_true(self, cond: ast.expr, inputs: list[ast.Name]) -> Iterator[None]:
+    def _if_true(self, cond: ast.expr, inputs: list[PlaceNode]) -> Iterator[None]:
         """Context manager to build a graph inside the `true` case of a `Conditional`
 
         In the `false` case, the inputs are outputted as is.
@@ -142,9 +139,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         with self._new_case(inputs, inputs, cond_node):
             yield
         # Update the DFG with the outputs from the Conditional node
-        for name in inputs:
-            out_port = cond_node.add_out_port(get_type(name))
-            self.dfg[name.id] = self.dfg[name.id].with_port(out_port)
+        for node in inputs:
+            self.dfg[node.place] = cond_node.add_out_port(node.place.ty)
 
     def visit_Constant(self, node: ast.Constant) -> OutPortV:
         if value := python_value_to_hugr(node.value, get_type(node)):
@@ -152,8 +148,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             return self.graph.add_load_constant(const).out_port(0)
         raise InternalGuppyError("Unsupported constant expression in compiler")
 
-    def visit_LocalName(self, node: LocalName) -> OutPortV:
-        return self.dfg[node.id].port
+    def visit_PlaceNode(self, node: PlaceNode) -> OutPortV:
+        return self.dfg[node.place]
 
     def visit_GlobalName(self, node: GlobalName) -> OutPortV:
         defn = self.globals[node.def_id]
@@ -293,6 +289,11 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 
         raise InternalGuppyError("Node should have been removed during type checking.")
 
+    def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> OutPortV:
+        struct_port = self.visit(node.value)
+        unpack = self.graph.add_unpack_tuple(struct_port)
+        return unpack.out_port(node.struct_ty.fields.index(node.field))
+
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> OutPortV:
         from guppylang.compiler.stmt_compiler import StmtCompiler
 
@@ -300,11 +301,10 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 
         # Make up a name for the list under construction and bind it to an empty list
         list_ty = get_type(node)
-        list_name = with_type(list_ty, with_loc(node, LocalName(id=next(tmp_vars))))
+        list_place = Variable(next(tmp_vars), list_ty, node)
+        list_name = with_type(list_ty, with_loc(node, PlaceNode(place=list_place)))
         empty_list = self.graph.add_node(DummyOp("MakeList"))
-        self.dfg[list_name.id] = PortVariable(
-            list_name.id, empty_list.add_out_port(list_ty), node
-        )
+        self.dfg[list_place] = empty_list.add_out_port(list_ty)
 
         def compile_generators(elt: ast.expr, gens: list[DesugaredGenerator]) -> None:
             """Helper function to generate nested TailLoop nodes for generators"""
@@ -313,13 +313,15 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
                 list_port, elt_port = self.visit(list_name), self.visit(elt)
                 push = self.graph.add_node(
                     DummyOp("Push"), inputs=[list_port, elt_port]
-                ).add_out_port(list_port.ty)
-                self.dfg[list_name.id] = self.dfg[list_name.id].with_port(push)
+                )
+                self.dfg[list_place] = push.add_out_port(list_port.ty)
                 return
 
             # Otherwise, compile the first iterator and construct a TailLoop
             gen, *gens = gens
             compiler.compile_stmts([gen.iter_assign], self.dfg)
+            assert isinstance(gen.iter, PlaceNode)
+            assert isinstance(gen.hasnext, PlaceNode)
             inputs = [gen.iter, list_name]
             with self._new_loop(inputs, gen.hasnext):
                 # If there is a next element, compile it and continue with the next

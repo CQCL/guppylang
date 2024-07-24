@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:20
+
+18:    @guppy(module)
+19:    def bar() -> None:
+20:        foo().x += 1
+           ^^^^^
+GuppyError: Assigning to this expression is not supported yet. Consider binding the expression to variable and mutate that variable instead.

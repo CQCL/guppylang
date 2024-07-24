@@ -6,7 +6,6 @@ from guppylang.checker.core import Variable
 from guppylang.compiler.core import (
     CompiledGlobals,
     DFContainer,
-    PortVariable,
     is_return_var,
     return_var,
 )
@@ -50,13 +49,9 @@ def compile_bb(
 
     # Add input node and compile the statements
     inp = graph.add_input(output_tys=[v.ty for v in inputs], parent=block)
-    dfg = DFContainer(
-        block,
-        {
-            v.name: PortVariable(v.name, inp.out_port(i), v.defined_at)
-            for (i, v) in enumerate(inputs)
-        },
-    )
+    dfg = DFContainer(graph, block)
+    for i, v in enumerate(inputs):
+        dfg[v] = inp.out_port(i)
     dfg = StmtCompiler(graph, globals).compile_stmts(bb.statements, dfg)
 
     # If we branch, we also have to compile the branch predicate
@@ -103,8 +98,7 @@ def compile_bb(
             outputs = [v for v in first if v.ty.linear and not is_return_var(v.name)]
 
     graph.add_output(
-        inputs=[branch_port] + [dfg[v.name].port for v in sort_vars(outputs)],
-        parent=block,
+        inputs=[branch_port] + [dfg[v] for v in sort_vars(outputs)], parent=block
     )
     return block
 
@@ -149,7 +143,7 @@ def choose_vars_for_tuple_sum(
     for i, var_row in enumerate(output_vars):
         case = graph.add_case(conditional)
         graph.add_input(output_tys=[], parent=case)
-        inputs = [dfg[v.name].port for v in var_row]
+        inputs = [dfg[v] for v in var_row]
         tag = graph.add_tag(variants=tys, tag=i, inputs=inputs, parent=case).out_port(0)
         graph.add_output(inputs=[tag], parent=case)
     return conditional.add_out_port(SumType([row_to_type(row) for row in tys]))

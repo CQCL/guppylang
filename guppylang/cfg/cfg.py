@@ -8,7 +8,7 @@ from guppylang.cfg.analysis import (
     MaybeAssignmentDomain,
     Result,
 )
-from guppylang.cfg.bb import BB, BBStatement
+from guppylang.cfg.bb import BB, BBStatement, VariableStats
 
 T = TypeVar("T", bound=BB)
 
@@ -20,9 +20,9 @@ class BaseCFG(Generic[T]):
     entry_bb: T
     exit_bb: T
 
-    live_before: Result[LivenessDomain]
-    ass_before: Result[DefAssignmentDomain]
-    maybe_ass_before: Result[MaybeAssignmentDomain]
+    live_before: Result[LivenessDomain[str]]
+    ass_before: Result[DefAssignmentDomain[str]]
+    maybe_ass_before: Result[MaybeAssignmentDomain[str]]
 
     def __init__(
         self, bbs: list[T], entry_bb: T | None = None, exit_bb: T | None = None
@@ -35,14 +35,6 @@ class BaseCFG(Generic[T]):
         self.live_before = {}
         self.ass_before = {}
         self.maybe_ass_before = {}
-
-    def analyze(self, def_ass_before: set[str], maybe_ass_before: set[str]) -> None:
-        for bb in self.bbs:
-            bb.compute_variable_stats()
-        self.live_before = LivenessAnalysis().run(self.bbs)
-        self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
-            self.bbs, def_ass_before, maybe_ass_before
-        ).run_unpacked(self.bbs)
 
 
 class CFG(BaseCFG[BB]):
@@ -67,3 +59,13 @@ class CFG(BaseCFG[BB]):
         """Adds a control-flow edge between two basic blocks."""
         src_bb.successors.append(tgt_bb)
         tgt_bb.predecessors.append(src_bb)
+
+    def analyze(
+        self, def_ass_before: set[str], maybe_ass_before: set[str]
+    ) -> dict[BB, VariableStats[str]]:
+        stats = {bb: bb.compute_variable_stats() for bb in self.bbs}
+        self.live_before = LivenessAnalysis(stats).run(self.bbs)
+        self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
+            stats, def_ass_before, maybe_ass_before
+        ).run_unpacked(self.bbs)
+        return stats

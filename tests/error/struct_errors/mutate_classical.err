@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:18
+
+16:    def foo(s: MyStruct) -> tuple[MyStruct, bool]:
+17:        t = s
+18:        t.x += 1
+           ^^^
+GuppyError: Mutation of classical fields is not supported yet

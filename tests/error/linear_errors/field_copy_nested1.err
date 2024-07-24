@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:26
+
+24:    measure(s.q)
+25:    s.q = s.x.q
+26:    return s
+              ^
+GuppyError: Field `s.x.q` with linear type `qubit` was already used (at 25:10)

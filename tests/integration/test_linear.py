@@ -66,6 +66,77 @@ def test_interleave(validate):
     validate(module.compile())
 
 
+def test_linear_struct(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q1: qubit
+        q2: qubit
+
+    @guppy.declare(module)
+    def f(q1: qubit, q2: qubit) -> tuple[qubit, qubit]: ...
+
+    @guppy.declare(module)
+    def g(q1: qubit, q2: qubit) -> tuple[qubit, qubit]: ...
+
+    @guppy(module)
+    def test(s: MyStruct, t: MyStruct) -> tuple[qubit, qubit, qubit, qubit]:
+        s.q1, s.q2 = f(s.q2, s.q1)
+        t.q1, t.q2 = f(t.q1, t.q2)
+        s.q2, t.q1 = g(t.q1, s.q2)
+        return s.q1, s.q2, t.q1, t.q2
+
+    validate(module.compile())
+
+
+def test_mixed_classical_linear_struct(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q: qubit
+        x: int
+        y: float
+
+    @guppy.declare(module)
+    def f(q: qubit) -> qubit: ...
+
+    @guppy(module)
+    def test1(s: MyStruct) -> tuple[MyStruct, float]:
+        a = s.x + s.y
+        s.q = f(s.q)
+        return s, a * s.x
+
+    @guppy(module)
+    def test2(s: MyStruct) -> tuple[MyStruct, int, int, int]:
+        t = s
+        u = t
+        u.q = f(u.q)
+        return u, s.x, t.x, u.x
+
+    validate(module.compile())
+
+
+def test_drop_classical_field(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q: qubit
+        x: int
+
+    @guppy.declare(module)
+    def f() -> MyStruct: ...
+
+    @guppy(module)
+    def test() -> qubit:
+        return f().q
+
+
 def test_if(validate):
     module = GuppyModule("test")
     module.load(quantum)
@@ -96,6 +167,56 @@ def test_if_return(validate):
         return q
 
     validate(module.compile())
+
+
+def test_if_struct_rebuild(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q: qubit
+
+    @guppy(module)
+    def test1(s: MyStruct, b: bool) -> MyStruct:
+        if b:
+            s = MyStruct(s.q)
+        return s
+
+    @guppy(module)
+    def test2(s: MyStruct, b: bool) -> MyStruct:
+        if b:
+            s.q = s.q
+        return s
+
+    validate(module.compile())
+
+
+def test_struct_reassign(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct1:
+        x: "MyStruct2"
+
+    @guppy.struct(module)
+    class MyStruct2:
+        q: qubit
+
+    @guppy.declare(module)
+    def consume(s: MyStruct2) -> None:
+        ...
+
+    @guppy(module)
+    def test(s: MyStruct2, b: bool) -> MyStruct2:
+        consume(s)
+        if b:
+            s = MyStruct2(qubit())
+            return s
+        else:
+            s = MyStruct1(MyStruct2(qubit()))
+        return s.x
 
 
 def test_measure(validate):

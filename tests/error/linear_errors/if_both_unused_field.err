@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:19
+
+17:    def foo(b: bool) -> int:
+18:        if b:
+19:            s = MyStruct(qubit())
+               ^
+GuppyError: Field `s.q` with linear type `qubit` is not used on all control-flow paths

@@ -125,3 +125,21 @@ def test_higher_order(validate):
         factory(Struct, 42)
 
     validate(module.compile())
+
+
+def test_wiring(validate):
+    module = GuppyModule("module")
+
+    @guppy.struct(module)
+    class MyStruct:
+        x: int
+
+    @guppy(module)
+    def foo() -> MyStruct:
+        s = 0
+        # This tests that reassigning `s` invalidates the old `s = 0` wire when
+        # compiling to Hugr.
+        s = MyStruct(42)
+        return s
+
+    validate(module.compile())

@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:19
+
+17:    def foo(s: MyStruct) -> tuple[qubit, qubit]:
+18:        t = s
+19:        return s.q, t.q
+                  ^^^
+GuppyError: Field `s.q` with linear type `qubit` was already used (at 18:8)

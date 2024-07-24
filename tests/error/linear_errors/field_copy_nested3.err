@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:28
+
+26:    def foo(s: MyStruct1) -> qubit:
+27:        use(s.x)
+28:        return s.x.q
+                  ^^^^^
+GuppyError: Field `s.x.q` with linear type `qubit` was already used (at 27:8)
