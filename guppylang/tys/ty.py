@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, Flag, auto
 from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
@@ -316,11 +316,22 @@ class NumericType(TypeBase):
         return transformer.transform(self) or self
 
 
+class InputFlags(Flag):
+    """Flags that can be set on inputs of function types.
+
+    Currently, the only supported flag is `Inout`. In the future, we could add
+    additional flags like `Frozen`, `Owned`, etc.
+    """
+
+    NoFlags = 0
+    Inout = auto()
+
+
 @dataclass(frozen=True, init=False)
 class FunctionType(ParametrizedTypeBase):
     """Type of (potentially generic) functions."""
 
-    inputs: Sequence["Type"]
+    inputs: Sequence[tuple["Type", InputFlags]]
     output: "Type"
     params: Sequence[Parameter]
     input_names: Sequence[str] | None
@@ -332,13 +343,13 @@ class FunctionType(ParametrizedTypeBase):
 
     def __init__(
         self,
-        inputs: Sequence["Type"],
+        inputs: Sequence[tuple["Type", InputFlags]],
         output: "Type",
         input_names: Sequence[str] | None = None,
         params: Sequence[Parameter] | None = None,
     ) -> None:
         # We need a custom __init__ to set the args
-        args = [TypeArg(ty) for ty in inputs]
+        args = [TypeArg(ty) for ty, _ in inputs]
         args.append(TypeArg(output))
         object.__setattr__(self, "args", args)
         object.__setattr__(self, "inputs", inputs)
@@ -375,7 +386,7 @@ class FunctionType(ParametrizedTypeBase):
         The resulting `FunctionType` can then be embedded into a Hugr `Type` or a Hugr
         `PolyFuncType`.
         """
-        ins = [t.to_hugr() for t in self.inputs]
+        ins = [t.to_hugr() for t, _ in self.inputs]
         outs = [t.to_hugr() for t in type_to_row(self.output)]
         return tys.FunctionType(input=ins, output=outs)
 
@@ -391,7 +402,7 @@ class FunctionType(ParametrizedTypeBase):
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or FunctionType(
-            [inp.transform(transformer) for inp in self.inputs],
+            [(inp.transform(transformer), flags) for inp, flags in self.inputs],
             self.output.transform(transformer),
             self.input_names,
             self.params,
@@ -415,7 +426,7 @@ class FunctionType(ParametrizedTypeBase):
 
         inst = Instantiator(preserved_args)
         return FunctionType(
-            [ty.transform(inst) for ty in self.inputs],
+            [(ty.transform(inst), flags) for ty, flags in self.inputs],
             self.output.transform(inst),
             self.input_names,
         )
@@ -732,7 +743,7 @@ def parse_function_tensor(ty: TupleType) -> list[FunctionType] | None:
 
 def function_tensor_signature(tys: list[FunctionType]) -> FunctionType:
     """Compute the combined function signature of a list of functions"""
-    inputs: list[Type] = []
+    inputs: list[tuple[Type, InputFlags]] = []
     outputs: list[Type] = []
     for fun_ty in tys:
         assert not fun_ty.parametrized

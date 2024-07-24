@@ -81,6 +81,7 @@ from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
     FunctionType,
+    InputFlags,
     NoneType,
     OpaqueType,
     StructType,
@@ -496,7 +497,10 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
     def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType(
-            [ty, ExistentialTypeVar.fresh("Key", False)],
+            [
+                (ty, InputFlags.NoFlags),
+                (ExistentialTypeVar.fresh("Key", False), InputFlags.NoFlags),
+            ],
             ExistentialTypeVar.fresh("Val", False),
         )
         return self._synthesize_instance_func(
@@ -544,7 +548,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType([ty], ExistentialTypeVar.fresh("Iter", False))
+        exp_sig = FunctionType(
+            [(ty, InputFlags.NoFlags)], ExistentialTypeVar.fresh("Iter", False)
+        )
         expr, ty = self._synthesize_instance_func(
             node.value, [], "__iter__", "not iterable", exp_sig
         )
@@ -566,7 +572,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType([ty], TupleType([bool_type(), ty]))
+        exp_sig = FunctionType([(ty, InputFlags.NoFlags)], TupleType([bool_type(), ty]))
         return self._synthesize_instance_func(
             node.value, [], "__hasnext__", "not an iterator", exp_sig, True
         )
@@ -574,7 +580,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
     def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType(
-            [ty], TupleType([ExistentialTypeVar.fresh("T", False), ty])
+            [(ty, InputFlags.NoFlags)],
+            TupleType([ExistentialTypeVar.fresh("T", False), ty]),
         )
         return self._synthesize_instance_func(
             node.value, [], "__next__", "not an iterator", exp_sig, True
@@ -582,7 +589,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType([ty], NoneType())
+        exp_sig = FunctionType([(ty, InputFlags.NoFlags)], NoneType())
         return self._synthesize_instance_func(
             node.value, [], "__end__", "not an iterator", exp_sig, True
         )
@@ -704,14 +711,16 @@ def type_check_args(
     check_num_args(len(func_ty.inputs), len(inputs), node)
 
     new_args: list[ast.expr] = []
-    for inp, ty in zip(inputs, func_ty.inputs, strict=True):
+    for inp, (ty, _flags) in zip(inputs, func_ty.inputs, strict=True):
         a, s = ExprChecker(ctx).check(inp, ty.substitute(subst), "argument")
         new_args.append(a)
         subst |= s
 
     # If the argument check succeeded, this means that we must have found instantiations
     # for all unification variables occurring in the input types
-    assert all(set.issubset(inp.unsolved_vars, subst.keys()) for inp in func_ty.inputs)
+    assert all(
+        set.issubset(inp.unsolved_vars, subst.keys()) for inp, _ in func_ty.inputs
+    )
 
     # We also have to check that we found instantiations for all vars in the return type
     if not set.issubset(func_ty.output.unsolved_vars, subst.keys()):
@@ -991,7 +1000,7 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
                             [], globals
                         )
                         return FunctionType(
-                            [qubit] * v.n_qubits,
+                            [(qubit, InputFlags.NoFlags)] * v.n_qubits,
                             row_to_type(
                                 [qubit] * v.n_qubits + [bool_type()] * v.n_bits
                             ),

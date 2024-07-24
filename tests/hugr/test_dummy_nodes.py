@@ -1,13 +1,15 @@
 from hugr.serialization import ops
 
 from guppylang.tys.builtin import bool_type
-from guppylang.tys.ty import FunctionType, TupleType
+from guppylang.tys.ty import FunctionType, TupleType, InputFlags
 from guppylang.hugr_builder.hugr import Hugr, DummyOp
 
 
 def test_single_dummy():
     g = Hugr()
-    defn = g.add_def(FunctionType([bool_type()], bool_type()), g.root, "test")
+    defn = g.add_def(
+        FunctionType([(bool_type(), InputFlags.NoFlags)], bool_type()), g.root, "test"
+    )
     dfg = g.add_dfg(defn)
     inp = g.add_input([bool_type()], dfg).out_port(0)
     dummy = g.add_node(
@@ -23,7 +25,9 @@ def test_single_dummy():
 def test_unique_names():
     g = Hugr()
     defn = g.add_def(
-        FunctionType([bool_type()], TupleType([bool_type(), bool_type()])),
+        FunctionType(
+            [(bool_type(), InputFlags.NoFlags)], TupleType([bool_type(), bool_type()])
+        ),
         g.root,
         "test",
     )

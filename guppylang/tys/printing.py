@@ -74,7 +74,7 @@ class TypePrinter:
         if ty.parametrized:
             for p in ty.params:
                 self.bound_names.append(self._fresh_name(p.name))
-        inputs = ", ".join([self._visit(inp, True) for inp in ty.inputs])
+        inputs = ", ".join([self._visit(inp, True) for inp, _ in ty.inputs])
         if len(ty.inputs) != 1:
             inputs = f"({inputs})"
         output = self._visit(ty.output, True)
