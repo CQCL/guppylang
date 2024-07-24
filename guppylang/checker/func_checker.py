@@ -146,10 +146,28 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     inputs = []
     input_names = []
     for inp in func_def.args.args:
-        if inp.annotation is None:
+        ty_ast = inp.annotation
+        if ty_ast is None:
             raise GuppyError("Argument type must be annotated", inp)
-        ty = type_from_ast(inp.annotation, globals, param_var_mapping)
-        inputs.append((ty, InputFlags.NoFlags))
+        flags = InputFlags.NoFlags
+        # Detect `@flag` argument annotations
+        # TODO: This doesn't work if the type annotation is a string forward ref. We
+        #  should rethink how we handle these...
+        if isinstance(ty_ast, ast.BinOp) and isinstance(ty_ast.op, ast.MatMult):
+            ty = type_from_ast(ty_ast.left, globals, param_var_mapping)
+            match ty_ast.right:
+                case ast.Name(id="inout"):
+                    if not ty.linear:
+                        raise GuppyError(
+                            f"Non-linear type `{ty}` cannot be annotated as `@inout`",
+                            ty_ast.right,
+                        )
+                    flags |= InputFlags.Inout
+                case _:
+                    raise GuppyError("Invalid annotation", ty_ast.right)
+        else:
+            ty = type_from_ast(ty_ast, globals, param_var_mapping)
+        inputs.append((ty, flags))
         input_names.append(inp.arg)
     ret_type = type_from_ast(func_def.returns, globals, param_var_mapping)
 

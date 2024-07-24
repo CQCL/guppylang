@@ -56,6 +56,16 @@ def py(*_args: Any) -> Any:
     raise GuppyError("`py` can only by used in a Guppy context")
 
 
+class _Inout:
+    """Dummy class to support `@inout` annotations."""
+
+    def __rmatmul__(self, other: Any) -> Any:
+        return other
+
+
+inout = _Inout()
+
+
 class nat:
     """Class to import in order to use nats."""
 
