@@ -17,7 +17,6 @@ from guppylang.definition.custom import (
     CustomCallCompiler,
     CustomFunctionDef,
     DefaultCallChecker,
-    OpCompiler
 )
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
@@ -27,7 +26,14 @@ from guppylang.tys.arg import ConstArg, TypeArg
 from guppylang.tys.builtin import bool_type, int_type, list_type
 from guppylang.tys.const import ConstValue
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import FunctionType, NoneType, NumericType, Type, unify, type_to_row
+from guppylang.tys.ty import (
+    FunctionType,
+    NoneType,
+    NumericType,
+    Type,
+    type_to_row,
+    unify,
+)
 
 
 class ConstInt(BaseModel):
@@ -443,6 +449,7 @@ class MeasureCompiler(CustomCallCompiler):
             quantum_op("QFree"), inputs=[measure.add_out_port(qubit.ty)]
         )
         return [measure.add_out_port(bool_type())]
+
 
 class QAllocCompiler(CustomCallCompiler):
     """Compiler for the `measure` function."""
