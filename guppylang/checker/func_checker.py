@@ -92,7 +92,7 @@ def check_nested_func_def(
             from guppylang.definition.function import ParsedFunctionDef
 
             func = ParsedFunctionDef(
-                def_id, func_def.name, func_def, func_ty, globals.python_scope
+                def_id, func_def.name, func_def, func_ty, globals.python_scope, None
             )
             globals = ctx.globals | Globals(
                 {func.id: func}, {func_def.name: func.id}, {}, {}
@@ -159,3 +159,24 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         input_names,
         sorted(param_var_mapping.values(), key=lambda v: v.idx),
     )
+
+
+def parse_docstring(func_ast: ast.FunctionDef) -> tuple[ast.FunctionDef, str | None]:
+    """Check if the first line of a function is a docstring.
+
+    If it is, return the function with the docstring removed, plus the docstring.
+    Else, return the original function and `None`
+    """
+    docstring = None
+    match func_ast.body:
+        case [doc, *xs]:
+            if (
+                isinstance(doc, ast.Expr)
+                and isinstance(doc.value, ast.Constant)
+                and isinstance(doc.value.value, str)
+            ):
+                docstring = doc.value.value
+                func_ast.body = xs
+        case _:
+            pass
+    return func_ast, docstring

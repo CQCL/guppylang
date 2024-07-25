@@ -73,6 +73,7 @@ def compile_local_func_def(
                 func,
                 func.ty,
                 {},
+                None,
                 func.cfg,
                 def_node,
             )
