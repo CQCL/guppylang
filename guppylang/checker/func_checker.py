@@ -17,7 +17,7 @@ from guppylang.definition.common import DefId
 from guppylang.error import GuppyError
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
 from guppylang.tys.parsing import type_from_ast
-from guppylang.tys.ty import FunctionType, InputFlags, NoneType
+from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, NoneType
 
 if TYPE_CHECKING:
     from guppylang.tys.param import Parameter
@@ -33,8 +33,8 @@ def check_global_func_def(
 
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
     inputs = [
-        Variable(x, ty, loc)
-        for x, (ty, _), loc in zip(ty.input_names, ty.inputs, args, strict=True)
+        Variable(x, inp.ty, loc)
+        for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
     ]
     return check_cfg(cfg, inputs, ty.output, globals)
 
@@ -75,8 +75,8 @@ def check_nested_func_def(
 
     # Construct inputs for checking the body CFG
     inputs = [v for v, _ in captured.values()] + [
-        Variable(x, ty, func_def.args.args[i])
-        for i, (x, (ty, _)) in enumerate(
+        Variable(x, inp.ty, func_def.args.args[i])
+        for i, (x, inp) in enumerate(
             zip(func_ty.input_names, func_ty.inputs, strict=True)
         )
     ]
@@ -149,7 +149,7 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         if inp.annotation is None:
             raise GuppyError("Argument type must be annotated", inp)
         ty = type_from_ast(inp.annotation, globals, param_var_mapping)
-        inputs.append((ty, InputFlags.NoFlags))
+        inputs.append(FuncInput(ty, InputFlags.NoFlags))
         input_names.append(inp.arg)
     ret_type = type_from_ast(func_def.returns, globals, param_var_mapping)
 
