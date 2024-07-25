@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from itertools import repeat
 from typing import TYPE_CHECKING, Literal
 
 from hugr.serialization import tys
@@ -11,7 +12,9 @@ from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
+    FuncInput,
     FunctionType,
+    InputFlags,
     NoneType,
     NumericType,
     OpaqueType,
@@ -43,8 +46,12 @@ class _CallableTypeDef(TypeDef):
             TypeParam(0, f"T{i}", can_be_linear=True).check_arg(arg, loc).ty
             for i, arg in enumerate(args)
         ]
-        *inputs, output = args
-        return FunctionType(inputs, output)
+        *input_tys, output = args
+        inputs = [
+            FuncInput(ty, flags)
+            for ty, flags in zip(input_tys, repeat(InputFlags.NoFlags), strict=False)
+        ]
+        return FunctionType(list(inputs), output)
 
 
 @dataclass(frozen=True)

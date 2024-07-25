@@ -12,7 +12,9 @@ from hugr.serialization.ops import OpType
 
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
+    FuncInput,
     FunctionType,
+    InputFlags,
     StructType,
     SumType,
     TupleType,
@@ -610,7 +612,7 @@ class Hugr:
         assert isinstance(def_port.ty, FunctionType)
         assert len(def_port.ty.inputs) >= len(inputs)
         assert [p.ty.to_hugr() for p in inputs] == [
-            ty.to_hugr() for ty in def_port.ty.inputs[: len(inputs)]
+            inp.ty.to_hugr() for inp in def_port.ty.inputs[: len(inputs)]
         ]
         new_ty = FunctionType(
             def_port.ty.inputs[len(inputs) :],
@@ -739,9 +741,15 @@ class Hugr:
         for n in list(self.nodes()):
             if isinstance(n, VNode) and isinstance(n.op, DummyOp):
                 name = n.op.name
-                fun_ty = FunctionType(
-                    list(n.in_port_types), row_to_type(n.out_port_types)
-                )
+                inputs = [
+                    FuncInput(ty, flags)
+                    for ty, flags in zip(
+                        n.in_port_types,
+                        itertools.repeat(InputFlags.NoFlags),
+                        strict=False,
+                    )
+                ]
+                fun_ty = FunctionType(list(inputs), row_to_type(n.out_port_types))
                 if name in used_names:
                     used_names[name] += 1
                     name = f"{name}${used_names[name]}"
