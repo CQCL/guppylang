@@ -205,7 +205,8 @@ def test_struct_reassign(validate):
         q: qubit
 
     @guppy.declare(module)
-    def consume(s: MyStruct2) -> None: ...
+    def consume(s: MyStruct2) -> None:
+        ...
 
     @guppy(module)
     def test(s: MyStruct2, b: bool) -> MyStruct2:
