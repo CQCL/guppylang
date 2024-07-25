@@ -71,8 +71,12 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
         graph: Hugr,
         globals: "CompiledGlobals",
         node: AstNode,
-    ) -> list[OutPortV]:
-        """Compiles a call to the function."""
+    ) -> tuple[list[OutPortV], list[OutPortV]]:
+        """Compiles a call to the function.
+
+        Returns the outputs of the call together with any @inout arguments that are
+        passed through the function.
+        """
 
     @abstractmethod
     def load_with_args(

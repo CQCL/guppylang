@@ -102,7 +102,7 @@ class CustomFunctionDef(CompiledCallableDef):
 
     defined_at: AstNode
     call_checker: "CustomCallChecker"
-    call_compiler: "CustomCallCompiler"
+    call_compiler: "CustomInoutCallCompiler"
     ty: FunctionType
     higher_order_value: bool
 
@@ -161,7 +161,7 @@ class CustomFunctionDef(CompiledCallableDef):
         with graph.parent(def_node):
             input_tys = [inp.ty for inp in fun_ty.inputs]
             _, inp_ports = graph.add_input_with_ports(input_tys)
-            returns = self.compile_call(
+            returns, inout_returns = self.compile_call(
                 inp_ports,
                 type_args,
                 DFContainer(graph, def_node),
@@ -169,7 +169,7 @@ class CustomFunctionDef(CompiledCallableDef):
                 globals,
                 node,
             )
-            graph.add_output(returns)
+            graph.add_output(returns + inout_returns)
 
         # Finally, load the function into the local DFG. We already monomorphised, so we
         # can load with empty type args
@@ -183,10 +183,10 @@ class CustomFunctionDef(CompiledCallableDef):
         graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> list[OutPortV]:
+    ) -> tuple[list[OutPortV], list[OutPortV]]:
         """Compiles a call to the function."""
         self.call_compiler._setup(type_args, dfg, graph, globals, node)
-        return self.call_compiler.compile(args)
+        return self.call_compiler.compile_with_inouts(args)
 
 
 class CustomCallChecker(ABC):
@@ -216,8 +216,8 @@ class CustomCallChecker(ABC):
         """
 
 
-class CustomCallCompiler(ABC):
-    """Abstract base class for custom function call compilers."""
+class CustomInoutCallCompiler(ABC):
+    """Abstract base class for custom function call compilers with @inout args."""
 
     type_args: Inst
     dfg: DFContainer
@@ -240,8 +240,27 @@ class CustomCallCompiler(ABC):
         self.node = node
 
     @abstractmethod
+    def compile_with_inouts(
+        self, args: list[OutPortV]
+    ) -> tuple[list[OutPortV], list[OutPortV]]:
+        """Compiles a custom function call.
+
+        Returns the outputs of the call together with any @inout arguments that are
+        passed through the function.
+        """
+
+
+class CustomCallCompiler(CustomInoutCallCompiler, ABC):
+    """Abstract base class for custom function call compilers without @inout args."""
+
+    @abstractmethod
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         """Compiles a custom function call and returns the resulting ports."""
+
+    def compile_with_inouts(
+        self, args: list[OutPortV]
+    ) -> tuple[list[OutPortV], list[OutPortV]]:
+        return self.compile(args), []
 
 
 class DefaultCallChecker(CustomCallChecker):
