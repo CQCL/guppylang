@@ -452,7 +452,7 @@ class MeasureCompiler(CustomCallCompiler):
 
 
 class QAllocCompiler(CustomCallCompiler):
-    """Compiler for the `measure` function."""
+    """Compiler for the `qubit` function."""
 
     def compile(self, args: list[OutPortV]) -> list[OutPortV]:
         from .quantum import quantum_op
