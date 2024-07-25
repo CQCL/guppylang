@@ -84,12 +84,16 @@ def zz_max(q1: qubit, q2: qubit) -> tuple[qubit, qubit]: ...
 def measure_return(q: qubit) -> tuple[qubit, bool]: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("RzF64"))
-def rz(q: qubit, angle: float) -> qubit: ...
-
-
 @guppy.hugr_op(quantum, quantum_op("RxF64"))
 def rx(q: qubit, angle: float) -> qubit: ...
+
+
+@guppy.hugr_op(quantum, quantum_op("RyF64"))
+def ry(q: qubit, angle: float) -> qubit: ...
+
+
+@guppy.hugr_op(quantum, quantum_op("RzF64"))
+def rz(q: qubit, angle: float) -> qubit: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("PhasedX"))
