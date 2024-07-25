@@ -4,7 +4,7 @@ from guppylang.compiler.cfg_compiler import compile_cfg
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr, OutPortV
 from guppylang.nodes import CheckedNestedFunctionDef
-from guppylang.tys.ty import FunctionType, InputFlags, type_to_row
+from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, type_to_row
 
 if TYPE_CHECKING:
     from guppylang.definition.function import CheckedFunctionDef
@@ -17,7 +17,7 @@ def compile_global_func_def(
     globals: CompiledGlobals,
 ) -> None:
     """Compiles a top-level function definition to Hugr."""
-    input_tys = [ty for ty, _ in func.ty.inputs]
+    input_tys = [inp.ty for inp in func.ty.inputs]
     _, ports = graph.add_input_with_ports(input_tys, def_node)
     cfg_node = graph.add_cfg(def_node, ports)
     compile_cfg(func.cfg, graph, cfg_node, globals)
@@ -43,14 +43,15 @@ def compile_local_func_def(
 
     # Prepend captured variables to the function arguments
     closure_ty = FunctionType(
-        [(v.ty, InputFlags.NoFlags) for v, _ in captured] + list(func.ty.inputs),
+        [FuncInput(v.ty, InputFlags.NoFlags) for v, _ in captured]
+        + list(func.ty.inputs),
         func.ty.output,
         [v.name for v, _ in captured] + list(func.ty.input_names),
     )
 
     def_node = graph.add_def(closure_ty, dfg.node, func.name)
     def_input, input_ports = graph.add_input_with_ports(
-        [ty for ty, _ in closure_ty.inputs], def_node
+        [inp.ty for inp in closure_ty.inputs], def_node
     )
 
     # If we have captured variables and the body contains a recursive occurrence of

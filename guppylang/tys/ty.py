@@ -327,11 +327,19 @@ class InputFlags(Flag):
     Inout = auto()
 
 
+@dataclass(frozen=True)
+class FuncInput:
+    """A single input of a function type."""
+
+    ty: "Type"
+    flags: InputFlags
+
+
 @dataclass(frozen=True, init=False)
 class FunctionType(ParametrizedTypeBase):
     """Type of (potentially generic) functions."""
 
-    inputs: Sequence[tuple["Type", InputFlags]]
+    inputs: Sequence[FuncInput]
     output: "Type"
     params: Sequence[Parameter]
     input_names: Sequence[str] | None
@@ -343,13 +351,13 @@ class FunctionType(ParametrizedTypeBase):
 
     def __init__(
         self,
-        inputs: Sequence[tuple["Type", InputFlags]],
+        inputs: Sequence[FuncInput],
         output: "Type",
         input_names: Sequence[str] | None = None,
         params: Sequence[Parameter] | None = None,
     ) -> None:
         # We need a custom __init__ to set the args
-        args = [TypeArg(ty) for ty, _ in inputs]
+        args = [TypeArg(inp.ty) for inp in inputs]
         args.append(TypeArg(output))
         object.__setattr__(self, "args", args)
         object.__setattr__(self, "inputs", inputs)
@@ -386,7 +394,7 @@ class FunctionType(ParametrizedTypeBase):
         The resulting `FunctionType` can then be embedded into a Hugr `Type` or a Hugr
         `PolyFuncType`.
         """
-        ins = [t.to_hugr() for t, _ in self.inputs]
+        ins = [inp.ty.to_hugr() for inp in self.inputs]
         outs = [t.to_hugr() for t in type_to_row(self.output)]
         return tys.FunctionType(input=ins, output=outs)
 
@@ -402,7 +410,10 @@ class FunctionType(ParametrizedTypeBase):
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
         return transformer.transform(self) or FunctionType(
-            [(inp.transform(transformer), flags) for inp, flags in self.inputs],
+            [
+                FuncInput(inp.ty.transform(transformer), inp.flags)
+                for inp in self.inputs
+            ],
             self.output.transform(transformer),
             self.input_names,
             self.params,
@@ -426,7 +437,7 @@ class FunctionType(ParametrizedTypeBase):
 
         inst = Instantiator(preserved_args)
         return FunctionType(
-            [(ty.transform(inst), flags) for ty, flags in self.inputs],
+            [FuncInput(inp.ty.transform(inst), inp.flags) for inp in self.inputs],
             self.output.transform(inst),
             self.input_names,
         )
@@ -743,7 +754,7 @@ def parse_function_tensor(ty: TupleType) -> list[FunctionType] | None:
 
 def function_tensor_signature(tys: list[FunctionType]) -> FunctionType:
     """Compute the combined function signature of a list of functions"""
-    inputs: list[tuple[Type, InputFlags]] = []
+    inputs: list[FuncInput] = []
     outputs: list[Type] = []
     for fun_ty in tys:
         assert not fun_ty.parametrized
