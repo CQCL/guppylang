@@ -6,7 +6,7 @@ import guppylang.prelude.quantum as quantum
 from guppylang.prelude.quantum import cx, measure, dirty_qubit
 
 
-def test_assign(validate):
+def test_dirty_qubit(validate):
     module = GuppyModule("test")
     module.load(quantum)
 
