@@ -159,7 +159,7 @@ class CustomFunctionDef(CompiledCallableDef):
         fun_ty = self.ty.instantiate(type_args)
         def_node = graph.add_def(fun_ty, dfg.node, self.name)
         with graph.parent(def_node):
-            input_tys = [ty for ty, _ in fun_ty.inputs]
+            input_tys = [inp.ty for inp in fun_ty.inputs]
             _, inp_ports = graph.add_input_with_ports(input_tys)
             returns = self.compile_call(
                 inp_ports,

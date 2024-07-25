@@ -12,6 +12,7 @@ from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
+    FuncInput,
     FunctionType,
     InputFlags,
     NoneType,
@@ -46,7 +47,10 @@ class _CallableTypeDef(TypeDef):
             for i, arg in enumerate(args)
         ]
         *input_tys, output = args
-        inputs = zip(input_tys, repeat(InputFlags.NoFlags), strict=False)
+        inputs = [
+            FuncInput(ty, flags)
+            for ty, flags in zip(input_tys, repeat(InputFlags.NoFlags), strict=False)
+        ]
         return FunctionType(list(inputs), output)
 
 

@@ -148,17 +148,17 @@ class BBLinearityChecker(ast.NodeVisitor):
 
     def _reassign_inout_args(self, func_ty: FunctionType, args: list[ast.expr]) -> None:
         """Helper function to reassign the @inout arguments after a function call."""
-        for (ty, flags), arg in zip(func_ty.inputs, args, strict=True):
-            if InputFlags.Inout in flags:
+        for inp, arg in zip(func_ty.inputs, args, strict=True):
+            if InputFlags.Inout in inp.flags:
                 match arg:
                     case PlaceNode(place=place):
                         for leaf in leaf_places(place):
                             leaf = leaf.replace_defined_at(arg)
                             self.scope.assign(leaf)
-                    case arg if ty.linear:
+                    case arg if inp.ty.linear:
                         raise GuppyError(
-                            f"Inout argument with linear type `{ty}` would be dropped "
-                            "after this function call. Consider assigning the "
+                            f"Inout argument with linear type `{inp.ty}` would be "
+                            "dropped after this function call. Consider assigning the "
                             "expression to a local variable before passing it to the "
                             "function.",
                             arg,
