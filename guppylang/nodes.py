@@ -188,6 +188,16 @@ class PyExpr(ast.expr):
     _fields = ("value",)
 
 
+class ResultExpr(ast.expr):
+    """A `result(tag, value)` expression."""
+
+    value: ast.expr
+    ty: Type
+    tag: int
+
+    _fields = ("value", "ty", "tag")
+
+
 class NestedFunctionDef(ast.FunctionDef):
     cfg: "CFG"
     ty: FunctionType
