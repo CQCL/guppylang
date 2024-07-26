@@ -191,6 +191,7 @@ class PyExpr(ast.expr):
 class NestedFunctionDef(ast.FunctionDef):
     cfg: "CFG"
     ty: FunctionType
+    docstring: str | None
 
     def __init__(self, cfg: "CFG", ty: FunctionType, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)

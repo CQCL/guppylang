@@ -29,13 +29,15 @@ class RawFunctionDecl(ParsableDef):
 
     def parse(self, globals: Globals) -> "CheckedFunctionDecl":
         """Parses and checks the user-provided signature of the function."""
-        func_ast = parse_py_func(self.python_func)
+        func_ast, docstring = parse_py_func(self.python_func)
         ty = check_signature(func_ast, globals)
         if not has_empty_body(func_ast):
             raise GuppyError(
                 "Body of function declaration must be empty", func_ast.body[0]
             )
-        return CheckedFunctionDecl(self.id, self.name, func_ast, ty, self.python_func)
+        return CheckedFunctionDecl(
+            self.id, self.name, func_ast, ty, self.python_func, docstring
+        )
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,7 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
     """
 
     defined_at: ast.FunctionDef
+    docstring: str | None
 
     def check_call(
         self, args: list[ast.expr], ty: Type, node: AstNode, ctx: Context
@@ -69,7 +72,13 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
         """Adds a Hugr `FuncDecl` node for this function to the Hugr."""
         node = graph.add_declare(self.ty, parent, self.name)
         return CompiledFunctionDecl(
-            self.id, self.name, self.defined_at, self.ty, self.python_func, node
+            self.id,
+            self.name,
+            self.defined_at,
+            self.ty,
+            self.python_func,
+            self.docstring,
+            node,
         )
 
 

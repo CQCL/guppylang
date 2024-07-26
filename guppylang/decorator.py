@@ -199,7 +199,7 @@ class _Guppy:
         """
 
         def dec(f: PyFunc) -> RawCustomFunctionDef:
-            func_ast = parse_py_func(f)
+            func_ast, docstring = parse_py_func(f)
             if not has_empty_body(func_ast):
                 raise GuppyError(
                     "Body of custom function declaration must be empty",
