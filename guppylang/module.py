@@ -33,6 +33,7 @@ class GuppyModule:
     """A Guppy module that may contain function and type definitions."""
 
     name: str
+    file: str | None
 
     # Whether the module has already been compiled
     _compiled: bool
@@ -59,8 +60,11 @@ class GuppyModule:
     # `_register_buffered_instance_funcs` is called. This way, we can associate
     _instance_func_buffer: dict[str, RawDef] | None
 
-    def __init__(self, name: str, import_builtins: bool = True):
+    def __init__(
+        self, name: str, file: str | None = None, import_builtins: bool = True
+    ):
         self.name = name
+        self.file = file
         self._globals = Globals({}, {}, {}, {})
         self._compiled_globals = {}
         self._imported_globals = Globals.default()
@@ -197,7 +201,7 @@ class GuppyModule:
         self._globals = self._globals.update_defs(other_defs)
 
         # Prepare Hugr for this module
-        graph = Hugr(self.name)
+        graph = Hugr(self.name, self.file)
         module_node = graph.set_root_name(self.name)
 
         # Compile definitions to Hugr
