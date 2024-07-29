@@ -18,9 +18,7 @@ def test_basic(validate):
         foo(q)
         return q
 
-    module.compile()
-    # TODO: Validate once inout HUGR compilation is implemented
-    # validate(module.compile())
+    validate(module.compile())
 
 
 def test_mixed(validate):
@@ -35,9 +33,7 @@ def test_mixed(validate):
         q2 = foo(q1, q2)
         return q1, q2
 
-    module.compile()
-    # TODO: Validate once inout HUGR compilation is implemented
-    # validate(module.compile())
+    validate(module.compile())
 
 
 def test_local(validate):
@@ -53,9 +49,7 @@ def test_local(validate):
         f(q)
         return q
 
-    module.compile()
-    # TODO: Validate once inout HUGR compilation is implemented
-    # validate(module.compile())
+    validate(module.compile())
 
 
 def test_nested_calls(validate):
@@ -70,9 +64,7 @@ def test_nested_calls(validate):
         # This is legal since function arguments and tuples are evaluated left to right
         return foo(foo(foo(0, q), q), q), q
 
-    module.compile()
-    # TODO: Validate once inout HUGR compilation is implemented
-    # validate(module.compile())
+    validate(module.compile())
 
 
 def test_struct(validate):
@@ -97,17 +89,14 @@ def test_struct(validate):
         bar(a)
         return a
 
-    # TODO: The test below requires updates to the HUGR compilation logic
-    # @guppy(module)
-    # def test2(a: MyStruct) -> MyStruct:
-    #     bar(a)
-    #     foo(a.q1, a.q2)
-    #     bar(a)
-    #     return a
+    @guppy(module)
+    def test2(a: MyStruct) -> MyStruct:
+        bar(a)
+        foo(a.q1, a.q2)
+        bar(a)
+        return a
 
-    module.compile()
-    # TODO: Validate once inout HUGR compilation is implemented
-    # validate(module.compile())
+    validate(module.compile())
 
 
 def test_control_flow(validate):
@@ -146,7 +135,5 @@ def test_control_flow(validate):
             i += 1
         return q1, q2
 
-    module.compile()
-    # TODO: Validate once inout HUGR compilation is implemented
-    # validate(module.compile())
+    validate(module.compile())
 

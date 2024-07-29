@@ -395,7 +395,11 @@ class FunctionType(ParametrizedTypeBase):
         `PolyFuncType`.
         """
         ins = [inp.ty.to_hugr() for inp in self.inputs]
-        outs = [t.to_hugr() for t in type_to_row(self.output)]
+        outs = [
+            *(t.to_hugr() for t in type_to_row(self.output)),
+            # We might have additional @inout args that will be also outputted
+            *(inp.ty.to_hugr() for inp in self.inputs if InputFlags.Inout in inp.flags),
+        ]
         return tys.FunctionType(input=ins, output=outs)
 
     def visit(self, visitor: Visitor) -> None:
