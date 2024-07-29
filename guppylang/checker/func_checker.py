@@ -33,7 +33,7 @@ def check_global_func_def(
 
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
     inputs = [
-        Variable(x, inp.ty, loc)
+        Variable(x, inp.ty, loc, inp.flags)
         for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
     ]
     return check_cfg(cfg, inputs, ty.output, globals)
@@ -75,7 +75,7 @@ def check_nested_func_def(
 
     # Construct inputs for checking the body CFG
     inputs = [v for v, _ in captured.values()] + [
-        Variable(x, inp.ty, func_def.args.args[i])
+        Variable(x, inp.ty, func_def.args.args[i], inp.flags)
         for i, (x, inp) in enumerate(
             zip(func_ty.input_names, func_ty.inputs, strict=True)
         )

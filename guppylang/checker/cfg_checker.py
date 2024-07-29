@@ -117,7 +117,7 @@ def check_cfg(
     }
 
     # Finally, run the linearity check
-    check_cfg_linearity(checked_cfg)
+    check_cfg_linearity(checked_cfg, globals)
 
     return checked_cfg
 

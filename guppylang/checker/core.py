@@ -2,7 +2,7 @@ import ast
 import copy
 import itertools
 from collections.abc import Iterable, Iterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
@@ -36,6 +36,7 @@ from guppylang.tys.ty import (
     BoundTypeVar,
     ExistentialTypeVar,
     FunctionType,
+    InputFlags,
     NoneType,
     NumericType,
     OpaqueType,
@@ -72,6 +73,7 @@ class Variable:
     name: str
     ty: Type
     defined_at: AstNode | None
+    flags: InputFlags = InputFlags.NoFlags
 
     @dataclass(frozen=True)
     class Id:
@@ -92,6 +94,10 @@ class Variable:
     def __str__(self) -> str:
         """String representation of this place."""
         return self.name
+
+    def replace_defined_at(self, node: AstNode | None) -> "Variable":
+        """Returns a new `Variable` instance with an updated definition location."""
+        return replace(self, defined_at=node)
 
 
 @dataclass(frozen=True)
@@ -142,6 +148,10 @@ class FieldAccess:
     def __str__(self) -> str:
         """String representation of this place."""
         return f"{self.parent}.{self.field.name}"
+
+    def replace_defined_at(self, node: AstNode | None) -> "FieldAccess":
+        """Returns a new `FieldAccess` instance with an updated definition location."""
+        return replace(self, exact_defined_at=node)
 
 
 PyScope = dict[str, Any]
