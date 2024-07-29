@@ -3,12 +3,7 @@ from typing import TYPE_CHECKING
 
 from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Signature, VarRow
 from guppylang.checker.core import Variable
-from guppylang.compiler.core import (
-    CompiledGlobals,
-    DFContainer,
-    is_return_var,
-    return_var,
-)
+from guppylang.compiler.core import CompiledGlobals, DFContainer, return_var
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
 from guppylang.hugr_builder.hugr import CFNode, Hugr, Node, OutPortV
@@ -37,7 +32,7 @@ def compile_bb(
     bb: CheckedBB, graph: Hugr, parent: Node, is_entry: bool, globals: CompiledGlobals
 ) -> CFNode:
     """Compiles a single basic block to Hugr."""
-    inputs = bb.sig.input_row if is_entry else sort_vars(bb.sig.input_row)
+    inputs = bb.sig.input_row if is_entry or bb.is_exit else sort_vars(bb.sig.input_row)
 
     # The exit BB is completely empty
     if len(bb.successors) == 0:
@@ -71,6 +66,10 @@ def compile_bb(
         # specified by the signature
         [outputs] = bb.sig.output_rows
     else:
+        # CFG building ensures that branching BBs don't branch to the exit (exit jumps
+        # must always be unconditional)
+        assert not any(succ.is_exit for succ in bb.successors)
+
         # If we branch and the branches use the same variables, then we can use a
         # regular output
         first, *rest = bb.sig.output_rows
@@ -80,26 +79,30 @@ def compile_bb(
             # Otherwise, we have to output a TupleSum: We put all non-linear variables
             # into the branch TupleSum and all linear variables in the normal output
             # (since they are shared between all successors). This is in line with the
-            # ordering on variables which puts linear variables at the end. The only
-            # exception are return vars which must be outputted in order.
+            # ordering on variables which puts linear variables at the end.
+            # We don't need to worry about the order of return vars since this isn't
+            # a branch to an exit (see assert above).
             branch_port = choose_vars_for_tuple_sum(
                 graph=graph,
                 unit_sum=branch_port,
                 output_vars=[
-                    [
-                        v
-                        for v in sort_vars(row)
-                        if not v.ty.linear or is_return_var(v.name)
-                    ]
+                    [v for v in sort_vars(row) if not v.ty.linear]
                     for row in bb.sig.output_rows
                 ],
                 dfg=dfg,
             )
-            outputs = [v for v in first if v.ty.linear and not is_return_var(v.name)]
+            outputs = [v for v in first if v.ty.linear]
 
-    graph.add_output(
-        inputs=[branch_port] + [dfg[v] for v in sort_vars(outputs)], parent=block
-    )
+    # If this is *not* a jump to the exit BB, we need to sort the outputs to make the
+    # signature consistent with what the next BB expects
+    if not any(succ.is_exit for succ in bb.successors):
+        outputs = sort_vars(outputs)
+    else:
+        # Exit variables are not allowed to be sorted since their order corresponds to
+        # the function outputs
+        assert len(bb.successors) == 1, "Exit jumps are always unconditional"
+
+    graph.add_output(inputs=[branch_port] + [dfg[v] for v in outputs], parent=block)
     return block
 
 
@@ -114,15 +117,16 @@ def insert_return_vars(cfg: CheckedCFG) -> None:
         Variable(return_var(i), ty, None)
         for i, ty in enumerate(type_to_row(cfg.output_ty))
     ]
-    # Before patching, the exit BB shouldn't take any inputs
-    assert len(cfg.exit_bb.sig.input_row) == 0
-    cfg.exit_bb.sig = Signature(return_vars, cfg.exit_bb.sig.output_rows)
+    # Prepend return variables to the exit signature
+    cfg.exit_bb.sig = Signature(
+        [*return_vars, *cfg.exit_bb.sig.input_row], cfg.exit_bb.sig.output_rows
+    )
     # Also patch the predecessors
     for pred in cfg.exit_bb.predecessors:
         # The exit BB will be the only successor
         assert len(pred.sig.output_rows) == 1
-        assert len(pred.sig.output_rows[0]) == 0
-        pred.sig = Signature(pred.sig.input_row, [return_vars])
+        [out_row] = pred.sig.output_rows
+        pred.sig = Signature(pred.sig.input_row, [[*return_vars, *out_row]])
 
 
 def choose_vars_for_tuple_sum(
@@ -154,11 +158,8 @@ def compare_var(x: Variable, y: Variable) -> int:
 
     We use this to determine in which order variables are outputted from basic blocks.
     We need to output linear variables at the end, so we do a lexicographic ordering of
-    linearity and name. The only exception are return vars which must be outputted in
-    order.
+    linearity and name.
     """
-    if is_return_var(x.name) and is_return_var(y.name):
-        return -1 if x.name < y.name else 1
     return -1 if (x.ty.linear, x.name) < (y.ty.linear, y.name) else 1
 
 
