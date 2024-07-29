@@ -305,7 +305,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         ]
         op = ops.CustomOp(
             extension="tket2.results",
-            op_name="Result",
+            name="Result",
             args=[arg.to_hugr() for arg in type_args],
             parent=UNDEFINED,
         )
