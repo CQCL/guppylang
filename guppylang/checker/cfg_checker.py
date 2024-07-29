@@ -6,45 +6,48 @@ Operates on CFGs produced by the `CFGBuilder`. Produces a `CheckedCFG` consistin
 
 import collections
 from collections.abc import Iterator, Sequence
-from dataclasses import dataclass
-from typing import TypeVar
+from dataclasses import dataclass, field
+from typing import Generic, TypeVar
 
 from guppylang.ast_util import line_col
 from guppylang.cfg.bb import BB
 from guppylang.cfg.cfg import CFG, BaseCFG
-from guppylang.checker.core import Context, Globals, Locals, Variable
+from guppylang.checker.core import Context, Globals, Locals, Place, V, Variable
 from guppylang.checker.expr_checker import ExprSynthesizer, to_bool
-from guppylang.checker.linearity_checker import check_cfg_linearity
 from guppylang.checker.stmt_checker import StmtChecker
 from guppylang.error import GuppyError
 from guppylang.tys.ty import Type
 
-VarRow = Sequence[Variable]
+Row = Sequence[V]
 
 
 @dataclass(frozen=True)
-class Signature:
+class Signature(Generic[V]):
     """The signature of a basic block.
 
-    Stores the input/output variables with their types.
+    Stores the input/output variables with their types. Generic over the representation
+    of program variables.
     """
 
-    input_row: VarRow
-    output_rows: Sequence[VarRow]  # One for each successor
+    input_row: Row[V]
+    output_rows: Sequence[Row[V]]  # One for each successor
 
     @staticmethod
-    def empty() -> "Signature":
+    def empty() -> "Signature[V]":
         return Signature([], [])
 
 
 @dataclass(eq=False)  # Disable equality to recover hash from `object`
-class CheckedBB(BB):
-    """Basic block annotated with an input and output type signature."""
+class CheckedBB(BB, Generic[V]):
+    """Basic block annotated with an input and output type signature.
 
-    sig: Signature = Signature.empty()  # noqa: RUF009
+    The signature is generic over the representation of program variables.
+    """
+
+    sig: Signature[V] = field(default_factory=Signature.empty)
 
 
-class CheckedCFG(BaseCFG[CheckedBB]):
+class CheckedCFG(BaseCFG[CheckedBB[V]], Generic[V]):
     input_tys: list[Type]
     output_ty: Type
 
@@ -55,19 +58,20 @@ class CheckedCFG(BaseCFG[CheckedBB]):
 
 
 def check_cfg(
-    cfg: CFG, inputs: VarRow, return_ty: Type, globals: Globals
-) -> CheckedCFG:
+    cfg: CFG, inputs: Row[Variable], return_ty: Type, globals: Globals
+) -> CheckedCFG[Place]:
     """Type checks a control-flow graph.
 
     Annotates the basic blocks with input and output type signatures and removes
-    unreachable blocks.
+    unreachable blocks. Note that the inputs/outputs are annotated in the form of
+    *places* rather than just variables.
     """
     # First, we need to run program analysis
     ass_before = {v.name for v in inputs}
     cfg.analyze(ass_before, ass_before)
 
     # We start by compiling the entry BB
-    checked_cfg = CheckedCFG([v.ty for v in inputs], return_ty)
+    checked_cfg: CheckedCFG[Variable] = CheckedCFG([v.ty for v in inputs], return_ty)
     checked_cfg.entry_bb = check_bb(
         cfg.entry_bb, checked_cfg, inputs, return_ty, globals
     )
@@ -117,18 +121,20 @@ def check_cfg(
     }
 
     # Finally, run the linearity check
-    check_cfg_linearity(checked_cfg)
+    from guppylang.checker.linearity_checker import check_cfg_linearity
 
-    return checked_cfg
+    linearity_checked_cfg = check_cfg_linearity(checked_cfg)
+
+    return linearity_checked_cfg
 
 
 def check_bb(
     bb: BB,
-    checked_cfg: CheckedCFG,
-    inputs: VarRow,
+    checked_cfg: CheckedCFG[Variable],
+    inputs: Row[Variable],
     return_ty: Type,
     globals: Globals,
-) -> CheckedBB:
+) -> CheckedBB[Variable]:
     cfg = bb.containing_cfg
 
     # For the entry BB we have to separately check that all used variables are
@@ -180,7 +186,7 @@ def check_bb(
     return checked_bb
 
 
-def check_rows_match(row1: VarRow, row2: VarRow, bb: BB) -> None:
+def check_rows_match(row1: Row[Variable], row2: Row[Variable], bb: BB) -> None:
     """Checks that the types of two rows match up.
 
     Otherwise, an error is thrown, alerting the user that a variable has different

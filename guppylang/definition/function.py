@@ -7,7 +7,7 @@ from typing import Any
 
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
-from guppylang.checker.core import Context, Globals, PyScope
+from guppylang.checker.core import Context, Globals, Place, PyScope
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import (
     check_global_func_def,
@@ -111,7 +111,7 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
     graph for the function body.
     """
 
-    cfg: CheckedCFG
+    cfg: CheckedCFG[Place]
 
     def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledFunctionDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr.
