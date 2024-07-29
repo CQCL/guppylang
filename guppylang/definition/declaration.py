@@ -9,7 +9,7 @@ from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.compiler.expr_compiler import inout_return_ports
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.function import PyFunc, parse_py_func
-from guppylang.definition.value import CallableDef, CompiledCallableDef
+from guppylang.definition.value import CallableDef, CallReturnPorts, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.hugr_builder.hugr import Hugr, Node, OutPortV, VNode
 from guppylang.nodes import GlobalCall
@@ -101,7 +101,10 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> tuple[list[OutPortV], list[OutPortV]]:
+    ) -> CallReturnPorts:
         """Compiles a call to the function."""
         call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
-        return list(call.out_ports), list(inout_return_ports(call, self.ty))
+        return CallReturnPorts(
+            regular_returns=list(call.out_ports),
+            inout_returns=list(inout_return_ports(call, self.ty)),
+        )

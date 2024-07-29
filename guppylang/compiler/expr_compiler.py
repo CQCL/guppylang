@@ -261,11 +261,11 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         assert isinstance(func, CompiledCallableDef)
 
         args = [self.visit(arg) for arg in node.args]
-        rets, inout_rets = func.compile_call(
+        rets = func.compile_call(
             args, list(node.type_args), self.dfg, self.graph, self.globals, node
         )
-        self._update_inout_ports(node.args, iter(inout_rets), func.ty)
-        return self._pack_returns(rets, func.ty.output)
+        self._update_inout_ports(node.args, iter(rets.inout_returns), func.ty)
+        return self._pack_returns(rets.regular_returns, func.ty.output)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
