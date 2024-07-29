@@ -6,7 +6,7 @@ from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
-from guppylang.compiler.expr_compiler import inout_return_ports
+from guppylang.compiler.expr_compiler import add_inout_return_ports
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.function import PyFunc, parse_py_func
 from guppylang.definition.value import CallableDef, CallReturnPorts, CompiledCallableDef
@@ -106,5 +106,5 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
         return CallReturnPorts(
             regular_returns=list(call.out_ports),
-            inout_returns=list(inout_return_ports(call, self.ty)),
+            inout_returns=list(add_inout_return_ports(call, self.ty)),
         )

@@ -11,7 +11,7 @@ from guppylang.checker.core import Context, Globals, PyScope
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_global_func_def, check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
-from guppylang.compiler.expr_compiler import inout_return_ports
+from guppylang.compiler.expr_compiler import add_inout_return_ports
 from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import CheckableDef, CompilableDef, ParsableDef
 from guppylang.definition.value import CallableDef, CallReturnPorts, CompiledCallableDef
@@ -157,7 +157,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
         return CallReturnPorts(
             regular_returns=list(call.out_ports),
-            inout_returns=list(inout_return_ports(call, self.ty)),
+            inout_returns=list(add_inout_return_ports(call, self.ty)),
         )
 
     def compile_inner(self, graph: Hugr, globals: CompiledGlobals) -> None:

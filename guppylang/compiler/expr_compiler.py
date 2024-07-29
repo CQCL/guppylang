@@ -212,7 +212,9 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         args = [self.visit(arg) for arg in node.args]
         call = self.graph.add_indirect_call(func, args)
         rets = [call.out_port(i) for i in range(len(type_to_row(func.ty.output)))]
-        self._update_inout_ports(node.args, inout_return_ports(call, func.ty), func.ty)
+        self._update_inout_ports(
+            node.args, add_inout_return_ports(call, func.ty), func.ty
+        )
         return self._pack_returns(rets, func.ty.output)
 
     def visit_TensorCall(self, node: TensorCall) -> OutPortV:
@@ -379,7 +381,7 @@ def expr_to_row(expr: ast.expr) -> list[ast.expr]:
     return expr.elts if isinstance(expr, ast.Tuple) else [expr]
 
 
-def inout_return_ports(call: VNode, func_ty: FunctionType) -> Iterator[OutPortV]:
+def add_inout_return_ports(call: VNode, func_ty: FunctionType) -> Iterator[OutPortV]:
     """Appends additional output ports to `Call` corresponding to @inout outputs.
 
     Returns an iterator of the added ports.
