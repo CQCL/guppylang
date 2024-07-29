@@ -8,7 +8,7 @@ from hugr.serialization.tys import TypeBound
 from guppylang.decorator import guppy
 from guppylang.hugr_builder.hugr import UNDEFINED
 from guppylang.module import GuppyModule
-from guppylang.prelude._internal import MeasureCompiler
+from guppylang.prelude._internal import MeasureCompiler, QAllocCompiler
 
 quantum = GuppyModule("quantum")
 
@@ -28,8 +28,12 @@ def quantum_op(op_name: str) -> ops.OpType:
     linear=True,
 )
 class qubit:
-    @guppy.hugr_op(quantum, quantum_op("QAlloc"))
+    @guppy.custom(quantum, QAllocCompiler())
     def __new__() -> "qubit": ...
+
+
+@guppy.hugr_op(quantum, quantum_op("QAlloc"))
+def dirty_qubit() -> qubit: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("H"))
