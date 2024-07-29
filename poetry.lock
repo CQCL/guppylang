@@ -370,13 +370,13 @@ url = "validator"
 
 [[package]]
 name = "hugr"
-version = "0.4.0"
+version = "0.5.0"
 description = "Quantinuum's common representation for quantum programs"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "hugr-0.4.0-py3-none-any.whl", hash = "sha256:284f9a8eba8e638b3c2b0ed54b0cddfa84c527cdcb10bdc468cc70f9cd6c3f4d"},
-    {file = "hugr-0.4.0.tar.gz", hash = "sha256:060693b1bc04a19c433eef262ff9574d909091851e73a4fc442887ee818257b1"},
+    {file = "hugr-0.5.0-py3-none-any.whl", hash = "sha256:7e6c6660e3c7143dd5b89bf429e3ccc68add0d329db4ac35076e7692d2899326"},
+    {file = "hugr-0.5.0.tar.gz", hash = "sha256:c362e19e6842c89d00c9eab8e3afe161a380459ecb212374ecb78e4081964f15"},
 ]
 
 [package.dependencies]

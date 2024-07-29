@@ -286,7 +286,7 @@ class BlockNode(DFContainingNode, CFNode):
 OrderEdge = tuple["Node", "Node"]
 ORDER_EDGE_KEY = (-1, -1)
 
-UNDEFINED: ops.NodeID = -1
+UNDEFINED: ops.NodeIdx = -1
 
 
 class Hugr:

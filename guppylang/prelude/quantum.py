@@ -17,7 +17,7 @@ def quantum_op(op_name: str) -> ops.OpType:
     """Utility method to create Hugr quantum ops."""
     return ops.OpType(
         ops.CustomOp(
-            extension="quantum.tket2", op_name=op_name, args=[], parent=UNDEFINED
+            extension="quantum.tket2", name=op_name, args=[], parent=UNDEFINED
         )
     )
 

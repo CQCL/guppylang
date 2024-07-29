@@ -276,7 +276,7 @@ dependencies = [
 name = "guppyval"
 version = "0.2.0"
 dependencies = [
- "hugr",
+ "hugr 0.10.0",
  "lazy_static",
  "pyo3",
  "serde_json",
@@ -333,6 +333,60 @@ dependencies = [
  "strum_macros",
  "thiserror",
  "typetag",
+]
+
+[[package]]
+name = "hugr"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "daa4ecfcad4aaf337f974e196e0b79ac9288a19535a5b57c9c77f0aaed1d0c6a"
+dependencies = [
+ "hugr-core",
+ "hugr-passes",
+]
+
+[[package]]
+name = "hugr-core"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7de0f6d5bd8ce765a989d928a773b6816b89051bdf1da55d27ac2b6965fa0e07"
+dependencies = [
+ "bitvec",
+ "cgmath",
+ "context-iterators",
+ "delegate",
+ "derive_more",
+ "downcast-rs",
+ "enum_dispatch",
+ "html-escape",
+ "itertools 0.13.0",
+ "lazy_static",
+ "num-rational",
+ "paste",
+ "petgraph",
+ "portgraph",
+ "regex",
+ "serde",
+ "serde_json",
+ "smol_str",
+ "strum",
+ "strum_macros",
+ "thiserror",
+ "typetag",
+]
+
+[[package]]
+name = "hugr-passes"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31c601b2bc2168e841cb1087f2f7d383a4cace5c9926e10e79e2dd4829cd6758"
+dependencies = [
+ "hugr-core",
+ "itertools 0.13.0",
+ "lazy_static",
+ "paste",
+ "petgraph",
+ "thiserror",
 ]
 
 [[package]]
@@ -552,13 +606,14 @@ checksum = "bda66fc9667c18cb2758a2ac84d1167245054bcf85d5d1aaa6923f45801bdd02"
 
 [[package]]
 name = "portgraph"
-version = "0.12.0"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8ad1ebc029f8dfab4f023f14c7e41b3b3a257cf28b2928949153e563c9bf02c"
+checksum = "4791aa897c125c0f9e606c9a26092f1a6ca50af86f7e37de54ab7e5a7673bdb0"
 dependencies = [
  "bitvec",
  "context-iterators",
  "delegate",
+ "itertools 0.13.0",
  "petgraph",
  "serde",
  "thiserror",
@@ -917,7 +972,7 @@ dependencies = [
  "derive_more",
  "downcast-rs",
  "fxhash",
- "hugr",
+ "hugr 0.4.0",
  "itertools 0.13.0",
  "lazy_static",
  "num-rational",
