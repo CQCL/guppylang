@@ -63,7 +63,8 @@ def check_cfg(
     """Type checks a control-flow graph.
 
     Annotates the basic blocks with input and output type signatures and removes
-    unreachable blocks.
+    unreachable blocks. Note that the inputs/outputs are annotated in the form of
+    *places* rather than just variables.
     """
     # First, we need to run program analysis
     ass_before = {v.name for v in inputs}

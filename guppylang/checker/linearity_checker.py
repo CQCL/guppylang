@@ -281,6 +281,9 @@ def check_cfg_linearity(cfg: "CheckedCFG[Variable]") -> "CheckedCFG[Place]":
     """Checks whether a CFG satisfies the linearity requirements.
 
     Raises a user-error if linearity violations are found.
+
+    Returns a new CFG with refined basic block signatures in terms of *places* rather
+    than just variables.
     """
     bb_checker = BBLinearityChecker()
     scopes: dict[BB, Scope] = {
