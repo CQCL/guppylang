@@ -24,7 +24,6 @@ from guppylang.prelude._internal import (
     IntTruedivCompiler,
     NatTruedivCompiler,
     ResultChecker,
-    ResultCompiler,
     ReversingChecker,
     UnsupportedChecker,
     float_op,
@@ -614,7 +613,7 @@ class Array:
 
 
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.
-@guppy.custom(builtins, ResultCompiler(), ResultChecker(), higher_order_value=False)
+@guppy.custom(builtins, checker=ResultChecker(), higher_order_value=False)
 def result(tag, value): ...
 
 
