@@ -1,3 +1,5 @@
+import pytest
+
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude.builtins import inout
@@ -137,3 +139,163 @@ def test_control_flow(validate):
 
     validate(module.compile())
 
+
+def test_basic_def(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.declare(module)
+    def h(q: qubit @inout) -> None: ...
+
+    @guppy(module)
+    def foo(q: qubit @inout) -> None:
+        h(q)
+        h(q)
+
+    @guppy(module)
+    def test(q: qubit) -> qubit:
+        foo(q)
+        foo(q)
+        return q
+
+    # TODO: Enable validation once HUGR codegen is updated
+    module.compile()
+    # validate(module.compile())
+
+
+def test_empty_def(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy(module)
+    def test(q: qubit @inout) -> None:
+        pass
+
+    @guppy(module)
+    def main(q: qubit) -> qubit:
+        test(q)
+        return q
+
+    # TODO: Enable validation once HUGR codegen is updated
+    module.compile()
+    # validate(module.compile())
+
+
+def test_mixed_def(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.declare(module)
+    def foo(q: qubit @ inout) -> None: ...
+
+    @guppy(module)
+    def test(
+        b: int, c: qubit @inout, d: float, a: tuple[qubit, qubit] @inout, e: qubit
+    ) -> tuple[qubit, float]:
+        foo(c)
+        return e, b + d
+
+    # TODO: Enable validation once HUGR codegen is updated
+    module.compile()
+    # validate(module.compile())
+
+
+def test_move_back(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q: qubit
+
+    @guppy.declare(module)
+    def use(q: qubit) -> None: ...
+
+    @guppy(module)
+    def foo(s: MyStruct @inout) -> None:
+        use(s.q)
+        s.q = qubit()
+
+    @guppy(module)
+    def bar(s: MyStruct @inout) -> None:
+        s.q = s.q
+
+    @guppy(module)
+    def swap(s: MyStruct @inout, t: MyStruct @inout) -> None:
+        s.q, t.q = t.q, s.q
+
+    @guppy(module)
+    def main(s: MyStruct, t: MyStruct) -> MyStruct:
+        foo(s)
+        swap(s, t)
+        bar(t)
+        use(t.q)
+        return s
+
+    # TODO: Enable validation once HUGR codegen is updated
+    module.compile()
+    # validate(module.compile())
+
+
+@pytest.mark.skip("Fails due to https://github.com/CQCL/guppylang/issues/337")
+def test_move_back_branch(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q: qubit
+
+    @guppy.declare(module)
+    def use(q: qubit) -> None: ...
+
+    @guppy(module)
+    def test(s: MyStruct @inout, b: bool, n: int, q1: qubit, q2: qubit) -> None:
+        use(s.q)
+        if b:
+            s.q = q1
+            use(q2)
+        else:
+            s.q = q2
+            use(q1)
+        use(s.q)
+        i = 0
+        while True:
+            if i == n:
+                s.q = qubit()
+                return
+            i += 1
+        # Guppy is not yet smart enough to detect that this code is unreachable
+        s.q = qubit()
+        return
+
+    @guppy(module)
+    def main(s: MyStruct) -> MyStruct:
+        test(s, False, 5, qubit(), qubit())
+        return s
+
+    # TODO: Enable validation once HUGR codegen is updated
+    module.compile()
+    # validate(module.compile())
+
+
+def test_self(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.declare(module)
+    def foo(q: qubit @inout) -> None: ...
+
+    @guppy.struct(module)
+    class MyStruct:
+        q: qubit
+
+        @guppy(module)
+        def bar(self: "MyStruct" @inout, b: bool) -> None:
+            foo(self.q)
+            if b:
+                foo(self.q)
+
+    # TODO: Enable validation once HUGR codegen is updated
+    module.compile()
+    # validate(module.compile())

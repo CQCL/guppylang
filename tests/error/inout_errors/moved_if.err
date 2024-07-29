@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:22
+
+20:    # foo(q)
+21:    if b:
+22:        use(q)
+               ^
+GuppyError: Variable `q` may only be used in an `@inout` position since it is annotated as `@inout`. Consider removing the annotation to get ownership of the value.
