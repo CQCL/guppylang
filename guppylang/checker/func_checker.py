@@ -12,7 +12,7 @@ from guppylang.ast_util import return_nodes_in_ast, with_loc
 from guppylang.cfg.bb import BB
 from guppylang.cfg.builder import CFGBuilder
 from guppylang.checker.cfg_checker import CheckedCFG, check_cfg
-from guppylang.checker.core import Context, Globals, Variable
+from guppylang.checker.core import Context, Globals, Place, Variable
 from guppylang.definition.common import DefId
 from guppylang.error import GuppyError
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 def check_global_func_def(
     func_def: ast.FunctionDef, ty: FunctionType, globals: Globals
-) -> CheckedCFG:
+) -> CheckedCFG[Place]:
     """Type checks a top-level function definition."""
     args = func_def.args.args
     returns_none = isinstance(ty.output, NoneType)

@@ -6,11 +6,11 @@ Linearity checking across control-flow is done by the `CFGChecker`.
 import ast
 from collections.abc import Generator, Iterator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
 
 from guppylang.ast_util import AstNode, find_nodes, get_type
 from guppylang.cfg.analysis import LivenessAnalysis
 from guppylang.cfg.bb import BB, VariableStats
+from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Signature
 from guppylang.checker.core import (
     FieldAccess,
     Locals,
@@ -27,9 +27,6 @@ from guppylang.nodes import (
     PlaceNode,
 )
 from guppylang.tys.ty import StructType
-
-if TYPE_CHECKING:
-    from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG
 
 
 class Scope(Locals[PlaceId, Place]):
@@ -89,7 +86,7 @@ class BBLinearityChecker(ast.NodeVisitor):
     scope: Scope
     stats: VariableStats[PlaceId]
 
-    def check(self, bb: "CheckedBB", is_entry: bool) -> Scope:
+    def check(self, bb: "CheckedBB[Variable]", is_entry: bool) -> Scope:
         # Manufacture a scope that holds all places that are live at the start
         # of this BB
         input_scope = Scope()
@@ -179,7 +176,9 @@ class BBLinearityChecker(ast.NodeVisitor):
             assert isinstance(tgt, PlaceNode)
             for tgt_place in leaf_places(tgt.place):
                 x = tgt_place.id
-                if x in self.scope and not self.scope.used(x):
+                # Only check for overrides of places locally defined in this BB. Global
+                # checks are handled by dataflow analysis.
+                if x in self.scope.vars and x not in self.scope.used_local:
                     place = self.scope[x]
                     if place.ty.linear:
                         raise GuppyError(
@@ -278,7 +277,7 @@ def leaf_places(place: Place) -> Iterator[Place]:
             yield place
 
 
-def check_cfg_linearity(cfg: "CheckedCFG") -> None:
+def check_cfg_linearity(cfg: "CheckedCFG[Variable]") -> "CheckedCFG[Place]":
     """Checks whether a CFG satisfies the linearity requirements.
 
     Raises a user-error if linearity violations are found.
@@ -291,6 +290,10 @@ def check_cfg_linearity(cfg: "CheckedCFG") -> None:
     # Run liveness analysis
     stats = {bb: scope.stats() for bb, scope in scopes.items()}
     live_before = LivenessAnalysis(stats).run(cfg.bbs)
+
+    # Construct a CFG that tracks places instead of just variables
+    result_cfg: CheckedCFG[Place] = CheckedCFG(cfg.input_tys, cfg.output_ty)
+    checked: dict[BB, CheckedBB[Place]] = {}
 
     for bb, scope in scopes.items():
         # We have to check that used linear variables are not being outputted
@@ -323,3 +326,30 @@ def check_cfg_linearity(cfg: "CheckedCFG") -> None:
                             # more precise location
                             scope[x].defined_at,
                         )
+
+        assert isinstance(bb, CheckedBB)
+        sig = Signature(
+            input_row=[scope[x] for x in live_before[bb]]
+            if bb not in (cfg.entry_bb, cfg.exit_bb)
+            else bb.sig.input_row,
+            output_rows=[
+                [scope[x] for x in live_before[succ]] for succ in bb.successors
+            ],
+        )
+        checked[bb] = CheckedBB(
+            bb.idx, result_cfg, bb.statements, branch_pred=bb.branch_pred, sig=sig
+        )
+
+    # Fill in missing fields of the result CFG
+    result_cfg.bbs = list(checked.values())
+    result_cfg.entry_bb = checked[cfg.entry_bb]
+    result_cfg.exit_bb = checked[cfg.exit_bb]
+    result_cfg.live_before = {checked[bb]: cfg.live_before[bb] for bb in cfg.bbs}
+    result_cfg.ass_before = {checked[bb]: cfg.ass_before[bb] for bb in cfg.bbs}
+    result_cfg.maybe_ass_before = {
+        checked[bb]: cfg.maybe_ass_before[bb] for bb in cfg.bbs
+    }
+    for bb in cfg.bbs:
+        checked[bb].predecessors = [checked[pred] for pred in bb.predecessors]
+        checked[bb].successors = [checked[succ] for succ in bb.successors]
+    return result_cfg

@@ -200,7 +200,7 @@ class NestedFunctionDef(ast.FunctionDef):
 
 class CheckedNestedFunctionDef(ast.FunctionDef):
     def_id: "DefId"
-    cfg: "CheckedCFG"
+    cfg: "CheckedCFG[Place]"
     ty: FunctionType
 
     #: Mapping from names to variables captured by this function, together with an AST
@@ -210,7 +210,7 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
     def __init__(
         self,
         def_id: "DefId",
-        cfg: "CheckedCFG",
+        cfg: "CheckedCFG[Place]",
         ty: FunctionType,
         captured: Mapping[str, tuple["Variable", AstNode]],
         *args: Any,

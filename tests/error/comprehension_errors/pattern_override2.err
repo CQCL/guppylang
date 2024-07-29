@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:13
 12:    def foo(qs: linst[qubit], xs: list[int]) -> list[int]:
 13:        return [q for q in qs for q in xs]
                          ^
-GuppyError: Variable `q` with linear type `qubit` is not used
+GuppyTypeError: Variable `q` with linear type `qubit` is not used
