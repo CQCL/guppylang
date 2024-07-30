@@ -2,5 +2,5 @@ Guppy compilation failed. Error in file $FILE:11
 
 9:     @guppy.declare(module)
 10:    def foo(x: int @inout) -> qubit: ...
-                       ^^^^^
+                  ^^^^^^^^^^
 GuppyError: Non-linear type `int` cannot be annotated as `@inout`
