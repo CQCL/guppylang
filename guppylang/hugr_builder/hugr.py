@@ -6,10 +6,10 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 import networkx as nx  # type: ignore[import-untyped]
+from hugr import node_port
 from hugr.serialization import ops, tys
 from hugr.serialization import serial_hugr as raw
 from hugr.serialization.ops import OpType
-from hugr import node_port
 
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (

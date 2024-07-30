@@ -101,9 +101,7 @@ def list_value(v: list[ops.Value], ty: Type) -> ops.Value:
 def logic_op(op_name: str, args: list[tys.TypeArg] | None = None) -> ops.OpType:
     """Utility method to create Hugr logic ops."""
     return ops.OpType(
-        ops.CustomOp(
-            extension="logic", name=op_name, args=args or [], parent=UNDEFINED
-        )
+        ops.CustomOp(extension="logic", name=op_name, args=args or [], parent=UNDEFINED)
     )
 
 

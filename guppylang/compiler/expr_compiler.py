@@ -284,9 +284,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         # since it is not implemented via a dunder method
         if isinstance(node.op, ast.Not):
             arg = self.visit(node.operand)
-            op = ops.CustomOp(
-                extension="logic", name="Not", args=[], parent=UNDEFINED
-            )
+            op = ops.CustomOp(extension="logic", name="Not", args=[], parent=UNDEFINED)
             return self.graph.add_node(ops.OpType(op), inputs=[arg]).add_out_port(
                 bool_type()
             )
