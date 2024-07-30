@@ -102,7 +102,6 @@ class BBLinearityChecker(ast.NodeVisitor):
         for var in bb.sig.input_row:
             for place in leaf_places(var):
                 input_scope.assign(place)
-        # TODO: Set used flags in input_scope
         self.globals = globals
 
         # Open up a new nested scope to check the BB contents. This way we can track
