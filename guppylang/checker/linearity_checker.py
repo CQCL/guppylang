@@ -238,6 +238,14 @@ class BBLinearityChecker(ast.NodeVisitor):
         [target] = targets
         for tgt in find_nodes(lambda n: isinstance(n, PlaceNode), target):
             assert isinstance(tgt, PlaceNode)
+            # Special error message for shadowing of @inout vars
+            x = tgt.place.id
+            if x in self.scope.vars and is_inout_var(self.scope[x]):
+                raise GuppyError(
+                    f"Assignment shadows argument `{tgt.place}` annotated as `@inout`. "
+                    "Consider assigning to a different name.",
+                    tgt,
+                )
             for tgt_place in leaf_places(tgt.place):
                 x = tgt_place.id
                 if x in self.scope and not self.scope.used(x):
@@ -354,6 +362,25 @@ def check_cfg_linearity(cfg: "CheckedCFG", globals: Globals) -> None:
         bb: bb_checker.check(bb, is_entry=bb == cfg.entry_bb, globals=globals)
         for bb in cfg.bbs
     }
+
+    # Check that @inout vars are not being shadowed. This would also be caught by
+    # the dataflow analysis below, however we can give nicer error messages here.
+    for bb, scope in scopes.items():
+        if bb == cfg.entry_bb:
+            # Arguments are assigned in the entry BB, so would yield a false positive
+            # in the check below. Shadowing in the entry BB will be caught by the check
+            # in `_check_assign_targets`.
+            continue
+        entry_scope = scopes[cfg.entry_bb]
+        for x, place in scope.vars.items():
+            if x in entry_scope:
+                entry_place = entry_scope[x]
+                if is_inout_var(entry_place):
+                    raise GuppyError(
+                        f"Assignment shadows argument `{entry_place}` annotated as "
+                        "`@inout`. Consider assigning to a different name.",
+                        place.defined_at,
+                    )
 
     # Mark the @inout variables as implicitly used in the exit BB
     exit_scope = scopes[cfg.exit_bb]
