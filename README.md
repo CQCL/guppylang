@@ -68,13 +68,12 @@ These instructions will get you a copy of the project up and running on your loc
 Run the following to setup your virtual environment and install dependencies:
 
 ```sh
-poetry install --with execution,validation
+poetry install --with validation
 ```
 
-Note that the `--with execution,validation` flag is optional and only needed to run integration tests.
+Note that the `--with validation` flag is optional and only needed to run integration tests.
 
-The `validation` flag allows the tests to validate that the hugrs guppy outputs are well formed, and the `execution` flag allows tests to compile these hugrs to native code using [hugr-llvm](https://github.com/CQCL/hugr-llvm) to check the results are as expected.
-This requires `llvm-14` as described in the `hugr-llvm` repo.
+The `validation` flag allows the tests to validate that the hugrs guppy outputs are well formed.
 
 You can then activate the virtual environment and work within it with:
 
@@ -122,7 +121,10 @@ which will create a directory `./guppy-exports` populated with hugr modules seri
 
 ### Experimental: Execution
 
-See the [guppy-runner](https://github.com/CQCL/guppy-runner) repository for in-progress work for compiling Guppy source programs and executing them.
+See [`hugr-llvm`](https://github.com/CQCL/hugr-llvm) project for in-progress
+work on compiling guppy programs to native code.
+
+See the [`guppy-runner`](https://github.com/CQCL/guppy-runner) repository for in-progress work for compiling Guppy source programs and executing them.
 
 ## License
 

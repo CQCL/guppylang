@@ -1,5 +1,3 @@
-from guppylang.hugr_builder.hugr import Hugr
-
 from pathlib import Path
 import pytest
 
@@ -33,25 +31,3 @@ def validate(request, export_test_cases_dir: Path):
             export_file.write_text(js)
 
     return validate_impl
-
-
-class LLVMException(Exception):
-    pass
-
-
-@pytest.fixture()
-def run_int_fn():
-    def f(hugr: Hugr, expected: int, fn_name: str = "main"):
-        try:
-            import execute_llvm
-
-            hugr_json: str = hugr.serialize()
-            res = execute_llvm.run_int_function(hugr_json, fn_name)
-            if res != expected:
-                raise LLVMException(
-                    f"Expected value ({expected}) doesn't match actual value ({res})"
-                )
-        except ImportError:
-            pytest.skip("Skipping llvm execution")
-
-    return f

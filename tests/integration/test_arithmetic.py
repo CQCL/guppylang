@@ -4,7 +4,7 @@ from guppylang.module import GuppyModule
 from tests.util import compile_guppy
 
 
-def test_negative(validate, run_int_fn):
+def test_negative(validate):
     module = GuppyModule("test_negative")
 
     @guppy(module)
@@ -13,10 +13,9 @@ def test_negative(validate, run_int_fn):
 
     compiled = module.compile()
     validate(compiled)
-    run_int_fn(compiled, expected=-40, fn_name="negative")
 
 
-def test_arith_basic(validate, run_int_fn):
+def test_arith_basic(validate):
     module = GuppyModule("test_arith")
 
     @guppy(module)
@@ -29,7 +28,6 @@ def test_arith_basic(validate, run_int_fn):
 
     compiled = module.compile()
     validate(compiled)
-    run_int_fn(compiled, 42)
 
 
 def test_constant(validate):
@@ -40,7 +38,7 @@ def test_constant(validate):
     validate(const)
 
 
-def test_aug_assign(validate, run_int_fn):
+def test_aug_assign(validate):
     module = GuppyModule("test_aug_assign")
 
     @guppy(module)
@@ -54,7 +52,6 @@ def test_aug_assign(validate, run_int_fn):
 
     compiled = module.compile()
     validate(compiled)
-    run_int_fn(compiled, 6)
 
 
 def test_nat(validate):
