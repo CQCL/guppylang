@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.0](https://github.com/CQCL/guppylang/compare/v0.7.0...v0.8.0) (2024-07-30)
+
+
+### Features
+
+* Parse docstrings for functions ([#334](https://github.com/CQCL/guppylang/issues/334)) ([a7cc97a](https://github.com/CQCL/guppylang/commit/a7cc97a6c1af674972c3a37e28ef7e33ddf6fa3d))
+
+
+### Bug Fixes
+
+* Use places in BB signatures for Hugr generation ([#342](https://github.com/CQCL/guppylang/issues/342)) ([48b0e35](https://github.com/CQCL/guppylang/commit/48b0e352d835298b66ea90ff12528391c1c0e2a3))
+
 ## [0.7.0](https://github.com/CQCL/guppylang/compare/v0.6.2...v0.7.0) (2024-07-25)
 
 
