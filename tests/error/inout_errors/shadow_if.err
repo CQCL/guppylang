@@ -1,6 +1,7 @@
-Guppy compilation failed. Error in file $FILE:11
+Guppy compilation failed. Error in file $FILE:13
 
-9:     @guppy(module)
-10:    def test(q: qubit @inout, b: bool) -> None:
-                ^^^^^^^^^^^^^^^
-GuppyError: Variable `q` with linear type `qubit` is not used on all control-flow paths
+11:    def test(q: qubit @inout, b: bool) -> None:
+12:        if b:
+13:            q = qubit()
+               ^
+GuppyError: Assignment shadows argument `q` annotated as `@inout`. Consider assigning to a different name.
