@@ -228,7 +228,7 @@ class NoneType(TypeBase):
     """Type of tuples."""
 
     linear: bool = field(default=False, init=False)
-    hugr_bound: tys.TypeBound = field(default=tys.TypeBound.Eq, init=False)
+    hugr_bound: tys.TypeBound = field(default=tys.TypeBound.Copyable, init=False)
 
     # Flag to avoid turning the type into a row when calling `type_to_row()`. This is
     # used to make sure that type vars instantiated to Nones are not broken up into
@@ -285,7 +285,7 @@ class NumericType(TypeBase):
                         extension="arithmetic.int.types",
                         id="int",
                         args=[tys.TypeArg(tys.BoundedNatArg(n=NumericType.INT_WIDTH))],
-                        bound=tys.TypeBound.Eq,
+                        bound=tys.TypeBound.Copyable,
                     )
                 )
             case NumericType.Kind.Float:
@@ -300,12 +300,8 @@ class NumericType(TypeBase):
 
     @property
     def hugr_bound(self) -> tys.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
-        match self.kind:
-            case NumericType.Kind.Float:
-                return tys.TypeBound.Copyable
-            case _:
-                return tys.TypeBound.Eq
+        """The Hugr bound of this type, i.e. `Any` or `Copyable`"""
+        return tys.TypeBound.Copyable
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""

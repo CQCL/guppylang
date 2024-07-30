@@ -196,9 +196,9 @@ dependencies = [
 
 [[package]]
 name = "hugr"
-version = "0.5.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a20246e5f1a0aae160b80b71bc4d5c1dcccc5605dbe6458ac6f9af73137339c3"
+checksum = "daa4ecfcad4aaf337f974e196e0b79ac9288a19535a5b57c9c77f0aaed1d0c6a"
 dependencies = [
  "hugr-core",
  "hugr-passes",
@@ -206,9 +206,9 @@ dependencies = [
 
 [[package]]
 name = "hugr-core"
-version = "0.2.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd64c708ba21cedae58e37f3557d139ee6eaeaaa7df0ab9541385249c1ee6065"
+checksum = "7de0f6d5bd8ce765a989d928a773b6816b89051bdf1da55d27ac2b6965fa0e07"
 dependencies = [
  "bitvec",
  "cgmath",
@@ -227,7 +227,6 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "serde_yaml",
  "smol_str",
  "strum",
  "strum_macros",
@@ -238,7 +237,7 @@ dependencies = [
 [[package]]
 name = "hugr-llvm"
 version = "0.1.0"
-source = "git+https://github.com/CQCL/hugr-llvm?branch=main#b6dec8b3a755f7e8db5b3c1cb72309ca8f445932"
+source = "git+https://github.com/CQCL/hugr-llvm?branch=doug/hugr-0.10.0#adbeaa53f0ea9d9447a9d8a48f43d2288578aa54"
 dependencies = [
  "anyhow",
  "delegate",
@@ -253,14 +252,15 @@ dependencies = [
 
 [[package]]
 name = "hugr-passes"
-version = "0.2.0"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7522d3a5299a49ee453f6d0e3c3a6e8e7ed08a38cbd11e1d19163b97098ce9be"
+checksum = "31c601b2bc2168e841cb1087f2f7d383a4cace5c9926e10e79e2dd4829cd6758"
 dependencies = [
  "hugr-core",
  "itertools 0.13.0",
  "lazy_static",
  "paste",
+ "petgraph",
  "thiserror",
 ]
 
@@ -472,13 +472,14 @@ dependencies = [
 
 [[package]]
 name = "portgraph"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d83271bd5c2249831ff13227e6b3a968e115b6d4f4a2027a8ce02838b789ff8"
+checksum = "4791aa897c125c0f9e606c9a26092f1a6ca50af86f7e37de54ab7e5a7673bdb0"
 dependencies = [
  "bitvec",
  "context-iterators",
  "delegate",
+ "itertools 0.13.0",
  "petgraph",
  "serde",
  "thiserror",
@@ -671,19 +672,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_yaml"
-version = "0.9.34+deprecated"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
-dependencies = [
- "indexmap",
- "itoa",
- "ryu",
- "serde",
- "unsafe-libyaml",
-]
-
-[[package]]
 name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -812,12 +800,6 @@ name = "unindent"
 version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1766d682d402817b5ac4490b3c3002d91dfa0d22812f341609f97b08757359c"
-
-[[package]]
-name = "unsafe-libyaml"
-version = "0.2.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
 name = "utf8-width"

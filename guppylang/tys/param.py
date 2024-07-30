@@ -190,7 +190,7 @@ class ConstParam(ParameterBase):
             case _:
                 hugr_ty = self.ty.to_hugr()
                 assert isinstance(hugr_ty.root, tys.Opaque)
-                return tys.TypeParam(tys.OpaqueParam(ty=hugr_ty.root))
+                return tys.TypeParam(tys.StringParam())
 
 
 def check_all_args(

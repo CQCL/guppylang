@@ -101,9 +101,7 @@ def list_value(v: list[ops.Value], ty: Type) -> ops.Value:
 def logic_op(op_name: str, args: list[tys.TypeArg] | None = None) -> ops.OpType:
     """Utility method to create Hugr logic ops."""
     return ops.OpType(
-        ops.CustomOp(
-            extension="logic", op_name=op_name, args=args or [], parent=UNDEFINED
-        )
+        ops.CustomOp(extension="logic", name=op_name, args=args or [], parent=UNDEFINED)
     )
 
 
@@ -117,14 +115,14 @@ def int_op(
     if args is None:
         args = num_params * [tys.TypeArg(tys.BoundedNatArg(n=NumericType.INT_WIDTH))]
     return ops.OpType(
-        ops.CustomOp(extension=ext, op_name=op_name, args=args, parent=UNDEFINED)
+        ops.CustomOp(extension=ext, name=op_name, args=args, parent=UNDEFINED)
     )
 
 
 def float_op(op_name: str, ext: str = "arithmetic.float") -> ops.OpType:
     """Utility method to create Hugr integer arithmetic ops."""
     return ops.OpType(
-        ops.CustomOp(extension=ext, op_name=op_name, args=[], parent=UNDEFINED)
+        ops.CustomOp(extension=ext, name=op_name, args=[], parent=UNDEFINED)
     )
 
 

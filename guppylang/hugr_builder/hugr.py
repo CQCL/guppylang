@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 import networkx as nx  # type: ignore[import-untyped]
+from hugr import node_port
 from hugr.serialization import ops, tys
 from hugr.serialization import serial_hugr as raw
 from hugr.serialization.ops import OpType
@@ -286,7 +287,7 @@ class BlockNode(DFContainingNode, CFNode):
 OrderEdge = tuple["Node", "Node"]
 ORDER_EDGE_KEY = (-1, -1)
 
-UNDEFINED: ops.NodeID = -1
+UNDEFINED: node_port.NodeIdx = -1
 
 
 class Hugr:
@@ -801,7 +802,7 @@ class Hugr:
         exit_nodes: list[Node] = []
         remaining_nodes: list[Node] = []
         indices = itertools.count()
-        raw_index: dict[int, ops.NodeID] = {}
+        raw_index: dict[int, node_port.NodeIdx] = {}
         all_nodes = self.nodes()
         for n in all_nodes:
             if n is self.root:

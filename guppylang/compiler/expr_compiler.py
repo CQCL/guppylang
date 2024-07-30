@@ -284,9 +284,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         # since it is not implemented via a dunder method
         if isinstance(node.op, ast.Not):
             arg = self.visit(node.operand)
-            op = ops.CustomOp(
-                extension="logic", op_name="Not", args=[], parent=UNDEFINED
-            )
+            op = ops.CustomOp(extension="logic", name="Not", args=[], parent=UNDEFINED)
             return self.graph.add_node(ops.OpType(op), inputs=[arg]).add_out_port(
                 bool_type()
             )
@@ -305,7 +303,7 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         ]
         op = ops.CustomOp(
             extension="tket2.results",
-            op_name="Result",
+            name="Result",
             args=[arg.to_hugr() for arg in type_args],
             parent=UNDEFINED,
         )
