@@ -9,6 +9,7 @@ from guppylang.cfg.analysis import (
     Result,
 )
 from guppylang.cfg.bb import BB, BBStatement, VariableStats
+from guppylang.nodes import InoutReturnSentinel
 
 T = TypeVar("T", bound=BB)
 
@@ -61,9 +62,14 @@ class CFG(BaseCFG[BB]):
         tgt_bb.predecessors.append(src_bb)
 
     def analyze(
-        self, def_ass_before: set[str], maybe_ass_before: set[str]
+        self,
+        def_ass_before: set[str],
+        maybe_ass_before: set[str],
+        inout_vars: list[str],
     ) -> dict[BB, VariableStats[str]]:
         stats = {bb: bb.compute_variable_stats() for bb in self.bbs}
+        # Mark all @inout variables as implicitly used in the exit BB
+        stats[self.exit_bb].used |= {x: InoutReturnSentinel(var=x) for x in inout_vars}
         self.live_before = LivenessAnalysis(stats).run(self.bbs)
         self.ass_before, self.maybe_ass_before = AssignmentAnalysis(
             stats, def_ass_before, maybe_ass_before

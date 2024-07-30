@@ -54,7 +54,8 @@ def check_nested_func_def(
     parent_cfg = bb.containing_cfg
     def_ass_before = set(func_ty.input_names) | ctx.locals.keys()
     maybe_ass_before = def_ass_before | parent_cfg.maybe_ass_before[bb]
-    cfg.analyze(def_ass_before, maybe_ass_before)
+    inout_vars = inout_var_names(func_ty)
+    cfg.analyze(def_ass_before, maybe_ass_before, inout_vars)
     captured = {
         x: (ctx.locals[x], using_bb.vars.used[x])
         for x, using_bb in cfg.live_before[cfg.entry_bb].items()
@@ -177,3 +178,13 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         input_names,
         sorted(param_var_mapping.values(), key=lambda v: v.idx),
     )
+
+
+def inout_var_names(func_ty: FunctionType) -> list[str]:
+    """Returns the names of all `@inout` arguments of a function type."""
+    assert func_ty.input_names is not None
+    return [
+        x
+        for inp, x in zip(func_ty.inputs, func_ty.input_names, strict=True)
+        if InputFlags.Inout in inp.flags
+    ]
