@@ -29,6 +29,7 @@ from guppylang.nodes import (
     GlobalCall,
     LocalCall,
     PlaceNode,
+    TensorCall,
 )
 from guppylang.tys.ty import FunctionType, InputFlags, StructType
 
@@ -178,6 +179,11 @@ class BBLinearityChecker(ast.NodeVisitor):
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
         self._reassign_inout_args(func_ty, node.args)
+
+    def visit_TensorCall(self, node: TensorCall) -> None:
+        for arg in node.args:
+            self.visit(arg)
+        self._reassign_inout_args(node.tensor_ty, node.args)
 
     def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> None:
         # A field access on a value that is not a place. This means the value can no

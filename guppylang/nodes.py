@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from guppylang.ast_util import AstNode
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import FunctionType, StructType, Type
+from guppylang.tys.ty import FunctionType, StructType
 
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import CFG
@@ -60,12 +60,12 @@ class TensorCall(ast.expr):
 
     func: ast.expr
     args: list[ast.expr]
-    out_tys: Type
+    tensor_ty: FunctionType
 
     _fields = (
         "func",
         "args",
-        "out_tys",
+        "tensor_ty",
     )
 
 
