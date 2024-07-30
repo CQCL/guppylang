@@ -83,6 +83,13 @@ class BB(ABC):
         self._vars = visitor.stats
         return visitor.stats
 
+    @property
+    def is_exit(self) -> bool:
+        """Whether this is the exit BB."""
+        # The exit BB is the only one without successors (otherwise we would have gotten
+        # an unreachable code error during CFG building)
+        return len(self.successors) == 0
+
 
 class VariableVisitor(ast.NodeVisitor):
     """Visitor that computes used and assigned variables in a BB."""
