@@ -11,7 +11,6 @@ https://github.com/CQCL/tket2/issues/new
 """
 
 from importlib.util import find_spec
-from typing import no_type_check
 
 import math
 import pytest
@@ -34,11 +33,10 @@ def test_lower_pure_circuit():
     module.load(quantum)
 
     @guppy(module)
-    @no_type_check
     def my_func(
         q0: qubit,
         q1: qubit,
-    ) -> tuple[qubit, qubit]:  # pragma: no cover
+    ) -> tuple[qubit, qubit]:
         q0 = phased_x(q0, py(math.pi / 2), py(-math.pi / 2))
         q0 = rz(q0, py(math.pi))
         q1 = phased_x(q1, py(math.pi / 2), py(-math.pi / 2))
@@ -67,11 +65,10 @@ def test_lower_hybrid_circuit():
     module.load(quantum)
 
     @guppy(module)
-    @no_type_check
     def my_func(
         q0: qubit,
         q1: qubit,
-    ) -> tuple[bool,]:  # pragma: no cover
+    ) -> tuple[bool,]:
         q0 = phased_x(q0, py(math.pi / 2), py(-math.pi / 2))
         q0 = rz(q0, py(math.pi))
         q1 = phased_x(q1, py(math.pi / 2), py(-math.pi / 2))
