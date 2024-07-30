@@ -7,7 +7,9 @@ from guppylang.module import GuppyModule
 
 if TYPE_CHECKING:
     try:
-        from tket2.circuit import Tk2Circuit
+        from tket2.circuit import (
+            Tk2Circuit,  # type: ignore[import-untyped, import-not-found, unused-ignore]
+        )
     except ImportError:
         Tk2Circuit = Any
 
