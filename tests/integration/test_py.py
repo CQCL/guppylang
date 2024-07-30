@@ -1,3 +1,5 @@
+"""Tests for using python expressions in guppy functions."""
+
 from importlib.util import find_spec
 
 import pytest

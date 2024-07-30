@@ -40,9 +40,9 @@ execute_llvm = { path = "execute_llvm" }
 optional = true
 
 [tool.poetry.group.pytket.dependencies]
-pytket = { version = "^1.24.0" }
-tket2-py = { git = "https://github.com/CQCL/tket2.git", rev = "eca258bfbef5fcd82a0d3b3d70cb736e275b3487" }
-
+pytket = { version = "^1.30.0" }
+#tket2 = { version = "^0.1.0a5" } # TODO: Use this instead of a git dep once released
+tket2-py = { git = "https://github.com/CQCL/tket2.git", rev = "da778dd79121c4e20b07934708db765ca717dc31" }
 
 [tool.poetry.group.docs]
 optional = true
