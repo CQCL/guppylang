@@ -8,16 +8,11 @@ module.load(quantum)
 
 
 @guppy.declare(module)
-def foo(q1: qubit @inout) -> None: ...
-
-
-@guppy.declare(module)
 def use(q: qubit) -> None: ...
 
 
 @guppy(module)
 def test(q: qubit @inout, b: bool) -> None:
-    # foo(q)
     if b:
         use(q)
 
