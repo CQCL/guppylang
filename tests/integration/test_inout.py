@@ -14,3 +14,13 @@ def test_declare(validate):
     def test(q: qubit @inout) -> qubit: ...
 
     validate(module.compile())
+
+
+def test_string_annotation(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.declare(module)
+    def test(q: "qubit @inout") -> qubit: ...
+
+    validate(module.compile())

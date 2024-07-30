@@ -21,10 +21,9 @@ from guppylang.definition.custom import (
     DefaultCallChecker,
 )
 from guppylang.definition.parameter import ParamDef
-from guppylang.definition.ty import TypeDef
+from guppylang.definition.ty import FlaggedArgs, TypeDef, check_no_flags
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.hugr_builder.hugr import OutPortV
-from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, StructType, Type
@@ -133,7 +132,7 @@ class RawStructDef(TypeDef, ParsableDef):
         return ParsedStructDef(self.id, self.name, cls_def, params, fields)
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: FlaggedArgs, globals: "Globals", loc: AstNode | None = None
     ) -> Type:
         raise InternalGuppyError("Tried to instantiate raw struct definition")
 
@@ -163,9 +162,10 @@ class ParsedStructDef(TypeDef, CheckableDef):
         )
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: FlaggedArgs, globals: "Globals", loc: AstNode | None = None
     ) -> Type:
         """Checks if the struct can be instantiated with the given arguments."""
+        args = check_no_flags(args, loc)
         check_all_args(self.params, args, self.name, loc)
         # Obtain a checked version of this struct definition so we can construct a
         # `StructType` instance
@@ -187,9 +187,10 @@ class CheckedStructDef(TypeDef, CompiledDef):
     fields: Sequence[StructField]
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: FlaggedArgs, globals: "Globals", loc: AstNode | None = None
     ) -> Type:
         """Checks if the struct can be instantiated with the given arguments."""
+        args = check_no_flags(args, loc)
         check_all_args(self.params, args, self.name, loc)
         return StructType(args, self)
 
@@ -290,7 +291,7 @@ def check_not_recursive(defn: ParsedStructDef, globals: Globals) -> None:
 
         def check_instantiate(
             self,
-            args: Sequence[Argument],
+            args: FlaggedArgs,
             globals: "Globals",
             loc: AstNode | None = None,
         ) -> Type:
