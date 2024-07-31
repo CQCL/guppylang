@@ -314,7 +314,7 @@ def check_cfg_linearity(cfg: "CheckedCFG[Variable]") -> "CheckedCFG[Place]":
                     )
 
             # On the other hand, unused linear variables *must* be outputted
-            for place in scope.vars.values():
+            for place in scope.values():
                 for leaf in leaf_places(place):
                     x = leaf.id
                     used_later = x in live
