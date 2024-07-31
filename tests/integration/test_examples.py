@@ -6,7 +6,7 @@ from guppylang.prelude.builtins import result
 from guppylang.prelude.quantum import qubit
 
 import guppylang.prelude.quantum as quantum
-from guppylang.prelude.quantum import h, cx, x, measure, rz, reset
+from guppylang.prelude.quantum import h, discard, cx, x, measure, rz
 
 
 def test_random_walk_phase_estimation(validate):
@@ -44,19 +44,20 @@ def test_random_walk_phase_estimation(validate):
             aux = h(qubit())
             t = 1 / sigma
             aux = rz(h(aux), (sigma - mu) * t)
-            aux, q = controlled_oracle(aux, tgt, t)
+            aux, tgt = controlled_oracle(aux, tgt, t)
             if measure(h(aux)):
                 mu += sigma * 0.6065  # = sigma/sqrt(e)
             else:
                 mu -= sigma * 0.6065  # = sigma/sqrt(e)
             sigma *= 0.7951  # = sqrt((e-1)/e)
 
-            # Reset the eigenstate every few iterations to increase the fideltity of
+            # Reset the eigenstate every few iterations to increase the fidelity of
             # the algorithm
             if i % reset_rate == 0:
-                reset(tgt)
+                discard(tgt)
                 tgt = eigenstate()
             i += 1
+        discard(tgt)
         return mu
 
     @guppy(module)
@@ -93,3 +94,5 @@ def test_random_walk_phase_estimation(validate):
         )
         result(0, eigenvalue)  # Expected outcome is 0.5
         return 0
+
+    validate(module.compile())
