@@ -2,13 +2,12 @@ import numpy as np
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import linst
+from guppylang.prelude.builtins import linst, py
 from guppylang.prelude.quantum import (
     cz,
     discard,
     h,
     measure,
-    py,
     quantum,
     qubit,
     rx,
