@@ -70,13 +70,13 @@ def t_state(timeout: int) -> tuple[linst[qubit], bool]:
     If the number of attempts is exceeded, the empty `linst` will be returned
     along with the boolean `False`.
     """
-    tgt = prepare_approx(qubit())
-    q0 = prepare_approx(qubit())
-    q1 = prepare_approx(qubit())
-    q2 = prepare_approx(qubit())
-    q3 = prepare_approx(qubit())
+    if timeout > 0:
+        tgt = prepare_approx(qubit())
+        q0 = prepare_approx(qubit())
+        q1 = prepare_approx(qubit())
+        q2 = prepare_approx(qubit())
+        q3 = prepare_approx(qubit())
 
-    while timeout > 0:
         q, success = distill(tgt, q0, q1, q2, q3)
         if success:
             return [q], True
