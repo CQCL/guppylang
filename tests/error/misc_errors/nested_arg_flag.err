@@ -2,5 +2,5 @@ Guppy compilation failed. Error in file $FILE:12
 
 10:    @guppy.declare(module)
 11:    def foo(x: list[qubit @inout]) -> qubit: ...
-                  ^^^^^^^^^^^^^^^^^^
-GuppyError: `@` type annotations are not allowed in this position
+                       ^^^^^^^^^^^^
+GuppyError: Not a valid type argument

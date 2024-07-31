@@ -1,0 +1,6 @@
+Guppy compilation failed. Error in file $FILE:10
+
+8:     @guppy.declare(module)
+9:     def foo(f: Callable) -> None: ...
+                  ^^^^^^^^
+GuppyError: Function types should be specified via `Callable[[<arguments>], <return types>]`
