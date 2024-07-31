@@ -1,8 +1,9 @@
+import math
 from collections.abc import Callable
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import result
+from guppylang.prelude.builtins import result, py
 from guppylang.prelude.quantum import qubit
 
 import guppylang.prelude.quantum as quantum
@@ -17,6 +18,9 @@ def test_random_walk_phase_estimation(validate):
 
     module = GuppyModule("test")
     module.load(quantum)
+
+    sqrt_e = math.sqrt(math.e)
+    sqrt_e_div = math.sqrt((math.e - 1) / math.e)
 
     @guppy(module)
     def random_walk_phase_estimation(
@@ -46,10 +50,10 @@ def test_random_walk_phase_estimation(validate):
             aux = rz(h(aux), (sigma - mu) * t)
             aux, tgt = controlled_oracle(aux, tgt, t)
             if measure(h(aux)):
-                mu += sigma * 0.6065  # = sigma/sqrt(e)
+                mu += sigma / py(sqrt_e)
             else:
-                mu -= sigma * 0.6065  # = sigma/sqrt(e)
-            sigma *= 0.7951  # = sqrt((e-1)/e)
+                mu -= sigma / py(sqrt_e)
+            sigma *= py(sqrt_e_div)
 
             # Reset the eigenstate every few iterations to increase the fidelity of
             # the algorithm
@@ -82,8 +86,8 @@ def test_random_walk_phase_estimation(validate):
     def main() -> int:
         num_iters = 24  # To avoid underflows
         reset_rate = 8
-        mu = 0.7951  # = sqrt(e)
-        sigma = 0.6065  # = sqrt((e-1)/e)
+        mu = py(sqrt_e)
+        sigma = py(sqrt_e_div)
         eigenvalue = random_walk_phase_estimation(
             example_eigenstate,
             example_controlled_oracle,
