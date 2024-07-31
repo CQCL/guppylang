@@ -1,12 +1,13 @@
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from itertools import repeat
 from typing import TYPE_CHECKING, Literal
 
 from hugr.serialization import tys
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
-from guppylang.definition.ty import FlaggedArgs, OpaqueTypeDef, TypeDef, check_no_flags
+from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.param import ConstParam, TypeParam
@@ -35,28 +36,22 @@ class _CallableTypeDef(TypeDef):
     name: Literal["Callable"] = field(default="Callable", init=False)
 
     def check_instantiate(
-        self, args: FlaggedArgs, globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> FunctionType:
         # We get the inputs/output as a flattened list: `args = [*inputs, output]`.
         if not args:
             raise GuppyError(f"Missing parameter for type `{self.name}`", loc)
         args = [
             # TODO: Better error location
-            (TypeParam(0, f"T{i}", can_be_linear=True).check_arg(arg, loc).ty, flags)
-            for i, (arg, flags) in enumerate(args)
+            TypeParam(0, f"T{i}", can_be_linear=True).check_arg(arg, loc).ty
+            for i, arg in enumerate(args)
         ]
-        *inputs, (output_ty, output_flags) = args
-        for ty, flags in inputs:
-            if InputFlags.Inout in flags and not ty.linear:
-                raise GuppyError(
-                    f"Non-linear type `{ty}` cannot be annotated as `@inout`",
-                    loc,  # TODO: Better error location
-                )
-        if output_flags != InputFlags.NoFlags:
-            raise GuppyError(
-                "`@` type annotations are not allowed in this position", loc
-            )
-        return FunctionType([FuncInput(ty, flags) for ty, flags in inputs], output_ty)
+        *input_tys, output = args
+        inputs = [
+            FuncInput(ty, flags)
+            for ty, flags in zip(input_tys, repeat(InputFlags.NoFlags), strict=False)
+        ]
+        return FunctionType(list(inputs), output)
 
 
 @dataclass(frozen=True)
@@ -69,9 +64,8 @@ class _TupleTypeDef(TypeDef):
     name: Literal["tuple"] = field(default="tuple", init=False)
 
     def check_instantiate(
-        self, args: FlaggedArgs, globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> TupleType:
-        args = check_no_flags(args, loc)
         # We accept any number of arguments. If users just write `tuple`, we give them
         # the empty tuple type. We just have to make sure that the args are of kind type
         args = [
@@ -92,7 +86,7 @@ class _NoneTypeDef(TypeDef):
     name: Literal["None"] = field(default="None", init=False)
 
     def check_instantiate(
-        self, args: FlaggedArgs, globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> NoneType:
         if args:
             raise GuppyError("Type `None` is not parameterized", loc)
@@ -109,7 +103,7 @@ class _NumericTypeDef(TypeDef):
     ty: NumericType
 
     def check_instantiate(
-        self, args: FlaggedArgs, globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> NumericType:
         if args:
             raise GuppyError(f"Type `{self.name}` is not parameterized", loc)
@@ -125,10 +119,10 @@ class _ListTypeDef(OpaqueTypeDef):
     """
 
     def check_instantiate(
-        self, args: FlaggedArgs, globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> OpaqueType:
         if len(args) == 1:
-            [arg] = check_no_flags(args, loc)
+            [arg] = args
             if isinstance(arg, TypeArg) and arg.ty.linear:
                 raise GuppyError(
                     "Type `list` cannot store linear data, use `linst` instead", loc
