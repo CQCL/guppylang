@@ -41,8 +41,7 @@ optional = true
 
 [tool.poetry.group.pytket.dependencies]
 pytket = { version = "^1.30.0" }
-#tket2 = { version = "^0.1.0a5" } # TODO: Use this instead of a git dep once released
-tket2-py = { git = "https://github.com/CQCL/tket2.git", rev = "da778dd79121c4e20b07934708db765ca717dc31" }
+tket2 = { version = "^0.2.0" }
 
 [tool.poetry.group.docs]
 optional = true
