@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 import networkx as nx  # type: ignore[import-untyped]
 from hugr import node_port
+from hugr.node_port import NodeIdx, PortOffset
 from hugr.serialization import ops, tys
 from hugr.serialization import serial_hugr as raw
 from hugr.serialization.ops import OpType
@@ -23,9 +24,6 @@ from guppylang.tys.ty import (
     rows_to_hugr,
     type_to_row,
 )
-
-NodeIdx = int
-PortOffset = int
 
 
 @dataclass(frozen=True)
