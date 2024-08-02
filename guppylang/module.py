@@ -5,6 +5,9 @@ from collections.abc import Callable, Mapping
 from types import ModuleType
 from typing import Any, Union
 
+from hugr import Hugr, ops
+from hugr.function import Module
+
 from guppylang.checker.core import Globals, PyScope
 from guppylang.compiler.core import CompiledGlobals
 from guppylang.definition.common import (
@@ -22,7 +25,6 @@ from guppylang.definition.parameter import ParamDef
 from guppylang.definition.struct import CheckedStructDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, pretty_errors
-from guppylang.hugr_builder.hugr import Hugr
 
 PyFunc = Callable[..., Any]
 PyFuncDefOrDecl = tuple[bool, PyFunc]
@@ -38,7 +40,7 @@ class GuppyModule:
 
     # If the hugr has already been compiled, keeps a reference that can be returned
     # from `compile`.
-    _compiled_hugr: Hugr | None
+    _compiled_hugr: Hugr[ops.Module] | None
 
     # Map of raw definitions in this module
     _raw_defs: dict[DefId, RawDef]
@@ -198,15 +200,14 @@ class GuppyModule:
         self._globals = self._globals.update_defs(other_defs)
 
         # Prepare Hugr for this module
-        graph = Hugr(self.name)
-        module_node = graph.set_root_name(self.name)
+        graph = Module()
+        # TODO: Metadata not yet supported
+        # graph.set_root_metadata("name", self.name)
 
         # Compile definitions to Hugr
         self._compiled_globals = {
             defn.id: (
-                defn.compile_outer(graph, module_node)
-                if isinstance(defn, CompilableDef)
-                else defn
+                defn.compile_outer(graph) if isinstance(defn, CompilableDef) else defn
             )
             for defn in itertools.chain(type_defs.values(), other_defs.values())
         }
@@ -217,6 +218,7 @@ class GuppyModule:
         for defn in self._compiled_globals.values():
             defn.compile_inner(graph, all_compiled_globals)
 
+        graph = graph.hugr
         self._compiled = True
         self._compiled_hugr = graph
         return graph

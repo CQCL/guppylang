@@ -3,16 +3,18 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from hugr import Wire
+
 from guppylang.ast_util import AstNode
+from guppylang.compiler.core import DFContainer
 from guppylang.definition.common import CompiledDef, Definition
 from guppylang.error import GuppyError
-from guppylang.hugr_builder.hugr import Hugr, OutPortV
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Context
-    from guppylang.compiler.core import CompiledGlobals, DFContainer
+    from guppylang.compiler.core import CompiledGlobals
 
 
 @dataclass(frozen=True)
@@ -29,9 +31,7 @@ class CompiledValueDef(ValueDef, CompiledDef):
     """Abstract base class for compiled definitions that represent values."""
 
     @abstractmethod
-    def load(
-        self, dfg: "DFContainer", graph: Hugr, globals: "CompiledGlobals", node: AstNode
-    ) -> OutPortV:
+    def load(self, dfg: DFContainer, globals: "CompiledGlobals", node: AstNode) -> Wire:
         """Loads the defined value into a local Hugr dataflow graph."""
 
 
@@ -65,31 +65,27 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
     @abstractmethod
     def compile_call(
         self,
-        args: list[OutPortV],
+        args: list[Wire],
         type_args: Inst,
-        dfg: "DFContainer",
-        graph: Hugr,
+        dfg: DFContainer,
         globals: "CompiledGlobals",
         node: AstNode,
-    ) -> list[OutPortV]:
+    ) -> list[Wire]:
         """Compiles a call to the function."""
 
     @abstractmethod
     def load_with_args(
         self,
         type_args: Inst,
-        dfg: "DFContainer",
-        graph: Hugr,
+        dfg: DFContainer,
         globals: "CompiledGlobals",
         node: AstNode,
-    ) -> OutPortV:
+    ) -> Wire:
         """Loads the function into a local Hugr dataflow graph.
 
         Requires an instantiation for all function parameters.
         """
 
-    def load(
-        self, dfg: "DFContainer", graph: Hugr, globals: "CompiledGlobals", node: AstNode
-    ) -> OutPortV:
+    def load(self, dfg: DFContainer, globals: "CompiledGlobals", node: AstNode) -> Wire:
         """Loads the defined value into a local Hugr dataflow graph."""
-        return self.load_with_args([], dfg, graph, globals, node)
+        return self.load_with_args([], dfg, globals, node)

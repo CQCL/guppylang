@@ -1,14 +1,14 @@
 import ast
 from dataclasses import dataclass, field
 
-from hugr.serialization import ops
+from hugr import Node, Wire, val
+from hugr.function import Module
 
 from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.value import CompiledValueDef, ValueDef
-from guppylang.hugr_builder.hugr import Hugr, Node, OutPortV, VNode
 from guppylang.tys.parsing import type_from_ast
 
 
@@ -39,19 +39,20 @@ class RawExternDef(ParsableDef):
 class ExternDef(RawExternDef, ValueDef, CompilableDef):
     """An extern symbol definition."""
 
-    def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledExternDef":
+    def compile_outer(self, graph: Module) -> "CompiledExternDef":
         """Adds a Hugr constant node for the extern definition to the provided graph."""
         custom_const = {
             "symbol": self.symbol,
             "typ": self.ty.to_hugr(),
             "constant": self.constant,
         }
-        value = ops.ExtensionValue(
-            extensions=["prelude"],
+        value = val.Extension(
+            name="ConstExternalSymbol",
             typ=self.ty.to_hugr(),
-            value=ops.CustomConst(c="ConstExternalSymbol", v=custom_const),
+            val=custom_const,
+            extensions=["prelude"],
         )
-        const_node = graph.add_constant(ops.Value(value), self.ty, parent)
+        const_node = graph.add_const(value)
         return CompiledExternDef(
             self.id,
             self.name,
@@ -68,10 +69,9 @@ class ExternDef(RawExternDef, ValueDef, CompilableDef):
 class CompiledExternDef(ExternDef, CompiledValueDef):
     """An extern symbol definition that has been compiled to a Hugr constant."""
 
-    const_node: VNode
+    const_node: Node
 
-    def load(
-        self, dfg: DFContainer, graph: Hugr, globals: CompiledGlobals, node: AstNode
-    ) -> OutPortV:
+    def load(self, dfg: DFContainer, globals: CompiledGlobals, node: AstNode) -> Wire:
         """Loads the extern value into a local Hugr dataflow graph."""
-        return graph.add_load_constant(self.const_node.out_port(0)).out_port(0)
+        # TODO: Use DFG's load, passing a value
+        return dfg.graph.load(self.const_node)

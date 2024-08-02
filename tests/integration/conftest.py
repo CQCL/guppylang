@@ -1,4 +1,4 @@
-from guppylang.hugr_builder.hugr import Hugr
+from hugr import Hugr
 
 from pathlib import Path
 import pytest
@@ -24,7 +24,7 @@ def validate(request, export_test_cases_dir: Path):
 
     def validate_impl(hugr, name=None):
         # Validate via the json encoding
-        js = hugr.serialize()
+        js = hugr.to_serial()
         validate_json(js)
 
         if export_test_cases_dir:
@@ -48,7 +48,7 @@ def run_int_fn():
             if not hasattr(execute_llvm, "run_int_function"):
                 pytest.skip("Skipping llvm execution")
 
-            hugr_json: str = hugr.serialize()
+            hugr_json: str = hugr.to_serial()
             res = execute_llvm.run_int_function(hugr_json, fn_name)
             if res != expected:
                 raise LLVMException(

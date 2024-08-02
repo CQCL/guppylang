@@ -5,7 +5,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
-from guppylang.hugr_builder.hugr import Hugr, Node
+from hugr import Hugr, Node
+from hugr.function import Module
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -100,8 +101,8 @@ class CompilableDef(Definition):
     """
 
     @abstractmethod
-    def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledDef":
-        """Adds a Hugr node for the definition to the provided graph.
+    def compile_outer(self, module: Module) -> "CompiledDef":
+        """Adds a Hugr node for the definition to the provided Hugr module.
 
         Note that is not required to fill in the contents of the node. At this point,
         we don't have access to the globals since they have not all been compiled yet.

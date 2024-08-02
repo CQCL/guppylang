@@ -1,6 +1,8 @@
 from abc import ABC
 from dataclasses import dataclass, field
 
+from hugr.dfg import Dfg
+
 from guppylang.checker.core import FieldAccess, Place, PlaceId, Variable
 from guppylang.definition.common import CompiledDef, DefId
 from guppylang.error import InternalGuppyError
@@ -21,8 +23,7 @@ class DFContainer:
     current compilation state.
     """
 
-    graph: Hugr
-    node: DFContainingNode
+    graph: Dfg
     locals: CompiledLocals = field(default_factory=dict)
 
     def __getitem__(self, place: Place) -> OutPortV:

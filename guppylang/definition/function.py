@@ -5,6 +5,10 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+import hugr.function as hf
+import hugr.tys as ht
+from hugr import Hugr, Wire
+
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
 from guppylang.checker.core import Context, Globals, Place, PyScope
@@ -19,7 +23,6 @@ from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import CheckableDef, CompilableDef, ParsableDef
 from guppylang.definition.value import CallableDef, CompiledCallableDef
 from guppylang.error import GuppyError
-from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr, Node, OutPortV
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type, type_to_row
@@ -34,6 +37,13 @@ class RawFunctionDef(ParsableDef):
     The raw definition stores exactly what the user has written (i.e. the AST), without
     any additional checking or parsing. Furthermore, we store the values of the Python
     variables in scope at the point of definition.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the function.
+        defined_at: The AST node where the function was defined.
+        python_func: The Python function to be defined.
+        python_scope: The Python scope where the function was defined.
     """
 
     python_func: PyFunc
@@ -60,6 +70,14 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
 
     In particular, this means that we have determined a type for the function and are
     ready to check the function body.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the function.
+        defined_at: The AST node where the function was defined.
+        ty: The type of the function.
+        python_scope: The Python scope where the function was defined.
+        docstring: The docstring of the function.
     """
 
     python_scope: PyScope
@@ -109,18 +127,28 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
 
     In particular, this means that we have a constructed and type checked a control-flow
     graph for the function body.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the function.
+        defined_at: The AST node where the function was defined.
+        ty: The type of the function.
+        python_scope: The Python scope where the function was defined.
+        docstring: The docstring of the function.
+        cfg: TODO ???
     """
 
     cfg: CheckedCFG[Place]
 
-    def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledFunctionDef":
+    def compile_outer(self, module: hf.Module) -> "CompiledFunctionDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr.
 
         Note that we don't compile the function body at this point since we don't have
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        def_node = graph.add_def(self.ty, parent, self.name)
+        func_typ = self.ty.to_hugr_poly()
+        func_def = module.define_function(self.name, self.ty.to_hugr_poly())
         return CompiledFunctionDef(
             self.id,
             self.name,
@@ -129,40 +157,58 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
             self.python_scope,
             self.docstring,
             self.cfg,
-            def_node,
+            func_def,
+            func_typ,
         )
 
 
 @dataclass(frozen=True)
 class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
-    """A function definition with a corresponding Hugr node."""
+    """A function definition with a corresponding Hugr node.
 
-    hugr_node: DFContainingVNode
+    Args:
+        id: The unique definition identifier.
+        name: The name of the function.
+        defined_at: The AST node where the function was defined.
+        ty: The type of the function.
+        python_scope: The Python scope where the function was defined.
+        docstring: The docstring of the function.
+        cfg: TODO ???
+        func_def: The Hugr function definition.
+        func_typ: The Hugr function type.
+    """
+
+    func_def: hf.Function
+    func_typ: ht.PolyFuncType
 
     def load_with_args(
         self,
         type_args: Inst,
         dfg: DFContainer,
-        graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> OutPortV:
+    ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        return graph.add_load_function(
-            self.hugr_node.out_port(0), type_args, dfg.node
-        ).out_port(0)
+        # TODO: This is probably wrong, as we are not instantiating the function type.
+        # We may need to add some methods in the Hugr `PolyFuncType` API to do this.
+        instantiation: FunctionType = self.func_typ.body
+        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        return dfg.graph.load_function(self.func_def, instantiation, type_args)
 
     def compile_call(
         self,
-        args: list[OutPortV],
+        args: list[Wire],
         type_args: Inst,
         dfg: DFContainer,
-        graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> list[OutPortV]:
+    ) -> list[Wire]:
         """Compiles a call to the function."""
-        call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
+        # TODO: This is probably wrong, as we are not instantiating the function type.
+        # We may need to add some methods in the Hugr `PolyFuncType` API to do this.
+        instantiation: FunctionType = self.func_typ.body
+        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        call = dfg.graph.call(self.func_def, args, instantiation, type_args)
         return [call.out_port(i) for i in range(len(type_to_row(self.ty.output)))]
 
     def compile_inner(self, graph: Hugr, globals: CompiledGlobals) -> None:
