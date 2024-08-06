@@ -14,7 +14,7 @@ from guppylang.prelude.quantum import (
     rz,
 )
 
-module = GuppyModule("tfactory")
+module = GuppyModule("t_factory")
 module.load(quantum)
 
 phi = np.arccos(1 / 3)
@@ -29,7 +29,7 @@ def ry(q: qubit, theta: float) -> qubit:
     return rz(q, py(pi))
 
 
-# Preparation of approximate T state, from 2310.12106
+# Preparation of approximate T state, from https://arxiv.org/abs/2310.12106
 @guppy(module)
 def prepare_approx(q: qubit) -> qubit:
     phi_ = py(phi)
@@ -39,7 +39,7 @@ def prepare_approx(q: qubit) -> qubit:
     return rz(q, pi_ / 4.0)
 
 
-# The inverse of the [[5,3,1]] encoder in figure 3 of 2208.01863
+# The inverse of the [[5,3,1]] encoder in figure 3 of https://arxiv.org/abs/2208.01863
 @guppy(module)
 def distill(
     target: qubit, q0: qubit, q1: qubit, q2: qubit, q3: qubit
@@ -56,6 +56,7 @@ def distill(
     # Measuring gives false for success, true for failure.
     # We check for all falses to say whether distillation succeeded.
     bits = [not (measure(h(q))) for q in [q0, q1, q2, q3]]
+    # guppy doesn't yet support the `any` or `all` operators...
     success = True
     for b in bits:
         success &= b
@@ -84,6 +85,7 @@ def t_state(timeout: int) -> tuple[linst[qubit], bool]:
             return [q], True
         else:
             # Discard the qubit and start over
+            # Note, this could just as easily be a while loop!
             discard(q)
             return t_state(timeout - 1)
 
