@@ -3,8 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeAlias
 
-from hugr.serialization import tys
-from hugr.serialization.tys import TypeBound
+from hugr import tys as ht
 from typing_extensions import Self
 
 from guppylang.ast_util import AstNode
@@ -28,7 +27,7 @@ Parameter: TypeAlias = "TypeParam | ConstParam"
 
 
 @dataclass(frozen=True)
-class ParameterBase(ToHugr[tys.TypeParam], ABC):
+class ParameterBase(ToHugr[ht.TypeParam], ABC):
     """Abstract base class for parameters used in function and type definitions.
 
     For example, when defining a struct type
@@ -121,12 +120,10 @@ class TypeParam(ParameterBase):
             idx = self.idx
         return TypeArg(BoundTypeVar(self.name, idx, self.can_be_linear))
 
-    def to_hugr(self) -> tys.TypeParam:
+    def to_hugr(self) -> ht.TypeParam:
         """Computes the Hugr representation of the parameter."""
-        return tys.TypeParam(
-            tys.TypeTypeParam(
-                b=tys.TypeBound.Any if self.can_be_linear else TypeBound.Copyable
-            )
+        return ht.TypeTypeParam(
+            bound=ht.TypeBound.Any if self.can_be_linear else ht.TypeBound.Copyable
         )
 
 
@@ -180,17 +177,16 @@ class ConstParam(ParameterBase):
             idx = self.idx
         return ConstArg(BoundConstVar(self.ty, self.name, idx))
 
-    def to_hugr(self) -> tys.TypeParam:
+    def to_hugr(self) -> ht.TypeParam:
         """Computes the Hugr representation of the parameter."""
         from guppylang.tys.ty import NumericType
 
         match self.ty:
             case NumericType(kind=NumericType.Kind.Nat):
-                return tys.TypeParam(tys.BoundedNatParam(bound=None))
+                return ht.BoundedNatParam(upper_bound=None)
             case _:
-                hugr_ty = self.ty.to_hugr()
-                assert isinstance(hugr_ty.root, tys.Opaque)
-                return tys.TypeParam(tys.StringParam())
+                assert isinstance(self.ty.to_hugr(), ht.Opaque)
+                return ht.StringParam()
 
 
 def check_all_args(

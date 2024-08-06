@@ -5,6 +5,8 @@ from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
+from hugr import tys as ht
+
 from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
@@ -19,7 +21,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class TypeBase(ToHugr[tys.Type], Transformable["Type"], ABC):
+class TypeBase(ToHugr[ht.Type], Transformable["Type"], ABC):
     """Abstract base class for all Guppy types.
 
     Note that all subclasses are expected to be immutable.
@@ -32,7 +34,7 @@ class TypeBase(ToHugr[tys.Type], Transformable["Type"], ABC):
 
     @cached_property
     @abstractmethod
-    def hugr_bound(self) -> tys.TypeBound:
+    def hugr_bound(self) -> ht.TypeBound:
         """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`.
 
         This needs to be specified explicitly, since opaque nonlinear types in a Hugr
@@ -115,11 +117,11 @@ class ParametrizedTypeBase(TypeBase, ABC):
         return set().union(*(arg.unsolved_vars for arg in self.args))
 
     @cached_property
-    def hugr_bound(self) -> tys.TypeBound:
+    def hugr_bound(self) -> ht.TypeBound:
         """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
         if self.linear:
-            return tys.TypeBound.Any
-        return tys.TypeBound.join(
+            return ht.TypeBound.Any
+        return ht.TypeBound.join(
             *(arg.ty.hugr_bound for arg in self.args if isinstance(arg, TypeArg))
         )
 
@@ -143,21 +145,21 @@ class BoundTypeVar(TypeBase, BoundVar):
     linear: bool
 
     @cached_property
-    def hugr_bound(self) -> tys.TypeBound:
+    def hugr_bound(self) -> ht.TypeBound:
         """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
         if self.linear:
-            return TypeBound.Any
+            return ht.TypeBound.Any
         # We're conservative and don't require equatability for non-linear variables.
         # This is fine since Guppy doesn't use the equatable feature anyways.
-        return TypeBound.Copyable
+        return ht.TypeBound.Copyable
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> tys.Type:
+    def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
-        return tys.Type(tys.Variable(i=self.idx, b=self.hugr_bound))
+        return ht.Variable(i=self.idx, b=self.hugr_bound)
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -195,7 +197,7 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
         return {self}
 
     @cached_property
-    def hugr_bound(self) -> tys.TypeBound:
+    def hugr_bound(self) -> ht.TypeBound:
         """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
         raise InternalGuppyError(
             "Tried to compute bound of unsolved existential type variable"
@@ -205,7 +207,7 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> tys.Type:
+    def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
         raise InternalGuppyError(
             "Tried to convert unsolved existential type variable to Hugr"
@@ -225,7 +227,7 @@ class NoneType(TypeBase):
     """Type of tuples."""
 
     linear: bool = field(default=False, init=False)
-    hugr_bound: tys.TypeBound = field(default=tys.TypeBound.Copyable, init=False)
+    hugr_bound: ht.TypeBound = field(default=ht.TypeBound.Copyable, init=False)
 
     # Flag to avoid turning the type into a row when calling `type_to_row()`. This is
     # used to make sure that type vars instantiated to Nones are not broken up into
@@ -236,7 +238,7 @@ class NoneType(TypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> tys.Type:
+    def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
         return TupleType([]).to_hugr()
 
@@ -273,32 +275,28 @@ class NumericType(TypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> tys.Type:
+    def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
         match self.kind:
             case NumericType.Kind.Nat | NumericType.Kind.Int:
-                return tys.Type(
-                    tys.Opaque(
-                        extension="arithmetic.int.types",
-                        id="int",
-                        args=[tys.TypeArg(tys.BoundedNatArg(n=NumericType.INT_WIDTH))],
-                        bound=tys.TypeBound.Copyable,
-                    )
+                return ht.Opaque(
+                    extension="arithmetic.int.types",
+                    id="int",
+                    args=[ht.BoundedNatArg(n=NumericType.INT_WIDTH)],
+                    bound=ht.TypeBound.Copyable,
                 )
             case NumericType.Kind.Float:
-                return tys.Type(
-                    tys.Opaque(
-                        extension="arithmetic.float.types",
-                        id="float64",
-                        args=[],
-                        bound=tys.TypeBound.Copyable,
-                    )
+                return ht.Opaque(
+                    extension="arithmetic.float.types",
+                    id="float64",
+                    args=[],
+                    bound=ht.TypeBound.Copyable,
                 )
 
     @property
-    def hugr_bound(self) -> tys.TypeBound:
+    def hugr_bound(self) -> ht.TypeBound:
         """The Hugr bound of this type, i.e. `Any` or `Copyable`"""
-        return tys.TypeBound.Copyable
+        return ht.TypeBound.Copyable
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -321,7 +319,7 @@ class FunctionType(ParametrizedTypeBase):
     args: Sequence[Argument] = field(init=False)
     linear: bool = field(default=False, init=False)
     intrinsically_linear: bool = field(default=False, init=False)
-    hugr_bound: tys.TypeBound = field(default=TypeBound.Copyable, init=False)
+    hugr_bound: ht.TypeBound = field(default=ht.TypeBound.Copyable, init=False)
 
     def __init__(
         self,
@@ -348,21 +346,21 @@ class FunctionType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> tys.Type:
+    def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
         if self.parametrized:
             raise InternalGuppyError(
                 "Tried to convert parametrised function type to Hugr. Use "
                 "`to_hugr_poly` instead"
             )
-        return tys.Type(self._to_hugr_function_type())
+        return self._to_hugr_function_type()
 
-    def to_hugr_poly(self) -> tys.PolyFuncType:
+    def to_hugr_poly(self) -> ht.PolyFuncType:
         """Computes the Hugr `PolyFuncType` representation of the type."""
         func_ty = self._to_hugr_function_type()
-        return tys.PolyFuncType(params=[p.to_hugr() for p in self.params], body=func_ty)
+        return ht.PolyFuncType(params=[p.to_hugr() for p in self.params], body=func_ty)
 
-    def _to_hugr_function_type(self) -> tys.FunctionType:
+    def _to_hugr_function_type(self) -> ht.FunctionType:
         """Helper method to compute the Hugr `FunctionType` representation of the type.
 
         The resulting `FunctionType` can then be embedded into a Hugr `Type` or a Hugr
@@ -370,7 +368,7 @@ class FunctionType(ParametrizedTypeBase):
         """
         ins = [t.to_hugr() for t in self.inputs]
         outs = [t.to_hugr() for t in type_to_row(self.output)]
-        return tys.FunctionType(input=ins, output=outs)
+        return ht.FunctionType(input=ins, output=outs)
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -445,7 +443,7 @@ class TupleType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> tys.Type:
+    def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
         # Tuples are encoded as a unary sum. Note that we need to make a copy of this
         # tuple with `preserve=False` to ensure that it can be broken up into a row (if
@@ -485,15 +483,15 @@ class SumType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> tys.Type:
+    def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
         rows = [type_to_row(ty) for ty in self.element_types]
-        sum_inner: tys.UnitSum | tys.GeneralSum
+        sum_inner: ht.UnitSum | ht.GeneralSum
         if all(len(row) == 0 for row in rows):
-            sum_inner = tys.UnitSum(size=len(rows))
+            sum_inner = ht.UnitSum(size=len(rows))
         else:
-            sum_inner = tys.GeneralSum(rows=rows_to_hugr(rows))
-        return tys.Type(tys.SumType(sum_inner))
+            sum_inner = ht.GeneralSum(rows=rows_to_hugr(rows))
+        return ht.SumType(sum_inner)
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
@@ -518,7 +516,7 @@ class OpaqueType(ParametrizedTypeBase):
         return self.defn.always_linear
 
     @property
-    def hugr_bound(self) -> tys.TypeBound:
+    def hugr_bound(self) -> ht.TypeBound:
         """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
         if self.defn.bound is not None:
             return self.defn.bound
@@ -528,7 +526,7 @@ class OpaqueType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> tys.Type:
+    def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
         return self.defn.to_hugr(self.args)
 
@@ -568,7 +566,7 @@ class StructType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> tys.Type:
+    def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
         return TupleType([f.ty for f in self.fields]).to_hugr()
 
@@ -620,12 +618,12 @@ def type_to_row(ty: Type) -> TypeRow:
     return [ty]
 
 
-def row_to_hugr(row: TypeRow) -> tys.TypeRow:
+def row_to_hugr(row: TypeRow) -> ht.TypeRow:
     """Computes the Hugr representation of a type row."""
     return [ty.to_hugr() for ty in row]
 
 
-def rows_to_hugr(rows: Sequence[TypeRow]) -> list[tys.TypeRow]:
+def rows_to_hugr(rows: Sequence[TypeRow]) -> list[ht.TypeRow]:
     """Computes the Hugr representation of a sequence of rows."""
     return [row_to_hugr(row) for row in rows]
 
