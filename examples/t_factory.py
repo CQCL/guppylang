@@ -48,8 +48,10 @@ def distill(
     Other arguments are ancillae, which should also be in an approximate T state.
     Returns target qubit and a bool, which is true if the distillation succeeded.
     """
-    q0, q1, q2, q3 = (cz, cz)(q0, q1, q2, q3)
-    target, q0, q1, q2 = (cz, cz)(target, q0, q1, q2)
+    q0, q1 = cz(q0, q1)
+    q2, q3 = cz(q2, q3)
+    target, q0 = cz(target, q0)
+    q1, q2 = cz(q1, q2)
     target, q3 = cz(target, q3)
     # Measuring gives false for success, true for failure.
     # We check for all falses to say whether distillation succeeded.
