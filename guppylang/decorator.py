@@ -6,7 +6,9 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, TypeVar
 
-from hugr.serialization import ops, tys
+from hugr import Hugr
+from hugr import tys as ht
+from hugr.ops import DataflowOp
 
 from guppylang.ast_util import annotate_location, has_empty_body
 from guppylang.definition.common import DefId
@@ -25,7 +27,6 @@ from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
-from guppylang.hugr_builder.hugr import Hugr
 from guppylang.module import GuppyModule, PyFunc
 from guppylang.tys.ty import NumericType
 
@@ -122,10 +123,10 @@ class _Guppy:
     def type(
         self,
         module: GuppyModule,
-        hugr_ty: tys.Type,
+        hugr_ty: ht.Type,
         name: str = "",
         linear: bool = False,
-        bound: tys.TypeBound | None = None,
+        bound: ht.TypeBound | None = None,
     ) -> ClassDecorator:
         """Decorator to annotate a class definitions as Guppy types.
 
@@ -222,7 +223,7 @@ class _Guppy:
     def hugr_op(
         self,
         module: GuppyModule,
-        op: ops.OpType,
+        op: DataflowOp,
         checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
@@ -296,7 +297,7 @@ class _Guppy:
             raise MissingModuleError(err)
         return self._modules.pop(id)
 
-    def compile_module(self, id: ModuleIdentifier | None = None) -> Hugr | None:
+    def compile_module(self, id: ModuleIdentifier | None = None) -> Hugr:
         """Compiles the local module into a Hugr."""
         module = self.take_module(id)
         if not module:

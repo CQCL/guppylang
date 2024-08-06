@@ -1,21 +1,24 @@
 import ast
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from hugr.serialization import ops
+import hugr.function as hf
+import hugr.tys as ht
+from hugr import Wire
+from hugr.ops import DataflowOp
 
-from guppylang.ast_util import AstNode, get_type, with_loc, with_type
+from guppylang.ast_util import AstNode, with_loc, with_type
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
-from guppylang.definition.common import ParsableDef
+from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.value import CompiledCallableDef
 from guppylang.error import GuppyError, InternalGuppyError
-from guppylang.hugr_builder.hugr import Hugr, OutPortV
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import FunctionType, NoneType, Type, type_to_row
+from guppylang.tys.ty import FunctionType, NoneType, Type
 
 
 @dataclass(frozen=True)
@@ -27,6 +30,14 @@ class RawCustomFunctionDef(ParsableDef):
 
     The raw definition stores exactly what the user has written (i.e. the AST together
     with the provided checker and compiler), without inspecting the signature.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the definition.
+        defined_at: The AST node where the definition was defined.
+        call_checker: The custom call checker.
+        call_compiler: The custom call compiler.
+        higher_order_value: Whether the function may be used as a higher-order value.
     """
 
     defined_at: ast.FunctionDef
@@ -72,7 +83,7 @@ class RawCustomFunctionDef(ParsableDef):
             if requires_type_annotation
             else FunctionType([], NoneType())
         )
-        return CustomFunctionDef(
+        return CheckedCustomFunctionDef(
             self.id,
             self.name,
             self.defined_at,
@@ -84,27 +95,80 @@ class RawCustomFunctionDef(ParsableDef):
 
     def compile_call(
         self,
-        args: list[OutPortV],
+        builder: hf.Function,
+        args: list[Wire],
         type_args: Inst,
-        dfg: DFContainer,
-        graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> list[OutPortV]:
+    ) -> Sequence[Wire]:
         """Compiles a call to the function."""
-        self.call_compiler._setup(type_args, dfg, graph, globals, node)
+        self.call_compiler._setup(builder, type_args, globals, node)
         return self.call_compiler.compile(args)
 
 
 @dataclass(frozen=True)
-class CustomFunctionDef(CompiledCallableDef):
-    """A custom function with parsed and checked signature."""
+class CheckedCustomFunctionDef(CompilableDef):
+    """A custom function definition that has been `parsed` and checked.
 
-    defined_at: AstNode
+    Note that the `compile_outer` method for this class does not compile the
+    function immediately, but instead stores the module reference and delays the
+    compilation until the function is used.
+
+    Args:
+        id: The unique definition identifier. name: The name of the definition.
+        defined_at: The AST node where the definition was defined. ty: The type
+        of the function. call_checker: The custom call checker. call_compiler:
+        The custom call compiler. higher_order_value: Whether the function may
+        be used as a higher-order value.
+    """
+
+    ty: FunctionType
     call_checker: "CustomCallChecker"
     call_compiler: "CustomCallCompiler"
-    ty: FunctionType
     higher_order_value: bool
+
+    description: str = field(default="function", init=False)
+
+    def compile_outer(self, module: hf.Module) -> "CustomFunctionDef":
+        """Adds a Hugr `FuncDefn` node for this function to the Hugr.
+
+        Note that we don't compile the function body at this point. The
+        definition is monomorphised and compiled later in
+        `CustomFunctionDef.load_with_args`.
+        """
+        return CustomFunctionDef(
+            self.id,
+            self.name,
+            self.defined_at,
+            self.ty,
+            self.call_checker,
+            self.call_compiler,
+            self.higher_order_value,
+            module,
+        )
+
+
+@dataclass(frozen=True)
+class CustomFunctionDef(CompiledCallableDef):
+    """A custom function with parsed and checked signature.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the definition.
+        defined_at: The AST node where the definition was defined.
+        ty: The type of the function.
+        call_checker: The custom call checker.
+        call_compiler: The custom call compiler.
+        higher_order_value: Whether the function may be used as a higher-order value.
+        module: The `Module` where the function should be defined.
+    """
+
+    defined_at: AstNode
+    ty: FunctionType
+    call_checker: "CustomCallChecker"
+    call_compiler: "CustomCallCompiler"
+    higher_order_value: bool
+    module: hf.Module
 
     description: str = field(default="function", init=False)
 
@@ -134,16 +198,19 @@ class CustomFunctionDef(CompiledCallableDef):
         self,
         type_args: Inst,
         dfg: "DFContainer",
-        graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> OutPortV:
+    ) -> Wire:
         """Loads the custom function as a value into a local dataflow graph.
 
         This will place a `FunctionDef` node into the Hugr module and loads it into the
         DFG. This operation will fail the function is not allowed to be used as a
         higher-order value.
         """
+        # TODO: The description above says the function is defined in "the Hugr module".
+        #   However, before the refactor this seemed to define it inside the DFG. Which
+        #   one is correct?
+
         # TODO: This should be raised during checking, not compilation!
         if not self.higher_order_value:
             raise GuppyError(
@@ -156,36 +223,32 @@ class CustomFunctionDef(CompiledCallableDef):
         # function, and returns the results. If the function signature is polymorphic,
         # we explicitly monomorphise here and invoke the call compiler with the
         # inferred type args.
-        fun_ty = self.ty.instantiate(type_args)
-        def_node = graph.add_def(fun_ty, dfg.node, self.name)
-        with graph.parent(def_node):
-            _, inp_ports = graph.add_input_with_ports(list(fun_ty.inputs))
-            returns = self.compile_call(
-                inp_ports,
-                type_args,
-                DFContainer(graph, def_node),
-                graph,
-                globals,
-                node,
-            )
-            graph.add_output(returns)
+        #
+        # TODO: Reuse compiled instances with the same type args?
+        # TODO: Why do we need to monomorphise here?
+        fun_ty: FunctionType = self.ty.instantiate(type_args)
+        input_types: list[ht.Type] = [ty.to_hugr() for ty in fun_ty.inputs]
+        func: hf.Function = dfg.graph.define_function(
+            self.name, input_types, type_params=[]
+        )
+
+        outputs = self.compile_call(func, type_args, globals, node)
+        func.set_outputs(*outputs)
 
         # Finally, load the function into the local DFG. We already monomorphised, so we
-        # can load with empty type args
-        return graph.add_load_function(def_node.out_port(0), [], dfg.node).out_port(0)
+        # don't need to give it type arguments.
+        return dfg.graph.load_function(func)
 
     def compile_call(
         self,
-        args: list[OutPortV],
+        builder: hf.Function,
         type_args: Inst,
-        dfg: DFContainer,
-        graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> list[OutPortV]:
+    ) -> Sequence[Wire]:
         """Compiles a call to the function."""
-        self.call_compiler._setup(type_args, dfg, graph, globals, node)
-        return self.call_compiler.compile(args)
+        self.call_compiler._setup(builder, type_args, globals, node)
+        return self.call_compiler.compile(builder.inputs())
 
 
 class CustomCallChecker(ABC):
@@ -216,31 +279,38 @@ class CustomCallChecker(ABC):
 
 
 class CustomCallCompiler(ABC):
-    """Abstract base class for custom function call compilers."""
+    """Abstract base class for custom function call compilers.
 
+    Args:
+        builder: The function builder where the function should be defined.
+        type_args: The type arguments for the function.
+        globals: The compiled globals.
+        node: The AST node where the function is defined.
+    """
+
+    dfg: hf.Function
     type_args: Inst
-    dfg: DFContainer
-    graph: Hugr
     globals: CompiledGlobals
     node: AstNode
 
     def _setup(
         self,
+        builder: hf.Function,
         type_args: Inst,
-        dfg: DFContainer,
-        graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
     ) -> None:
+        self.builder = builder
         self.type_args = type_args
-        self.dfg = dfg
-        self.graph = graph
         self.globals = globals
         self.node = node
 
     @abstractmethod
-    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        """Compiles a custom function call and returns the resulting ports."""
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        """Compiles a custom function call and returns the resulting ports.
+
+        Use the provided `self.builder` to add nodes to the Hugr graph.
+        """
 
 
 class DefaultCallChecker(CustomCallChecker):
@@ -265,28 +335,25 @@ class NotImplementedCallCompiler(CustomCallCompiler):
     thus doesn't need to be compiled.
     """
 
-    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+    def compile(self, args: list[Wire]) -> Sequence[Wire]:
         raise InternalGuppyError("Function should have been removed during checking")
 
 
 class OpCompiler(CustomCallCompiler):
     """Call compiler for functions that are directly implemented via Hugr ops."""
 
-    op: ops.OpType
+    op: DataflowOp
 
-    def __init__(self, op: ops.OpType) -> None:
+    def __init__(self, op: DataflowOp) -> None:
         self.op = op
 
-    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        node = self.graph.add_node(
-            self.op.model_copy(deep=True), inputs=args, parent=self.dfg.node
-        )
-        return_ty = get_type(self.node)
-        return [node.add_out_port(ty) for ty in type_to_row(return_ty)]
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        node = self.builder.add_op(self.op, *args)
+        return node[:]
 
 
 class NoopCompiler(CustomCallCompiler):
     """Call compiler for functions that are noops."""
 
-    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+    def compile(self, args: list[Wire]) -> list[Wire]:
         return args

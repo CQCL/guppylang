@@ -5,9 +5,6 @@ from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
-from hugr.serialization import tys
-from hugr.serialization.tys import TypeBound
-
 from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor

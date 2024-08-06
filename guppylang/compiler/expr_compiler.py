@@ -4,7 +4,8 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any, TypeGuard, TypeVar
 
-from hugr.serialization import ops
+import hugr
+from hugr import val as hv
 
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
@@ -12,13 +13,6 @@ from guppylang.checker.core import Variable
 from guppylang.compiler.core import CompilerBase, DFContainer
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.error import GuppyError, InternalGuppyError
-from guppylang.hugr_builder.hugr import (
-    UNDEFINED,
-    DFContainingNode,
-    DummyOp,
-    OutPortV,
-    VNode,
-)
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
@@ -386,25 +380,20 @@ def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
     return False
 
 
-def python_value_to_hugr(v: Any, exp_ty: Type) -> ops.Value | None:
+def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
     """Turns a Python value into a Hugr value.
 
     Returns None if the Python value cannot be represented in Guppy.
     """
-    from guppylang.prelude._internal import (
-        bool_value,
-        float_value,
-        int_value,
-        list_value,
-    )
+    from guppylang.prelude._internal import ListVal
 
     match v:
         case bool():
-            return bool_value(v)
+            return hv.bool_value(v)
         case int():
-            return int_value(v)
+            return hugr.std.int.IntVal(v)
         case float():
-            return float_value(v)
+            return hugr.std.float.FloatVal(v)
         case tuple(elts):
             assert isinstance(exp_ty, TupleType)
             vs = [
@@ -412,12 +401,12 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> ops.Value | None:
                 for elt, ty in zip(elts, exp_ty.element_types, strict=True)
             ]
             if doesnt_contain_none(vs):
-                return ops.Value(ops.TupleValue(vs=vs))
+                return hv.Tuple(vals=vs)
         case list(elts):
             assert is_list_type(exp_ty)
             vs = [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
             if doesnt_contain_none(vs):
-                return list_value(vs, get_element_type(exp_ty))
+                return ListVal(vs, get_element_type(exp_ty))
         case _:
             # Pytket conversion is an optional feature
             try:
@@ -428,8 +417,8 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> ops.Value | None:
                         Tk2Circuit,
                     )
 
-                    hugr = json.loads(Tk2Circuit(v).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
-                    return ops.Value(ops.FunctionValue(hugr=hugr))
+                    circ = json.loads(Tk2Circuit(v).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
+                    return hv.Function(hugr=circ)
             except ImportError:
                 pass
     return None

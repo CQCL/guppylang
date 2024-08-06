@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 import pytest
 
-from hugr import OutPort
+from hugr import OutPort, Wire
 
 from guppylang.decorator import guppy
 from guppylang.definition.custom import CustomCallCompiler
@@ -279,7 +279,7 @@ def test_pass_linear(validate):
 
 def test_custom_higher_order():
     class CustomCompiler(CustomCallCompiler):
-        def compile(self, args: list[OutPort]) -> list[OutPort]:
+        def compile(self, args: list[Wire]) -> list[Wire]:
             return args
 
     module = GuppyModule("test")
