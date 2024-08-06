@@ -6,7 +6,7 @@ from hugr.dfg import Dfg
 from guppylang.checker.core import FieldAccess, Place, PlaceId, Variable
 from guppylang.definition.common import CompiledDef, DefId
 from guppylang.error import InternalGuppyError
-from guppylang.hugr_builder.hugr import DFContainingNode, Hugr, OutPortV
+from guppylang.hugr_builder.hugr import Hugr, OutPortV
 from guppylang.tys.ty import StructType
 
 CompiledGlobals = dict[DefId, CompiledDef]

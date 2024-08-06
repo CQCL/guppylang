@@ -1,8 +1,9 @@
 from typing import TYPE_CHECKING, Any
 
+from hugr import Hugr
+
 import guppylang
 from guppylang.definition.function import RawFunctionDef
-from guppylang.hugr_builder.hugr import Hugr
 from guppylang.module import GuppyModule
 
 if TYPE_CHECKING:
@@ -33,7 +34,7 @@ def dump_llvm(hugr: Hugr):
     try:
         from execute_llvm import compile_module_to_string
 
-        hugr_json = hugr.serialize()
+        hugr_json = hugr.to_serial()
         llvm_module = compile_module_to_string(hugr_json)
         print(llvm_module)  # noqa: T201
 
@@ -52,5 +53,5 @@ def guppy_to_circuit(guppy_func: RawFunctionDef) -> "Tk2Circuit":
     hugr = module.compile()
     assert hugr is not None, "Module must be compilable"
 
-    json = hugr.to_raw().to_json()
+    json = hugr.to_serial()
     return Tk2Circuit.from_guppy_json(json, guppy_func.name)
