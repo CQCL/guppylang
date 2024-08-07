@@ -187,7 +187,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         """Loads the function as a value into a local Hugr dataflow graph."""
         func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr_poly().body
         type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
-        return dfg.graph.load_function(self.func_def, func_ty, type_args)
+        return dfg.builder.load_function(self.func_def, func_ty, type_args)
 
     def compile_call(
         self,
@@ -200,10 +200,10 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         """Compiles a call to the function."""
         func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr_poly().body
         type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
-        call = dfg.graph.call(self.func_def, args, func_ty, type_args)
-        return [call.out_port(i) for i in range(len(type_to_row(self.ty.output)))]
+        call = dfg.builder.call(self.func_def, args, func_ty, type_args)
+        return call[:]
 
-    def compile_inner(self, graph: Hugr, globals: CompiledGlobals) -> None:
+    def compile_inner(self, globals: CompiledGlobals) -> None:
         """Compiles the body of the function."""
         compile_global_func_def(self, self.func_def, globals)
 
