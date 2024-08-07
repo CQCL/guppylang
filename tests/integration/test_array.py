@@ -1,8 +1,8 @@
 from hugr.serialization import ops
+from hugr.std.int import IntVal
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude._internal import ConstInt
 from guppylang.prelude.builtins import array
 from tests.util import compile_guppy
 
@@ -23,7 +23,7 @@ def test_len(validate):
         if isinstance(node.op.root, ops.Const)
     ]
     assert isinstance(val, ops.ExtensionValue)
-    assert isinstance(val.value.v, ConstInt)
+    assert isinstance(val.value.v, IntVal)
     assert val.value.v.value == 42
 
 

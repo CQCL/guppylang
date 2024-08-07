@@ -8,7 +8,7 @@ from hugr import tys as ht
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude._internal import MeasureCompiler, QAllocCompiler
+from guppylang.prelude._internal.compiler import MeasureCompiler, QAllocCompiler
 
 quantum = GuppyModule("quantum")
 
@@ -40,9 +40,7 @@ def quantum_op(
     )
 
     out_qubits = out_qubits if out_qubits is not None else qubits
-    output = [ht.Qubit for _ in range(out_qubits)] + [
-        ht.Bool() for _ in range(out_bits)
-    ]
+    output = [ht.Qubit for _ in range(out_qubits)] + [ht.Bool for _ in range(out_bits)]
 
     return ops.Custom(
         name=op_name,

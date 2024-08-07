@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from typing import Any, TypeVar
 
 import hugr
+import hugr.std.float
+import hugr.std.int
 from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
@@ -132,7 +134,7 @@ def logic_op(
         typ = ht.Bool()
     else:
         assert len(args) == 1, "Logic ops should have at most one type argument."
-        ht.Variable(idx=0, bound=ht.TypeBound.Any)
+        typ = ht.Variable(idx=0, bound=ht.TypeBound.Any)
 
     sig = ht.FunctionType(input=[typ for _ in range(inputs)], output=[typ])
 
