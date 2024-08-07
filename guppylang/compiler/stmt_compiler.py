@@ -2,7 +2,7 @@ import ast
 from collections.abc import Sequence
 
 from hugr import Wire, ops
-from hugr.dfg import Dfg
+from hugr.dfg import _DfBase
 
 from guppylang.ast_util import AstVisitor, get_type
 from guppylang.checker.core import Variable
@@ -15,7 +15,7 @@ from guppylang.compiler.core import (
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.error import InternalGuppyError
 from guppylang.nodes import CheckedNestedFunctionDef, PlaceNode
-from guppylang.tys.ty import TupleType
+from guppylang.tys.ty import TupleType, Type
 
 
 class StmtCompiler(CompilerBase, AstVisitor[None]):
@@ -45,7 +45,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         return self.dfg
 
     @property
-    def builder(self) -> Dfg:
+    def builder(self) -> _DfBase[ops.DfParentOp]:
         """The Hugr dataflow graph builder."""
         return self.dfg.builder
 
@@ -83,14 +83,18 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         if node.value is not None:
             return_ty = get_type(node.value)
             port = self.expr_compiler.compile(node.value, self.dfg)
+
+            row: list[tuple[Wire, Type]]
             if isinstance(return_ty, TupleType):
                 types = [e.to_hugr() for e in return_ty.element_types]
-                row = self.builder.add_op(ops.UnpackTuple(types), port)[:]
+                unpack = self.builder.add_op(ops.UnpackTuple(types), port)
+                row = list(zip(unpack[:], return_ty.element_types, strict=True))
             else:
-                row = [port]
-            for i, port in enumerate(row):
-                var = Variable(return_var(i), port.ty, node.value)
-                self.dfg[var] = port
+                row = [(port, return_ty)]
+
+            for i, (wire, ty) in enumerate(row):
+                var = Variable(return_var(i), ty, node.value)
+                self.dfg[var] = wire
 
     def visit_CheckedNestedFunctionDef(self, node: CheckedNestedFunctionDef) -> None:
         from guppylang.compiler.func_compiler import compile_local_func_def

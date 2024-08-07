@@ -46,7 +46,7 @@ def builtin_type_to_hugr(ty: Any) -> ht.Type:
         raise ValueError(f"Unsupported type: {ty}")
 
 
-def dummy_op(name: str, inp: Sequence[Any], out: Sequence[Any]) -> ops.Op:
+def dummy_op(name: str, inp: Sequence[Any], out: Sequence[Any]) -> ops.DataflowOp:
     """Dummy operation.
 
     `inp` and `out` are lists of python types,
@@ -75,7 +75,7 @@ def float_op(
     inp: Sequence[Any],
     out: Sequence[Any],
     ext: str = "arithmetic.float",
-) -> ops.Op:
+) -> ops.DataflowOp:
     """Utility method to create Hugr float arithmetic ops.
 
     Args:
@@ -96,7 +96,7 @@ def int_op(
     *,
     args: list[ht.TypeArg] | None = None,
     num_params: int = 1,
-) -> ops.Op:
+) -> ops.DataflowOp:
     """Utility method to create Hugr integer arithmetic ops.
 
     Args:
@@ -110,15 +110,17 @@ def int_op(
     #     Can't we just accept some `input` and `output` type rows?
 
     if args is None:
-        args = num_params * [ht.BoundedNatArg(n=NumericType.INT_WIDTH)]
+        args = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)] * num_params
     else:
         num_params = len(args)
     assert (
         num_params > 0
     ), "Integer ops should have at least one type parameter."  # TODO: Why?
 
-    output = [ht.Variable(idx=0, bound=ht.TypeBound.Any)]
-    input = [ht.Variable(idx=i, bound=ht.TypeBound.Any) for i in range(len(args))]
+    output: list[ht.Type] = [ht.Variable(idx=0, bound=ht.TypeBound.Any)]
+    input: list[ht.Type] = [
+        ht.Variable(idx=i, bound=ht.TypeBound.Any) for i in range(len(args))
+    ]
 
     sig = ht.FunctionType(input=input, output=output)
     return ops.Custom(extension=ext, signature=sig, name=op_name, args=args)
@@ -126,12 +128,12 @@ def int_op(
 
 def logic_op(
     op_name: str, args: list[ht.TypeArg] | None = None, *, inputs: int = 2
-) -> ops.Op:
+) -> ops.DataflowOp:
     """Utility method to create Hugr logic ops."""
     args = args or []
     typ: ht.Type
     if not args:
-        typ = ht.Bool()
+        typ = ht.Bool
     else:
         assert len(args) == 1, "Logic ops should have at most one type argument."
         typ = ht.Variable(idx=0, bound=ht.TypeBound.Any)

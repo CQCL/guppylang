@@ -6,7 +6,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, TypeVar
 
-from hugr import Hugr
+from hugr import Hugr, ops
 from hugr import tys as ht
 from hugr.ops import DataflowOp
 
@@ -297,7 +297,7 @@ class _Guppy:
             raise MissingModuleError(err)
         return self._modules.pop(id)
 
-    def compile_module(self, id: ModuleIdentifier | None = None) -> Hugr:
+    def compile_module(self, id: ModuleIdentifier | None = None) -> Hugr[ops.Module]:
         """Compiles the local module into a Hugr."""
         module = self.take_module(id)
         if not module:

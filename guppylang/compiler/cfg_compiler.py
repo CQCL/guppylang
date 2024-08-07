@@ -1,10 +1,11 @@
 import functools
 from collections.abc import Sequence
+from typing import TypeVar
 
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.cfg import Block, Cfg
-from hugr.dfg import Dfg
+from hugr.dfg import _DfBase
 from hugr.node_port import ToNode
 
 from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
@@ -20,10 +21,12 @@ from guppylang.compiler.stmt_compiler import StmtCompiler
 from guppylang.tys.builtin import is_bool_type
 from guppylang.tys.ty import SumType, Type, row_to_type, type_to_row
 
+DP = TypeVar("DP", bound=ops.DfParentOp)
+
 
 def compile_cfg(
     cfg: CheckedCFG[Place],
-    container: Dfg,
+    container: _DfBase[DP],
     inputs: Sequence[Wire],
     globals: CompiledGlobals,
 ) -> Cfg:
@@ -59,7 +62,7 @@ def compile_bb(
 
     # Otherwise, we use a regular `Block` node
     inputs = bb.sig.input_row if is_entry else sort_vars(bb.sig.input_row)
-    block: Block = builder.add_block([v.ty.to_hugr() for v in inputs])
+    block: Block = builder.add_block(*(v.ty.to_hugr() for v in inputs))
 
     # Add input node and compile the statements
     dfg = DFContainer(block)
@@ -144,6 +147,7 @@ def choose_vars_for_tuple_sum(
     assert all(not v.ty.linear for var_row in output_vars for v in var_row)
     tys = [[v.ty for v in var_row] for var_row in output_vars]
     sum_type = SumType([row_to_type(row) for row in tys]).to_hugr()
+    assert isinstance(sum_type, ht.Sum)
 
     with dfg.builder.add_conditional(unit_sum) as conditional:
         for i, var_row in enumerate(output_vars):

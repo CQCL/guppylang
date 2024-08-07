@@ -2,11 +2,12 @@ import ast
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import cast
 
 import hugr.function as hf
 import hugr.tys as ht
-from hugr import Wire
-from hugr.ops import DataflowOp
+from hugr import Wire, ops
+from hugr.dfg import _DfBase
 
 from guppylang.ast_util import AstNode, with_loc, with_type
 from guppylang.checker.core import Context, Globals
@@ -50,7 +51,7 @@ class RawCustomFunctionDef(ParsableDef):
 
     description: str = field(default="function", init=False)
 
-    def parse(self, globals: "Globals") -> "CustomFunctionDef":
+    def parse(self, globals: "Globals") -> "CheckedCustomFunctionDef":
         """Parses and checks the user-provided signature of the custom function.
 
         The signature is optional if custom type checking logic is provided by the user.
@@ -122,6 +123,7 @@ class CheckedCustomFunctionDef(CompilableDef):
         be used as a higher-order value.
     """
 
+    defined_at: ast.FunctionDef
     ty: FunctionType
     call_checker: "CustomCallChecker"
     call_compiler: "CustomCallCompiler"
@@ -228,11 +230,14 @@ class CustomFunctionDef(CompiledCallableDef):
         # TODO: Why do we need to monomorphise here?
         fun_ty: FunctionType = self.ty.instantiate(type_args)
         input_types: list[ht.Type] = [ty.to_hugr() for ty in fun_ty.inputs]
-        func: hf.Function = dfg.builder.define_function(
+        func: hf.Function = self.module.define_function(
             self.name, input_types, type_params=[]
         )
 
-        outputs = self.compile_call(func, type_args, globals, node)
+        func_dfg = DFContainer(func, dfg.locals.copy())
+        args = cast(list[Wire], func.inputs())
+        outputs = self.compile_call(args, type_args, func_dfg, globals, node)
+
         func.set_outputs(*outputs)
 
         # Finally, load the function into the local DFG. We already monomorphised, so we
@@ -241,14 +246,18 @@ class CustomFunctionDef(CompiledCallableDef):
 
     def compile_call(
         self,
-        builder: hf.Function,
+        args: list[Wire],
         type_args: Inst,
+        dfg: "DFContainer",
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> Sequence[Wire]:
+    ) -> list[Wire]:
         """Compiles a call to the function."""
+        builder = dfg.builder
+        assert isinstance(builder, hf.Function)
+
         self.call_compiler._setup(builder, type_args, globals, node)
-        return self.call_compiler.compile(builder.inputs())
+        return self.call_compiler.compile(args)
 
 
 class CustomCallChecker(ABC):
@@ -288,7 +297,7 @@ class CustomCallCompiler(ABC):
         node: The AST node where the function is defined.
     """
 
-    dfg: hf.Function
+    builder: hf.Function
     type_args: Inst
     globals: CompiledGlobals
     node: AstNode
@@ -311,6 +320,11 @@ class CustomCallCompiler(ABC):
 
         Use the provided `self.builder` to add nodes to the Hugr graph.
         """
+
+    @property
+    def dfg(self) -> DFContainer:
+        """The dataflow graph container."""
+        return DFContainer(self.builder)
 
 
 class DefaultCallChecker(CustomCallChecker):
@@ -335,21 +349,21 @@ class NotImplementedCallCompiler(CustomCallCompiler):
     thus doesn't need to be compiled.
     """
 
-    def compile(self, args: list[Wire]) -> Sequence[Wire]:
+    def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Function should have been removed during checking")
 
 
 class OpCompiler(CustomCallCompiler):
     """Call compiler for functions that are directly implemented via Hugr ops."""
 
-    op: DataflowOp
+    op: ops.DataflowOp
 
-    def __init__(self, op: DataflowOp) -> None:
+    def __init__(self, op: ops.DataflowOp) -> None:
         self.op = op
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         node = self.builder.add_op(self.op, *args)
-        return node[:]
+        return list(node)
 
 
 class NoopCompiler(CustomCallCompiler):

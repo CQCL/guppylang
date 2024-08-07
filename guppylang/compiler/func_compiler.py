@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from hugr import Wire, ops
 from hugr import tys as ht
@@ -23,7 +23,7 @@ def compile_global_func_def(
     """Compiles a top-level function definition to Hugr."""
     cfg = compile_cfg(func.cfg, builder, builder.inputs(), globals)
 
-    builder.set_outputs(cfg[:])
+    builder.set_outputs(*cfg[:])
 
 
 def compile_local_func_def(
@@ -39,13 +39,14 @@ def compile_local_func_def(
 
     # Pick an order for the captured variables
     captured = list(func.captured.values())
+    captured_types = [v.ty for v, _ in captured]
 
     # Whether the function calls itself recursively.
     recursive = func.name in func.cfg.live_before[func.cfg.entry_bb]
 
     # Prepend captured variables to the function arguments
     closure_ty = FunctionType(
-        [v.ty for v, _ in captured] + list(func.ty.inputs),
+        captured_types + list(func.ty.inputs),
         func.ty.output,
         input_names=[v.name for v, _ in captured] + list(func.ty.input_names),
     )
@@ -56,11 +57,11 @@ def compile_local_func_def(
     # If we have captured variables and the body contains a recursive occurrence of
     # the function itself, then we provide the partially applied function as a local
     # variable
-    call_args = func_builder.inputs()
+    call_args = cast(list[Wire], func_builder.inputs())
     if len(captured) > 0 and recursive:
         loaded = func_builder.load_function(func_builder, hugr_closure_ty)
         partial = func_builder.add_op(
-            make_partial_op(closure_ty, captured),
+            make_partial_op(closure_ty, captured_types),
             loaded,
             *func_builder.input_node[: len(captured)],
         )
@@ -86,21 +87,23 @@ def compile_local_func_def(
 
     # Compile the CFG
     cfg = compile_cfg(func.cfg, func_builder, call_args, globals)
-    func_builder.set_outputs(cfg[:])
+    func_builder.set_outputs(*cfg[:])
 
     # Finally, load the function into the local data-flow graph
     loaded = dfg.builder.load_function(func_builder, hugr_closure_ty)
     if len(captured) > 0:
         loaded = dfg.builder.add_op(
-            make_partial_op(closure_ty, captured),
+            make_partial_op(closure_ty, captured_types),
             loaded,
             *(dfg[v] for v, _ in captured),
         )
 
-    return loaded
+    return (func_builder, loaded)
 
 
-def make_dummy_op(name: str, inp: Sequence[Type], out: Sequence[Type]) -> ops.Op:
+def make_dummy_op(
+    name: str, inp: Sequence[Type], out: Sequence[Type]
+) -> ops.DataflowOp:
     """Dummy operation."""
     input = [ty.to_hugr() for ty in inp]
     output = [ty.to_hugr() for ty in out]
@@ -109,10 +112,10 @@ def make_dummy_op(name: str, inp: Sequence[Type], out: Sequence[Type]) -> ops.Op
     return ops.Custom(name=name, extension="dummy", signature=sig, args=[])
 
 
-def make_partial_op(func_ty: FunctionType, inputs: Sequence[Type]) -> ops.Op:
+def make_partial_op(func_ty: FunctionType, inputs: Sequence[Type]) -> ops.DataflowOp:
     """Creates a dummy operation for partially evaluating a function."""
     assert len(func_ty.inputs) >= len(inputs)
-    assert [p.ty.to_hugr() for p in inputs] == [
+    assert [p.to_hugr() for p in inputs] == [
         ty.to_hugr() for ty in func_ty.inputs[: len(inputs)]
     ]
     return make_dummy_op("partial", func_ty.inputs[len(inputs) :], [func_ty.output])

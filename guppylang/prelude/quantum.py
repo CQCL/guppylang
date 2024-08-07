@@ -33,14 +33,16 @@ def quantum_op(
     # TODO: Use a common definition from either `hugr` or `tket2`, and drop all
     # the extra parameters.
 
-    input = (
+    input: list[ht.Type] = (
         [ht.Qubit for _ in range(qubits)]
-        + [ht.Bool() for _ in range(in_bits)]
+        + [ht.Bool for _ in range(in_bits)]
         + [hugr.std.float.FLOAT_T for _ in range(in_floats)]
     )
 
     out_qubits = out_qubits if out_qubits is not None else qubits
-    output = [ht.Qubit for _ in range(out_qubits)] + [ht.Bool for _ in range(out_bits)]
+    output: list[ht.Type] = [ht.Qubit for _ in range(out_qubits)] + [
+        ht.Bool for _ in range(out_bits)
+    ]
 
     return ops.Custom(
         name=op_name,

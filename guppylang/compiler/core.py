@@ -1,8 +1,9 @@
 from abc import ABC
 from dataclasses import dataclass, field
+from typing import TypeVar, cast
 
 from hugr import Wire, ops
-from hugr.dfg import Dfg
+from hugr.dfg import _DfBase
 
 from guppylang.checker.core import FieldAccess, Place, PlaceId, Variable
 from guppylang.definition.common import CompiledDef, DefId
@@ -11,6 +12,8 @@ from guppylang.tys.ty import StructType
 
 CompiledGlobals = dict[DefId, CompiledDef]
 CompiledLocals = dict[PlaceId, Wire]
+
+DP = TypeVar("DP", bound=ops.DfParentOp)
 
 
 @dataclass
@@ -23,8 +26,17 @@ class DFContainer:
     current compilation state.
     """
 
-    builder: Dfg
+    builder: _DfBase[ops.DfParentOp]
     locals: CompiledLocals = field(default_factory=dict)
+
+    def __init__(
+        self, builder: _DfBase[DP], locals: CompiledLocals | None = None
+    ) -> None:
+        generic_builder = cast(_DfBase[ops.DfParentOp], builder)
+        if locals is None:
+            locals = {}
+        self.builder = generic_builder
+        self.locals = locals
 
     def __getitem__(self, place: Place) -> Wire:
         """Constructs a port for a local place in this DFG.
@@ -42,7 +54,7 @@ class DFContainer:
         children = [FieldAccess(place, field, None) for field in place.ty.fields]
         child_types = [child.ty.to_hugr() for child in children]
         child_wires = [self[child] for child in children]
-        wire = self.builder.add_op(ops.MakeTuple(child_types), child_wires)[0]
+        wire = self.builder.add_op(ops.MakeTuple(child_types), *child_wires)[0]
         for child in children:
             if child.ty.linear:
                 self.locals.pop(child.id)
@@ -55,7 +67,7 @@ class DFContainer:
         is_return = isinstance(place, Variable) and is_return_var(place.name)
         if isinstance(place.ty, StructType) and not is_return:
             unpack = self.builder.add_op(
-                ops.UnpackTuple(t.ty.to_hugr() for t in place.ty.fields), [port]
+                ops.UnpackTuple([t.ty.to_hugr() for t in place.ty.fields]), port
             )
             for field, field_port in zip(place.ty.fields, unpack[:], strict=True):
                 self[FieldAccess(place, field, None)] = field_port

@@ -2,14 +2,14 @@ import ast
 import json
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from typing import Any, TypeGuard, TypeVar
+from typing import Any, TypeGuard, TypeVar, cast
 
 import hugr
 from hugr import Node, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
 from hugr.cond_loop import Conditional
-from hugr.dfg import Dfg
+from hugr.dfg import _DfBase
 
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
@@ -42,6 +42,8 @@ from guppylang.tys.ty import (
     Type,
 )
 
+DP = TypeVar("DP", bound=ops.DfParentOp)
+
 
 class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     """A compiler from guppylang expressions to Hugr."""
@@ -63,12 +65,14 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return [self.compile(e, dfg) for e in expr_to_row(expr)]
 
     @property
-    def builder(self) -> Dfg:
+    def builder(self) -> _DfBase[ops.DfParentOp]:
         """The current Hugr dataflow graph builder."""
         return self.dfg.builder
 
     @contextmanager
-    def _new_dfcontainer(self, inputs: list[PlaceNode], builder: Dfg) -> Iterator[None]:
+    def _new_dfcontainer(
+        self, inputs: list[PlaceNode], builder: _DfBase[DP]
+    ) -> Iterator[None]:
         """Context manager to build a graph inside a new `DFContainer`.
 
         Automatically updates `self.dfg` and makes the inputs available.
@@ -79,7 +83,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             inputs
         ), "Inputs are not unique"
         self.dfg = DFContainer(builder, self.dfg.locals.copy())
-        hugr_input: Node = builder.input_node()
+        hugr_input: Node = builder.input_node
         for input_node, wire in zip(inputs, hugr_input[:], strict=True):
             self.dfg[input_node.place] = wire
 
@@ -129,7 +133,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         case = conditional.add_case(case_id)
         with self._new_dfcontainer(inputs, case):
             yield
-            case.set_outputs([self.visit(name) for name in outputs])
+            case.set_outputs(*(self.visit(name) for name in outputs))
 
     @contextmanager
     def _if_true(self, cond: ast.expr, inputs: list[PlaceNode]) -> Iterator[None]:
@@ -138,7 +142,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         In the `false` case, the inputs are outputted as is.
         """
         conditional = self.builder.add_conditional(
-            self.visit(cond), [self.visit(inp) for inp in inputs]
+            self.visit(cond), *(self.visit(inp) for inp in inputs)
         )
         with self._new_case(inputs, inputs, conditional, 0):
             yield
@@ -183,20 +187,20 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         out_type = get_type(node)
         return self.builder.add_op(
             make_list_op(in_types, out_type),
-            inputs=inputs,
+            *inputs,
         )
 
     def _unpack_tuple(self, wire: Wire, types: Sequence[Type]) -> Sequence[Wire]:
         """Add a tuple unpack operation to the graph"""
         types = [t.to_hugr() for t in types]
-        return self.builder.add_op(ops.UnpackTuple(types), wire)[:]
+        return list(self.builder.add_op(ops.UnpackTuple(types), wire))
 
     def _pack_tuple(self, wires: Sequence[Wire], types: Sequence[Type]) -> Wire:
         """Add a tuple pack operation to the graph"""
         types = [t.to_hugr() for t in types]
         return self.builder.add_op(ops.MakeTuple(types), *wires)
 
-    def _pack_returns(self, returns: list[Wire], return_ty: Type) -> Wire:
+    def _pack_returns(self, returns: Sequence[Wire], return_ty: Type) -> Wire:
         """Groups function return values into a tuple"""
         if isinstance(return_ty, TupleType | NoneType) and not return_ty.preserve:
             types = return_ty.element_types if isinstance(return_ty, TupleType) else []
@@ -210,9 +214,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
 
+        func_hugr_ty = func_ty.to_hugr_poly().body
+        assert isinstance(func_hugr_ty, ht.FunctionType)
+
         args = [self.visit(arg) for arg in node.args]
-        call = self.builder.add_op(ops.CallIndirect(func_ty.to_hugr()), func, *args)
-        return self._pack_returns(call[:], func.ty.output)
+        call = self.builder.add_op(ops.CallIndirect(func_hugr_ty), func, *args)
+        return self._pack_returns(list(call), func_ty.output)
 
     def visit_TensorCall(self, node: TensorCall) -> Wire:
         functions: Wire = self.visit(node.func)
@@ -241,8 +248,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def _compile_tensor_with_leftovers(
         self, func: Wire, func_ty: Type, args: list[Wire]
     ) -> tuple[
-        Sequence[Wire],  # Compiled outputs
-        Sequence[Wire],  # Leftover args
+        list[Wire],  # Compiled outputs
+        list[Wire],  # Leftover args
     ]:
         """Compiles a function call, consuming as many arguments as needed, and
         returning the unused ones.
@@ -262,12 +269,18 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             return all_outs, remaining_args
 
         elif isinstance(func_ty, FunctionType):
+            hugr_ty = func_ty.to_hugr()
+            assert isinstance(hugr_ty, ht.FunctionType)
+
+            func_hugr_ty = func_ty.to_hugr_poly().body
+            assert isinstance(func_hugr_ty, ht.FunctionType)
+
             input_len = len(func_ty.inputs)
             call = self.builder.add_op(
-                ops.CallIndirect(func_ty.to_hugr()), func, *args[0:input_len]
+                ops.CallIndirect(func_hugr_ty), func, *args[0:input_len]
             )
 
-            return call[:], args[input_len:]
+            return list(call), args[input_len:]
         else:
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
@@ -319,7 +332,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> Wire:
         struct_port = self.visit(node.value)
-        return self._unpack_tuple(struct_port, [f.ty for f in node.struct_ty.fields])
+        return self._unpack_tuple(struct_port, [f.ty for f in node.struct_ty.fields])[0]
 
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
         type_args = [
@@ -355,8 +368,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             # If there are no more generators left, just append the element to the list
             if not gens:
                 list_port, elt_port = self.visit(list_name), self.visit(elt)
+                elt_ty = get_type(elt)
                 push = self.builder.add_op(
-                    list_push_op(list_port, elt_port), list_port, elt_port
+                    list_push_op(list_ty, elt_ty), list_port, elt_port
                 )
                 self.dfg[list_place] = push
                 return
@@ -419,7 +433,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
 
     Returns None if the Python value cannot be represented in Guppy.
     """
-    from guppylang.prelude._internal import ListVal
+    from guppylang.prelude._internal.util import ListVal
 
     match v:
         case bool():
@@ -435,7 +449,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
                 for elt, ty in zip(elts, exp_ty.element_types, strict=True)
             ]
             if doesnt_contain_none(vs):
-                return hv.Tuple(vals=vs)
+                return hv.Tuple(*vs)
         case list(elts):
             assert is_list_type(exp_ty)
             vs = [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
@@ -452,13 +466,15 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
                     )
 
                     circ = json.loads(Tk2Circuit(v).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
-                    return hv.Function(hugr=circ)
+                    return hv.Function(circ)
             except ImportError:
                 pass
     return None
 
 
-def make_dummy_op(name: str, inp: Sequence[Type], out: Sequence[Type]) -> ops.Op:
+def make_dummy_op(
+    name: str, inp: Sequence[Type], out: Sequence[Type]
+) -> ops.DataflowOp:
     """Dummy operation."""
     input = [ty.to_hugr() for ty in inp]
     output = [ty.to_hugr() for ty in out]
@@ -467,12 +483,12 @@ def make_dummy_op(name: str, inp: Sequence[Type], out: Sequence[Type]) -> ops.Op
     return ops.Custom(name=name, extension="dummy", signature=sig, args=[])
 
 
-def make_list_op(in_types: Sequence[Type], out_type: Type) -> ops.Op:
+def make_list_op(in_types: Sequence[Type], out_type: Type) -> ops.DataflowOp:
     """Creates a dummy operation for constructing a list."""
     return make_dummy_op("MakeList", in_types, [out_type])
 
 
-def list_push_op(list_ty: Type, elem_ty: Type) -> ops.Op:
+def list_push_op(list_ty: Type, elem_ty: Type) -> ops.DataflowOp:
     """Creates a dummy operation for constructing a list."""
     return make_dummy_op("Push", [list_ty, elem_ty], [list_ty])
 

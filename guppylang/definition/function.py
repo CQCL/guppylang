@@ -147,7 +147,8 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        func_def = module.define_function(self.name, self.ty.to_hugr_poly())
+        input_types = self.ty.to_hugr_poly().body.input
+        func_def = module.define_function(self.name, input_types)
         return CompiledFunctionDef(
             self.id,
             self.name,
@@ -200,8 +201,10 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         """Compiles a call to the function."""
         func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr_poly().body
         type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
-        call = dfg.builder.call(self.func_def, args, func_ty, type_args)
-        return call[:]
+        call = dfg.builder.call(
+            self.func_def, *args, instantiation=func_ty, type_args=type_args
+        )
+        return list(call)
 
     def compile_inner(self, globals: CompiledGlobals) -> None:
         """Compiles the body of the function."""

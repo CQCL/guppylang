@@ -171,11 +171,16 @@ class GuppyModule:
         }
 
     @pretty_errors
-    def compile(self) -> Hugr:
+    def compile(self) -> Hugr[ops.Module]:
         """Compiles the module and returns the final Hugr."""
         if self.compiled:
             assert self._compiled_hugr is not None, "Module is compiled but has no Hugr"
             return self._compiled_hugr
+
+        # Prepare Hugr for this module
+        graph = Module()
+        # TODO: Metadata not yet supported
+        # graph.set_root_metadata("name", self.name)
 
         # Type definitions need to be checked first so that we can use them when parsing
         # function signatures etc.
@@ -189,7 +194,7 @@ class GuppyModule:
         for defn in type_defs.values():
             if isinstance(defn, CheckedStructDef):
                 self._globals.impls.setdefault(defn.id, {})
-                for method_def in defn.generated_methods:
+                for method_def in defn.generated_methods(graph):
                     generated[method_def.id] = method_def
                     self._globals.impls[defn.id][method_def.name] = method_def.id
 
@@ -198,11 +203,6 @@ class GuppyModule:
             self._raw_defs | generated, self._imported_globals | self._globals
         )
         self._globals = self._globals.update_defs(other_defs)
-
-        # Prepare Hugr for this module
-        graph = Module()
-        # TODO: Metadata not yet supported
-        # graph.set_root_metadata("name", self.name)
 
         # Compile definitions to Hugr
         self._compiled_globals = {
@@ -218,10 +218,10 @@ class GuppyModule:
         for defn in self._compiled_globals.values():
             defn.compile_inner(all_compiled_globals)
 
-        graph = graph.hugr
+        hugr = graph.hugr
         self._compiled = True
-        self._compiled_hugr = graph
-        return graph
+        self._compiled_hugr = hugr
+        return hugr
 
     def contains(self, name: str) -> bool:
         """Returns 'True' if the module contains an object with the given name."""

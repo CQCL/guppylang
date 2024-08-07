@@ -159,7 +159,7 @@ class BoundTypeVar(TypeBase, BoundVar):
 
     def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
-        return ht.Variable(i=self.idx, b=self.hugr_bound)
+        return ht.Variable(idx=self.idx, bound=self.hugr_bound)
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -486,12 +486,12 @@ class SumType(ParametrizedTypeBase):
     def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
         rows = [type_to_row(ty) for ty in self.element_types]
-        sum_inner: ht.UnitSum | ht.GeneralSum
+        sum: ht.Sum
         if all(len(row) == 0 for row in rows):
-            sum_inner = ht.UnitSum(size=len(rows))
+            sum = ht.UnitSum(size=len(rows))
         else:
-            sum_inner = ht.GeneralSum(rows=rows_to_hugr(rows))
-        return ht.SumType(sum_inner)
+            sum = ht.Sum(variant_rows=rows_to_hugr(rows))
+        return sum
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""

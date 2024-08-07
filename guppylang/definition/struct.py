@@ -7,6 +7,7 @@ from functools import cached_property
 from typing import Any
 
 from hugr import Wire, ops
+from hugr import function as hf
 
 from guppylang.ast_util import AstNode, annotate_location
 from guppylang.checker.core import Globals
@@ -194,15 +195,14 @@ class CheckedStructDef(TypeDef, CompiledDef):
         check_all_args(self.params, args, self.name, loc)
         return StructType(args, self)
 
-    @cached_property
-    def generated_methods(self) -> list[CustomFunctionDef]:
+    def generated_methods(self, module: hf.Module) -> list[CustomFunctionDef]:
         """Auto-generated methods for this struct."""
 
         class ConstructorCompiler(CustomCallCompiler):
             """Compiler for the `__new__` constructor method of a struct."""
 
             def compile(self, args: list[Wire]) -> list[Wire]:
-                self.builder.add(ops.MakeTuple()(*args))[:]
+                return list(self.builder.add(ops.MakeTuple()(*args)))
 
         constructor_sig = FunctionType(
             inputs=[f.ty for f in self.fields],
@@ -220,6 +220,7 @@ class CheckedStructDef(TypeDef, CompiledDef):
             call_checker=DefaultCallChecker(),
             call_compiler=ConstructorCompiler(),
             higher_order_value=True,
+            module=module,
         )
         return [constructor_def]
 

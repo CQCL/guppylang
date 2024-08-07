@@ -114,5 +114,7 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         """Compiles a call to the function."""
         func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr_poly().body
         type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
-        call = dfg.builder.call(self.declaration, args, func_ty, type_args)
-        return call[:]
+        call = dfg.builder.call(
+            self.declaration, *args, instantiation=func_ty, type_args=type_args
+        )
+        return list(call)

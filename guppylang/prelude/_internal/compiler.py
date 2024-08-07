@@ -15,13 +15,13 @@ class NatTruedivCompiler(CustomCallCompiler):
         # Compile `truediv` using float arithmetic
         [left, right] = args
         [left] = Nat.__float__.compile_call(
-            self.builder, [left], [], self.globals, self.node
+            [left], [], self.dfg, self.globals, self.node
         )
         [right] = Nat.__float__.compile_call(
-            self.builder, [right], [], self.globals, self.node
+            [right], [], self.dfg, self.globals, self.node
         )
         [out] = Float.__truediv__.compile_call(
-            self.builder, [left, right], [], self.globals, self.node
+            [left, right], [], self.dfg, self.globals, self.node
         )
         return [out]
 
@@ -35,13 +35,13 @@ class IntTruedivCompiler(CustomCallCompiler):
         # Compile `truediv` using float arithmetic
         [left, right] = args
         [left] = Int.__float__.compile_call(
-            self.builder, [left], [], self.globals, self.node
+            [left], [], self.dfg, self.globals, self.node
         )
         [right] = Int.__float__.compile_call(
-            self.builder, [right], [], self.globals, self.node
+            [right], [], self.dfg, self.globals, self.node
         )
         [out] = Float.__truediv__.compile_call(
-            self.builder, [left, right], [], self.globals, self.node
+            [left, right], [], self.dfg, self.globals, self.node
         )
         return [out]
 
@@ -55,9 +55,9 @@ class FloatBoolCompiler(CustomCallCompiler):
         # We have: bool(x) = (x != 0.0)
         zero = self.builder.load(hugr.std.float.FloatVal(0.0))
         [out] = Float.__ne__.compile_call(
-            self.builder,
             [args[0], zero],
             [],
+            self.dfg,
             self.globals,
             self.node,
         )
@@ -72,10 +72,10 @@ class FloatFloordivCompiler(CustomCallCompiler):
 
         # We have: floordiv(x, y) = floor(truediv(x, y))
         [div] = Float.__truediv__.compile_call(
-            self.builder, args, [], self.globals, self.node
+            args, [], self.dfg, self.globals, self.node
         )
         [floor] = Float.__floor__.compile_call(
-            self.builder, [div], [], self.globals, self.node
+            [div], [], self.dfg, self.globals, self.node
         )
         return [floor]
 
@@ -88,13 +88,13 @@ class FloatModCompiler(CustomCallCompiler):
 
         # We have: mod(x, y) = x - (x // y) * y
         [div] = Float.__floordiv__.compile_call(
-            self.builder, args, [], self.globals, self.node
+            args, [], self.dfg, self.globals, self.node
         )
         [mul] = Float.__mul__.compile_call(
-            self.builder, [div, args[1]], [], self.globals, self.node
+            [div, args[1]], [], self.dfg, self.globals, self.node
         )
         [sub] = Float.__sub__.compile_call(
-            self.builder, [args[0], mul], [], self.globals, self.node
+            [args[0], mul], [], self.dfg, self.globals, self.node
         )
         return [sub]
 
@@ -107,12 +107,10 @@ class FloatDivmodCompiler(CustomCallCompiler):
 
         # We have: divmod(x, y) = (div(x, y), mod(x, y))
         [div] = Float.__truediv__.compile_call(
-            self.builder, args, [], self.globals, self.node
+            args, [], self.dfg, self.globals, self.node
         )
-        [mod] = Float.__mod__.compile_call(
-            self.builder, args, [], self.globals, self.node
-        )
-        return self.builder.add(ops.MakeTuple()(div, mod))[:]
+        [mod] = Float.__mod__.compile_call(args, [], self.dfg, self.globals, self.node)
+        return list(self.builder.add(ops.MakeTuple()(div, mod)))
 
 
 class MeasureCompiler(CustomCallCompiler):
