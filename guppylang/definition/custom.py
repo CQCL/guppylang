@@ -228,7 +228,7 @@ class CustomFunctionDef(CompiledCallableDef):
         # TODO: Why do we need to monomorphise here?
         fun_ty: FunctionType = self.ty.instantiate(type_args)
         input_types: list[ht.Type] = [ty.to_hugr() for ty in fun_ty.inputs]
-        func: hf.Function = dfg.graph.define_function(
+        func: hf.Function = dfg.builder.define_function(
             self.name, input_types, type_params=[]
         )
 
@@ -237,7 +237,7 @@ class CustomFunctionDef(CompiledCallableDef):
 
         # Finally, load the function into the local DFG. We already monomorphised, so we
         # don't need to give it type arguments.
-        return dfg.graph.load_function(func)
+        return dfg.builder.load_function(func)
 
     def compile_call(
         self,

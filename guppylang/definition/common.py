@@ -145,7 +145,7 @@ class CompiledDef(Definition):
         defined_at: The AST node where the definition was defined.
     """
 
-    def compile_inner(self, graph: Hugr, globals: "CompiledGlobals") -> None:
+    def compile_inner(self, globals: "CompiledGlobals") -> None:
         """Optional hook that is called to fill in the content of the Hugr node.
 
         Opposed to `CompilableDef.compile()`, we have access to all other compiled

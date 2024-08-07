@@ -216,7 +216,7 @@ class GuppyModule:
         # Finally, compile the definition contents to Hugr. For example, this compiles
         # the bodies of functions.
         for defn in self._compiled_globals.values():
-            defn.compile_inner(graph, all_compiled_globals)
+            defn.compile_inner(all_compiled_globals)
 
         graph = graph.hugr
         self._compiled = True
