@@ -205,7 +205,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
 
     def compile_inner(self, graph: Hugr, globals: CompiledGlobals) -> None:
         """Compiles the body of the function."""
-        compile_global_func_def(self, self.hugr_node, graph, globals)
+        compile_global_func_def(self, self.func_def, globals)
 
 
 def parse_py_func(f: PyFunc) -> tuple[ast.FunctionDef, str | None]:

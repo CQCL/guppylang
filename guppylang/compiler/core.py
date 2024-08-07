@@ -1,16 +1,16 @@
 from abc import ABC
 from dataclasses import dataclass, field
 
+from hugr import Wire, ops
 from hugr.dfg import Dfg
 
 from guppylang.checker.core import FieldAccess, Place, PlaceId, Variable
 from guppylang.definition.common import CompiledDef, DefId
 from guppylang.error import InternalGuppyError
-from guppylang.hugr_builder.hugr import Hugr, OutPortV
 from guppylang.tys.ty import StructType
 
 CompiledGlobals = dict[DefId, CompiledDef]
-CompiledLocals = dict[PlaceId, OutPortV]
+CompiledLocals = dict[PlaceId, Wire]
 
 
 @dataclass
@@ -23,10 +23,10 @@ class DFContainer:
     current compilation state.
     """
 
-    graph: Dfg
+    builder: Dfg
     locals: CompiledLocals = field(default_factory=dict)
 
-    def __getitem__(self, place: Place) -> OutPortV:
+    def __getitem__(self, place: Place) -> Wire:
         """Constructs a port for a local place in this DFG.
 
         Note that this mutates the Hugr since we might need to pack or unpack some
@@ -40,23 +40,24 @@ class DFContainer:
         if not isinstance(place.ty, StructType):
             raise InternalGuppyError(f"Couldn't obtain a port for `{place}`")
         children = [FieldAccess(place, field, None) for field in place.ty.fields]
-        child_ports = [self[child] for child in children]
-        port = self.graph.add_make_tuple(child_ports, self.node).out_port(0)
+        child_types = [child.ty.to_hugr() for child in children]
+        child_wires = [self[child] for child in children]
+        wire = self.builder.add_op(ops.MakeTuple(child_types), child_wires)[0]
         for child in children:
             if child.ty.linear:
                 self.locals.pop(child.id)
-        self.locals[place.id] = port
-        return port
+        self.locals[place.id] = wire
+        return wire
 
-    def __setitem__(self, place: Place, port: OutPortV) -> None:
+    def __setitem__(self, place: Place, port: Wire) -> None:
         # When assigning a struct value, we immediately unpack it recursively and only
         # store the leaf wires.
         is_return = isinstance(place, Variable) and is_return_var(place.name)
         if isinstance(place.ty, StructType) and not is_return:
-            unpack = self.graph.add_unpack_tuple(port, self.node)
-            for field, field_port in zip(
-                place.ty.fields, unpack.out_ports, strict=True
-            ):
+            unpack = self.builder.add_op(
+                ops.UnpackTuple(t.ty.to_hugr() for t in place.ty.fields), [port]
+            )
+            for field, field_port in zip(place.ty.fields, unpack[:], strict=True):
                 self[FieldAccess(place, field, None)] = field_port
             # If we had a previous wire assigned to this place, we need forget about it.
             # Otherwise, we might use this old value when looking up the place later
@@ -67,17 +68,15 @@ class DFContainer:
     def __copy__(self) -> "DFContainer":
         # Make a copy of the var map so that mutating the copy doesn't
         # mutate our variable mapping
-        return DFContainer(self.graph, self.node, self.locals.copy())
+        return DFContainer(self.builder, self.locals.copy())
 
 
 class CompilerBase(ABC):
     """Base class for the Guppy compiler."""
 
-    graph: Hugr
     globals: CompiledGlobals
 
-    def __init__(self, graph: Hugr, globals: CompiledGlobals) -> None:
-        self.graph = graph
+    def __init__(self, globals: CompiledGlobals) -> None:
         self.globals = globals
 
 

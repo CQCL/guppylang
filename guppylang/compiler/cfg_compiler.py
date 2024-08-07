@@ -1,5 +1,11 @@
 import functools
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
+
+from hugr import Wire, ops
+from hugr import tys as ht
+from hugr.cfg import Block, Cfg
+from hugr.dfg import Dfg
+from hugr.node_port import ToNode
 
 from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
 from guppylang.checker.core import Place, Variable
@@ -11,62 +17,63 @@ from guppylang.compiler.core import (
 )
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
-from guppylang.hugr_builder.hugr import CFNode, Hugr, Node, OutPortV
 from guppylang.tys.builtin import is_bool_type
-from guppylang.tys.ty import SumType, row_to_type, type_to_row
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
+from guppylang.tys.ty import SumType, Type, row_to_type, type_to_row
 
 
 def compile_cfg(
-    cfg: CheckedCFG[Place], graph: Hugr, parent: Node, globals: CompiledGlobals
-) -> None:
+    cfg: CheckedCFG[Place],
+    container: Dfg,
+    inputs: Sequence[Wire],
+    globals: CompiledGlobals,
+) -> Cfg:
     """Compiles a CFG to Hugr."""
     insert_return_vars(cfg)
 
-    blocks: dict[CheckedBB[Place], CFNode] = {}
+    builder = container.add_cfg(*inputs)
+
+    blocks: dict[CheckedBB[Place], ToNode] = {}
     for bb in cfg.bbs:
-        blocks[bb] = compile_bb(bb, graph, parent, bb == cfg.entry_bb, globals)
+        blocks[bb] = compile_bb(bb, builder, bb == cfg.entry_bb, globals)
     for bb in cfg.bbs:
-        for succ in bb.successors:
-            graph.add_edge(blocks[bb].add_out_port(), blocks[succ].in_port(None))
+        for i, succ in enumerate(bb.successors):
+            builder.branch(blocks[bb][i], blocks[succ])
+
+    return builder
 
 
 def compile_bb(
     bb: CheckedBB[Place],
-    graph: Hugr,
-    parent: Node,
+    builder: Cfg,
     is_entry: bool,
     globals: CompiledGlobals,
-) -> CFNode:
-    """Compiles a single basic block to Hugr."""
-    inputs = bb.sig.input_row if is_entry else sort_vars(bb.sig.input_row)
+) -> ToNode:
+    """Compiles a single basic block to Hugr, and returns the resulting block.
 
+    If the basic block is the output block, returns `None`.
+    """
     # The exit BB is completely empty
     if len(bb.successors) == 0:
         assert len(bb.statements) == 0
-        return graph.add_exit([v.ty for v in inputs], parent)
+        return builder.exit
 
     # Otherwise, we use a regular `Block` node
-    block = graph.add_block(parent)
+    inputs = bb.sig.input_row if is_entry else sort_vars(bb.sig.input_row)
+    block: Block = builder.add_block([v.ty.to_hugr() for v in inputs])
 
     # Add input node and compile the statements
-    inp = graph.add_input(output_tys=[v.ty for v in inputs], parent=block)
-    dfg = DFContainer(graph, block)
-    for i, v in enumerate(inputs):
-        dfg[v] = inp.out_port(i)
-    dfg = StmtCompiler(graph, globals).compile_stmts(bb.statements, dfg)
+    dfg = DFContainer(block)
+    for v, wire in zip(inputs, block.input_node[:], strict=True):
+        dfg[v] = wire
+    dfg = StmtCompiler(globals).compile_stmts(bb.statements, dfg)
 
     # If we branch, we also have to compile the branch predicate
     if len(bb.successors) > 1:
         assert bb.branch_pred is not None
-        branch_port = ExprCompiler(graph, globals).compile(bb.branch_pred, dfg)
+        branch_port = ExprCompiler(globals).compile(bb.branch_pred, dfg)
     else:
         # Even if we don't branch, we still have to add a `Sum(())` predicates
-        branch_port = graph.add_tag(
-            variants=[[]], tag=0, inputs=[], parent=block
-        ).out_port(0)
+        branch_port = dfg.builder.add_op(ops.Tag(0, ht.UnitSum(1)))
 
     # Finally, we have to add the block output.
     outputs: Sequence[Place]
@@ -87,7 +94,6 @@ def compile_bb(
             # ordering on variables which puts linear variables at the end. The only
             # exception are return vars which must be outputted in order.
             branch_port = choose_vars_for_tuple_sum(
-                graph=graph,
                 unit_sum=branch_port,
                 output_vars=[
                     [
@@ -101,9 +107,7 @@ def compile_bb(
             )
             outputs = [v for v in first if v.ty.linear and not is_return_var(str(v))]
 
-    graph.add_output(
-        inputs=[branch_port] + [dfg[v] for v in sort_vars(outputs)], parent=block
-    )
+    block.set_block_outputs(branch_port, *(dfg[v] for v in sort_vars(outputs)))
     return block
 
 
@@ -130,27 +134,23 @@ def insert_return_vars(cfg: CheckedCFG[Place]) -> None:
 
 
 def choose_vars_for_tuple_sum(
-    graph: Hugr, unit_sum: OutPortV, output_vars: list[Row[Place]], dfg: DFContainer
-) -> OutPortV:
+    unit_sum: Wire, output_vars: list[Row[Place]], dfg: DFContainer
+) -> Wire:
     """Selects an output based on a TupleSum.
 
     Given `unit_sum: Sum(*(), *(), ...)` and output variable rows `#s1, #s2, ...`,
     constructs a TupleSum value of type `Sum(#s1, #s2, ...)`.
     """
-    assert isinstance(unit_sum.ty, SumType) or is_bool_type(unit_sum.ty)
-    assert len(output_vars) == (
-        len(unit_sum.ty.element_types) if isinstance(unit_sum.ty, SumType) else 2
-    )
     assert all(not v.ty.linear for var_row in output_vars for v in var_row)
-    conditional = graph.add_conditional(cond_input=unit_sum, inputs=[], parent=dfg.node)
     tys = [[v.ty for v in var_row] for var_row in output_vars]
-    for i, var_row in enumerate(output_vars):
-        case = graph.add_case(conditional)
-        graph.add_input(output_tys=[], parent=case)
-        inputs = [dfg[v] for v in var_row]
-        tag = graph.add_tag(variants=tys, tag=i, inputs=inputs, parent=case).out_port(0)
-        graph.add_output(inputs=[tag], parent=case)
-    return conditional.add_out_port(SumType([row_to_type(row) for row in tys]))
+    sum_type = SumType([row_to_type(row) for row in tys]).to_hugr()
+
+    with dfg.builder.add_conditional(unit_sum) as conditional:
+        for i, var_row in enumerate(output_vars):
+            with conditional.add_case(i) as case:
+                tag = case.add_op(ops.Tag(i, sum_type), *(dfg[v] for v in var_row))
+                case.set_outputs(tag)
+        return conditional
 
 
 def compare_var(p1: Place, p2: Place) -> int:

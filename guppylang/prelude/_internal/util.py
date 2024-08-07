@@ -45,7 +45,11 @@ def builtin_type_to_hugr(ty: Any) -> ht.Type:
 
 
 def dummy_op(name: str, inp: Sequence[Any], out: Sequence[Any]) -> ops.Op:
-    """Dummy operation."""
+    """Dummy operation.
+
+    `inp` and `out` are lists of python types,
+    which are converted to Hugr types.
+    """
     # TODO: Using this function as a placeholder until we know if it can be
     # dropped with the builder update.
     try:
