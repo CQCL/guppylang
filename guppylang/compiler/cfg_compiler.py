@@ -18,8 +18,7 @@ from guppylang.compiler.core import (
 )
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
-from guppylang.tys.builtin import is_bool_type
-from guppylang.tys.ty import SumType, Type, row_to_type, type_to_row
+from guppylang.tys.ty import SumType, row_to_type, type_to_row
 
 DP = TypeVar("DP", bound=ops.DfParentOp)
 
@@ -61,8 +60,14 @@ def compile_bb(
         return builder.exit
 
     # Otherwise, we use a regular `Block` node
-    inputs = bb.sig.input_row if is_entry else sort_vars(bb.sig.input_row)
-    block: Block = builder.add_block(*(v.ty.to_hugr() for v in inputs))
+    block: Block
+    inputs: Sequence[Place]
+    if is_entry:
+        inputs = bb.sig.input_row
+        block: Block = builder.add_entry()
+    else:
+        inputs = sort_vars(bb.sig.input_row)
+        block: Block = builder.add_block(*(v.ty.to_hugr() for v in inputs))
 
     # Add input node and compile the statements
     dfg = DFContainer(block)
