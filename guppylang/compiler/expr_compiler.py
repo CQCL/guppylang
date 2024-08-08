@@ -437,7 +437,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
         case bool():
             return hv.bool_value(v)
         case int():
-            return hugr.std.int.IntVal(v)
+            return hugr.std.int.IntVal(v, width=NumericType.INT_WIDTH)
         case float():
             return hugr.std.float.FloatVal(v)
         case tuple(elts):

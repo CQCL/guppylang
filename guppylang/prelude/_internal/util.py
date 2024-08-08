@@ -46,11 +46,21 @@ def builtin_type_to_hugr(ty: Any) -> ht.Type:
         raise ValueError(f"Unsupported type: {ty}")
 
 
-def dummy_op(name: str, inp: Sequence[Any], out: Sequence[Any]) -> ops.DataflowOp:
+def dummy_op(
+    name: str,
+    inp: Sequence[Any],
+    out: Sequence[Any],
+    ext: str = "dummy",
+    n_vars: int = 0,
+) -> ops.DataflowOp:
     """Dummy operation.
 
-    `inp` and `out` are lists of python types,
-    which are converted to Hugr types.
+    Args:
+        op_name: The name of the operation.
+        inp: The python input types of the operation.
+        out: The python output types of the operation.
+        ext: The extension of the operation.
+        n_vars: The number of type arguments. Defaults to 0.
     """
     # TODO: Using this function as a placeholder until we know if it can be
     # dropped with the builder update.
@@ -66,8 +76,11 @@ def dummy_op(name: str, inp: Sequence[Any], out: Sequence[Any]) -> ops.DataflowO
         # Just ignore for now (e.g. for lists)
         output = []
 
+    # Dummy arguments
+    args: list[ht.TypeArg] = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)] * n_vars
+
     sig = ht.FunctionType(input=input, output=output)
-    return ops.Custom(name=name, extension="dummy", signature=sig, args=[])
+    return ops.Custom(name=name, extension=ext, signature=sig, args=args)
 
 
 def float_op(
@@ -92,36 +105,27 @@ def float_op(
 
 def int_op(
     op_name: str,
+    inp: Sequence[Any],
+    out: Sequence[Any],
     ext: str = "arithmetic.int",
-    *,
-    args: list[ht.TypeArg] | None = None,
-    num_params: int = 1,
+    n_vars: int = 1,
 ) -> ops.DataflowOp:
     """Utility method to create Hugr integer arithmetic ops.
 
     Args:
         op_name: The name of the operation.
+        inp: The python input types of the operation.
+        out: The python output types of the operation.
         ext: The extension of the operation.
-        num_params: The number of type parameters.
-        args: The type arguments of the operation.
-            If not provided, it defaults to `num_params` type parameters.
+        n_vars: The number of type arguments. Defaults to 1.
     """
-    # TODO: Why do we need arguments here?
-    #     Can't we just accept some `input` and `output` type rows?
-
-    if args is None:
-        args = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)] * num_params
-    else:
-        num_params = len(args)
-    assert (
-        num_params > 0
-    ), "Integer ops should have at least one type parameter."  # TODO: Why?
-
-    output: list[ht.Type] = [ht.Variable(idx=0, bound=ht.TypeBound.Any)]
-    input: list[ht.Type] = [
-        ht.Variable(idx=i, bound=ht.TypeBound.Any) for i in range(len(args))
-    ]
-
+    input = [builtin_type_to_hugr(ty) for ty in inp]
+    output = [builtin_type_to_hugr(ty) for ty in out]
+    # Ideally we'd be able to derive the arguments from the input/output types,
+    # but the amount of variables does not correlate with the signature for the
+    # integer ops in hugr :/
+    # https://github.com/CQCL/hugr/blob/bfa13e59468feb0fc746677ea3b3a4341b2ed42e/hugr-core/src/std_extensions/arithmetic/int_ops.rs#L116
+    args: list[ht.TypeArg] = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)] * n_vars
     sig = ht.FunctionType(input=input, output=output)
     return ops.Custom(extension=ext, signature=sig, name=op_name, args=args)
 
