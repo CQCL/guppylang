@@ -406,7 +406,7 @@ semver = "^3.0.2"
 type = "git"
 url = "https://github.com/CQCL/hugr"
 reference = "ab/guppy-things"
-resolved_reference = "b92ec9e39da8870b112c221e7c3394d380ac8aaa"
+resolved_reference = "2dc333cf1e2bbf8033e85585fcb57f31708a3ba6"
 subdirectory = "hugr-py"
 
 [[package]]
@@ -1035,26 +1035,26 @@ testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtuale
 
 [[package]]
 name = "pytket"
-version = "1.31.0"
+version = "1.31.1"
 description = "Quantum computing toolkit and interface to the TKET compiler"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "pytket-1.31.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:6a1981f2e8fcfa4bfa2bf7c2732f7062646415d2846a717d9542f44fb2c506a7"},
-    {file = "pytket-1.31.0-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:625fa01d930cafb99538fe9d6134039d25feb27bba528f32a78e1679d4103d0f"},
-    {file = "pytket-1.31.0-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:33762b67a39fe0052afa39a21e6b0f9c045d7c5639a7571ece4cf1bcb0b68e3f"},
-    {file = "pytket-1.31.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9878468c7fda0eb8ca3f0b9c349f811a1e7a7c896463892bfea9b66f88c99447"},
-    {file = "pytket-1.31.0-cp310-cp310-win_amd64.whl", hash = "sha256:8cc42819d6ca0e4c2587235fc78ec6ae2b75610190f0a0ab369911043e6a7dc0"},
-    {file = "pytket-1.31.0-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:be5fab98fcc14860ee4effe0a7657b39c2487a29c048e0ab228b7be3ec80e049"},
-    {file = "pytket-1.31.0-cp311-cp311-macosx_12_0_x86_64.whl", hash = "sha256:258ee145704e040d352c164e11d794bf612d26cc37c1f585a5453397a86f7113"},
-    {file = "pytket-1.31.0-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:6a2f7ff90a2d73447d1e45c2f56ce08116634a4c2986312fc88a7903a328b4b5"},
-    {file = "pytket-1.31.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5069fd53997ae93826df24ff7e2b5309d4d0ae645b6c10d3ac62725688b2556f"},
-    {file = "pytket-1.31.0-cp311-cp311-win_amd64.whl", hash = "sha256:e4e361269f611869495ac34aaa68a07994f76bd35d21962629d2aa54a62d5726"},
-    {file = "pytket-1.31.0-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:848350011e8f04f59ec43deb79b1fd1ff00382f71fd208adfa972c0b74efa09d"},
-    {file = "pytket-1.31.0-cp312-cp312-macosx_12_0_x86_64.whl", hash = "sha256:88957b28fec827a55eceac7d4c70e29ddf89531cb62c325585cab7600a4c55b9"},
-    {file = "pytket-1.31.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f674664465c04336f7d85b6f0aafdd28f5437acd647c9083df1433a90d10a98d"},
-    {file = "pytket-1.31.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4fa61c7a629402fb260a71c6425466ad205ef148463959f1b29717fd66a79681"},
-    {file = "pytket-1.31.0-cp312-cp312-win_amd64.whl", hash = "sha256:c414598ea4a66a8075943cdee067911af597ca9dc0a22e9ffa4596c8e995abe2"},
+    {file = "pytket-1.31.1-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:4a838f1c6a4b011e49e360fa6803f9a67e9dc94b3f6b4ee672455293f71930b8"},
+    {file = "pytket-1.31.1-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:de9c3769b97c696da594a58292e0765839505d55c4d714e7cd00cebef35d7987"},
+    {file = "pytket-1.31.1-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:508fb391ae90e37519008a63bd7b5f13257ea9d2026100aaf27c81c433dfc9c6"},
+    {file = "pytket-1.31.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a070a2cb4fe006bd384365646ff8b2353765ed6b858fe665b98022f03520cbf0"},
+    {file = "pytket-1.31.1-cp310-cp310-win_amd64.whl", hash = "sha256:6dcb5c6536483a7815e25b6b5bdb3de37813eda7a1a140c6770054a58e186356"},
+    {file = "pytket-1.31.1-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:27d5f2d6f4742503e5ccae90a13d3241b0b46791aa242cf3fde4a5c6ca2b0798"},
+    {file = "pytket-1.31.1-cp311-cp311-macosx_12_0_x86_64.whl", hash = "sha256:a7da7122c0079f33ba8e810584ddf810e4cd1d1e39339ee636fca026f1cec771"},
+    {file = "pytket-1.31.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:1321a2b101bf6c5c433a468c5a6ccbeae8e41e69e907704898c9c28c49f2e95f"},
+    {file = "pytket-1.31.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e28e8dafe2d5e529ef27f9cc0e73930f97db4eb5cc4194f3918d094086d0be50"},
+    {file = "pytket-1.31.1-cp311-cp311-win_amd64.whl", hash = "sha256:88cafae024852d9999bfecd0eb54458aba7dbe9cae0334fce9594502b9046994"},
+    {file = "pytket-1.31.1-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:0a7061da0d748d3c5bf48db1c28893e5a5cff53b6ad4f7ec6515ad934d8a479d"},
+    {file = "pytket-1.31.1-cp312-cp312-macosx_12_0_x86_64.whl", hash = "sha256:50e309230b3cc77504bf6d06ab00d7e7e70d797464239c2f9f4e2390f236858c"},
+    {file = "pytket-1.31.1-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:6d67a365d3611bd0fce29e1c62501e4bdee5e27bb360004d0f146eb1adc4842c"},
+    {file = "pytket-1.31.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:82933fca9d659ebf544e8b0dc04b0b8c7333979dafeb88534f470104733c9152"},
+    {file = "pytket-1.31.1-cp312-cp312-win_amd64.whl", hash = "sha256:33f8def6e563c854a46ca500a639211b7c4c965884d585543b4ae5a373c1d1c3"},
 ]
 
 [package.dependencies]
