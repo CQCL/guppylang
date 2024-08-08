@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 import pytest
 
-from hugr import OutPort, Wire
+from hugr import Wire
 
 from guppylang.decorator import guppy
 from guppylang.definition.custom import CustomCallCompiler

@@ -1,4 +1,4 @@
-from hugr.serialization import ops
+from hugr import ops
 from hugr.std.int import IntVal
 
 from guppylang.decorator import guppy
@@ -17,14 +17,10 @@ def test_len(validate):
     hg = module.compile()
     validate(hg)
 
-    [val] = [
-        node.op.root.v.root
-        for node in hg.nodes()
-        if isinstance(node.op.root, ops.Const)
-    ]
-    assert isinstance(val, ops.ExtensionValue)
-    assert isinstance(val.value.v, IntVal)
-    assert val.value.v.value == 42
+    [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    assert isinstance(val, ops.Const)
+    assert isinstance(val.val, IntVal)
+    assert val.val.v == 42
 
 
 def test_index(validate):
