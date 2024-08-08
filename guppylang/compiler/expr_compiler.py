@@ -342,8 +342,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             output=[],
         )
         op = ops.Custom(
-            extension="tket2.results",
-            name="Result",
+            extension="tket2.result",
+            name="result_uint",
             args=[arg.to_hugr() for arg in type_args],
             signature=sig,
         )
