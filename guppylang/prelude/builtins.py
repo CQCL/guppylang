@@ -464,10 +464,8 @@ class Float:
     @guppy.hugr_op(builtins, float_op("fne", [float, float], [bool]), CoercingChecker())
     def __ne__(self: float, other: float) -> bool: ...
 
-    @guppy.hugr_op(
-        builtins, float_op("fneg", [float, float], [float]), CoercingChecker()
-    )
-    def __neg__(self: float, other: float) -> float: ...
+    @guppy.hugr_op(builtins, float_op("fneg", [float], [float]), CoercingChecker())
+    def __neg__(self: float) -> float: ...
 
     @guppy.custom(
         builtins, checker=DunderChecker("__float__"), higher_order_value=False
