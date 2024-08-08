@@ -2,7 +2,7 @@ import ast
 from dataclasses import dataclass, field
 
 from hugr import Node, Wire, val
-from hugr.function import Module
+from hugr.dfg import OpVar, _DefinitionBuilder
 
 from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals
@@ -39,7 +39,7 @@ class RawExternDef(ParsableDef):
 class ExternDef(RawExternDef, ValueDef, CompilableDef):
     """An extern symbol definition."""
 
-    def compile_outer(self, graph: Module) -> "CompiledExternDef":
+    def compile_outer(self, graph: _DefinitionBuilder[OpVar]) -> "CompiledExternDef":
         """Adds a Hugr constant node for the extern definition to the provided graph."""
         custom_const = {
             "symbol": self.symbol,

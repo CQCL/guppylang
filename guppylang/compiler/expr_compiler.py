@@ -2,14 +2,14 @@ import ast
 import json
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from typing import Any, TypeGuard, TypeVar, cast
+from typing import Any, TypeGuard, TypeVar
 
 import hugr
 from hugr import Node, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
 from hugr.cond_loop import Conditional
-from hugr.dfg import _DfBase
+from hugr.dfg import DP, _DfBase
 
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
@@ -41,8 +41,6 @@ from guppylang.tys.ty import (
     TupleType,
     Type,
 )
-
-DP = TypeVar("DP", bound=ops.DfParentOp)
 
 
 class ExprCompiler(CompilerBase, AstVisitor[Wire]):

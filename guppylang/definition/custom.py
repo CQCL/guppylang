@@ -14,7 +14,7 @@ from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
-from guppylang.definition.common import CompilableDef, ParsableDef
+from guppylang.definition.common import ParsableDef
 from guppylang.definition.value import CompiledCallableDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
@@ -51,7 +51,7 @@ class RawCustomFunctionDef(ParsableDef):
 
     description: str = field(default="function", init=False)
 
-    def parse(self, globals: "Globals") -> "CheckedCustomFunctionDef":
+    def parse(self, globals: "Globals") -> "CustomFunctionDef":
         """Parses and checks the user-provided signature of the custom function.
 
         The signature is optional if custom type checking logic is provided by the user.
@@ -84,7 +84,7 @@ class RawCustomFunctionDef(ParsableDef):
             if requires_type_annotation
             else FunctionType([], NoneType())
         )
-        return CheckedCustomFunctionDef(
+        return CustomFunctionDef(
             self.id,
             self.name,
             self.defined_at,
@@ -96,58 +96,15 @@ class RawCustomFunctionDef(ParsableDef):
 
     def compile_call(
         self,
-        builder: hf.Function,
         args: list[Wire],
         type_args: Inst,
+        dfg: DFContainer,
         globals: CompiledGlobals,
         node: AstNode,
     ) -> Sequence[Wire]:
         """Compiles a call to the function."""
-        self.call_compiler._setup(builder, type_args, globals, node)
+        self.call_compiler._setup(type_args, dfg, globals, node)
         return self.call_compiler.compile(args)
-
-
-@dataclass(frozen=True)
-class CheckedCustomFunctionDef(CompilableDef):
-    """A custom function definition that has been `parsed` and checked.
-
-    Note that the `compile_outer` method for this class does not compile the
-    function immediately, but instead stores the module reference and delays the
-    compilation until the function is used.
-
-    Args:
-        id: The unique definition identifier. name: The name of the definition.
-        defined_at: The AST node where the definition was defined. ty: The type
-        of the function. call_checker: The custom call checker. call_compiler:
-        The custom call compiler. higher_order_value: Whether the function may
-        be used as a higher-order value.
-    """
-
-    defined_at: ast.FunctionDef
-    ty: FunctionType
-    call_checker: "CustomCallChecker"
-    call_compiler: "CustomCallCompiler"
-    higher_order_value: bool
-
-    description: str = field(default="function", init=False)
-
-    def compile_outer(self, module: hf.Module) -> "CustomFunctionDef":
-        """Adds a Hugr `FuncDefn` node for this function to the Hugr.
-
-        Note that we don't compile the function body at this point. The
-        definition is monomorphised and compiled later in
-        `CustomFunctionDef.load_with_args`.
-        """
-        return CustomFunctionDef(
-            self.id,
-            self.name,
-            self.defined_at,
-            self.ty,
-            self.call_checker,
-            self.call_compiler,
-            self.higher_order_value,
-            module,
-        )
 
 
 @dataclass(frozen=True)
@@ -162,7 +119,6 @@ class CustomFunctionDef(CompiledCallableDef):
         call_checker: The custom call checker.
         call_compiler: The custom call compiler.
         higher_order_value: Whether the function may be used as a higher-order value.
-        module: The `Module` where the function should be defined.
     """
 
     defined_at: AstNode
@@ -170,7 +126,6 @@ class CustomFunctionDef(CompiledCallableDef):
     call_checker: "CustomCallChecker"
     call_compiler: "CustomCallCompiler"
     higher_order_value: bool
-    module: hf.Module
 
     description: str = field(default="function", init=False)
 
@@ -209,9 +164,13 @@ class CustomFunctionDef(CompiledCallableDef):
         DFG. This operation will fail the function is not allowed to be used as a
         higher-order value.
         """
-        # TODO: The description above says the function is defined in "the Hugr module".
-        #   However, before the refactor this seemed to define it inside the DFG. Which
-        #   one is correct?
+        # TODO: The description above says the function is defined in "the Hugr
+        #   module". However, before the refactor this seemed to define it
+        #   inside the DFG. Which one is correct?
+        #
+        #   I left it to define things locally, as requiring a `Module` gets a
+        #   bit annoying since `Globals.get_instance_func` would need to have
+        #   access to a builder, to instantiate functions.
 
         # TODO: This should be raised during checking, not compilation!
         if not self.higher_order_value:
@@ -230,7 +189,7 @@ class CustomFunctionDef(CompiledCallableDef):
         # TODO: Why do we need to monomorphise here?
         fun_ty: FunctionType = self.ty.instantiate(type_args)
         input_types: list[ht.Type] = [ty.to_hugr() for ty in fun_ty.inputs]
-        func: hf.Function = self.module.define_function(
+        func: hf.Function = dfg.builder.define_function(
             self.name, input_types, type_params=[]
         )
 
@@ -253,10 +212,7 @@ class CustomFunctionDef(CompiledCallableDef):
         node: AstNode,
     ) -> list[Wire]:
         """Compiles a call to the function."""
-        builder = dfg.builder
-        assert isinstance(builder, hf.Function)
-
-        self.call_compiler._setup(builder, type_args, globals, node)
+        self.call_compiler._setup(type_args, dfg, globals, node)
         return self.call_compiler.compile(args)
 
 
@@ -297,20 +253,20 @@ class CustomCallCompiler(ABC):
         node: The AST node where the function is defined.
     """
 
-    builder: hf.Function
+    dfg: DFContainer
     type_args: Inst
     globals: CompiledGlobals
     node: AstNode
 
     def _setup(
         self,
-        builder: hf.Function,
         type_args: Inst,
+        dfg: DFContainer,
         globals: CompiledGlobals,
         node: AstNode,
     ) -> None:
-        self.builder = builder
         self.type_args = type_args
+        self.dfg = dfg
         self.globals = globals
         self.node = node
 
@@ -322,9 +278,9 @@ class CustomCallCompiler(ABC):
         """
 
     @property
-    def dfg(self) -> DFContainer:
-        """The dataflow graph container."""
-        return DFContainer(self.builder)
+    def builder(self) -> _DfBase[ops.DfParentOp]:
+        """The hugr dataflow builder."""
+        return self.dfg.builder
 
 
 class DefaultCallChecker(CustomCallChecker):

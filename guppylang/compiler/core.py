@@ -1,9 +1,9 @@
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import TypeVar, cast
+from typing import cast
 
 from hugr import Wire, ops
-from hugr.dfg import _DfBase
+from hugr.dfg import DP, _DfBase
 
 from guppylang.checker.core import FieldAccess, Place, PlaceId, Variable
 from guppylang.definition.common import CompiledDef, DefId
@@ -12,8 +12,6 @@ from guppylang.tys.ty import StructType
 
 CompiledGlobals = dict[DefId, CompiledDef]
 CompiledLocals = dict[PlaceId, Wire]
-
-DP = TypeVar("DP", bound=ops.DfParentOp)
 
 
 @dataclass

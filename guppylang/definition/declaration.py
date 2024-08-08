@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from hugr import Node, Wire
 from hugr import function as hf
 from hugr import tys as ht
+from hugr.dfg import OpVar, _DefinitionBuilder
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals
@@ -16,7 +17,7 @@ from guppylang.definition.value import CallableDef, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import Type, type_to_row
+from guppylang.tys.ty import Type
 
 
 @dataclass(frozen=True)
@@ -71,8 +72,15 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
         node = with_loc(node, GlobalCall(def_id=self.id, args=args, type_args=inst))
         return node, ty
 
-    def compile_outer(self, module: hf.Module) -> "CompiledFunctionDecl":
+    def compile_outer(
+        self, module: _DefinitionBuilder[OpVar]
+    ) -> "CompiledFunctionDecl":
         """Adds a Hugr `FuncDecl` node for this function to the Hugr."""
+        assert isinstance(
+            module, hf.Module
+        ), "Functions can only be declared in modules"
+        module: hf.Module = module
+
         node = module.declare_function(self.name, self.ty.to_hugr_poly())
         return CompiledFunctionDecl(
             self.id,

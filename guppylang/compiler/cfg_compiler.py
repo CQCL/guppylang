@@ -1,11 +1,10 @@
 import functools
 from collections.abc import Sequence
-from typing import TypeVar
 
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.cfg import Block, Cfg
-from hugr.dfg import _DfBase
+from hugr.dfg import DP, _DfBase
 from hugr.node_port import ToNode
 
 from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
@@ -19,8 +18,6 @@ from guppylang.compiler.core import (
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
 from guppylang.tys.ty import SumType, row_to_type, type_to_row
-
-DP = TypeVar("DP", bound=ops.DfParentOp)
 
 
 def compile_cfg(
@@ -64,10 +61,10 @@ def compile_bb(
     inputs: Sequence[Place]
     if is_entry:
         inputs = bb.sig.input_row
-        block: Block = builder.add_entry()
+        block = builder.add_entry()
     else:
         inputs = sort_vars(bb.sig.input_row)
-        block: Block = builder.add_block(*(v.ty.to_hugr() for v in inputs))
+        block = builder.add_block(*(v.ty.to_hugr() for v in inputs))
 
     # Add input node and compile the statements
     dfg = DFContainer(block)

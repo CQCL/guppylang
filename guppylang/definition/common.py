@@ -5,8 +5,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
-from hugr import Hugr
-from hugr.function import Module
+from hugr.dfg import OpVar, _DefinitionBuilder
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -125,7 +124,7 @@ class CompilableDef(Definition):
     """
 
     @abstractmethod
-    def compile_outer(self, module: Module) -> "CompiledDef":
+    def compile_outer(self, module: _DefinitionBuilder[OpVar]) -> "CompiledDef":
         """Adds a Hugr node for the definition to the provided Hugr module.
 
         Note that is not required to fill in the contents of the node. At this point,

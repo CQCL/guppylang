@@ -3,7 +3,6 @@ import inspect
 import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass
-from functools import cached_property
 from typing import Any
 
 from hugr import Wire, ops
@@ -220,7 +219,6 @@ class CheckedStructDef(TypeDef, CompiledDef):
             call_checker=DefaultCallChecker(),
             call_compiler=ConstructorCompiler(),
             higher_order_value=True,
-            module=module,
         )
         return [constructor_def]
 

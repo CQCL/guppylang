@@ -7,7 +7,8 @@ from typing import Any
 
 import hugr.function as hf
 import hugr.tys as ht
-from hugr import Hugr, Wire
+from hugr import Wire
+from hugr.dfg import OpVar, _DefinitionBuilder
 
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
@@ -25,7 +26,7 @@ from guppylang.definition.value import CallableDef, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import FunctionType, Type, type_to_row
+from guppylang.tys.ty import FunctionType, Type
 
 PyFunc = Callable[..., Any]
 
@@ -140,7 +141,7 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
 
     cfg: CheckedCFG[Place]
 
-    def compile_outer(self, module: hf.Module) -> "CompiledFunctionDef":
+    def compile_outer(self, module: _DefinitionBuilder[OpVar]) -> "CompiledFunctionDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr.
 
         Note that we don't compile the function body at this point since we don't have
