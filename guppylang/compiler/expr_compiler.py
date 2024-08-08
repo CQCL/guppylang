@@ -302,8 +302,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             ConstArg(ConstValue(value=node.tag, ty=NumericType(NumericType.Kind.Nat))),
         ]
         op = ops.CustomOp(
-            extension="tket2.results",
-            name="Result",
+            extension="tket2.result",
+            name="result_uint",
             args=[arg.to_hugr() for arg in type_args],
             parent=UNDEFINED,
         )
