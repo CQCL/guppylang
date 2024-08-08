@@ -395,7 +395,7 @@ description = "Quantinuum's common representation for quantum programs"
 optional = false
 python-versions = ">=3.10"
 files = []
-develop = true
+develop = false
 
 [package.dependencies]
 pydantic = ">=2.7,<2.9"
@@ -403,8 +403,11 @@ pydantic-extra-types = "^2.9.0"
 semver = "^3.0.2"
 
 [package.source]
-type = "directory"
-url = "../hugr/hugr-py"
+type = "git"
+url = "https://github.com/CQCL/hugr"
+reference = "ab/guppy-things"
+resolved_reference = "9cda70de5976f860fb11bdb8c14341a78daedb10"
+subdirectory = "hugr-py"
 
 [[package]]
 name = "identify"
@@ -1588,4 +1591,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "6d00969708b5fdf57155eb99c71f3349f6747356e09e0440a3926ce15aa711f0"
+content-hash = "25da649c2965feeca83c90c29eed5f2a31a69e9d406093cdd761414bdb4d6147"
