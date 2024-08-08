@@ -82,7 +82,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         ), "Inputs are not unique"
         self.dfg = DFContainer(builder, self.dfg.locals.copy())
         hugr_input: Node = builder.input_node
-        for input_node, wire in zip(inputs, hugr_input[:], strict=True):
+        for input_node, wire in zip(inputs, hugr_input, strict=True):
             self.dfg[input_node.place] = wire
 
         yield
@@ -112,7 +112,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 *(self.visit(name) for name in loop_vars),
             )
         # Update the DFG with the outputs from the loop
-        for node, wire in zip(loop_vars, loop.parent_node[:], strict=True):
+        for node, wire in zip(loop_vars, loop.parent_node, strict=True):
             self.dfg[node.place] = wire
 
     @contextmanager
@@ -148,7 +148,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         with self._new_case(inputs, inputs, conditional, 1):
             pass
         # Update the DFG with the outputs from the Conditional node
-        for node, wire in zip(inputs, conditional.parent_node[:], strict=True):
+        for node, wire in zip(inputs, conditional.parent_node, strict=True):
             self.dfg[node.place] = wire
 
     def visit_Constant(self, node: ast.Constant) -> Wire:

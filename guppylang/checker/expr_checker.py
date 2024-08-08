@@ -266,10 +266,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
                 ),
             ), subst
 
-        elif callee := self.ctx.globals.get_instance_func(
-            func_ty,
-            "__call__",
-        ):
+        elif callee := self.ctx.globals.get_instance_func(func_ty, "__call__"):
             return callee.check_call(node.args, ty, node, self.ctx)
         else:
             raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)

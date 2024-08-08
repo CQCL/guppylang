@@ -56,7 +56,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         elif isinstance(lhs, ast.Tuple):
             types = [get_type(e).to_hugr() for e in lhs.elts]
             unpack = self.builder.add_op(ops.UnpackTuple(types), port)
-            for pat, wire in zip(lhs.elts, unpack[:], strict=True):
+            for pat, wire in zip(lhs.elts, unpack, strict=True):
                 self._unpack_assign(pat, wire, node)
         else:
             raise InternalGuppyError("Invalid assign pattern in compiler")
@@ -88,7 +88,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             if isinstance(return_ty, TupleType):
                 types = [e.to_hugr() for e in return_ty.element_types]
                 unpack = self.builder.add_op(ops.UnpackTuple(types), port)
-                row = list(zip(unpack[:], return_ty.element_types, strict=True))
+                row = list(zip(unpack, return_ty.element_types, strict=True))
             else:
                 row = [(port, return_ty)]
 

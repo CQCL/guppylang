@@ -68,7 +68,7 @@ def compile_bb(
 
     # Add input node and compile the statements
     dfg = DFContainer(block)
-    for v, wire in zip(inputs, block.input_node[:], strict=True):
+    for v, wire in zip(inputs, block.input_node, strict=True):
         dfg[v] = wire
     dfg = StmtCompiler(globals).compile_stmts(bb.statements, dfg)
 

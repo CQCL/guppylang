@@ -4,12 +4,11 @@ from typing import TYPE_CHECKING, cast
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.function import Function
-from hugr.node_port import ToNode
 
 from guppylang.compiler.cfg_compiler import compile_cfg
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.nodes import CheckedNestedFunctionDef
-from guppylang.tys.ty import FunctionType, Type, type_to_row
+from guppylang.tys.ty import FunctionType, Type
 
 if TYPE_CHECKING:
     from guppylang.definition.function import CheckedFunctionDef
@@ -23,7 +22,7 @@ def compile_global_func_def(
     """Compiles a top-level function definition to Hugr."""
     cfg = compile_cfg(func.cfg, builder, builder.inputs(), globals)
 
-    builder.set_outputs(*cfg[:])
+    builder.set_outputs(*cfg)
 
 
 def compile_local_func_def(
@@ -87,7 +86,7 @@ def compile_local_func_def(
 
     # Compile the CFG
     cfg = compile_cfg(func.cfg, func_builder, call_args, globals)
-    func_builder.set_outputs(*cfg[:])
+    func_builder.set_outputs(*cfg)
 
     # Finally, load the function into the local data-flow graph
     loaded = dfg.builder.load_function(func_builder, hugr_closure_ty)

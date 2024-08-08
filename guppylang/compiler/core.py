@@ -67,7 +67,7 @@ class DFContainer:
             unpack = self.builder.add_op(
                 ops.UnpackTuple([t.ty.to_hugr() for t in place.ty.fields]), port
             )
-            for field, field_port in zip(place.ty.fields, unpack[:], strict=True):
+            for field, field_port in zip(place.ty.fields, unpack, strict=True):
                 self[FieldAccess(place, field, None)] = field_port
             # If we had a previous wire assigned to this place, we need forget about it.
             # Otherwise, we might use this old value when looking up the place later
