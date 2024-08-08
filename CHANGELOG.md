@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.1](https://github.com/CQCL/guppylang/compare/v0.8.0...v0.8.1) (2024-08-08)
+
+
+### Bug Fixes
+
+* Fix invalid result operation name ([#367](https://github.com/CQCL/guppylang/issues/367)) ([568624d](https://github.com/CQCL/guppylang/commit/568624d1ccd70dc78c16f4ca2170dc167791ea64))
+* Linearity checking bug ([#355](https://github.com/CQCL/guppylang/issues/355)) ([e14660f](https://github.com/CQCL/guppylang/commit/e14660f2b31d104c7fb0b5cb8806c3656098afbb))
+
 ## [0.8.0](https://github.com/CQCL/guppylang/compare/v0.7.0...v0.8.0) (2024-07-30)
 
 
