@@ -141,10 +141,10 @@ def _parse_callable_type(
     globals: Globals,
     param_var_mapping: dict[str, Parameter] | None,
 ) -> FunctionType:
-    """Helper function to parse a `Callable[[<arguments>], <return types>]` type."""
+    """Helper function to parse a `Callable[[<arguments>], <return type>]` type."""
     err = (
         "Function types should be specified via "
-        "`Callable[[<arguments>], <return types>]`"
+        "`Callable[[<arguments>], <return type>]`"
     )
     if len(args) != 2:
         raise GuppyError(err, loc)

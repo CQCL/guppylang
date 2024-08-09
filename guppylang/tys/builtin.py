@@ -35,7 +35,7 @@ class CallableTypeDef(TypeDef):
     def check_instantiate(
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> FunctionType:
-        # Callable types are constructed using special login in the type parser
+        # Callable types are constructed using special logic in the type parser
         raise InternalGuppyError("Tried to `Callable` type via `check_instantiate`")
 
 
