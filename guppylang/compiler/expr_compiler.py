@@ -204,7 +204,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             types = return_ty.element_types if isinstance(return_ty, TupleType) else []
             assert len(returns) == len(types)
             return self._pack_tuple(returns, types)
-        assert len(returns) == 1
+        assert (
+            len(returns) == 1
+        ), f"Expected a single return value. Got {returns}. return type {return_ty.__class__}"
         return returns[0]
 
     def visit_LocalCall(self, node: LocalCall) -> Wire:

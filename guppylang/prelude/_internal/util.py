@@ -1,6 +1,13 @@
+"""Utilities for defining the with builtin functions.
+
+Note: This is all _really_ hacky, and intended to be temporary until we have a
+unified definition of extension operations.
+"""
+
+import builtins
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import TypeVar
 
 import hugr
 import hugr.std.float
@@ -9,6 +16,9 @@ from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
 
+import guppylang.tys.builtin
+import guppylang.tys.ty
+import guppylang.tys.var
 from guppylang.tys.builtin import list_type
 from guppylang.tys.ty import NumericType, Type
 
@@ -27,7 +37,92 @@ class ListVal(hv.ExtensionValue):
         )
 
 
-def builtin_type_to_hugr(ty: Any) -> ht.Type:
+def var_t(var_idx: int = 0) -> ht.Type:
+    """The hugr type for a TypeVar[T].
+
+    args:
+        var_idx: The index of `T` in the operation's type arguments.
+    """
+    return ht.Variable(idx=var_idx, bound=ht.TypeBound.Copyable)
+
+
+def lvar_t(var_idx: int = 0) -> ht.Type:
+    """The hugr type for a linear TypeVar[T].
+
+    args:
+        var_idx: The index of `T` in the operation's type arguments.
+    """
+    return ht.Variable(idx=var_idx, bound=ht.TypeBound.Any)
+
+
+def list_t(var_idx: int = 0) -> ht.Type:
+    """The hugr type for a list[T]
+
+    args:
+        var_idx: The index of `T` in the operation's type arguments.
+    """
+    bound: ht.TypeBound = ht.TypeBound.Copyable
+    return ht.Opaque(
+        extension="Collections",
+        id="List",
+        args=[ht.VariableArg(idx=var_idx, param=ht.TypeTypeParam(bound=bound))],
+        bound=bound,
+    )
+
+
+def linst_t(var_idx: int = 0) -> ht.Type:
+    """The hugr type for a linst[T]
+
+    args:
+        var_idx: The index of `T` in the operation's type arguments.
+    """
+    bound = ht.TypeBound.Any
+    return ht.Opaque(
+        extension="Collections",
+        id="List",
+        args=[ht.VariableArg(idx=var_idx, param=ht.TypeTypeParam(bound=bound))],
+        bound=bound,
+    )
+
+
+def array_n_t(n_var_idx: int = 0, t_var_idx: int = 1) -> ht.Type:
+    """The hugr type for an array[T, n]
+
+    args:
+        n_var_idx: The index of `n` in the operation's type arguments.
+        t_var_idx: The index of `T` in the operation's type arguments.
+    """
+    bound: ht.TypeBound = ht.TypeBound.Copyable
+    return ht.Opaque(
+        extension="prelude",
+        id="array",
+        args=[
+            ht.VariableArg(
+                idx=n_var_idx,
+                param=ht.BoundedNatParam(upper_bound=hugr.std.int.LOG_WIDTH_BOUND),
+            ),
+            ht.VariableArg(idx=t_var_idx, param=ht.TypeTypeParam(bound=bound)),
+        ],
+        bound=bound,
+    )
+
+
+def int_arg(n: int = NumericType.INT_WIDTH) -> ht.TypeArg:
+    """A bounded int type argument."""
+    return ht.BoundedNatArg(n=n)
+
+
+def type_arg() -> ht.TypeArg:
+    """A generic type argument."""
+    return ht.VariableArg(idx=0, param=ht.TypeTypeParam(bound=ht.TypeBound.Copyable))
+
+
+def ltype_arg() -> ht.TypeArg:
+    """A generic linear type argument."""
+    return ht.VariableArg(idx=0, param=ht.TypeTypeParam(bound=ht.TypeBound.Any))
+
+
+def builtin_type_to_hugr(ty: builtins.type) -> ht.Type:
     """Utility function to translate numeric python types to Hugr types.
 
     Supports only a handful types, used in the builtin operations.
@@ -46,38 +141,52 @@ def builtin_type_to_hugr(ty: Any) -> ht.Type:
         raise ValueError(f"Unsupported type: {ty}")
 
 
+def type_to_hugr(ty: guppylang.tys.ty.Type | builtins.type | ht.Type) -> ht.Type:
+    """Translates either a guppylang type or a native python type to a Hugr type.
+
+    Raises a ValueError if the builtin type is not supported.
+    """
+    if isinstance(ty, ht.Type):
+        return ty
+    elif isinstance(ty, guppylang.tys.ty.TypeBase):
+        return ty.to_hugr()
+    else:
+        assert isinstance(ty, builtins.type), f"Unsupported type: {ty}"
+        return builtin_type_to_hugr(ty)
+
+
 def dummy_op(
     name: str,
-    inp: Sequence[Any],
-    out: Sequence[Any],
+    inp: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
+    out: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
     ext: str = "dummy",
-    n_vars: int = 0,
+    args: list[ht.TypeArg] | None = None,
 ) -> ops.DataflowOp:
     """Dummy operation.
 
     Args:
         op_name: The name of the operation.
-        inp: The python input types of the operation.
-        out: The python output types of the operation.
+        inp: The input types of the operation.
+            If the types are guppylang types, they are translated to Hugr types.
+            Any other types is treated as a native python type, and translated to
+            a Hugr type using `builtin_type_to_hugr`.
+        out: The output types of the operation.
+            If the types are guppylang types, they are translated to Hugr types.
+            Any other types is treated as a native python type, and translated to
+            a Hugr type using `builtin_type_to_hugr`.
         ext: The extension of the operation.
-        n_vars: The number of type arguments. Defaults to 0.
+        args: The type arguments of the operation.
     """
     # TODO: Using this function as a placeholder until we know if it can be
     # dropped with the builder update.
     try:
-        input = [builtin_type_to_hugr(ty) for ty in inp]
-    except ValueError:
-        # Just ignore for now (e.g. for lists)
-        input = []
+        input = [type_to_hugr(ty) for ty in inp]
+        output = [type_to_hugr(ty) for ty in out]
+    except ValueError as e:
+        e.add_note(f"For function {name}")
+        raise
 
-    try:
-        output = [builtin_type_to_hugr(ty) for ty in out]
-    except ValueError:
-        # Just ignore for now (e.g. for lists)
-        output = []
-
-    # Dummy arguments
-    args: list[ht.TypeArg] = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)] * n_vars
+    args = args or []
 
     sig = ht.FunctionType(input=input, output=output)
     return ops.Custom(name=name, extension=ext, signature=sig, args=args)
@@ -85,8 +194,8 @@ def dummy_op(
 
 def float_op(
     op_name: str,
-    inp: Sequence[Any],
-    out: Sequence[Any],
+    inp: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
+    out: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
     ext: str = "arithmetic.float",
 ) -> ops.DataflowOp:
     """Utility method to create Hugr float arithmetic ops.
@@ -97,16 +206,16 @@ def float_op(
         out: The python output types of the operation.
         ext: The extension of the operation.
     """
-    input = [builtin_type_to_hugr(ty) for ty in inp]
-    output = [builtin_type_to_hugr(ty) for ty in out]
+    input = [type_to_hugr(ty) for ty in inp]
+    output = [type_to_hugr(ty) for ty in out]
     sig = ht.FunctionType(input=input, output=output)
     return ops.Custom(extension=ext, signature=sig, name=op_name, args=[])
 
 
 def int_op(
     op_name: str,
-    inp: Sequence[Any],
-    out: Sequence[Any],
+    inp: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
+    out: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
     ext: str = "arithmetic.int",
     n_vars: int = 1,
 ) -> ops.DataflowOp:
@@ -119,8 +228,8 @@ def int_op(
         ext: The extension of the operation.
         n_vars: The number of type arguments. Defaults to 1.
     """
-    input = [builtin_type_to_hugr(ty) for ty in inp]
-    output = [builtin_type_to_hugr(ty) for ty in out]
+    input = [type_to_hugr(ty) for ty in inp]
+    output = [type_to_hugr(ty) for ty in out]
     # Ideally we'd be able to derive the arguments from the input/output types,
     # but the amount of variables does not correlate with the signature for the
     # integer ops in hugr :/
