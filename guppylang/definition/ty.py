@@ -3,7 +3,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from hugr.serialization import tys
+from hugr import tys
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition

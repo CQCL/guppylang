@@ -1,4 +1,4 @@
-from hugr.serialization import tys
+from hugr import tys
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
@@ -270,11 +270,7 @@ def test_nonlinear_next_linear_iter(validate):
 
     @guppy.type(
         module,
-        tys.Type(
-            tys.Opaque(
-                extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Any
-            )
-        ),
+        tys.Opaque(extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Any),
         linear=True,
     )
     class MyIter:

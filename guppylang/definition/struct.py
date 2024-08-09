@@ -3,8 +3,10 @@ import inspect
 import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass
-from functools import cached_property
 from typing import Any
+
+from hugr import Wire, ops
+from hugr import function as hf
 
 from guppylang.ast_util import AstNode, annotate_location
 from guppylang.checker.core import Globals
@@ -23,7 +25,6 @@ from guppylang.definition.custom import (
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
-from guppylang.hugr_builder.hugr import OutPortV
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.parsing import type_from_ast
@@ -193,15 +194,14 @@ class CheckedStructDef(TypeDef, CompiledDef):
         check_all_args(self.params, args, self.name, loc)
         return StructType(args, self)
 
-    @cached_property
-    def generated_methods(self) -> list[CustomFunctionDef]:
+    def generated_methods(self, module: hf.Module) -> list[CustomFunctionDef]:
         """Auto-generated methods for this struct."""
 
         class ConstructorCompiler(CustomCallCompiler):
             """Compiler for the `__new__` constructor method of a struct."""
 
-            def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-                return [self.graph.add_make_tuple(args).out_port(0)]
+            def compile(self, args: list[Wire]) -> list[Wire]:
+                return list(self.builder.add(ops.MakeTuple()(*args)))
 
         constructor_sig = FunctionType(
             inputs=[f.ty for f in self.fields],

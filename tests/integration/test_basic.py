@@ -1,4 +1,4 @@
-from hugr.serialization import ops
+from hugr import ops
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
@@ -23,7 +23,7 @@ def test_void(validate):
 
 def test_copy(validate):
     @compile_guppy
-    def copy(x: int) -> (int, int):
+    def copy(x: int) -> tuple[int, int]:
         return x, x
 
     validate(copy)
@@ -69,8 +69,9 @@ def test_func_def_name():
         return
 
     [def_op] = [
-        n.op.root for n in func_name.nodes() if isinstance(n.op.root, ops.FuncDefn)
+        data.op for n, data in func_name.nodes() if isinstance(data.op, ops.FuncDefn)
     ]
+    assert isinstance(def_op, ops.FuncDefn)
     assert def_op.name == "func_name"
 
 
@@ -80,11 +81,11 @@ def test_func_decl_name():
     @guppy.declare(module)
     def func_name() -> None: ...
 
+    hugr = module.compile()
     [def_op] = [
-        n.op.root
-        for n in module.compile().nodes()
-        if isinstance(n.op.root, ops.FuncDecl)
+        data.op for n, data in hugr.nodes() if isinstance(data.op, ops.FuncDecl)
     ]
+    assert isinstance(def_op, ops.FuncDecl)
     assert def_op.name == "func_name"
 
 
