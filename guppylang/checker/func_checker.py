@@ -16,8 +16,8 @@ from guppylang.checker.core import Context, Globals, Variable
 from guppylang.definition.common import DefId
 from guppylang.error import GuppyError
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
-from guppylang.tys.parsing import type_from_ast
-from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, NoneType
+from guppylang.tys.parsing import parse_function_io_types
+from guppylang.tys.ty import FunctionType, NoneType
 
 if TYPE_CHECKING:
     from guppylang.tys.param import Parameter
@@ -143,19 +143,19 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
 
     # TODO: Prepopulate mapping when using Python 3.12 style generic functions
     param_var_mapping: dict[str, Parameter] = {}
-    inputs = []
+    input_nodes = []
     input_names = []
     for inp in func_def.args.args:
         if inp.annotation is None:
             raise GuppyError("Argument type must be annotated", inp)
-        ty = type_from_ast(inp.annotation, globals, param_var_mapping)
-        inputs.append(FuncInput(ty, InputFlags.NoFlags))
+        input_nodes.append(inp.annotation)
         input_names.append(inp.arg)
-    ret_type = type_from_ast(func_def.returns, globals, param_var_mapping)
-
+    inputs, output = parse_function_io_types(
+        input_nodes, func_def.returns, func_def, globals, param_var_mapping
+    )
     return FunctionType(
         inputs,
-        ret_type,
+        output,
         input_names,
         sorted(param_var_mapping.values(), key=lambda v: v.idx),
     )
