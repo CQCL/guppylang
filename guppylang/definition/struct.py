@@ -27,7 +27,7 @@ from guppylang.hugr_builder.hugr import OutPortV
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.parsing import type_from_ast
-from guppylang.tys.ty import FunctionType, StructType, Type
+from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, StructType, Type
 
 
 @dataclass(frozen=True)
@@ -204,7 +204,7 @@ class CheckedStructDef(TypeDef, CompiledDef):
                 return [self.graph.add_make_tuple(args).out_port(0)]
 
         constructor_sig = FunctionType(
-            inputs=[f.ty for f in self.fields],
+            inputs=[FuncInput(f.ty, InputFlags.NoFlags) for f in self.fields],
             output=StructType(
                 defn=self, args=[p.to_bound(i) for i, p in enumerate(self.params)]
             ),

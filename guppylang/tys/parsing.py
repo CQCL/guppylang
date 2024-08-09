@@ -11,9 +11,18 @@ from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.builtin import CallableTypeDef
 from guppylang.tys.const import ConstValue
 from guppylang.tys.param import Parameter, TypeParam
-from guppylang.tys.ty import NoneType, NumericType, TupleType, Type
+from guppylang.tys.ty import (
+    FuncInput,
+    FunctionType,
+    InputFlags,
+    NoneType,
+    NumericType,
+    TupleType,
+    Type,
+)
 
 
 def arg_from_ast(
@@ -28,6 +37,11 @@ def arg_from_ast(
         if x not in globals:
             raise GuppyError("Unknown identifier", node)
         match globals[x]:
+            # Special case for the `Callable` type
+            case CallableTypeDef():
+                return TypeArg(
+                    _parse_callable_type([], node, globals, param_var_mapping)
+                )
             # Either a defined type (e.g. `int`, `bool`, ...)
             case TypeDef() as defn:
                 return TypeArg(defn.check_instantiate([], globals, node))
@@ -50,21 +64,16 @@ def arg_from_ast(
         x = node.value.id
         if x in globals:
             defn = globals[x]
-            if isinstance(defn, TypeDef):
-                arg_nodes = (
-                    node.slice.elts
-                    if isinstance(node.slice, ast.Tuple)
-                    else [node.slice]
+            arg_nodes = (
+                node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+            )
+            if isinstance(defn, CallableTypeDef):
+                # Special case for the `Callable[[S1, S2, ...], T]` type to support the
+                # input list syntax and @inout annotations.
+                return TypeArg(
+                    _parse_callable_type(arg_nodes, node, globals, param_var_mapping)
                 )
-                # Hack: Flatten argument lists to support the `Callable` type. For
-                # example, we turn `Callable[[int, int], bool]` into
-                # `Callable[int, int, bool]`.
-                # TODO: We can get rid of this once we added support for variadic params
-                arg_nodes = [
-                    n
-                    for arg in arg_nodes
-                    for n in (arg.elts if isinstance(arg, ast.List) else (arg,))
-                ]
+            if isinstance(defn, TypeDef):
                 args = [
                     arg_from_ast(arg_node, globals, param_var_mapping)
                     for arg_node in arg_nodes
@@ -102,24 +111,108 @@ def arg_from_ast(
 
     # Finally, we also support delayed annotations in strings
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
-        try:
-            [stmt] = ast.parse(node.value).body
-            if not isinstance(stmt, ast.Expr):
-                raise GuppyError("Invalid Guppy type", node)
-            set_location_from(stmt, loc=node)
-            shift_loc(
-                stmt,
-                delta_lineno=node.lineno - 1,  # -1 since lines start at 1
-                delta_col_offset=node.col_offset + 1,  # +1 to remove the `"`
-            )
-            return arg_from_ast(stmt.value, globals, param_var_mapping)
-        except (SyntaxError, ValueError):
-            raise GuppyError("Invalid Guppy type", node) from None
+        node = _parse_delayed_annotation(node.value, node)
+        return arg_from_ast(node, globals, param_var_mapping)
 
     raise GuppyError("Not a valid type argument", node)
 
 
+def _parse_delayed_annotation(ast_str: str, node: ast.Constant) -> ast.expr:
+    """Parses a delayed type annotation in a string."""
+    try:
+        [stmt] = ast.parse(ast_str).body
+        if not isinstance(stmt, ast.Expr):
+            raise GuppyError("Invalid Guppy type", node)
+        set_location_from(stmt, loc=node)
+        shift_loc(
+            stmt,
+            delta_lineno=node.lineno - 1,  # -1 since lines start at 1
+            delta_col_offset=node.col_offset + 1,  # +1 to remove the `"`
+        )
+    except (SyntaxError, ValueError):
+        raise GuppyError("Invalid Guppy type", node) from None
+    else:
+        return stmt.value
+
+
+def _parse_callable_type(
+    args: list[ast.expr],
+    loc: AstNode,
+    globals: Globals,
+    param_var_mapping: dict[str, Parameter] | None,
+) -> FunctionType:
+    """Helper function to parse a `Callable[[<arguments>], <return type>]` type."""
+    err = (
+        "Function types should be specified via "
+        "`Callable[[<arguments>], <return type>]`"
+    )
+    if len(args) != 2:
+        raise GuppyError(err, loc)
+    [inputs, output] = args
+    if not isinstance(inputs, ast.List):
+        raise GuppyError(err, loc)
+    inouts, output = parse_function_io_types(
+        inputs.elts, output, loc, globals, param_var_mapping
+    )
+    return FunctionType(inouts, output)
+
+
+def parse_function_io_types(
+    input_nodes: list[ast.expr],
+    output_node: ast.expr,
+    loc: AstNode,
+    globals: Globals,
+    param_var_mapping: dict[str, Parameter] | None,
+) -> tuple[list[FuncInput], Type]:
+    """Parses the inputs and output types of a function type.
+
+    This function takes care of parsing `@inout` annotations and any related checks.
+
+    Returns the parsed input and output types.
+    """
+    inputs = []
+    for inp in input_nodes:
+        ty, flags = type_with_flags_from_ast(inp, globals, param_var_mapping)
+        if InputFlags.Inout in flags and not ty.linear:
+            raise GuppyError(
+                f"Non-linear type `{ty}` cannot be annotated as `@inout`", loc
+            )
+        inputs.append(FuncInput(ty, flags))
+    output = type_from_ast(output_node, globals, param_var_mapping)
+    return inputs, output
+
+
 _type_param = TypeParam(0, "T", True)
+
+
+def type_with_flags_from_ast(
+    node: AstNode,
+    globals: Globals,
+    param_var_mapping: dict[str, Parameter] | None = None,
+) -> tuple[Type, InputFlags]:
+    """Turns an AST expression into a Guppy type with some optional @flags."""
+    # Check for `type @flag` annotations
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.MatMult):
+        ty, flags = type_with_flags_from_ast(node.left, globals, param_var_mapping)
+        match node.right:
+            case ast.Name(id="inout"):
+                if not ty.linear:
+                    raise GuppyError(
+                        f"Non-linear type `{ty}` cannot be annotated as `@inout`",
+                        node.right,
+                    )
+                flags |= InputFlags.Inout
+            case _:
+                raise GuppyError("Invalid annotation", node.right)
+        return ty, flags
+    # We also need to handle the case that this could be a delayed string annotation
+    elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+        node = _parse_delayed_annotation(node.value, node)
+        return type_with_flags_from_ast(node, globals, param_var_mapping)
+    else:
+        # Parse an argument and check that it's valid for a `TypeParam`
+        arg = arg_from_ast(node, globals, param_var_mapping)
+        return _type_param.check_arg(arg, node).ty, InputFlags.NoFlags
 
 
 def type_from_ast(
@@ -128,9 +221,10 @@ def type_from_ast(
     param_var_mapping: dict[str, Parameter] | None = None,
 ) -> Type:
     """Turns an AST expression into a Guppy type."""
-    # Parse an argument and check that it's valid for a `TypeParam`
-    arg = arg_from_ast(node, globals, param_var_mapping)
-    return _type_param.check_arg(arg, node).ty
+    ty, flags = type_with_flags_from_ast(node, globals, param_var_mapping)
+    if flags != InputFlags.NoFlags:
+        raise GuppyError("`@` type annotations are not allowed in this position", node)
+    return ty
 
 
 def type_row_from_ast(node: ast.expr, globals: "Globals") -> Sequence[Type]:

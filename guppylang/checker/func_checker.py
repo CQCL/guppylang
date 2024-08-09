@@ -16,7 +16,7 @@ from guppylang.checker.core import Context, Globals, Place, Variable
 from guppylang.definition.common import DefId
 from guppylang.error import GuppyError
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
-from guppylang.tys.parsing import type_from_ast
+from guppylang.tys.parsing import parse_function_io_types
 from guppylang.tys.ty import FunctionType, NoneType
 
 if TYPE_CHECKING:
@@ -33,8 +33,8 @@ def check_global_func_def(
 
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
     inputs = [
-        Variable(x, ty, loc)
-        for x, ty, loc in zip(ty.input_names, ty.inputs, args, strict=True)
+        Variable(x, inp.ty, loc)
+        for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
     ]
     return check_cfg(cfg, inputs, ty.output, globals)
 
@@ -75,8 +75,8 @@ def check_nested_func_def(
 
     # Construct inputs for checking the body CFG
     inputs = [v for v, _ in captured.values()] + [
-        Variable(x, ty, func_def.args.args[i])
-        for i, (x, ty) in enumerate(
+        Variable(x, inp.ty, func_def.args.args[i])
+        for i, (x, inp) in enumerate(
             zip(func_ty.input_names, func_ty.inputs, strict=True)
         )
     ]
@@ -143,19 +143,19 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
 
     # TODO: Prepopulate mapping when using Python 3.12 style generic functions
     param_var_mapping: dict[str, Parameter] = {}
-    input_tys = []
+    input_nodes = []
     input_names = []
     for inp in func_def.args.args:
         if inp.annotation is None:
             raise GuppyError("Argument type must be annotated", inp)
-        ty = type_from_ast(inp.annotation, globals, param_var_mapping)
-        input_tys.append(ty)
+        input_nodes.append(inp.annotation)
         input_names.append(inp.arg)
-    ret_type = type_from_ast(func_def.returns, globals, param_var_mapping)
-
+    inputs, output = parse_function_io_types(
+        input_nodes, func_def.returns, func_def, globals, param_var_mapping
+    )
     return FunctionType(
-        input_tys,
-        ret_type,
+        inputs,
+        output,
         input_names,
         sorted(param_var_mapping.values(), key=lambda v: v.idx),
     )
