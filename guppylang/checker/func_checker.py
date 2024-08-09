@@ -146,9 +146,10 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     input_nodes = []
     input_names = []
     for inp in func_def.args.args:
-        if inp.annotation is None:
+        ty_ast = inp.annotation
+        if ty_ast is None:
             raise GuppyError("Argument type must be annotated", inp)
-        input_nodes.append(inp.annotation)
+        input_nodes.append(ty_ast)
         input_names.append(inp.arg)
     inputs, output = parse_function_io_types(
         input_nodes, func_def.returns, func_def, globals, param_var_mapping

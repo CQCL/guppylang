@@ -6,6 +6,7 @@ from guppylang.tys.const import ConstValue
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
     FunctionType,
+    InputFlags,
     NoneType,
     NumericType,
     OpaqueType,
@@ -69,12 +70,24 @@ class TypePrinter:
             self.existential_names[var.id] = self._fresh_name(var.display_name)
         return f"?{self.existential_names[var.id]}"
 
+    @staticmethod
+    def _print_flags(flags: InputFlags) -> str:
+        s = ""
+        if InputFlags.Inout in flags:
+            s += " @inout"
+        return s
+
     @_visit.register
     def _visit_FunctionType(self, ty: FunctionType, inside_row: bool) -> str:
         if ty.parametrized:
             for p in ty.params:
                 self.bound_names.append(self._fresh_name(p.name))
-        inputs = ", ".join([self._visit(inp.ty, True) for inp in ty.inputs])
+        inputs = ", ".join(
+            [
+                self._visit(inp.ty, True) + self._print_flags(inp.flags)
+                for inp in ty.inputs
+            ]
+        )
         if len(ty.inputs) != 1:
             inputs = f"({inputs})"
         output = self._visit(ty.output, True)

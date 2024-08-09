@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:19
+
+17:    @guppy(module)
+18:    def test() -> Callable[[qubit], qubit]:
+19:        return foo
+                  ^^^
+GuppyTypeError: Expected return value of type `qubit -> qubit`, got `qubit @inout -> qubit`
