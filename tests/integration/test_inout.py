@@ -136,4 +136,3 @@ def test_control_flow(validate):
         return q1, q2
 
     validate(module.compile())
-
