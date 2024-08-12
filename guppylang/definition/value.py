@@ -1,7 +1,7 @@
 import ast
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
@@ -71,7 +71,7 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
         graph: Hugr,
         globals: "CompiledGlobals",
         node: AstNode,
-    ) -> tuple[list[OutPortV], list[OutPortV]]:
+    ) -> "CallReturnPorts":
         """Compiles a call to the function.
 
         Returns the outputs of the call together with any @inout arguments that are
@@ -97,3 +97,14 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
     ) -> OutPortV:
         """Loads the defined value into a local Hugr dataflow graph."""
         return self.load_with_args([], dfg, graph, globals, node)
+
+
+class CallReturnPorts(NamedTuple):
+    """Output ports that are given back from a call.
+
+    Contains the regular function returns together with any @inout arguments that are
+    passed through the function.
+    """
+
+    regular_returns: list[OutPortV]
+    inout_returns: list[OutPortV]

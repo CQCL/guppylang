@@ -6,10 +6,10 @@ from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
-from guppylang.compiler.expr_compiler import inout_return_ports
+from guppylang.compiler.expr_compiler import add_inout_return_ports
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.function import PyFunc, parse_py_func
-from guppylang.definition.value import CallableDef, CompiledCallableDef
+from guppylang.definition.value import CallableDef, CallReturnPorts, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.hugr_builder.hugr import Hugr, Node, OutPortV, VNode
 from guppylang.nodes import GlobalCall
@@ -30,13 +30,15 @@ class RawFunctionDecl(ParsableDef):
 
     def parse(self, globals: Globals) -> "CheckedFunctionDecl":
         """Parses and checks the user-provided signature of the function."""
-        func_ast = parse_py_func(self.python_func)
+        func_ast, docstring = parse_py_func(self.python_func)
         ty = check_signature(func_ast, globals)
         if not has_empty_body(func_ast):
             raise GuppyError(
                 "Body of function declaration must be empty", func_ast.body[0]
             )
-        return CheckedFunctionDecl(self.id, self.name, func_ast, ty, self.python_func)
+        return CheckedFunctionDecl(
+            self.id, self.name, func_ast, ty, self.python_func, docstring
+        )
 
 
 @dataclass(frozen=True)
@@ -47,6 +49,7 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
     """
 
     defined_at: ast.FunctionDef
+    docstring: str | None
 
     def check_call(
         self, args: list[ast.expr], ty: Type, node: AstNode, ctx: Context
@@ -70,7 +73,13 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
         """Adds a Hugr `FuncDecl` node for this function to the Hugr."""
         node = graph.add_declare(self.ty, parent, self.name)
         return CompiledFunctionDecl(
-            self.id, self.name, self.defined_at, self.ty, self.python_func, node
+            self.id,
+            self.name,
+            self.defined_at,
+            self.ty,
+            self.python_func,
+            self.docstring,
+            node,
         )
 
 
@@ -101,7 +110,10 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> tuple[list[OutPortV], list[OutPortV]]:
+    ) -> CallReturnPorts:
         """Compiles a call to the function."""
         call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
-        return list(call.out_ports), list(inout_return_ports(call, self.ty))
+        return CallReturnPorts(
+            regular_returns=list(call.out_ports),
+            inout_returns=list(add_inout_return_ports(call, self.ty)),
+        )

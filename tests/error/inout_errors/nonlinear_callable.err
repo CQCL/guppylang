@@ -1,0 +1,6 @@
+Guppy compilation failed. Error in file $FILE:12
+
+10:    @guppy.declare(module)
+11:    def foo(f: Callable[[int @inout], None]) -> None: ...
+                                 ^^^^^
+GuppyError: Non-linear type `int` cannot be annotated as `@inout`

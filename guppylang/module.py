@@ -5,7 +5,6 @@ from collections.abc import Callable, Mapping
 from types import ModuleType
 from typing import Any, Union
 
-from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals, PyScope
 from guppylang.compiler.core import CompiledGlobals
 from guppylang.definition.common import (
@@ -104,6 +103,9 @@ class GuppyModule:
     def register_def(self, defn: RawDef, instance: TypeDef | None = None) -> None:
         """Registers a definition with this module.
 
+        If the name of the definition is already defined, the new definition
+        replaces the old.
+
         Optionally, the definition can be marked as an instance method by passing the
         corresponding instance type definition.
         """
@@ -111,7 +113,6 @@ class GuppyModule:
         if self._instance_func_buffer is not None and not isinstance(defn, TypeDef):
             self._instance_func_buffer[defn.name] = defn
         else:
-            self._check_name_available(defn.name, defn.defined_at)
             if isinstance(defn, TypeDef | ParamDef):
                 self._raw_type_defs[defn.id] = defn
             else:
@@ -227,13 +228,6 @@ class GuppyModule:
     def _check_not_yet_compiled(self) -> None:
         if self._compiled:
             raise GuppyError(f"The module `{self.name}` has already been compiled")
-
-    def _check_name_available(self, name: str, node: AstNode | None) -> None:
-        if self.contains(name):
-            raise GuppyError(
-                f"Module `{self.name}` already contains a definition named `{name}`",
-                node,
-            )
 
 
 def get_py_scope(f: PyFunc) -> PyScope:

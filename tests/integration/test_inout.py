@@ -86,7 +86,6 @@ def test_struct(validate):
 
     @guppy(module)
     def test1(a: MyStruct) -> MyStruct:
-        # bar(a)
         foo(a.q1, a.q2)
         bar(a)
         return a
@@ -140,6 +139,44 @@ def test_control_flow(validate):
     validate(module.compile())
 
 
+def test_tensor(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class A:
+        q: qubit
+
+    @guppy.struct(module)
+    class B:
+        q: qubit
+        x: int
+
+    @guppy.struct(module)
+    class C:
+        q: qubit
+        x: float
+
+    @guppy.declare(module)
+    def foo(a: A @ inout, x: int) -> None: ...
+
+    @guppy.declare(module)
+    def bar(y: float, b: B @ inout, c: C) -> C: ...
+
+    @guppy.declare(module)
+    def baz(c: C @ inout) -> None: ...
+
+    @guppy(module)
+    def test(a: A, b: B, c1: C, c2: C, x: bool) -> tuple[A, B, C, C]:
+        c1 = (foo, bar, baz)(a, b.x, c1.x, b, c1, c2)
+        if x:
+            c1 = ((foo, bar), baz)(a, b.x, c1.x, b, c1, c2)
+        c1 = (foo, (bar, baz))(a, b.x, c1.x, b, c1, c2)
+        return a, b, c1, c2
+
+    validate(module.compile())
+
+
 def test_basic_def(validate):
     module = GuppyModule("test")
     module.load(quantum)
@@ -158,9 +195,7 @@ def test_basic_def(validate):
         foo(q)
         return q
 
-    # TODO: Enable validation once HUGR codegen is updated
-    module.compile()
-    # validate(module.compile())
+    validate(module.compile())
 
 
 def test_empty_def(validate):
@@ -176,9 +211,7 @@ def test_empty_def(validate):
         test(q)
         return q
 
-    # TODO: Enable validation once HUGR codegen is updated
-    module.compile()
-    # validate(module.compile())
+    validate(module.compile())
 
 
 def test_mixed_def(validate):
@@ -195,9 +228,7 @@ def test_mixed_def(validate):
         foo(c)
         return e, b + d
 
-    # TODO: Enable validation once HUGR codegen is updated
-    module.compile()
-    # validate(module.compile())
+    validate(module.compile())
 
 
 def test_move_back(validate):
@@ -232,9 +263,7 @@ def test_move_back(validate):
         use(t.q)
         return s
 
-    # TODO: Enable validation once HUGR codegen is updated
-    module.compile()
-    # validate(module.compile())
+    validate(module.compile())
 
 
 @pytest.mark.skip("Fails due to https://github.com/CQCL/guppylang/issues/337")
@@ -274,9 +303,7 @@ def test_move_back_branch(validate):
         test(s, False, 5, qubit(), qubit())
         return s
 
-    # TODO: Enable validation once HUGR codegen is updated
-    module.compile()
-    # validate(module.compile())
+    validate(module.compile())
 
 
 def test_self(validate):
@@ -296,6 +323,4 @@ def test_self(validate):
             if b:
                 foo(self.q)
 
-    # TODO: Enable validation once HUGR codegen is updated
-    module.compile()
-    # validate(module.compile())
+    validate(module.compile())

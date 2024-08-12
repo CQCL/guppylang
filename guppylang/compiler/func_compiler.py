@@ -18,13 +18,17 @@ def compile_global_func_def(
 ) -> None:
     """Compiles a top-level function definition to Hugr."""
     input_tys = [inp.ty for inp in func.ty.inputs]
+    inout_tys = [inp.ty for inp in func.ty.inputs if InputFlags.Inout in inp.flags]
     _, ports = graph.add_input_with_ports(input_tys, def_node)
     cfg_node = graph.add_cfg(def_node, ports)
     compile_cfg(func.cfg, graph, cfg_node, globals)
 
     # Add output node for the cfg
     graph.add_output(
-        inputs=[cfg_node.add_out_port(ty) for ty in type_to_row(func.cfg.output_ty)],
+        inputs=[
+            cfg_node.add_out_port(ty)
+            for ty in (*type_to_row(func.cfg.output_ty), *inout_tys)
+        ],
         parent=def_node,
     )
 
@@ -48,6 +52,7 @@ def compile_local_func_def(
         func.ty.output,
         [v.name for v, _ in captured] + list(func.ty.input_names),
     )
+    inout_tys = [inp.ty for inp in closure_ty.inputs if InputFlags.Inout in inp.flags]
 
     def_node = graph.add_def(closure_ty, dfg.node, func.name)
     def_input, input_ports = graph.add_input_with_ports(
@@ -75,6 +80,7 @@ def compile_local_func_def(
                 func,
                 func.ty,
                 {},
+                None,
                 func.cfg,
                 def_node,
             )
@@ -86,7 +92,10 @@ def compile_local_func_def(
 
     # Add output node for the cfg
     graph.add_output(
-        inputs=[cfg_node.add_out_port(ty) for ty in type_to_row(func.cfg.output_ty)],
+        inputs=[
+            cfg_node.add_out_port(ty)
+            for ty in (*type_to_row(func.cfg.output_ty), *inout_tys)
+        ],
         parent=def_node,
     )
 
