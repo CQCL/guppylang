@@ -103,20 +103,40 @@ def compile_local_func_def(
 
 
 def make_dummy_op(
-    name: str, inp: Sequence[Type], out: Sequence[Type]
+    name: str, inp: Sequence[Type], out: Sequence[Type], extension: str = "dummy"
 ) -> ops.DataflowOp:
     """Dummy operation."""
     input = [ty.to_hugr() for ty in inp]
     output = [ty.to_hugr() for ty in out]
 
     sig = ht.FunctionType(input=input, output=output)
-    return ops.Custom(name=name, extension="dummy", signature=sig, args=[])
+    return ops.Custom(name=name, extension=extension, signature=sig, args=[])
 
 
-def make_partial_op(func_ty: FunctionType, inputs: Sequence[Type]) -> ops.DataflowOp:
-    """Creates a dummy operation for partially evaluating a function."""
-    assert len(func_ty.inputs) >= len(inputs)
-    assert [p.to_hugr() for p in inputs] == [
-        ty.to_hugr() for ty in func_ty.inputs[: len(inputs)]
+def make_partial_op(
+    closure_ty: FunctionType, captured_tys: Sequence[Type]
+) -> ops.DataflowOp:
+    """Creates a dummy operation for partially evaluating a function.
+
+    args:
+        closure_ty: A function type `a_0, ..., a_n -> b_0, ..., b_m`
+        captured_tys: A list of types `c_0, ..., c_k` that are captured by the function
+
+    returns:
+        An operation with type
+            ` ( a_0, ..., a_n, c_0, ..., c_k -> b_0, ..., b_m )`
+            `-> a_0, ..., a_n -> b_0, ..., b_m`
+    """
+    all_inputs = closure_ty.inputs + captured_tys
+    full_func_ty = FunctionType(all_inputs, closure_ty.output)
+
+    assert len(closure_ty.inputs) >= len(captured_tys)
+    assert [p.to_hugr() for p in captured_tys] == [
+        ty.to_hugr() for ty in closure_ty.inputs[: len(captured_tys)]
     ]
-    return make_dummy_op("partial", func_ty.inputs[len(inputs) :], [func_ty.output])
+    return make_dummy_op(
+        "partial",
+        [full_func_ty, *captured_tys],
+        [closure_ty],
+        extension="guppylang.unsupported",
+    )

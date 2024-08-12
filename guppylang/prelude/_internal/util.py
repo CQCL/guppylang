@@ -266,7 +266,7 @@ def list_op(
     op_name: str,
     inp: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
     out: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
-    ext: str = "guppy.list.unsupported",
+    ext: str = "guppy.unsupported",
 ) -> Callable[[Inst], ops.DataflowOp]:
     """Utility method to create Hugr list operations.
 
@@ -293,7 +293,7 @@ def linst_op(
     op_name: str,
     inp: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
     out: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
-    ext: str = "guppy.list.unsupported",
+    ext: str = "guppy.unsupported",
 ) -> Callable[[Inst], ops.DataflowOp]:
     """Utility method to create linear Hugr list operations.
 
