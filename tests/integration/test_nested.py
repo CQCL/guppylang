@@ -12,6 +12,20 @@ def test_basic(validate):
     validate(foo)
 
 
+def test_basic_empty(validate):
+    @compile_guppy
+    def foo() -> None:
+        def f() -> None:
+            pass
+
+        def g() -> None:
+            f()
+
+        g()
+
+    validate(foo)
+
+
 def test_call_twice(validate):
     @compile_guppy
     def foo(x: int) -> int:
