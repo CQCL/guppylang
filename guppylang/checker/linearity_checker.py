@@ -30,6 +30,7 @@ from guppylang.nodes import (
     InoutReturnSentinel,
     LocalCall,
     PlaceNode,
+    TensorCall,
 )
 from guppylang.tys.ty import FunctionType, InputFlags, StructType
 
@@ -102,7 +103,6 @@ class BBLinearityChecker(ast.NodeVisitor):
         for var in bb.sig.input_row:
             for place in leaf_places(var):
                 input_scope.assign(place)
-        # TODO: Set used flags in input_scope
         self.globals = globals
 
         # Open up a new nested scope to check the BB contents. This way we can track
@@ -193,6 +193,11 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.visit(node.func)
         self._visit_call_args(func_ty, node.args)
         self._reassign_inout_args(func_ty, node.args)
+
+    def visit_TensorCall(self, node: TensorCall) -> None:
+        for arg in node.args:
+            self.visit(arg)
+        self._reassign_inout_args(node.tensor_ty, node.args)
 
     def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> None:
         # A field access on a value that is not a place. This means the value can no

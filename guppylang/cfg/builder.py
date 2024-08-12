@@ -211,7 +211,9 @@ class CFGBuilder(AstVisitor[BB | None]):
     def visit_FunctionDef(
         self, node: ast.FunctionDef, bb: BB, jumps: Jumps
     ) -> BB | None:
-        from guppylang.checker.func_checker import check_signature
+        from guppylang.checker.func_checker import check_signature, parse_docstring
+
+        node, docstring = parse_docstring(node)
 
         func_ty = check_signature(node, self.globals)
         returns_none = isinstance(func_ty.output, NoneType)
@@ -220,6 +222,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         new_node = NestedFunctionDef(
             cfg,
             func_ty,
+            docstring=docstring,
             name=node.name,
             args=node.args,
             body=node.body,

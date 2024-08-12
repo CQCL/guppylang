@@ -27,16 +27,20 @@ from guppylang.nodes import (
     GlobalName,
     LocalCall,
     PlaceNode,
+    ResultExpr,
     TensorCall,
     TypeApply,
 )
+from guppylang.tys.arg import ConstArg, TypeArg
 from guppylang.tys.builtin import bool_type, get_element_type, is_list_type
+from guppylang.tys.const import ConstValue
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
     FunctionType,
     InputFlags,
     NoneType,
+    NumericType,
     TupleType,
     Type,
     type_to_row,
@@ -212,31 +216,29 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         args = [self.visit(arg) for arg in node.args]
         call = self.graph.add_indirect_call(func, args)
         rets = [call.out_port(i) for i in range(len(type_to_row(func.ty.output)))]
-        self._update_inout_ports(node.args, inout_return_ports(call, func.ty), func.ty)
+        self._update_inout_ports(
+            node.args, add_inout_return_ports(call, func.ty), func.ty
+        )
         return self._pack_returns(rets, func.ty.output)
 
     def visit_TensorCall(self, node: TensorCall) -> OutPortV:
         func = self.visit(node.func)
-        args = [self.visit(arg) for arg in node.args]
-
         assert isinstance(func.ty, TupleType)
-
         rets: list[OutPortV] = []
-        remaining_args = args
+        remaining_args = node.args
         for elem in self._unpack_tuple(func):
             outs, remaining_args = self._compile_tensor_with_leftovers(
                 elem, remaining_args
             )
             rets.extend(outs)
         assert remaining_args == []
-
-        return self._pack_returns(rets, node.out_tys)
+        return self._pack_returns(rets, node.tensor_ty.output)
 
     def _compile_tensor_with_leftovers(
-        self, func: OutPortV, args: list[OutPortV]
+        self, func: OutPortV, args: list[ast.expr]
     ) -> tuple[
         list[OutPortV],  # Compiled outputs
-        list[OutPortV],
+        list[ast.expr],
     ]:  # Leftover args
         if isinstance(func.ty, TupleType):
             remaining_args = args
@@ -250,9 +252,14 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 
         elif isinstance(func.ty, FunctionType):
             input_len = len(func.ty.inputs)
-            call = self.graph.add_indirect_call(func, args[0:input_len])
+            ports = [self.visit(arg) for arg in args[:input_len]]
+            call = self.graph.add_indirect_call(func, ports)
+            rets = list(call.out_ports)
+            self._update_inout_ports(
+                args[:input_len], add_inout_return_ports(call, func.ty), func.ty
+            )
+            return rets, args[input_len:]
 
-            return list(call.out_ports), args[input_len:]
         else:
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
@@ -261,11 +268,11 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         assert isinstance(func, CompiledCallableDef)
 
         args = [self.visit(arg) for arg in node.args]
-        rets, inout_rets = func.compile_call(
+        rets = func.compile_call(
             args, list(node.type_args), self.dfg, self.graph, self.globals, node
         )
-        self._update_inout_ports(node.args, iter(inout_rets), func.ty)
-        return self._pack_returns(rets, func.ty.output)
+        self._update_inout_ports(node.args, iter(rets.inout_returns), func.ty)
+        return self._pack_returns(rets.regular_returns, func.ty.output)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
@@ -310,6 +317,20 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         struct_port = self.visit(node.value)
         unpack = self.graph.add_unpack_tuple(struct_port)
         return unpack.out_port(node.struct_ty.fields.index(node.field))
+
+    def visit_ResultExpr(self, node: ResultExpr) -> OutPortV:
+        type_args = [
+            TypeArg(node.ty),
+            ConstArg(ConstValue(value=node.tag, ty=NumericType(NumericType.Kind.Nat))),
+        ]
+        op = ops.CustomOp(
+            extension="tket2.results",
+            op_name="Result",
+            args=[arg.to_hugr() for arg in type_args],
+            parent=UNDEFINED,
+        )
+        self.graph.add_node(ops.OpType(op), inputs=[self.visit(node.value)])
+        return self._pack_returns([], NoneType())
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> OutPortV:
         from guppylang.compiler.stmt_compiler import StmtCompiler
@@ -379,7 +400,7 @@ def expr_to_row(expr: ast.expr) -> list[ast.expr]:
     return expr.elts if isinstance(expr, ast.Tuple) else [expr]
 
 
-def inout_return_ports(call: VNode, func_ty: FunctionType) -> Iterator[OutPortV]:
+def add_inout_return_ports(call: VNode, func_ty: FunctionType) -> Iterator[OutPortV]:
     """Appends additional output ports to `Call` corresponding to @inout outputs.
 
     Returns an iterator of the added ports.

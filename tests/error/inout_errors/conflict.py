@@ -1,20 +1,22 @@
+from collections.abc import Callable
+
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude.builtins import inout
-from guppylang.prelude.quantum import measure, qubit, quantum
+from guppylang.prelude.quantum import quantum, qubit
+
 
 module = GuppyModule("test")
 module.load(quantum)
 
 
 @guppy.declare(module)
-def use(q: qubit) -> None: ...
+def foo(x: qubit @inout) -> qubit: ...
 
 
 @guppy(module)
-def test(q: qubit @inout, b: bool) -> None:
-    if b:
-        use(q)
+def test() -> Callable[[qubit], qubit]:
+    return foo
 
 
 module.compile()
