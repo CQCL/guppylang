@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from guppylang.ast_util import AstNode
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import FunctionType, StructType
+from guppylang.tys.ty import FunctionType, StructType, Type
 
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import CFG
@@ -188,9 +188,20 @@ class PyExpr(ast.expr):
     _fields = ("value",)
 
 
+class ResultExpr(ast.expr):
+    """A `result(tag, value)` expression."""
+
+    value: ast.expr
+    ty: Type
+    tag: int
+
+    _fields = ("value", "ty", "tag")
+
+
 class NestedFunctionDef(ast.FunctionDef):
     cfg: "CFG"
     ty: FunctionType
+    docstring: str | None
 
     def __init__(self, cfg: "CFG", ty: FunctionType, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)

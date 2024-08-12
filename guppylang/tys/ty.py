@@ -689,6 +689,10 @@ def unify(s: Type | Const, t: Type | Const, subst: "Subst | None") -> "Subst | N
         case NoneType(), NoneType():
             return subst
         case FunctionType() as s, FunctionType() as t if s.params == t.params:
+            if len(s.inputs) != len(t.inputs) or any(
+                a.flags != b.flags for a, b in zip(s.inputs, t.inputs, strict=True)
+            ):
+                return None
             return _unify_args(s, t, subst)
         case TupleType() as s, TupleType() as t:
             return _unify_args(s, t, subst)

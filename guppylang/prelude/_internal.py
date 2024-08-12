@@ -21,12 +21,19 @@ from guppylang.definition.custom import (
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.hugr_builder.hugr import UNDEFINED, OutPortV
-from guppylang.nodes import GlobalCall
-from guppylang.tys.arg import ConstArg, TypeArg
+from guppylang.nodes import GlobalCall, ResultExpr
+from guppylang.tys.arg import ConstArg
 from guppylang.tys.builtin import bool_type, int_type, list_type
 from guppylang.tys.const import ConstValue
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import FunctionType, NoneType, NumericType, Type, unify
+from guppylang.tys.ty import (
+    FunctionType,
+    NoneType,
+    NumericType,
+    Type,
+    type_to_row,
+    unify,
+)
 
 
 class ConstInt(BaseModel):
@@ -287,34 +294,12 @@ class ResultChecker(CustomCallChecker):
             raise GuppyTypeError(
                 f"Cannot use value with linear type `{ty}` as a result", value
             )
-        type_args = [
-            TypeArg(ty),
-            ConstArg(ConstValue(value=tag.value, ty=NumericType(NumericType.Kind.Nat))),
-        ]
-        call = GlobalCall(def_id=self.func.id, args=[value], type_args=type_args)
-        return with_loc(self.node, call), NoneType()
+        return with_loc(self.node, ResultExpr(value, ty, tag.value)), NoneType()
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         expr, res_ty = self.synthesize(args)
         subst, _ = check_type_against(res_ty, ty, self.node)
         return expr, subst
-
-
-class ResultCompiler(CustomCallCompiler):
-    """Call compiler for the `result` function.
-
-    This is a temporary hack until we have implemented the proper results mechanism.
-    """
-
-    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
-        op = ops.CustomOp(
-            extension="tket2.results",
-            op_name="Result",
-            args=[arg.to_hugr() for arg in self.type_args],
-            parent=UNDEFINED,
-        )
-        self.graph.add_node(ops.OpType(op), inputs=args)
-        return []
 
 
 class NatTruedivCompiler(CustomCallCompiler):
@@ -442,3 +427,16 @@ class MeasureCompiler(CustomCallCompiler):
             quantum_op("QFree"), inputs=[measure.add_out_port(qubit.ty)]
         )
         return [measure.add_out_port(bool_type())]
+
+
+class QAllocCompiler(CustomCallCompiler):
+    """Compiler for the `qubit` function."""
+
+    def compile(self, args: list[OutPortV]) -> list[OutPortV]:
+        from .quantum import quantum_op
+
+        [qubit_ty] = type_to_row(get_type(self.node))
+        qalloc = self.graph.add_node(quantum_op("QAlloc"), inputs=args)
+        qalloc_result = qalloc.add_out_port(qubit_ty)
+        reset = self.graph.add_node(quantum_op("Reset"), inputs=[qalloc_result])
+        return [reset.add_out_port(qubit_ty)]

@@ -27,16 +27,20 @@ from guppylang.nodes import (
     GlobalName,
     LocalCall,
     PlaceNode,
+    ResultExpr,
     TensorCall,
     TypeApply,
 )
+from guppylang.tys.arg import ConstArg, TypeArg
 from guppylang.tys.builtin import bool_type, get_element_type, is_list_type
+from guppylang.tys.const import ConstValue
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
     FunctionType,
     InputFlags,
     NoneType,
+    NumericType,
     TupleType,
     Type,
     type_to_row,
@@ -313,6 +317,20 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         struct_port = self.visit(node.value)
         unpack = self.graph.add_unpack_tuple(struct_port)
         return unpack.out_port(node.struct_ty.fields.index(node.field))
+
+    def visit_ResultExpr(self, node: ResultExpr) -> OutPortV:
+        type_args = [
+            TypeArg(node.ty),
+            ConstArg(ConstValue(value=node.tag, ty=NumericType(NumericType.Kind.Nat))),
+        ]
+        op = ops.CustomOp(
+            extension="tket2.results",
+            op_name="Result",
+            args=[arg.to_hugr() for arg in type_args],
+            parent=UNDEFINED,
+        )
+        self.graph.add_node(ops.OpType(op), inputs=[self.visit(node.value)])
+        return self._pack_returns([], NoneType())
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> OutPortV:
         from guppylang.compiler.stmt_compiler import StmtCompiler
