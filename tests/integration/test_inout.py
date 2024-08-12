@@ -84,7 +84,6 @@ def test_struct(validate):
 
     @guppy(module)
     def test1(a: MyStruct) -> MyStruct:
-        # bar(a)
         foo(a.q1, a.q2)
         bar(a)
         return a
