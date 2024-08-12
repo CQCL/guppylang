@@ -16,8 +16,8 @@ from guppylang.checker.core import Context, Globals, Variable
 from guppylang.definition.common import DefId
 from guppylang.error import GuppyError
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
-from guppylang.tys.parsing import type_from_ast
-from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, NoneType
+from guppylang.tys.parsing import parse_function_io_types
+from guppylang.tys.ty import FunctionType, NoneType
 
 if TYPE_CHECKING:
     from guppylang.tys.param import Parameter
@@ -92,7 +92,7 @@ def check_nested_func_def(
             from guppylang.definition.function import ParsedFunctionDef
 
             func = ParsedFunctionDef(
-                def_id, func_def.name, func_def, func_ty, globals.python_scope
+                def_id, func_def.name, func_def, func_ty, globals.python_scope, None
             )
             globals = ctx.globals | Globals(
                 {func.id: func}, {func_def.name: func.id}, {}, {}
@@ -143,37 +143,41 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
 
     # TODO: Prepopulate mapping when using Python 3.12 style generic functions
     param_var_mapping: dict[str, Parameter] = {}
-    inputs = []
+    input_nodes = []
     input_names = []
     for inp in func_def.args.args:
         ty_ast = inp.annotation
         if ty_ast is None:
             raise GuppyError("Argument type must be annotated", inp)
-        flags = InputFlags.NoFlags
-        # Detect `@flag` argument annotations
-        # TODO: This doesn't work if the type annotation is a string forward ref. We
-        #  should rethink how we handle these...
-        if isinstance(ty_ast, ast.BinOp) and isinstance(ty_ast.op, ast.MatMult):
-            ty = type_from_ast(ty_ast.left, globals, param_var_mapping)
-            match ty_ast.right:
-                case ast.Name(id="inout"):
-                    if not ty.linear:
-                        raise GuppyError(
-                            f"Non-linear type `{ty}` cannot be annotated as `@inout`",
-                            ty_ast.right,
-                        )
-                    flags |= InputFlags.Inout
-                case _:
-                    raise GuppyError("Invalid annotation", ty_ast.right)
-        else:
-            ty = type_from_ast(ty_ast, globals, param_var_mapping)
-        inputs.append(FuncInput(ty, flags))
+        input_nodes.append(ty_ast)
         input_names.append(inp.arg)
-    ret_type = type_from_ast(func_def.returns, globals, param_var_mapping)
-
+    inputs, output = parse_function_io_types(
+        input_nodes, func_def.returns, func_def, globals, param_var_mapping
+    )
     return FunctionType(
         inputs,
-        ret_type,
+        output,
         input_names,
         sorted(param_var_mapping.values(), key=lambda v: v.idx),
     )
+
+
+def parse_docstring(func_ast: ast.FunctionDef) -> tuple[ast.FunctionDef, str | None]:
+    """Check if the first line of a function is a docstring.
+
+    If it is, return the function with the docstring removed, plus the docstring.
+    Else, return the original function and `None`
+    """
+    docstring = None
+    match func_ast.body:
+        case [doc, *xs]:
+            if (
+                isinstance(doc, ast.Expr)
+                and isinstance(doc.value, ast.Constant)
+                and isinstance(doc.value.value, str)
+            ):
+                docstring = doc.value.value
+                func_ast.body = xs
+        case _:
+            pass
+    return func_ast, docstring
