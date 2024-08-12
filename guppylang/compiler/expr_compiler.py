@@ -325,7 +325,6 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
             base_name = "bool"
         if node.array_len is not None:
             op_name = f"result_array_{base_name}"
-            assert node.array_len is not None
             match node.array_len:
                 case ConstValue(value=value):
                     assert isinstance(value, int)
