@@ -60,12 +60,12 @@ class TensorCall(ast.expr):
 
     func: ast.expr
     args: list[ast.expr]
-    out_tys: Type
+    tensor_ty: FunctionType
 
     _fields = (
         "func",
         "args",
-        "out_tys",
+        "tensor_ty",
     )
 
 

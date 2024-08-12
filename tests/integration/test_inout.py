@@ -135,3 +135,41 @@ def test_control_flow(validate):
         return q1, q2
 
     validate(module.compile())
+
+
+def test_tensor(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class A:
+        q: qubit
+
+    @guppy.struct(module)
+    class B:
+        q: qubit
+        x: int
+
+    @guppy.struct(module)
+    class C:
+        q: qubit
+        x: float
+
+    @guppy.declare(module)
+    def foo(a: A @ inout, x: int) -> None: ...
+
+    @guppy.declare(module)
+    def bar(y: float, b: B @ inout, c: C) -> C: ...
+
+    @guppy.declare(module)
+    def baz(c: C @ inout) -> None: ...
+
+    @guppy(module)
+    def test(a: A, b: B, c1: C, c2: C, x: bool) -> tuple[A, B, C, C]:
+        c1 = (foo, bar, baz)(a, b.x, c1.x, b, c1, c2)
+        if x:
+            c1 = ((foo, bar), baz)(a, b.x, c1.x, b, c1, c2)
+        c1 = (foo, (bar, baz))(a, b.x, c1.x, b, c1, c2)
+        return a, b, c1, c2
+
+    validate(module.compile())
