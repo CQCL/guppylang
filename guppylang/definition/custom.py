@@ -1,8 +1,8 @@
 import ast
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Callable, cast
+from typing import cast
 
 import hugr.function as hf
 import hugr.tys as ht
@@ -189,8 +189,9 @@ class CustomFunctionDef(CompiledCallableDef):
         # TODO: Why do we need to monomorphise here?
         fun_ty: FunctionType = self.ty.instantiate(type_args)
         input_types: list[ht.Type] = [ty.to_hugr() for ty in fun_ty.inputs]
+        output_types: list[ht.Type] = [ty.to_hugr() for ty in fun_ty.output]
         func: hf.Function = dfg.builder.define_function(
-            self.name, input_types, type_params=[]
+            self.name, input_types, output_types, type_params=[]
         )
 
         func_dfg = DFContainer(func, dfg.locals.copy())

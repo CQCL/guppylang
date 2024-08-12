@@ -51,7 +51,9 @@ def compile_local_func_def(
     )
     hugr_closure_ty: ht.FunctionType = closure_ty.to_hugr_poly().body
 
-    func_builder = dfg.builder.define_function(func.name, hugr_closure_ty.input)
+    func_builder = dfg.builder.define_function(
+        func.name, hugr_closure_ty.input, hugr_closure_ty.output
+    )
 
     # If we have captured variables and the body contains a recursive occurrence of
     # the function itself, then we provide the partially applied function as a local

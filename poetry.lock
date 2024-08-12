@@ -406,7 +406,7 @@ semver = "^3.0.2"
 type = "git"
 url = "https://github.com/CQCL/hugr"
 reference = "ab/guppy-things"
-resolved_reference = "84344bfa4fa3c4e8761e9bf2eccf981d69f05581"
+resolved_reference = "abd70c99291f41fce57ed8d8b0692faa63117b74"
 subdirectory = "hugr-py"
 
 [[package]]

@@ -283,11 +283,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             assert isinstance(func_hugr_ty, ht.FunctionType)
 
             input_len = len(func_ty.inputs)
+            consumed_args, other_args = args[0:input_len], args[input_len:]
+
             call = self.builder.add_op(
-                ops.CallIndirect(func_hugr_ty), func, *args[0:input_len]
+                ops.CallIndirect(func_hugr_ty), func, *consumed_args
             )
 
-            return list(call), args[input_len:]
+            return list(call), other_args
         else:
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 

@@ -103,7 +103,7 @@ def array_n_t(n_var_idx: int = 0, t_var_idx: int = 1) -> ht.Type:
         args=[
             ht.VariableArg(
                 idx=n_var_idx,
-                param=ht.BoundedNatParam(upper_bound=hugr.std.int.LOG_WIDTH_BOUND),
+                param=ht.BoundedNatParam(upper_bound=None),
             ),
             ht.VariableArg(idx=t_var_idx, param=ht.TypeTypeParam(bound=bound)),
         ],
