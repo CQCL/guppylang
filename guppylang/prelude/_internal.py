@@ -22,9 +22,15 @@ from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.hugr_builder.hugr import UNDEFINED, OutPortV
 from guppylang.nodes import GlobalCall, ResultExpr
-from guppylang.tys.arg import ConstArg
-from guppylang.tys.builtin import bool_type, int_type, list_type
-from guppylang.tys.const import ConstValue
+from guppylang.tys.arg import ConstArg, TypeArg
+from guppylang.tys.builtin import (
+    bool_type,
+    int_type,
+    is_array_type,
+    is_bool_type,
+    list_type,
+)
+from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     FunctionType,
@@ -277,22 +283,34 @@ class ArrayLenChecker(CustomCallChecker):
 
 
 class ResultChecker(CustomCallChecker):
-    """Call checker for the `result` function.
-
-    This is a temporary hack until we have implemented the proper results mechanism.
-    """
+    """Call checker for the `result` function."""
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(2, len(args), self.node)
         [tag, value] = args
-        if not isinstance(tag, ast.Constant) or not isinstance(tag.value, int):
-            raise GuppyTypeError("Expected an int literal", tag)
+        if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
+            raise GuppyTypeError("Expected a string literal", tag)
         value, ty = ExprSynthesizer(self.ctx).synthesize(value)
-        if ty.linear:
-            raise GuppyTypeError(
-                f"Cannot use value with linear type `{ty}` as a result", value
-            )
-        return with_loc(self.node, ResultExpr(value, ty, tag.value)), NoneType()
+        # We only allow numeric values or vectors of numeric values
+        err = (
+            f"Expression of type `{ty}` is not a valid result. Only numeric values or "
+            "arrays thereof are allowed."
+        )
+        if isinstance(ty, NumericType) or is_bool_type(ty):
+            base_ty = ty
+            array_len: Const | None = None
+        elif is_array_type(ty):
+            [ty_arg, len_arg] = ty.args
+            assert isinstance(ty_arg, TypeArg)
+            assert isinstance(len_arg, ConstArg)
+            if not isinstance(ty_arg.ty, NumericType) and not is_bool_type(ty_arg.ty):
+                raise GuppyError(err, value)
+            base_ty = ty_arg.ty
+            array_len = len_arg.const
+        else:
+            raise GuppyError(err, value)
+        node = ResultExpr(value, base_ty, array_len, tag.value)
+        return with_loc(self.node, node), NoneType()
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         expr, res_ty = self.synthesize(args)

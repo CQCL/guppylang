@@ -11,7 +11,7 @@ module.load(quantum)
 
 @guppy(module)
 def foo(q: qubit) -> None:
-    result(0, q)
+    result("foo", q)
 
 
 module.compile()

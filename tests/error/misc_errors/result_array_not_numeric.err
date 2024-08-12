@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:7
+
+5:    @compile_guppy
+6:    def foo(x: array[tuple[int, bool], 42]) -> None:
+7:        result("foo", x)
+                        ^
+GuppyError: Expression of type `array[(int, bool), 42]` is not a valid result. Only numeric values or arrays thereof are allowed.
