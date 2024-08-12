@@ -9,12 +9,16 @@ from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
 from guppylang.checker.core import Context, Globals, PyScope
 from guppylang.checker.expr_checker import check_call, synthesize_call
-from guppylang.checker.func_checker import check_global_func_def, check_signature
+from guppylang.checker.func_checker import (
+    check_global_func_def,
+    check_signature,
+    parse_docstring,
+)
 from guppylang.compiler.core import CompiledGlobals, DFContainer
-from guppylang.compiler.expr_compiler import inout_return_ports
+from guppylang.compiler.expr_compiler import add_inout_return_ports
 from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import CheckableDef, CompilableDef, ParsableDef
-from guppylang.definition.value import CallableDef, CompiledCallableDef
+from guppylang.definition.value import CallableDef, CallReturnPorts, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr, Node, OutPortV
 from guppylang.nodes import GlobalCall
@@ -40,13 +44,15 @@ class RawFunctionDef(ParsableDef):
 
     def parse(self, globals: Globals) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
-        func_ast = parse_py_func(self.python_func)
+        func_ast, docstring = parse_py_func(self.python_func)
         ty = check_signature(func_ast, globals)
         if ty.parametrized:
             raise GuppyError(
                 "Generic function definitions are not supported yet", func_ast
             )
-        return ParsedFunctionDef(self.id, self.name, func_ast, ty, self.python_scope)
+        return ParsedFunctionDef(
+            self.id, self.name, func_ast, ty, self.python_scope, docstring
+        )
 
 
 @dataclass(frozen=True)
@@ -60,6 +66,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
     python_scope: PyScope
     defined_at: ast.FunctionDef
     ty: FunctionType
+    docstring: str | None
 
     description: str = field(default="function", init=False)
 
@@ -74,6 +81,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
             self.defined_at,
             self.ty,
             self.python_scope,
+            self.docstring,
             cfg,
         )
 
@@ -120,6 +128,7 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
             self.defined_at,
             self.ty,
             self.python_scope,
+            self.docstring,
             self.cfg,
             def_node,
         )
@@ -152,17 +161,20 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> tuple[list[OutPortV], list[OutPortV]]:
+    ) -> CallReturnPorts:
         """Compiles a call to the function."""
         call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
-        return list(call.out_ports), list(inout_return_ports(call, self.ty))
+        return CallReturnPorts(
+            regular_returns=list(call.out_ports),
+            inout_returns=list(add_inout_return_ports(call, self.ty)),
+        )
 
     def compile_inner(self, graph: Hugr, globals: CompiledGlobals) -> None:
         """Compiles the body of the function."""
         compile_global_func_def(self, self.hugr_node, graph, globals)
 
 
-def parse_py_func(f: PyFunc) -> ast.FunctionDef:
+def parse_py_func(f: PyFunc) -> tuple[ast.FunctionDef, str | None]:
     source_lines, line_offset = inspect.getsourcelines(f)
     source = "".join(source_lines)  # Lines already have trailing \n's
     source = textwrap.dedent(source)
@@ -173,4 +185,4 @@ def parse_py_func(f: PyFunc) -> ast.FunctionDef:
     annotate_location(func_ast, source, file, line_offset)
     if not isinstance(func_ast, ast.FunctionDef):
         raise GuppyError("Expected a function definition", func_ast)
-    return func_ast
+    return parse_docstring(func_ast)

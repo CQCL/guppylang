@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.7.0](https://github.com/CQCL/guppylang/compare/v0.6.2...v0.7.0) (2024-07-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* `qubit`s are now reset on allocation
+
+### Features
+
+* `qubit`s are now reset on allocation, and `dirty_qubit` added ([#325](https://github.com/CQCL/guppylang/issues/325)) ([4a9e205](https://github.com/CQCL/guppylang/commit/4a9e20529a4d0859f010fad62ba06f62ca1c98ce))
+* Allow access to struct fields and mutation of linear ones ([#295](https://github.com/CQCL/guppylang/issues/295)) ([6698b75](https://github.com/CQCL/guppylang/commit/6698b75b01421cd1fa545219786266fb0c1da05b)), closes [#293](https://github.com/CQCL/guppylang/issues/293)
+* Allow redefinition of names in guppy modules ([#326](https://github.com/CQCL/guppylang/issues/326)) ([314409c](https://github.com/CQCL/guppylang/commit/314409cd63b544d0fdbf16db66201b08dead81fe)), closes [#307](https://github.com/CQCL/guppylang/issues/307)
+
+
+### Bug Fixes
+
+* Use correct hook for error printing inside jupyter notebooks ([#324](https://github.com/CQCL/guppylang/issues/324)) ([bfdb003](https://github.com/CQCL/guppylang/commit/bfdb003d454d3d8fb6385c2c758dab56ab622496)), closes [#323](https://github.com/CQCL/guppylang/issues/323)
+
 ## [0.6.2](https://github.com/CQCL/guppylang/compare/v0.6.1...v0.6.2) (2024-07-10)
 
 

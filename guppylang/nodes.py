@@ -60,12 +60,12 @@ class TensorCall(ast.expr):
 
     func: ast.expr
     args: list[ast.expr]
-    out_tys: Type
+    tensor_ty: FunctionType
 
     _fields = (
         "func",
         "args",
-        "out_tys",
+        "tensor_ty",
     )
 
 
@@ -188,6 +188,16 @@ class PyExpr(ast.expr):
     _fields = ("value",)
 
 
+class ResultExpr(ast.expr):
+    """A `result(tag, value)` expression."""
+
+    value: ast.expr
+    ty: Type
+    tag: int
+
+    _fields = ("value", "ty", "tag")
+
+
 class InoutReturnSentinel(ast.expr):
     """An invisible expression corresponding to an implicit use of @inout vars whenever
     a function returns."""
@@ -200,6 +210,7 @@ class InoutReturnSentinel(ast.expr):
 class NestedFunctionDef(ast.FunctionDef):
     cfg: "CFG"
     ty: FunctionType
+    docstring: str | None
 
     def __init__(self, cfg: "CFG", ty: FunctionType, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
