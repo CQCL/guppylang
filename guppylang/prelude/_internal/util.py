@@ -5,7 +5,7 @@ unified definition of extension operations.
 """
 
 import builtins
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import TypeVar
 
@@ -19,7 +19,9 @@ from hugr import val as hv
 import guppylang.tys.builtin
 import guppylang.tys.ty
 import guppylang.tys.var
-from guppylang.tys.builtin import list_type
+from guppylang.tys.arg import Argument, TypeArg
+from guppylang.tys.builtin import int_type, list_type
+from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType, Type
 
 
@@ -86,11 +88,13 @@ def linst_t(var_idx: int = 0) -> ht.Type:
 
 
 def array_n_t(n_var_idx: int = 0, t_var_idx: int = 1) -> ht.Type:
-    """The hugr type for an array[T, n]
+    """The hugr type `array[n, T]` corresponding to the guppy type `array[T, n]`.
+
+    Note that the type arguments are reversed.
 
     args:
-        n_var_idx: The index of `n` in the operation's type arguments.
-        t_var_idx: The index of `T` in the operation's type arguments.
+        n_var_idx: The index of `n` in the hugr operation's type arguments.
+        t_var_idx: The index of `T` in the hugr operation's type arguments.
     """
     bound: ht.TypeBound = ht.TypeBound.Copyable
     return ht.Opaque(
@@ -112,14 +116,14 @@ def int_arg(n: int = NumericType.INT_WIDTH) -> ht.TypeArg:
     return ht.BoundedNatArg(n=n)
 
 
-def type_arg() -> ht.TypeArg:
+def type_arg(idx: int = 0) -> ht.TypeArg:
     """A generic type argument."""
-    return ht.VariableArg(idx=0, param=ht.TypeTypeParam(bound=ht.TypeBound.Copyable))
+    return ht.VariableArg(idx=idx, param=ht.TypeTypeParam(bound=ht.TypeBound.Copyable))
 
 
-def ltype_arg() -> ht.TypeArg:
+def ltype_arg(idx: int = 0) -> ht.TypeArg:
     """A generic linear type argument."""
-    return ht.VariableArg(idx=0, param=ht.TypeTypeParam(bound=ht.TypeBound.Any))
+    return ht.VariableArg(idx=idx, param=ht.TypeTypeParam(bound=ht.TypeBound.Any))
 
 
 def builtin_type_to_hugr(ty: builtins.type) -> ht.Type:
@@ -155,14 +159,68 @@ def type_to_hugr(ty: guppylang.tys.ty.Type | builtins.type | ht.Type) -> ht.Type
         return builtin_type_to_hugr(ty)
 
 
-def dummy_op(
+def make_concrete_arg(
+    arg: ht.TypeArg,
+    inst: Inst,
+    variable_remap: dict[int, int] | None = None,
+) -> ht.TypeArg:
+    """Makes a concrete hugr type argument using a guppy instantiation.
+
+    Args:
+        arg: The hugr type argument to make concrete, containing variable arguments.
+        inst: The guppy instantiation of the type arguments.
+        variable_remap: A mapping from the hugr param variable indices to
+            de Bruijn indices in the guppy type. Defaults to identity.
+    """
+    remap = variable_remap or {}
+
+    if isinstance(arg, ht.VariableArg) and remap.get(arg.idx, arg.idx) < len(inst):
+        concrete_arg: Argument = inst[remap.get(arg.idx, arg.idx)]
+        return concrete_arg.to_hugr()
+    return arg
+
+
+def make_concrete(
+    ty: ht.Type,
+    inst: Inst,
+    variable_remap: dict[int, int] | None = None,
+) -> ht.Type:
+    """Makes a concrete hugr type using a guppy instantiation.
+
+    Args:
+        ty: The hugr type to make concrete.
+        inst: The guppy instantiation of the type arguments.
+        variable_remap: A mapping from the hugr param variable indices to
+            de Bruijn indices in the guppy type. Defaults to identity.
+    """
+    remap = variable_remap or {}
+
+    if isinstance(ty, ht.Variable) and remap.get(ty.idx, ty.idx) < len(inst):
+        concrete_arg: Argument = inst[remap.get(ty.idx, ty.idx)]
+        assert isinstance(
+            concrete_arg, TypeArg
+        ), f"Cannot translate const type {concrete_arg} arg into a type"
+        return concrete_arg.ty.to_hugr()
+    if isinstance(ty, ht.Opaque):
+        return ht.Opaque(
+            id=ty.id,
+            bound=ty.bound,
+            extension=ty.extension,
+            args=[make_concrete_arg(arg, inst, remap) for arg in ty.args],
+        )
+    return ty
+
+
+def custom_op(
     name: str,
     inp: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
     out: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
-    ext: str = "dummy",
-    args: list[ht.TypeArg] | None = None,
-) -> ops.DataflowOp:
-    """Dummy operation.
+    args: list[ht.TypeArg],
+    *,
+    ext: str = "guppy.unsupported",
+    variable_remap: dict[int, int] | None = None,
+) -> Callable[[Inst], ops.DataflowOp]:
+    """Custom hugr operation
 
     Args:
         op_name: The name of the operation.
@@ -174,8 +232,14 @@ def dummy_op(
             If the types are guppylang types, they are translated to Hugr types.
             Any other types is treated as a native python type, and translated to
             a Hugr type using `builtin_type_to_hugr`.
-        ext: The extension of the operation.
         args: The type arguments of the operation.
+        ext: The extension of the operation. Defaults to a placeholder extension.
+        variable_remap: A mapping from the hugr param variable indices to
+            de Bruijn indices in the guppy type. Defaults to identity.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
     """
     # TODO: Using this function as a placeholder until we know if it can be
     # dropped with the builder update.
@@ -186,10 +250,70 @@ def dummy_op(
         e.add_note(f"For function {name}")
         raise
 
-    args = args or []
+    def op(inst: Inst) -> ops.DataflowOp:
+        concrete_input = [make_concrete(ty, inst, variable_remap) for ty in input]
+        concrete_output = [make_concrete(ty, inst, variable_remap) for ty in output]
+        sig = ht.FunctionType(input=concrete_input, output=concrete_output)
 
-    sig = ht.FunctionType(input=input, output=output)
-    return ops.Custom(name=name, extension=ext, signature=sig, args=args)
+        concrete_args = [make_concrete_arg(arg, inst, variable_remap) for arg in args]
+
+        return ops.Custom(extension=ext, signature=sig, name=name, args=concrete_args)
+
+    return op
+
+
+def list_op(
+    op_name: str,
+    inp: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
+    out: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
+    ext: str = "guppy.list.unsupported",
+) -> Callable[[Inst], ops.DataflowOp]:
+    """Utility method to create Hugr list operations.
+
+    These ops have exactly one type argument, used to instantiate the list type.
+    If a the input or output types contain some variable type with index 0, it
+    is replaced with the type argument when instantiating the op.
+
+    Args:
+        op_name: The name of the operation.
+        inp: The python input types of the operation.
+        out: The python output types of the operation.
+        ext: The extension of the operation.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
+    """
+    return custom_op(
+        op_name, inp, out, args=[type_arg(0)], ext=ext, variable_remap=None
+    )
+
+
+def linst_op(
+    op_name: str,
+    inp: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
+    out: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
+    ext: str = "guppy.list.unsupported",
+) -> Callable[[Inst], ops.DataflowOp]:
+    """Utility method to create linear Hugr list operations.
+
+    These ops have exactly one type argument, used to instantiate the list type.
+    If a the input or output types contain some variable type with index 0, it
+    is replaced with the type argument when instantiating the op.
+
+    Args:
+        op_name: The name of the operation.
+        inp: The python input types of the operation.
+        out: The python output types of the operation.
+        ext: The extension of the operation.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
+    """
+    return custom_op(
+        op_name, inp, out, args=[ltype_arg(0)], ext=ext, variable_remap=None
+    )
 
 
 def float_op(
@@ -197,7 +321,7 @@ def float_op(
     inp: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
     out: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
     ext: str = "arithmetic.float",
-) -> ops.DataflowOp:
+) -> Callable[[Inst], ops.DataflowOp]:
     """Utility method to create Hugr float arithmetic ops.
 
     Args:
@@ -205,11 +329,12 @@ def float_op(
         inp: The python input types of the operation.
         out: The python output types of the operation.
         ext: The extension of the operation.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
     """
-    input = [type_to_hugr(ty) for ty in inp]
-    output = [type_to_hugr(ty) for ty in out]
-    sig = ht.FunctionType(input=input, output=output)
-    return ops.Custom(extension=ext, signature=sig, name=op_name, args=[])
+    return custom_op(op_name, inp, out, args=[], ext=ext, variable_remap=None)
 
 
 def int_op(
@@ -218,7 +343,7 @@ def int_op(
     out: Sequence[guppylang.tys.ty.Type | builtins.type | ht.Type],
     ext: str = "arithmetic.int",
     n_vars: int = 1,
-) -> ops.DataflowOp:
+) -> Callable[[Inst], ops.DataflowOp]:
     """Utility method to create Hugr integer arithmetic ops.
 
     Args:
@@ -227,30 +352,51 @@ def int_op(
         out: The python output types of the operation.
         ext: The extension of the operation.
         n_vars: The number of type arguments. Defaults to 1.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
     """
-    input = [type_to_hugr(ty) for ty in inp]
-    output = [type_to_hugr(ty) for ty in out]
     # Ideally we'd be able to derive the arguments from the input/output types,
     # but the amount of variables does not correlate with the signature for the
     # integer ops in hugr :/
     # https://github.com/CQCL/hugr/blob/bfa13e59468feb0fc746677ea3b3a4341b2ed42e/hugr-core/src/std_extensions/arithmetic/int_ops.rs#L116
-    args: list[ht.TypeArg] = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)] * n_vars
-    sig = ht.FunctionType(input=input, output=output)
-    return ops.Custom(extension=ext, signature=sig, name=op_name, args=args)
+    #
+    # For now, we just instantiate every type argument to a 64-bit integer.
+    args: list[ht.TypeArg] = [int_arg() for _ in range(n_vars)]
+    inst = [TypeArg(int_type()) for _ in range(n_vars)]
+    concrete_input = [make_concrete(type_to_hugr(ty), inst) for ty in inp]
+    concrete_output = [make_concrete(type_to_hugr(ty), inst) for ty in out]
+
+    return custom_op(
+        op_name,
+        concrete_input,
+        concrete_output,
+        args=args,
+        ext=ext,
+        variable_remap=None,
+    )
 
 
 def logic_op(
-    op_name: str, args: list[ht.TypeArg] | None = None, *, inputs: int = 2
-) -> ops.DataflowOp:
-    """Utility method to create Hugr logic ops."""
-    args = args or []
-    typ: ht.Type
-    if not args:
-        typ = ht.Bool
-    else:
-        assert len(args) == 1, "Logic ops should have at most one type argument."
-        typ = ht.Variable(idx=0, bound=ht.TypeBound.Any)
+    op_name: str, inputs: int = 2, ext: str = "logic"
+) -> Callable[[Inst], ops.DataflowOp]:
+    """Utility method to create Hugr logic ops.
 
-    sig = ht.FunctionType(input=[typ for _ in range(inputs)], output=[typ])
+    The generated operations always have a single BoundedNat type argument,
+    used to instantiate all its inputs and output types.
 
-    return ops.Custom(extension="logic", signature=sig, name=op_name, args=args)
+    args:
+        op_name: The name of the operation.
+        inputs: The number of inputs to the operation.
+        ext: The extension of the operation.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
+    """
+    inp = [var_t(0) for _ in range(inputs)]
+    out = [var_t(0)]
+    return custom_op(
+        op_name, inp, out, args=[type_arg(0)], ext=ext, variable_remap=None
+    )

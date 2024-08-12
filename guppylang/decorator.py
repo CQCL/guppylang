@@ -28,6 +28,7 @@ from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
 from guppylang.module import GuppyModule, PyFunc
+from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 
 FuncDefDecorator = Callable[[PyFunc], RawFunctionDef]
@@ -223,12 +224,21 @@ class _Guppy:
     def hugr_op(
         self,
         module: GuppyModule,
-        op: DataflowOp,
+        op: Callable[[Inst], DataflowOp],
         checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
     ) -> CustomFuncDecorator:
-        """Decorator to annotate function declarations as HUGR ops."""
+        """Decorator to annotate function declarations as HUGR ops.
+
+        Args:
+            module: The module in which the function should be defined.
+            op: A function that takes an instantiation of the type arguments and returns
+                a concrete HUGR op.
+            checker: The custom call checker.
+            higher_order_value: Whether the function may be used as a higher-order value.
+            name: The name of the function.
+        """
         return self.custom(module, OpCompiler(op), checker, higher_order_value, name)
 
     def declare(self, module: GuppyModule) -> FuncDeclDecorator:

@@ -2,6 +2,8 @@
 
 # mypy: disable-error-code="empty-body, misc"
 
+from collections.abc import Callable
+
 import hugr
 from hugr import ops
 from hugr import tys as ht
@@ -9,6 +11,7 @@ from hugr import tys as ht
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal.compiler import MeasureCompiler, QAllocCompiler
+from guppylang.tys.subst import Inst
 
 quantum = GuppyModule("quantum")
 
@@ -20,7 +23,7 @@ def quantum_op(
     out_bits: int = 0,
     out_qubits: int | None = None,
     in_floats: int = 0,
-) -> ops.Custom:
+) -> Callable[[Inst], ops.DataflowOp]:
     """Utility method to create Hugr quantum ops.
 
     Args:
@@ -29,6 +32,10 @@ def quantum_op(
         in_bits: The number of input bits.
         out_bits: The number of output bits.
         out_qubits: The number of output qubits. If `None`, defaults to `qubits`.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
     """
     # TODO: Use a common definition from either `hugr` or `tket2`, and drop all
     # the extra parameters.
@@ -44,12 +51,15 @@ def quantum_op(
         ht.Bool for _ in range(out_bits)
     ]
 
-    return ops.Custom(
-        name=op_name,
-        extension="quantum.tket2",
-        signature=ht.FunctionType(input=input, output=output),
-        args=[],
-    )
+    def op(inst: Inst) -> ops.DataflowOp:
+        return ops.Custom(
+            name=op_name,
+            extension="quantum.tket2",
+            signature=ht.FunctionType(input=input, output=output),
+            args=[],
+        )
+
+    return op
 
 
 @guppy.type(quantum, ht.Qubit, linear=True)

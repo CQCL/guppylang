@@ -30,7 +30,7 @@ from guppylang.nodes import (
     TypeApply,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
-from guppylang.tys.builtin import get_element_type, is_list_type
+from guppylang.tys.builtin import bool_type, get_element_type, is_list_type
 from guppylang.tys.const import ConstValue
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
@@ -326,7 +326,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             from guppylang.prelude._internal.util import logic_op
 
             arg = self.visit(node.operand)
-            return self.builder.add_op(logic_op("Not", args=[], inputs=1), arg)
+            op = logic_op("Not", inputs=1)([TypeArg(bool_type())])
+            return self.builder.add_op(op, arg)
 
         raise InternalGuppyError("Node should have been removed during type checking.")
 

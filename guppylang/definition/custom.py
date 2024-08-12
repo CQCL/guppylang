@@ -2,7 +2,7 @@ import ast
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import cast
+from typing import Callable, cast
 
 import hugr.function as hf
 import hugr.tys as ht
@@ -310,15 +310,21 @@ class NotImplementedCallCompiler(CustomCallCompiler):
 
 
 class OpCompiler(CustomCallCompiler):
-    """Call compiler for functions that are directly implemented via Hugr ops."""
+    """Call compiler for functions that are directly implemented via Hugr ops.
 
-    op: ops.DataflowOp
+    args:
+        op: A function that takes an instantiation of the type arguments and returns
+            a concrete HUGR op.
+    """
 
-    def __init__(self, op: ops.DataflowOp) -> None:
+    op: Callable[[Inst], ops.DataflowOp]
+
+    def __init__(self, op: Callable[[Inst], ops.DataflowOp]) -> None:
         self.op = op
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        node = self.builder.add_op(self.op, *args)
+        op = self.op(self.type_args)
+        node = self.builder.add_op(op, *args)
         return list(node)
 
 
