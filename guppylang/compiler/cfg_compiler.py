@@ -114,14 +114,11 @@ def insert_return_vars(cfg: CheckedCFG) -> None:
         Variable(return_var(i), ty, None)
         for i, ty in enumerate(type_to_row(cfg.output_ty))
     ]
-    # Before patching, the exit BB shouldn't take any inputs
-    assert len(cfg.exit_bb.sig.input_row) == 0
     cfg.exit_bb.sig = Signature(return_vars, cfg.exit_bb.sig.output_rows)
     # Also patch the predecessors
     for pred in cfg.exit_bb.predecessors:
         # The exit BB will be the only successor
         assert len(pred.sig.output_rows) == 1
-        assert len(pred.sig.output_rows[0]) == 0
         pred.sig = Signature(pred.sig.input_row, [return_vars])
 
 

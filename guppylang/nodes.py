@@ -198,6 +198,15 @@ class ResultExpr(ast.expr):
     _fields = ("value", "ty", "tag")
 
 
+class InoutReturnSentinel(ast.expr):
+    """An invisible expression corresponding to an implicit use of @inout vars whenever
+    a function returns."""
+
+    var: "Variable | str"
+
+    _fields = ("var",)
+
+
 class NestedFunctionDef(ast.FunctionDef):
     cfg: "CFG"
     ty: FunctionType

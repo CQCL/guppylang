@@ -6,7 +6,7 @@ Linearity checking across control-flow is done by the `CFGChecker`.
 import ast
 from collections.abc import Generator, Iterator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeGuard
 
 from guppylang.ast_util import AstNode, find_nodes, get_type
 from guppylang.cfg.analysis import LivenessAnalysis
@@ -27,6 +27,7 @@ from guppylang.nodes import (
     DesugaredListComp,
     FieldAccessAndDrop,
     GlobalCall,
+    InoutReturnSentinel,
     LocalCall,
     PlaceNode,
     TensorCall,
@@ -123,29 +124,43 @@ class BBLinearityChecker(ast.NodeVisitor):
         yield new_scope
         self.scope = scope
 
-    def visit_PlaceNode(self, node: PlaceNode) -> None:
+    def visit_PlaceNode(self, node: PlaceNode, /, is_inout_arg: bool = False) -> None:
+        # Usage of @inout variables is generally forbidden. The only exception is using
+        # them in another @inout position of a function call. In that case, our
+        # `_visit_call_args` helper will set `is_inout_arg=True`.
+        if is_inout_var(node.place) and not is_inout_arg:
+            raise GuppyError(
+                f"{node.place.describe} may only be used in an `@inout` position since "
+                "it is annotated as `@inout`. Consider removing the annotation to get "
+                "ownership of the value.",
+                node,
+            )
         for place in leaf_places(node.place):
             x = place.id
-            if use := self.scope.used(x):
-                if isinstance(place, Variable) and InputFlags.Inout in place.flags:
-                    raise GuppyError(
-                        f"{place.describe} cannot be moved since it is annotated as "
-                        "`@inout`",
-                        node,
-                        [use],
-                    )
-                if place.ty.linear:
-                    raise GuppyError(
-                        f"{place.describe} with linear type `{place.ty}` was already "
-                        "used (at {0})",
-                        node,
-                        [use],
-                    )
+            if (use := self.scope.used(x)) and place.ty.linear:
+                raise GuppyError(
+                    f"{place.describe} with linear type `{place.ty}` was already "
+                    "used (at {0})",
+                    node,
+                    [use],
+                )
             self.scope.use(x, node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
         self._check_assign_targets(node.targets)
+
+    def _visit_call_args(self, func_ty: FunctionType, args: list[ast.expr]) -> None:
+        """Helper function to check the arguments of a function call.
+
+        Populates the `is_inout_arg` kwarg of `visit_PlaceNode` in case some of the
+        arguments are places.
+        """
+        for inp, arg in zip(func_ty.inputs, args, strict=True):
+            if isinstance(arg, PlaceNode):
+                self.visit_PlaceNode(arg, is_inout_arg=InputFlags.Inout in inp.flags)
+            else:
+                self.visit(arg)
 
     def _reassign_inout_args(self, func_ty: FunctionType, args: list[ast.expr]) -> None:
         """Helper function to reassign the @inout arguments after a function call."""
@@ -166,18 +181,17 @@ class BBLinearityChecker(ast.NodeVisitor):
                         )
 
     def visit_GlobalCall(self, node: GlobalCall) -> None:
-        for arg in node.args:
-            self.visit(arg)
         func = self.globals[node.def_id]
         assert isinstance(func, CallableDef)
         func_ty = func.ty.instantiate(node.type_args)
+        self._visit_call_args(func_ty, node.args)
         self._reassign_inout_args(func_ty, node.args)
 
     def visit_LocalCall(self, node: LocalCall) -> None:
-        for arg in node.args:
-            self.visit(arg)
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
+        self.visit(node.func)
+        self._visit_call_args(func_ty, node.args)
         self._reassign_inout_args(func_ty, node.args)
 
     def visit_TensorCall(self, node: TensorCall) -> None:
@@ -331,6 +345,11 @@ def leaf_places(place: Place) -> Iterator[Place]:
             yield place
 
 
+def is_inout_var(place: Place) -> TypeGuard[Variable]:
+    """Checks whether a place is an @inout variable."""
+    return isinstance(place, Variable) and InputFlags.Inout in place.flags
+
+
 def check_cfg_linearity(cfg: "CheckedCFG", globals: Globals) -> None:
     """Checks whether a CFG satisfies the linearity requirements.
 
@@ -341,6 +360,13 @@ def check_cfg_linearity(cfg: "CheckedCFG", globals: Globals) -> None:
         bb: bb_checker.check(bb, is_entry=bb == cfg.entry_bb, globals=globals)
         for bb in cfg.bbs
     }
+
+    # Mark the @inout variables as implicitly used in the exit BB
+    exit_scope = scopes[cfg.exit_bb]
+    for var in cfg.entry_bb.sig.input_row:
+        if InputFlags.Inout in var.flags:
+            for leaf in leaf_places(var):
+                exit_scope.use(leaf.id, InoutReturnSentinel(var=var))
 
     # Run liveness analysis
     stats = {bb: scope.stats() for bb, scope in scopes.items()}
@@ -353,12 +379,26 @@ def check_cfg_linearity(cfg: "CheckedCFG", globals: Globals) -> None:
             for x, use_bb in live.items():
                 use_scope = scopes[use_bb]
                 place = use_scope[x]
-                if place.ty.linear and (use := scope.used(x)):
+                if place.ty.linear and (prev_use := scope.used(x)):
+                    use = use_scope.used_parent[x]
+                    # Special case if this is a use arising from the implicit returning
+                    # of an @inout argument
+                    if isinstance(use, InoutReturnSentinel):
+                        assert isinstance(use.var, Variable)
+                        assert InputFlags.Inout in use.var.flags
+                        raise GuppyError(
+                            f"Argument `{use.var}` annotated as `@inout` cannot be "
+                            f"returned to the caller since `{place}` is used at {{0}}. "
+                            f"Consider writing a value back into `{place}` before "
+                            "returning.",
+                            use.var.defined_at,
+                            [prev_use],
+                        )
                     raise GuppyError(
                         f"{place.describe} with linear type `{place.ty}` was "
                         "already used (at {0})",
-                        use_scope.used_parent[x],
-                        [use],
+                        use,
+                        [prev_use],
                     )
 
             # On the other hand, unused linear variables *must* be outputted

@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:12
+
+10:    @guppy(module)
+11:    def test(q: qubit @inout) -> qubit:
+12:        r = q
+               ^
+GuppyError: Variable `q` may only be used in an `@inout` position since it is annotated as `@inout`. Consider removing the annotation to get ownership of the value.
