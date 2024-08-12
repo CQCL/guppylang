@@ -14,3 +14,4 @@ hugr = "0.10.0"
 lazy_static = "1.5.0"
 serde_json = "1.0.111"
 tket2 = { git = "https://github.com/CQCL/tket2.git", rev = "eca258bfbef5fcd82a0d3b3d70cb736e275b3487" }
+tket2-hseries = "0.1.0"
