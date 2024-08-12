@@ -38,6 +38,7 @@ from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
     FunctionType,
+    InputFlags,
     NoneType,
     NumericType,
     TupleType,
@@ -194,6 +195,20 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         assert len(returns) == 1
         return returns[0]
 
+    def _update_inout_ports(
+        self,
+        args: list[ast.expr],
+        inout_ports: Iterator[OutPortV],
+        func_ty: FunctionType,
+    ) -> None:
+        """Helper method that updates the ports for @inout arguments after a call."""
+        for inp, arg in zip(func_ty.inputs, args, strict=True):
+            if InputFlags.Inout in inp.flags:
+                # Linearity checker ensures that inout arguments are places
+                assert isinstance(arg, PlaceNode)
+                self.dfg[arg.place] = next(inout_ports)
+        assert next(inout_ports, None) is None, "Too many inout return ports"
+
     def visit_LocalCall(self, node: LocalCall) -> OutPortV:
         func = self.visit(node.func)
         assert isinstance(func.ty, FunctionType)
@@ -201,6 +216,9 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         args = [self.visit(arg) for arg in node.args]
         call = self.graph.add_indirect_call(func, args)
         rets = [call.out_port(i) for i in range(len(type_to_row(func.ty.output)))]
+        self._update_inout_ports(
+            node.args, add_inout_return_ports(call, func.ty), func.ty
+        )
         return self._pack_returns(rets, func.ty.output)
 
     def visit_TensorCall(self, node: TensorCall) -> OutPortV:
@@ -252,7 +270,8 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
         rets = func.compile_call(
             args, list(node.type_args), self.dfg, self.graph, self.globals, node
         )
-        return self._pack_returns(rets, func.ty.output)
+        self._update_inout_ports(node.args, iter(rets.inout_returns), func.ty)
+        return self._pack_returns(rets.regular_returns, func.ty.output)
 
     def visit_Call(self, node: ast.Call) -> OutPortV:
         raise InternalGuppyError("Node should have been removed during type checking.")
@@ -378,6 +397,18 @@ class ExprCompiler(CompilerBase, AstVisitor[OutPortV]):
 def expr_to_row(expr: ast.expr) -> list[ast.expr]:
     """Turns an expression into a row expressions by unpacking top-level tuples."""
     return expr.elts if isinstance(expr, ast.Tuple) else [expr]
+
+
+def add_inout_return_ports(call: VNode, func_ty: FunctionType) -> Iterator[OutPortV]:
+    """Appends additional output ports to `Call` corresponding to @inout outputs.
+
+    Returns an iterator of the added ports.
+    """
+    return (
+        call.add_out_port(inp.ty)
+        for inp in func_ty.inputs
+        if InputFlags.Inout in inp.flags
+    )
 
 
 def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:

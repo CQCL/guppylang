@@ -15,14 +15,15 @@ from guppylang.checker.func_checker import (
     parse_docstring,
 )
 from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.compiler.expr_compiler import add_inout_return_ports
 from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import CheckableDef, CompilableDef, ParsableDef
-from guppylang.definition.value import CallableDef, CompiledCallableDef
+from guppylang.definition.value import CallableDef, CallReturnPorts, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr, Node, OutPortV
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import FunctionType, Type, type_to_row
+from guppylang.tys.ty import FunctionType, Type
 
 PyFunc = Callable[..., Any]
 
@@ -160,10 +161,13 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> list[OutPortV]:
+    ) -> CallReturnPorts:
         """Compiles a call to the function."""
         call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
-        return [call.out_port(i) for i in range(len(type_to_row(self.ty.output)))]
+        return CallReturnPorts(
+            regular_returns=list(call.out_ports),
+            inout_returns=list(add_inout_return_ports(call, self.ty)),
+        )
 
     def compile_inner(self, graph: Hugr, globals: CompiledGlobals) -> None:
         """Compiles the body of the function."""
