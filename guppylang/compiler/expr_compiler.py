@@ -383,7 +383,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             *extra_args,
         ]
         sig = ht.FunctionType(
-            input=[node.base_ty.to_hugr()],
+            input=[get_type(node.value).to_hugr()],
             output=[],
         )
         op = ops.Custom(
