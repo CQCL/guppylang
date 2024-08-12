@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:7
 6:    def foo(x: int) -> None:
 7:        result((), x)
                  ^^
-GuppyTypeError: Expected an int literal
+GuppyTypeError: Expected a string literal

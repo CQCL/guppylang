@@ -1,37 +1,33 @@
-from guppylang.prelude.builtins import result
+from guppylang.prelude.builtins import result, nat, array
 from tests.util import compile_guppy
 
 
-def test_single(validate):
+def test_basic(validate):
     @compile_guppy
     def main(x: int) -> None:
-        result(0, x)
-
-    validate(main)
-
-
-def test_value(validate):
-    @compile_guppy
-    def main(x: int) -> None:
-        return result(0, x)
-
-    validate(main)
-
-
-def test_nested(validate):
-    @compile_guppy
-    def main(x: int, y: float, z: bool) -> None:
-        result(42, (x, (y, z)))
+        result("foo", x)
 
     validate(main)
 
 
 def test_multi(validate):
     @compile_guppy
-    def main(x: int, y: float, z: bool) -> None:
-        result(0, x)
-        result(1, y)
-        result(2, z)
+    def main(w: nat, x: int, y: float, z: bool) -> None:
+        result("a", w)
+        result("b", x)
+        result("c", y)
+        result("d", z)
+
+    validate(main)
+
+
+def test_array(validate):
+    @compile_guppy
+    def main(w: array[nat, 42], x: array[int, 5], y: array[float, 1], z: array[bool, 0]) -> None:
+        result("a", w)
+        result("b", x)
+        result("c", y)
+        result("d", z)
 
     validate(main)
 
@@ -39,8 +35,8 @@ def test_multi(validate):
 def test_same_tag(validate):
     @compile_guppy
     def main(x: int, y: float, z: bool) -> None:
-        result(0, x)
-        result(0, y)
-        result(0, z)
+        result("foo", x)
+        result("foo", y)
+        result("foo", z)
 
     validate(main)

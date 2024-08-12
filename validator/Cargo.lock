@@ -286,6 +286,7 @@ dependencies = [
  "pyo3",
  "serde_json",
  "tket2",
+ "tket2-hseries",
 ]
 
 [[package]]
@@ -921,8 +922,9 @@ dependencies = [
 
 [[package]]
 name = "tket2"
-version = "0.1.0-alpha.2"
-source = "git+https://github.com/CQCL/tket2.git?rev=eca258bfbef5fcd82a0d3b3d70cb736e275b3487#eca258bfbef5fcd82a0d3b3d70cb736e275b3487"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ded27cd4a131a8e071090d9043c048739196cf1fb6f763a217c1d97af3b67477"
 dependencies = [
  "bytemuck",
  "cgmath",
@@ -952,6 +954,24 @@ dependencies = [
  "tracing",
  "typetag",
  "zstd",
+]
+
+[[package]]
+name = "tket2-hseries"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f25d9beb4668a4955504bb0c6f6af8a61c2510d4bf4fd5c3220ea0c3ee2a2e81"
+dependencies = [
+ "hugr",
+ "itertools",
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "smol_str",
+ "strum",
+ "strum_macros",
+ "thiserror",
+ "tket2",
 ]
 
 [[package]]

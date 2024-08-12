@@ -10,6 +10,7 @@ from hugr import tys as ht
 from hugr import val as hv
 from hugr.cond_loop import Conditional
 from hugr.dfg import DP, _DfBase
+from typing_extensions import assert_never
 
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
@@ -29,9 +30,14 @@ from guppylang.nodes import (
     TensorCall,
     TypeApply,
 )
-from guppylang.tys.arg import ConstArg, TypeArg
-from guppylang.tys.builtin import bool_type, get_element_type, is_list_type
-from guppylang.tys.const import ConstValue
+from guppylang.tys.arg import TypeArg
+from guppylang.tys.builtin import (
+    bool_type,
+    get_element_type,
+    is_bool_type,
+    is_list_type,
+)
+from guppylang.tys.const import BoundConstVar, ConstValue, ExistentialConstVar
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
@@ -204,9 +210,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             types = return_ty.element_types if isinstance(return_ty, TupleType) else []
             assert len(returns) == len(types)
             return self._pack_tuple(returns, types)
-        assert (
-            len(returns) == 1
-        ), f"Expected a single return value. Got {returns}. return type {return_ty.__class__}"
+        assert len(returns) == 1, (
+            f"Expected a single return value. Got {returns}. "
+            "return type {return_ty.__class__}"
+        )
         return returns[0]
 
     def visit_LocalCall(self, node: LocalCall) -> Wire:
@@ -336,18 +343,53 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._unpack_tuple(struct_port, [f.ty for f in node.struct_ty.fields])[0]
 
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
-        type_args = [
-            TypeArg(node.ty),
-            ConstArg(ConstValue(value=node.tag, ty=NumericType(NumericType.Kind.Nat))),
+        extra_args = []
+        if isinstance(node.base_ty, NumericType):
+            match node.base_ty.kind:
+                case NumericType.Kind.Nat:
+                    base_name = "uint"
+                    extra_args = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)]
+                case NumericType.Kind.Int:
+                    base_name = "int"
+                    extra_args = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)]
+                case NumericType.Kind.Float:
+                    base_name = "f64"
+                case kind:
+                    assert_never(kind)
+        else:
+            # The only other valid base type is bool
+            assert is_bool_type(node.base_ty)
+            base_name = "bool"
+        if node.array_len is not None:
+            op_name = f"result_array_{base_name}"
+            match node.array_len:
+                case ConstValue(value=value):
+                    assert isinstance(value, int)
+                    extra_args = [ht.BoundedNatArg(n=value), *extra_args]
+                case BoundConstVar():
+                    # TODO: We need to handle this once we allow function definitions
+                    #  that are generic over array lengths
+                    raise NotImplementedError
+                case ExistentialConstVar() as var:
+                    raise InternalGuppyError(
+                        f"Unsolved existential variable during Hugr lowering: {var}"
+                    )
+                case c:
+                    assert_never(c)
+        else:
+            op_name = f"result_{base_name}"
+        args = [
+            ht.StringArg(node.tag),
+            *extra_args,
         ]
         sig = ht.FunctionType(
-            input=[node.ty.to_hugr()],
+            input=[node.base_ty.to_hugr()],
             output=[],
         )
         op = ops.Custom(
             extension="tket2.result",
-            name="result_uint",
-            args=[arg.to_hugr() for arg in type_args],
+            name=op_name,
+            args=args,
             signature=sig,
         )
         self.builder.add_op(op, self.visit(node.value))

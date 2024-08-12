@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypeGuard
 
 from hugr import tys as ht
 
@@ -223,6 +223,10 @@ def is_list_type(ty: Type) -> bool:
 
 def is_linst_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == linst_type_def
+
+
+def is_array_type(ty: Type) -> TypeGuard[OpaqueType]:
+    return isinstance(ty, OpaqueType) and ty.defn == array_type_def
 
 
 def get_element_type(ty: Type) -> Type:

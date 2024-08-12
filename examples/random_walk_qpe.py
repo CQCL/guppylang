@@ -100,7 +100,7 @@ def main() -> int:
         mu,
         sigma,
     )
-    result(0, eigenvalue)  # Expected outcome is 0.5
+    result("eigenvalue", eigenvalue)  # Expected outcome is 0.5
     return 0
 
 
