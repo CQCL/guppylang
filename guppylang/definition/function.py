@@ -148,8 +148,9 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        input_types = self.ty.to_hugr_poly().body.input
-        func_def = module.define_function(self.name, input_types)
+        func_type = self.ty.to_hugr_poly().body
+        func_def = module.define_function(self.name, func_type.input)
+        func_def.declare_outputs(func_type.output)
         return CompiledFunctionDef(
             self.id,
             self.name,
