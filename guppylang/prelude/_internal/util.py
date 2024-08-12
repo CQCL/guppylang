@@ -397,6 +397,4 @@ def logic_op(
     """
     inp = [var_t(0) for _ in range(inputs)]
     out = [var_t(0)]
-    return custom_op(
-        op_name, inp, out, args=[type_arg(0)], ext=ext, variable_remap=None
-    )
+    return custom_op(op_name, inp, out, args=[], ext=ext, variable_remap=None)
