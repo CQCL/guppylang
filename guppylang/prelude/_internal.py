@@ -296,14 +296,14 @@ class ResultChecker(CustomCallChecker):
             f"Expression of type `{ty}` is not a valid result. Only numeric values or "
             "arrays thereof are allowed."
         )
-        if isinstance(ty, NumericType) or is_bool_type(ty):
+        if self._is_numeric_or_bool_type(ty):
             base_ty = ty
             array_len: Const | None = None
         elif is_array_type(ty):
             [ty_arg, len_arg] = ty.args
             assert isinstance(ty_arg, TypeArg)
             assert isinstance(len_arg, ConstArg)
-            if not isinstance(ty_arg.ty, NumericType) and not is_bool_type(ty_arg.ty):
+            if not self._is_numeric_or_bool_type(ty_arg.ty):
                 raise GuppyError(err, value)
             base_ty = ty_arg.ty
             array_len = len_arg.const
@@ -316,6 +316,10 @@ class ResultChecker(CustomCallChecker):
         expr, res_ty = self.synthesize(args)
         subst, _ = check_type_against(res_ty, ty, self.node)
         return expr, subst
+
+    @staticmethod
+    def _is_numeric_or_bool_type(ty: Type) -> bool:
+        return isinstance(ty, NumericType) or is_bool_type(ty)
 
 
 class NatTruedivCompiler(CustomCallCompiler):
