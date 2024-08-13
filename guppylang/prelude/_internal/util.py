@@ -254,14 +254,8 @@ def custom_op(
         A function that takes an instantiation of the type arguments and returns
         a concrete HUGR op.
     """
-    # TODO: Using this function as a placeholder until we know if it can be
-    # dropped with the builder update.
-    try:
-        input = [type_to_hugr(ty) for ty in inp]
-        output = [type_to_hugr(ty) for ty in out]
-    except ValueError as e:
-        e.add_note(f"For function {name}")
-        raise
+    input = [type_to_hugr(ty) for ty in inp]
+    output = [type_to_hugr(ty) for ty in out]
 
     def op(inst: Inst) -> ops.DataflowOp:
         concrete_input = [make_concrete(ty, inst, variable_remap) for ty in input]
