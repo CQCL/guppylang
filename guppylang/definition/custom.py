@@ -189,7 +189,7 @@ class CustomFunctionDef(CompiledCallableDef):
         # TODO: Why do we need to monomorphise here?
         fun_ty: FunctionType = self.ty.instantiate(type_args)
         input_types: list[ht.Type] = [ty.to_hugr() for ty in fun_ty.inputs]
-        output_types: list[ht.Type] = [ty.to_hugr() for ty in fun_ty.output]
+        output_types: list[ht.Type] = [fun_ty.output.to_hugr()]
         func: hf.Function = dfg.builder.define_function(
             self.name, input_types, output_types, type_params=[]
         )

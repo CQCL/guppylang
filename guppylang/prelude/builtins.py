@@ -4,8 +4,6 @@
 
 from typing import Any, Generic, TypeVar
 
-from hugr import tys as ht
-
 from guppylang.decorator import guppy
 from guppylang.definition.custom import DefaultCallChecker, NoopCompiler
 from guppylang.error import GuppyError
@@ -39,7 +37,6 @@ from guppylang.prelude._internal.util import (
     list_op,
     list_t,
     logic_op,
-    ltype_arg,
     lvar_t,
     type_arg,
     var_t,
