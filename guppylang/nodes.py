@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from guppylang.ast_util import AstNode
+from guppylang.tys.const import Const
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import FunctionType, StructType, Type
 
@@ -192,10 +193,12 @@ class ResultExpr(ast.expr):
     """A `result(tag, value)` expression."""
 
     value: ast.expr
-    ty: Type
-    tag: int
+    base_ty: Type
+    #: Array length in case this is an array result, otherwise `None`
+    array_len: Const | None
+    tag: str
 
-    _fields = ("value", "ty", "tag")
+    _fields = ("value", "base_ty", "array_len", "tag")
 
 
 class InoutReturnSentinel(ast.expr):
@@ -220,7 +223,7 @@ class NestedFunctionDef(ast.FunctionDef):
 
 class CheckedNestedFunctionDef(ast.FunctionDef):
     def_id: "DefId"
-    cfg: "CheckedCFG"
+    cfg: "CheckedCFG[Place]"
     ty: FunctionType
 
     #: Mapping from names to variables captured by this function, together with an AST
@@ -230,7 +233,7 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
     def __init__(
         self,
         def_id: "DefId",
-        cfg: "CheckedCFG",
+        cfg: "CheckedCFG[Place]",
         ty: FunctionType,
         captured: Mapping[str, tuple["Variable", AstNode]],
         *args: Any,

@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.9.0](https://github.com/CQCL/guppylang/compare/v0.8.1...v0.9.0) (2024-08-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* 
+
+### Bug Fixes
+
+* Use latest results extension spec ([#370](https://github.com/CQCL/guppylang/issues/370)) ([d9cc8d2](https://github.com/CQCL/guppylang/commit/d9cc8d29cce4178c44d00e444d29f7c30fafb7a3))
+
+## [0.8.1](https://github.com/CQCL/guppylang/compare/v0.8.0...v0.8.1) (2024-08-08)
+
+
+### Bug Fixes
+
+* Fix invalid result operation name ([#367](https://github.com/CQCL/guppylang/issues/367)) ([568624d](https://github.com/CQCL/guppylang/commit/568624d1ccd70dc78c16f4ca2170dc167791ea64))
+* Linearity checking bug ([#355](https://github.com/CQCL/guppylang/issues/355)) ([e14660f](https://github.com/CQCL/guppylang/commit/e14660f2b31d104c7fb0b5cb8806c3656098afbb))
+
+## [0.8.0](https://github.com/CQCL/guppylang/compare/v0.7.0...v0.8.0) (2024-07-30)
+
+
+### Features
+
+* Parse docstrings for functions ([#334](https://github.com/CQCL/guppylang/issues/334)) ([a7cc97a](https://github.com/CQCL/guppylang/commit/a7cc97a6c1af674972c3a37e28ef7e33ddf6fa3d))
+
+
+### Bug Fixes
+
+* Use places in BB signatures for Hugr generation ([#342](https://github.com/CQCL/guppylang/issues/342)) ([48b0e35](https://github.com/CQCL/guppylang/commit/48b0e352d835298b66ea90ff12528391c1c0e2a3))
+
 ## [0.7.0](https://github.com/CQCL/guppylang/compare/v0.6.2...v0.7.0) (2024-07-25)
 
 

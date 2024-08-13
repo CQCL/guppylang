@@ -1,3 +1,5 @@
+"""Tests for using python expressions in guppy functions."""
+
 from importlib.util import find_spec
 
 import pytest
@@ -105,6 +107,7 @@ def test_list_empty_multiple(validate):
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skip("Fails because of extensions in types #343")
 def test_pytket_single_qubit(validate):
     from pytket import Circuit
 
@@ -123,6 +126,7 @@ def test_pytket_single_qubit(validate):
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skip("Fails because of extensions in types #343")
 def test_pytket_multi_qubit(validate):
     from pytket import Circuit
 

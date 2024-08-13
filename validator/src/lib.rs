@@ -5,6 +5,7 @@ use hugr::std_extensions::logic;
 use lazy_static::lazy_static;
 use pyo3::prelude::*;
 use tket2::extension::{TKET1_EXTENSION, TKET2_EXTENSION};
+use tket2_hseries::extension::result;
 
 lazy_static! {
     pub static ref REGISTRY: ExtensionRegistry = ExtensionRegistry::try_new([
@@ -17,6 +18,7 @@ lazy_static! {
         collections::EXTENSION.to_owned(),
         TKET1_EXTENSION.to_owned(),
         TKET2_EXTENSION.to_owned(),
+        result::EXTENSION.to_owned(),
     ])
     .unwrap();
 }

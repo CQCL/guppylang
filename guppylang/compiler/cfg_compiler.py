@@ -1,8 +1,8 @@
 import functools
 from typing import TYPE_CHECKING
 
-from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Signature, VarRow
-from guppylang.checker.core import Variable
+from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
+from guppylang.checker.core import Place, Variable
 from guppylang.compiler.core import CompiledGlobals, DFContainer, return_var
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
@@ -15,12 +15,12 @@ if TYPE_CHECKING:
 
 
 def compile_cfg(
-    cfg: CheckedCFG, graph: Hugr, parent: Node, globals: CompiledGlobals
+    cfg: CheckedCFG[Place], graph: Hugr, parent: Node, globals: CompiledGlobals
 ) -> None:
     """Compiles a CFG to Hugr."""
     insert_return_vars(cfg)
 
-    blocks: dict[CheckedBB, CFNode] = {}
+    blocks: dict[CheckedBB[Place], CFNode] = {}
     for bb in cfg.bbs:
         blocks[bb] = compile_bb(bb, graph, parent, bb == cfg.entry_bb, globals)
     for bb in cfg.bbs:
@@ -29,7 +29,11 @@ def compile_cfg(
 
 
 def compile_bb(
-    bb: CheckedBB, graph: Hugr, parent: Node, is_entry: bool, globals: CompiledGlobals
+    bb: CheckedBB[Place],
+    graph: Hugr,
+    parent: Node,
+    is_entry: bool,
+    globals: CompiledGlobals,
 ) -> CFNode:
     """Compiles a single basic block to Hugr."""
     inputs = bb.sig.input_row if is_entry or bb.is_exit else sort_vars(bb.sig.input_row)
@@ -60,7 +64,7 @@ def compile_bb(
         ).out_port(0)
 
     # Finally, we have to add the block output.
-    outputs: Sequence[Variable]
+    outputs: Sequence[Place]
     if len(bb.successors) == 1:
         # The easy case is if we don't branch: We just output all variables that are
         # specified by the signature
@@ -70,10 +74,10 @@ def compile_bb(
         # must always be unconditional)
         assert not any(succ.is_exit for succ in bb.successors)
 
-        # If we branch and the branches use the same variables, then we can use a
+        # If we branch and the branches use the same places, then we can use a
         # regular output
         first, *rest = bb.sig.output_rows
-        if all({v.name for v in first} == {v.name for v in r} for r in rest):
+        if all({p.id for p in first} == {p.id for p in r} for r in rest):
             outputs = first
         else:
             # Otherwise, we have to output a TupleSum: We put all non-linear variables
@@ -106,7 +110,7 @@ def compile_bb(
     return block
 
 
-def insert_return_vars(cfg: CheckedCFG) -> None:
+def insert_return_vars(cfg: CheckedCFG[Place]) -> None:
     """Patches a CFG by annotating dummy return variables in the BB signatures.
 
     The statement compiler turns `return` statements into assignments of dummy variables
@@ -130,7 +134,7 @@ def insert_return_vars(cfg: CheckedCFG) -> None:
 
 
 def choose_vars_for_tuple_sum(
-    graph: Hugr, unit_sum: OutPortV, output_vars: list[VarRow], dfg: DFContainer
+    graph: Hugr, unit_sum: OutPortV, output_vars: list[Row[Place]], dfg: DFContainer
 ) -> OutPortV:
     """Selects an output based on a TupleSum.
 
@@ -153,17 +157,17 @@ def choose_vars_for_tuple_sum(
     return conditional.add_out_port(SumType([row_to_type(row) for row in tys]))
 
 
-def compare_var(x: Variable, y: Variable) -> int:
+def compare_var(p1: Place, p2: Place) -> int:
     """Defines a `<` order on variables.
 
     We use this to determine in which order variables are outputted from basic blocks.
     We need to output linear variables at the end, so we do a lexicographic ordering of
     linearity and name.
     """
-    return -1 if (x.ty.linear, x.name) < (y.ty.linear, y.name) else 1
+    return -1 if (p1.ty.linear, str(p1)) < (p2.ty.linear, str(p2)) else 1
 
 
-def sort_vars(row: VarRow) -> list[Variable]:
+def sort_vars(row: Row[Place]) -> list[Place]:
     """Sorts a row of variables.
 
     This determines the order in which they are outputted from a BB.

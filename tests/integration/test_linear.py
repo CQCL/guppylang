@@ -205,8 +205,7 @@ def test_struct_reassign(validate):
         q: qubit
 
     @guppy.declare(module)
-    def consume(s: MyStruct2) -> None:
-        ...
+    def consume(s: MyStruct2) -> None: ...
 
     @guppy(module)
     def test(s: MyStruct2, b: bool) -> MyStruct2:
@@ -217,6 +216,29 @@ def test_struct_reassign(validate):
         else:
             s = MyStruct1(MyStruct2(qubit()))
         return s.x
+
+
+def test_struct_reassign2(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q1: qubit
+        q2: qubit
+
+    @guppy.declare(module)
+    def use(q: qubit) -> None: ...
+
+    @guppy(module)
+    def test(s: MyStruct, b: bool) -> MyStruct:
+        use(s.q1)
+        if b:
+            s.q1 = qubit()
+        else:
+            s.q1 = qubit()
+        s.q2 = qubit()
+        return s
 
 
 def test_measure(validate):

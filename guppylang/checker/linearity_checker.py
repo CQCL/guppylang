@@ -6,11 +6,12 @@ Linearity checking across control-flow is done by the `CFGChecker`.
 import ast
 from collections.abc import Generator, Iterator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, TypeGuard
+from typing import TypeGuard
 
 from guppylang.ast_util import AstNode, find_nodes, get_type
 from guppylang.cfg.analysis import LivenessAnalysis
 from guppylang.cfg.bb import BB, VariableStats
+from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Signature
 from guppylang.checker.core import (
     FieldAccess,
     Globals,
@@ -33,9 +34,6 @@ from guppylang.nodes import (
     TensorCall,
 )
 from guppylang.tys.ty import FunctionType, InputFlags, StructType
-
-if TYPE_CHECKING:
-    from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG
 
 
 class Scope(Locals[PlaceId, Place]):
@@ -96,7 +94,9 @@ class BBLinearityChecker(ast.NodeVisitor):
     stats: VariableStats[PlaceId]
     globals: Globals
 
-    def check(self, bb: "CheckedBB", is_entry: bool, globals: Globals) -> Scope:
+    def check(
+        self, bb: "CheckedBB[Variable]", is_entry: bool, globals: Globals
+    ) -> Scope:
         # Manufacture a scope that holds all places that are live at the start
         # of this BB
         input_scope = Scope()
@@ -254,7 +254,9 @@ class BBLinearityChecker(ast.NodeVisitor):
                 )
             for tgt_place in leaf_places(tgt.place):
                 x = tgt_place.id
-                if x in self.scope and not self.scope.used(x):
+                # Only check for overrides of places locally defined in this BB. Global
+                # checks are handled by dataflow analysis.
+                if x in self.scope.vars and x not in self.scope.used_local:
                     place = self.scope[x]
                     if place.ty.linear:
                         raise GuppyError(
@@ -358,10 +360,15 @@ def is_inout_var(place: Place) -> TypeGuard[Variable]:
     return isinstance(place, Variable) and InputFlags.Inout in place.flags
 
 
-def check_cfg_linearity(cfg: "CheckedCFG", globals: Globals) -> None:
+def check_cfg_linearity(
+    cfg: "CheckedCFG[Variable]", globals: Globals
+) -> "CheckedCFG[Place]":
     """Checks whether a CFG satisfies the linearity requirements.
 
     Raises a user-error if linearity violations are found.
+
+    Returns a new CFG with refined basic block signatures in terms of *places* rather
+    than just variables.
     """
     bb_checker = BBLinearityChecker()
     scopes: dict[BB, Scope] = {
@@ -399,6 +406,10 @@ def check_cfg_linearity(cfg: "CheckedCFG", globals: Globals) -> None:
     stats = {bb: scope.stats() for bb, scope in scopes.items()}
     live_before = LivenessAnalysis(stats).run(cfg.bbs)
 
+    # Construct a CFG that tracks places instead of just variables
+    result_cfg: CheckedCFG[Place] = CheckedCFG(cfg.input_tys, cfg.output_ty)
+    checked: dict[BB, CheckedBB[Place]] = {}
+
     for bb, scope in scopes.items():
         # We have to check that used linear variables are not being outputted
         for succ in bb.successors:
@@ -429,7 +440,7 @@ def check_cfg_linearity(cfg: "CheckedCFG", globals: Globals) -> None:
                     )
 
             # On the other hand, unused linear variables *must* be outputted
-            for place in scope.vars.values():
+            for place in scope.values():
                 for leaf in leaf_places(place):
                     x = leaf.id
                     used_later = x in live
@@ -444,3 +455,30 @@ def check_cfg_linearity(cfg: "CheckedCFG", globals: Globals) -> None:
                             # more precise location
                             scope[x].defined_at,
                         )
+
+        assert isinstance(bb, CheckedBB)
+        sig = Signature(
+            input_row=[scope[x] for x in live_before[bb]]
+            if bb not in (cfg.entry_bb, cfg.exit_bb)
+            else bb.sig.input_row,
+            output_rows=[
+                [scope[x] for x in live_before[succ]] for succ in bb.successors
+            ],
+        )
+        checked[bb] = CheckedBB(
+            bb.idx, result_cfg, bb.statements, branch_pred=bb.branch_pred, sig=sig
+        )
+
+    # Fill in missing fields of the result CFG
+    result_cfg.bbs = list(checked.values())
+    result_cfg.entry_bb = checked[cfg.entry_bb]
+    result_cfg.exit_bb = checked[cfg.exit_bb]
+    result_cfg.live_before = {checked[bb]: cfg.live_before[bb] for bb in cfg.bbs}
+    result_cfg.ass_before = {checked[bb]: cfg.ass_before[bb] for bb in cfg.bbs}
+    result_cfg.maybe_ass_before = {
+        checked[bb]: cfg.maybe_ass_before[bb] for bb in cfg.bbs
+    }
+    for bb in cfg.bbs:
+        checked[bb].predecessors = [checked[pred] for pred in bb.predecessors]
+        checked[bb].successors = [checked[succ] for succ in bb.successors]
+    return result_cfg

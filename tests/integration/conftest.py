@@ -45,6 +45,9 @@ def run_int_fn():
         try:
             import execute_llvm
 
+            if not hasattr(execute_llvm, "run_int_function"):
+                pytest.skip("Skipping llvm execution")
+
             hugr_json: str = hugr.serialize()
             res = execute_llvm.run_int_function(hugr_json, fn_name)
             if res != expected:
