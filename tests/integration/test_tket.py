@@ -25,7 +25,9 @@ from tests.util import guppy_to_circuit
 tket2_installed = find_spec("tket2") is not None
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+# TODO: Remove this skip once https://github.com/CQCL/hugr/issues/1424 is fixed
+@pytest.mark.skip(reason="Bug in hugr-py constant serialization")
+# @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
 def test_lower_pure_circuit():
     import pytket
 
@@ -57,7 +59,9 @@ def test_lower_pure_circuit():
     assert gates[4].op.type == pytket.circuit.OpType.ZZMax
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+# TODO: Remove this skip once https://github.com/CQCL/hugr/issues/1424 is fixed
+@pytest.mark.skip(reason="Bug in hugr-py constant serialization")
+# @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
 def test_lower_hybrid_circuit():
     import pytket
 
