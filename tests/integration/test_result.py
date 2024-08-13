@@ -23,7 +23,9 @@ def test_multi(validate):
 
 def test_array(validate):
     @compile_guppy
-    def main(w: array[nat, 42], x: array[int, 5], y: array[float, 1], z: array[bool, 0]) -> None:
+    def main(
+        w: array[nat, 42], x: array[int, 5], y: array[float, 1], z: array[bool, 0]
+    ) -> None:
         result("a", w)
         result("b", x)
         result("c", y)

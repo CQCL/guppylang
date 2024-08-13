@@ -236,7 +236,8 @@ class _Guppy:
             op: A function that takes an instantiation of the type arguments and returns
                 a concrete HUGR op.
             checker: The custom call checker.
-            higher_order_value: Whether the function may be used as a higher-order value.
+            higher_order_value: Whether the function may be used as a higher-order
+                value.
             name: The name of the function.
         """
         return self.custom(module, OpCompiler(op), checker, higher_order_value, name)

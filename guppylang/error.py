@@ -105,9 +105,10 @@ def exception_hook(hook: ExceptHook) -> Iterator[None]:
         ipython_shell.set_custom_exc((GuppyError,), ipython_excepthook)
         yield
         ipython_shell.set_custom_exc((), None)
-        return
     except NameError:
         pass
+    else:
+        return
 
     # Otherwise, override the regular sys.excepthook
     old_hook = sys.excepthook
