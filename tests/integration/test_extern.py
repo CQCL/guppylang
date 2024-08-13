@@ -18,9 +18,7 @@ def test_extern_float(validate):
 
     [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(c.val, val.Extension)
-    # TODO: This should be checking the "symbol" attribute of the value, but
-    # that's not in hugr?
-    assert c.val.name == "ext"
+    assert c.val.val["symbol"] == "ext"
 
 
 def test_extern_alt_symbol(validate):
@@ -37,9 +35,7 @@ def test_extern_alt_symbol(validate):
 
     [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(c.val, val.Extension)
-    # TODO: This should be checking the "symbol" attribute of the value, but
-    # that's not in hugr?
-    assert c.val.name == "foo"
+    assert c.val.val["symbol"] == "foo"
 
 
 def test_extern_tuple(validate):
