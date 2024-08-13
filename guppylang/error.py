@@ -10,6 +10,7 @@ from types import TracebackType
 from typing import Any, TypeVar, cast
 
 from guppylang.ast_util import AstNode, get_file, get_line_offset, get_source
+from guppylang.ipython_inspect import is_running_ipython
 
 
 @dataclass(frozen=True)
@@ -179,8 +180,9 @@ def pretty_errors(f: FuncT) -> FuncT:
                 # excepthook is automatically invoked when the exception (which is being
                 # reraised below) is not handled. However, when running tests, we have
                 # to manually invoke the hook to print the error message, since the
-                # tests always have to capture exceptions.
-                if _pytest_running():
+                # tests always have to capture exceptions. The only exception are
+                # notebook tests which don't rely on the capsys fixture.
+                if _pytest_running() and not is_running_ipython():
                     hook(type(err), err, err.__traceback__)
                 raise
 
