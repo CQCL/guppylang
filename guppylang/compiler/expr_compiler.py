@@ -335,7 +335,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             from guppylang.prelude._internal.util import logic_op
 
             arg = self.visit(node.operand)
-            op = logic_op("Not", inputs=1)([TypeArg(bool_type())])
+            op = logic_op("Not", inputs=1, parametric_size=False)(
+                [TypeArg(bool_type())]
+            )
             return self.builder.add_op(op, arg)
 
         raise InternalGuppyError("Node should have been removed during type checking.")

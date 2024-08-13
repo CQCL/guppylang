@@ -379,16 +379,17 @@ def int_op(
 
 
 def logic_op(
-    op_name: str, inputs: int = 2, ext: str = "logic"
+    op_name: str, inputs: int = 2, parametric_size: bool = True, ext: str = "logic"
 ) -> Callable[[Inst], ops.DataflowOp]:
     """Utility method to create Hugr logic ops.
 
-    The generated operations always have a single BoundedNat type argument,
+    If `parametric_size` is True, the generated operations has a single argument
     encoding the number of boolean inputs to the operation.
 
     args:
         op_name: The name of the operation.
         inputs: The number of inputs to the operation.
+        parametric_size: Whether the size of the input is parametric.
         ext: The extension of the operation.
 
     Returns:
@@ -397,5 +398,5 @@ def logic_op(
     """
     inp = [ht.Bool for _ in range(inputs)]
     out = [ht.Bool]
-    args = [int_arg(inputs)]
+    args = [int_arg(inputs)] if parametric_size else []
     return custom_op(op_name, inp, out, args=args, ext=ext, variable_remap=None)
