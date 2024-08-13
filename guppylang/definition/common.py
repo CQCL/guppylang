@@ -49,14 +49,10 @@ class Definition(ABC):
     name: str
     defined_at: ast.AST | None
 
-    @property
-    @abstractmethod
-    def description(self) -> str:
-        """Description of this definition to be used in messages to the user.
-
-        The returned text should fit into messages of the following form: "expected
-        a function, but got {description of this definition} instead".
-        """
+    # Description of this definition to be used in messages to the user.
+    # The returned text should fit into messages of the following form: "expected
+    # a function, but got {description of this definition} instead".
+    description: str
 
 
 class ParsableDef(Definition):
