@@ -11,7 +11,7 @@ from typing import TypeGuard
 from guppylang.ast_util import AstNode, find_nodes, get_type
 from guppylang.cfg.analysis import LivenessAnalysis
 from guppylang.cfg.bb import BB, VariableStats
-from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Signature
+from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
 from guppylang.checker.core import (
     FieldAccess,
     Globals,
@@ -456,13 +456,26 @@ def check_cfg_linearity(
                             scope[x].defined_at,
                         )
 
+        def live_places_row(bb: BB, original_row: Row[Variable]) -> Row[Place]:
+            """Construct a row of all places that are live at the start of a given BB.
+
+            The only exception are input and exit BBs whose signature should not be
+            split up into places but instead keep the original variable signature.
+            """
+            if bb in (cfg.entry_bb, cfg.exit_bb):
+                return original_row
+            # N.B. we can ignore lint B023. The use of loop variable `scope` below is
+            # safe since we don't call this function outside the loop.
+            return [scope[x] for x in live_before[bb]]  # noqa: B023
+
         assert isinstance(bb, CheckedBB)
         sig = Signature(
-            input_row=[scope[x] for x in live_before[bb]]
-            if bb not in (cfg.entry_bb, cfg.exit_bb)
-            else bb.sig.input_row,
+            input_row=live_places_row(bb, bb.sig.input_row),
             output_rows=[
-                [scope[x] for x in live_before[succ]] for succ in bb.successors
+                live_places_row(succ, output_row)
+                for succ, output_row in zip(
+                    bb.successors, bb.sig.output_rows, strict=True
+                )
             ],
         )
         checked[bb] = CheckedBB(
