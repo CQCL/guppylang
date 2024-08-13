@@ -12,20 +12,6 @@ def test_basic(validate):
     validate(foo)
 
 
-def test_basic_empty(validate):
-    @compile_guppy
-    def foo() -> None:
-        def f() -> None:
-            pass
-
-        def g() -> None:
-            f()
-
-        g()
-
-    validate(foo)
-
-
 def test_call_twice(validate):
     @compile_guppy
     def foo(x: int) -> int:
@@ -139,6 +125,20 @@ def test_capture_multiple(validate):
             return q + z
 
         return bar()
+
+    validate(foo)
+
+
+def test_capture_fn(validate):
+    @compile_guppy
+    def foo() -> bool:
+        def f(x: bool) -> bool:
+            return x
+
+        def g(b: bool) -> bool:
+            return f(b)
+
+        return g(True)
 
     validate(foo)
 
