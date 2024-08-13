@@ -202,9 +202,19 @@ def make_concrete(
         ), f"Cannot translate const type {concrete_arg} arg into a type"
         return concrete_arg.ty.to_hugr()
     if isinstance(ty, ht.Opaque):
+        # TODO: This is a temporary hack to compute bounds that depend on the
+        # type parameters. This won't be needed once we start using hugr's
+        # extension definitions, which include a `TypeDefBound` field to compute
+        # bounds during instantiation.
+        if ty.id == "List":
+            assert isinstance(inst[0], TypeArg)
+            bound = inst[0].ty.hugr_bound
+        else:
+            bound = ty.bound
+
         return ht.Opaque(
             id=ty.id,
-            bound=ty.bound,
+            bound=bound,
             extension=ty.extension,
             args=[make_concrete_arg(arg, inst, remap) for arg in ty.args],
         )
