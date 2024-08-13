@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "guppylang"
-version = "0.8.1"
+version = "0.9.0"
 description = "Pythonic quantum-classical programming language"
 authors = ["Mark Koch <mark.koch@quantinuum.com>"]
 license = "Apache-2.0"
