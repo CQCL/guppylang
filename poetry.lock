@@ -406,7 +406,7 @@ semver = "^3.0.2"
 type = "git"
 url = "https://github.com/CQCL/hugr"
 reference = "ab/guppy-things"
-resolved_reference = "abd70c99291f41fce57ed8d8b0692faa63117b74"
+resolved_reference = "cc315cc0db9557e766b8eff6f737f21efdfd7cd3"
 subdirectory = "hugr-py"
 
 [[package]]
@@ -475,13 +475,13 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "lark"
-version = "1.1.9"
+version = "1.2.1"
 description = "a modern parsing library"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 files = [
-    {file = "lark-1.1.9-py3-none-any.whl", hash = "sha256:a0dd3a87289f8ccbb325901e4222e723e7d745dbfc1803eaf5f3d2ace19cf2db"},
-    {file = "lark-1.1.9.tar.gz", hash = "sha256:15fa5236490824c2c4aba0e22d2d6d823575dcaf4cdd1848e34b6ad836240fba"},
+    {file = "lark-1.2.1-py3-none-any.whl", hash = "sha256:c1aa89dc3d795af38114e8c1b9762f7be0f582d288905acf050800ce729fa3e8"},
+    {file = "lark-1.2.1.tar.gz", hash = "sha256:adde63b8c6df110c2e2fdfca4dd279787f038ac1a5c5a3d95c45f92e6843e5a0"},
 ]
 
 [package.extras]
@@ -1277,13 +1277,13 @@ files = [
 
 [[package]]
 name = "soupsieve"
-version = "2.5"
+version = "2.6"
 description = "A modern CSS selector implementation for Beautiful Soup."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "soupsieve-2.5-py3-none-any.whl", hash = "sha256:eaa337ff55a1579b6549dc679565eac1e3d000563bcb1c8ab0d0fefbc0c2cdc7"},
-    {file = "soupsieve-2.5.tar.gz", hash = "sha256:5663d5a7b3bfaeee0bc4372e7fc48f9cff4940b3eec54a6451cc5299f1097690"},
+    {file = "soupsieve-2.6-py3-none-any.whl", hash = "sha256:e72c4ff06e4fb6e4b5a9f0f55fe6e81514581fca1515028625d0f299c602ccc9"},
+    {file = "soupsieve-2.6.tar.gz", hash = "sha256:e2e68417777af359ec65daac1057404a3c8a5455bb8abc36f1a9866ab1a51abb"},
 ]
 
 [[package]]
