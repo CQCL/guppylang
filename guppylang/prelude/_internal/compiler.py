@@ -120,8 +120,8 @@ class MeasureCompiler(CustomCallCompiler):
         from guppylang.prelude.quantum import quantum_op
 
         [qubit] = args
-        [qubit, bit] = self.builder.add_op(quantum_op("Measure")([]), qubit)
-        self.builder.add_op(quantum_op("QFree")([]), qubit)
+        [qubit, bit] = self.builder.add_op(quantum_op("Measure", out_bits=1)([]), qubit)
+        self.builder.add_op(quantum_op("QFree", qubits=1, out_qubits=0)([]), qubit)
         return [bit]
 
 
@@ -132,6 +132,6 @@ class QAllocCompiler(CustomCallCompiler):
         from guppylang.prelude.quantum import quantum_op
 
         assert not args, "qubit() does not take any arguments"
-        qubit = self.builder.add_op(quantum_op("QAlloc")([]))
+        qubit = self.builder.add_op(quantum_op("QAlloc", qubits=0, out_qubits=1)([]))
         qubit = self.builder.add_op(quantum_op("Reset")([]), qubit)
         return [qubit]
