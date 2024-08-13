@@ -628,11 +628,7 @@ class List:
     )
     def __radd__(self: list[T], other: list[T]) -> list[T]: ...
 
-    @guppy.hugr_op(
-        builtins,
-        list_op("Repeat", [list_t(), int], [list_t()]),
-        ReversingChecker(),
-    )
+    @guppy.hugr_op(builtins, list_op("Repeat", [list_t(), int], [list_t()]))
     def __rmul__(self: list[T], other: int) -> list[T]: ...
 
     @guppy.custom(builtins, checker=FailingChecker("Guppy lists are immutable"))
@@ -708,11 +704,7 @@ class Linst:
     )
     def __radd__(self: linst[L], other: linst[L]) -> linst[L]: ...
 
-    @guppy.hugr_op(
-        builtins,
-        linst_op("Repeat", [linst_t(), int], [linst_t()]),
-        ReversingChecker(),
-    )
+    @guppy.hugr_op(builtins, linst_op("Repeat", [linst_t(), int], [linst_t()]))
     def __rmul__(self: linst[L], other: int) -> linst[L]: ...
 
     @guppy.hugr_op(
