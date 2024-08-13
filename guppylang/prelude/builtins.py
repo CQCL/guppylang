@@ -87,6 +87,9 @@ class Bool:
     @guppy.hugr_op(builtins, logic_op("Or", [tys.TypeArg(tys.BoundedNatArg(n=2))]))
     def __or__(self: bool, other: bool) -> bool: ...
 
+    @guppy.hugr_op(builtins, DummyOp("Xor"))
+    def __xor__(self: bool, other: bool) -> bool: ...
+
 
 @guppy.extend_type(builtins, nat_type_def)
 class Nat:
