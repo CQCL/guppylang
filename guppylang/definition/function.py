@@ -20,6 +20,7 @@ from guppylang.definition.common import CheckableDef, CompilableDef, ParsableDef
 from guppylang.definition.value import CallableDef, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr, Node, OutPortV
+from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type, type_to_row
@@ -175,7 +176,17 @@ def parse_py_func(f: PyFunc) -> tuple[ast.FunctionDef, str | None]:
     source = "".join(source_lines)  # Lines already have trailing \n's
     source = textwrap.dedent(source)
     func_ast = ast.parse(source).body[0]
-    file = inspect.getsourcefile(f)
+    # In Jupyter notebooks, we shouldn't use `inspect.getsourcefile(f)` since it would
+    # only give us a dummy temporary file
+    file: str | None
+    if is_running_ipython():
+        file = "<In [?]>"
+        if isinstance(func_ast, ast.FunctionDef):
+            defn = find_ipython_def(func_ast.name)
+            if defn is not None:
+                file = f"<{defn.cell_name}>"
+    else:
+        file = inspect.getsourcefile(f)
     if file is None:
         raise GuppyError("Couldn't determine source file for function")
     annotate_location(func_ast, source, file, line_offset)
