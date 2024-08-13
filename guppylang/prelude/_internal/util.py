@@ -384,7 +384,7 @@ def logic_op(
     """Utility method to create Hugr logic ops.
 
     The generated operations always have a single BoundedNat type argument,
-    used to instantiate all its inputs and output types.
+    encoding the number of boolean inputs to the operation.
 
     args:
         op_name: The name of the operation.
@@ -395,6 +395,7 @@ def logic_op(
         A function that takes an instantiation of the type arguments and returns
         a concrete HUGR op.
     """
-    inp = [var_t(0) for _ in range(inputs)]
-    out = [var_t(0)]
-    return custom_op(op_name, inp, out, args=[], ext=ext, variable_remap=None)
+    inp = [ht.Bool for _ in range(inputs)]
+    out = [ht.Bool]
+    args = [int_arg(inputs)]
+    return custom_op(op_name, inp, out, args=args, ext=ext, variable_remap=None)
