@@ -73,5 +73,4 @@ class CompiledExternDef(ExternDef, CompiledValueDef):
 
     def load(self, dfg: DFContainer, globals: CompiledGlobals, node: AstNode) -> Wire:
         """Loads the extern value into a local Hugr dataflow graph."""
-        # TODO: Use DFG's load, passing a value
         return dfg.builder.load(self.const_node)
