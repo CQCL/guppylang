@@ -30,12 +30,15 @@ class ListVal(hv.ExtensionValue):
     """Custom value for a floating point number."""
 
     v: list[hv.Value]
-    ty: Type
+    ty: ht.Type
+
+    def __init__(self, v: list[hv.Value], elem_ty: Type) -> None:
+        self.v = v
+        self.ty = list_type(elem_ty).to_hugr()
 
     def to_value(self) -> hv.Extension:
-        typ = list_type(self.ty).to_hugr()
         return hv.Extension(
-            name="ListValue", typ=typ, val=self.v, extensions=["Collections"]
+            name="ListValue", typ=self.ty, val=self.v, extensions=["Collections"]
         )
 
 
