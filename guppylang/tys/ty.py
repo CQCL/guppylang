@@ -5,6 +5,8 @@ from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
+import hugr.std.float
+import hugr.std.int
 from hugr import tys as ht
 
 from guppylang.error import InternalGuppyError
@@ -279,19 +281,9 @@ class NumericType(TypeBase):
         """Computes the Hugr representation of the type."""
         match self.kind:
             case NumericType.Kind.Nat | NumericType.Kind.Int:
-                return ht.Opaque(
-                    extension="arithmetic.int.types",
-                    id="int",
-                    args=[ht.BoundedNatArg(n=NumericType.INT_WIDTH)],
-                    bound=ht.TypeBound.Copyable,
-                )
+                return hugr.std.int.int_t(NumericType.INT_WIDTH)
             case NumericType.Kind.Float:
-                return ht.Opaque(
-                    extension="arithmetic.float.types",
-                    id="float64",
-                    args=[],
-                    bound=ht.TypeBound.Copyable,
-                )
+                return hugr.std.float.FLOAT_T
 
     @property
     def hugr_bound(self) -> ht.TypeBound:

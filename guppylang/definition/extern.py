@@ -41,9 +41,11 @@ class ExternDef(RawExternDef, ValueDef, CompilableDef):
 
     def compile_outer(self, graph: _DefinitionBuilder[OpVar]) -> "CompiledExternDef":
         """Adds a Hugr constant node for the extern definition to the provided graph."""
+        # The `typ` field must be serialized at this point, to ensure that the
+        # `Extension` is serializable.
         custom_const = {
             "symbol": self.symbol,
-            "typ": self.ty.to_hugr(),
+            "typ": self.ty.to_hugr().to_serial_root(),
             "constant": self.constant,
         }
         value = val.Extension(

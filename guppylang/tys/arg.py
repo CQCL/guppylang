@@ -82,7 +82,6 @@ class ConstArg(ArgumentBase):
                 assert isinstance(v, int)
                 return ht.BoundedNatArg(n=v)
             case BoundConstVar(idx=idx):
-                assert isinstance(self.const.ty.to_hugr(), ht.Opaque)
                 param = ht.BoundedNatParam(upper_bound=None)
                 return ht.VariableArg(idx=idx, param=param)
             case ConstValue() | BoundConstVar():

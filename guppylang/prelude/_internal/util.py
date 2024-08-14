@@ -37,8 +37,11 @@ class ListVal(hv.ExtensionValue):
         self.ty = list_type(elem_ty).to_hugr()
 
     def to_value(self) -> hv.Extension:
+        # The value list must be serialized at this point, otherwise the
+        # `Extension` will not be serializable.
+        vs = [v.to_serial_root() for v in self.v]
         return hv.Extension(
-            name="ListValue", typ=self.ty, val=self.v, extensions=["Collections"]
+            name="ListValue", typ=self.ty, val=vs, extensions=["Collections"]
         )
 
 
@@ -204,7 +207,7 @@ def make_concrete(
             concrete_arg, TypeArg
         ), f"Cannot translate const type {concrete_arg} arg into a type"
         return concrete_arg.ty.to_hugr()
-    if isinstance(ty, ht.Opaque):
+    elif isinstance(ty, ht.Opaque):
         # TODO: This is a temporary hack to compute bounds that depend on the
         # type parameters. This won't be needed once we start using hugr's
         # extension definitions, which include a `TypeDefBound` field to compute
@@ -219,6 +222,11 @@ def make_concrete(
             id=ty.id,
             bound=bound,
             extension=ty.extension,
+            args=[make_concrete_arg(arg, inst, remap) for arg in ty.args],
+        )
+    elif isinstance(ty, ht.ExtType):
+        return ht.ExtType(
+            type_def=ty.type_def,
             args=[make_concrete_arg(arg, inst, remap) for arg in ty.args],
         )
     return ty
