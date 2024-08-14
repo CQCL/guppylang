@@ -179,9 +179,7 @@ class GuppyModule:
 
         # Prepare Hugr for this module
         graph = Module()
-        # TODO: Metadata not yet supported
-        # https://github.com/CQCL/hugr/issues/1319
-        # graph.set_root_metadata("name", self.name)
+        graph.metadata["name"] = self.name
 
         # Type definitions need to be checked first so that we can use them when parsing
         # function signatures etc.
