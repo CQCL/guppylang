@@ -154,7 +154,7 @@ dependencies = [
 name = "execute_llvm"
 version = "0.1.0"
 dependencies = [
- "hugr",
+ "hugr 0.11.0",
  "hugr-llvm",
  "inkwell",
  "pyo3",
@@ -200,8 +200,18 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "daa4ecfcad4aaf337f974e196e0b79ac9288a19535a5b57c9c77f0aaed1d0c6a"
 dependencies = [
- "hugr-core",
- "hugr-passes",
+ "hugr-core 0.7.0",
+ "hugr-passes 0.6.2",
+]
+
+[[package]]
+name = "hugr"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "888ee8f56c9e2788b9d74162e2d057426fae9d5cfe4167c415c20260754ea433"
+dependencies = [
+ "hugr-core 0.8.0",
+ "hugr-passes 0.7.0",
 ]
 
 [[package]]
@@ -235,6 +245,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "hugr-core"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff8a7da4d5b36861d0695e7b9bc3120099bc2b579642e33886022b3e65c92d16"
+dependencies = [
+ "bitvec",
+ "cgmath",
+ "context-iterators",
+ "delegate",
+ "derive_more",
+ "downcast-rs",
+ "enum_dispatch",
+ "html-escape",
+ "itertools 0.13.0",
+ "lazy_static",
+ "num-rational",
+ "paste",
+ "petgraph",
+ "portgraph",
+ "regex",
+ "semver",
+ "serde",
+ "serde_json",
+ "smol_str",
+ "strum",
+ "strum_macros",
+ "thiserror",
+ "typetag",
+]
+
+[[package]]
 name = "hugr-llvm"
 version = "0.1.0"
 source = "git+https://github.com/CQCL/hugr-llvm?branch=doug/hugr-0.10.0#adbeaa53f0ea9d9447a9d8a48f43d2288578aa54"
@@ -242,7 +283,7 @@ dependencies = [
  "anyhow",
  "delegate",
  "downcast-rs",
- "hugr",
+ "hugr 0.10.0",
  "inkwell",
  "itertools 0.12.1",
  "lazy_static",
@@ -256,7 +297,21 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31c601b2bc2168e841cb1087f2f7d383a4cace5c9926e10e79e2dd4829cd6758"
 dependencies = [
- "hugr-core",
+ "hugr-core 0.7.0",
+ "itertools 0.13.0",
+ "lazy_static",
+ "paste",
+ "petgraph",
+ "thiserror",
+]
+
+[[package]]
+name = "hugr-passes"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75f2dd0e0c842e9513532b3025420dfdb5fed2db511cc83c749f964b25982bc8"
+dependencies = [
+ "hugr-core 0.8.0",
  "itertools 0.13.0",
  "lazy_static",
  "paste",
@@ -639,6 +694,9 @@ name = "semver"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61697e0a1c7e512e84a621326239844a24d8207b4669b41bc18b32ea5cbf988b"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "serde"
