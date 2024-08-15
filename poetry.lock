@@ -390,17 +390,19 @@ url = "validator"
 
 [[package]]
 name = "hugr"
-version = "0.5.0"
+version = "0.7.0"
 description = "Quantinuum's common representation for quantum programs"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "hugr-0.5.0-py3-none-any.whl", hash = "sha256:7e6c6660e3c7143dd5b89bf429e3ccc68add0d329db4ac35076e7692d2899326"},
-    {file = "hugr-0.5.0.tar.gz", hash = "sha256:c362e19e6842c89d00c9eab8e3afe161a380459ecb212374ecb78e4081964f15"},
+    {file = "hugr-0.7.0-py3-none-any.whl", hash = "sha256:acde80beaff613ee28e2141aeed1049cd536d1d705b90ad2fabfb84b17413caa"},
+    {file = "hugr-0.7.0.tar.gz", hash = "sha256:5db7b53668a96a648ff5457f8f6b3768d869461f7097f26b5a9c2bcab20f7d10"},
 ]
 
 [package.dependencies]
 pydantic = ">=2.7,<2.9"
+pydantic-extra-types = ">=2.9.0,<3.0.0"
+semver = ">=3.0.2,<4.0.0"
 
 [[package]]
 name = "identify"
@@ -923,6 +925,28 @@ files = [
 typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 
 [[package]]
+name = "pydantic-extra-types"
+version = "2.9.0"
+description = "Extra Pydantic types."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pydantic_extra_types-2.9.0-py3-none-any.whl", hash = "sha256:f0bb975508572ba7bf3390b7337807588463b7248587e69f43b1ad7c797530d0"},
+    {file = "pydantic_extra_types-2.9.0.tar.gz", hash = "sha256:e061c01636188743bb69f368dcd391f327b8cfbfede2fe1cbb1211b06601ba3b"},
+]
+
+[package.dependencies]
+pydantic = ">=2.5.2"
+
+[package.extras]
+all = ["pendulum (>=3.0.0,<4.0.0)", "phonenumbers (>=8,<9)", "pycountry (>=23)", "python-ulid (>=1,<2)", "python-ulid (>=1,<3)", "pytz (>=2024.1)", "semver (>=3.0.2)", "tzdata (>=2024.1)"]
+pendulum = ["pendulum (>=3.0.0,<4.0.0)"]
+phonenumbers = ["phonenumbers (>=8,<9)"]
+pycountry = ["pycountry (>=23)"]
+python-ulid = ["python-ulid (>=1,<2)", "python-ulid (>=1,<3)"]
+semver = ["semver (>=3.0.2)"]
+
+[[package]]
 name = "pydata-sphinx-theme"
 version = "0.15.4"
 description = "Bootstrap-based Sphinx theme from the PyData community"
@@ -1209,6 +1233,17 @@ doc = ["jupyterlite-pyodide-kernel", "jupyterlite-sphinx (>=0.13.1)", "jupytext"
 test = ["Cython", "array-api-strict", "asv", "gmpy2", "hypothesis (>=6.30)", "meson", "mpmath", "ninja", "pooch", "pytest", "pytest-cov", "pytest-timeout", "pytest-xdist", "scikit-umfpack", "threadpoolctl"]
 
 [[package]]
+name = "semver"
+version = "3.0.2"
+description = "Python helper for Semantic Versioning (https://semver.org)"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "semver-3.0.2-py3-none-any.whl", hash = "sha256:b1ea4686fe70b981f85359eda33199d60c53964284e0cfb4977d243e37cf4bf4"},
+    {file = "semver-3.0.2.tar.gz", hash = "sha256:6253adb39c70f6e51afed2fa7152bcd414c411286088fb4b9effb133885ab4cc"},
+]
+
+[[package]]
 name = "setuptools"
 version = "72.2.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
@@ -1414,67 +1449,67 @@ dev = ["hypothesis (>=6.70.0)", "pytest (>=7.1.0)"]
 
 [[package]]
 name = "tket2"
-version = "0.2.0"
+version = "0.2.1"
 description = "Quantinuum's TKET2 Quantum Compiler"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "tket2-0.2.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:85538ba800b63de51bcf1334de167b8f5ca57a2624f0bb555787b0111b761332"},
-    {file = "tket2-0.2.0-cp310-cp310-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:474f596653128624394a9ea8ca4668c8a43c4bc5fcab9981bc0c1f0700b12566"},
-    {file = "tket2-0.2.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:02e9ef68dcba8099d0b484ad2892d45412967ab02cc222a7e0085e9420ae540a"},
-    {file = "tket2-0.2.0-cp310-cp310-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:9ab2e864fecfac142655f09e3c78e16eb77831ec6c49a2d3a88abdf285263184"},
-    {file = "tket2-0.2.0-cp310-cp310-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:85f0d9ff11c4aca6634ca8a90657433747d0630553025cd68c266529fcf2631b"},
-    {file = "tket2-0.2.0-cp310-cp310-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:05d6beecbe2a6d38bda00ed174d7851312a7654a35860c0c316f1f61806a9d1f"},
-    {file = "tket2-0.2.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:10939961ccfc5fb8ed23054bc90b80ca6cab2f077e4e2789fd6d316fe77f9102"},
-    {file = "tket2-0.2.0-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:216108174ee0323c7016ccb77b16d47b678b84ce9699be34a387bcb03a5407ec"},
-    {file = "tket2-0.2.0-cp310-cp310-musllinux_1_2_armv7l.whl", hash = "sha256:a36c060e91c70752c8ab2a647afcdb276cee7bf4891f6e9139d3f0d8f5710262"},
-    {file = "tket2-0.2.0-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:571ed66d5fa82161af3ddcc2524b76c7e70c815ff6de91f195dd1b7baf018cdf"},
-    {file = "tket2-0.2.0-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:d5a58253f1e89346aaac5ca35a6c749ac201e3e2c4fabded409f5b9e506fa524"},
-    {file = "tket2-0.2.0-cp310-none-win32.whl", hash = "sha256:0911dddd1d659c5e2f1e0e59ab158cc047e4d1c0648f96787c97fcb69914b606"},
-    {file = "tket2-0.2.0-cp310-none-win_amd64.whl", hash = "sha256:1d8a63beb398fdd1600a3cf7cc9e07cbcced5eefe9d39f75111c4edfa415133b"},
-    {file = "tket2-0.2.0-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:cee49fb5b09e4dd4ed4b768a328351f222ed863e562e60054026c00a54b3de69"},
-    {file = "tket2-0.2.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:c3ba74e83750c230f74af3d8154d0760a82fd768e203abf83f1d442bf4837a7d"},
-    {file = "tket2-0.2.0-cp311-cp311-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:59ecd52a44984101b947e7b6e454686b0fa42d968d6b03b8a38252b6d60f1f3c"},
-    {file = "tket2-0.2.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f7df45d0d80c9a9920c6cf0217ec859946c04881b8172cf0d7616e341a8fd47b"},
-    {file = "tket2-0.2.0-cp311-cp311-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:b872a6aadd637e6dfd54e9b92ccf6126e41dd03404363a52b2f8f65157b4a87d"},
-    {file = "tket2-0.2.0-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:0db435270ad2eabf25eb8d84e684d7c1f7b447c60c0d6128231441d48212b447"},
-    {file = "tket2-0.2.0-cp311-cp311-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:c296fe29f54a0af1499533b7530b799a761d671af2a3349bb9d40674149c5f1d"},
-    {file = "tket2-0.2.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:139c5cb285d37320afecda16095decfdad3ee72991c22ea8f1ba5301429e899c"},
-    {file = "tket2-0.2.0-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:10de3255e029cda66a86fdb9e37f64eea4b1308562bc4a2a1b2c733d8a1df711"},
-    {file = "tket2-0.2.0-cp311-cp311-musllinux_1_2_armv7l.whl", hash = "sha256:2a9e9e88e608c62405534f45b96a36f4f59ec0d8894e9a69a2b2c77c530d0ac3"},
-    {file = "tket2-0.2.0-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:fe461009bf95532e84c09fbf9c7f015bcec9066f0bc7f669959ea5e7dc3031ce"},
-    {file = "tket2-0.2.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:509598cacda037eac65773f45350cacf1a7e39cac0232fcecb59797b44a5bca8"},
-    {file = "tket2-0.2.0-cp311-none-win32.whl", hash = "sha256:aef143f456b6b9fe7f914b5e53bce173cef419f33ba0675ba150a01e923aae4d"},
-    {file = "tket2-0.2.0-cp311-none-win_amd64.whl", hash = "sha256:d481b636649792307676af019e9d97e00f6e34edb49007918700dfddd674eaf7"},
-    {file = "tket2-0.2.0-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:1daa99dfd32c3631449d4bf012c3ee57af8d9ec7722cc09eca555b3bd69ab158"},
-    {file = "tket2-0.2.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:f2c3bdff6d6a6f1e7ff718f3c68ed758e333d8568a4553af9b19051f49bfae75"},
-    {file = "tket2-0.2.0-cp312-cp312-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:f54529349e33623671e4f3fbf424a386c66876379c45e838d138a22f84007dbf"},
-    {file = "tket2-0.2.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:82b3e4901c98a9a8000239a728b439a81a1b50b735ab39d8a5baa8b5406cd03b"},
-    {file = "tket2-0.2.0-cp312-cp312-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:3c110968c3a7a2b04a338c4bb1d588cb6c810713c3618a3d796bee6d461c4457"},
-    {file = "tket2-0.2.0-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:fc362867c3dd6e2e872163eebef39ed18d26ca715fbbe9dec3fe6ec9adcdc61b"},
-    {file = "tket2-0.2.0-cp312-cp312-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:860198bacb7f14a6aee02630eb4f686cca20108cd8713fe0aa078176a7871f32"},
-    {file = "tket2-0.2.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f467fdfb1d1a2d197940ff711bbf54934675141df46f255769a074bff4f56122"},
-    {file = "tket2-0.2.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:3bb3100ba604a5915733f2b15230d8dfcdd92be60cca7f554f24bcf075530a04"},
-    {file = "tket2-0.2.0-cp312-cp312-musllinux_1_2_armv7l.whl", hash = "sha256:2ab7c00ad7a3f3cbe45570087194545b22c0eea24e269a5511a7c500a6867ed5"},
-    {file = "tket2-0.2.0-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:f3357eb2bd5edb4e2e8ac9fa0a82cb9c6a9c9b0796c2d9b6b384a974690e0b3a"},
-    {file = "tket2-0.2.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:76a437c9cc9116b69dd42028b2059ffa8bc2e69e7898f93671ba30c0ec51dd18"},
-    {file = "tket2-0.2.0-cp312-none-win32.whl", hash = "sha256:501391a85f4c5d9e3b6ddca2d8765f56f045dd96c8e6ee90f998082b257b5bc0"},
-    {file = "tket2-0.2.0-cp312-none-win_amd64.whl", hash = "sha256:6a5f763b48f721995cf5b83c72cd275ec7140ff5d140753fcde4f89bf1d2be53"},
-    {file = "tket2-0.2.0-pp310-pypy310_pp73-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:c361724bdf1d3a95abd75b33e0fe06421b082c867e06be3c3f13ea323f5ee778"},
-    {file = "tket2-0.2.0-pp310-pypy310_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ab8db595d573da59e08d9fd1e7957734495470b3c119a043e01c6c24d928201b"},
-    {file = "tket2-0.2.0-pp310-pypy310_pp73-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:584aae56ba7f8fac3325d62f129e5ccb2f73c4b83b5e1b2ba620fa4c7eb5e100"},
-    {file = "tket2-0.2.0-pp310-pypy310_pp73-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:21c9d398a5298d17578132ed3d6c22ee8c9935a0b97d3d6c61d87e75dccf0116"},
-    {file = "tket2-0.2.0-pp310-pypy310_pp73-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:becb2182b6402a77c7f506754e3bface43294225afc8978b7408709c2ca9cf46"},
-    {file = "tket2-0.2.0-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:87eca576c484ed77ab098c675a51b88c28c0de77c64cfc9623a73e5d1a004bb6"},
-    {file = "tket2-0.2.0-pp310-pypy310_pp73-musllinux_1_2_aarch64.whl", hash = "sha256:6e868028cde96c5c83d6e5dd5f3d568e53abbf7fd4dff43f41efe96582613e67"},
-    {file = "tket2-0.2.0-pp310-pypy310_pp73-musllinux_1_2_armv7l.whl", hash = "sha256:7a1e1ebbeb7193e2842c8e6235c1d2f262ea91096f1d9802abf057a7fa435d72"},
-    {file = "tket2-0.2.0-pp310-pypy310_pp73-musllinux_1_2_i686.whl", hash = "sha256:38019b4cab2368fc112daf8ccccbadc315d3fbad3b1089dd5b1b2698c8fcb3c9"},
-    {file = "tket2-0.2.0-pp310-pypy310_pp73-musllinux_1_2_x86_64.whl", hash = "sha256:245c50a1fca6a3d349ab8f57627a0d4c2bdc2acecc0bcd64ced7930c0cd3337e"},
-    {file = "tket2-0.2.0.tar.gz", hash = "sha256:84721a12592711f4b9cb40ea780c44892d0bc24728af0ec5910678ca495fdb09"},
+    {file = "tket2-0.2.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:f3a4ab96dcefcf96815e858741d0d474a7ed9d4374bd849e388832e1cc309cd0"},
+    {file = "tket2-0.2.1-cp310-cp310-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:9d879f2f6451fd94d085aa043dbd14a08754cb8adcb3f1f899f8ff93027e5139"},
+    {file = "tket2-0.2.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:064261a4776e48645dd873fb4a204271b7b4c573a18ce69cc87556401b118943"},
+    {file = "tket2-0.2.1-cp310-cp310-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:8aec07a0d1db089a263f26d392d3b04ccce60b4e6a6bd3337d48399204e5962c"},
+    {file = "tket2-0.2.1-cp310-cp310-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:ec7252665241271860e4e55195e5af20f65ce2d43e9661880bab8c370f34c410"},
+    {file = "tket2-0.2.1-cp310-cp310-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:da9e0ccedd0fec38e30214cb666198b210492d381ef2894210679a238fda1274"},
+    {file = "tket2-0.2.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9d890ef1173c8919e0058f20533b1541f5ae1e20af4449c8eb53b7e4d51b480a"},
+    {file = "tket2-0.2.1-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:4c08ce7119a25d651c56a339d0bc72722bdabad1d2451d8799744bf7f2ca96f1"},
+    {file = "tket2-0.2.1-cp310-cp310-musllinux_1_2_armv7l.whl", hash = "sha256:d8aaaba875305f1598fea858e3315d51bc452d41a2e092ccf467eb6c87179b51"},
+    {file = "tket2-0.2.1-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:fcae42ae86c495b988035da338409051e2c3c257e3656287e9785e9497921449"},
+    {file = "tket2-0.2.1-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:abed6f4924c5487359e2a13a86ded77050f9042df1efca814ed4a79a9a9060cc"},
+    {file = "tket2-0.2.1-cp310-none-win32.whl", hash = "sha256:9d3c50601789aeb43fab3a951cee4a90537e74a852659244dddbfa8f4f940c34"},
+    {file = "tket2-0.2.1-cp310-none-win_amd64.whl", hash = "sha256:8e39c04d6c1beb5a28b00c7e3fa32273c518954d4edcc08a13d115249ee04674"},
+    {file = "tket2-0.2.1-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:9a22c65cb14a9c3306262526205f8ddc35897fde4e320890d70063f40cee08c2"},
+    {file = "tket2-0.2.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:fb3571630b1f6d82d93d747f426ee5e4e1b7be334cdc5e3b5a51f7b9a5839c51"},
+    {file = "tket2-0.2.1-cp311-cp311-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:88a898246c321aca4c5852ed981c7f4ca44812da2f4686f2758e67439839f4a1"},
+    {file = "tket2-0.2.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5e8440e556df3ad838b3c301f3fe15f8482bc43d4d7c4871c225739814476dd5"},
+    {file = "tket2-0.2.1-cp311-cp311-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:6e79d035e9e7255cb7d6d6548ab24675311a6f6efbad87f16a6aae9bcc16ab7b"},
+    {file = "tket2-0.2.1-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:9e2237cbde306dde680c2e1954778be8cf86fd29417bbabfbb47a26531dd2534"},
+    {file = "tket2-0.2.1-cp311-cp311-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:7a57422b880a4808452009245dfed406ad8a53e8b29c306089ef522fbf3fd527"},
+    {file = "tket2-0.2.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:74a61b8f10c8c0bc695300edd9c20665b51ddaaac23c85a709792a77474c8732"},
+    {file = "tket2-0.2.1-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:48d5cd9eb468344264cb8b7beae9e7e2dc148de9bf08cb9938df88337e7f5f65"},
+    {file = "tket2-0.2.1-cp311-cp311-musllinux_1_2_armv7l.whl", hash = "sha256:e3c379cfa79f244582959036123e655efeec7c52fe4c904d832ca955dbd8dc1e"},
+    {file = "tket2-0.2.1-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:c82a1e61bee276551389e3d98dcb8b86ddb44b0d50b5d5a430e04a329953c54d"},
+    {file = "tket2-0.2.1-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:9acc8061990ab1fddf7eab5535f877a5bd01ac3d102f954b741472ed0e897493"},
+    {file = "tket2-0.2.1-cp311-none-win32.whl", hash = "sha256:bda9eed68b558e36374fb42ace2a7f9fb13d8b400c26faadbb4881fc6a20b1f8"},
+    {file = "tket2-0.2.1-cp311-none-win_amd64.whl", hash = "sha256:3d76ac6b1d029829d8890d9aca25d5ca74c49940a465383efe88c7e1cc461a0e"},
+    {file = "tket2-0.2.1-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:31c0c3a40034ebbdf21d7c2aba245289f80395c5b006b83efb4c14774bb0c98f"},
+    {file = "tket2-0.2.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:a3d5696a7f3c33357a9a91b1c53b914526e173366c1fb4fd158f759f474f66a3"},
+    {file = "tket2-0.2.1-cp312-cp312-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:11dd7bc544d31d832861655a5d5068da8e9df214e10caf0d1c87b69ab783e0a8"},
+    {file = "tket2-0.2.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:19ff6c56bef6292778e9ab308cd3f74b421fbec64e06155e6a993d50224cad94"},
+    {file = "tket2-0.2.1-cp312-cp312-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:1e71a4f4cc26e0c53a455af913e03da243f14f032202d3eb1f807dde59ed788d"},
+    {file = "tket2-0.2.1-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:93060373767c69c016fb52bc6b6164867bf59c43d327d56bf633b01e804905eb"},
+    {file = "tket2-0.2.1-cp312-cp312-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:725d00ab183ef76d2d40831f074c8f293bcd1423ade59a97e3be687323d5a73a"},
+    {file = "tket2-0.2.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b1c1edb142b968ec91fd617762eb39ee6cd7f3dcd3813abac7db722b25fe9e9a"},
+    {file = "tket2-0.2.1-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:f57d1ace1e08cbb62626abfca1cd73397f7e00657691ba492283d96c91276f61"},
+    {file = "tket2-0.2.1-cp312-cp312-musllinux_1_2_armv7l.whl", hash = "sha256:119f99d4424c0940d946f943c5906cbf71a1bb6a4debc46660fb2e3ec4de8366"},
+    {file = "tket2-0.2.1-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:6695350fa967c5c80d14cfd17399408339e17b4be07b7dee713a498ee79fa234"},
+    {file = "tket2-0.2.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:3d3cd8e0ff63c190d13951ea7c1caccf504aaa56ea472a680f06120d4a32cd48"},
+    {file = "tket2-0.2.1-cp312-none-win32.whl", hash = "sha256:c707181e26415a67a6d5beb44227174b37035069aeb5e216199083c0da882b82"},
+    {file = "tket2-0.2.1-cp312-none-win_amd64.whl", hash = "sha256:04379b2cdb0d2b7bf20ef30b21ad2657266e0836df271e436f72b79c4367a364"},
+    {file = "tket2-0.2.1-pp310-pypy310_pp73-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:f45e0bef41c598248fdea3133f6b61f0ea165c23b5b18e7eee6478440fa491ac"},
+    {file = "tket2-0.2.1-pp310-pypy310_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:84fed638546da9dd80c82ce58daab89d322c8054307b12d73d209708a9472955"},
+    {file = "tket2-0.2.1-pp310-pypy310_pp73-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:60495983e2cb23cd8907496609af9b6896161a7eabb80161b06d3b3aafd3baa4"},
+    {file = "tket2-0.2.1-pp310-pypy310_pp73-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:3843c0b2af2e5279661ca5044f4abcc55c557cf6573716cfc2a1286b3fe0a2fd"},
+    {file = "tket2-0.2.1-pp310-pypy310_pp73-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:9f4e8eb11243755ece3edc28efe9885a3817e79ff509c1b08a7dcdb6ee609882"},
+    {file = "tket2-0.2.1-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9362ff1b8c4b79afa2a9a9225b6e320204b33ea7bf8117e8fa68c6cee19059a8"},
+    {file = "tket2-0.2.1-pp310-pypy310_pp73-musllinux_1_2_aarch64.whl", hash = "sha256:520fc5f6885004c4db197c4f29fb08eb9591595d7a7706024653df25d21a596b"},
+    {file = "tket2-0.2.1-pp310-pypy310_pp73-musllinux_1_2_armv7l.whl", hash = "sha256:e0298a1af78d34be8eef6840c7149fda5e24d2adc17c150566042f0fc889c224"},
+    {file = "tket2-0.2.1-pp310-pypy310_pp73-musllinux_1_2_i686.whl", hash = "sha256:6233197b5eb21af0844dcc6fa6f3f0f3aa7db092a47d7bd5f6f7164a9d37598a"},
+    {file = "tket2-0.2.1-pp310-pypy310_pp73-musllinux_1_2_x86_64.whl", hash = "sha256:27c07a55528a39d46b53a015921fc7adaa25d61be957b94d24765a91368e70f1"},
+    {file = "tket2-0.2.1.tar.gz", hash = "sha256:e2e3efbd2be52901915ba6a3664ed1da612db511281fc9bb1f40deedf42fc877"},
 ]
 
 [package.dependencies]
-hugr = ">=0.5.0,<0.6"
+hugr = ">=0.7.0,<0.8"
 pytket = ">=1.29.2,<2"
 tket2-eccs = ">=0.1.0,<0.2"
 
@@ -1551,4 +1586,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "8b5decbd3509b37043b11a803ed1ed0e2b1bd9ac663c9641be69a1dd564712ed"
+content-hash = "779c3a03197e6a71a1815ef360cddd2cbbd39e305399a24cc4aff4ce4b4d0d54"
