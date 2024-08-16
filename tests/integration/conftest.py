@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture
 def export_test_cases_dir(request):
     r = request.config.getoption("--export-test-cases")
     if r and not r.exists():
@@ -12,7 +12,7 @@ def export_test_cases_dir(request):
     return r
 
 
-@pytest.fixture()
+@pytest.fixture
 def validate(request, export_test_cases_dir: Path):
     def validate_json(hugr: str):
         try:
@@ -39,7 +39,7 @@ class LLVMException(Exception):
     pass
 
 
-@pytest.fixture()
+@pytest.fixture
 def run_int_fn():
     def f(hugr: Hugr, expected: int, fn_name: str = "main"):
         try:

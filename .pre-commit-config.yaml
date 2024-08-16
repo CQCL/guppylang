@@ -24,30 +24,36 @@ repos:
     hooks:
       - id: typos
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.6
-    hooks:
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-      - id: ruff-format
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.10.0"
-    hooks:
-      - id: mypy
-        pass_filenames: false
-        args: [--package=guppylang]
-        additional_dependencies: [
-          hugr,
-          graphviz,
-          networkx,
-          ormsgpack,
-          pydantic,
-          pytket,
-          ]
-
   - repo: local
     hooks:
+      - id: poetry-install
+        name: sync poetry deps
+        description: Ensure development tools are installed.
+        entry: poetry install --sync
+        language: system
+        files: poetry.lock
+        pass_filenames: false
+      - id: ruff-format
+        name: ruff format
+        description: Format python code with `ruff`.
+        entry: poetry run ruff format guppylang
+        language: system
+        files: \.py$
+        pass_filenames: false
+      - id: ruff-check
+        name: ruff
+        description: Check python code with `ruff`.
+        entry: poetry run ruff check --fix --exit-non-zero-on-fix guppylang
+        language: system
+        files: \.py$
+        pass_filenames: false
+      - id: mypy-check
+        name: mypy
+        description: Check python code with `mypy`.
+        entry: poetry run mypy guppylang
+        language: system
+        files: \.py$
+        pass_filenames: false
       - id: cargo-check
         name: Cargo check
         entry: bash -c 'cd validator && exec cargo check'
