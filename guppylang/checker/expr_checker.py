@@ -936,7 +936,7 @@ def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
         )
 
     try:
-        python_val = eval(  # noqa: S307, PGH001
+        python_val = eval(  # noqa: S307
             ast.unparse(node.value),
             None,
             DummyEvalDict(ctx, node.value),
