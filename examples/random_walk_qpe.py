@@ -8,13 +8,11 @@ The example Hamiltonian and numbers are taken from https://arxiv.org/abs/2206.12
 import math
 from collections.abc import Callable
 
+import guppylang.prelude.quantum as quantum
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import result, py
-from guppylang.prelude.quantum import qubit
-
-import guppylang.prelude.quantum as quantum
-from guppylang.prelude.quantum import h, discard, cx, x, measure, rz
+from guppylang.prelude.builtins import py, result
+from guppylang.prelude.quantum import cx, discard, h, measure, qubit, rz, x
 
 module = GuppyModule("test")
 module.load(quantum)
@@ -67,9 +65,7 @@ def random_walk_phase_estimation(
 
 
 @guppy(module)
-def example_controlled_oracle(
-    q1: qubit, q2: qubit, t: float
-) -> tuple[qubit, qubit]:
+def example_controlled_oracle(q1: qubit, q2: qubit, t: float) -> tuple[qubit, qubit]:
     """A controlled e^itH gate for the example Hamiltonian H = -0.5 * Z"""
     # This is just a controlled rz gate
     angle = -0.5 * t
