@@ -3,8 +3,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
-import hugr.function as hf
-import hugr.tys as ht
 from hugr import Wire, ops
 from hugr.dfg import _DfBase
 
@@ -179,10 +177,10 @@ class CustomFunctionDef(CompiledCallableDef):
         # TODO: Reuse compiled instances with the same type args?
         # TODO: Why do we need to monomorphise here? Why not wait for `load_function`?
         # See https://github.com/CQCL/guppylang/issues/393 for both issues.
-        fun_ty: FunctionType = self.ty.instantiate(type_args)
-        input_types: list[ht.Type] = [ty.to_hugr() for ty in fun_ty.inputs]
-        output_types: list[ht.Type] = [fun_ty.output.to_hugr()]
-        func: hf.Function = dfg.builder.define_function(
+        fun_ty = self.ty.instantiate(type_args)
+        input_types = [ty.to_hugr() for ty in fun_ty.inputs]
+        output_types = [fun_ty.output.to_hugr()]
+        func = dfg.builder.define_function(
             self.name, input_types, output_types, type_params=[]
         )
 
