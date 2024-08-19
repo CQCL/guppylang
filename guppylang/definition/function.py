@@ -137,7 +137,7 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
         ty: The type of the function.
         python_scope: The Python scope where the function was defined.
         docstring: The docstring of the function.
-        cfg: TODO ???
+        cfg: The type- and linearity-checked CFG for the function body.
     """
 
     cfg: CheckedCFG[Place]
@@ -175,7 +175,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         ty: The type of the function.
         python_scope: The Python scope where the function was defined.
         docstring: The docstring of the function.
-        cfg: TODO ???
+        cfg: The type- and linearity-checked CFG for the function body.
         func_def: The Hugr function definition.
     """
 
