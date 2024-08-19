@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Never, TypeAlias, cast
+from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
 import hugr.std.float
 import hugr.std.int
@@ -209,7 +209,7 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> Never:
+    def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
         raise InternalGuppyError(
             "Tried to convert unsolved existential type variable to Hugr"
