@@ -18,8 +18,8 @@ CompiledLocals = dict[PlaceId, Wire]
 class DFContainer:
     """A dataflow graph under construction.
 
-    This class is passed through the entire compilation pipeline and stores the node
-    whose dataflow child-graph is currently being constructed as well as all live local
+    This class is passed through the entire compilation pipeline and stores a builder
+    for the dataflow child-graph currently being constructed as well as all live local
     variables. Note that the variable map is mutated in-place and always reflects the
     current compilation state.
     """
