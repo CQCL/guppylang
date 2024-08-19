@@ -2,8 +2,8 @@ import functools
 from collections.abc import Sequence
 
 from hugr import Wire, ops
+from hugr import cfg as hc
 from hugr import tys as ht
-from hugr.cfg import Block, Cfg
 from hugr.dfg import DP, _DfBase
 from hugr.node_port import ToNode
 
@@ -25,7 +25,7 @@ def compile_cfg(
     container: _DfBase[DP],
     inputs: Sequence[Wire],
     globals: CompiledGlobals,
-) -> Cfg:
+) -> hc.Cfg:
     """Compiles a CFG to Hugr."""
     insert_return_vars(cfg)
 
@@ -43,7 +43,7 @@ def compile_cfg(
 
 def compile_bb(
     bb: CheckedBB[Place],
-    builder: Cfg,
+    builder: hc.Cfg,
     is_entry: bool,
     globals: CompiledGlobals,
 ) -> ToNode:
@@ -57,7 +57,7 @@ def compile_bb(
         return builder.exit
 
     # Otherwise, we use a regular `Block` node
-    block: Block
+    block: hc.Block
     inputs: Sequence[Place]
     if is_entry:
         inputs = bb.sig.input_row
