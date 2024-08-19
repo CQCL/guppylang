@@ -159,18 +159,10 @@ class CustomFunctionDef(CompiledCallableDef):
     ) -> Wire:
         """Loads the custom function as a value into a local dataflow graph.
 
-        This will place a `FunctionDef` node into the Hugr module and loads it into the
-        DFG. This operation will fail the function is not allowed to be used as a
-        higher-order value.
+        This will place a `FunctionDef` node in the local DFG, and load with a
+        `LoadFunc` node. This operation will fail if the function is not allowed
+        to be used as a higher-order value.
         """
-        # TODO: The description above says the function is defined in "the Hugr
-        #   module". However, before the refactor this seemed to define it
-        #   inside the DFG. Which one is correct?
-        #
-        #   I left it to define things locally, as requiring a `Module` gets a
-        #   bit annoying since `Globals.get_instance_func` would need to have
-        #   access to a builder, to instantiate functions.
-
         # TODO: This should be raised during checking, not compilation!
         if not self.higher_order_value:
             raise GuppyError(
