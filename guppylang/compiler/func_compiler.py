@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from hugr import Wire, ops
 from hugr import tys as ht
@@ -58,7 +58,7 @@ def compile_local_func_def(
     # If we have captured variables and the body contains a recursive occurrence of
     # the function itself, then we provide the partially applied function as a local
     # variable
-    call_args = cast(list[Wire], func_builder.inputs())
+    call_args: list[Wire] = list(func_builder.inputs())
     if len(captured) > 0 and recursive:
         loaded = func_builder.load_function(func_builder, hugr_closure_ty)
         partial = func_builder.add_op(

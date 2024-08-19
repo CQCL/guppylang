@@ -2,7 +2,6 @@ import ast
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import cast
 
 import hugr.function as hf
 import hugr.tys as ht
@@ -195,7 +194,7 @@ class CustomFunctionDef(CompiledCallableDef):
         )
 
         func_dfg = DFContainer(func, dfg.locals.copy())
-        args = cast(list[Wire], func.inputs())
+        args: list[Wire] = list(func.inputs())
         outputs = self.compile_call(args, type_args, func_dfg, globals, node)
 
         func.set_outputs(*outputs)
