@@ -196,9 +196,9 @@ dependencies = [
 
 [[package]]
 name = "hugr"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daa4ecfcad4aaf337f974e196e0b79ac9288a19535a5b57c9c77f0aaed1d0c6a"
+checksum = "888ee8f56c9e2788b9d74162e2d057426fae9d5cfe4167c415c20260754ea433"
 dependencies = [
  "hugr-core",
  "hugr-passes",
@@ -206,9 +206,9 @@ dependencies = [
 
 [[package]]
 name = "hugr-core"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7de0f6d5bd8ce765a989d928a773b6816b89051bdf1da55d27ac2b6965fa0e07"
+checksum = "ff8a7da4d5b36861d0695e7b9bc3120099bc2b579642e33886022b3e65c92d16"
 dependencies = [
  "bitvec",
  "cgmath",
@@ -225,6 +225,7 @@ dependencies = [
  "petgraph",
  "portgraph",
  "regex",
+ "semver",
  "serde",
  "serde_json",
  "smol_str",
@@ -236,8 +237,8 @@ dependencies = [
 
 [[package]]
 name = "hugr-llvm"
-version = "0.1.0"
-source = "git+https://github.com/CQCL/hugr-llvm?branch=doug/hugr-0.10.0#adbeaa53f0ea9d9447a9d8a48f43d2288578aa54"
+version = "0.2.0"
+source = "git+https://github.com/CQCL/hugr-llvm#43739f107090b41502b124dade71ba68032f2d5c"
 dependencies = [
  "anyhow",
  "delegate",
@@ -252,9 +253,9 @@ dependencies = [
 
 [[package]]
 name = "hugr-passes"
-version = "0.6.2"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31c601b2bc2168e841cb1087f2f7d383a4cace5c9926e10e79e2dd4829cd6758"
+checksum = "75f2dd0e0c842e9513532b3025420dfdb5fed2db511cc83c749f964b25982bc8"
 dependencies = [
  "hugr-core",
  "itertools 0.13.0",
@@ -639,6 +640,9 @@ name = "semver"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61697e0a1c7e512e84a621326239844a24d8207b4669b41bc18b32ea5cbf988b"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "serde"
