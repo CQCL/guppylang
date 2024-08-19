@@ -1,4 +1,4 @@
-"""Utilities for defining the with builtin functions.
+"""Utilities for defining builtin functions.
 
 Note: This is all _really_ hacky, and intended to be temporary until we have a
 unified definition of extension operations.
