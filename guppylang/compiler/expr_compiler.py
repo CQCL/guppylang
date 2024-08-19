@@ -5,6 +5,9 @@ from contextlib import contextmanager
 from typing import Any, TypeGuard, TypeVar
 
 import hugr
+import hugr.std.float
+import hugr.std.int
+import hugr.std.logic
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
@@ -30,9 +33,7 @@ from guppylang.nodes import (
     TensorCall,
     TypeApply,
 )
-from guppylang.tys.arg import TypeArg
 from guppylang.tys.builtin import (
-    bool_type,
     get_element_type,
     is_bool_type,
     is_list_type,
@@ -325,13 +326,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # The only case that is not desugared by the type checker is the `not` operation
         # since it is not implemented via a dunder method
         if isinstance(node.op, ast.Not):
-            from guppylang.prelude._internal.util import logic_op
-
             arg = self.visit(node.operand)
-            op = logic_op("Not", inputs=1, parametric_size=False)(
-                [TypeArg(bool_type())]
-            )
-            return self.builder.add_op(op, arg)
+            return self.builder.add_op(hugr.std.logic.Not, arg)
 
         raise InternalGuppyError("Node should have been removed during type checking.")
 
