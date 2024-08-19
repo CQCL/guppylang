@@ -49,7 +49,7 @@ def compile_local_func_def(
         func.ty.output,
         input_names=[v.name for v, _ in captured] + list(func.ty.input_names),
     )
-    hugr_closure_ty: ht.FunctionType = closure_ty.to_hugr_poly().body
+    hugr_closure_ty: ht.FunctionType = closure_ty.to_hugr()
 
     func_builder = dfg.builder.define_function(
         func.name, hugr_closure_ty.input, hugr_closure_ty.output

@@ -149,7 +149,7 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        func_type = self.ty.to_hugr_poly().body
+        func_type = self.ty.to_hugr()
         func_def = module.define_function(self.name, func_type.input)
         func_def.declare_outputs(func_type.output)
         return CompiledFunctionDef(
@@ -189,7 +189,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr_poly().body
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
         type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
         return dfg.builder.load_function(self.func_def, func_ty, type_args)
 
@@ -202,7 +202,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         node: AstNode,
     ) -> list[Wire]:
         """Compiles a call to the function."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr_poly().body
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
         type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
         call = dfg.builder.call(
             self.func_def, *args, instantiation=func_ty, type_args=type_args

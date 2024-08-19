@@ -107,7 +107,7 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr_poly().body
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
         type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
         return dfg.builder.load_function(self.declaration, func_ty, type_args)
 
@@ -120,7 +120,7 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         node: AstNode,
     ) -> list[Wire]:
         """Compiles a call to the function."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr_poly().body
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
         type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
         call = dfg.builder.call(
             self.declaration, *args, instantiation=func_ty, type_args=type_args

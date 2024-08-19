@@ -46,6 +46,7 @@ from guppylang.tys.ty import (
     NumericType,
     TupleType,
     Type,
+    type_to_row,
 )
 
 
@@ -207,7 +208,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def _pack_returns(self, returns: Sequence[Wire], return_ty: Type) -> Wire:
         """Groups function return values into a tuple"""
         if isinstance(return_ty, TupleType | NoneType) and not return_ty.preserve:
-            types = return_ty.element_types if isinstance(return_ty, TupleType) else []
+            types = type_to_row(return_ty)
             assert len(returns) == len(types)
             return self._pack_tuple(returns, types)
         assert len(returns) == 1, (
@@ -221,11 +222,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
 
-        func_hugr_ty = func_ty.to_hugr_poly().body
-        assert isinstance(func_hugr_ty, ht.FunctionType)
-
         args = [self.visit(arg) for arg in node.args]
-        call = self.builder.add_op(ops.CallIndirect(func_hugr_ty), func, *args)
+        call = self.builder.add_op(ops.CallIndirect(func_ty.to_hugr()), func, *args)
         return self._pack_returns(list(call), func_ty.output)
 
     def visit_TensorCall(self, node: TensorCall) -> Wire:
@@ -276,17 +274,11 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             return all_outs, remaining_args
 
         elif isinstance(func_ty, FunctionType):
-            hugr_ty = func_ty.to_hugr()
-            assert isinstance(hugr_ty, ht.FunctionType)
-
-            func_hugr_ty = func_ty.to_hugr_poly().body
-            assert isinstance(func_hugr_ty, ht.FunctionType)
-
             input_len = len(func_ty.inputs)
             consumed_args, other_args = args[0:input_len], args[input_len:]
 
             call = self.builder.add_op(
-                ops.CallIndirect(func_hugr_ty), func, *consumed_args
+                ops.CallIndirect(func_ty.to_hugr()), func, *consumed_args
             )
 
             return list(call), other_args
