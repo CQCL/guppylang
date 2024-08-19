@@ -55,12 +55,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     dfg: DFContainer
 
     def compile(self, expr: ast.expr, dfg: DFContainer) -> Wire:
-        """Compiles an expression and returns a single port holding the output value."""
+        """Compiles an expression and returns a single wire holding the output value."""
         self.dfg = dfg
         return self.visit(expr)
 
     def compile_row(self, expr: ast.expr, dfg: DFContainer) -> list[Wire]:
-        """Compiles a row expression and returns a list of ports, one for each value in
+        """Compiles a row expression and returns a list of wires, one for each value in
         the row.
 
         On Python-level, we treat tuples like rows on top-level. However, nested tuples
@@ -212,7 +212,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             return self._pack_tuple(returns, types)
         assert len(returns) == 1, (
             f"Expected a single return value. Got {returns}. "
-            "return type {return_ty.__class__}"
+            f"return type {return_ty}"
         )
         return returns[0]
 

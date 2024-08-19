@@ -37,7 +37,7 @@ class DFContainer:
         self.locals = locals
 
     def __getitem__(self, place: Place) -> Wire:
-        """Constructs a port for a local place in this DFG.
+        """Constructs a wire for a local place in this DFG.
 
         Note that this mutates the Hugr since we might need to pack or unpack some
         tuples to obtain a port for places that involve struct fields.
