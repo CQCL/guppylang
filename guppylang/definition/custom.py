@@ -177,7 +177,8 @@ class CustomFunctionDef(CompiledCallableDef):
         # inferred type args.
         #
         # TODO: Reuse compiled instances with the same type args?
-        # TODO: Why do we need to monomorphise here?
+        # TODO: Why do we need to monomorphise here? Why not wait for `load_function`?
+        # See https://github.com/CQCL/guppylang/issues/393 for both issues.
         fun_ty: FunctionType = self.ty.instantiate(type_args)
         input_types: list[ht.Type] = [ty.to_hugr() for ty in fun_ty.inputs]
         output_types: list[ht.Type] = [fun_ty.output.to_hugr()]
