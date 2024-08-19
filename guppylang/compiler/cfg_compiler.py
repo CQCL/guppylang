@@ -149,7 +149,6 @@ def choose_vars_for_tuple_sum(
     assert all(not v.ty.linear for var_row in output_vars for v in var_row)
     tys = [[v.ty for v in var_row] for var_row in output_vars]
     sum_type = SumType([row_to_type(row) for row in tys]).to_hugr()
-    assert isinstance(sum_type, ht.Sum)
 
     with dfg.builder.add_conditional(unit_sum) as conditional:
         for i, var_row in enumerate(output_vars):
