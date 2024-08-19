@@ -58,7 +58,7 @@ class ReversingChecker(CustomCallChecker):
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         expr, subst = self.base_checker.check(args, ty)
         if isinstance(expr, GlobalCall):
-            expr.args = list(reversed(args))
+            expr.args = list(reversed(expr.args))
         return expr, subst
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
