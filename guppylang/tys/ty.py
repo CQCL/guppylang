@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
+from typing import TYPE_CHECKING, ClassVar, Never, TypeAlias, cast
 
 import hugr.std.float
 import hugr.std.int
@@ -159,7 +159,7 @@ class BoundTypeVar(TypeBase, BoundVar):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> ht.Type:
+    def to_hugr(self) -> ht.Variable:
         """Computes the Hugr representation of the type."""
         return ht.Variable(idx=self.idx, bound=self.hugr_bound)
 
@@ -209,7 +209,7 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> ht.Type:
+    def to_hugr(self) -> Never:
         """Computes the Hugr representation of the type."""
         raise InternalGuppyError(
             "Tried to convert unsolved existential type variable to Hugr"
@@ -240,9 +240,9 @@ class NoneType(TypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> ht.Type:
+    def to_hugr(self) -> ht.Tuple:
         """Computes the Hugr representation of the type."""
-        return TupleType([]).to_hugr()
+        return ht.Tuple()
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -277,7 +277,7 @@ class NumericType(TypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> ht.Type:
+    def to_hugr(self) -> ht.ExtType:
         """Computes the Hugr representation of the type."""
         match self.kind:
             case NumericType.Kind.Nat | NumericType.Kind.Int:
@@ -338,7 +338,7 @@ class FunctionType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> ht.Type:
+    def to_hugr(self) -> ht.FunctionType:
         """Computes the Hugr representation of the type."""
         if self.parametrized:
             raise InternalGuppyError(
@@ -435,14 +435,9 @@ class TupleType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> ht.Type:
+    def to_hugr(self) -> ht.Tuple:
         """Computes the Hugr representation of the type."""
-        # Tuples are encoded as a unary sum. Note that we need to make a copy of this
-        # tuple with `preserve=False` to ensure that it can be broken up into a row (if
-        # this tuple was created by instantiating a type variable, it is still
-        # represented as a *row* sum).
-        tuple_ty = TupleType(self.element_types, preserve=False)
-        return SumType([tuple_ty]).to_hugr()
+        return ht.Tuple(*row_to_hugr(self.element_types))
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
@@ -475,15 +470,15 @@ class SumType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> ht.Type:
+    def to_hugr(self) -> ht.Sum:
         """Computes the Hugr representation of the type."""
         rows = [type_to_row(ty) for ty in self.element_types]
-        sum: ht.Sum
         if all(len(row) == 0 for row in rows):
-            sum = ht.UnitSum(size=len(rows))
+            return ht.UnitSum(size=len(rows))
+        elif len(rows) == 1:
+            return ht.Tuple(*row_to_hugr(rows[0]))
         else:
-            sum = ht.Sum(variant_rows=rows_to_hugr(rows))
-        return sum
+            return ht.Sum(variant_rows=rows_to_hugr(rows))
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
@@ -558,9 +553,9 @@ class StructType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self) -> ht.Type:
+    def to_hugr(self) -> ht.Tuple:
         """Computes the Hugr representation of the type."""
-        return TupleType([f.ty for f in self.fields]).to_hugr()
+        return ht.Tuple(*(f.ty.to_hugr() for f in self.fields))
 
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
