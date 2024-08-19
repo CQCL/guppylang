@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from hugr import Wire, ops
-from hugr import function as hf
 
 from guppylang.ast_util import AstNode, annotate_location
 from guppylang.checker.core import Globals
@@ -195,7 +194,7 @@ class CheckedStructDef(TypeDef, CompiledDef):
         check_all_args(self.params, args, self.name, loc)
         return StructType(args, self)
 
-    def generated_methods(self, module: hf.Module) -> list[CustomFunctionDef]:
+    def generated_methods(self) -> list[CustomFunctionDef]:
         """Auto-generated methods for this struct."""
 
         class ConstructorCompiler(CustomCallCompiler):
