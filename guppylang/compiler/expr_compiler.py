@@ -149,6 +149,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         conditional = self.builder.add_conditional(
             self.visit(cond), *(self.visit(inp) for inp in inputs)
         )
+        # If the condition is true, we enter the `with` block
         with self._new_case(inputs, inputs, conditional, 0):
             yield
         # If the condition is false, output the inputs as is
