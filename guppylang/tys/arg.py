@@ -47,7 +47,7 @@ class TypeArg(ArgumentBase):
         """The existential type variables contained in this argument."""
         return self.ty.unsolved_vars
 
-    def to_hugr(self) -> ht.TypeArg:
+    def to_hugr(self) -> ht.TypeTypeArg:
         """Computes the Hugr representation of the argument."""
         ty: ht.Type = self.ty.to_hugr()
         return ty.type_arg()
