@@ -100,5 +100,5 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         from guppylang.compiler.func_compiler import compile_local_func_def
 
         var = Variable(node.name, node.ty, node)
-        _, loaded_func = compile_local_func_def(node, self.dfg, self.globals)
+        loaded_func = compile_local_func_def(node, self.dfg, self.globals)
         self.dfg[var] = loaded_func

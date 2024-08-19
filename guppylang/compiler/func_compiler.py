@@ -29,10 +29,10 @@ def compile_local_func_def(
     func: CheckedNestedFunctionDef,
     dfg: DFContainer,
     globals: CompiledGlobals,
-) -> tuple[Function, Wire]:
+) -> Wire:
     """Compiles a local (nested) function definition to Hugr and loads it into a value.
 
-    Returns the compiled function node, and the wire output of the `LoadFunc` operation.
+    Returns the wire output of the `LoadFunc` operation.
     """
     assert func.ty.input_names is not None
 
@@ -99,7 +99,7 @@ def compile_local_func_def(
             *(dfg[v] for v, _ in captured),
         )
 
-    return (func_builder, loaded)
+    return loaded
 
 
 def make_dummy_op(
