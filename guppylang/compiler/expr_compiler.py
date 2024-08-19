@@ -333,7 +333,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> Wire:
         struct_port = self.visit(node.value)
-        return self._unpack_tuple(struct_port, [f.ty for f in node.struct_ty.fields])[0]
+        field_idx = node.struct_ty.fields.index(node.field)
+        return self._unpack_tuple(struct_port, [f.ty for f in node.struct_ty.fields])[
+            field_idx
+        ]
 
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
         extra_args = []
