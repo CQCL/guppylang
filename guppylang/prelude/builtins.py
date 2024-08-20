@@ -75,7 +75,7 @@ class Bool:
     @guppy.custom(builtins, NoopCompiler())
     def __bool__(self: bool) -> bool: ...
 
-    @guppy.hugr_op(builtins, logic_op("Eq", [tys.TypeArg(tys.BoundedNatArg(n=2))]))
+    @guppy.hugr_op(builtins, logic_op("Eq", [tys.TypeArg(tys.BoundedNatArg(n=1))]))
     def __eq__(self: bool, other: bool) -> bool: ...
 
     @guppy.hugr_op(builtins, int_op("ifrombool"))
