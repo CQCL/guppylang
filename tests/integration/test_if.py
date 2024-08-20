@@ -264,3 +264,13 @@ def test_continue_different_types2(validate):
         return z
 
     validate(foo)
+
+
+def test_eq(validate):
+    @compile_guppy
+    def foo() -> bool:
+        x = True
+        y = not x
+        return x == y
+
+    validate(foo)
