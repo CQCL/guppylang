@@ -8,7 +8,6 @@ from typing import Any, TypeVar
 
 from hugr import Hugr, ops
 from hugr import tys as ht
-from hugr.ops import DataflowOp
 
 from guppylang.ast_util import annotate_location, has_empty_body
 from guppylang.definition.common import DefId
@@ -224,7 +223,7 @@ class _Guppy:
     def hugr_op(
         self,
         module: GuppyModule,
-        op: Callable[[Inst], DataflowOp],
+        op: Callable[[ht.FunctionType, Inst], ops.DataflowOp],
         checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
@@ -233,8 +232,8 @@ class _Guppy:
 
         Args:
             module: The module in which the function should be defined.
-            op: A function that takes an instantiation of the type arguments and returns
-                a concrete HUGR op.
+            op: A function that takes an instantiation of the type arguments as well as
+                the inferred input and output types and returns a concrete HUGR op.
             checker: The custom call checker.
             higher_order_value: Whether the function may be used as a higher-order
                 value.

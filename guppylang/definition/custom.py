@@ -4,6 +4,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 from hugr import Wire, ops
+from hugr import tys as ht
 from hugr.dfg import _DfBase
 
 from guppylang.ast_util import AstNode, with_loc, with_type
@@ -60,27 +61,7 @@ class RawCustomFunctionDef(ParsableDef):
         code. The only information we need to access is that it's a function type and
         that there are no unsolved existential vars.
         """
-        # Type annotations are needed if we rely on the default call checker or want
-        # to allow the usage of the function as a higher-order value
-        requires_type_annotation = (
-            isinstance(self.call_checker, DefaultCallChecker) or self.higher_order_value
-        )
-        has_type_annotation = self.defined_at.returns or any(
-            arg.annotation for arg in self.defined_at.args.args
-        )
-
-        if requires_type_annotation and not has_type_annotation:
-            raise GuppyError(
-                f"Type signature for function `{self.name}` is required. "
-                "Alternatively, try passing `higher_order_value=False` on definition.",
-                self.defined_at,
-            )
-
-        ty = (
-            check_signature(self.defined_at, globals)
-            if requires_type_annotation
-            else FunctionType([], NoneType())
-        )
+        ty = self._get_signature(globals) or FunctionType([], NoneType())
         return CustomFunctionDef(
             self.id,
             self.name,
@@ -100,8 +81,47 @@ class RawCustomFunctionDef(ParsableDef):
         node: AstNode,
     ) -> Sequence[Wire]:
         """Compiles a call to the function."""
-        self.call_compiler._setup(type_args, dfg, globals, node)
+        # Note: We have _compiled_ globals rather than `Globals` here,
+        # so we cannot use `self._get_signature()`.
+        # ty = self._get_signature(globals)
+        ty = None
+        self.call_compiler._setup(
+            type_args,
+            dfg,
+            globals,
+            node,
+            ty,
+        )
         return self.call_compiler.compile(args)
+
+    def _get_signature(self, globals: Globals) -> FunctionType | None:
+        """Returns the type of the function, if known.
+
+        Type annotations are needed if we rely on the default call checker or
+        want to allow the usage of the function as a higher-order value.
+
+        Some function types like python's `int()` cannot be expressed in the Guppy
+        type system, so we return `None` here and rely on the specialized compiler
+        to handle the call.
+        """
+        requires_type_annotation = (
+            isinstance(self.call_checker, DefaultCallChecker) or self.higher_order_value
+        )
+        has_type_annotation = self.defined_at.returns or any(
+            arg.annotation for arg in self.defined_at.args.args
+        )
+
+        if requires_type_annotation and not has_type_annotation:
+            raise GuppyError(
+                f"Type signature for function `{self.name}` is required. "
+                "Alternatively, try passing `higher_order_value=False` on definition.",
+                self.defined_at,
+            )
+
+        if requires_type_annotation:
+            return check_signature(self.defined_at, globals)
+        else:
+            return None
 
 
 @dataclass(frozen=True)
@@ -203,7 +223,7 @@ class CustomFunctionDef(CompiledCallableDef):
         node: AstNode,
     ) -> list[Wire]:
         """Compiles a call to the function."""
-        self.call_compiler._setup(type_args, dfg, globals, node)
+        self.call_compiler._setup(type_args, dfg, globals, node, self.ty)
         return self.call_compiler.compile(args)
 
 
@@ -242,12 +262,14 @@ class CustomCallCompiler(ABC):
         type_args: The type arguments for the function.
         globals: The compiled globals.
         node: The AST node where the function is defined.
+        ty: The type of the function, if known.
     """
 
     dfg: DFContainer
     type_args: Inst
     globals: CompiledGlobals
     node: AstNode
+    ty: FunctionType | None
 
     def _setup(
         self,
@@ -255,11 +277,13 @@ class CustomCallCompiler(ABC):
         dfg: DFContainer,
         globals: CompiledGlobals,
         node: AstNode,
+        ty: FunctionType | None = None,
     ) -> None:
         self.type_args = type_args
         self.dfg = dfg
         self.globals = globals
         self.node = node
+        self.ty = ty
 
     @abstractmethod
     def compile(self, args: list[Wire]) -> list[Wire]:
@@ -304,17 +328,22 @@ class OpCompiler(CustomCallCompiler):
     """Call compiler for functions that are directly implemented via Hugr ops.
 
     args:
-        op: A function that takes an instantiation of the type arguments and returns
-            a concrete HUGR op.
+        op: A function that takes an instantiation of the type arguments as well as
+            the monomorphic function type, and returns a concrete HUGR op.
     """
 
-    op: Callable[[Inst], ops.DataflowOp]
+    op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]
 
-    def __init__(self, op: Callable[[Inst], ops.DataflowOp]) -> None:
+    def __init__(self, op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]) -> None:
         self.op = op
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        op = self.op(self.type_args)
+        if self.ty is None:
+            raise InternalGuppyError(
+                "Cannot compile custom operator without type information"
+            )
+        hugr_ty = self.ty.to_hugr()
+        op = self.op(hugr_ty, self.type_args)
         node = self.builder.add_op(op, *args)
         return list(node)
 

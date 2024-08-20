@@ -1,5 +1,6 @@
 import hugr
 from hugr import Wire, ops
+from hugr import tys as ht
 
 from guppylang.definition.custom import (
     CustomCallCompiler,
@@ -119,9 +120,12 @@ class MeasureCompiler(CustomCallCompiler):
     def compile(self, args: list[Wire]) -> list[Wire]:
         from guppylang.prelude.quantum import quantum_op
 
-        [qubit] = args
-        [qubit, bit] = self.builder.add_op(quantum_op("Measure", out_bits=1)([]), qubit)
-        self.builder.add_op(quantum_op("QFree", qubits=1, out_qubits=0)([]), qubit)
+        [q] = args
+        [q, bit] = self.builder.add_op(
+            quantum_op("Measure")(ht.FunctionType([ht.Qubit], [ht.Qubit, ht.Bool]), []),
+            q,
+        )
+        self.builder.add_op(quantum_op("QFree")(ht.FunctionType([ht.Qubit], []), []), q)
         return [bit]
 
 
@@ -132,6 +136,10 @@ class QAllocCompiler(CustomCallCompiler):
         from guppylang.prelude.quantum import quantum_op
 
         assert not args, "qubit() does not take any arguments"
-        qubit = self.builder.add_op(quantum_op("QAlloc", qubits=0, out_qubits=1)([]))
-        qubit = self.builder.add_op(quantum_op("Reset")([]), qubit)
-        return [qubit]
+        q = self.builder.add_op(
+            quantum_op("QAlloc")(ht.FunctionType([], [ht.Qubit]), [])
+        )
+        q = self.builder.add_op(
+            quantum_op("Reset")(ht.FunctionType([ht.Qubit], [ht.Qubit]), []), q
+        )
+        return [q]
