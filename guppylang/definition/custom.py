@@ -79,18 +79,17 @@ class RawCustomFunctionDef(ParsableDef):
         dfg: DFContainer,
         globals: CompiledGlobals,
         node: AstNode,
+        function_ty: ht.FunctionType,
     ) -> Sequence[Wire]:
         """Compiles a call to the function."""
         # Note: We have _compiled_ globals rather than `Globals` here,
         # so we cannot use `self._get_signature()`.
-        # ty = self._get_signature(globals)
-        ty = None
         self.call_compiler._setup(
             type_args,
             dfg,
             globals,
             node,
-            ty,
+            function_ty,
         )
         return self.call_compiler.compile(args)
 
@@ -223,7 +222,10 @@ class CustomFunctionDef(CompiledCallableDef):
         node: AstNode,
     ) -> list[Wire]:
         """Compiles a call to the function."""
-        self.call_compiler._setup(type_args, dfg, globals, node, self.ty)
+        concrete_ty = self.ty.instantiate(type_args)
+        hugr_ty = concrete_ty.to_hugr()
+
+        self.call_compiler._setup(type_args, dfg, globals, node, hugr_ty)
         return self.call_compiler.compile(args)
 
 
@@ -269,7 +271,7 @@ class CustomCallCompiler(ABC):
     type_args: Inst
     globals: CompiledGlobals
     node: AstNode
-    ty: FunctionType | None
+    ty: ht.FunctionType
 
     def _setup(
         self,
@@ -277,13 +279,13 @@ class CustomCallCompiler(ABC):
         dfg: DFContainer,
         globals: CompiledGlobals,
         node: AstNode,
-        ty: FunctionType | None = None,
+        hugr_ty: ht.FunctionType,
     ) -> None:
         self.type_args = type_args
         self.dfg = dfg
         self.globals = globals
         self.node = node
-        self.ty = ty
+        self.ty = hugr_ty
 
     @abstractmethod
     def compile(self, args: list[Wire]) -> list[Wire]:
@@ -338,12 +340,7 @@ class OpCompiler(CustomCallCompiler):
         self.op = op
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        if self.ty is None:
-            raise InternalGuppyError(
-                "Cannot compile custom operator without type information"
-            )
-        hugr_ty = self.ty.to_hugr()
-        op = self.op(hugr_ty, self.type_args)
+        op = self.op(self.ty, self.type_args)
         node = self.builder.add_op(op, *args)
         return list(node)
 
