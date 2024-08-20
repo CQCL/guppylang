@@ -45,17 +45,10 @@ jobs:
         run: poetry run mypy guppylang
 
       - name: Check formatting with ruff
-        uses: chartboost/ruff-action@v1
-        with:
-          src: "./guppylang"
-          args: format --check
-          version: 0.4.2
+        run: poetry run ruff format --check guppylang
 
       - name: Lint with ruff
-        uses: chartboost/ruff-action@v1
-        with:
-          src: "./guppylang"
-          args: check
+        run: poetry run ruff check guppylang
 
       - name: Install Guppy with validation and llvm-based execution
         run: poetry install --with execution,validation
