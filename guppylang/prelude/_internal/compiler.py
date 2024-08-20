@@ -2,11 +2,14 @@ import hugr
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.std.float import FLOAT_T
-from hugr.std.int import INT_T
 
 from guppylang.definition.custom import (
     CustomCallCompiler,
 )
+from guppylang.tys.ty import NumericType
+
+# Note: Hugr's INT_T is 64bits, but guppy defaults to 32bits
+INT_T = NumericType(NumericType.Kind.Int).to_hugr()
 
 
 class NatTruedivCompiler(CustomCallCompiler):
