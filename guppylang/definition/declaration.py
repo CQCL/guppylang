@@ -1,6 +1,11 @@
 import ast
 from dataclasses import dataclass, field
 
+from hugr import Node, Wire
+from hugr import function as hf
+from hugr import tys as ht
+from hugr.dfg import OpVar, _DefinitionBuilder
+
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
@@ -10,10 +15,9 @@ from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.function import PyFunc, parse_py_func
 from guppylang.definition.value import CallableDef, CompiledCallableDef
 from guppylang.error import GuppyError
-from guppylang.hugr_builder.hugr import Hugr, Node, OutPortV, VNode
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import Type, type_to_row
+from guppylang.tys.ty import Type
 
 
 @dataclass(frozen=True)
@@ -68,9 +72,16 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
         node = with_loc(node, GlobalCall(def_id=self.id, args=args, type_args=inst))
         return node, ty
 
-    def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledFunctionDecl":
+    def compile_outer(
+        self, module: _DefinitionBuilder[OpVar]
+    ) -> "CompiledFunctionDecl":
         """Adds a Hugr `FuncDecl` node for this function to the Hugr."""
-        node = graph.add_declare(self.ty, parent, self.name)
+        assert isinstance(
+            module, hf.Module
+        ), "Functions can only be declared in modules"
+        module: hf.Module = module
+
+        node = module.declare_function(self.name, self.ty.to_hugr_poly())
         return CompiledFunctionDecl(
             self.id,
             self.name,
@@ -86,30 +97,32 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
 class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
     """A function declaration with a corresponding Hugr node."""
 
-    hugr_node: VNode
+    declaration: Node
 
     def load_with_args(
         self,
         type_args: Inst,
         dfg: DFContainer,
-        graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> OutPortV:
+    ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        return graph.add_load_function(
-            self.hugr_node.out_port(0), type_args, dfg.node
-        ).out_port(0)
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
+        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        return dfg.builder.load_function(self.declaration, func_ty, type_args)
 
     def compile_call(
         self,
-        args: list[OutPortV],
+        args: list[Wire],
         type_args: Inst,
         dfg: DFContainer,
-        graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> list[OutPortV]:
+    ) -> list[Wire]:
         """Compiles a call to the function."""
-        call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
-        return [call.out_port(i) for i in range(len(type_to_row(self.ty.output)))]
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
+        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        call = dfg.builder.call(
+            self.declaration, *args, instantiation=func_ty, type_args=type_args
+        )
+        return list(call)

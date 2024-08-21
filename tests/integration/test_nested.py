@@ -129,6 +129,20 @@ def test_capture_multiple(validate):
     validate(foo)
 
 
+def test_capture_fn(validate):
+    @compile_guppy
+    def foo() -> bool:
+        def f(x: bool) -> bool:
+            return x
+
+        def g(b: bool) -> bool:
+            return f(b)
+
+        return g(True)
+
+    validate(foo)
+
+
 def test_capture_cfg(validate):
     @compile_guppy
     def foo(x: int) -> int:

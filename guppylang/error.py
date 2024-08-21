@@ -107,11 +107,15 @@ def exception_hook(hook: ExceptHook) -> Iterator[None]:
         yield
         ipython_shell.set_custom_exc((), None)
     except NameError:
-        # Otherwise, override the regular sys.excepthook
-        old_hook = sys.excepthook
-        sys.excepthook = hook
-        yield
-        sys.excepthook = old_hook
+        pass
+    else:
+        return
+
+    # Otherwise, override the regular sys.excepthook
+    old_hook = sys.excepthook
+    sys.excepthook = hook
+    yield
+    sys.excepthook = old_hook
 
 
 def format_source_location(

@@ -13,7 +13,7 @@ graphviz = "^0.20.1"
 networkx = "^3.2.1"
 pydantic = "^2.7.0b1"
 typing-extensions = "^4.9.0"
-hugr = "^0.5.0"
+hugr = "^0.7.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
@@ -43,7 +43,7 @@ optional = true
 
 [tool.poetry.group.pytket.dependencies]
 pytket = { version = "^1.30.0" }
-tket2 = { version = "^0.2.0" }
+tket2 = { version = "^0.2.1" }
 
 [tool.poetry.group.docs]
 optional = true
