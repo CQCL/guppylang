@@ -2,29 +2,41 @@
 
 # mypy: disable-error-code="empty-body, misc"
 
-from hugr.serialization import ops, tys
-from hugr.serialization.tys import TypeBound
+from collections.abc import Callable
+
+from hugr import ops
+from hugr import tys as ht
 
 from guppylang.decorator import guppy
-from guppylang.hugr_builder.hugr import UNDEFINED
 from guppylang.module import GuppyModule
-from guppylang.prelude._internal import MeasureCompiler, QAllocCompiler
+from guppylang.prelude._internal.compiler import MeasureCompiler, QAllocCompiler
+from guppylang.tys.subst import Inst
 
 quantum = GuppyModule("quantum")
 
 
-def quantum_op(op_name: str) -> ops.OpType:
-    """Utility method to create Hugr quantum ops."""
-    return ops.OpType(
-        ops.CustomOp(extension="quantum.tket2", name=op_name, args=[], parent=UNDEFINED)
-    )
+def quantum_op(
+    op_name: str,
+) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+    """Utility method to create Hugr quantum ops.
+
+    Args:
+        op_name: The name of the quantum operation.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
+    """
+
+    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
+        return ops.Custom(
+            name=op_name, extension="quantum.tket2", signature=ty, args=[]
+        )
+
+    return op
 
 
-@guppy.type(
-    quantum,
-    tys.Type(tys.Opaque(extension="prelude", id="qubit", args=[], bound=TypeBound.Any)),
-    linear=True,
-)
+@guppy.type(quantum, ht.Qubit, linear=True)
 class qubit:
     @guppy.custom(quantum, QAllocCompiler())
     def __new__() -> "qubit": ...

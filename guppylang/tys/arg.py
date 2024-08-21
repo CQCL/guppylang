@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeAlias
 
-from hugr.serialization import tys
+from hugr import tys as ht
 
 from guppylang.error import InternalGuppyError
 from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
@@ -23,7 +23,7 @@ Argument: TypeAlias = "TypeArg | ConstArg"
 
 
 @dataclass(frozen=True)
-class ArgumentBase(ToHugr[tys.TypeArg], Transformable["Argument"], ABC):
+class ArgumentBase(ToHugr[ht.TypeArg], Transformable["Argument"], ABC):
     """Abstract base class for arguments of parametrized types.
 
     For example, in the type `array[int, 42]` we have two arguments `int` and `42`.
@@ -47,9 +47,10 @@ class TypeArg(ArgumentBase):
         """The existential type variables contained in this argument."""
         return self.ty.unsolved_vars
 
-    def to_hugr(self) -> tys.TypeArg:
+    def to_hugr(self) -> ht.TypeTypeArg:
         """Computes the Hugr representation of the argument."""
-        return tys.TypeArg(tys.TypeTypeArg(ty=self.ty.to_hugr()))
+        ty: ht.Type = self.ty.to_hugr()
+        return ty.type_arg()
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this argument."""
@@ -72,19 +73,17 @@ class ConstArg(ArgumentBase):
         """The existential const variables contained in this argument."""
         return self.const.unsolved_vars
 
-    def to_hugr(self) -> tys.TypeArg:
+    def to_hugr(self) -> ht.TypeArg:
         """Computes the Hugr representation of this argument."""
         from guppylang.tys.ty import NumericType
 
         match self.const:
             case ConstValue(value=v, ty=NumericType(kind=NumericType.Kind.Nat)):
                 assert isinstance(v, int)
-                return tys.TypeArg(tys.BoundedNatArg(n=v))
+                return ht.BoundedNatArg(n=v)
             case BoundConstVar(idx=idx):
-                hugr_ty = self.const.ty.to_hugr()
-                assert isinstance(hugr_ty.root, tys.Opaque)
-                param = tys.TypeParam(tys.BoundedNatParam(bound=None))
-                return tys.TypeArg(tys.VariableArg(idx=idx, cached_decl=param))
+                param = ht.BoundedNatParam(upper_bound=None)
+                return ht.VariableArg(idx=idx, param=param)
             case ConstValue() | BoundConstVar():
                 # TODO: Handle other cases besides nats
                 raise NotImplementedError

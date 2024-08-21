@@ -6,7 +6,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, TypeVar
 
-from hugr.serialization import ops, tys
+from hugr import Hugr, ops
+from hugr import tys as ht
 
 from guppylang.ast_util import annotate_location, has_empty_body
 from guppylang.definition.common import DefId
@@ -25,8 +26,8 @@ from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
-from guppylang.hugr_builder.hugr import Hugr
 from guppylang.module import GuppyModule, PyFunc
+from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 
 FuncDefDecorator = Callable[[PyFunc], RawFunctionDef]
@@ -122,10 +123,10 @@ class _Guppy:
     def type(
         self,
         module: GuppyModule,
-        hugr_ty: tys.Type,
+        hugr_ty: ht.Type,
         name: str = "",
         linear: bool = False,
-        bound: tys.TypeBound | None = None,
+        bound: ht.TypeBound | None = None,
     ) -> ClassDecorator:
         """Decorator to annotate a class definitions as Guppy types.
 
@@ -222,12 +223,22 @@ class _Guppy:
     def hugr_op(
         self,
         module: GuppyModule,
-        op: ops.OpType,
+        op: Callable[[ht.FunctionType, Inst], ops.DataflowOp],
         checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
     ) -> CustomFuncDecorator:
-        """Decorator to annotate function declarations as HUGR ops."""
+        """Decorator to annotate function declarations as HUGR ops.
+
+        Args:
+            module: The module in which the function should be defined.
+            op: A function that takes an instantiation of the type arguments as well as
+                the inferred input and output types and returns a concrete HUGR op.
+            checker: The custom call checker.
+            higher_order_value: Whether the function may be used as a higher-order
+                value.
+            name: The name of the function.
+        """
         return self.custom(module, OpCompiler(op), checker, higher_order_value, name)
 
     def declare(self, module: GuppyModule) -> FuncDeclDecorator:
@@ -296,7 +307,7 @@ class _Guppy:
             raise MissingModuleError(err)
         return self._modules.pop(id)
 
-    def compile_module(self, id: ModuleIdentifier | None = None) -> Hugr | None:
+    def compile_module(self, id: ModuleIdentifier | None = None) -> Hugr[ops.Module]:
         """Compiles the local module into a Hugr."""
         module = self.take_module(id)
         if not module:

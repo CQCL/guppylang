@@ -5,6 +5,9 @@ from collections.abc import Callable, Mapping
 from types import ModuleType
 from typing import Any, Union
 
+from hugr import Hugr, ops
+from hugr.function import Module
+
 from guppylang.checker.core import Globals, PyScope
 from guppylang.compiler.core import CompiledGlobals
 from guppylang.definition.common import (
@@ -22,7 +25,6 @@ from guppylang.definition.parameter import ParamDef
 from guppylang.definition.struct import CheckedStructDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, pretty_errors
-from guppylang.hugr_builder.hugr import Hugr
 
 PyFunc = Callable[..., Any]
 PyFuncDefOrDecl = tuple[bool, PyFunc]
@@ -38,7 +40,7 @@ class GuppyModule:
 
     # If the hugr has already been compiled, keeps a reference that can be returned
     # from `compile`.
-    _compiled_hugr: Hugr | None
+    _compiled_hugr: Hugr[ops.Module] | None
 
     # Map of raw definitions in this module
     _raw_defs: dict[DefId, RawDef]
@@ -169,11 +171,15 @@ class GuppyModule:
         }
 
     @pretty_errors
-    def compile(self) -> Hugr:
+    def compile(self) -> Hugr[ops.Module]:
         """Compiles the module and returns the final Hugr."""
         if self.compiled:
             assert self._compiled_hugr is not None, "Module is compiled but has no Hugr"
             return self._compiled_hugr
+
+        # Prepare Hugr for this module
+        graph = Module()
+        graph.metadata["name"] = self.name
 
         # Type definitions need to be checked first so that we can use them when parsing
         # function signatures etc.
@@ -187,7 +193,7 @@ class GuppyModule:
         for defn in type_defs.values():
             if isinstance(defn, CheckedStructDef):
                 self._globals.impls.setdefault(defn.id, {})
-                for method_def in defn.generated_methods:
+                for method_def in defn.generated_methods():
                     generated[method_def.id] = method_def
                     self._globals.impls[defn.id][method_def.name] = method_def.id
 
@@ -197,16 +203,10 @@ class GuppyModule:
         )
         self._globals = self._globals.update_defs(other_defs)
 
-        # Prepare Hugr for this module
-        graph = Hugr(self.name)
-        module_node = graph.set_root_name(self.name)
-
         # Compile definitions to Hugr
         self._compiled_globals = {
             defn.id: (
-                defn.compile_outer(graph, module_node)
-                if isinstance(defn, CompilableDef)
-                else defn
+                defn.compile_outer(graph) if isinstance(defn, CompilableDef) else defn
             )
             for defn in itertools.chain(type_defs.values(), other_defs.values())
         }
@@ -215,11 +215,12 @@ class GuppyModule:
         # Finally, compile the definition contents to Hugr. For example, this compiles
         # the bodies of functions.
         for defn in self._compiled_globals.values():
-            defn.compile_inner(graph, all_compiled_globals)
+            defn.compile_inner(all_compiled_globals)
 
+        hugr = graph.hugr
         self._compiled = True
-        self._compiled_hugr = graph
-        return graph
+        self._compiled_hugr = hugr
+        return hugr
 
     def contains(self, name: str) -> bool:
         """Returns 'True' if the module contains an object with the given name."""

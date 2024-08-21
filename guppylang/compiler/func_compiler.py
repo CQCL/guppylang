@@ -1,10 +1,14 @@
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
+
+from hugr import Wire, ops
+from hugr import tys as ht
+from hugr.function import Function
 
 from guppylang.compiler.cfg_compiler import compile_cfg
 from guppylang.compiler.core import CompiledGlobals, DFContainer
-from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr, OutPortV
 from guppylang.nodes import CheckedNestedFunctionDef
-from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, type_to_row
+from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, Type, type_to_row
 
 if TYPE_CHECKING:
     from guppylang.definition.function import CheckedFunctionDef
@@ -12,62 +16,58 @@ if TYPE_CHECKING:
 
 def compile_global_func_def(
     func: "CheckedFunctionDef",
-    def_node: DFContainingVNode,
-    graph: Hugr,
+    builder: Function,
     globals: CompiledGlobals,
 ) -> None:
     """Compiles a top-level function definition to Hugr."""
-    input_tys = [inp.ty for inp in func.ty.inputs]
-    inout_tys = [inp.ty for inp in func.ty.inputs if InputFlags.Inout in inp.flags]
-    _, ports = graph.add_input_with_ports(input_tys, def_node)
-    cfg_node = graph.add_cfg(def_node, ports)
-    compile_cfg(func.cfg, graph, cfg_node, globals)
-
-    # Add output node for the cfg
-    graph.add_output(
-        inputs=[
-            cfg_node.add_out_port(ty)
-            for ty in (*type_to_row(func.cfg.output_ty), *inout_tys)
-        ],
-        parent=def_node,
-    )
+    cfg = compile_cfg(func.cfg, builder, builder.inputs(), globals)
+    builder.set_outputs(*cfg)
 
 
 def compile_local_func_def(
     func: CheckedNestedFunctionDef,
     dfg: DFContainer,
-    graph: Hugr,
     globals: CompiledGlobals,
-) -> OutPortV:
-    """Compiles a local (nested) function definition to Hugr."""
+) -> Wire:
+    """Compiles a local (nested) function definition to Hugr and loads it into a value.
+
+    Returns the wire output of the `LoadFunc` operation.
+    """
     assert func.ty.input_names is not None
 
     # Pick an order for the captured variables
     captured = list(func.captured.values())
+    captured_types = [v.ty for v, _ in captured]
+
+    # Whether the function calls itself recursively.
+    recursive = func.name in func.cfg.live_before[func.cfg.entry_bb]
 
     # Prepend captured variables to the function arguments
     closure_ty = FunctionType(
-        [FuncInput(v.ty, InputFlags.NoFlags) for v, _ in captured]
+        [FuncInput(ty, InputFlags.NoFlags) for ty in captured_types]
         + list(func.ty.inputs),
         func.ty.output,
-        [v.name for v, _ in captured] + list(func.ty.input_names),
+        input_names=[v.name for v, _ in captured] + list(func.ty.input_names),
     )
-    inout_tys = [inp.ty for inp in closure_ty.inputs if InputFlags.Inout in inp.flags]
+    hugr_closure_ty: ht.FunctionType = closure_ty.to_hugr()
 
-    def_node = graph.add_def(closure_ty, dfg.node, func.name)
-    def_input, input_ports = graph.add_input_with_ports(
-        [inp.ty for inp in closure_ty.inputs], def_node
+    func_builder = dfg.builder.define_function(
+        func.name, hugr_closure_ty.input, hugr_closure_ty.output
     )
 
     # If we have captured variables and the body contains a recursive occurrence of
     # the function itself, then we provide the partially applied function as a local
     # variable
-    if len(captured) > 0 and func.name in func.cfg.live_before[func.cfg.entry_bb]:
-        loaded = graph.add_load_function(def_node.out_port(0), [], def_node).out_port(0)
-        partial = graph.add_partial(
-            loaded, [def_input.out_port(i) for i in range(len(captured))], def_node
+    call_args: list[Wire] = list(func_builder.inputs())
+    if len(captured) > 0 and recursive:
+        loaded = func_builder.load_function(func_builder, hugr_closure_ty)
+        partial = func_builder.add_op(
+            make_partial_op(closure_ty, captured_types),
+            loaded,
+            *func_builder.input_node[: len(captured)],
         )
-        input_ports.append(partial.out_port(0))
+
+        call_args.append(partial)
         func.cfg.input_tys.append(func.ty)
     else:
         # Otherwise, we treat the function like a normal global variable
@@ -82,28 +82,62 @@ def compile_local_func_def(
                 {},
                 None,
                 func.cfg,
-                def_node,
+                func_builder,
             )
         }
 
     # Compile the CFG
-    cfg_node = graph.add_cfg(def_node, inputs=input_ports)
-    compile_cfg(func.cfg, graph, cfg_node, globals)
-
-    # Add output node for the cfg
-    graph.add_output(
-        inputs=[
-            cfg_node.add_out_port(ty)
-            for ty in (*type_to_row(func.cfg.output_ty), *inout_tys)
-        ],
-        parent=def_node,
-    )
+    cfg = compile_cfg(func.cfg, func_builder, call_args, globals)
+    func_builder.set_outputs(*cfg)
 
     # Finally, load the function into the local data-flow graph
-    loaded = graph.add_load_function(def_node.out_port(0), [], dfg.node).out_port(0)
+    loaded = dfg.builder.load_function(func_builder, hugr_closure_ty)
     if len(captured) > 0:
-        loaded = graph.add_partial(
-            loaded, [dfg[v] for v, _ in captured], dfg.node
-        ).out_port(0)
+        loaded = dfg.builder.add_op(
+            make_partial_op(closure_ty, captured_types),
+            loaded,
+            *(dfg[v] for v, _ in captured),
+        )
 
     return loaded
+
+
+def make_dummy_op(
+    name: str, inp: Sequence[Type], out: Sequence[Type], extension: str = "dummy"
+) -> ops.DataflowOp:
+    """Dummy operation."""
+    input = [ty.to_hugr() for ty in inp]
+    output = [ty.to_hugr() for ty in out]
+
+    sig = ht.FunctionType(input=input, output=output)
+    return ops.Custom(name=name, extension=extension, signature=sig, args=[])
+
+
+def make_partial_op(
+    closure_ty: FunctionType, captured_tys: Sequence[Type]
+) -> ops.DataflowOp:
+    """Creates a dummy operation for partially evaluating a function.
+
+    args:
+        closure_ty: A function type `(c_0, ..., c_k, a_0, ..., a_n) -> b_0, ..., b_m`
+        captured_tys: A list of types `c_0, ..., c_k` that are captured by the function
+
+    returns:
+        An operation with type
+            ` (c_0, ..., c_k, a_0, ..., a_n -> b_0, ..., b_m ), c_0, ..., c_k`
+            `-> (a_0, ..., a_n -> b_0, ..., b_m)`
+    """
+    assert len(closure_ty.inputs) >= len(captured_tys)
+    assert [p.to_hugr() for p in captured_tys] == [
+        inp.ty.to_hugr() for inp in closure_ty.inputs[: len(captured_tys)]
+    ]
+
+    explicit_inputs = closure_ty.inputs[len(captured_tys) :]
+    partially_applied_func = FunctionType(explicit_inputs, closure_ty.output)
+
+    return make_dummy_op(
+        "partial",
+        [closure_ty, *captured_tys],
+        [partially_applied_func],
+        extension="guppylang.unsupported",
+    )

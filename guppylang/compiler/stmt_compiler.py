@@ -1,6 +1,9 @@
 import ast
 from collections.abc import Sequence
 
+from hugr import Wire, ops
+from hugr.dfg import _DfBase
+
 from guppylang.ast_util import AstVisitor, get_type
 from guppylang.checker.core import Variable
 from guppylang.compiler.core import (
@@ -11,9 +14,8 @@ from guppylang.compiler.core import (
 )
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.error import InternalGuppyError
-from guppylang.hugr_builder.hugr import Hugr, OutPortV
 from guppylang.nodes import CheckedNestedFunctionDef, PlaceNode
-from guppylang.tys.ty import TupleType
+from guppylang.tys.ty import TupleType, Type
 
 
 class StmtCompiler(CompilerBase, AstVisitor[None]):
@@ -23,9 +25,9 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
     dfg: DFContainer
 
-    def __init__(self, graph: Hugr, globals: CompiledGlobals):
-        super().__init__(graph, globals)
-        self.expr_compiler = ExprCompiler(graph, globals)
+    def __init__(self, globals: CompiledGlobals):
+        super().__init__(globals)
+        self.expr_compiler = ExprCompiler(globals)
 
     def compile_stmts(
         self,
@@ -42,14 +44,20 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             self.visit(s)
         return self.dfg
 
-    def _unpack_assign(self, lhs: ast.expr, port: OutPortV, node: ast.stmt) -> None:
+    @property
+    def builder(self) -> _DfBase[ops.DfParentOp]:
+        """The Hugr dataflow graph builder."""
+        return self.dfg.builder
+
+    def _unpack_assign(self, lhs: ast.expr, port: Wire, node: ast.stmt) -> None:
         """Updates the local DFG with assignments."""
         if isinstance(lhs, PlaceNode):
             self.dfg[lhs.place] = port
         elif isinstance(lhs, ast.Tuple):
-            unpack = self.graph.add_unpack_tuple(port, self.dfg.node)
-            for i, pat in enumerate(lhs.elts):
-                self._unpack_assign(pat, unpack.out_port(i), node)
+            types = [get_type(e).to_hugr() for e in lhs.elts]
+            unpack = self.builder.add_op(ops.UnpackTuple(types), port)
+            for pat, wire in zip(lhs.elts, unpack, strict=True):
+                self._unpack_assign(pat, wire, node)
         else:
             raise InternalGuppyError("Invalid assign pattern in compiler")
 
@@ -75,17 +83,22 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         if node.value is not None:
             return_ty = get_type(node.value)
             port = self.expr_compiler.compile(node.value, self.dfg)
+
+            row: list[tuple[Wire, Type]]
             if isinstance(return_ty, TupleType):
-                unpack = self.graph.add_unpack_tuple(port, self.dfg.node)
-                row = [unpack.out_port(i) for i in range(len(return_ty.element_types))]
+                types = [e.to_hugr() for e in return_ty.element_types]
+                unpack = self.builder.add_op(ops.UnpackTuple(types), port)
+                row = list(zip(unpack, return_ty.element_types, strict=True))
             else:
-                row = [port]
-            for i, port in enumerate(row):
-                var = Variable(return_var(i), port.ty, node.value)
-                self.dfg[var] = port
+                row = [(port, return_ty)]
+
+            for i, (wire, ty) in enumerate(row):
+                var = Variable(return_var(i), ty, node.value)
+                self.dfg[var] = wire
 
     def visit_CheckedNestedFunctionDef(self, node: CheckedNestedFunctionDef) -> None:
         from guppylang.compiler.func_compiler import compile_local_func_def
 
         var = Variable(node.name, node.ty, node)
-        self.dfg[var] = compile_local_func_def(node, self.dfg, self.graph, self.globals)
+        loaded_func = compile_local_func_def(node, self.dfg, self.globals)
+        self.dfg[var] = loaded_func

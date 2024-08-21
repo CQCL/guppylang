@@ -3,10 +3,11 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, NamedTuple
 
+from hugr import Wire
+
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
 from guppylang.error import GuppyError
-from guppylang.hugr_builder.hugr import Hugr, OutPortV
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type
 
@@ -30,8 +31,8 @@ class CompiledValueDef(ValueDef, CompiledDef):
 
     @abstractmethod
     def load(
-        self, dfg: "DFContainer", graph: Hugr, globals: "CompiledGlobals", node: AstNode
-    ) -> OutPortV:
+        self, dfg: "DFContainer", globals: "CompiledGlobals", node: AstNode
+    ) -> Wire:
         """Loads the defined value into a local Hugr dataflow graph."""
 
 
@@ -65,13 +66,12 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
     @abstractmethod
     def compile_call(
         self,
-        args: list[OutPortV],
+        args: list[Wire],
         type_args: Inst,
         dfg: "DFContainer",
-        graph: Hugr,
         globals: "CompiledGlobals",
         node: AstNode,
-    ) -> "CallReturnPorts":
+    ) -> "CallReturnWires":
         """Compiles a call to the function.
 
         Returns the outputs of the call together with any @inout arguments that are
@@ -83,28 +83,27 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
         self,
         type_args: Inst,
         dfg: "DFContainer",
-        graph: Hugr,
         globals: "CompiledGlobals",
         node: AstNode,
-    ) -> OutPortV:
+    ) -> Wire:
         """Loads the function into a local Hugr dataflow graph.
 
         Requires an instantiation for all function parameters.
         """
 
     def load(
-        self, dfg: "DFContainer", graph: Hugr, globals: "CompiledGlobals", node: AstNode
-    ) -> OutPortV:
+        self, dfg: "DFContainer", globals: "CompiledGlobals", node: AstNode
+    ) -> Wire:
         """Loads the defined value into a local Hugr dataflow graph."""
-        return self.load_with_args([], dfg, graph, globals, node)
+        return self.load_with_args([], dfg, globals, node)
 
 
-class CallReturnPorts(NamedTuple):
-    """Output ports that are given back from a call.
+class CallReturnWires(NamedTuple):
+    """Output wires that are given back from a call.
 
     Contains the regular function returns together with any @inout arguments that are
     passed through the function.
     """
 
-    regular_returns: list[OutPortV]
-    inout_returns: list[OutPortV]
+    regular_returns: list[Wire]
+    inout_returns: list[Wire]

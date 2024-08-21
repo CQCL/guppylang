@@ -1,10 +1,10 @@
-from guppylang.hugr_builder.hugr import Hugr
+from hugr import Hugr
 
 from pathlib import Path
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture
 def export_test_cases_dir(request):
     r = request.config.getoption("--export-test-cases")
     if r and not r.exists():
@@ -12,7 +12,7 @@ def export_test_cases_dir(request):
     return r
 
 
-@pytest.fixture()
+@pytest.fixture
 def validate(request, export_test_cases_dir: Path):
     def validate_json(hugr: str):
         try:
@@ -22,9 +22,9 @@ def validate(request, export_test_cases_dir: Path):
         except ImportError:
             pytest.skip("Skipping validation")
 
-    def validate_impl(hugr, name=None):
+    def validate_impl(hugr: Hugr, name=None):
         # Validate via the json encoding
-        js = hugr.serialize()
+        js = hugr.to_json()
         validate_json(js)
 
         if export_test_cases_dir:
@@ -39,7 +39,7 @@ class LLVMException(Exception):
     pass
 
 
-@pytest.fixture()
+@pytest.fixture
 def run_int_fn():
     def f(hugr: Hugr, expected: int, fn_name: str = "main"):
         try:
@@ -48,7 +48,7 @@ def run_int_fn():
             if not hasattr(execute_llvm, "run_int_function"):
                 pytest.skip("Skipping llvm execution")
 
-            hugr_json: str = hugr.serialize()
+            hugr_json: str = hugr.to_json()
             res = execute_llvm.run_int_function(hugr_json, fn_name)
             if res != expected:
                 raise LLVMException(

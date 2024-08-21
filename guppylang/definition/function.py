@@ -5,6 +5,11 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+import hugr.function as hf
+import hugr.tys as ht
+from hugr import Wire
+from hugr.dfg import OpVar, _DefinitionBuilder
+
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
 from guppylang.checker.core import Context, Globals, Place, PyScope
@@ -15,15 +20,14 @@ from guppylang.checker.func_checker import (
     parse_docstring,
 )
 from guppylang.compiler.core import CompiledGlobals, DFContainer
-from guppylang.compiler.expr_compiler import add_inout_return_ports
 from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import CheckableDef, CompilableDef, ParsableDef
-from guppylang.definition.value import CallableDef, CallReturnPorts, CompiledCallableDef
+from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError
-from guppylang.hugr_builder.hugr import DFContainingVNode, Hugr, Node, OutPortV
+from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import FunctionType, Type
+from guppylang.tys.ty import FunctionType, Type, type_to_row
 
 PyFunc = Callable[..., Any]
 
@@ -35,6 +39,13 @@ class RawFunctionDef(ParsableDef):
     The raw definition stores exactly what the user has written (i.e. the AST), without
     any additional checking or parsing. Furthermore, we store the values of the Python
     variables in scope at the point of definition.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the function.
+        defined_at: The AST node where the function was defined.
+        python_func: The Python function to be defined.
+        python_scope: The Python scope where the function was defined.
     """
 
     python_func: PyFunc
@@ -61,6 +72,14 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
 
     In particular, this means that we have determined a type for the function and are
     ready to check the function body.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the function.
+        defined_at: The AST node where the function was defined.
+        ty: The type of the function.
+        python_scope: The Python scope where the function was defined.
+        docstring: The docstring of the function.
     """
 
     python_scope: PyScope
@@ -110,18 +129,29 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
 
     In particular, this means that we have a constructed and type checked a control-flow
     graph for the function body.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the function.
+        defined_at: The AST node where the function was defined.
+        ty: The type of the function.
+        python_scope: The Python scope where the function was defined.
+        docstring: The docstring of the function.
+        cfg: The type- and linearity-checked CFG for the function body.
     """
 
     cfg: CheckedCFG[Place]
 
-    def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledFunctionDef":
+    def compile_outer(self, module: _DefinitionBuilder[OpVar]) -> "CompiledFunctionDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr.
 
         Note that we don't compile the function body at this point since we don't have
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        def_node = graph.add_def(self.ty, parent, self.name)
+        func_type = self.ty.to_hugr()
+        func_def = module.define_function(self.name, func_type.input)
+        func_def.declare_outputs(func_type.output)
         return CompiledFunctionDef(
             self.id,
             self.name,
@@ -130,48 +160,64 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
             self.python_scope,
             self.docstring,
             self.cfg,
-            def_node,
+            func_def,
         )
 
 
 @dataclass(frozen=True)
 class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
-    """A function definition with a corresponding Hugr node."""
+    """A function definition with a corresponding Hugr node.
 
-    hugr_node: DFContainingVNode
+    Args:
+        id: The unique definition identifier.
+        name: The name of the function.
+        defined_at: The AST node where the function was defined.
+        ty: The type of the function.
+        python_scope: The Python scope where the function was defined.
+        docstring: The docstring of the function.
+        cfg: The type- and linearity-checked CFG for the function body.
+        func_def: The Hugr function definition.
+    """
+
+    func_def: hf.Function
 
     def load_with_args(
         self,
         type_args: Inst,
         dfg: DFContainer,
-        graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> OutPortV:
+    ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        return graph.add_load_function(
-            self.hugr_node.out_port(0), type_args, dfg.node
-        ).out_port(0)
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
+        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        return dfg.builder.load_function(self.func_def, func_ty, type_args)
 
     def compile_call(
         self,
-        args: list[OutPortV],
+        args: list[Wire],
         type_args: Inst,
         dfg: DFContainer,
-        graph: Hugr,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> CallReturnPorts:
+    ) -> CallReturnWires:
         """Compiles a call to the function."""
-        call = graph.add_call(self.hugr_node.out_port(0), args, type_args, dfg.node)
-        return CallReturnPorts(
-            regular_returns=list(call.out_ports),
-            inout_returns=list(add_inout_return_ports(call, self.ty)),
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
+        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        num_returns = len(type_to_row(self.ty.output))
+        call = dfg.builder.call(
+            self.func_def, *args, instantiation=func_ty, type_args=type_args
+        )
+        return CallReturnWires(
+            # TODO: Replace below with `list(call[:num_returns])` once
+            #  https://github.com/CQCL/hugr/issues/1454 is fixed.
+            regular_returns=[call[i] for i in range(num_returns)],
+            inout_returns=list(call[num_returns:]),
         )
 
-    def compile_inner(self, graph: Hugr, globals: CompiledGlobals) -> None:
+    def compile_inner(self, globals: CompiledGlobals) -> None:
         """Compiles the body of the function."""
-        compile_global_func_def(self, self.hugr_node, graph, globals)
+        compile_global_func_def(self, self.func_def, globals)
 
 
 def parse_py_func(f: PyFunc) -> tuple[ast.FunctionDef, str | None]:
@@ -179,7 +225,17 @@ def parse_py_func(f: PyFunc) -> tuple[ast.FunctionDef, str | None]:
     source = "".join(source_lines)  # Lines already have trailing \n's
     source = textwrap.dedent(source)
     func_ast = ast.parse(source).body[0]
-    file = inspect.getsourcefile(f)
+    # In Jupyter notebooks, we shouldn't use `inspect.getsourcefile(f)` since it would
+    # only give us a dummy temporary file
+    file: str | None
+    if is_running_ipython():
+        file = "<In [?]>"
+        if isinstance(func_ast, ast.FunctionDef):
+            defn = find_ipython_def(func_ast.name)
+            if defn is not None:
+                file = f"<{defn.cell_name}>"
+    else:
+        file = inspect.getsourcefile(f)
     if file is None:
         raise GuppyError("Couldn't determine source file for function")
     annotate_location(func_ast, source, file, line_offset)
