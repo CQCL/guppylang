@@ -8,7 +8,7 @@ from hugr.function import Function
 from guppylang.compiler.cfg_compiler import compile_cfg
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.nodes import CheckedNestedFunctionDef
-from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, Type, type_to_row
+from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, Type
 
 if TYPE_CHECKING:
     from guppylang.definition.function import CheckedFunctionDef
