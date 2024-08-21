@@ -11,7 +11,7 @@ annotated.
 import ast
 from collections.abc import Sequence
 
-from guppylang.ast_util import AstVisitor, with_loc
+from guppylang.ast_util import AstVisitor, with_loc, with_type
 from guppylang.cfg.bb import BB, BBStatement
 from guppylang.checker.core import Context, FieldAccess, Variable
 from guppylang.checker.expr_checker import ExprChecker, ExprSynthesizer
@@ -53,7 +53,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             case ast.Name(id=x):
                 var = Variable(x, ty, lhs)
                 self.ctx.locals[x] = var
-                return with_loc(lhs, PlaceNode(place=var))
+                return with_loc(lhs, with_type(ty, PlaceNode(place=var)))
 
             # The LHS could also be a field `expr.field`
             case ast.Attribute(value=value, attr=attr):
@@ -93,7 +93,7 @@ class StmtChecker(AstVisitor[BBStatement]):
                         "Mutation of classical fields is not supported yet", lhs
                     )
                 place = FieldAccess(value.place, struct_ty.field_dict[attr], lhs)
-                return with_loc(lhs, PlaceNode(place=place))
+                return with_loc(lhs, with_type(ty, PlaceNode(place=place)))
 
             # The only other thing we support right now are tuples
             case ast.Tuple(elts=elts) as lhs:
@@ -109,7 +109,7 @@ class StmtChecker(AstVisitor[BBStatement]):
                     self._check_assign(pat, el_ty, node)
                     for pat, el_ty in zip(elts, tys, strict=True)
                 ]
-                return lhs
+                return with_type(ty, lhs)
 
             # TODO: Python also supports assignments like `[a, b] = [1, 2]` or
             #  `a, *b = ...`. The former would require some runtime checks but

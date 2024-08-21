@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
-from guppylang.hugr_builder.hugr import Hugr, Node
+from hugr.dfg import OpVar, _DefinitionBuilder
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -24,6 +24,10 @@ class DefId:
 
     This id is persistent across all compilation stages. It can be used to identify a
     definition at any step in the compilation pipeline.
+
+    Args:
+        id: An integer uniquely identifying the definition.
+        module: The module where the definition was defined.
     """
 
     id: int
@@ -43,6 +47,11 @@ class Definition(ABC):
     Each definition is identified by a globally unique id. Furthermore, we store the
     user-picked name for the defined object and an optional AST node for the definition
     location.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the definition.
+        defined_at: The AST node where the definition was defined.
     """
 
     id: DefId
@@ -65,6 +74,11 @@ class ParsableDef(Definition):
     For example, raw function definitions first need to parse their signature and check
     that all types are valid. The result of parsing should be a definition that is ready
     to be checked.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the definition.
+        defined_at: The AST node where the definition was defined.
     """
 
     @abstractmethod
@@ -79,6 +93,11 @@ class CheckableDef(Definition):
     """Abstract base class for definitions that still need to be checked.
 
     The result of checking should be a definition that is ready to be compiled to Hugr.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the definition.
+        defined_at: The AST node where the definition was defined.
     """
 
     @abstractmethod
@@ -97,11 +116,16 @@ class CompilableDef(Definition):
 
     The result of compilation should be a `CompiledDef` with a pointer to the Hugr node
     that was created for this definition.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the definition.
+        defined_at: The AST node where the definition was defined.
     """
 
     @abstractmethod
-    def compile_outer(self, graph: Hugr, parent: Node) -> "CompiledDef":
-        """Adds a Hugr node for the definition to the provided graph.
+    def compile_outer(self, module: _DefinitionBuilder[OpVar]) -> "CompiledDef":
+        """Adds a Hugr node for the definition to the provided Hugr module.
 
         Note that is not required to fill in the contents of the node. At this point,
         we don't have access to the globals since they have not all been compiled yet.
@@ -112,9 +136,15 @@ class CompilableDef(Definition):
 
 
 class CompiledDef(Definition):
-    """Abstract base class for definitions that have been added to a Hugr."""
+    """Abstract base class for definitions that have been added to a Hugr.
 
-    def compile_inner(self, graph: Hugr, globals: "CompiledGlobals") -> None:
+    Args:
+        id: The unique definition identifier.
+        name: The name of the definition.
+        defined_at: The AST node where the definition was defined.
+    """
+
+    def compile_inner(self, globals: "CompiledGlobals") -> None:
         """Optional hook that is called to fill in the content of the Hugr node.
 
         Opposed to `CompilableDef.compile()`, we have access to all other compiled

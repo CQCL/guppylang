@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, TypeGuard
 
-from hugr.serialization import tys
+from hugr import tys as ht
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
@@ -123,31 +123,29 @@ class _ListTypeDef(OpaqueTypeDef):
         return super().check_instantiate(args, globals, loc)
 
 
-def _list_to_hugr(args: Sequence[Argument]) -> tys.Type:
+def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # Type checker ensures that we get a single arg of kind type
     [arg] = args
     assert isinstance(arg, TypeArg)
-    ty = tys.Opaque(
+    return ht.Opaque(
         extension="Collections",
         id="List",
         args=[arg.to_hugr()],
         bound=arg.ty.hugr_bound,
     )
-    return tys.Type(ty)
 
 
-def _array_to_hugr(args: Sequence[Argument]) -> tys.Type:
+def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # Type checker ensures that we get a two args
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
     assert isinstance(len_arg, ConstArg)
-    ty = tys.Opaque(
+    return ht.Opaque(
         extension="prelude",
         id="array",
         args=[len_arg.to_hugr(), ty_arg.to_hugr()],
         bound=ty_arg.ty.hugr_bound,
     )
-    return tys.Type(ty)
 
 
 callable_type_def = _CallableTypeDef(DefId.fresh(), None)
@@ -159,7 +157,7 @@ bool_type_def = OpaqueTypeDef(
     defined_at=None,
     params=[],
     always_linear=False,
-    to_hugr=lambda _: tys.Type(tys.SumType(tys.UnitSum(size=2))),
+    to_hugr=lambda _: ht.Bool,
 )
 nat_type_def = _NumericTypeDef(
     DefId.fresh(), "nat", None, NumericType(NumericType.Kind.Nat)

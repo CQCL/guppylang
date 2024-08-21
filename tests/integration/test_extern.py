@@ -1,4 +1,4 @@
-from hugr.serialization import ops
+from hugr import ops, val
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
@@ -16,9 +16,9 @@ def test_extern_float(validate):
     hg = module.compile()
     validate(hg)
 
-    [c] = [n.op.root for n in hg.nodes() if isinstance(n.op.root, ops.Const)]
-    assert isinstance(c.v.root, ops.ExtensionValue)
-    assert c.v.root.value.v["symbol"] == "ext"
+    [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    assert isinstance(c.val, val.Extension)
+    assert c.val.val["symbol"] == "ext"
 
 
 def test_extern_alt_symbol(validate):
@@ -33,9 +33,9 @@ def test_extern_alt_symbol(validate):
     hg = module.compile()
     validate(hg)
 
-    [c] = [n.op.root for n in hg.nodes() if isinstance(n.op.root, ops.Const)]
-    assert isinstance(c.v.root, ops.ExtensionValue)
-    assert c.v.root.value.v["symbol"] == "foo"
+    [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    assert isinstance(c.val, val.Extension)
+    assert c.val.val["symbol"] == "foo"
 
 
 def test_extern_tuple(validate):

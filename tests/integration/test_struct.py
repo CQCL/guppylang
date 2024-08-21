@@ -143,3 +143,21 @@ def test_wiring(validate):
         return s
 
     validate(module.compile())
+
+
+def test_field_access_and_drop(validate):
+    module = GuppyModule("module")
+
+    @guppy.struct(module)
+    class MyStruct:
+        x: int
+        y: float
+        z: tuple[int, int]
+
+    @guppy(module)
+    def foo() -> float:
+        # Access a field of an unnamed struct,
+        # dropping all the other fields
+        return MyStruct(42, 3.14, (1, 2)).y
+
+    validate(module.compile())
