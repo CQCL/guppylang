@@ -81,6 +81,9 @@ class Bool:
     @guppy.custom(builtins, NoopCompiler())
     def __bool__(self: bool) -> bool: ...
 
+    @guppy.hugr_op(builtins, logic_op("Eq"))
+    def __eq__(self: bool, other: bool) -> bool: ...
+
     @guppy.hugr_op(builtins, int_op("ifrombool", n_vars=0))
     def __int__(self: bool) -> int: ...
 
