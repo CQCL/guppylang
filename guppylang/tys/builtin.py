@@ -7,7 +7,7 @@ from hugr import tys as ht
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
-from guppylang.error import GuppyError
+from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class _CallableTypeDef(TypeDef):
+class CallableTypeDef(TypeDef):
     """Type definition associated with the builtin `Callable` type.
 
     Any impls on functions can be registered with this definition.
@@ -35,16 +35,8 @@ class _CallableTypeDef(TypeDef):
     def check_instantiate(
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> FunctionType:
-        # We get the inputs/output as a flattened list: `args = [*inputs, output]`.
-        if not args:
-            raise GuppyError(f"Missing parameter for type `{self.name}`", loc)
-        args = [
-            # TODO: Better error location
-            TypeParam(0, f"T{i}", can_be_linear=True).check_arg(arg, loc).ty
-            for i, arg in enumerate(args)
-        ]
-        *inputs, output = args
-        return FunctionType(inputs, output)
+        # Callable types are constructed using special logic in the type parser
+        raise InternalGuppyError("Tried to `Callable` type via `check_instantiate`")
 
 
 @dataclass(frozen=True)
@@ -148,7 +140,7 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     )
 
 
-callable_type_def = _CallableTypeDef(DefId.fresh(), None)
+callable_type_def = CallableTypeDef(DefId.fresh(), None)
 tuple_type_def = _TupleTypeDef(DefId.fresh(), None)
 none_type_def = _NoneTypeDef(DefId.fresh(), None)
 bool_type_def = OpaqueTypeDef(

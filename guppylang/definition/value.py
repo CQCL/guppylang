@@ -1,7 +1,7 @@
 import ast
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from hugr import Wire
 
@@ -71,8 +71,12 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
         dfg: "DFContainer",
         globals: "CompiledGlobals",
         node: AstNode,
-    ) -> list[Wire]:
-        """Compiles a call to the function."""
+    ) -> "CallReturnWires":
+        """Compiles a call to the function.
+
+        Returns the outputs of the call together with any @inout arguments that are
+        passed through the function.
+        """
 
     @abstractmethod
     def load_with_args(
@@ -92,3 +96,14 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
     ) -> Wire:
         """Loads the defined value into a local Hugr dataflow graph."""
         return self.load_with_args([], dfg, globals, node)
+
+
+class CallReturnWires(NamedTuple):
+    """Output wires that are given back from a call.
+
+    Contains the regular function returns together with any @inout arguments that are
+    passed through the function.
+    """
+
+    regular_returns: list[Wire]
+    inout_returns: list[Wire]

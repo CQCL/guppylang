@@ -43,6 +43,7 @@ from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
     FunctionType,
+    InputFlags,
     NoneType,
     NumericType,
     TupleType,
@@ -219,24 +220,42 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         )
         return returns[0]
 
+    def _update_inout_ports(
+        self,
+        args: list[ast.expr],
+        inout_ports: Iterator[Wire],
+        func_ty: FunctionType,
+    ) -> None:
+        """Helper method that updates the ports for @inout arguments after a call."""
+        for inp, arg in zip(func_ty.inputs, args, strict=True):
+            if InputFlags.Inout in inp.flags:
+                # Linearity checker ensures that inout arguments are places
+                assert isinstance(arg, PlaceNode)
+                self.dfg[arg.place] = next(inout_ports)
+        assert next(inout_ports, None) is None, "Too many inout return ports"
+
     def visit_LocalCall(self, node: LocalCall) -> Wire:
         func = self.visit(node.func)
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
+        num_returns = len(type_to_row(func_ty.output))
 
         args = [self.visit(arg) for arg in node.args]
         call = self.builder.add_op(ops.CallIndirect(func_ty.to_hugr()), func, *args)
-        return self._pack_returns(list(call), func_ty.output)
+        # TODO: Replace below with `list(call[:num_returns])` once
+        #  https://github.com/CQCL/hugr/issues/1454 is fixed.
+        regular_returns = [call[i] for i in range(num_returns)]
+        inout_returns = call[num_returns:]
+        self._update_inout_ports(node.args, inout_returns, func_ty)
+        return self._pack_returns(regular_returns, func_ty.output)
 
     def visit_TensorCall(self, node: TensorCall) -> Wire:
         functions: Wire = self.visit(node.func)
         function_types = get_type(node.func)
-
-        args = [self.visit(arg) for arg in node.args]
         assert isinstance(function_types, TupleType)
 
         rets: list[Wire] = []
-        remaining_args = args
+        remaining_args = node.args
         for func, func_ty in zip(
             self._unpack_tuple(functions, function_types.element_types),
             function_types.element_types,
@@ -249,14 +268,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert (
             remaining_args == []
         ), "Not all function arguments were consumed after a tensor call"
-
-        return self._pack_returns(rets, node.out_tys)
+        return self._pack_returns(rets, node.tensor_ty.output)
 
     def _compile_tensor_with_leftovers(
-        self, func: Wire, func_ty: Type, args: list[Wire]
+        self, func: Wire, func_ty: Type, args: list[ast.expr]
     ) -> tuple[
         list[Wire],  # Compiled outputs
-        list[Wire],  # Leftover args
+        list[ast.expr],  # Leftover args
     ]:
         """Compiles a function call, consuming as many arguments as needed, and
         returning the unused ones.
@@ -277,13 +295,18 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
         elif isinstance(func_ty, FunctionType):
             input_len = len(func_ty.inputs)
+            num_returns = len(type_to_row(func_ty.output))
             consumed_args, other_args = args[0:input_len], args[input_len:]
-
+            consumed_wires = [self.visit(arg) for arg in consumed_args]
             call = self.builder.add_op(
-                ops.CallIndirect(func_ty.to_hugr()), func, *consumed_args
+                ops.CallIndirect(func_ty.to_hugr()), func, *consumed_wires
             )
-
-            return list(call), other_args
+            # TODO: Replace below with `list(call[:num_returns])` once
+            #  https://github.com/CQCL/hugr/issues/1454 is fixed.
+            regular_returns: list[Wire] = [call[i] for i in range(num_returns)]
+            inout_returns = call[num_returns:]
+            self._update_inout_ports(consumed_args, inout_returns, func_ty)
+            return regular_returns, other_args
         else:
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
@@ -295,7 +318,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         rets = func.compile_call(
             args, list(node.type_args), self.dfg, self.globals, node
         )
-        return self._pack_returns(rets, func.ty.output)
+        self._update_inout_ports(node.args, iter(rets.inout_returns), func.ty)
+        return self._pack_returns(rets.regular_returns, func.ty.output)
 
     def visit_Call(self, node: ast.Call) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")

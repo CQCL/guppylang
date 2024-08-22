@@ -13,7 +13,7 @@ from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.definition.common import ParsableDef
-from guppylang.definition.value import CompiledCallableDef
+from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
@@ -140,7 +140,7 @@ class CustomFunctionDef(CompiledCallableDef):
     defined_at: AstNode
     ty: FunctionType
     call_checker: "CustomCallChecker"
-    call_compiler: "CustomCallCompiler"
+    call_compiler: "CustomInoutCallCompiler"
     higher_order_value: bool
 
     description: str = field(default="function", init=False)
@@ -197,7 +197,7 @@ class CustomFunctionDef(CompiledCallableDef):
         # TODO: Why do we need to monomorphise here? Why not wait for `load_function`?
         # See https://github.com/CQCL/guppylang/issues/393 for both issues.
         fun_ty = self.ty.instantiate(type_args)
-        input_types = [ty.to_hugr() for ty in fun_ty.inputs]
+        input_types = [inp.ty.to_hugr() for inp in fun_ty.inputs]
         output_types = [fun_ty.output.to_hugr()]
         func = dfg.builder.define_function(
             self.name, input_types, output_types, type_params=[]
@@ -205,9 +205,9 @@ class CustomFunctionDef(CompiledCallableDef):
 
         func_dfg = DFContainer(func, dfg.locals.copy())
         args: list[Wire] = list(func.inputs())
-        outputs = self.compile_call(args, type_args, func_dfg, globals, node)
+        returns = self.compile_call(args, type_args, func_dfg, globals, node)
 
-        func.set_outputs(*outputs)
+        func.set_outputs(*returns.regular_returns, *returns.inout_returns)
 
         # Finally, load the function into the local DFG. We already monomorphised, so we
         # don't need to give it type arguments.
@@ -220,13 +220,13 @@ class CustomFunctionDef(CompiledCallableDef):
         dfg: "DFContainer",
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> list[Wire]:
+    ) -> CallReturnWires:
         """Compiles a call to the function."""
         concrete_ty = self.ty.instantiate(type_args)
         hugr_ty = concrete_ty.to_hugr()
 
         self.call_compiler._setup(type_args, dfg, globals, node, hugr_ty)
-        return self.call_compiler.compile(args)
+        return self.call_compiler.compile_with_inouts(args)
 
 
 class CustomCallChecker(ABC):
@@ -256,8 +256,8 @@ class CustomCallChecker(ABC):
         """
 
 
-class CustomCallCompiler(ABC):
-    """Abstract base class for custom function call compilers.
+class CustomInoutCallCompiler(ABC):
+    """Abstract base class for custom function call compilers with @inout args.
 
     Args:
         builder: The function builder where the function should be defined.
@@ -288,6 +288,18 @@ class CustomCallCompiler(ABC):
         self.ty = hugr_ty
 
     @abstractmethod
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        """Compiles a custom function call.
+
+        Returns the outputs of the call together with any @inout arguments that are
+        passed through the function.
+        """
+
+
+class CustomCallCompiler(CustomInoutCallCompiler, ABC):
+    """Abstract base class for custom function call compilers without @inout args."""
+
+    @abstractmethod
     def compile(self, args: list[Wire]) -> list[Wire]:
         """Compiles a custom function call and returns the resulting ports.
 
@@ -298,6 +310,9 @@ class CustomCallCompiler(ABC):
     def builder(self) -> _DfBase[ops.DfParentOp]:
         """The hugr dataflow builder."""
         return self.dfg.builder
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        return CallReturnWires(self.compile(args), inout_returns=[])
 
 
 class DefaultCallChecker(CustomCallChecker):

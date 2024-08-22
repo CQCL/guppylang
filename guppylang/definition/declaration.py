@@ -13,11 +13,11 @@ from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.function import PyFunc, parse_py_func
-from guppylang.definition.value import CallableDef, CompiledCallableDef
+from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import Type
+from guppylang.tys.ty import Type, type_to_row
 
 
 @dataclass(frozen=True)
@@ -118,11 +118,17 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         dfg: DFContainer,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> list[Wire]:
+    ) -> CallReturnWires:
         """Compiles a call to the function."""
         func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
         type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        num_returns = len(type_to_row(self.ty.output))
         call = dfg.builder.call(
             self.declaration, *args, instantiation=func_ty, type_args=type_args
         )
-        return list(call)
+        return CallReturnWires(
+            # TODO: Replace below with `list(call[:num_returns])` once
+            #  https://github.com/CQCL/hugr/issues/1454 is fixed.
+            regular_returns=[call[i] for i in range(num_returns)],
+            inout_returns=list(call[num_returns:]),
+        )

@@ -16,7 +16,7 @@ from guppylang.checker.core import Context, Globals, Locals, Place, V, Variable
 from guppylang.checker.expr_checker import ExprSynthesizer, to_bool
 from guppylang.checker.stmt_checker import StmtChecker
 from guppylang.error import GuppyError
-from guppylang.tys.ty import Type
+from guppylang.tys.ty import InputFlags, Type
 
 Row = Sequence[V]
 
@@ -68,7 +68,8 @@ def check_cfg(
     """
     # First, we need to run program analysis
     ass_before = {v.name for v in inputs}
-    cfg.analyze(ass_before, ass_before)
+    inout_vars = [v.name for v in inputs if InputFlags.Inout in v.flags]
+    cfg.analyze(ass_before, ass_before, inout_vars)
 
     # We start by compiling the entry BB
     checked_cfg: CheckedCFG[Variable] = CheckedCFG([v.ty for v in inputs], return_ty)
@@ -89,7 +90,7 @@ def check_cfg(
     while len(queue) > 0:
         pred, num_output, bb = queue.popleft()
         input_row = [
-            Variable(v.name, v.ty, v.defined_at)
+            Variable(v.name, v.ty, v.defined_at, v.flags)
             for v in pred.sig.output_rows[num_output]
         ]
 
@@ -123,7 +124,7 @@ def check_cfg(
     # Finally, run the linearity check
     from guppylang.checker.linearity_checker import check_cfg_linearity
 
-    linearity_checked_cfg = check_cfg_linearity(checked_cfg)
+    linearity_checked_cfg = check_cfg_linearity(checked_cfg, globals)
 
     return linearity_checked_cfg
 

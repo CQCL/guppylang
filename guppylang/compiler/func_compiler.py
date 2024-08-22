@@ -8,7 +8,7 @@ from hugr.function import Function
 from guppylang.compiler.cfg_compiler import compile_cfg
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.nodes import CheckedNestedFunctionDef
-from guppylang.tys.ty import FunctionType, Type
+from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, Type
 
 if TYPE_CHECKING:
     from guppylang.definition.function import CheckedFunctionDef
@@ -21,7 +21,6 @@ def compile_global_func_def(
 ) -> None:
     """Compiles a top-level function definition to Hugr."""
     cfg = compile_cfg(func.cfg, builder, builder.inputs(), globals)
-
     builder.set_outputs(*cfg)
 
 
@@ -45,7 +44,8 @@ def compile_local_func_def(
 
     # Prepend captured variables to the function arguments
     closure_ty = FunctionType(
-        captured_types + list(func.ty.inputs),
+        [FuncInput(ty, InputFlags.NoFlags) for ty in captured_types]
+        + list(func.ty.inputs),
         func.ty.output,
         input_names=[v.name for v, _ in captured] + list(func.ty.input_names),
     )
@@ -129,7 +129,7 @@ def make_partial_op(
     """
     assert len(closure_ty.inputs) >= len(captured_tys)
     assert [p.to_hugr() for p in captured_tys] == [
-        ty.to_hugr() for ty in closure_ty.inputs[: len(captured_tys)]
+        inp.ty.to_hugr() for inp in closure_ty.inputs[: len(captured_tys)]
     ]
 
     explicit_inputs = closure_ty.inputs[len(captured_tys) :]

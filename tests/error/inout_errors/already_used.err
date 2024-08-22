@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:21
+
+19:    def test(q: qubit) -> None:
+20:        use(q)
+21:        foo(q)
+               ^
+GuppyError: Variable `q` with linear type `qubit` was already used (at 20:8)

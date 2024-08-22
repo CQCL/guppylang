@@ -16,8 +16,8 @@ from guppylang.checker.core import Context, Globals, Place, Variable
 from guppylang.definition.common import DefId
 from guppylang.error import GuppyError
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
-from guppylang.tys.parsing import type_from_ast
-from guppylang.tys.ty import FunctionType, NoneType
+from guppylang.tys.parsing import parse_function_io_types
+from guppylang.tys.ty import FunctionType, InputFlags, NoneType
 
 if TYPE_CHECKING:
     from guppylang.tys.param import Parameter
@@ -33,8 +33,8 @@ def check_global_func_def(
 
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
     inputs = [
-        Variable(x, ty, loc)
-        for x, ty, loc in zip(ty.input_names, ty.inputs, args, strict=True)
+        Variable(x, inp.ty, loc, inp.flags)
+        for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
     ]
     return check_cfg(cfg, inputs, ty.output, globals)
 
@@ -54,7 +54,8 @@ def check_nested_func_def(
     parent_cfg = bb.containing_cfg
     def_ass_before = set(func_ty.input_names) | ctx.locals.keys()
     maybe_ass_before = def_ass_before | parent_cfg.maybe_ass_before[bb]
-    cfg.analyze(def_ass_before, maybe_ass_before)
+    inout_vars = inout_var_names(func_ty)
+    cfg.analyze(def_ass_before, maybe_ass_before, inout_vars)
     captured = {
         x: (ctx.locals[x], using_bb.vars.used[x])
         for x, using_bb in cfg.live_before[cfg.entry_bb].items()
@@ -75,8 +76,8 @@ def check_nested_func_def(
 
     # Construct inputs for checking the body CFG
     inputs = [v for v, _ in captured.values()] + [
-        Variable(x, ty, func_def.args.args[i])
-        for i, (x, ty) in enumerate(
+        Variable(x, inp.ty, func_def.args.args[i], inp.flags)
+        for i, (x, inp) in enumerate(
             zip(func_ty.input_names, func_ty.inputs, strict=True)
         )
     ]
@@ -143,19 +144,20 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
 
     # TODO: Prepopulate mapping when using Python 3.12 style generic functions
     param_var_mapping: dict[str, Parameter] = {}
-    input_tys = []
+    input_nodes = []
     input_names = []
     for inp in func_def.args.args:
-        if inp.annotation is None:
+        ty_ast = inp.annotation
+        if ty_ast is None:
             raise GuppyError("Argument type must be annotated", inp)
-        ty = type_from_ast(inp.annotation, globals, param_var_mapping)
-        input_tys.append(ty)
+        input_nodes.append(ty_ast)
         input_names.append(inp.arg)
-    ret_type = type_from_ast(func_def.returns, globals, param_var_mapping)
-
+    inputs, output = parse_function_io_types(
+        input_nodes, func_def.returns, func_def, globals, param_var_mapping
+    )
     return FunctionType(
-        input_tys,
-        ret_type,
+        inputs,
+        output,
         input_names,
         sorted(param_var_mapping.values(), key=lambda v: v.idx),
     )
@@ -180,3 +182,13 @@ def parse_docstring(func_ast: ast.FunctionDef) -> tuple[ast.FunctionDef, str | N
         case _:
             pass
     return func_ast, docstring
+
+
+def inout_var_names(func_ty: FunctionType) -> list[str]:
+    """Returns the names of all `@inout` arguments of a function type."""
+    assert func_ty.input_names is not None
+    return [
+        x
+        for inp, x in zip(func_ty.inputs, func_ty.input_names, strict=True)
+        if InputFlags.Inout in inp.flags
+    ]

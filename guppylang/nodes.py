@@ -61,12 +61,12 @@ class TensorCall(ast.expr):
 
     func: ast.expr
     args: list[ast.expr]
-    out_tys: Type
+    tensor_ty: FunctionType
 
     _fields = (
         "func",
         "args",
-        "out_tys",
+        "tensor_ty",
     )
 
 
@@ -199,6 +199,15 @@ class ResultExpr(ast.expr):
     tag: str
 
     _fields = ("value", "base_ty", "array_len", "tag")
+
+
+class InoutReturnSentinel(ast.expr):
+    """An invisible expression corresponding to an implicit use of @inout vars whenever
+    a function returns."""
+
+    var: "Variable | str"
+
+    _fields = ("var",)
 
 
 class NestedFunctionDef(ast.FunctionDef):

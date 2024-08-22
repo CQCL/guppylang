@@ -22,12 +22,12 @@ from guppylang.checker.func_checker import (
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import CheckableDef, CompilableDef, ParsableDef
-from guppylang.definition.value import CallableDef, CompiledCallableDef
+from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import FunctionType, Type
+from guppylang.tys.ty import FunctionType, Type, type_to_row
 
 PyFunc = Callable[..., Any]
 
@@ -200,14 +200,20 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         dfg: DFContainer,
         globals: CompiledGlobals,
         node: AstNode,
-    ) -> list[Wire]:
+    ) -> CallReturnWires:
         """Compiles a call to the function."""
         func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
         type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        num_returns = len(type_to_row(self.ty.output))
         call = dfg.builder.call(
             self.func_def, *args, instantiation=func_ty, type_args=type_args
         )
-        return list(call)
+        return CallReturnWires(
+            # TODO: Replace below with `list(call[:num_returns])` once
+            #  https://github.com/CQCL/hugr/issues/1454 is fixed.
+            regular_returns=[call[i] for i in range(num_returns)],
+            inout_returns=list(call[num_returns:]),
+        )
 
     def compile_inner(self, globals: CompiledGlobals) -> None:
         """Compiles the body of the function."""
