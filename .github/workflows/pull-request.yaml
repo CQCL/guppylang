@@ -26,9 +26,9 @@ jobs:
       PYTHON_VERSION: '3.10'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.5
       - name: install-llvm
         run: "sudo apt-get update && sudo apt-get install -y llvm-14"
 
@@ -85,7 +85,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.5
 
       - name: Set up uv
         # Install a specific uv version using the installer
