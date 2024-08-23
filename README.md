@@ -59,8 +59,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-- Python >= 3.10
-- [Poetry](https://python-poetry.org/docs/#installation)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - [Rust](https://www.rust-lang.org/tools/install) >= 1.75.0  (only needed for tests)
 
 ### Installing
@@ -68,31 +67,25 @@ These instructions will get you a copy of the project up and running on your loc
 Run the following to setup your virtual environment and install dependencies:
 
 ```sh
-poetry install --with execution,validation
+uv sync --extra execution --extra validation
 ```
 
-Note that the `--with execution,validation` flag is optional and only needed to run integration tests.
+Note that the `--extra` flags are optional and only needed to run integration tests.
 
-The `validation` flag allows the tests to validate that the hugrs guppy outputs are well formed, and the `execution` flag allows tests to compile these hugrs to native code using [hugr-llvm](https://github.com/CQCL/hugr-llvm) to check the results are as expected.
+The `validation` extra allows the tests to validate that the hugrs guppy outputs are well formed, and the `execution` extra allows tests to compile these hugrs to native code using [hugr-llvm](https://github.com/CQCL/hugr-llvm) to check the results are as expected.
 This requires `llvm-14` as described in the `hugr-llvm` repo.
 
-You can then activate the virtual environment and work within it with:
-
-```sh
-poetry shell
-```
-
-Consider using [direnv](https://github.com/direnv/direnv/wiki/Python#poetry) to
+Consider using [direnv](https://direnv.net/docs/installation.html) to
 automate this when entering and leaving a directory.
 
-To run a single command in the shell, just prefix it with `poetry run`.
+To run a single command in the shell, just prefix it with `uv run`.
 
 ### Pre-commit
 
 Install the pre-commit hook by running:
 
 ```sh
-poetry run pre-commit install
+uv run pre-commit install
 ```
 
 
@@ -101,21 +94,24 @@ poetry run pre-commit install
 Run tests using
 
 ```sh
-poetry run pytest -v
+uv run pytest -v
 ```
 
-You have to install extra dependencies to test automatic circuit conversion from `pytket`:
+You have to install extra dependencies to test automatic circuit conversion from `pytket`.
 
 ```sh
-poetry install --with pytket
-poetry run pytest -v  # Now rerun tests
+# Install extra dependencies
+# Using `--inexact` to avoid removing the already installed extras.
+uv sync --extra pytket --inexact
+# Now rerun tests
+uv run pytest -v
 ```
 
 
 Integration test cases can be exported to a directory using
 
 ```sh
-poetry run pytest --export-test-cases=guppy-exports
+uv run pytest --export-test-cases=guppy-exports
 ```
 
 which will create a directory `./guppy-exports` populated with hugr modules serialised in JSON.

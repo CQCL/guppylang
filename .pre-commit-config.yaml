@@ -26,31 +26,31 @@ repos:
 
   - repo: local
     hooks:
-      - id: poetry-install
-        name: sync poetry deps
+      - id: uv-install
+        name: sync uv deps
         description: Ensure development tools are installed.
-        entry: poetry install --sync
+        entry: uv sync
         language: system
-        files: poetry.lock
+        files: "uv.lock|pyproject.toml"
         pass_filenames: false
       - id: ruff-format
         name: ruff format
         description: Format python code with `ruff`.
-        entry: poetry run ruff format guppylang
+        entry: uv run ruff format guppylang
         language: system
         files: \.py$
         pass_filenames: false
       - id: ruff-check
         name: ruff
         description: Check python code with `ruff`.
-        entry: poetry run ruff check --fix --exit-non-zero-on-fix guppylang
+        entry: uv run ruff check --fix --exit-non-zero-on-fix guppylang
         language: system
         files: \.py$
         pass_filenames: false
       - id: mypy-check
         name: mypy
         description: Check python code with `mypy`.
-        entry: poetry run mypy guppylang
+        entry: uv run mypy guppylang
         language: system
         files: \.py$
         pass_filenames: false
