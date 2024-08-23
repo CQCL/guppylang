@@ -26,13 +26,6 @@ repos:
 
   - repo: local
     hooks:
-      - id: uv-install
-        name: sync uv deps
-        description: Ensure development tools are installed.
-        entry: uv sync
-        language: system
-        files: "uv.lock|pyproject.toml"
-        pass_filenames: false
       - id: ruff-format
         name: ruff format
         description: Format python code with `ruff`.
