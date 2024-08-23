@@ -17,10 +17,6 @@ on:
   release:
     types:
       - published
-  # Temporary trigger to test the workflow
-  pull_request:
-    branches:
-      - main
 
 jobs:
   build-publish:
@@ -55,6 +51,7 @@ jobs:
         run: |
           echo "Testing the newly built wheels..."
           uv run -f dist --with guppylang --refresh-package guppylang --no-project -- python -c "import guppylang"
+          uvx twine check --strict dist/*
 
       - name: Publish to PyPI
         if: ${{ (github.event_name == 'release' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')) }}
@@ -64,5 +61,8 @@ jobs:
           echo "  - event_name: ${{ github.event_name }}"
           echo "  - ref_type: ${{ github.ref_type }}"
           echo "  - ref: ${{ github.ref }}"
-          poetry config pypi-token.pypi ${{ secrets.PYPI_PUBLISH }}
-          poetry publish --dist-dir dist --skip-existing
+          uvx twine upload --skip-existing --verbose dist/*
+        env:
+          TWINE_NON_INTERACTIVE: 1
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_PUBLISH }}
