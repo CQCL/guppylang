@@ -20,12 +20,10 @@ env:
 
 jobs:
   check:
-    name: Check Python
+    name: Check Python (3.10)
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        python-version: ['3.10']
+    env:
+      PYTHON_VERSION: '3.10'
 
     steps:
       - uses: actions/checkout@v3
@@ -40,7 +38,7 @@ jobs:
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Restore uv cache
         uses: actions/cache@v4
         with:
@@ -63,7 +61,7 @@ jobs:
         run: uv run ruff check guppylang
 
       - name: Install Guppy with validation and llvm-based execution
-        run: uv sync --extra execution --extra validation
+        run: uv sync --extra execution --extra pytket --extra validation
 
       - name: Run tests
         run: uv run pytest
@@ -78,10 +76,12 @@ jobs:
       - name: Minimize uv cache
         run: uv cache prune --ci
 
-  coverage:
-    if: github.event_name != 'merge_group'
-    needs: check
+  test-coverage:
+    name: Check Python (3.12) with coverage
     runs-on: ubuntu-latest
+    env:
+      PYTHON_VERSION: '3.12'
+
     steps:
       - uses: actions/checkout@v4
       - name: Run sccache-cache
@@ -93,7 +93,7 @@ jobs:
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Restore uv cache
         uses: actions/cache@v4
         with:
