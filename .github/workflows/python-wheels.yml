@@ -57,9 +57,7 @@ jobs:
           uv run -f dist --with guppylang --refresh-package guppylang --no-project -- python -c "import guppylang"
 
       - name: Publish to PyPI
-        if: |
-          ${{ (github.event_name == 'release' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v'))}} ||
-          ${{ (github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v'))}} ||
+        if: ${{ (github.event_name == 'release' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')) }}
         run: |
           echo "Publishing to PyPI..."
           echo "Based on the following workflow variables, this is a new version tag push:"
