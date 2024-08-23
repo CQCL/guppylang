@@ -54,7 +54,7 @@ jobs:
       - name: Test installing the built wheels
         run: |
           echo "Testing the newly built wheels..."
-          uv run --with guppylang --refresh-package guppylang --no-project -- python -c "import guppylang"
+          uv run -f dist --with guppylang --refresh-package guppylang --no-project -- python -c "import guppylang"
 
       - name: Publish to PyPI
         if: |
