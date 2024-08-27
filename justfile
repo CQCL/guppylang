@@ -33,8 +33,8 @@ coverage:
     uv run pytest --cov=./ --cov-report=html
 
 # Generate the documentation.
-build-py-docs:
-    cd hugr-py/docs && ./build.sh
+build-docs:
+    cd docs && ./build.sh
 
 # Package the code and store the wheels in the dist/ directory.
 build-wheels:
