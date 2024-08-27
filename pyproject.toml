@@ -1,61 +1,65 @@
-[tool.poetry]
+[project]
 name = "guppylang"
 version = "0.9.0"
+requires-python = ">=3.10,<3.13"
 description = "Pythonic quantum-classical programming language"
-authors = ["Mark Koch <mark.koch@quantinuum.com>"]
-license = "Apache-2.0"
+license = { file = "LICENCE" }
 readme = "quickstart.md"
-repository = "https://github.com/CQCL/guppy"
+authors = [
+    { name = "Mark Koch", email = "mark.koch@quantinuum.com" },
+    { name = "TKET development team", email = "tket-support@quantinuum.com" },
+]
+maintainers = [
+    { name = "Mark Koch", email = "mark.koch@quantinuum.com" },
+    { name = "TKET development team", email = "tket-support@quantinuum.com" },
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-graphviz = "^0.20.1"
-networkx = "^3.2.1"
-pydantic = "^2.7.0b1"
-typing-extensions = "^4.9.0"
-hugr = "^0.7.0"
+dependencies = [
+    "graphviz >=0.20.1,<0.21",
+    "networkx >=3.2.1,<4",
+    "pydantic >=2.7.0b1,<3",
+    "typing-extensions >=4.9.0,<5",
+    "hugr >=0.7.0,<0.8",
+]
 
-[tool.poetry.group.dev.dependencies]
-ipykernel = "^6.29.5"
-pytest = "^7.4.4"
-pytest-cov = "^4.1.0"
-pytest-notebook = "^0.10.0"
-mypy = "<=1.10.0"
-pre-commit = "^3.6.0"
-ruff = ">=0.4.5"
-maturin = "^1.4.0"
-pytket = "*"
+[project.optional-dependencies]
+pytket = ["pytket >=1.30.0,<2", "tket2 >=0.2.1,<0.3"]
+docs = ["sphinx >=7.2.6,<8", "sphinx-book-theme >=1.1.2,<2"]
+validation = ["guppyval"]
+execution = ["execute-llvm"]
 
-[tool.poetry.group.validation]
-optional = true
+[project.urls]
+homepage = "https://github.com/CQCL/guppylang"
+repository = "https://github.com/CQCL/guppylang"
 
-[tool.poetry.group.validation.dependencies]
-guppyval = { path = "validator" }
+[tool.uv]
+dev-dependencies = [
+    "ipykernel >=6.29.5,<7",
+    "pytest >=8.3.2,<9",
+    "pytest-cov >=5.0.0,<6",
+    "pytest-notebook >=0.10.0,<0.11",
+    "mypy ==1.10.0",
+    "pre-commit >=3.6.0,<4",
+    "ruff >=0.6.2,<0.7",
+    "maturin >=1.4.0,<2",
+    "pytket >=1.30.0,<2",
+]
 
-[tool.poetry.group.execution]
-optional = true
+[tool.uv.workspace]
+members = ["execute_llvm", "validator"]
 
-[tool.poetry.group.execution.dependencies]
-execute_llvm = { path = "execute_llvm" }
+[tool.uv.sources]
+guppyval = { workspace = true }
+execute-llvm = { workspace = true }
 
-[tool.poetry.group.pytket]
-optional = true
-
-[tool.poetry.group.pytket.dependencies]
-pytket = { version = "^1.30.0" }
-tket2 = { version = "^0.2.1" }
-
-[tool.poetry.group.docs]
-optional = true
-
-[tool.poetry.group.docs.dependencies]
-sphinx = ">=7.2.6,<9.0.0"
-sphinx-book-theme = "^1.1.2"
-
+# Uncomment these to test the latest dependency version during development
+#hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-cli" }
+#tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py" }
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]

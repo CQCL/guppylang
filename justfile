@@ -5,33 +5,37 @@ help:
 # Prepare the environment for development, installing all the dependencies and
 # setting up the pre-commit hooks.
 setup:
-    poetry install
-    [[ -n "${JUST_INHIBIT_GIT_HOOKS:-}" ]] || poetry run pre-commit install -t pre-commit
+    uv sync
+    [[ -n "${JUST_INHIBIT_GIT_HOOKS:-}" ]] || uv run pre-commit install -t pre-commit
+
+# Prepare the environment for development, including the extra dependency groups.
+setup-extras:
+    uv sync --extra pytket --extra validation --extra execution --inexact
 
 # Run the pre-commit checks.
 check:
-    poetry run pre-commit run --all-files
+    uv run pre-commit run --all-files
 
 # Run all the tests.
 test:
-    poetry run pytest
+    uv run pytest
 
 # Auto-fix all clippy warnings.
 fix:
-    poetry run ruff check --fix guppylang
+    uv run ruff check --fix guppylang
 
 # Format the code.
 format:
-    poetry run ruff format guppylang
+    uv run ruff format guppylang
 
 # Generate a test coverage report.
 coverage:
-    poetry run pytest --cov=./ --cov-report=html
+    uv run pytest --cov=./ --cov-report=html
 
-# Load a shell with all the dependencies installed
-shell:
-    poetry shell
+# Generate the documentation.
+build-docs:
+    cd docs && ./build.sh
 
-
-build-py-docs:
-    cd hugr-py/docs && ./build.sh
+# Package the code and store the wheels in the dist/ directory.
+build-wheels:
+    uvx --from build pyproject-build --installer uv

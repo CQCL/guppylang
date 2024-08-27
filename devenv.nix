@@ -4,6 +4,7 @@
   # for building optional tket2 dependency
   # see https://github.com/CQCL/tket2/blob/main/devenv.nix
   packages = [
+    pkgs.just
     pkgs.llvmPackages_14.libllvm
     pkgs.libffi
     pkgs.libxml2
@@ -18,16 +19,15 @@
     ]
   );
 
+  enterShell = ''
+    just setup-extras
+    source .venv/bin/activate
+  '';
+
   languages.python = {
     enable = true;
-    poetry = {
+    uv = {
       enable = true;
-      install = {
-        enable = true;
-        groups = ["validation" "execution" "pytket"];
-      };
-
-      activate.enable = true;
     };
   };
 
