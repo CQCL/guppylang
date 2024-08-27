@@ -49,7 +49,7 @@ tket2 = { version = "^0.2.1" }
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-sphinx = "^7.2.6"
+sphinx = ">=7.2.6,<9.0.0"
 sphinx-book-theme = "^1.1.2"
 
 
