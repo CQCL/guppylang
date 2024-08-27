@@ -118,3 +118,5 @@ jobs:
 
       - name: Minimize uv cache
         run: uv cache prune --ci
+      - name: Minimize uv cache
+        run: uv cache prune --ci
