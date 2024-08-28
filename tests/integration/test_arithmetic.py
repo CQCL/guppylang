@@ -139,3 +139,51 @@ def test_shortcircuit_assign4(validate):
         return z
 
     validate(foo)
+
+def test_supported_ops(validate, run_int_fn):
+    module = GuppyModule("supported_ops")
+
+    @guppy(module)
+    def double_add(x: int) -> int:
+        return x + x
+
+    @guppy(module)
+    def double_mul(x: int) -> int:
+        return x * 2
+
+    @guppy(module)
+    def quad(x: int) -> int:
+        y = double_add(x)
+        z = double_mul(x)
+        return y + z
+
+    @guppy(module)
+    def run_quad() -> int:
+        return quad(42)
+
+    @guppy(module)
+    def neg(x: int) -> int:
+        return -x
+
+    @guppy(module)
+    def run_neg() -> int:
+        return neg(42)
+
+    @guppy(module)
+    def div(x: int, y: int) -> int:
+        return x // y
+
+    @guppy(module)
+    def run_div() -> int:
+        return div(-42, 21)
+
+    @guppy(module)
+    def run_rem() -> int:
+        return 11 % 3
+
+    hugr = module.compile()
+    validate(hugr)
+    run_int_fn(hugr, expected=168, fn_name="run_quad")
+    run_int_fn(hugr, expected=-42, fn_name="run_neg")
+    run_int_fn(hugr, expected=-2, fn_name="run_div")
+    run_int_fn(hugr, expected=2, fn_name="run_rem")
