@@ -11,6 +11,6 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = "0.19.0"
 hugr = "0.11.0"
-hugr-llvm = { git = "https://github.com/CQCL/hugr-llvm", commit = "43739f1" }
+hugr-llvm = { git = "https://github.com/CQCL/hugr-llvm", commit = "7245ca91b45b828ddb49456e9e0a895d79f1d739" }
 serde_json = "1.0.111"
-inkwell = "*"
+inkwell = "0.4.0"
