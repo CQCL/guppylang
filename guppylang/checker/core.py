@@ -60,10 +60,10 @@ if TYPE_CHECKING:
 #:
 #: All places are equipped with a unique id, a type and an optional definition AST
 #: location. During linearity checking, they are tracked separately.
-Place: TypeAlias = "Variable | FieldAccess"
+Place: TypeAlias = "Variable | FieldAccess | SubscriptAccess"
 
 #: Unique identifier for a `Place`.
-PlaceId: TypeAlias = "Variable.Id | FieldAccess.Id"
+PlaceId: TypeAlias = "Variable.Id | FieldAccess.Id | SubscriptAccess.Id"
 
 
 @dataclass(frozen=True)
@@ -152,6 +152,45 @@ class FieldAccess:
     def replace_defined_at(self, node: AstNode | None) -> "FieldAccess":
         """Returns a new `FieldAccess` instance with an updated definition location."""
         return replace(self, exact_defined_at=node)
+
+
+@dataclass(frozen=True)
+class SubscriptAccess:
+    """A place identifying a subscript `place[item]` access."""
+
+    parent: Place
+    item: Variable
+    ty: Type
+    item_expr: ast.expr
+    getitem_call: ast.expr
+    #: Only populated if this place occurs in an inout position
+    setitem_call: ast.expr | None = None
+
+    @dataclass(frozen=True)
+    class Id:
+        """Identifier for subscript places."""
+
+        parent: PlaceId
+        item: Variable.Id
+
+    @cached_property
+    def id(self) -> "SubscriptAccess.Id":
+        """The unique `PlaceId` identifier for this place."""
+        return SubscriptAccess.Id(self.parent.id, self.item.id)
+
+    @cached_property
+    def defined_at(self) -> AstNode | None:
+        """Optional location where this place was last assigned to."""
+        return self.parent.defined_at
+
+    @property
+    def describe(self) -> str:
+        """A human-readable description of this place for error messages."""
+        return f"Subscript `{self}`"
+
+    def __str__(self) -> str:
+        """String representation of this place."""
+        return f"{self.parent}[...]"
 
 
 PyScope = dict[str, Any]

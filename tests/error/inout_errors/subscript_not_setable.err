@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:24
+
+22:    @guppy(module)
+23:    def test(c: MyImmutableContainer) -> MyImmutableContainer:
+24:        foo(c[0])
+               ^^^^
+GuppyTypeError: Expression of type `MyImmutableContainer` is not assignable since it does not implement the `__setitem__` method
