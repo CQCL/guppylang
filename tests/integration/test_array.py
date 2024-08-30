@@ -27,6 +27,7 @@ def test_len(validate):
     assert val.val.v == 42
 
 
+@pytest.mark.skip("Skipped until Hugr lowering is updated")
 def test_index(validate):
     @compile_guppy
     def main(xs: array[int, 5], i: int) -> int:
