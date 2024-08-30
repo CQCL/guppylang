@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:24
 23:    def test(c: MyImmutableContainer) -> MyImmutableContainer:
 24:        foo(c[0])
                ^^^^
-GuppyTypeError: Expression of type `MyImmutableContainer` is not assignable since it does not implement the `__setitem__` method
+GuppyTypeError: Expression of type `MyImmutableContainer` is not allowed in a subscripted `@inout` position since it does not implement the `__setitem__` method

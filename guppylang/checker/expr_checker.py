@@ -793,7 +793,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 setitem_args[0],
                 setitem_args[1:],
                 "__setitem__",
-                "not assignable",
+                "not allowed in a subscripted `@inout` position",
                 exp_sig,
                 True,
             )
