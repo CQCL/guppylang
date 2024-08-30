@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:18
+
+16:    @guppy(module)
+17:    def main() -> qubit:
+18:        return foo()[0]
+                  ^^^^^^^^
+GuppyTypeError: Remaining linear items with type `qubit` are not used
