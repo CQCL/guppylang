@@ -90,12 +90,9 @@ def test_type_transitive(validate):
     module.load(g)  # `g` returns a type that was defined in `mod_a`
 
     @guppy(module)
-    def test() -> None:
+    def test() -> int:
         x = g()  # Type of x was defined in `mod_a`
-        # TODO: Should we be allowed to use a method that was defined in `mod_a` even
-        #  though we have not explicitly imported it? This would work in Python, but
-        #  not in Rust
-        # int(-x)
+        return int(-x)  # Call method that was defined in `mod_a`
 
     validate(module.compile())
 

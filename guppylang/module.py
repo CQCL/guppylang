@@ -142,12 +142,15 @@ class GuppyModule:
         # Also include any impls that are defined by the imported modules
         impls: dict[DefId, dict[str, DefId]] = {}
         for module in modules:
-            for def_id in module._globals.impls:
+            # We also need to include any impls that are transitively imported
+            all_globals = module._imported_globals | module._globals
+            all_checked_defs = module._imported_checked_defs | module._checked_defs
+            for def_id in all_globals.impls:
                 impls.setdefault(def_id, {})
-                impls[def_id] |= module._globals.impls[def_id]
+                impls[def_id] |= all_globals.impls[def_id]
                 defs |= {
-                    def_id: module._checked_defs[def_id]
-                    for def_id in module._globals.impls[def_id].values()
+                    def_id: all_checked_defs[def_id]
+                    for def_id in all_globals.impls[def_id].values()
                 }
         self._imported_globals |= Globals(defs, names, impls, {})
         self._imported_checked_defs |= defs
