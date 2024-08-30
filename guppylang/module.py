@@ -1,24 +1,23 @@
 import inspect
-import itertools
 import sys
 from collections.abc import Callable, Mapping
 from types import ModuleType
-from typing import Any, Union
+from typing import Any
 
 from hugr import Hugr, ops
 from hugr.function import Module
 
 from guppylang.checker.core import Globals, PyScope
-from guppylang.compiler.core import CompiledGlobals
 from guppylang.definition.common import (
     CheckableDef,
     CheckedDef,
     CompilableDef,
+    CompiledDef,
     DefId,
+    Definition,
     ParsableDef,
     RawDef,
 )
-from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.function import RawFunctionDef
 from guppylang.definition.parameter import ParamDef
@@ -35,6 +34,9 @@ class GuppyModule:
 
     name: str
 
+    # Whether the module has already been checked
+    _checked: bool
+
     # Whether the module has already been compiled
     _compiled: bool
 
@@ -46,14 +48,19 @@ class GuppyModule:
     _raw_defs: dict[DefId, RawDef]
     _raw_type_defs: dict[DefId, RawDef]
 
+    # Map of checked definitions in this module. These are populated by calling `check`
+    # on this module
+    _checked_defs: dict[DefId, CheckedDef]
+
     # Globals from imported modules
     _imported_globals: Globals
-    _imported_compiled_globals: CompiledGlobals
+    # Checked definitions from imported modules. Also includes transitively imported
+    # definitions.
+    _imported_checked_defs: dict[DefId, CheckedDef]
 
     # Globals for functions and types defined in this module. Only gets populated during
     # compilation
     _globals: Globals
-    _compiled_globals: CompiledGlobals
 
     # When `_instance_buffer` is not `None`, then all registered functions will be
     # buffered in this list. They only get properly registered, once
@@ -63,14 +70,14 @@ class GuppyModule:
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
         self._globals = Globals({}, {}, {}, {})
-        self._compiled_globals = {}
         self._imported_globals = Globals.default()
-        self._imported_compiled_globals = {}
+        self._imported_checked_defs = {}
         self._compiled = False
         self._compiled_hugr = None
         self._instance_func_buffer = None
         self._raw_defs = {}
         self._raw_type_defs = {}
+        self._checked_defs = {}
 
         # Import builtin module
         if import_builtins:
@@ -78,29 +85,77 @@ class GuppyModule:
 
             self.load(builtins)
 
-    def load(self, m: Union[ModuleType, "GuppyModule"]) -> None:
-        """Imports another Guppy module."""
-        self._check_not_yet_compiled()
-        if isinstance(m, GuppyModule):
-            # Compile module if it isn't compiled yet
-            if not m.compiled:
-                m.compile()
+    def load(
+        self,
+        *args: "Definition | GuppyModule | ModuleType",
+        **kwargs: "Definition | GuppyModule | ModuleType",
+    ) -> None:
+        """Imports another Guppy module or selected definitions from a module.
 
-            # For now, we can only import custom functions
-            if any(
-                not isinstance(v, CustomFunctionDef | TypeDef | ParamDef)
-                for v in m._compiled_globals.values()
-            ):
-                raise GuppyError(
-                    "Importing modules with defined functions is not supported yet"
+        Keyword args may be used to specify alias names for the imports.
+        """
+        modules: set[GuppyModule] = set()
+        defs: dict[DefId, CheckedDef] = {}
+        names: dict[str, DefId] = {}
+
+        # Collect imports in reverse since we'll use it as a stack to push and pop from
+        imports: list[tuple[str, Definition | GuppyModule | ModuleType]] = [
+            *reversed(kwargs.items()),
+            *(("", arg) for arg in reversed(args)),
+        ]
+        while imports:
+            alias, imp = imports.pop()
+            if isinstance(imp, Definition):
+                module = imp.id.module
+                assert module is not None
+                module.check()
+                defs[imp.id] = module._checked_defs[imp.id]
+                names[alias or imp.name] = imp.id
+                modules.add(module)
+            elif isinstance(imp, GuppyModule):
+                # TODO: In the future this should be a qualified module import. For now
+                #  we just import all contained definitions that don't start with `_`
+                imp.check()
+                imports.extend(
+                    (defn.name, defn)
+                    for defn in imp._globals.defs.values()
+                    if not defn.name.startswith("_")
                 )
+            elif isinstance(imp, ModuleType):
+                mods = [
+                    val for val in imp.__dict__.values() if isinstance(val, GuppyModule)
+                ]
+                if not mods:
+                    msg = f"No Guppy modules found in `{imp.__name__}`"
+                    raise GuppyError(msg)
+                if len(mods) > 1:
+                    msg = (
+                        f"Python module `{imp.__name__}` contains multiple Guppy "
+                        "modules. Cannot decide which one to import."
+                    )
+                    raise GuppyError(msg)
+                imports.append((alias, mods[0]))
+            else:
+                msg = f"Object `{imp}` cannot be imported"
+                raise GuppyError(msg)
 
-            self._imported_globals |= m._globals
-            self._imported_compiled_globals |= m._compiled_globals
-        else:
-            for val in m.__dict__.values():
-                if isinstance(val, GuppyModule):
-                    self.load(val)
+        # Also include any impls that are defined by the imported modules
+        impls: dict[DefId, dict[str, DefId]] = {}
+        for module in modules:
+            for def_id in module._globals.impls:
+                impls.setdefault(def_id, {})
+                impls[def_id] |= module._globals.impls[def_id]
+                defs |= {
+                    def_id: module._checked_defs[def_id]
+                    for def_id in module._globals.impls[def_id].values()
+                }
+        self._imported_globals |= Globals(defs, names, impls, {})
+        self._imported_checked_defs |= defs
+
+        # We also need to include transitively imported checked definitions so we can
+        # lower everything into one Hugr at the same time.
+        for module in modules:
+            self._imported_checked_defs |= module._imported_checked_defs
 
     def register_def(self, defn: RawDef, instance: TypeDef | None = None) -> None:
         """Registers a definition with this module.
@@ -111,7 +166,9 @@ class GuppyModule:
         Optionally, the definition can be marked as an instance method by passing the
         corresponding instance type definition.
         """
-        self._check_not_yet_compiled()
+        self._checked = False
+        self._compiled = False
+        self._compiled_hugr = None
         if self._instance_func_buffer is not None and not isinstance(defn, TypeDef):
             self._instance_func_buffer[defn.name] = defn
         else:
@@ -149,6 +206,10 @@ class GuppyModule:
             self.register_def(defn, instance)
 
     @property
+    def checked(self) -> bool:
+        return self._checked
+
+    @property
     def compiled(self) -> bool:
         return self._compiled
 
@@ -170,16 +231,22 @@ class GuppyModule:
             for def_id, defn in parsed.items()
         }
 
-    @pretty_errors
-    def compile(self) -> Hugr[ops.Module]:
-        """Compiles the module and returns the final Hugr."""
-        if self.compiled:
-            assert self._compiled_hugr is not None, "Module is compiled but has no Hugr"
-            return self._compiled_hugr
+    @staticmethod
+    def _compile_defs(
+        checked_defs: Mapping[DefId, CheckedDef], hugr_module: Module
+    ) -> dict[DefId, CompiledDef]:
+        """Helper method to compile checked definitions to Hugr."""
+        return {
+            def_id: defn.compile_outer(hugr_module)
+            if isinstance(defn, CompilableDef)
+            else defn
+            for def_id, defn in checked_defs.items()
+        }
 
-        # Prepare Hugr for this module
-        graph = Module()
-        graph.metadata["name"] = self.name
+    def check(self) -> None:
+        """Type-checks the module."""
+        if self.checked:
+            return
 
         # Type definitions need to be checked first so that we can use them when parsing
         # function signatures etc.
@@ -194,6 +261,7 @@ class GuppyModule:
             if isinstance(defn, CheckedStructDef):
                 self._globals.impls.setdefault(defn.id, {})
                 for method_def in defn.generated_methods():
+                    # We might have checked
                     generated[method_def.id] = method_def
                     self._globals.impls[defn.id][method_def.name] = method_def.id
 
@@ -202,20 +270,30 @@ class GuppyModule:
             self._raw_defs | generated, self._imported_globals | self._globals
         )
         self._globals = self._globals.update_defs(other_defs)
+        self._checked_defs = type_defs | other_defs
+        self._checked = True
+
+    @pretty_errors
+    def compile(self) -> Hugr[ops.Module]:
+        """Compiles the module and returns the final Hugr."""
+        if self.compiled:
+            assert self._compiled_hugr is not None, "Module is compiled but has no Hugr"
+            return self._compiled_hugr
+
+        self.check()
+
+        # Prepare Hugr for this module
+        graph = Module()
+        graph.metadata["name"] = self.name
 
         # Compile definitions to Hugr
-        self._compiled_globals = {
-            defn.id: (
-                defn.compile_outer(graph) if isinstance(defn, CompilableDef) else defn
-            )
-            for defn in itertools.chain(type_defs.values(), other_defs.values())
-        }
-        all_compiled_globals = self._compiled_globals | self._imported_compiled_globals
+        compiled_defs = self._compile_defs(self._imported_checked_defs, graph)
+        compiled_defs |= self._compile_defs(self._checked_defs, graph)
 
         # Finally, compile the definition contents to Hugr. For example, this compiles
         # the bodies of functions.
-        for defn in self._compiled_globals.values():
-            defn.compile_inner(all_compiled_globals)
+        for defn in compiled_defs.values():
+            defn.compile_inner(compiled_defs)
 
         hugr = graph.hugr
         self._compiled = True
@@ -225,10 +303,6 @@ class GuppyModule:
     def contains(self, name: str) -> bool:
         """Returns 'True' if the module contains an object with the given name."""
         return name in self._globals.names
-
-    def _check_not_yet_compiled(self) -> None:
-        if self._compiled:
-            raise GuppyError(f"The module `{self.name}` has already been compiled")
 
 
 def get_py_scope(f: PyFunc) -> PyScope:

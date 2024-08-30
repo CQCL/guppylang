@@ -9,7 +9,12 @@ from hugr.node_port import ToNode
 
 from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
 from guppylang.checker.core import Place, Variable
-from guppylang.compiler.core import CompiledGlobals, DFContainer, return_var
+from guppylang.compiler.core import (
+    CompiledGlobals,
+    DFContainer,
+    is_return_var,
+    return_var,
+)
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
 from guppylang.tys.ty import SumType, row_to_type, type_to_row
@@ -22,7 +27,17 @@ def compile_cfg(
     globals: CompiledGlobals,
 ) -> hc.Cfg:
     """Compiles a CFG to Hugr."""
-    insert_return_vars(cfg)
+    # Patch the CFG with dummy return variables
+    # TODO: This mutates the CFG in-place which leads to problems when trying to lower
+    #  the same function to Hugr twice. For now we just check that the return vars
+    #  haven't already been inserted, but we should figure out a better way to handle
+    #  this: https://github.com/CQCL/guppylang/issues/428
+    if all(
+        not is_return_var(v.name)
+        for v in cfg.exit_bb.sig.input_row
+        if isinstance(v, Variable)
+    ):
+        insert_return_vars(cfg)
 
     builder = container.add_cfg(*inputs)
 
