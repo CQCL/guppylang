@@ -18,6 +18,7 @@ from guppylang.checker.core import (
     Locals,
     Place,
     PlaceId,
+    SubscriptAccess,
     Variable,
 )
 from guppylang.definition.value import CallableDef
@@ -169,6 +170,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                 match arg:
                     case PlaceNode(place=place):
                         for leaf in leaf_places(place):
+                            assert not isinstance(leaf, SubscriptAccess)
                             leaf = leaf.replace_defined_at(arg)
                             self.scope.assign(leaf)
                     case arg if inp.ty.linear:

@@ -24,6 +24,7 @@ import ast
 import sys
 import traceback
 from contextlib import suppress
+from dataclasses import replace
 from typing import Any, NoReturn, cast
 
 from guppylang.ast_util import (
@@ -35,12 +36,15 @@ from guppylang.ast_util import (
     with_loc,
     with_type,
 )
+from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import (
     Context,
     DummyEvalDict,
     FieldAccess,
     Globals,
     Locals,
+    Place,
+    SubscriptAccess,
     Variable,
 )
 from guppylang.definition.ty import TypeDef
@@ -56,6 +60,7 @@ from guppylang.nodes import (
     DesugaredListComp,
     FieldAccessAndDrop,
     GlobalName,
+    InoutReturnSentinel,
     IterEnd,
     IterHasNext,
     IterNext,
@@ -63,6 +68,7 @@ from guppylang.nodes import (
     MakeIter,
     PlaceNode,
     PyExpr,
+    SubscriptAccessAndDrop,
     TensorCall,
     TypeApply,
 )
@@ -447,7 +453,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             node,
         )
 
-    def _synthesize_instance_func(
+    def synthesize_instance_func(
         self,
         node: ast.expr,
         args: list[ast.expr],
@@ -495,16 +501,37 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
+        item_expr, item_ty = self.synthesize(node.slice)
+        # Give the item a unique name so we can refer to it later in case we also want
+        # to compile a call to `__setitem__`
+        item = Variable(next(tmp_vars), item_ty, item_expr)
+        item_node = with_type(item_ty, with_loc(item_expr, PlaceNode(place=item)))
+        # Check a call to the `__getitem__` instance function
         exp_sig = FunctionType(
             [
-                FuncInput(ty, InputFlags.NoFlags),
+                FuncInput(ty, InputFlags.Inout),
                 FuncInput(ExistentialTypeVar.fresh("Key", False), InputFlags.NoFlags),
             ],
             ExistentialTypeVar.fresh("Val", False),
         )
-        return self._synthesize_instance_func(
-            node.value, [node.slice], "__getitem__", "not subscriptable", exp_sig
+        getitem_expr, result_ty = self.synthesize_instance_func(
+            node.value, [item_node], "__getitem__", "not subscriptable", exp_sig
         )
+        # Subscripting a place is itself a place
+        expr: ast.expr
+        if isinstance(node.value, PlaceNode):
+            place = SubscriptAccess(
+                node.value.place, item, result_ty, item_expr, getitem_expr
+            )
+            expr = PlaceNode(place=place)
+        else:
+            # If the subscript is not on a place, then there is no way to address the
+            # other indices after this one has been projected out (e.g. `f()[0]` makes
+            # you loose access to all elements besides 0).
+            expr = SubscriptAccessAndDrop(
+                item=item, item_expr=item_expr, getitem_expr=getitem_expr
+            )
+        return with_loc(node, expr), result_ty
 
     def visit_Call(self, node: ast.Call) -> tuple[ast.expr, Type]:
         if len(node.keywords) > 0:
@@ -550,7 +577,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         exp_sig = FunctionType(
             [FuncInput(ty, InputFlags.NoFlags)], ExistentialTypeVar.fresh("Iter", False)
         )
-        expr, ty = self._synthesize_instance_func(
+        expr, ty = self.synthesize_instance_func(
             node.value, [], "__iter__", "not iterable", exp_sig
         )
 
@@ -574,7 +601,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         exp_sig = FunctionType(
             [FuncInput(ty, InputFlags.NoFlags)], TupleType([bool_type(), ty])
         )
-        return self._synthesize_instance_func(
+        return self.synthesize_instance_func(
             node.value, [], "__hasnext__", "not an iterator", exp_sig, True
         )
 
@@ -584,14 +611,14 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             [FuncInput(ty, InputFlags.NoFlags)],
             TupleType([ExistentialTypeVar.fresh("T", False), ty]),
         )
-        return self._synthesize_instance_func(
+        return self.synthesize_instance_func(
             node.value, [], "__next__", "not an iterator", exp_sig, True
         )
 
     def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         exp_sig = FunctionType([FuncInput(ty, InputFlags.NoFlags)], NoneType())
-        return self._synthesize_instance_func(
+        return self.synthesize_instance_func(
             node.value, [], "__end__", "not an iterator", exp_sig, True
         )
 
@@ -714,6 +741,8 @@ def type_check_args(
     new_args: list[ast.expr] = []
     for inp, func_inp in zip(inputs, func_ty.inputs, strict=True):
         a, s = ExprChecker(ctx).check(inp, func_inp.ty.substitute(subst), "argument")
+        if InputFlags.Inout in func_inp.flags and isinstance(a, PlaceNode):
+            a.place = check_inout_arg_place(a.place, ctx, a)
         new_args.append(a)
         subst |= s
 
@@ -732,6 +761,43 @@ def type_check_args(
         )
 
     return new_args, subst
+
+
+def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
+    """Performs additional checks for place arguments in @inout position.
+
+    In particular, we need to check that places involving `place[item]` subscripts
+    implement the corresponding `__setitem__` method.
+    """
+    match place:
+        case Variable():
+            return place
+        case FieldAccess(parent=parent):
+            return replace(place, parent=check_inout_arg_place(parent, ctx, node))
+        case SubscriptAccess(parent=parent, item=item, ty=ty):
+            # Check a call to the `__setitem__` instance function
+            exp_sig = FunctionType(
+                [
+                    FuncInput(parent.ty, InputFlags.Inout),
+                    FuncInput(item.ty, InputFlags.NoFlags),
+                    FuncInput(ty, InputFlags.NoFlags),
+                ],
+                NoneType(),
+            )
+            setitem_args = [
+                with_type(parent.ty, with_loc(node, PlaceNode(parent))),
+                with_type(item.ty, with_loc(node, PlaceNode(item))),
+                with_type(ty, with_loc(node, InoutReturnSentinel(var=place))),
+            ]
+            setitem_call, _ = ExprSynthesizer(ctx).synthesize_instance_func(
+                setitem_args[0],
+                setitem_args[1:],
+                "__setitem__",
+                "not allowed in a subscripted `@inout` position",
+                exp_sig,
+                True,
+            )
+            return replace(place, setitem_call=setitem_call)
 
 
 def synthesize_call(

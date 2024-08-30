@@ -655,7 +655,15 @@ class Array:
             "ArrayGet", args=[int_arg(), type_arg()], variable_remap={0: 1, 1: 0}
         ),
     )
-    def __getitem__(self: array[T, n], idx: int) -> T: ...
+    def __getitem__(self: array[L, n] @ inout, idx: int) -> L: ...
+
+    @guppy.hugr_op(
+        builtins,
+        custom_op(
+            "ArraySet", args=[int_arg(), type_arg()], variable_remap={0: 1, 1: 0}
+        ),
+    )
+    def __setitem__(self: array[L, n] @ inout, idx: int, value: L) -> None: ...
 
     @guppy.custom(builtins, checker=ArrayLenChecker())
     def __len__(self: array[T, n]) -> int: ...
