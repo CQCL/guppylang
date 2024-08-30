@@ -18,6 +18,7 @@ from typing_extensions import assert_never
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import Variable
+from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import CompilerBase, DFContainer
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.error import GuppyError, InternalGuppyError
@@ -27,9 +28,11 @@ from guppylang.nodes import (
     FieldAccessAndDrop,
     GlobalCall,
     GlobalName,
+    InoutReturnSentinel,
     LocalCall,
     PlaceNode,
     ResultExpr,
+    SubscriptAccessAndDrop,
     TensorCall,
     TypeApply,
 )
@@ -167,6 +170,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         raise InternalGuppyError("Unsupported constant expression in compiler")
 
     def visit_PlaceNode(self, node: PlaceNode) -> Wire:
+        if subscript := contains_subscript(node.place):
+            if subscript.item not in self.dfg:
+                self.dfg[subscript.item] = self.visit(subscript.item_expr)
+            self.dfg[subscript] = self.visit(subscript.getitem_call)
         return self.dfg[node.place]
 
     def visit_GlobalName(self, node: GlobalName) -> Wire:
@@ -182,6 +189,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_Name(self, node: ast.Name) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
+
+    def visit_InoutReturnSentinel(self, node: InoutReturnSentinel) -> Wire:
+        assert not isinstance(node.var, str)
+        return self.dfg[node.var]
 
     def visit_Tuple(self, node: ast.Tuple) -> Wire:
         elems = [self.visit(e) for e in node.elts]
@@ -229,9 +240,18 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         """Helper method that updates the ports for @inout arguments after a call."""
         for inp, arg in zip(func_ty.inputs, args, strict=True):
             if InputFlags.Inout in inp.flags:
-                # Linearity checker ensures that inout arguments are places
-                assert isinstance(arg, PlaceNode)
+                # Linearity checker ensures that inout arguments that are not places
+                # can be safely dropped after the call returns
+                if not isinstance(arg, PlaceNode):
+                    next(inout_ports)
+                    continue
                 self.dfg[arg.place] = next(inout_ports)
+                # Places involving subscripts need to generate code for the appropriate
+                # `__setitem__` call. Nested subscripts are handled automatically since
+                # `arg.place.parent` occurs as an inout arg of this call, so will also
+                # be recursively reassigned.
+                if subscript := contains_subscript(arg.place):
+                    self.visit(subscript.setitem_call)
         assert next(inout_ports, None) is None, "Too many inout return ports"
 
     def visit_LocalCall(self, node: LocalCall) -> Wire:
@@ -361,6 +381,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._unpack_tuple(struct_port, [f.ty for f in node.struct_ty.fields])[
             field_idx
         ]
+
+    def visit_SubscriptAccessAndDrop(self, node: SubscriptAccessAndDrop) -> Wire:
+        self.dfg[node.item] = self.visit(node.item_expr)
+        return self.visit(node.getitem_expr)
 
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
         extra_args = []

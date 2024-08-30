@@ -6,6 +6,8 @@ from hugr.std.float import FLOAT_T
 from guppylang.definition.custom import (
     CustomCallCompiler,
 )
+from guppylang.definition.value import CallReturnWires
+from guppylang.error import InternalGuppyError
 from guppylang.tys.ty import NumericType
 
 # Note: Hugr's INT_T is 64bits, but guppy defaults to 32bits
@@ -216,3 +218,45 @@ class QAllocCompiler(CustomCallCompiler):
             quantum_op("Reset")(ht.FunctionType([ht.Qubit], [ht.Qubit]), []), q
         )
         return [q]
+
+
+class ArrayGetitemCompiler(CustomCallCompiler):
+    """Compiler for the `array.__getitem__` function."""
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [array, idx] = args
+        array_ty = self.ty.input[0]
+        idx_ty = self.ty.input[1]
+        elem_ty = self.ty.output[0]
+        op = ops.Custom(
+            extension="guppy.unsupported.array",
+            signature=ht.FunctionType([array_ty, idx_ty], [array_ty, elem_ty]),
+            name="GetItem",
+            args=[arg.to_hugr() for arg in self.type_args],
+        )
+        node = self.builder.add_op(op, array, idx)
+        return CallReturnWires(regular_returns=[node[1]], inout_returns=[node[0]])
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        raise InternalGuppyError("Call compile_with_inouts instead")
+
+
+class ArraySetitemCompiler(CustomCallCompiler):
+    """Compiler for the `array.__setitem__` function."""
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [array, idx, elem] = args
+        array_ty = self.ty.input[0]
+        idx_ty = self.ty.input[1]
+        elem_ty = self.ty.input[2]
+        op = ops.Custom(
+            extension="guppy.unsupported.array",
+            signature=ht.FunctionType([array_ty, idx_ty, elem_ty], [array_ty]),
+            name="SetItem",
+            args=[arg.to_hugr() for arg in self.type_args],
+        )
+        node = self.builder.add_op(op, array, idx, elem)
+        return CallReturnWires(regular_returns=[], inout_returns=[node[0]])
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        raise InternalGuppyError("Call compile_with_inouts instead")
