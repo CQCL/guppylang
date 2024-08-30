@@ -171,7 +171,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_PlaceNode(self, node: PlaceNode) -> Wire:
         if subscript := contains_subscript(node.place):
-            if subscript.item.id not in self.dfg.locals:
+            if subscript.item not in self.dfg:
                 self.dfg[subscript.item] = self.visit(subscript.item_expr)
             self.dfg[subscript] = self.visit(subscript.getitem_call)
         return self.dfg[node.place]

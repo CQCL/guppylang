@@ -256,7 +256,7 @@ class ArraySetitemCompiler(CustomCallCompiler):
             args=[arg.to_hugr() for arg in self.type_args],
         )
         node = self.builder.add_op(op, array, idx, elem)
-        return CallReturnWires(regular_returns=[], inout_returns=[node])
+        return CallReturnWires(regular_returns=[], inout_returns=[node[0]])
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
