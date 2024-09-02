@@ -329,6 +329,30 @@ def test_while_reset(validate):
         return b
 
 
+def test_while_move_back(validate):
+    module = GuppyModule("test")
+    module.load(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q: qubit
+
+    @guppy.declare(module)
+    def use(q: qubit) -> None: ...
+
+    @guppy(module)
+    def test(s: MyStruct) -> MyStruct:
+        use(s.q)
+        while True:
+            s.q = qubit()
+            return s
+        # Guppy is not yet smart enough to detect that this code is unreachable
+        s.q = qubit()
+        return s
+
+    validate(module.compile())
+
+
 def test_for(validate):
     module = GuppyModule("test")
     module.load(quantum)
