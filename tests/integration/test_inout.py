@@ -266,7 +266,6 @@ def test_move_back(validate):
     validate(module.compile())
 
 
-@pytest.mark.skip("Fails due to https://github.com/CQCL/guppylang/issues/337")
 def test_move_back_branch(validate):
     module = GuppyModule("test")
     module.load(quantum)

@@ -425,6 +425,8 @@ def check_cfg_linearity(
     checked: dict[BB, CheckedBB[Place]] = {}
 
     for bb, scope in scopes.items():
+        live_before_bb = live_before[bb]
+
         # We have to check that used linear variables are not being outputted
         for succ in bb.successors:
             live = live_before[succ]
@@ -457,6 +459,12 @@ def check_cfg_linearity(
             for place in scope.values():
                 for leaf in leaf_places(place):
                     x = leaf.id
+                    # Some values are just in scope because the type checker determined
+                    # them as live in the first (less precises) dataflow analysis. It
+                    # might be the case that x is actually not live when considering
+                    # the second, more fine-grained, analysis based on places.
+                    if x not in live_before_bb and x not in scope.vars:
+                        continue
                     used_later = x in live
                     if leaf.ty.linear and not scope.used(x) and not used_later:
                         # TODO: This should be "Variable x with linear type ty is not
