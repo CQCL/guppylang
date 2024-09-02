@@ -19,7 +19,7 @@ dependencies = [
     "networkx >=3.2.1,<4",
     "pydantic >=2.7.0b1,<3",
     "typing-extensions >=4.9.0,<5",
-    "hugr >=0.7.0,<0.8",
+    "hugr >=0.7.0,<0.9",
 ]
 
 [project.optional-dependencies]
