@@ -34,7 +34,7 @@ class ListVal(hv.ExtensionValue):
     def to_value(self) -> hv.Extension:
         # The value list must be serialized at this point, otherwise the
         # `Extension` will not be serializable.
-        vs = [v.to_serial_root() for v in self.v]
+        vs = [v._to_serial_root() for v in self.v]
         return hv.Extension(
             name="ListValue", typ=self.ty, val=vs, extensions=["Collections"]
         )
@@ -99,7 +99,7 @@ def custom_op(
 
     def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
         concrete_args = [make_concrete_arg(arg, inst, variable_remap) for arg in args]
-        return ops.Custom(extension=ext, signature=ty, name=name, args=concrete_args)
+        return ops.Custom(extension=ext, signature=ty, op_name=name, args=concrete_args)
 
     return op
 
@@ -215,6 +215,6 @@ def logic_op(
 
     def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
         args = [int_arg(len(ty.input))] if parametric_size else []
-        return ops.Custom(extension=ext, signature=ty, name=op_name, args=args)
+        return ops.Custom(extension=ext, signature=ty, op_name=op_name, args=args)
 
     return op

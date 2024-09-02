@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr.function import Function
+from hugr.build.function import Function
 
 from guppylang.compiler.cfg_compiler import compile_cfg
 from guppylang.compiler.core import CompiledGlobals, DFContainer
@@ -110,7 +110,7 @@ def make_dummy_op(
     output = [ty.to_hugr() for ty in out]
 
     sig = ht.FunctionType(input=input, output=output)
-    return ops.Custom(name=name, extension=extension, signature=sig, args=[])
+    return ops.Custom(op_name=name, extension=extension, signature=sig, args=[])
 
 
 def make_partial_op(

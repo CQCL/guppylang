@@ -30,7 +30,7 @@ def quantum_op(
 
     def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
         return ops.Custom(
-            name=op_name, extension="quantum.tket2", signature=ty, args=[]
+            op_name=op_name, extension="quantum.tket2", signature=ty, args=[]
         )
 
     return op

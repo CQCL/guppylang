@@ -72,7 +72,7 @@ def test_func_def_name():
         data.op for n, data in func_name.nodes() if isinstance(data.op, ops.FuncDefn)
     ]
     assert isinstance(def_op, ops.FuncDefn)
-    assert def_op.name == "func_name"
+    assert def_op.f_name == "func_name"
 
 
 def test_func_decl_name():
@@ -86,7 +86,7 @@ def test_func_decl_name():
         data.op for n, data in hugr.nodes() if isinstance(data.op, ops.FuncDecl)
     ]
     assert isinstance(def_op, ops.FuncDecl)
-    assert def_op.name == "func_name"
+    assert def_op.f_name == "func_name"
 
 
 def test_compile_again():

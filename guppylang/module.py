@@ -5,7 +5,7 @@ from types import ModuleType
 from typing import Any
 
 from hugr import Hugr, ops
-from hugr.function import Module
+from hugr.build.function import Module
 
 from guppylang.checker.core import Globals, PyScope
 from guppylang.definition.common import (

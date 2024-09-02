@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import cast
 
 from hugr import Wire, ops
-from hugr.dfg import DP, _DfBase
+from hugr.build.dfg import DP, DfBase
 
 from guppylang.checker.core import FieldAccess, Place, PlaceId, Variable
 from guppylang.definition.common import CompiledDef, DefId
@@ -24,13 +24,13 @@ class DFContainer:
     current compilation state.
     """
 
-    builder: _DfBase[ops.DfParentOp]
+    builder: DfBase[ops.DfParentOp]
     locals: CompiledLocals = field(default_factory=dict)
 
     def __init__(
-        self, builder: _DfBase[DP], locals: CompiledLocals | None = None
+        self, builder: DfBase[DP], locals: CompiledLocals | None = None
     ) -> None:
-        generic_builder = cast(_DfBase[ops.DfParentOp], builder)
+        generic_builder = cast(DfBase[ops.DfParentOp], builder)
         if locals is None:
             locals = {}
         self.builder = generic_builder

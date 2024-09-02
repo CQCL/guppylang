@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr.dfg import _DfBase
+from hugr.build.dfg import DfBase
 
 from guppylang.ast_util import AstNode, get_type, with_loc, with_type
 from guppylang.checker.core import Context, Globals
@@ -319,7 +319,7 @@ class CustomCallCompiler(CustomInoutCallCompiler, ABC):
         """
 
     @property
-    def builder(self) -> _DfBase[ops.DfParentOp]:
+    def builder(self) -> DfBase[ops.DfParentOp]:
         """The hugr dataflow builder."""
         return self.dfg.builder
 

@@ -1,6 +1,6 @@
 import ast
 import json
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any, TypeGuard, TypeVar
 
@@ -11,8 +11,8 @@ import hugr.std.logic
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
-from hugr.cond_loop import Conditional
-from hugr.dfg import DP, _DfBase
+from hugr.build.cond_loop import Conditional
+from hugr.build.dfg import DP, DfBase
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
@@ -78,13 +78,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return [self.compile(e, dfg) for e in expr_to_row(expr)]
 
     @property
-    def builder(self) -> _DfBase[ops.DfParentOp]:
+    def builder(self) -> DfBase[ops.DfParentOp]:
         """The current Hugr dataflow graph builder."""
         return self.dfg.builder
 
     @contextmanager
     def _new_dfcontainer(
-        self, inputs: list[PlaceNode], builder: _DfBase[DP]
+        self, inputs: list[PlaceNode], builder: DfBase[DP]
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `DFContainer`.
 
@@ -442,19 +442,11 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                     assert_never(c)
         else:
             op_name = f"result_{base_name}"
-        args = [
-            ht.StringArg(node.tag),
-            *extra_args,
-        ]
-        sig = ht.FunctionType(
-            input=[get_type(node.value).to_hugr()],
-            output=[],
-        )
-        op = ops.Custom(
-            extension="tket2.result",
-            name=op_name,
-            args=args,
-            signature=sig,
+        op = tket2_result_op(
+            op_name=op_name,
+            typ=get_type(node.value).to_hugr(),
+            tag=node.tag,
+            extra_args=extra_args,
         )
         self.builder.add_op(op, self.visit(node.value))
         return self._pack_returns([], NoneType())
@@ -587,7 +579,7 @@ def make_dummy_op(
     output = [ty.to_hugr() for ty in out]
 
     sig = ht.FunctionType(input=input, output=output)
-    return ops.Custom(name=name, extension="dummy", signature=sig, args=[])
+    return ops.Custom(op_name=name, extension="dummy", signature=sig, args=[])
 
 
 def make_list_op(in_types: Sequence[Type], out_type: Type) -> ops.DataflowOp:
@@ -598,6 +590,29 @@ def make_list_op(in_types: Sequence[Type], out_type: Type) -> ops.DataflowOp:
 def list_push_op(list_ty: Type, elem_ty: Type) -> ops.DataflowOp:
     """Creates a dummy operation for constructing a list."""
     return make_dummy_op("Push", [list_ty, elem_ty], [list_ty])
+
+
+def tket2_result_op(
+    op_name: str,
+    typ: ht.Type,
+    tag: str,
+    extra_args: Iterable[ht.TypeArg],
+) -> ops.DataflowOp:
+    """Creates a dummy operation for constructing a list."""
+    args = [
+        ht.StringArg(tag),
+        *extra_args,
+    ]
+    sig = ht.FunctionType(
+        input=[typ],
+        output=[],
+    )
+    return ops.Custom(
+        extension="tket2.result",
+        op_name=op_name,
+        args=args,
+        signature=sig,
+    )
 
 
 T = TypeVar("T")
