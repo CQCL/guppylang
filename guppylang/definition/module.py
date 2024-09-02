@@ -1,7 +1,7 @@
-from dataclasses import field, dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from guppylang.definition.common import Definition, CompiledDef
+from guppylang.definition.common import CompiledDef
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -20,4 +20,3 @@ class ModuleDef(CompiledDef):
     globals: "Globals"
 
     description: str = field(default="module", init=False)
-

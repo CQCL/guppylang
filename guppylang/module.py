@@ -154,7 +154,13 @@ class GuppyModule:
         """Imports all public members of a module."""
         if isinstance(mod, GuppyModule):
             mod.check()
-            self.load(*(defn for defn in mod._globals.defs.values() if not defn.name.startswith("_")))
+            self.load(
+                *(
+                    defn
+                    for defn in mod._globals.defs.values()
+                    if not defn.name.startswith("_")
+                )
+            )
         elif isinstance(mod, ModuleType):
             self.load_all(find_guppy_module_in_py_module(mod))
         else:
@@ -344,9 +350,7 @@ def find_guppy_module_in_py_module(module: ModuleType) -> GuppyModule:
 
     Raises a user-error if no unique module can be found.
     """
-    mods = [
-        val for val in module.__dict__.values() if isinstance(val, GuppyModule)
-    ]
+    mods = [val for val in module.__dict__.values() if isinstance(val, GuppyModule)]
     if not mods:
         msg = f"No Guppy modules found in `{module.__name__}`"
         raise GuppyError(msg)

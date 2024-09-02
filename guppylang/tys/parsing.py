@@ -77,7 +77,7 @@ def arg_from_ast(
     raise GuppyError("Not a valid type argument", node)
 
 
-def _try_parse_defn(node: ast.expr, globals: Globals) -> Definition | None:
+def _try_parse_defn(node: AstNode, globals: Globals) -> Definition | None:
     """Tries to parse a (possibly qualified) name into a global definition."""
     match node:
         case ast.Name(id=x):
@@ -92,7 +92,7 @@ def _try_parse_defn(node: ast.expr, globals: Globals) -> Definition | None:
                 raise GuppyError(
                     f"Expected a module, got {module_def.description} "
                     f"`{module_def.name}`",
-                    value
+                    value,
                 )
             if x not in module_def.globals:
                 raise GuppyError(
