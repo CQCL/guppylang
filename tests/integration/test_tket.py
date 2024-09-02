@@ -30,7 +30,7 @@ def test_lower_pure_circuit():
     import pytket
 
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def my_func(
@@ -62,7 +62,7 @@ def test_lower_hybrid_circuit():
     import pytket
 
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def my_func(

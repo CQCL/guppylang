@@ -14,22 +14,23 @@ It allows you to write high-level hybrid quantum programs with classical control
 ```python
 from guppylang import guppy, qubit, quantum
 
-guppy.load(quantum)
+guppy.load_all(quantum)
+
 
 # Teleports the state in `src` to `tgt`.
 @guppy
 def teleport(src: qubit, tgt: qubit) -> qubit:
-   # Create ancilla and entangle it with src and tgt
-   tmp = qubit()
-   tmp, tgt = cx(h(tmp), tgt)
-   src, tmp = cx(src, tmp)
+    # Create ancilla and entangle it with src and tgt
+    tmp = qubit()
+    tmp, tgt = cx(h(tmp), tgt)
+    src, tmp = cx(src, tmp)
 
-   # Apply classical corrections
-   if measure(h(src)):
-      tgt = z(tgt)
-   if measure(tmp):
-      tgt = x(tgt)
-   return tgt
+    # Apply classical corrections
+    if measure(h(src)):
+        tgt = z(tgt)
+    if measure(tmp):
+        tgt = x(tgt)
+    return tgt
 ```
 
 More examples and tutorials are available [here][examples].

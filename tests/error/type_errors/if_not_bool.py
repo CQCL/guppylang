@@ -4,7 +4,7 @@ from guppylang.module import GuppyModule
 from tests.error.util import NonBool
 
 module = GuppyModule("test")
-module.load(tests.error.util)
+module.load_all(tests.error.util)
 
 
 @guppy(module)

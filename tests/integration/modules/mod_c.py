@@ -2,7 +2,7 @@ from guppylang import GuppyModule, guppy
 from tests.integration.modules.mod_a import f, mod_a, MyType
 
 mod_c = GuppyModule("mod_c")
-mod_c.load(mod_a)
+mod_c.load_all(mod_a)
 
 
 @guppy.declare(mod_c)

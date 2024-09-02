@@ -6,7 +6,7 @@ import guppylang.prelude.quantum as quantum
 
 def test_redefinition(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test() -> bool:

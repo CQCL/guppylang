@@ -20,7 +20,7 @@ def test_basic(validate):
 
 def test_basic_linear(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test(qs: linst[qubit]) -> linst[qubit]:
@@ -47,7 +47,7 @@ def test_multiple(validate):
 
 def test_multiple_struct(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.struct(module)
     class MyStruct:
@@ -70,7 +70,7 @@ def test_tuple_pat(validate):
 
 def test_tuple_pat_linear(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test(qs: linst[tuple[int, qubit, qubit]]) -> linst[tuple[qubit, qubit]]:
@@ -151,7 +151,7 @@ def test_nested_right(validate):
 
 def test_nested_linear(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test(qs: linst[qubit]) -> linst[qubit]:
@@ -162,7 +162,7 @@ def test_nested_linear(validate):
 
 def test_classical_linst_comp(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test(xs: list[int]) -> linst[int]:
@@ -173,7 +173,7 @@ def test_classical_linst_comp(validate):
 
 def test_linear_discard(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def discard(q: qubit) -> None: ...
@@ -187,7 +187,7 @@ def test_linear_discard(validate):
 
 def test_linear_discard_struct(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.struct(module)
     class MyStruct:
@@ -206,7 +206,7 @@ def test_linear_discard_struct(validate):
 
 def test_linear_consume_in_guard(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def cond(q: qubit) -> bool: ...
@@ -220,7 +220,7 @@ def test_linear_consume_in_guard(validate):
 
 def test_linear_consume_in_iter(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def make_list(q: qubit) -> list[int]: ...
@@ -234,7 +234,7 @@ def test_linear_consume_in_iter(validate):
 
 def test_linear_next_nonlinear_iter(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.type(module, NoneType().to_hugr())
     class MyIter:
@@ -266,7 +266,7 @@ def test_linear_next_nonlinear_iter(validate):
 
 def test_nonlinear_next_linear_iter(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.type(
         module,
