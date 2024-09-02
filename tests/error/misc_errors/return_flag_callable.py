@@ -11,7 +11,7 @@ module.load(quantum)
 
 
 @guppy.declare(module)
-def foo(f: Callable[[], qubit @inout]) -> None: ...
+def foo(f: "Callable[[], qubit @inout]") -> None: ...
 
 
 module.compile()

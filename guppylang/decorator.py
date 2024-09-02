@@ -34,6 +34,7 @@ FuncDefDecorator = Callable[[PyFunc], RawFunctionDef]
 FuncDeclDecorator = Callable[[PyFunc], RawFunctionDecl]
 CustomFuncDecorator = Callable[[PyFunc], RawCustomFunctionDef]
 ClassDecorator = Callable[[type], type]
+OpaqueTypeDecorator = Callable[[type], OpaqueTypeDef]
 StructDecorator = Callable[[type], RawStructDef]
 
 
@@ -127,7 +128,7 @@ class _Guppy:
         name: str = "",
         linear: bool = False,
         bound: ht.TypeBound | None = None,
-    ) -> ClassDecorator:
+    ) -> OpaqueTypeDecorator:
         """Decorator to annotate a class definitions as Guppy types.
 
         Requires the static Hugr translation of the type. Additionally, the type can be
@@ -136,7 +137,7 @@ class _Guppy:
         """
         module._instance_func_buffer = {}
 
-        def dec(c: type) -> type:
+        def dec(c: type) -> OpaqueTypeDef:
             defn = OpaqueTypeDef(
                 DefId.fresh(module),
                 name or c.__name__,
@@ -148,7 +149,7 @@ class _Guppy:
             )
             module.register_def(defn)
             module._register_buffered_instance_funcs(defn)
-            return c
+            return defn
 
         return dec
 
