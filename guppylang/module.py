@@ -136,7 +136,7 @@ class GuppyModule:
                     raise GuppyError(msg)
                 imports.append((alias, mods[0]))
             else:
-                msg = f"Object `{imp}` cannot be imported"
+                msg = f"Only Guppy definitions or modules can be imported. Got `{imp}`"
                 raise GuppyError(msg)
 
         # Also include any impls that are defined by the imported modules
