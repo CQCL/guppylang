@@ -28,6 +28,7 @@ from guppylang.nodes import (
     GlobalCall,
     GlobalName,
     LocalCall,
+    PartialApply,
     PlaceNode,
     ResultExpr,
     TensorCall,
@@ -323,6 +324,16 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_Call(self, node: ast.Call) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
+
+    def visit_PartialApply(self, node: PartialApply) -> Wire:
+        from guppylang.compiler.func_compiler import make_partial_op
+
+        func_ty = get_type(node.func)
+        assert isinstance(func_ty, FunctionType)
+        op = make_partial_op(func_ty, [get_type(arg) for arg in node.args])
+        return self.builder.add_op(
+            op, self.visit(node.func), *(self.visit(arg) for arg in node.args)
+        )
 
     def visit_TypeApply(self, node: TypeApply) -> Wire:
         # For now, we can only TypeApply global FunctionDefs/Decls.

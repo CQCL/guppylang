@@ -66,3 +66,14 @@ def test_unary_tuple(validate):
         return y
 
     validate(module.compile())
+
+
+def test_method_call(validate):
+    module = GuppyModule("module")
+
+    @guppy(module)
+    def foo(x: int) -> int:
+        return x.__add__(2)
+
+    validate(module.compile())
+

@@ -108,6 +108,33 @@ def test_generic(validate):
     validate(module.compile())
 
 
+def test_methods(validate):
+    module = GuppyModule("module")
+
+    @guppy.struct(module)
+    class StructA:
+        x: int
+
+        @guppy(module)
+        def foo(self: "StructA", y: int) -> int:
+            return 2 * self.x + y
+
+    @guppy.struct(module)
+    class StructB:
+        x: int
+        y: float
+
+        @guppy(module)
+        def bar(self: "StructB", a: StructA) -> float:
+            return a.foo(self.x) + self.y
+
+    @guppy(module)
+    def main(a: StructA, b: StructB) -> tuple[int, float]:
+        return a.foo(1), b.bar(a)
+
+    validate(module.compile())
+
+
 def test_higher_order(validate):
     module = GuppyModule("module")
     T = guppy.type_var(module, "T")
