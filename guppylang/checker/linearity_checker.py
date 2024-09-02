@@ -30,6 +30,7 @@ from guppylang.nodes import (
     GlobalCall,
     InoutReturnSentinel,
     LocalCall,
+    PartialApply,
     PlaceNode,
     TensorCall,
 )
@@ -198,6 +199,19 @@ class BBLinearityChecker(ast.NodeVisitor):
         for arg in node.args:
             self.visit(arg)
         self._reassign_inout_args(node.tensor_ty, node.args)
+
+    def visit_PartialApply(self, node: PartialApply) -> None:
+        self.visit(node.func)
+        for arg in node.args:
+            ty = get_type(arg)
+            if ty.linear:
+                raise GuppyError(
+                    f"Capturing a value with linear type `{ty}` in a closure is not "
+                    "allowed. Try calling the function directly instead of using it as "
+                    "a higher-order value.",
+                    node,
+                )
+            self.visit(arg)
 
     def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> None:
         # A field access on a value that is not a place. This means the value can no
