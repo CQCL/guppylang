@@ -264,7 +264,6 @@ class GuppyModule:
             if isinstance(defn, CheckedStructDef):
                 self._globals.impls.setdefault(defn.id, {})
                 for method_def in defn.generated_methods():
-                    # We might have checked
                     generated[method_def.id] = method_def
                     self._globals.impls[defn.id][method_def.name] = method_def.id
 
