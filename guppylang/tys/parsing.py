@@ -7,6 +7,8 @@ from guppylang.ast_util import (
     shift_loc,
 )
 from guppylang.checker.core import Globals
+from guppylang.definition.common import Definition
+from guppylang.definition.module import ModuleDef
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError
@@ -31,62 +33,20 @@ def arg_from_ast(
     param_var_mapping: dict[str, Parameter] | None = None,
 ) -> Argument:
     """Turns an AST expression into an argument."""
-    # A single identifier
-    if isinstance(node, ast.Name):
-        x = node.id
-        if x not in globals:
-            raise GuppyError("Unknown identifier", node)
-        match globals[x]:
-            # Special case for the `Callable` type
-            case CallableTypeDef():
-                return TypeArg(
-                    _parse_callable_type([], node, globals, param_var_mapping)
-                )
-            # Either a defined type (e.g. `int`, `bool`, ...)
-            case TypeDef() as defn:
-                return TypeArg(defn.check_instantiate([], globals, node))
-            # Or a parameter (e.g. `T`, `n`, ...)
-            case ParamDef() as defn:
-                if param_var_mapping is None:
-                    raise GuppyError(
-                        "Free type variable. Only function types can be generic", node
-                    )
-                if x not in param_var_mapping:
-                    param_var_mapping[x] = defn.to_param(len(param_var_mapping))
-                return param_var_mapping[x].to_bound()
-            case defn:
-                raise GuppyError(
-                    f"Expected a type, got {defn.description} `{defn.name}`", node
-                )
+    # A single (possibly qualified) identifier
+    if defn := _try_parse_defn(node, globals):
+        return _arg_from_instantiated_defn(defn, [], globals, node, param_var_mapping)
 
     # A parametrised type, e.g. `list[??]`
-    if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
-        x = node.value.id
-        if x in globals:
-            defn = globals[x]
-            arg_nodes = (
-                node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
-            )
-            if isinstance(defn, CallableTypeDef):
-                # Special case for the `Callable[[S1, S2, ...], T]` type to support the
-                # input list syntax and @inout annotations.
-                return TypeArg(
-                    _parse_callable_type(arg_nodes, node, globals, param_var_mapping)
-                )
-            if isinstance(defn, TypeDef):
-                args = [
-                    arg_from_ast(arg_node, globals, param_var_mapping)
-                    for arg_node in arg_nodes
-                ]
-                ty = defn.check_instantiate(args, globals, node)
-                return TypeArg(ty)
-            # We don't allow parametrised variables like `T[int]`
-            if isinstance(defn, ParamDef):
-                raise GuppyError(
-                    f"Variable `{x}` is not parameterized. Higher-kinded types are not "
-                    f"supported",
-                    node,
-                )
+    if isinstance(node, ast.Subscript) and (
+        defn := _try_parse_defn(node.value, globals)
+    ):
+        arg_nodes = (
+            node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+        )
+        return _arg_from_instantiated_defn(
+            defn, arg_nodes, globals, node, param_var_mapping
+        )
 
     # We allow tuple types to be written as `(int, bool)`
     if isinstance(node, ast.Tuple):
@@ -115,6 +75,76 @@ def arg_from_ast(
         return arg_from_ast(node, globals, param_var_mapping)
 
     raise GuppyError("Not a valid type argument", node)
+
+
+def _try_parse_defn(node: ast.expr, globals: Globals) -> Definition | None:
+    """Tries to parse a (possibly qualified) name into a global definition."""
+    match node:
+        case ast.Name(id=x):
+            if x not in globals:
+                raise GuppyError("Unknown identifier", node)
+            return globals[x]
+        case ast.Attribute(value=ast.Name(id=module_name) as value, attr=x):
+            if module_name not in globals:
+                raise GuppyError("Unknown identifier", value)
+            module_def = globals[module_name]
+            if not isinstance(module_def, ModuleDef):
+                raise GuppyError(
+                    f"Expected a module, got {module_def.description} "
+                    f"`{module_def.name}`",
+                    value
+                )
+            if x not in module_def.globals:
+                raise GuppyError(
+                    f"Module `{module_def.name}` has no member `{x}`", node
+                )
+            return module_def.globals[x]
+        case _:
+            return None
+
+
+def _arg_from_instantiated_defn(
+    defn: Definition,
+    arg_nodes: list[ast.expr],
+    globals: Globals,
+    node: AstNode,
+    param_var_mapping: dict[str, Parameter] | None = None,
+) -> Argument:
+    """Parses a globals definition with type args into an argument."""
+    match defn:
+        # Special case for the `Callable` type
+        case CallableTypeDef():
+            return TypeArg(
+                _parse_callable_type(arg_nodes, node, globals, param_var_mapping)
+            )
+        # Either a defined type (e.g. `int`, `bool`, ...)
+        case TypeDef() as defn:
+            args = [
+                arg_from_ast(arg_node, globals, param_var_mapping)
+                for arg_node in arg_nodes
+            ]
+            ty = defn.check_instantiate(args, globals, node)
+            return TypeArg(ty)
+        # Or a parameter (e.g. `T`, `n`, ...)
+        case ParamDef() as defn:
+            # We don't allow parametrised variables like `T[int]`
+            if arg_nodes:
+                raise GuppyError(
+                    f"Variable `{defn.name}` is not parameterized. Higher-kinded types "
+                    f"are not supported",
+                    node,
+                )
+            if param_var_mapping is None:
+                raise GuppyError(
+                    "Free type variable. Only function types can be generic", node
+                )
+            if defn.name not in param_var_mapping:
+                param_var_mapping[defn.name] = defn.to_param(len(param_var_mapping))
+            return param_var_mapping[defn.name].to_bound()
+        case defn:
+            raise GuppyError(
+                f"Expected a type, got {defn.description} `{defn.name}`", node
+            )
 
 
 def _parse_delayed_annotation(ast_str: str, node: ast.Constant) -> ast.expr:
