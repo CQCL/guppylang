@@ -123,3 +123,17 @@ def test_func_transitive(validate):
         return h(x)
 
     validate(module.compile())
+
+
+def test_qualified(validate):
+    import tests.integration.modules.mod_a as mod_a
+    import tests.integration.modules.mod_b as mod_b
+
+    module = GuppyModule("test")
+    module.load(mod_a, mod_b)
+
+    @guppy(module)
+    def test(x: int, y: bool) -> tuple[int, bool]:
+        return mod_a.f(x), mod_b.f(y)
+
+    validate(module.compile())
