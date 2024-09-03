@@ -4,7 +4,7 @@ from guppylang.prelude.builtins import inout
 from guppylang.prelude.quantum import qubit, quantum
 
 module = GuppyModule("test")
-module.load(quantum)
+module.load_all(quantum)
 
 
 @guppy.declare(module)

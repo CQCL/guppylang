@@ -15,7 +15,7 @@ from guppylang.prelude.quantum import (
 )
 
 module = GuppyModule("t_factory")
-module.load(quantum)
+module.load_all(quantum)
 
 phi = np.arccos(1 / 3)
 pi = np.pi

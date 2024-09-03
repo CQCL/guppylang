@@ -115,7 +115,7 @@ def test_pytket_single_qubit(validate):
     circ.H(0)
 
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def foo(q: qubit) -> qubit:
@@ -137,7 +137,7 @@ def test_pytket_multi_qubit(validate):
     circ.CZ(2, 0)
 
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def foo(q1: qubit, q2: qubit, q3: qubit) -> tuple[qubit, qubit, qubit]:
@@ -158,7 +158,7 @@ def test_pytket_measure(validate):
     circ.measure_all()
 
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def foo(q: qubit) -> tuple[qubit, bool]:

@@ -1,0 +1,6 @@
+Guppy compilation failed. Error in file $FILE:5
+
+3:    @compile_guppy
+4:    def f(x: "foo.bar") -> None:
+                ^^^
+GuppyError: Unknown identifier
