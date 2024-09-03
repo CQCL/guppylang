@@ -20,6 +20,7 @@ from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import Variable
 from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import CompilerBase, DFContainer
+from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
@@ -30,6 +31,7 @@ from guppylang.nodes import (
     GlobalName,
     InoutReturnSentinel,
     LocalCall,
+    PartialApply,
     PlaceNode,
     ResultExpr,
     SubscriptAccessAndDrop,
@@ -45,6 +47,7 @@ from guppylang.tys.const import BoundConstVar, ConstValue, ExistentialConstVar
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
+    FuncInput,
     FunctionType,
     InputFlags,
     NoneType,
@@ -338,11 +341,28 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         rets = func.compile_call(
             args, list(node.type_args), self.dfg, self.globals, node
         )
-        self._update_inout_ports(node.args, iter(rets.inout_returns), func.ty)
-        return self._pack_returns(rets.regular_returns, func.ty.output)
+        if isinstance(func, CustomFunctionDef) and not func.has_signature:
+            func_ty = FunctionType(
+                [FuncInput(get_type(arg), InputFlags.NoFlags) for arg in node.args],
+                get_type(node),
+            )
+        else:
+            func_ty = func.ty.instantiate(node.type_args)
+        self._update_inout_ports(node.args, iter(rets.inout_returns), func_ty)
+        return self._pack_returns(rets.regular_returns, func_ty.output)
 
     def visit_Call(self, node: ast.Call) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
+
+    def visit_PartialApply(self, node: PartialApply) -> Wire:
+        from guppylang.compiler.func_compiler import make_partial_op
+
+        func_ty = get_type(node.func)
+        assert isinstance(func_ty, FunctionType)
+        op = make_partial_op(func_ty, [get_type(arg) for arg in node.args])
+        return self.builder.add_op(
+            op, self.visit(node.func), *(self.visit(arg) for arg in node.args)
+        )
 
     def visit_TypeApply(self, node: TypeApply) -> Wire:
         # For now, we can only TypeApply global FunctionDefs/Decls.

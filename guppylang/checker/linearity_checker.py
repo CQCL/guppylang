@@ -21,6 +21,7 @@ from guppylang.checker.core import (
     SubscriptAccess,
     Variable,
 )
+from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
@@ -31,11 +32,13 @@ from guppylang.nodes import (
     GlobalCall,
     InoutReturnSentinel,
     LocalCall,
+    PartialApply,
     PlaceNode,
     SubscriptAccessAndDrop,
     TensorCall,
 )
 from guppylang.tys.ty import (
+    FuncInput,
     FunctionType,
     InputFlags,
     StructType,
@@ -215,7 +218,13 @@ class BBLinearityChecker(ast.NodeVisitor):
     def visit_GlobalCall(self, node: GlobalCall) -> None:
         func = self.globals[node.def_id]
         assert isinstance(func, CallableDef)
-        func_ty = func.ty.instantiate(node.type_args)
+        if isinstance(func, CustomFunctionDef) and not func.has_signature:
+            func_ty = FunctionType(
+                [FuncInput(get_type(arg), InputFlags.NoFlags) for arg in node.args],
+                get_type(node),
+            )
+        else:
+            func_ty = func.ty.instantiate(node.type_args)
         self._visit_call_args(func_ty, node.args)
         self._reassign_inout_args(func_ty, node.args)
 
@@ -230,6 +239,19 @@ class BBLinearityChecker(ast.NodeVisitor):
         for arg in node.args:
             self.visit(arg)
         self._reassign_inout_args(node.tensor_ty, node.args)
+
+    def visit_PartialApply(self, node: PartialApply) -> None:
+        self.visit(node.func)
+        for arg in node.args:
+            ty = get_type(arg)
+            if ty.linear:
+                raise GuppyError(
+                    f"Capturing a value with linear type `{ty}` in a closure is not "
+                    "allowed. Try calling the function directly instead of using it as "
+                    "a higher-order value.",
+                    node,
+                )
+            self.visit(arg)
 
     def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> None:
         # A field access on a value that is not a place. This means the value can no
@@ -465,6 +487,8 @@ def check_cfg_linearity(
     checked: dict[BB, CheckedBB[Place]] = {}
 
     for bb, scope in scopes.items():
+        live_before_bb = live_before[bb]
+
         # We have to check that used linear variables are not being outputted
         for succ in bb.successors:
             live = live_before[succ]
@@ -497,6 +521,12 @@ def check_cfg_linearity(
             for place in scope.values():
                 for leaf in leaf_places(place):
                     x = leaf.id
+                    # Some values are just in scope because the type checker determined
+                    # them as live in the first (less precises) dataflow analysis. It
+                    # might be the case that x is actually not live when considering
+                    # the second, more fine-grained, analysis based on places.
+                    if x not in live_before_bb and x not in scope.vars:
+                        continue
                     used_later = x in live
                     if leaf.ty.linear and not scope.used(x) and not used_later:
                         # TODO: This should be "Variable x with linear type ty is not

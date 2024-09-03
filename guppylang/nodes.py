@@ -80,6 +80,22 @@ class TypeApply(ast.expr):
     )
 
 
+class PartialApply(ast.expr):
+    """A partial function application.
+
+    This node is emitted when methods are loaded as values, since this requires
+    partially applying the `self` argument.
+    """
+
+    func: ast.expr
+    args: list[ast.expr]
+
+    _fields = (
+        "func",
+        "args",
+    )
+
+
 class FieldAccessAndDrop(ast.expr):
     """A field access on a struct, dropping all the remaining other fields."""
 

@@ -66,6 +66,7 @@ from guppylang.nodes import (
     IterNext,
     LocalCall,
     MakeIter,
+    PartialApply,
     PlaceNode,
     PyExpr,
     SubscriptAccessAndDrop,
@@ -245,6 +246,12 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             if isinstance(defn, CallableDef):
                 return defn.check_call(node.args, ty, node, self.ctx)
 
+        # When calling a `PartialApply` node, we just move the args into this call
+        if isinstance(node.func, PartialApply):
+            node.args = [*node.func.args, *node.args]
+            node.func = node.func.func
+            return self.visit_Call(node, ty)
+
         # Otherwise, it must be a function as a higher-order value - something
         # whose type is either a FunctionType or a Tuple of FunctionTypes
         if isinstance(func_ty, FunctionType):
@@ -377,6 +384,19 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 # you loose access to all fields besides `a`).
                 expr = FieldAccessAndDrop(value=node.value, struct_ty=ty, field=field)
             return with_loc(node, expr), field.ty
+        elif func := self.ctx.globals.get_instance_func(ty, node.attr):
+            name = with_type(
+                func.ty, with_loc(node, GlobalName(id=func.name, def_id=func.id))
+            )
+            # Make a closure by partially applying the `self` argument
+            # TODO: Try to infer some type args based on `self`
+            result_ty = FunctionType(
+                func.ty.inputs[1:],
+                func.ty.output,
+                func.ty.input_names[1:] if func.ty.input_names else None,
+                func.ty.params,
+            )
+            return with_loc(node, PartialApply(func=name, args=[node.value])), result_ty
         raise GuppyTypeError(
             f"Expression of type `{ty}` has no attribute `{node.attr}`",
             # Unfortunately, `node.attr` doesn't contain source annotations, so we have
@@ -543,6 +563,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             defn = self.ctx.globals[node.func.def_id]
             if isinstance(defn, CallableDef):
                 return defn.synthesize_call(node.args, node, self.ctx)
+
+        # When calling a `PartialApply` node, we just move the args into this call
+        if isinstance(node.func, PartialApply):
+            node.args = [*node.func.args, *node.args]
+            node.func = node.func.func
+            return self.visit_Call(node)
 
         # Otherwise, it must be a function as a higher-order value, or a tensor
         if isinstance(ty, FunctionType):

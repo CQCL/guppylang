@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:13
+
+11:    @guppy(module)
+12:    def main() -> array[int, 1]:
+13:        array(False)
+           ^^^^^^^^^^^^
+GuppyError: Expected return statement

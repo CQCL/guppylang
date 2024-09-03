@@ -55,6 +55,17 @@ def test_call_2(validate):
     validate(module.compile())
 
 
+def test_method(validate):
+    module = GuppyModule("module")
+
+    @guppy(module)
+    def foo(x: int) -> tuple[int, Callable[[int], int]]:
+        f = x.__add__
+        return f(1), f
+
+    validate(module.compile())
+
+
 def test_nested(validate):
     @compile_guppy
     def foo(x: int) -> Callable[[int], bool]:

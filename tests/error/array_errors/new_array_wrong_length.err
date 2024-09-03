@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:13
+
+11:    @guppy(module)
+12:    def main() -> array[int, 2]:
+13:        return array(1, 2, 3)
+                  ^^^^^^^^^^^^^^
+GuppyTypeError: Expected expression of type `array[int, 2]`, got `array[int, 3]`
