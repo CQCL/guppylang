@@ -13,6 +13,7 @@ from hugr import tys as ht
 from hugr import val as hv
 from hugr.build.cond_loop import Conditional
 from hugr.build.dfg import DP, DfBase
+from hugr.std.collections import ListVal
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
@@ -532,8 +533,6 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
 
     Returns None if the Python value cannot be represented in Guppy.
     """
-    from guppylang.prelude._internal.util import ListVal
-
     match v:
         case bool():
             return hv.bool_value(v)
@@ -553,7 +552,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
             assert is_list_type(exp_ty)
             vs = [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
             if doesnt_contain_none(vs):
-                return ListVal(vs, get_element_type(exp_ty))
+                return ListVal(vs, get_element_type(exp_ty).to_hugr())
         case _:
             # Pytket conversion is an optional feature
             try:

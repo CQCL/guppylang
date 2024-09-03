@@ -5,39 +5,16 @@ definitions from the hugr library.
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from hugr import ops
 from hugr import tys as ht
-from hugr import val as hv
 
-from guppylang.tys.builtin import list_type
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import NumericType, Type
+from guppylang.tys.ty import NumericType
 
 if TYPE_CHECKING:
     from guppylang.tys.arg import Argument
-
-
-@dataclass
-class ListVal(hv.ExtensionValue):
-    """Custom value for a floating point number."""
-
-    v: list[hv.Value]
-    ty: ht.Type
-
-    def __init__(self, v: list[hv.Value], elem_ty: Type) -> None:
-        self.v = v
-        self.ty = list_type(elem_ty).to_hugr()
-
-    def to_value(self) -> hv.Extension:
-        # The value list must be serialized at this point, otherwise the
-        # `Extension` will not be serializable.
-        vs = [v._to_serial_root() for v in self.v]
-        return hv.Extension(
-            name="ListValue", typ=self.ty, val=vs, extensions=["Collections"]
-        )
 
 
 def int_arg(n: int = NumericType.INT_WIDTH) -> ht.TypeArg:
