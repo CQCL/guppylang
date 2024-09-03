@@ -6,6 +6,10 @@ from hugr.std.float import FLOAT_T
 from guppylang.definition.custom import (
     CustomCallCompiler,
 )
+from guppylang.error import InternalGuppyError
+from guppylang.tys.arg import ConstArg, TypeArg
+from guppylang.tys.builtin import array_type
+from guppylang.tys.const import ConstValue
 from guppylang.tys.ty import NumericType
 
 # Note: Hugr's INT_T is 64bits, but guppy defaults to 32bits
@@ -185,6 +189,30 @@ class FloatDivmodCompiler(CustomCallCompiler):
             ht.FunctionType([FLOAT_T] * len(args), [FLOAT_T]),
         )
         return list(self.builder.add(ops.MakeTuple()(div, mod)))
+
+
+class NewArrayCompiler(CustomCallCompiler):
+    """Compiler for the `array.__new__` function."""
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        match self.type_args:
+            case [
+                TypeArg(ty=elem_ty) as ty_arg,
+                ConstArg(ConstValue(value=int(length))) as len_arg,
+            ]:
+                sig = ht.FunctionType(
+                    [elem_ty.to_hugr()] * len(args),
+                    [array_type(elem_ty, length).to_hugr()],
+                )
+                op = ops.Custom(
+                    extension="prelude",
+                    signature=sig,
+                    name="new_array",
+                    args=[len_arg.to_hugr(), ty_arg.to_hugr()],
+                )
+                return [self.builder.add_op(op, *args)]
+            case type_args:
+                raise InternalGuppyError(f"Invalid array type args: {type_args}")
 
 
 class MeasureCompiler(CustomCallCompiler):

@@ -20,6 +20,7 @@ from guppylang.checker.core import (
     PlaceId,
     Variable,
 )
+from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
@@ -34,7 +35,7 @@ from guppylang.nodes import (
     PlaceNode,
     TensorCall,
 )
-from guppylang.tys.ty import FunctionType, InputFlags, StructType
+from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, StructType
 
 
 class Scope(Locals[PlaceId, Place]):
@@ -184,7 +185,13 @@ class BBLinearityChecker(ast.NodeVisitor):
     def visit_GlobalCall(self, node: GlobalCall) -> None:
         func = self.globals[node.def_id]
         assert isinstance(func, CallableDef)
-        func_ty = func.ty.instantiate(node.type_args)
+        if isinstance(func, CustomFunctionDef) and not func.has_signature:
+            func_ty = FunctionType(
+                [FuncInput(get_type(arg), InputFlags.NoFlags) for arg in node.args],
+                get_type(node),
+            )
+        else:
+            func_ty = func.ty.instantiate(node.type_args)
         self._visit_call_args(func_ty, node.args)
         self._reassign_inout_args(func_ty, node.args)
 
