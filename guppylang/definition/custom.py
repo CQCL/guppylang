@@ -7,7 +7,7 @@ from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.dfg import _DfBase
 
-from guppylang.ast_util import AstNode, with_loc, with_type
+from guppylang.ast_util import AstNode, get_type, with_loc, with_type
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
@@ -17,7 +17,7 @@ from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import FunctionType, NoneType, Type
+from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, NoneType, Type
 
 
 @dataclass(frozen=True)
@@ -61,7 +61,8 @@ class RawCustomFunctionDef(ParsableDef):
         code. The only information we need to access is that it's a function type and
         that there are no unsolved existential vars.
         """
-        ty = self._get_signature(globals) or FunctionType([], NoneType())
+        sig = self._get_signature(globals)
+        ty = sig or FunctionType([], NoneType())
         return CustomFunctionDef(
             self.id,
             self.name,
@@ -70,6 +71,7 @@ class RawCustomFunctionDef(ParsableDef):
             self.call_checker,
             self.call_compiler,
             self.higher_order_value,
+            sig is not None,
         )
 
     def compile_call(
@@ -131,10 +133,12 @@ class CustomFunctionDef(CompiledCallableDef):
         id: The unique definition identifier.
         name: The name of the definition.
         defined_at: The AST node where the definition was defined.
-        ty: The type of the function.
+        ty: The type of the function. This may be a dummy value if `has_signature` is
+            false.
         call_checker: The custom call checker.
         call_compiler: The custom call compiler.
         higher_order_value: Whether the function may be used as a higher-order value.
+        has_signature: Whether the function has a declared signature.
     """
 
     defined_at: AstNode
@@ -142,6 +146,7 @@ class CustomFunctionDef(CompiledCallableDef):
     call_checker: "CustomCallChecker"
     call_compiler: "CustomInoutCallCompiler"
     higher_order_value: bool
+    has_signature: bool
 
     description: str = field(default="function", init=False)
 
@@ -222,7 +227,14 @@ class CustomFunctionDef(CompiledCallableDef):
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
-        concrete_ty = self.ty.instantiate(type_args)
+        if self.has_signature:
+            concrete_ty = self.ty.instantiate(type_args)
+        else:
+            assert isinstance(node, GlobalCall)
+            concrete_ty = FunctionType(
+                [FuncInput(get_type(arg), InputFlags.NoFlags) for arg in node.args],
+                get_type(node),
+            )
         hugr_ty = concrete_ty.to_hugr()
 
         self.call_compiler._setup(type_args, dfg, globals, node, hugr_ty)

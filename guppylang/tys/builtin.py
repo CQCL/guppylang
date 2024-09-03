@@ -9,6 +9,7 @@ from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.const import ConstValue
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
     FunctionType,
@@ -203,6 +204,13 @@ def list_type(element_ty: Type) -> OpaqueType:
 
 def linst_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], linst_type_def)
+
+
+def array_type(element_ty: Type, length: int) -> OpaqueType:
+    nat_type = NumericType(NumericType.Kind.Nat)
+    return OpaqueType(
+        [TypeArg(element_ty), ConstArg(ConstValue(nat_type, length))], array_type_def
+    )
 
 
 def is_bool_type(ty: Type) -> bool:

@@ -29,3 +29,30 @@ def test_index(validate):
         return xs[0] + xs[i] + xs[xs[2 * i]]
 
     validate(main)
+
+
+def test_new_array(validate):
+    @compile_guppy
+    def main(x: int, y: int) -> array[int, 3]:
+        xs = array(x, y, x)
+        return xs
+
+    validate(main)
+
+
+def test_new_array_infer_empty(validate):
+    @compile_guppy
+    def main() -> array[float, 0]:
+        return array()
+
+    validate(main)
+
+
+def test_new_array_infer_nested(validate):
+    @compile_guppy
+    def main(ys: array[int, 0]) -> array[array[int, 0], 2]:
+        xs = array(ys, array())
+        return xs
+
+    validate(main)
+

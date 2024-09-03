@@ -14,6 +14,7 @@ from guppylang.prelude._internal.checker import (
     CoercingChecker,
     DunderChecker,
     FailingChecker,
+    NewArrayChecker,
     ResultChecker,
     ReversingChecker,
     UnsupportedChecker,
@@ -25,6 +26,7 @@ from guppylang.prelude._internal.compiler import (
     FloatModCompiler,
     IntTruedivCompiler,
     NatTruedivCompiler,
+    NewArrayCompiler,
 )
 from guppylang.prelude._internal.util import (
     custom_op,
@@ -81,6 +83,9 @@ _n = TypeVar("_n")
 
 class array(Generic[_T, _n]):
     """Class to import in order to use arrays."""
+
+    def __init__(self, *args: _T):
+        pass
 
 
 @guppy.extend_type(builtins, bool_type_def)
@@ -659,6 +664,11 @@ class Array:
 
     @guppy.custom(builtins, checker=ArrayLenChecker())
     def __len__(self: array[T, n]) -> int: ...
+
+    @guppy.custom(
+        builtins, NewArrayCompiler(), NewArrayChecker(), higher_order_value=False
+    )
+    def __new__(): ...
 
 
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.

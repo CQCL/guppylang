@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:13
+
+11:    @guppy(module)
+12:    def main() -> None:
+13:        xs = array()
+                ^^^^^^^
+GuppyTypeError: Cannot infer the array element type. Consider adding a type annotation.
