@@ -7,6 +7,11 @@ definitions from the hugr library.
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+import hugr.std.collections
+import hugr.std.float
+import hugr.std.int
+import hugr.std.logic
+from hugr import ext as he
 from hugr import ops
 from hugr import tys as ht
 
@@ -24,11 +29,6 @@ def int_arg(n: int = NumericType.INT_WIDTH) -> ht.TypeArg:
 
 def type_arg(idx: int = 0) -> ht.TypeArg:
     """A generic type argument."""
-    return ht.VariableArg(idx=idx, param=ht.TypeTypeParam(bound=ht.TypeBound.Copyable))
-
-
-def ltype_arg(idx: int = 0) -> ht.TypeArg:
-    """A generic linear type argument."""
     return ht.VariableArg(idx=idx, param=ht.TypeTypeParam(bound=ht.TypeBound.Any))
 
 
@@ -53,11 +53,11 @@ def make_concrete_arg(
     return arg
 
 
-def custom_op(
+def external_op(
     name: str,
     args: list[ht.TypeArg],
+    ext: he.Extension,
     *,
-    ext: str = "guppy.unsupported",
     variable_remap: dict[int, int] | None = None,
 ) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
     """Custom hugr operation
@@ -65,7 +65,7 @@ def custom_op(
     Args:
         op_name: The name of the operation.
         args: The type arguments of the operation.
-        ext: The extension of the operation. Defaults to a placeholder extension.
+        ext: The extension of the operation.
         variable_remap: A mapping from the hugr param variable indices to
             de Bruijn indices in the guppy type. Defaults to identity.
 
@@ -73,59 +73,22 @@ def custom_op(
         A function that takes an instantiation of the type arguments as well as
         the inferred input and output types and returns a concrete HUGR op.
     """
+    op_def = ext.get_op(name)
 
     def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
         concrete_args = [make_concrete_arg(arg, inst, variable_remap) for arg in args]
-        return ops.Custom(extension=ext, signature=ty, op_name=name, args=concrete_args)
+        return ops.ExtOp(
+            op_def,
+            ty,
+            concrete_args,
+        )
 
     return op
 
 
-def list_op(
-    op_name: str,
-    ext: str = "guppy.unsupported",
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
-    """Utility method to create Hugr list operations.
-
-    These ops have exactly one type argument, used to instantiate the list type.
-    If a the input or output types contain some variable type with index 0, it
-    is replaced with the type argument when instantiating the op.
-
-    Args:
-        op_name: The name of the operation.
-        ext: The extension of the operation.
-
-    Returns:
-        A function that takes an instantiation of the type arguments and returns
-        a concrete HUGR op.
-    """
-    return custom_op(op_name, args=[type_arg(0)], ext=ext, variable_remap=None)
-
-
-def linst_op(
-    op_name: str,
-    ext: str = "guppy.unsupported",
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
-    """Utility method to create linear Hugr list operations.
-
-    These ops have exactly one type argument, used to instantiate the list type.
-    If a the input or output types contain some variable type with index 0, it
-    is replaced with the type argument when instantiating the op.
-
-    Args:
-        op_name: The name of the operation.
-        ext: The extension of the operation.
-
-    Returns:
-        A function that takes an instantiation of the type arguments and returns
-        a concrete HUGR op.
-    """
-    return custom_op(op_name, args=[ltype_arg(0)], ext=ext, variable_remap=None)
-
-
 def float_op(
     op_name: str,
-    ext: str = "arithmetic.float",
+    ext: he.Extension = hugr.std.float.EXTENSION,
 ) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
     """Utility method to create Hugr float arithmetic ops.
 
@@ -137,12 +100,12 @@ def float_op(
         A function that takes an instantiation of the type arguments and returns
         a concrete HUGR op.
     """
-    return custom_op(op_name, args=[], ext=ext, variable_remap=None)
+    return external_op(op_name, args=[], ext=ext, variable_remap=None)
 
 
 def int_op(
     op_name: str,
-    ext: str = "arithmetic.int",
+    ext: he.Extension = hugr.std.int.INT_OPS_EXTENSION,
     n_vars: int = 1,
 ) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
     """Utility method to create Hugr integer arithmetic ops.
@@ -164,7 +127,7 @@ def int_op(
     # For now, we just instantiate every type argument to a 64-bit integer.
     args: list[ht.TypeArg] = [int_arg() for _ in range(n_vars)]
 
-    return custom_op(
+    return external_op(
         op_name,
         args=args,
         ext=ext,
@@ -173,7 +136,9 @@ def int_op(
 
 
 def logic_op(
-    op_name: str, parametric_size: bool = True, ext: str = "logic"
+    op_name: str,
+    parametric_size: bool = True,
+    ext: he.Extension = hugr.std.logic.EXTENSION,
 ) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
     """Utility method to create Hugr logic ops.
 
@@ -189,9 +154,14 @@ def logic_op(
         A function that takes an instantiation of the type arguments and returns
         a concrete HUGR op.
     """
+    op_def = ext.get_op(op_name)
 
     def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
         args = [int_arg(len(ty.input))] if parametric_size else []
-        return ops.Custom(extension=ext, signature=ty, op_name=op_name, args=args)
+        return ops.ExtOp(
+            op_def,
+            ty,
+            args,
+        )
 
     return op

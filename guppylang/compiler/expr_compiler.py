@@ -40,6 +40,11 @@ from guppylang.nodes import (
     TensorCall,
     TypeApply,
 )
+from guppylang.prelude._internal import list_compiler
+from guppylang.prelude._internal.std_ops import (
+    list_elem_type,
+    list_push,
+)
 from guppylang.tys.builtin import (
     get_element_type,
     is_bool_type,
@@ -207,12 +212,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def visit_List(self, node: ast.List) -> Wire:
         # Note that this is a list literal (i.e. `[e1, e2, ...]`), not a comprehension
         inputs = [self.visit(e) for e in node.elts]
-        in_types = [get_type(e) for e in node.elts]
-        out_type = get_type(node)
-        return self.builder.add_op(
-            make_list_op(in_types, out_type),
-            *inputs,
-        )
+        list_ty = get_type(node)
+        elem_ty = list_elem_type(list_ty)
+        return list_compiler.list_new(self.builder, elem_ty.to_hugr(), inputs)[0]
 
     def _unpack_tuple(self, wire: Wire, types: Sequence[Type]) -> Sequence[Wire]:
         """Add a tuple unpack operation to the graph"""
@@ -359,10 +361,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def visit_PartialApply(self, node: PartialApply) -> Wire:
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
-        op = (
-            PartialOp.from_closure(
-                func_ty.to_hugr(), [get_type(arg).to_hugr() for arg in node.args]
-            ),
+        op = PartialOp.from_closure(
+            func_ty.to_hugr(), [get_type(arg).to_hugr() for arg in node.args]
         )
         return self.builder.add_op(
             op, self.visit(node.func), *(self.visit(arg) for arg in node.args)
@@ -462,9 +462,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
         # Make up a name for the list under construction and bind it to an empty list
         list_ty = get_type(node)
+        elem_ty = list_elem_type(list_ty)
         list_place = Variable(next(tmp_vars), list_ty, node)
         list_name = with_type(list_ty, with_loc(node, PlaceNode(place=list_place)))
-        self.dfg[list_place] = self.builder.add_op(make_list_op([], list_ty))
+        self.dfg[list_place] = list_compiler.list_new(
+            self.builder, elem_ty.to_hugr(), []
+        )[0]
 
         def compile_generators(elt: ast.expr, gens: list[DesugaredGenerator]) -> None:
             """Helper function to generate nested TailLoop nodes for generators"""
@@ -473,7 +476,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 list_port, elt_port = self.visit(list_name), self.visit(elt)
                 elt_ty = get_type(elt)
                 push = self.builder.add_op(
-                    list_push_op(list_ty, elt_ty), list_port, elt_port
+                    list_push(elt_ty.to_hugr()), list_port, elt_port
                 )
                 self.dfg[list_place] = push
                 return
@@ -571,27 +574,6 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
             except ImportError:
                 pass
     return None
-
-
-def make_dummy_op(
-    name: str, inp: Sequence[Type], out: Sequence[Type]
-) -> ops.DataflowOp:
-    """Dummy operation."""
-    input = [ty.to_hugr() for ty in inp]
-    output = [ty.to_hugr() for ty in out]
-
-    sig = ht.FunctionType(input=input, output=output)
-    return ops.Custom(op_name=name, extension="dummy", signature=sig, args=[])
-
-
-def make_list_op(in_types: Sequence[Type], out_type: Type) -> ops.DataflowOp:
-    """Creates a dummy operation for constructing a list."""
-    return make_dummy_op("MakeList", in_types, [out_type])
-
-
-def list_push_op(list_ty: Type, elem_ty: Type) -> ops.DataflowOp:
-    """Creates a dummy operation for constructing a list."""
-    return make_dummy_op("Push", [list_ty, elem_ty], [list_ty])
 
 
 def tket2_result_op(
