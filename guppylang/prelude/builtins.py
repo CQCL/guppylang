@@ -873,8 +873,45 @@ def print(x): ...
 def property(x): ...
 
 
-@guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
-def range(x): ...
+@guppy.struct(builtins)
+class Range:
+    stop: int
+
+    @guppy(builtins)
+    def __iter__(self: "Range") -> "RangeIter":
+        return RangeIter(0, self.stop)
+
+
+@guppy.struct(builtins)
+class RangeIter:
+    next: int
+    stop: int
+
+    @guppy(builtins)
+    def __iter__(self: "RangeIter") -> "RangeIter":
+        return self
+
+    @guppy(builtins)
+    def __hasnext__(self: "RangeIter") -> tuple[bool, "RangeIter"]:
+        return (self.next < self.stop, self)
+
+    @guppy(builtins)
+    def __next__(self: "RangeIter") -> tuple[int, "RangeIter"]:
+        # Fine not to check bounds while we can only be called from inside a `for` loop.
+        # if self.start >= self.stop:
+        #    raise StopIteration
+        return (self.next, RangeIter(self.next + 1, self.stop))
+
+    @guppy(builtins)
+    def __end__(self: "RangeIter") -> None:
+        pass
+
+
+@guppy(builtins)
+def range(stop: int) -> Range:
+    """Limited version of python range().
+    Only a single argument (stop/limit) is supported."""
+    return Range(stop)
 
 
 @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
