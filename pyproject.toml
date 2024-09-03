@@ -42,6 +42,8 @@ dev-dependencies = [
     "ruff >=0.6.2,<0.7",
     "maturin >=1.4.0,<2",
     "pytket >=1.30.0,<2",
+    # Required to run `maturin develop`
+    "pip >=24",
 ]
 
 [tool.uv.workspace]
