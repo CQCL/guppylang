@@ -1,14 +1,14 @@
-from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from hugr import Wire, ops
+from hugr import Wire
 from hugr import tys as ht
 from hugr.build.function import Function
 
 from guppylang.compiler.cfg_compiler import compile_cfg
 from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.nodes import CheckedNestedFunctionDef
-from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, Type
+from guppylang.tys.ty import type_to_row
 
 if TYPE_CHECKING:
     from guppylang.definition.function import CheckedFunctionDef
@@ -37,22 +37,18 @@ def compile_local_func_def(
 
     # Pick an order for the captured variables
     captured = list(func.captured.values())
-    captured_types = [v.ty for v, _ in captured]
+    captured_types = [v.ty.to_hugr() for v, _ in captured]
 
     # Whether the function calls itself recursively.
     recursive = func.name in func.cfg.live_before[func.cfg.entry_bb]
 
     # Prepend captured variables to the function arguments
-    closure_ty = FunctionType(
-        [FuncInput(ty, InputFlags.NoFlags) for ty in captured_types]
-        + list(func.ty.inputs),
-        func.ty.output,
-        input_names=[v.name for v, _ in captured] + list(func.ty.input_names),
+    closure_ty = ht.FunctionType(
+        captured_types + [v.ty.to_hugr() for v in func.ty.inputs],
+        [ty.to_hugr() for ty in type_to_row(func.ty.output)],
     )
-    hugr_closure_ty: ht.FunctionType = closure_ty.to_hugr()
-
     func_builder = dfg.builder.define_function(
-        func.name, hugr_closure_ty.input, hugr_closure_ty.output
+        func.name, closure_ty.input, closure_ty.output
     )
 
     # If we have captured variables and the body contains a recursive occurrence of
@@ -60,9 +56,9 @@ def compile_local_func_def(
     # variable
     call_args: list[Wire] = list(func_builder.inputs())
     if len(captured) > 0 and recursive:
-        loaded = func_builder.load_function(func_builder, hugr_closure_ty)
+        loaded = func_builder.load_function(func_builder, closure_ty)
         partial = func_builder.add_op(
-            make_partial_op(closure_ty, captured_types),
+            PartialOp.from_closure(closure_ty, captured_types),
             loaded,
             *func_builder.input_node[: len(captured)],
         )
@@ -91,53 +87,12 @@ def compile_local_func_def(
     func_builder.set_outputs(*cfg)
 
     # Finally, load the function into the local data-flow graph
-    loaded = dfg.builder.load_function(func_builder, hugr_closure_ty)
+    loaded = dfg.builder.load_function(func_builder, closure_ty)
     if len(captured) > 0:
         loaded = dfg.builder.add_op(
-            make_partial_op(closure_ty, captured_types),
+            PartialOp.from_closure(closure_ty, captured_types),
             loaded,
             *(dfg[v] for v, _ in captured),
         )
 
     return loaded
-
-
-def make_dummy_op(
-    name: str, inp: Sequence[Type], out: Sequence[Type], extension: str = "dummy"
-) -> ops.DataflowOp:
-    """Dummy operation."""
-    input = [ty.to_hugr() for ty in inp]
-    output = [ty.to_hugr() for ty in out]
-
-    sig = ht.FunctionType(input=input, output=output)
-    return ops.Custom(op_name=name, extension=extension, signature=sig, args=[])
-
-
-def make_partial_op(
-    closure_ty: FunctionType, captured_tys: Sequence[Type]
-) -> ops.DataflowOp:
-    """Creates a dummy operation for partially evaluating a function.
-
-    args:
-        closure_ty: A function type `(c_0, ..., c_k, a_0, ..., a_n) -> b_0, ..., b_m`
-        captured_tys: A list of types `c_0, ..., c_k` that are captured by the function
-
-    returns:
-        An operation with type
-            ` (c_0, ..., c_k, a_0, ..., a_n -> b_0, ..., b_m ), c_0, ..., c_k`
-            `-> (a_0, ..., a_n -> b_0, ..., b_m)`
-    """
-    assert len(closure_ty.inputs) >= len(captured_tys)
-    assert [p.to_hugr() for p in captured_tys] == [
-        inp.ty.to_hugr() for inp in closure_ty.inputs[: len(captured_tys)]
-    ]
-
-    explicit_inputs = closure_ty.inputs[len(captured_tys) :]
-    partially_applied_func = FunctionType(explicit_inputs, closure_ty.output)
-
-    return make_dummy_op(
-        "partial",
-        [closure_ty, *captured_tys],
-        [partially_applied_func],
-        extension="guppylang.unsupported",
-    )

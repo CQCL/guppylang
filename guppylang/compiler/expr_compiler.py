@@ -21,6 +21,7 @@ from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import Variable
 from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import CompilerBase, DFContainer
+from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.error import GuppyError, InternalGuppyError
@@ -356,11 +357,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         raise InternalGuppyError("Node should have been removed during type checking.")
 
     def visit_PartialApply(self, node: PartialApply) -> Wire:
-        from guppylang.compiler.func_compiler import make_partial_op
-
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
-        op = make_partial_op(func_ty, [get_type(arg) for arg in node.args])
+        op = (
+            PartialOp.from_closure(
+                func_ty.to_hugr(), [get_type(arg).to_hugr() for arg in node.args]
+            ),
+        )
         return self.builder.add_op(
             op, self.visit(node.func), *(self.visit(arg) for arg in node.args)
         )
