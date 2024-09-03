@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from hugr.build.dfg import DfBase
 
 
-@dataclass(frozen=True)
+@dataclass
 class ArrayOpCompiler(CustomCallCompiler, ABC):
     """Generic compiler for array operations that involve multiple nodes.
 

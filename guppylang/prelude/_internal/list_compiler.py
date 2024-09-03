@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from hugr.build.dfg import DfBase
 
 
-@dataclass(frozen=True)
+@dataclass
 class ListOpCompiler(CustomCallCompiler, ABC):
     """Generic compiler for list operations that involve multiple nodes.
 

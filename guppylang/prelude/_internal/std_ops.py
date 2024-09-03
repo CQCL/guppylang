@@ -116,34 +116,6 @@ def _instantiate_int_op(
     )
 
 
-def iwiden_s(from_width: int, to_width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.iwiden_s` operation."""
-    return _instantiate_int_op(
-        "iwiden_s", [from_width, to_width], [int_t(from_width)], [int_t(to_width)]
-    )
-
-
-def iwiden_u(from_width: int, to_width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.iwiden_u` operation."""
-    return _instantiate_int_op(
-        "iwiden_u", [from_width, to_width], [int_t(from_width)], [int_t(to_width)]
-    )
-
-
-def inarrow_s(from_width: int, to_width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.inarrow_s` operation."""
-    return _instantiate_int_op(
-        "inarrow_s", [from_width, to_width], [int_t(from_width)], [int_t(to_width)]
-    )
-
-
-def inarrow_u(from_width: int, to_width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.inarrow_u` operation."""
-    return _instantiate_int_op(
-        "inarrow_u", [from_width, to_width], [int_t(from_width)], [int_t(to_width)]
-    )
-
-
 def ieq(width: int) -> ops.DataflowOp:
     """Returns a `std.arithmetic.int.ieq` operation."""
     return _instantiate_int_op("ieq", width, [int_t(width), int_t(width)], [ht.Bool])
@@ -152,46 +124,6 @@ def ieq(width: int) -> ops.DataflowOp:
 def ine(width: int) -> ops.DataflowOp:
     """Returns a `std.arithmetic.int.ine` operation."""
     return _instantiate_int_op("ine", width, [int_t(width), int_t(width)], [ht.Bool])
-
-
-def ilt_u(width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.ilt_u` operation."""
-    return _instantiate_int_op("ilt_u", width, [int_t(width), int_t(width)], [ht.Bool])
-
-
-def ilt_s(width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.ilt_s` operation."""
-    return _instantiate_int_op("ilt_s", width, [int_t(width), int_t(width)], [ht.Bool])
-
-
-def igt_u(width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.igt_u` operation."""
-    return _instantiate_int_op("igt_u", width, [int_t(width), int_t(width)], [ht.Bool])
-
-
-def igt_s(width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.igt_s` operation."""
-    return _instantiate_int_op("igt_s", width, [int_t(width), int_t(width)], [ht.Bool])
-
-
-def ile_u(width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.ile_u` operation."""
-    return _instantiate_int_op("ile_u", width, [int_t(width), int_t(width)], [ht.Bool])
-
-
-def ile_s(width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.ile_s` operation."""
-    return _instantiate_int_op("ile_s", width, [int_t(width), int_t(width)], [ht.Bool])
-
-
-def ige_u(width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.ige_u` operation."""
-    return _instantiate_int_op("ige_u", width, [int_t(width), int_t(width)], [ht.Bool])
-
-
-def ige_s(width: int) -> ops.DataflowOp:
-    """Returns a `std.arithmetic.int.ige_s` operation."""
-    return _instantiate_int_op("ige_s", width, [int_t(width), int_t(width)], [ht.Bool])
 
 
 # ------------------------------------------------------

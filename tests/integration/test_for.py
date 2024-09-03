@@ -1,5 +1,11 @@
 from tests.util import compile_guppy
 
+import pytest
+
+pytest.skip(
+    "List operations still not supported with hugr 0.8", allow_module_level=True
+)
+
 
 import pytest
 

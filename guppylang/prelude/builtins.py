@@ -106,7 +106,9 @@ class Bool:
     @guppy.hugr_op(builtins, logic_op("Eq"))
     def __eq__(self: bool, other: bool) -> bool: ...
 
-    @guppy.hugr_op(builtins, int_op("ifrombool", n_vars=0))
+    @guppy.hugr_op(
+        builtins, int_op("ifrombool", hugr.std.int.CONVERSIONS_EXTENSION, n_vars=0)
+    )
     def __int__(self: bool) -> int: ...
 
     @guppy.hugr_op(
@@ -121,7 +123,9 @@ class Bool:
     @guppy.hugr_op(builtins, logic_op("Or"))
     def __or__(self: bool, other: bool) -> bool: ...
 
-    @guppy.hugr_op(builtins, logic_op("Xor"))
+    @guppy.custom(
+        builtins, checker=UnsupportedChecker(), higher_order_value=False
+    )  # TODO
     def __xor__(self: bool, other: bool) -> bool: ...
 
 
@@ -207,7 +211,7 @@ class Nat:
     @guppy.hugr_op(builtins, int_op("iadd"), ReversingChecker())
     def __radd__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(builtins, int_op("rand"), ReversingChecker())
+    @guppy.hugr_op(builtins, int_op("iand"), ReversingChecker())
     def __rand__(self: nat, other: nat) -> nat: ...
 
     @guppy.hugr_op(
@@ -281,7 +285,9 @@ class Int:
     @guppy.hugr_op(builtins, int_op("iand"))
     def __and__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(builtins, int_op("itobool", n_vars=0))
+    @guppy.hugr_op(
+        builtins, int_op("itobool", hugr.std.int.CONVERSIONS_EXTENSION, n_vars=0)
+    )
     def __bool__(self: int) -> bool: ...
 
     @guppy.custom(builtins, NoopCompiler())
@@ -323,7 +329,7 @@ class Int:
     @guppy.hugr_op(builtins, int_op("ilt_s"))
     def __lt__(self: int, other: int) -> bool: ...
 
-    @guppy.hugr_op(builtins, int_op("imod_s", n_vars=2))
+    @guppy.hugr_op(builtins, int_op("imod_s"))
     def __mod__(self: int, other: int) -> int: ...
 
     @guppy.hugr_op(builtins, int_op("imul"))
@@ -353,7 +359,7 @@ class Int:
     @guppy.hugr_op(builtins, int_op("iadd"), ReversingChecker())
     def __radd__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(builtins, int_op("rand"), ReversingChecker())
+    @guppy.hugr_op(builtins, int_op("iand"), ReversingChecker())
     def __rand__(self: int, other: int) -> int: ...
 
     @guppy.hugr_op(builtins, int_op("idivmod_s", n_vars=2), ReversingChecker())

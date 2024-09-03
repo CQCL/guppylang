@@ -88,7 +88,7 @@ def external_op(
 
 def float_op(
     op_name: str,
-    ext: he.Extension = hugr.std.float.EXTENSION,
+    ext: he.Extension = hugr.std.float.FLOAT_OPS_EXTENSION,
 ) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
     """Utility method to create Hugr float arithmetic ops.
 
