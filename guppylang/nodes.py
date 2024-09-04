@@ -110,6 +110,20 @@ class FieldAccessAndDrop(ast.expr):
     )
 
 
+class SubscriptAccessAndDrop(ast.expr):
+    """A subscript element access on an object, dropping all the remaining items."""
+
+    item: "Variable"
+    item_expr: ast.expr
+    getitem_expr: ast.expr
+
+    _fields = (
+        "item",
+        "item_expr",
+        "getitem_expr",
+    )
+
+
 class MakeIter(ast.expr):
     """Creates an iterator using the `__iter__` magic method.
 
@@ -221,7 +235,7 @@ class InoutReturnSentinel(ast.expr):
     """An invisible expression corresponding to an implicit use of @inout vars whenever
     a function returns."""
 
-    var: "Variable | str"
+    var: "Place | str"
 
     _fields = ("var",)
 

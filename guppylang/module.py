@@ -20,6 +20,7 @@ from guppylang.definition.common import (
 )
 from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.function import RawFunctionDef
+from guppylang.definition.module import ModuleDef
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.struct import CheckedStructDef
 from guppylang.definition.ty import TypeDef
@@ -83,7 +84,7 @@ class GuppyModule:
         if import_builtins:
             import guppylang.prelude.builtins as builtins
 
-            self.load(builtins)
+            self.load_all(builtins)
 
     def load(
         self,
@@ -113,28 +114,17 @@ class GuppyModule:
                 names[alias or imp.name] = imp.id
                 modules.add(module)
             elif isinstance(imp, GuppyModule):
-                # TODO: In the future this should be a qualified module import. For now
-                #  we just import all contained definitions that don't start with `_`
                 imp.check()
-                imports.extend(
-                    (defn.name, defn)
-                    for defn in imp._globals.defs.values()
-                    if not defn.name.startswith("_")
-                )
+                def_id = DefId.fresh(imp)
+                name = alias or imp.name
+                defn = ModuleDef(def_id, name, None, imp._globals)
+                defs[def_id] = defn
+                names[name] = def_id
+                defs |= imp._checked_defs
+                modules.add(imp)
             elif isinstance(imp, ModuleType):
-                mods = [
-                    val for val in imp.__dict__.values() if isinstance(val, GuppyModule)
-                ]
-                if not mods:
-                    msg = f"No Guppy modules found in `{imp.__name__}`"
-                    raise GuppyError(msg)
-                if len(mods) > 1:
-                    msg = (
-                        f"Python module `{imp.__name__}` contains multiple Guppy "
-                        "modules. Cannot decide which one to import."
-                    )
-                    raise GuppyError(msg)
-                imports.append((alias, mods[0]))
+                mod = find_guppy_module_in_py_module(imp)
+                imports.append((alias, mod))
             else:
                 msg = f"Only Guppy definitions or modules can be imported. Got `{imp}`"
                 raise GuppyError(msg)
@@ -159,6 +149,23 @@ class GuppyModule:
         # lower everything into one Hugr at the same time.
         for module in modules:
             self._imported_checked_defs |= module._imported_checked_defs
+
+    def load_all(self, mod: "GuppyModule | ModuleType") -> None:
+        """Imports all public members of a module."""
+        if isinstance(mod, GuppyModule):
+            mod.check()
+            self.load(
+                *(
+                    defn
+                    for defn in mod._globals.defs.values()
+                    if not defn.name.startswith("_")
+                )
+            )
+        elif isinstance(mod, ModuleType):
+            self.load_all(find_guppy_module_in_py_module(mod))
+        else:
+            msg = f"Only Guppy definitions or modules can be imported. Got `{mod}`"
+            raise GuppyError(msg)
 
     def register_def(self, defn: RawDef, instance: TypeDef | None = None) -> None:
         """Registers a definition with this module.
@@ -335,3 +342,22 @@ def get_py_scope(f: PyFunc) -> PyScope:
             nonlocals[var] = value
 
     return nonlocals | f.__globals__.copy()
+
+
+def find_guppy_module_in_py_module(module: ModuleType) -> GuppyModule:
+    """Helper function to search the `__dict__` of a Python module for an instance of
+     `GuppyModule`.
+
+    Raises a user-error if no unique module can be found.
+    """
+    mods = [val for val in module.__dict__.values() if isinstance(val, GuppyModule)]
+    if not mods:
+        msg = f"No Guppy modules found in `{module.__name__}`"
+        raise GuppyError(msg)
+    if len(mods) > 1:
+        msg = (
+            f"Python module `{module.__name__}` contains multiple Guppy modules. "
+            "Cannot decide which one to import."
+        )
+        raise GuppyError(msg)
+    return mods[0]

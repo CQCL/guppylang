@@ -8,7 +8,7 @@ import guppylang.prelude.quantum as quantum
 
 def test_types(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test(
@@ -21,7 +21,7 @@ def test_types(validate):
 
 def test_len(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test(xs: linst[qubit]) -> tuple[int, linst[qubit]]:
@@ -32,7 +32,7 @@ def test_len(validate):
 
 def test_literal(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test(q1: qubit, q2: qubit) -> linst[qubit]:
@@ -43,7 +43,7 @@ def test_literal(validate):
 
 def test_arith(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test(xs: linst[qubit], ys: linst[qubit], q: qubit) -> linst[qubit]:
@@ -55,7 +55,7 @@ def test_arith(validate):
 
 def test_copyable(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test() -> linst[int]:

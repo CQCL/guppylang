@@ -9,6 +9,7 @@ from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.const import ConstValue
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
     FunctionType,
@@ -132,10 +133,17 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
     assert isinstance(len_arg, ConstArg)
+    # Linear elements are turned into an optional to enable unsafe indexing.
+    # See `ArrayGetitemCompiler` for details.
+    elem_ty: ht.Type
+    if ty_arg.ty.linear:
+        elem_ty = ht.Sum([[ty_arg.ty.to_hugr()], []])
+    else:
+        elem_ty = ty_arg.ty.to_hugr()
     return ht.Opaque(
         extension="prelude",
         id="array",
-        args=[len_arg.to_hugr(), ty_arg.to_hugr()],
+        args=[len_arg.to_hugr(), ht.TypeTypeArg(elem_ty)],
         bound=ty_arg.ty.hugr_bound,
     )
 
@@ -203,6 +211,13 @@ def list_type(element_ty: Type) -> OpaqueType:
 
 def linst_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], linst_type_def)
+
+
+def array_type(element_ty: Type, length: int) -> OpaqueType:
+    nat_type = NumericType(NumericType.Kind.Nat)
+    return OpaqueType(
+        [TypeArg(element_ty), ConstArg(ConstValue(nat_type, length))], array_type_def
+    )
 
 
 def is_bool_type(ty: Type) -> bool:

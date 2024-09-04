@@ -75,6 +75,9 @@ class DFContainer:
         else:
             self.locals[place.id] = port
 
+    def __contains__(self, place: Place) -> bool:
+        return place.id in self.locals
+
     def __copy__(self) -> "DFContainer":
         # Make a copy of the var map so that mutating the copy doesn't
         # mutate our variable mapping

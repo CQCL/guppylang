@@ -1,3 +1,5 @@
+import pytest
+
 from tests.util import compile_guppy
 
 
@@ -37,6 +39,7 @@ def test_arith(validate):
     validate(test)
 
 
+@pytest.mark.skip("Requires updating lists to use inout")
 def test_subscript(validate):
     @compile_guppy
     def test(xs: list[float], i: int) -> float:

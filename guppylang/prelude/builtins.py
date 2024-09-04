@@ -14,17 +14,21 @@ from guppylang.prelude._internal.checker import (
     CoercingChecker,
     DunderChecker,
     FailingChecker,
+    NewArrayChecker,
     ResultChecker,
     ReversingChecker,
     UnsupportedChecker,
 )
 from guppylang.prelude._internal.compiler import (
+    ArrayGetitemCompiler,
+    ArraySetitemCompiler,
     FloatBoolCompiler,
     FloatDivmodCompiler,
     FloatFloordivCompiler,
     FloatModCompiler,
     IntTruedivCompiler,
     NatTruedivCompiler,
+    NewArrayCompiler,
 )
 from guppylang.prelude._internal.util import (
     custom_op,
@@ -34,7 +38,6 @@ from guppylang.prelude._internal.util import (
     linst_op,
     list_op,
     logic_op,
-    type_arg,
 )
 from guppylang.tys.builtin import (
     array_type_def,
@@ -81,6 +84,9 @@ _n = TypeVar("_n")
 
 class array(Generic[_T, _n]):
     """Class to import in order to use arrays."""
+
+    def __init__(self, *args: _T):
+        pass
 
 
 @guppy.extend_type(builtins, bool_type_def)
@@ -649,16 +655,19 @@ n = guppy.nat_var(builtins, "n")
 
 @guppy.extend_type(builtins, array_type_def)
 class Array:
-    @guppy.hugr_op(
-        builtins,
-        custom_op(
-            "ArrayGet", args=[int_arg(), type_arg()], variable_remap={0: 1, 1: 0}
-        ),
-    )
-    def __getitem__(self: array[T, n], idx: int) -> T: ...
+    @guppy.custom(builtins, ArrayGetitemCompiler())
+    def __getitem__(self: array[L, n] @ inout, idx: int) -> L: ...
+
+    @guppy.custom(builtins, ArraySetitemCompiler())
+    def __setitem__(self: array[L, n] @ inout, idx: int, value: L) -> None: ...
 
     @guppy.custom(builtins, checker=ArrayLenChecker())
     def __len__(self: array[T, n]) -> int: ...
+
+    @guppy.custom(
+        builtins, NewArrayCompiler(), NewArrayChecker(), higher_order_value=False
+    )
+    def __new__(): ...
 
 
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.

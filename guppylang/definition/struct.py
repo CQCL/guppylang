@@ -219,6 +219,7 @@ class CheckedStructDef(TypeDef, CompiledDef):
             call_checker=DefaultCallChecker(),
             call_compiler=ConstructorCompiler(),
             higher_order_value=True,
+            has_signature=True,
         )
         return [constructor_def]
 

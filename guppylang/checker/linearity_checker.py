@@ -18,8 +18,10 @@ from guppylang.checker.core import (
     Locals,
     Place,
     PlaceId,
+    SubscriptAccess,
     Variable,
 )
+from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
@@ -32,9 +34,15 @@ from guppylang.nodes import (
     LocalCall,
     PartialApply,
     PlaceNode,
+    SubscriptAccessAndDrop,
     TensorCall,
 )
-from guppylang.tys.ty import FunctionType, InputFlags, StructType
+from guppylang.tys.ty import (
+    FuncInput,
+    FunctionType,
+    InputFlags,
+    StructType,
+)
 
 
 class Scope(Locals[PlaceId, Place]):
@@ -136,16 +144,31 @@ class BBLinearityChecker(ast.NodeVisitor):
                 "ownership of the value.",
                 node,
             )
-        for place in leaf_places(node.place):
-            x = place.id
-            if (use := self.scope.used(x)) and place.ty.linear:
+        # Places involving subscripts are handled differently since we ignore everything
+        # after the subscript for the purposes of linearity checking
+        if subscript := contains_subscript(node.place):
+            if not is_inout_arg and subscript.parent.ty.linear:
                 raise GuppyError(
-                    f"{place.describe} with linear type `{place.ty}` was already "
-                    "used (at {0})",
+                    "Subscripting on expression with linear type "
+                    f"`{subscript.parent.ty}` is only allowed in `@inout` position",
                     node,
-                    [use],
                 )
-            self.scope.use(x, node)
+            self.scope.assign(subscript.item)
+            # Visiting the `__getitem__(place.parent, place.item)` call ensures that we
+            # linearity-check the parent and element.
+            self.visit(subscript.getitem_call)
+        # For all other places, we record uses of all leafs
+        else:
+            for place in leaf_places(node.place):
+                x = place.id
+                if (use := self.scope.used(x)) and place.ty.linear:
+                    raise GuppyError(
+                        f"{place.describe} with linear type `{place.ty}` was already "
+                        "used (at {0})",
+                        node,
+                        [use],
+                    )
+                self.scope.use(x, node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
@@ -169,9 +192,7 @@ class BBLinearityChecker(ast.NodeVisitor):
             if InputFlags.Inout in inp.flags:
                 match arg:
                     case PlaceNode(place=place):
-                        for leaf in leaf_places(place):
-                            leaf = leaf.replace_defined_at(arg)
-                            self.scope.assign(leaf)
+                        self._reassign_single_inout_arg(place, arg)
                     case arg if inp.ty.linear:
                         raise GuppyError(
                             f"Inout argument with linear type `{inp.ty}` would be "
@@ -181,10 +202,29 @@ class BBLinearityChecker(ast.NodeVisitor):
                             arg,
                         )
 
+    def _reassign_single_inout_arg(self, place: Place, node: ast.expr) -> None:
+        """Helper function to reassign a single inout argument after a function call."""
+        # Places involving subscripts are given back by visiting the `__setitem__` call
+        if subscript := contains_subscript(place):
+            assert subscript.setitem_call is not None
+            self.visit(subscript.setitem_call)
+            self._reassign_single_inout_arg(subscript.parent, node)
+        else:
+            for leaf in leaf_places(place):
+                assert not isinstance(leaf, SubscriptAccess)
+                leaf = leaf.replace_defined_at(node)
+                self.scope.assign(leaf)
+
     def visit_GlobalCall(self, node: GlobalCall) -> None:
         func = self.globals[node.def_id]
         assert isinstance(func, CallableDef)
-        func_ty = func.ty.instantiate(node.type_args)
+        if isinstance(func, CustomFunctionDef) and not func.has_signature:
+            func_ty = FunctionType(
+                [FuncInput(get_type(arg), InputFlags.NoFlags) for arg in node.args],
+                get_type(node),
+            )
+        else:
+            func_ty = func.ty.instantiate(node.type_args)
         self._visit_call_args(func_ty, node.args)
         self._reassign_inout_args(func_ty, node.args)
 
@@ -225,6 +265,19 @@ class BBLinearityChecker(ast.NodeVisitor):
                     f"`{node.struct_ty}` is not used",
                     node.value,
                 )
+
+    def visit_SubscriptAccessAndDrop(self, node: SubscriptAccessAndDrop) -> None:
+        # A subscript access on a value that is not a place. This means the value can no
+        # longer be accessed after the item has been projected out. Thus, this is only
+        # legal if the items in the container are not linear
+        elem_ty = get_type(node.getitem_expr)
+        if elem_ty.linear:
+            raise GuppyTypeError(
+                f"Remaining linear items with type `{elem_ty}` are not used", node
+            )
+        self.visit(node.item_expr)
+        self.scope.assign(node.item)
+        self.visit(node.getitem_expr)
 
     def visit_Expr(self, node: ast.Expr) -> None:
         # An expression statement where the return value is discarded
@@ -367,6 +420,15 @@ def leaf_places(place: Place) -> Iterator[Place]:
             ]
         else:
             yield place
+
+
+def contains_subscript(place: Place) -> SubscriptAccess | None:
+    """Checks if a place contains a subscript access and returns the rightmost one."""
+    while not isinstance(place, Variable):
+        if isinstance(place, SubscriptAccess):
+            return place
+        place = place.parent
+    return None
 
 
 def is_inout_var(place: Place) -> TypeGuard[Variable]:

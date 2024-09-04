@@ -5,7 +5,7 @@ from guppylang.prelude.quantum import qubit
 import guppylang.prelude.quantum as quantum
 
 module = GuppyModule("test")
-module.load(quantum)
+module.load_all(quantum)
 
 
 T = guppy.type_var(module, "T")

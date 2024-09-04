@@ -6,7 +6,7 @@ import guppylang.prelude.quantum as quantum
 
 
 module = GuppyModule("test")
-module.load(quantum)
+module.load_all(quantum)
 
 
 @guppy(module)

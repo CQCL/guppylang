@@ -3,6 +3,7 @@ import ast
 from guppylang.ast_util import AstNode, with_loc
 from guppylang.checker.core import Context
 from guppylang.checker.expr_checker import (
+    ExprChecker,
     ExprSynthesizer,
     check_call,
     check_num_args,
@@ -18,7 +19,13 @@ from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import GlobalCall, ResultExpr
 from guppylang.tys.arg import ConstArg, TypeArg
-from guppylang.tys.builtin import bool_type, int_type, is_array_type, is_bool_type
+from guppylang.tys.builtin import (
+    array_type,
+    bool_type,
+    int_type,
+    is_array_type,
+    is_bool_type,
+)
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -178,6 +185,52 @@ class ArrayLenChecker(CustomCallChecker):
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         _, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
         return self._get_const_len(inst), subst
+
+
+class NewArrayChecker(CustomCallChecker):
+    """Function call checker for the `array.__new__` function."""
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        if len(args) == 0:
+            raise GuppyTypeError(
+                "Cannot infer the array element type. Consider adding a type "
+                "annotation.",
+                self.node,
+            )
+        [fst, *rest] = args
+        fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
+        checker = ExprChecker(self.ctx)
+        for i in range(len(rest)):
+            rest[i], subst = checker.check(rest[i], ty)
+            assert len(subst) == 0, "Array element type is closed"
+        result_ty = array_type(ty, len(args))
+        call = GlobalCall(
+            def_id=self.func.id, args=[fst, *rest], type_args=result_ty.args
+        )
+        return with_loc(self.node, call), result_ty
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        if not is_array_type(ty):
+            raise GuppyTypeError(
+                f"Expected expression of type `{ty}`, got `array`", self.node
+            )
+        match ty.args:
+            case [TypeArg(ty=elem_ty), ConstArg(ConstValue(value=int(length)))]:
+                subst: Subst = {}
+                checker = ExprChecker(self.ctx)
+                for i in range(len(args)):
+                    args[i], s = checker.check(args[i], elem_ty.substitute(subst))
+                    subst |= s
+                if len(args) != length:
+                    raise GuppyTypeError(
+                        f"Expected expression of type `{ty}`, got "
+                        f"`array[{elem_ty}, {len(args)}]`",
+                        self.node,
+                    )
+                call = GlobalCall(def_id=self.func.id, args=args, type_args=ty.args)
+                return with_loc(self.node, call), subst
+            case type_args:
+                raise InternalGuppyError(f"Invalid array type args: {type_args}")
 
 
 class ResultChecker(CustomCallChecker):
