@@ -64,7 +64,7 @@ def test_new_array_infer_nested(validate):
 
 def test_subscript_drop_rest(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo() -> array[int, 10]: ...
@@ -78,7 +78,7 @@ def test_subscript_drop_rest(validate):
 
 def test_linear_subscript(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(q: qubit @inout) -> None: ...
@@ -93,7 +93,7 @@ def test_linear_subscript(validate):
 
 def test_inout_subscript(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(q: qubit @inout) -> None: ...
@@ -107,7 +107,7 @@ def test_inout_subscript(validate):
 
 def test_multi_subscripts(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(q1: qubit @inout, q2: qubit @inout) -> None: ...
@@ -123,7 +123,7 @@ def test_multi_subscripts(validate):
 
 def test_struct_array(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.struct(module)
     class S:
@@ -146,7 +146,7 @@ def test_struct_array(validate):
 
 def test_nested_subscripts(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(q: qubit @inout) -> None: ...
@@ -170,7 +170,7 @@ def test_nested_subscripts(validate):
 
 def test_struct_nested_subscript(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.struct(module)
     class C:
