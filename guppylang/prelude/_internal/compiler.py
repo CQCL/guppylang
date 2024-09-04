@@ -1,6 +1,8 @@
 import hugr
 from hugr import Wire, ops
 from hugr import tys as ht
+from hugr import val as hv
+from hugr.dfg import _DfBase
 from hugr.std.float import FLOAT_T
 
 from guppylang.definition.custom import (
@@ -250,19 +252,67 @@ class QAllocCompiler(CustomCallCompiler):
 class ArrayGetitemCompiler(CustomCallCompiler):
     """Compiler for the `array.__getitem__` function."""
 
-    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
-        [array, idx] = args
-        array_ty = self.ty.input[0]
-        idx_ty = self.ty.input[1]
-        elem_ty = self.ty.output[0]
+    def build_classical_getitem(
+        self,
+        array: Wire,
+        array_ty: ht.Type,
+        idx: Wire,
+        idx_ty: ht.Type,
+        elem_ty: ht.Type,
+    ) -> CallReturnWires:
+        """Lowers a call to `array.__getitem__` for classical arrays."""
+        [ty_arg, len_arg] = self.type_args
         op = ops.Custom(
             extension="guppy.unsupported.array",
             signature=ht.FunctionType([array_ty, idx_ty], [array_ty, elem_ty]),
-            name="GetItem",
-            args=[arg.to_hugr() for arg in self.type_args],
+            name="get",
+            args=[len_arg.to_hugr(), ty_arg.to_hugr()],
         )
         node = self.builder.add_op(op, array, idx)
         return CallReturnWires(regular_returns=[node[1]], inout_returns=[node[0]])
+
+    def build_linear_getitem(
+        self,
+        array: Wire,
+        array_ty: ht.Type,
+        idx: Wire,
+        idx_ty: ht.Type,
+        elem_ty: ht.Type,
+    ) -> CallReturnWires:
+        """Lowers a call to `array.__getitem__` for linear arrays."""
+        # Swap out the element at the given index with `None`. The `to_hugr`
+        # implementation of the array type ensures that linear element types are turned
+        # into optionals.
+        elem_opt_ty = ht.Sum([[elem_ty], []])
+        none = self.builder.add_op(ops.Tag(1, elem_opt_ty))
+        length = self.type_args[1].to_hugr()
+        array, elem_opt = build_array_set(
+            self.builder,
+            array,
+            array_ty,
+            idx,
+            idx_ty,
+            none,
+            elem_opt_ty,
+            length,
+        )
+        # Make sure that the element we got out is not None
+        conditional = self.builder.add_conditional(elem_opt)
+        with conditional.add_case(0) as case:
+            case.set_outputs(*case.inputs())
+        with conditional.add_case(1) as case:
+            error = build_error(case, 1, "Linear array element has already been used")
+            case.set_outputs(build_panic(case, [], [elem_ty], error))
+        return CallReturnWires(regular_returns=[conditional], inout_returns=[array])
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [array, idx] = args
+        [array_ty, idx_ty] = self.ty.input
+        [elem_ty, *_] = self.ty.output
+        if elem_ty.type_bound() == ht.TypeBound.Any:
+            return self.build_linear_getitem(array, array_ty, idx, idx_ty, elem_ty)
+        else:
+            return self.build_classical_getitem(array, array_ty, idx, idx_ty, elem_ty)
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
@@ -271,19 +321,120 @@ class ArrayGetitemCompiler(CustomCallCompiler):
 class ArraySetitemCompiler(CustomCallCompiler):
     """Compiler for the `array.__setitem__` function."""
 
+    def build_classical_setitem(
+        self,
+        array: Wire,
+        array_ty: ht.Type,
+        idx: Wire,
+        idx_ty: ht.Type,
+        elem: Wire,
+        elem_ty: ht.Type,
+        length: ht.TypeArg,
+    ) -> CallReturnWires:
+        """Lowers a call to `array.__setitem__` for classical arrays."""
+        array, _ = build_array_set(
+            self.builder, array, array_ty, idx, idx_ty, elem, elem_ty, length
+        )
+        return CallReturnWires(regular_returns=[], inout_returns=[array])
+
+    def build_linear_setitem(
+        self,
+        array: Wire,
+        array_ty: ht.Type,
+        idx: Wire,
+        idx_ty: ht.Type,
+        elem: Wire,
+        elem_ty: ht.Type,
+        length: ht.TypeArg,
+    ) -> CallReturnWires:
+        """Lowers a call to `array.__setitem__` for linear arrays."""
+        # Embed the element into an optional
+        elem_opt_ty = ht.Sum([[elem_ty], []])
+        elem = self.builder.add_op(ops.Tag(0, elem_opt_ty), elem)
+        array, old_elem = build_array_set(
+            self.builder, array, array_ty, idx, idx_ty, elem, elem_opt_ty, length
+        )
+        # Check that the old element was `None`
+        conditional = self.builder.add_conditional(old_elem)
+        with conditional.add_case(0) as case:
+            error = build_error(case, 1, "Linear array element has not been used")
+            build_panic(case, [elem_ty], [], error, *case.inputs())
+            case.set_outputs()
+        with conditional.add_case(1) as case:
+            case.set_outputs()
+        return CallReturnWires(regular_returns=[], inout_returns=[array])
+
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [array, idx, elem] = args
-        array_ty = self.ty.input[0]
-        idx_ty = self.ty.input[1]
-        elem_ty = self.ty.input[2]
-        op = ops.Custom(
-            extension="guppy.unsupported.array",
-            signature=ht.FunctionType([array_ty, idx_ty, elem_ty], [array_ty]),
-            name="SetItem",
-            args=[arg.to_hugr() for arg in self.type_args],
-        )
-        node = self.builder.add_op(op, array, idx, elem)
-        return CallReturnWires(regular_returns=[], inout_returns=[node[0]])
+        [array_ty, idx_ty, elem_ty] = self.ty.input
+        length = self.type_args[1].to_hugr()
+        if elem_ty.type_bound() == ht.TypeBound.Any:
+            return self.build_linear_setitem(
+                array, array_ty, idx, idx_ty, elem, elem_ty, length
+            )
+        else:
+            return self.build_classical_setitem(
+                array, array_ty, idx, idx_ty, elem, elem_ty, length
+            )
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
+
+
+#: The Hugr error type
+error_ty = ht.Opaque(
+    id="error", bound=ht.TypeBound.Copyable, args=[], extension="prelude"
+)
+
+
+def build_panic(
+    # TODO: Change to `_DfBase[ops.DfParentOp]` once `_DfBase` is covariant
+    builder: _DfBase[ops.Case],
+    in_tys: ht.TypeRow,
+    out_tys: ht.TypeRow,
+    err: Wire,
+    *args: Wire,
+) -> Wire:
+    """Builds a panic operation."""
+    op = ops.Custom(
+        extension="prelude",
+        signature=ht.FunctionType([error_ty, *in_tys], out_tys),
+        name="panic",
+        args=[
+            ht.SequenceArg([ht.TypeTypeArg(ty) for ty in in_tys]),
+            ht.SequenceArg([ht.TypeTypeArg(ty) for ty in out_tys]),
+        ],
+    )
+    return builder.add_op(op, err, *args)
+
+
+def build_error(builder: _DfBase[ops.Case], signal: int, msg: str) -> Wire:
+    """Constructs and loads a static error value."""
+    val = hv.Extension(
+        name="ConstError",
+        typ=error_ty,
+        val={"signal": signal, "message": msg},
+        extensions=["prelude"],
+    )
+    return builder.load(builder.add_const(val))
+
+
+def build_array_set(
+    builder: _DfBase[ops.DfParentOp],
+    array: Wire,
+    array_ty: ht.Type,
+    idx: Wire,
+    idx_ty: ht.Type,
+    elem: Wire,
+    elem_ty: ht.Type,
+    length: ht.TypeArg,
+) -> tuple[Wire, Wire]:
+    """Builds an array set operation, returning the original element."""
+    op = ops.Custom(
+        extension="guppy.unsupported.array",
+        signature=ht.FunctionType([array_ty, idx_ty, elem_ty], [array_ty, elem_ty]),
+        name="get",
+        args=[length, ht.TypeTypeArg(elem_ty)],
+    )
+    array, swapped_elem = iter(builder.add_op(op, array, idx, elem))
+    return array, swapped_elem
