@@ -140,7 +140,7 @@ def int_op(
 
 def logic_op(
     op_name: str,
-    parametric_size: bool = True,
+    parametric_size: bool = False,
     ext: he.Extension = hugr.std.logic.EXTENSION,
 ) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
     """Utility method to create Hugr logic ops.

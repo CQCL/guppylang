@@ -111,9 +111,7 @@ class Bool:
     @guppy.hugr_op(builtins, logic_op("Or"))
     def __or__(self: bool, other: bool) -> bool: ...
 
-    @guppy.custom(
-        builtins, checker=UnsupportedChecker(), higher_order_value=False
-    )  # TODO
+    @guppy.hugr_op(builtins, unsupported_op("Xor"))  # TODO: Missing op
     def __xor__(self: bool, other: bool) -> bool: ...
 
 

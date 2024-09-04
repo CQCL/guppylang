@@ -8,7 +8,7 @@ from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal.compiler import MeasureCompiler, QAllocCompiler
 from guppylang.prelude._internal.quantum_ops import HSERIES_EXTENSION
-from guppylang.prelude._internal.util import quantum_op
+from guppylang.prelude._internal.util import quantum_op, unsupported_op
 
 quantum = GuppyModule("quantum")
 
@@ -71,11 +71,15 @@ def zz_max(q1: qubit, q2: qubit) -> tuple[qubit, qubit]: ...
 def measure_return(q: qubit) -> tuple[qubit, bool]: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Rz"))
+@guppy.hugr_op(
+    quantum, quantum_op("Rz", ext=HSERIES_EXTENSION)
+)  # TODO: Use the `tket.quantum` operation once we support angles
 def rz(q: qubit, angle: float) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Rx"))
+@guppy.hugr_op(
+    quantum, unsupported_op("Rx")
+)  # TODO: Use the `tket.quantum` operation once we support angles
 def rx(q: qubit, angle: float) -> qubit: ...
 
 
