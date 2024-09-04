@@ -1,11 +1,16 @@
 """A hugr extension with guppy-specific operations."""
 
-from collections.abc import Iterator, Sequence
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import hugr.ext as he
 import hugr.tys as ht
 from hugr import ops
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
 
 EXTENSION: he.Extension = he.Extension("guppylang", he.Version(0, 1, 0))
 
@@ -46,7 +51,7 @@ class PartialOp(ops.AsExtOp):
     @classmethod
     def from_closure(
         cls, closure_ty: ht.FunctionType, captured_tys: Sequence[ht.Type]
-    ) -> "PartialOp":
+    ) -> PartialOp:
         """An operation that partially evaluates a function.
 
         args:
@@ -91,11 +96,10 @@ class PartialOp(ops.AsExtOp):
         return ht.FunctionType([closure_ty, *self.captured_inputs], closure_ty.output)
 
     @classmethod
-    def from_ext(cls, custom: ops.ExtOp) -> "PartialOp":
+    def from_ext(cls, custom: ops.ExtOp) -> PartialOp:
         match custom:
             case ops.ExtOp(
-                _op_def=op_def,
-                args=[captured_args, other_args, output_args],
+                _op_def=op_def, args=[captured_args, other_args, output_args]
             ):
                 if op_def.qualified_name() == PARTIAL_OP_DEF.qualified_name():
 
@@ -109,6 +113,67 @@ class PartialOp(ops.AsExtOp):
                         captured_inputs=[*arg_seq_to_types(captured_args)],
                         other_inputs=[*arg_seq_to_types(other_args)],
                         outputs=[*arg_seq_to_types(output_args)],
+                    )
+        msg = f"Invalid custom op: {custom}"
+        raise ops.AsExtOp.InvalidExtOp(msg)
+
+
+UNSUPPORTED_OP_DEF: he.OpDef = EXTENSION.add_op_def(
+    he.OpDef(
+        "unsupported",
+        signature=he.OpDefSig(
+            poly_func=None,
+            binary=True,
+        ),
+        description="An unsupported operation stub emitted by Guppy.",
+    )
+)
+
+
+@dataclass
+class UnsupportedOp(ops.AsExtOp):
+    """An unsupported operation stub emitted by Guppy.
+
+    args:
+        op_name: The name of the unsupported operation.
+        inputs: The input types of the operation.
+        outputs: The output types of the operation.
+        args: The type arguments to this operation.
+            The operation name will be prepended to this list.
+    """
+
+    op_name: str
+    inputs: list[ht.Type]
+    outputs: list[ht.Type]
+    args: list[ht.TypeArg]
+
+    def op_def(self) -> he.OpDef:
+        return UNSUPPORTED_OP_DEF
+
+    def type_args(self) -> list[ht.TypeArg]:
+        op_name = ht.StringArg(self.op_name)
+        return [op_name, *self.args]
+
+    def cached_signature(self) -> ht.FunctionType | None:
+        return ht.FunctionType(self.inputs, self.outputs)
+
+    @classmethod
+    def from_ext(cls, custom: ops.ExtOp) -> UnsupportedOp:
+        match custom:
+            case ops.ExtOp(_op_def=op_def, args=args):
+                if op_def.qualified_name() == UNSUPPORTED_OP_DEF.qualified_name():
+                    sig = custom.cached_signature()
+                    assert (
+                        sig is not None
+                    ), "`guppylang.unsupported` ops must have a computed signature"
+                    [op_name, *args] = args
+                    assert isinstance(op_name, ht.StringArg), (
+                        "The first argument to a guppylang.unsupported op "
+                        "must be the operation name"
+                    )
+                    op_name = op_name.value
+                    return cls(
+                        op_name=op_name, inputs=sig.input, outputs=sig.output, args=args
                     )
         msg = f"Invalid custom op: {custom}"
         raise ops.AsExtOp.InvalidExtOp(msg)

@@ -15,6 +15,7 @@ from hugr import ext as he
 from hugr import ops
 from hugr import tys as ht
 
+import guppylang
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 
@@ -27,9 +28,10 @@ def int_arg(n: int = NumericType.INT_WIDTH) -> ht.TypeArg:
     return ht.BoundedNatArg(n=n)
 
 
-def type_arg(idx: int = 0) -> ht.TypeArg:
+def type_arg(idx: int = 0, bound: ht.TypeBound | None = None) -> ht.TypeArg:
     """A generic type argument."""
-    return ht.VariableArg(idx=idx, param=ht.TypeTypeParam(bound=ht.TypeBound.Any))
+    bound = bound or ht.TypeBound.Any
+    return ht.VariableArg(idx=idx, param=ht.TypeTypeParam(bound=bound))
 
 
 def make_concrete_arg(
@@ -165,3 +167,51 @@ def logic_op(
         )
 
     return op
+
+
+def unsupported_list_op(
+    op_name: str, bound: ht.TypeBound | None = None
+) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+    """Utility method to define not-yet-implemented list operations.
+
+    Emits `guppylang.unsupported` operations with one type argument.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
+    """
+    bound = bound or ht.TypeBound.Any
+    args: list[ht.TypeArg] = [ht.StringArg(op_name), type_arg(bound=bound)]
+
+    return external_op(
+        "unsupported",
+        args=args,
+        ext=guppylang.compiler.hugr_extension.EXTENSION,
+        variable_remap=None,
+    )
+
+
+def unsupported_array_op(
+    op_name: str, bound: ht.TypeBound | None = None
+) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+    """Utility method to define not-yet-implemented array operations.
+
+    Emits `guppylang.unsupported` operations with one type argument.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
+    """
+    bound = bound or ht.TypeBound.Any
+    args: list[ht.TypeArg] = [
+        ht.StringArg(op_name),
+        int_arg(0),
+        type_arg(1, bound=bound),
+    ]
+
+    return external_op(
+        "unsupported",
+        args=args,
+        ext=guppylang.compiler.hugr_extension.EXTENSION,
+        variable_remap=None,
+    )

@@ -10,8 +10,6 @@ from guppylang.decorator import guppy
 from guppylang.definition.custom import DefaultCallChecker, NoopCompiler
 from guppylang.error import GuppyError
 from guppylang.module import GuppyModule
-from guppylang.prelude._internal import array_compiler, list_compiler
-from guppylang.prelude._internal.array_compiler import ArrayOpCompiler
 from guppylang.prelude._internal.checker import (
     ArrayLenChecker,
     CallableChecker,
@@ -44,6 +42,8 @@ from guppylang.prelude._internal.util import (
     float_op,
     int_op,
     logic_op,
+    unsupported_array_op,
+    unsupported_list_op,
 )
 from guppylang.tys.builtin import (
     array_type_def,
@@ -547,13 +547,13 @@ class List:
     @guppy.custom(builtins, ListOpCompiler(list_isEmpty))
     def __bool__(self: list[T]) -> bool: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Contains")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Contains"))
     def __contains__(self: list[T], el: T) -> bool: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("AssertEmpty")))
+    @guppy.hugr_op(builtins, unsupported_list_op("AssertEmpty"))
     def __end__(self: list[T]) -> None: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Lookup")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Lookup"))
     def __getitem__(self: list[T], idx: int) -> T: ...
 
     @guppy.custom(builtins, ListOpCompiler(list_isNotEmpty))
@@ -562,13 +562,13 @@ class List:
     @guppy.custom(builtins, NoopCompiler())
     def __iter__(self: list[T]) -> list[T]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Length")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Length"))
     def __len__(self: list[T]) -> int: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Repeat")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Repeat"))
     def __mul__(self: list[T], other: int) -> list[T]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Pop")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Pop"))
     def __next__(self: list[T]) -> tuple[T, list[T]]: ...
 
     @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
@@ -580,7 +580,7 @@ class List:
     @guppy.custom(builtins, ListOpCompiler(list_append), ReversingChecker())
     def __radd__(self: list[T], other: list[T]) -> list[T]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Repeat")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Repeat"))
     def __rmul__(self: list[T], other: int) -> list[T]: ...
 
     @guppy.custom(builtins, checker=FailingChecker("Guppy lists are immutable"))
@@ -592,13 +592,13 @@ class List:
     @guppy.custom(builtins, NoopCompiler())  # Can be noop since lists are immutable
     def copy(self: list[T]) -> list[T]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Count")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Count"))
     def count(self: list[T], elt: T) -> int: ...
 
     @guppy.custom(builtins, checker=FailingChecker("Guppy lists are immutable"))
     def extend(self: list[T], seq: None) -> None: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Find")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Find"))
     def index(self: list[T], elt: T) -> int: ...
 
     @guppy.custom(builtins, checker=FailingChecker("Guppy lists are immutable"))
@@ -622,7 +622,7 @@ class Linst:
     @guppy.custom(builtins, ListOpCompiler(list_append))
     def __add__(self: linst[L], other: linst[L]) -> linst[L]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("AssertEmpty")))
+    @guppy.hugr_op(builtins, unsupported_list_op("AssertEmpty"))
     def __end__(self: linst[L]) -> None: ...
 
     @guppy.custom(builtins, ListOpCompiler(list_isNotEmpty))
@@ -631,30 +631,28 @@ class Linst:
     @guppy.custom(builtins, NoopCompiler())
     def __iter__(self: linst[L]) -> linst[L]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Length")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Length"))
     def __len__(self: linst[L]) -> tuple[int, linst[L]]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Pop")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Pop"))
     def __next__(self: linst[L]) -> tuple[L, linst[L]]: ...
 
     @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
     def __new__(x): ...
 
-    @guppy.custom(
-        builtins, ListOpCompiler(list_compiler.dummy_op("Append")), ReversingChecker()
-    )
+    @guppy.hugr_op(builtins, unsupported_list_op("Append"), ReversingChecker())
     def __radd__(self: linst[L], other: linst[L]) -> linst[L]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Repeat")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Repeat"))
     def __rmul__(self: linst[L], other: int) -> linst[L]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Push")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Push"))
     def append(self: linst[L], elt: L) -> linst[L]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("PopAt")))
+    @guppy.hugr_op(builtins, unsupported_list_op("PopAt"))
     def pop(self: linst[L], idx: int) -> tuple[L, linst[L]]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_compiler.dummy_op("Reverse")))
+    @guppy.hugr_op(builtins, unsupported_list_op("Reverse"))
     def reverse(self: linst[L]) -> linst[L]: ...
 
     @guppy.custom(builtins, checker=FailingChecker("Guppy lists are immutable"))
@@ -666,10 +664,10 @@ n = guppy.nat_var(builtins, "n")
 
 @guppy.extend_type(builtins, array_type_def)
 class Array:
-    @guppy.custom(builtins, ArrayOpCompiler(array_compiler.dummy_op("get")))
+    @guppy.hugr_op(builtins, unsupported_array_op("get"))
     def __getitem__(self: array[L, n] @ inout, idx: int) -> L: ...
 
-    @guppy.custom(builtins, ArrayOpCompiler(array_compiler.dummy_op("set")))
+    @guppy.hugr_op(builtins, unsupported_array_op("set"))
     def __setitem__(self: array[L, n] @ inout, idx: int, value: L) -> None: ...
 
     @guppy.custom(builtins, checker=ArrayLenChecker())

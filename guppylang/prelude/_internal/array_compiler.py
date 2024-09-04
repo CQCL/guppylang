@@ -87,21 +87,3 @@ def _get_arr_length(
         assert isinstance(arg, ht.BoundedNatArg)
         return arg.n
     raise InternalGuppyError("Could not get the array length of the input")
-
-
-def dummy_op(
-    name: str,
-) -> Callable[
-    [DfBase[ops.DfParentOp], int | None, ht.Type | None, list[Wire]], list[Wire]
-]:
-    """Dummy operation, used as a placeholder for missing list operations."""
-
-    def compile(
-        builder: DfBase[ops.DfParentOp],
-        length: int | None,
-        elem_type: ht.Type | None,
-        args: list[Wire],
-    ) -> list[Wire]:
-        raise InternalGuppyError(f"Array operation not implemented for {name}")
-
-    return compile

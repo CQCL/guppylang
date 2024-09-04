@@ -140,16 +140,3 @@ def list_append(
     # TODO
 
     return [list1]
-
-
-def dummy_op(
-    name: str,
-) -> Callable[[DfBase[ops.DfParentOp], ht.Type | None, list[Wire]], list[Wire]]:
-    """Dummy operation, used as a placeholder for missing list operations."""
-
-    def compile(
-        builder: DfBase[ops.DfParentOp], elem_type: ht.Type | None, args: list[Wire]
-    ) -> list[Wire]:
-        raise InternalGuppyError(f"List operation not implemented for {name}")
-
-    return compile
