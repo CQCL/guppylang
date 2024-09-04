@@ -1,9 +1,11 @@
+import pytest
 from hugr import ops, val
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 
 
+@pytest.mark.xfail(reason="hugr-includes-whole-stdlib")
 def test_extern_float(validate):
     module = GuppyModule("module")
 
@@ -21,6 +23,7 @@ def test_extern_float(validate):
     assert c.val.val["symbol"] == "ext"
 
 
+@pytest.mark.xfail(reason="hugr-includes-whole-stdlib")
 def test_extern_alt_symbol(validate):
     module = GuppyModule("module")
 

@@ -1,3 +1,4 @@
+import pytest
 from hugr import ops
 
 from guppylang.decorator import guppy
@@ -63,17 +64,17 @@ def test_assign_expr(validate):
     validate(foo)
 
 
+@pytest.mark.xfail(reason="hugr-includes-whole-stdlib")
 def test_func_def_name():
     @compile_guppy
     def func_name() -> None:
         return
 
-    # Note that while we don't have Hugr linking, and are compiling the stdlib into every Hugr,
-    # the entire stdlib (even unused parts) will show up here too.
-    func_defn_names = [
-        data.op.name for n, data in func_name.nodes() if isinstance(data.op, ops.FuncDefn)
+    [def_op] = [
+        data.op for n, data in func_name.nodes() if isinstance(data.op, ops.FuncDefn)
     ]
-    assert "func_name" in func_defn_names
+    assert isinstance(def_op, ops.FuncDefn)
+    assert def_op.name == "func_name"
 
 
 def test_func_decl_name():

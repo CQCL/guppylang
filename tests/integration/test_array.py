@@ -1,3 +1,4 @@
+import pytest
 from hugr import ops
 from hugr.std.int import IntVal
 
@@ -7,6 +8,7 @@ from guppylang.prelude.builtins import array
 from tests.util import compile_guppy
 
 
+@pytest.mark.xfail(reason="hugr-includes-whole-stdlib")
 def test_len(validate):
     module = GuppyModule("test")
 
