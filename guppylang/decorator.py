@@ -319,7 +319,7 @@ class _Guppy:
                 else "No Guppy functions or types defined in this module."
             )
             raise MissingModuleError(err)
-        return module.compile_package()
+        return module.compile()
 
     def registered_modules(self) -> list[ModuleIdentifier]:
         """Returns a list of all currently registered modules for local contexts."""

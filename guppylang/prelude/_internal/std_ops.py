@@ -32,7 +32,7 @@ def list_elem_type(ty: Type) -> Type:
 
 def _instantiate_list_op(
     name: str, elem_type: ht.Type, inp: list[ht.Type], out: list[ht.Type]
-) -> ops.DataflowOp:
+) -> ops.ExtOp:
     op_def = hugr.std.collections.EXTENSION.get_op(name)
     return ops.ExtOp(
         op_def,
@@ -41,7 +41,7 @@ def _instantiate_list_op(
     )
 
 
-def list_pop(elem_type: ht.Type) -> ops.DataflowOp:
+def list_pop(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `pop` operation."""
     list_type = hugr.std.collections.list_type(elem_type)
     return _instantiate_list_op(
@@ -49,13 +49,13 @@ def list_pop(elem_type: ht.Type) -> ops.DataflowOp:
     )
 
 
-def list_push(elem_type: ht.Type) -> ops.DataflowOp:
+def list_push(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `push` operation."""
     list_type = hugr.std.collections.list_type(elem_type)
     return _instantiate_list_op("push", elem_type, [list_type, elem_type], [list_type])
 
 
-def list_get(elem_type: ht.Type) -> ops.DataflowOp:
+def list_get(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `get` operation."""
     list_type = hugr.std.collections.list_type(elem_type)
     return _instantiate_list_op(
@@ -63,7 +63,7 @@ def list_get(elem_type: ht.Type) -> ops.DataflowOp:
     )
 
 
-def list_set(elem_type: ht.Type) -> ops.DataflowOp:
+def list_set(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `set` operation."""
     list_type = hugr.std.collections.list_type(elem_type)
     return _instantiate_list_op(
@@ -74,7 +74,7 @@ def list_set(elem_type: ht.Type) -> ops.DataflowOp:
     )
 
 
-def list_insert(elem_type: ht.Type) -> ops.DataflowOp:
+def list_insert(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `insert` operation."""
     list_type = hugr.std.collections.list_type(elem_type)
     return _instantiate_list_op(
@@ -85,7 +85,7 @@ def list_insert(elem_type: ht.Type) -> ops.DataflowOp:
     )
 
 
-def list_length(elem_type: ht.Type) -> ops.DataflowOp:
+def list_length(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `length` operation."""
     list_type = hugr.std.collections.list_type(elem_type)
     return _instantiate_list_op(
@@ -106,7 +106,7 @@ def _instantiate_int_op(
     int_width: int | Sequence[int],
     inp: list[ht.Type],
     out: list[ht.Type],
-) -> ops.DataflowOp:
+) -> ops.ExtOp:
     op_def = hugr.std.int.INT_OPS_EXTENSION.get_op(name)
     int_width = [int_width] if isinstance(int_width, int) else int_width
     return ops.ExtOp(
@@ -116,12 +116,12 @@ def _instantiate_int_op(
     )
 
 
-def ieq(width: int) -> ops.DataflowOp:
+def ieq(width: int) -> ops.ExtOp:
     """Returns a `std.arithmetic.int.ieq` operation."""
     return _instantiate_int_op("ieq", width, [int_t(width), int_t(width)], [ht.Bool])
 
 
-def ine(width: int) -> ops.DataflowOp:
+def ine(width: int) -> ops.ExtOp:
     """Returns a `std.arithmetic.int.ine` operation."""
     return _instantiate_int_op("ine", width, [int_t(width), int_t(width)], [ht.Bool])
 
@@ -131,7 +131,7 @@ def ine(width: int) -> ops.DataflowOp:
 # ------------------------------------------------------
 
 
-def convert_ifromusize() -> ops.DataflowOp:
+def convert_ifromusize() -> ops.ExtOp:
     """Returns a `std.arithmetic.conversions.ifromusize` operation."""
     op_def = hugr.std.int.CONVERSIONS_EXTENSION.get_op("ifromusize")
     return ops.ExtOp(
@@ -140,7 +140,7 @@ def convert_ifromusize() -> ops.DataflowOp:
     )
 
 
-def convert_itousize() -> ops.DataflowOp:
+def convert_itousize() -> ops.ExtOp:
     """Returns a `std.arithmetic.conversions.itousize` operation."""
     op_def = hugr.std.int.CONVERSIONS_EXTENSION.get_op("itousize")
     return ops.ExtOp(
@@ -149,7 +149,7 @@ def convert_itousize() -> ops.DataflowOp:
     )
 
 
-def convert_ifrombool() -> ops.DataflowOp:
+def convert_ifrombool() -> ops.ExtOp:
     """Returns a `std.arithmetic.conversions.ifrombool` operation."""
     op_def = hugr.std.int.CONVERSIONS_EXTENSION.get_op("ifrombool")
     return ops.ExtOp(
@@ -158,7 +158,7 @@ def convert_ifrombool() -> ops.DataflowOp:
     )
 
 
-def convert_itobool() -> ops.DataflowOp:
+def convert_itobool() -> ops.ExtOp:
     """Returns a `std.arithmetic.conversions.itobool` operation."""
     op_def = hugr.std.int.CONVERSIONS_EXTENSION.get_op("itobool")
     return ops.ExtOp(

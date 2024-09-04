@@ -15,7 +15,7 @@ from hugr import ext as he
 from hugr import ops
 from hugr import tys as ht
 
-import guppylang
+from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 
@@ -169,49 +169,22 @@ def logic_op(
     return op
 
 
-def unsupported_list_op(
-    op_name: str, bound: ht.TypeBound | None = None
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
-    """Utility method to define not-yet-implemented list operations.
+def unsupported_op(op_name: str) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+    """Utility method to define not-yet-implemented operations.
 
-    Emits `guppylang.unsupported` operations with one type argument.
-
-    Returns:
-        A function that takes an instantiation of the type arguments and returns
-        a concrete HUGR op.
-    """
-    bound = bound or ht.TypeBound.Any
-    args: list[ht.TypeArg] = [ht.StringArg(op_name), type_arg(bound=bound)]
-
-    return external_op(
-        "unsupported",
-        args=args,
-        ext=guppylang.compiler.hugr_extension.EXTENSION,
-        variable_remap=None,
-    )
-
-
-def unsupported_array_op(
-    op_name: str, bound: ht.TypeBound | None = None
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
-    """Utility method to define not-yet-implemented array operations.
-
-    Emits `guppylang.unsupported` operations with one type argument.
+    Args:
+        op_name: The name of the operation to define.
 
     Returns:
-        A function that takes an instantiation of the type arguments and returns
-        a concrete HUGR op.
+        A function that takes an instantiation of the type arguments as well as
+        the inferred input and output types and returns a concrete HUGR op.
     """
-    bound = bound or ht.TypeBound.Any
-    args: list[ht.TypeArg] = [
-        ht.StringArg(op_name),
-        int_arg(0),
-        type_arg(1, bound=bound),
-    ]
 
-    return external_op(
-        "unsupported",
-        args=args,
-        ext=guppylang.compiler.hugr_extension.EXTENSION,
-        variable_remap=None,
-    )
+    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
+        return UnsupportedOp(
+            op_name=op_name,
+            inputs=ty.input,
+            outputs=ty.output,
+        )
+
+    return op

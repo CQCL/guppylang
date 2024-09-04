@@ -19,8 +19,29 @@ PARTIAL_OP_DEF: he.OpDef = EXTENSION.add_op_def(
     he.OpDef(
         "partial",
         signature=he.OpDefSig(
-            poly_func=None,
-            binary=True,
+            poly_func=ht.PolyFuncType(
+                params=[
+                    # Captured input types
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    # Non-captured input types
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    # Output types
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                ],
+                body=ht.FunctionType(
+                    input=[
+                        ht.FunctionType(
+                            input=[
+                                ht.RowVariable(0, ht.TypeBound.Any),
+                                ht.RowVariable(1, ht.TypeBound.Any),
+                            ],
+                            output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                        ),
+                        ht.RowVariable(0, ht.TypeBound.Any),
+                    ],
+                    output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                ),
+            )
         ),
         description="A partial application of a function.\n"
         "Given arguments [*a],[*b],[*c], represents an operation with type\n"
@@ -102,17 +123,10 @@ class PartialOp(ops.AsExtOp):
                 _op_def=op_def, args=[captured_args, other_args, output_args]
             ):
                 if op_def.qualified_name() == PARTIAL_OP_DEF.qualified_name():
-
-                    def arg_seq_to_types(args: ht.TypeArg) -> Iterator[ht.Type]:
-                        assert isinstance(args, ht.SequenceArg)
-                        for arg in args.elems:
-                            assert isinstance(arg, ht.TypeTypeArg)
-                            yield arg.ty
-
                     return cls(
-                        captured_inputs=[*arg_seq_to_types(captured_args)],
-                        other_inputs=[*arg_seq_to_types(other_args)],
-                        outputs=[*arg_seq_to_types(output_args)],
+                        captured_inputs=[*_arg_seq_to_types(captured_args)],
+                        other_inputs=[*_arg_seq_to_types(other_args)],
+                        outputs=[*_arg_seq_to_types(output_args)],
                     )
         msg = f"Invalid custom op: {custom}"
         raise ops.AsExtOp.InvalidExtOp(msg)
@@ -122,8 +136,20 @@ UNSUPPORTED_OP_DEF: he.OpDef = EXTENSION.add_op_def(
     he.OpDef(
         "unsupported",
         signature=he.OpDefSig(
-            poly_func=None,
-            binary=True,
+            poly_func=ht.PolyFuncType(
+                params=[
+                    # Name of the operation
+                    ht.StringParam(),
+                    # Input types
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    # Output types
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                ],
+                body=ht.FunctionType(
+                    input=[ht.RowVariable(1, ht.TypeBound.Any)],
+                    output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                ),
+            )
         ),
         description="An unsupported operation stub emitted by Guppy.",
     )
@@ -138,21 +164,20 @@ class UnsupportedOp(ops.AsExtOp):
         op_name: The name of the unsupported operation.
         inputs: The input types of the operation.
         outputs: The output types of the operation.
-        args: The type arguments to this operation.
-            The operation name will be prepended to this list.
     """
 
     op_name: str
     inputs: list[ht.Type]
     outputs: list[ht.Type]
-    args: list[ht.TypeArg]
 
     def op_def(self) -> he.OpDef:
         return UNSUPPORTED_OP_DEF
 
     def type_args(self) -> list[ht.TypeArg]:
         op_name = ht.StringArg(self.op_name)
-        return [op_name, *self.args]
+        input_args = ht.SequenceArg([ht.TypeTypeArg(ty) for ty in self.inputs])
+        output_args = ht.SequenceArg([ht.TypeTypeArg(ty) for ty in self.outputs])
+        return [op_name, input_args, output_args]
 
     def cached_signature(self) -> ht.FunctionType | None:
         return ht.FunctionType(self.inputs, self.outputs)
@@ -162,18 +187,24 @@ class UnsupportedOp(ops.AsExtOp):
         match custom:
             case ops.ExtOp(_op_def=op_def, args=args):
                 if op_def.qualified_name() == UNSUPPORTED_OP_DEF.qualified_name():
-                    sig = custom.cached_signature()
-                    assert (
-                        sig is not None
-                    ), "`guppylang.unsupported` ops must have a computed signature"
-                    [op_name, *args] = args
+                    [op_name, input_args, output_args] = args
                     assert isinstance(op_name, ht.StringArg), (
                         "The first argument to a guppylang.unsupported op "
                         "must be the operation name"
                     )
                     op_name = op_name.value
                     return cls(
-                        op_name=op_name, inputs=sig.input, outputs=sig.output, args=args
+                        op_name=op_name,
+                        inputs=[*_arg_seq_to_types(input_args)],
+                        outputs=[*_arg_seq_to_types(output_args)],
                     )
         msg = f"Invalid custom op: {custom}"
         raise ops.AsExtOp.InvalidExtOp(msg)
+
+
+def _arg_seq_to_types(args: ht.TypeArg) -> Iterator[ht.Type]:
+    """Converts a SequenceArg of type arguments into a sequence of types."""
+    assert isinstance(args, ht.SequenceArg)
+    for arg in args.elems:
+        assert isinstance(arg, ht.TypeTypeArg)
+        yield arg.ty
