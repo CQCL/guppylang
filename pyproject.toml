@@ -25,7 +25,6 @@ dependencies = [
 [project.optional-dependencies]
 pytket = ["pytket >=1.30.0,<2", "tket2 >=0.2.1,<0.3"]
 docs = ["sphinx >=7.2.6,<9", "sphinx-book-theme >=1.1.2,<2"]
-validation = ["guppyval"]
 execution = ["execute-llvm"]
 
 [project.urls]
@@ -46,10 +45,9 @@ dev-dependencies = [
 ]
 
 [tool.uv.workspace]
-members = ["execute_llvm", "validator"]
+members = ["execute_llvm"]
 
 [tool.uv.sources]
-guppyval = { workspace = true }
 execute-llvm = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
