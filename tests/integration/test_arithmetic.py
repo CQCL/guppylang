@@ -1,4 +1,5 @@
 from guppylang.decorator import guppy
+from guppylang.prelude.angles import angle
 from guppylang.prelude.builtins import nat
 from guppylang.module import GuppyModule
 from tests.util import compile_guppy
@@ -99,6 +100,32 @@ def test_arith_big(validate):
         return b
 
     validate(arith)
+
+
+def test_angle_arith(validate):
+    module = GuppyModule("test")
+    module.load(angle)
+
+    @guppy(module)
+    def main(a1: angle, a2: angle) -> bool:
+        a3 = -a1 + a2 * -3
+        a3 -= a1
+        a3 += 2 * a1
+        return a3 / 3 == -a2
+
+    validate(module.compile())
+
+
+def test_angle_float_coercion(validate):
+    module = GuppyModule("test")
+    module.load(angle)
+
+    @guppy(module)
+    def main(f: float) -> tuple[angle, float]:
+        a = angle(f)
+        return a, float(a)
+
+    validate(module.compile())
 
 
 def test_shortcircuit_assign1(validate):
