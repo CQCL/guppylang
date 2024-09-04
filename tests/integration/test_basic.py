@@ -68,11 +68,12 @@ def test_func_def_name():
     def func_name() -> None:
         return
 
-    [def_op] = [
-        data.op for n, data in func_name.nodes() if isinstance(data.op, ops.FuncDefn)
+    # Note that while we don't have Hugr linking, and are compiling the stdlib into every Hugr,
+    # the entire stdlib (even unused parts) will show up here too.
+    func_defn_names = [
+        data.op.name for n, data in func_name.nodes() if isinstance(data.op, ops.FuncDefn)
     ]
-    assert isinstance(def_op, ops.FuncDefn)
-    assert def_op.name == "func_name"
+    assert "func_name" in func_defn_names
 
 
 def test_func_decl_name():
