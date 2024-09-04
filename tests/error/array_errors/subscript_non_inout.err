@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:14
+
+12:    @guppy(module)
+13:    def main(qs: array[qubit, 42]) -> tuple[qubit, array[qubit, 42]]:
+14:        q = qs[0]
+               ^^^^^
+GuppyError: Subscripting on expression with linear type `array[qubit, 42]` is only allowed in `@inout` position

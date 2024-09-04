@@ -10,8 +10,9 @@ module.load_all(quantum)
 
 
 @guppy(module)
-def main(qs: array[qubit, 42]) -> int:
-    return qs[0]
+def main(qs: array[qubit, 42]) -> tuple[qubit, array[qubit, 42]]:
+    q = qs[0]
+    return q, qs
 
 
 module.compile()

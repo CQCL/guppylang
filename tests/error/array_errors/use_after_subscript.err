@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:18
+
+16:    @guppy(module)
+17:    def main(qs: array[qubit, 42]) -> array[qubit, 42]:
+18:        return foo(qs[0], qs)
+                      ^^^^^
+GuppyError: Variable `qs` with linear type `array[qubit, 42]` was already used (at 18:22)

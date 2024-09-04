@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:9
+
+7:    @guppy(module)
+8:    def foo(x: int) -> None:
+9:        x[0]
+          ^
+GuppyTypeError: Expression of type `int` is not subscriptable

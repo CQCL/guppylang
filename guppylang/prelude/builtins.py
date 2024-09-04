@@ -20,6 +20,8 @@ from guppylang.prelude._internal.checker import (
     UnsupportedChecker,
 )
 from guppylang.prelude._internal.compiler import (
+    ArrayGetitemCompiler,
+    ArraySetitemCompiler,
     FloatBoolCompiler,
     FloatDivmodCompiler,
     FloatFloordivCompiler,
@@ -36,7 +38,6 @@ from guppylang.prelude._internal.util import (
     linst_op,
     list_op,
     logic_op,
-    type_arg,
 )
 from guppylang.tys.builtin import (
     array_type_def,
@@ -654,13 +655,11 @@ n = guppy.nat_var(builtins, "n")
 
 @guppy.extend_type(builtins, array_type_def)
 class Array:
-    @guppy.hugr_op(
-        builtins,
-        custom_op(
-            "ArrayGet", args=[int_arg(), type_arg()], variable_remap={0: 1, 1: 0}
-        ),
-    )
-    def __getitem__(self: array[T, n], idx: int) -> T: ...
+    @guppy.custom(builtins, ArrayGetitemCompiler())
+    def __getitem__(self: array[L, n] @ inout, idx: int) -> L: ...
+
+    @guppy.custom(builtins, ArraySetitemCompiler())
+    def __setitem__(self: array[L, n] @ inout, idx: int, value: L) -> None: ...
 
     @guppy.custom(builtins, checker=ArrayLenChecker())
     def __len__(self: array[T, n]) -> int: ...

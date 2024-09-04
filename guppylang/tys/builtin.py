@@ -133,10 +133,17 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
     assert isinstance(len_arg, ConstArg)
+    # Linear elements are turned into an optional to enable unsafe indexing.
+    # See `ArrayGetitemCompiler` for details.
+    elem_ty: ht.Type
+    if ty_arg.ty.linear:
+        elem_ty = ht.Sum([[ty_arg.ty.to_hugr()], []])
+    else:
+        elem_ty = ty_arg.ty.to_hugr()
     return ht.Opaque(
         extension="prelude",
         id="array",
-        args=[len_arg.to_hugr(), ty_arg.to_hugr()],
+        args=[len_arg.to_hugr(), ht.TypeTypeArg(elem_ty)],
         bound=ty_arg.ty.hugr_bound,
     )
 
