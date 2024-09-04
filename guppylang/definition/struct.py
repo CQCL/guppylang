@@ -231,24 +231,29 @@ def parse_py_class(cls: type) -> ast.ClassDef:
     #  - https://github.com/wandb/weave/pull/1864
     if is_running_ipython():
         defn = find_ipython_def(cls.__name__)
-        if defn is None:
-            raise ValueError(f"Couldn't find source for class `{cls.__name__}`")
-        annotate_location(defn.node, defn.cell_source, f"<{defn.cell_name}>", 1)
-        if not isinstance(defn.node, ast.ClassDef):
-            raise GuppyError("Expected a class definition", defn.node)
-        return defn.node
+        if defn is not None:
+            annotate_location(defn.node, defn.cell_source, f"<{defn.cell_name}>", 1)
+            if not isinstance(defn.node, ast.ClassDef):
+                raise GuppyError("Expected a class definition", defn.node)
+            return defn.node
+        # inspect.getsourcelines works for classes defined in the guppy stdlib/builtins
+        try:
+            source_lines, line_offset = inspect.getsourcelines(cls)
+        except OSError as e:
+            # Not a guppy builtin
+            raise ValueError(f"Couldn't find source for class `{cls.__name__}`") from e
     else:
         source_lines, line_offset = inspect.getsourcelines(cls)
-        source = "".join(source_lines)  # Lines already have trailing \n's
-        source = textwrap.dedent(source)
-        cls_ast = ast.parse(source).body[0]
-        file = inspect.getsourcefile(cls)
-        if file is None:
-            raise GuppyError("Couldn't determine source file for class")
-        annotate_location(cls_ast, source, file, line_offset)
-        if not isinstance(cls_ast, ast.ClassDef):
-            raise GuppyError("Expected a class definition", cls_ast)
-        return cls_ast
+    source = "".join(source_lines)  # Lines already have trailing \n's
+    source = textwrap.dedent(source)
+    cls_ast = ast.parse(source).body[0]
+    file = inspect.getsourcefile(cls)
+    if file is None:
+        raise GuppyError("Couldn't determine source file for class")
+    annotate_location(cls_ast, source, file, line_offset)
+    if not isinstance(cls_ast, ast.ClassDef):
+        raise GuppyError("Expected a class definition", cls_ast)
+    return cls_ast
 
 
 def try_parse_generic_base(node: ast.expr) -> list[ast.expr] | None:
