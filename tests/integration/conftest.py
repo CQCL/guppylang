@@ -50,10 +50,6 @@ def validate(request, export_test_cases_dir: Path):
             raise RuntimeError(f"{p.stderr}")
 
     def validate_impl(hugr: Package | Hugr, name=None):
-        # TODO: Validate the package, including extensions
-        if isinstance(hugr, Package):
-            hugr = hugr.modules[0]
-
         # Validate via the json encoding
         js = hugr.to_json()
 

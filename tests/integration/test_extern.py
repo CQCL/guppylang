@@ -14,7 +14,7 @@ def test_extern_float(validate):
         return ext + ext  # noqa: F821
 
     package = module.compile()
-    validate(hg)
+    validate(package)
 
     hg = package.modules[0]
     [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]

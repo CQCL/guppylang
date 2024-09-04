@@ -288,7 +288,7 @@ class GuppyModule:
         """Compiles the module and returns the final Hugr."""
         # This function does not use the `pretty_errors` decorator since it is
         # is wrapping around `compile_package` which does use it already.
-        package = self.compile_package()
+        package = self.compile()
         hugr = package.modules[0]
         return hugr
 
