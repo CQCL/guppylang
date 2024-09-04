@@ -4,21 +4,19 @@ from guppylang.module import GuppyModule
 from tests.util import compile_guppy
 
 def test_range(validate, run_int_fn):
-    module = GuppyModule("test_aug_assign_loop")
+    module = GuppyModule("test_range")
 
     @guppy(module)
     def main() -> int:
         total = 0
-        xs = range(5)
-        for x in xs:
-            total += 100 + x
+        for x in range(5):
+            total += x + 100 # Make the initial 0 obvious
         return total
 
     @guppy(module)
     def negative() -> int:
         total = 0
-        xs = range(-3)
-        for x in xs:
+        for x in range(-3):
             total += 100 + x
         return total
 
