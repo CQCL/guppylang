@@ -15,12 +15,14 @@ repos:
       - id: end-of-file-fixer
         exclude: |
           (?x)^(
-            .*\.json
+            .*\.json|
+            .*\.err
           )$
       - id: trailing-whitespace
         exclude: |
           (?x)^(
-            .*\.json
+            .*\.json|
+            .*\.err
           )$
       # Python-specific
       - id: check-ast
