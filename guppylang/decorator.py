@@ -3,14 +3,16 @@ import inspect
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from types import ModuleType
+from types import FrameType, ModuleType
 from typing import Any, TypeVar
 
 from hugr import Hugr, ops
 from hugr import tys as ht
+from hugr import val as hv
 
 from guppylang.ast_util import annotate_location, has_empty_body
 from guppylang.definition.common import DefId
+from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
     CustomCallChecker,
     CustomCallCompiler,
@@ -250,6 +252,15 @@ class _Guppy:
 
         return dec
 
+    def constant(
+        self, module: GuppyModule, name: str, ty: str, value: hv.Value
+    ) -> RawConstDef:
+        """Adds a constant to a module, backed by a `hugr.val.Value`."""
+        type_ast = _parse_expr_string(ty, f"Not a valid Guppy type: `{ty}`")
+        defn = RawConstDef(DefId.fresh(module), name, None, type_ast, value)
+        module.register_def(defn)
+        return defn
+
     def extern(
         self,
         module: GuppyModule,
@@ -259,28 +270,7 @@ class _Guppy:
         constant: bool = True,
     ) -> RawExternDef:
         """Adds an extern symbol to a module."""
-        try:
-            type_ast = ast.parse(ty, mode="eval").body
-        except SyntaxError:
-            err = f"Not a valid Guppy type: `{ty}`"
-            raise GuppyError(err) from None
-
-        # Try to annotate the type AST with source information. This requires us to
-        # inspect the stack frame of the caller
-        if frame := inspect.currentframe():  # noqa: SIM102
-            if caller_frame := frame.f_back:  # noqa: SIM102
-                if caller_module := inspect.getmodule(caller_frame):
-                    info = inspect.getframeinfo(caller_frame)
-                    source_lines, _ = inspect.getsourcelines(caller_module)
-                    source = "".join(source_lines)
-                    annotate_location(type_ast, source, info.filename, 0)
-                    # Modify the AST so that all sub-nodes span the entire line. We
-                    # can't give a better location since we don't know the column
-                    # offset of the `ty` argument
-                    for node in [type_ast, *ast.walk(type_ast)]:
-                        node.lineno, node.col_offset = info.lineno, 0
-                        node.end_col_offset = len(source_lines[info.lineno - 1])
-
+        type_ast = _parse_expr_string(ty, f"Not a valid Guppy type: `{ty}`")
         defn = RawExternDef(
             DefId.fresh(module), name, None, symbol or name, constant, type_ast
         )
@@ -326,3 +316,44 @@ class _Guppy:
 
 
 guppy = _Guppy()
+
+
+def _parse_expr_string(ty_str: str, parse_err: str) -> ast.expr:
+    """Helper function to parse expressions that are provided as strings.
+
+    Tries to infer the source location were the given string was defined by inspecting
+    the call stack.
+    """
+    try:
+        expr_ast = ast.parse(ty_str, mode="eval").body
+    except SyntaxError:
+        raise GuppyError(parse_err) from None
+
+    # Try to annotate the type AST with source information. This requires us to
+    # inspect the stack frame of the caller
+    if caller_frame := _get_calling_frame():
+        info = inspect.getframeinfo(caller_frame)
+        if caller_module := inspect.getmodule(caller_frame):
+            source_lines, _ = inspect.getsourcelines(caller_module)
+            source = "".join(source_lines)
+            annotate_location(expr_ast, source, info.filename, 0)
+            # Modify the AST so that all sub-nodes span the entire line. We
+            # can't give a better location since we don't know the column
+            # offset of the `ty` argument
+            for node in [expr_ast, *ast.walk(expr_ast)]:
+                node.lineno, node.col_offset = info.lineno, 0
+                node.end_col_offset = len(source_lines[info.lineno - 1])
+    return expr_ast
+
+
+def _get_calling_frame() -> FrameType | None:
+    """Finds the first frame that called this function outside the current module."""
+    frame = inspect.currentframe()
+    while frame:
+        module = inspect.getmodule(frame)
+        if module is None:
+            break
+        if module.__file__ != __file__:
+            return frame
+        frame = frame.f_back
+    return None

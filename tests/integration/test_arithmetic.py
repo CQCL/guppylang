@@ -1,5 +1,5 @@
 from guppylang.decorator import guppy
-from guppylang.prelude.angles import angle
+from guppylang.prelude.angles import angle, pi
 from guppylang.prelude.builtins import nat
 from guppylang.module import GuppyModule
 from tests.util import compile_guppy
@@ -124,6 +124,20 @@ def test_angle_float_coercion(validate):
     def main(f: float) -> tuple[angle, float]:
         a = angle(f)
         return a, float(a)
+
+    validate(module.compile())
+
+
+def test_angle_pi(validate):
+    module = GuppyModule("test")
+    module.load(angle, pi)
+
+    @guppy(module)
+    def main() -> angle:
+        a = 2 * pi
+        a += -pi / 3
+        a += 3 * pi / 2
+        return a
 
     validate(module.compile())
 
