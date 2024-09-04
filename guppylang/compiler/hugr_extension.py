@@ -39,7 +39,12 @@ PARTIAL_OP_DEF: he.OpDef = EXTENSION.add_op_def(
                         ),
                         ht.RowVariable(0, ht.TypeBound.Any),
                     ],
-                    output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                    output=[
+                        ht.FunctionType(
+                            input=[ht.RowVariable(1, ht.TypeBound.Any)],
+                            output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                        ),
+                    ],
                 ),
             )
         ),
@@ -114,7 +119,8 @@ class PartialOp(ops.AsExtOp):
             [*self.captured_inputs, *self.other_inputs],
             self.outputs,
         )
-        return ht.FunctionType([closure_ty, *self.captured_inputs], closure_ty.output)
+        partial_fn_ty = ht.FunctionType(self.other_inputs, closure_ty.output)
+        return ht.FunctionType([closure_ty, *self.captured_inputs], [partial_fn_ty])
 
     @classmethod
     def from_ext(cls, custom: ops.ExtOp) -> PartialOp:
@@ -130,6 +136,10 @@ class PartialOp(ops.AsExtOp):
                     )
         msg = f"Invalid custom op: {custom}"
         raise ops.AsExtOp.InvalidExtOp(msg)
+
+    @property
+    def num_out(self) -> int:
+        return 1
 
 
 UNSUPPORTED_OP_DEF: he.OpDef = EXTENSION.add_op_def(
@@ -200,6 +210,10 @@ class UnsupportedOp(ops.AsExtOp):
                     )
         msg = f"Invalid custom op: {custom}"
         raise ops.AsExtOp.InvalidExtOp(msg)
+
+    @property
+    def num_out(self) -> int:
+        return len(self.outputs)
 
 
 def _arg_seq_to_types(args: ht.TypeArg) -> Iterator[ht.Type]:

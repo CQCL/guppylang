@@ -8,7 +8,6 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import hugr.std.int
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.std.collections import ListVal
@@ -16,11 +15,6 @@ from hugr.std.collections import ListVal
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.error import InternalGuppyError
 from guppylang.prelude._internal.std_ops import (
-    convert_ifromusize,
-    ieq,
-    ine,
-    list_length,
-    list_pop,
     list_push,
 )
 
@@ -86,57 +80,3 @@ def list_new(
     for elem in args:
         lst = builder.add_op(push_op, lst, elem)
     return [lst]
-
-
-def list_isEmpty(
-    builder: DfBase[ops.DfParentOp], elem_type: ht.Type | None, args: list[Wire]
-) -> list[Wire]:
-    (lst,) = args
-    ty = _get_elem_type(builder, elem_type, lst=lst)
-    length = builder.add_op(list_length(ty), lst)
-    length = builder.add_op(convert_ifromusize(), length)
-    zero = builder.load(hugr.std.int.IntVal(0, width=6))
-    is_empty = builder.add_op(ieq(6), length, zero)
-    return [lst, is_empty]
-
-
-def list_isNotEmpty(
-    builder: DfBase[ops.DfParentOp], elem_type: ht.Type | None, args: list[Wire]
-) -> list[Wire]:
-    (lst,) = args
-    ty = _get_elem_type(builder, elem_type, lst=lst)
-    length = builder.add_op(list_length(ty), lst)
-    length = builder.add_op(convert_ifromusize(), length)
-    zero = builder.load(hugr.std.int.IntVal(0, width=6))
-    is_empty = builder.add_op(ine(6), length, zero)
-    return [is_empty, lst]
-
-
-def list_append(
-    builder: DfBase[ops.DfParentOp], elem_type: ht.Type | None, args: list[Wire]
-) -> list[Wire]:
-    (list1, list2) = args
-    ty = _get_elem_type(builder, elem_type, lst=list1)
-
-    # It'd be nice to preallocate `len(list2)` capacity on list1 here,
-    # if that gets added in
-    # https://github.com/CQCL/hugr/issues/1508
-    with builder.add_tail_loop([], [list1, list2]) as loop:
-        list1, list2 = loop.inputs()
-        list2, elem = loop.add_op(list_pop(ty), list2).outputs()
-
-        # The returned `elem` is an option.
-        # If it has a value, we append it to the list and continue with the loop.
-        # Otherwise, it means the second list is empty, so we return the first list.
-
-        # TODO
-
-        # Output the branch predicate and the inputs for the next iteration
-        # loop.set_loop_outputs(sum_wire=elem_is_none, list1, list2)
-
-    list1, list2 = loop.outputs()
-
-    # Discard the empty list2
-    # TODO
-
-    return [list1]

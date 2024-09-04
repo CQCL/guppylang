@@ -269,9 +269,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
         args = [self.visit(arg) for arg in node.args]
         call = self.builder.add_op(ops.CallIndirect(func_ty.to_hugr()), func, *args)
-        # TODO: Replace below with `list(call[:num_returns])` once
-        #  https://github.com/CQCL/hugr/issues/1454 is fixed.
-        regular_returns = [call[i] for i in range(num_returns)]
+        regular_returns = list(call[:num_returns])
         inout_returns = call[num_returns:]
         self._update_inout_ports(node.args, inout_returns, func_ty)
         return self._pack_returns(regular_returns, func_ty.output)

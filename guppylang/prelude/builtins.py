@@ -32,12 +32,6 @@ from guppylang.prelude._internal.compiler import (
     NatTruedivCompiler,
     NewArrayCompiler,
 )
-from guppylang.prelude._internal.list_compiler import (
-    ListOpCompiler,
-    list_append,
-    list_isEmpty,
-    list_isNotEmpty,
-)
 from guppylang.prelude._internal.util import (
     float_op,
     int_op,
@@ -533,10 +527,10 @@ class Float:
 
 @guppy.extend_type(builtins, list_type_def)
 class List:
-    @guppy.custom(builtins, ListOpCompiler(list_append))
+    @guppy.hugr_op(builtins, unsupported_op("Append"))
     def __add__(self: list[T], other: list[T]) -> list[T]: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_isEmpty))
+    @guppy.hugr_op(builtins, unsupported_op("IsEmpty"))
     def __bool__(self: list[T]) -> bool: ...
 
     @guppy.hugr_op(builtins, unsupported_op("Contains"))
@@ -548,7 +542,7 @@ class List:
     @guppy.hugr_op(builtins, unsupported_op("Lookup"))
     def __getitem__(self: list[T], idx: int) -> T: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_isNotEmpty))
+    @guppy.hugr_op(builtins, unsupported_op("IsNotEmpty"))
     def __hasnext__(self: list[T]) -> tuple[bool, list[T]]: ...
 
     @guppy.custom(builtins, NoopCompiler())
@@ -569,7 +563,7 @@ class List:
     @guppy.custom(builtins, checker=FailingChecker("Guppy lists are immutable"))
     def __setitem__(self: list[T], idx: int, value: T) -> None: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_append), ReversingChecker())
+    @guppy.hugr_op(builtins, unsupported_op("Append"), ReversingChecker())
     def __radd__(self: list[T], other: list[T]) -> list[T]: ...
 
     @guppy.hugr_op(builtins, unsupported_op("Repeat"))
@@ -611,13 +605,13 @@ linst = list
 
 @guppy.extend_type(builtins, linst_type_def)
 class Linst:
-    @guppy.custom(builtins, ListOpCompiler(list_append))
+    @guppy.hugr_op(builtins, unsupported_op("Append"))
     def __add__(self: linst[L], other: linst[L]) -> linst[L]: ...
 
     @guppy.hugr_op(builtins, unsupported_op("AssertEmpty"))
     def __end__(self: linst[L]) -> None: ...
 
-    @guppy.custom(builtins, ListOpCompiler(list_isNotEmpty))
+    @guppy.hugr_op(builtins, unsupported_op("IsNotEmpty"))
     def __hasnext__(self: linst[L]) -> tuple[bool, linst[L]]: ...
 
     @guppy.custom(builtins, NoopCompiler())
