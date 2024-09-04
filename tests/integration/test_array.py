@@ -18,9 +18,10 @@ def test_len(validate):
     def main(xs: array[float, 42]) -> int:
         return len(xs)
 
-    hg = module.compile()
+    package = module.compile()
     validate(hg)
 
+    hg = package.modules[0]
     [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(val, ops.Const)
     assert isinstance(val.val, IntVal)
