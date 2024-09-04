@@ -15,7 +15,7 @@ from guppylang.prelude.builtins import py, result
 from guppylang.prelude.quantum import cx, discard, h, measure, qubit, rz, x
 
 module = GuppyModule("test")
-module.load(quantum)
+module.load_all(quantum)
 
 sqrt_e = math.sqrt(math.e)
 sqrt_e_div = math.sqrt((math.e - 1) / math.e)

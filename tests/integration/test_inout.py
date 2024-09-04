@@ -10,7 +10,7 @@ import guppylang.prelude.quantum as quantum
 
 def test_basic(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(q: qubit @inout) -> None: ...
@@ -25,7 +25,7 @@ def test_basic(validate):
 
 def test_mixed(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(q1: qubit @inout, q2: qubit) -> qubit: ...
@@ -40,7 +40,7 @@ def test_mixed(validate):
 
 def test_local(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(q: qubit @inout) -> None: ...
@@ -56,7 +56,7 @@ def test_local(validate):
 
 def test_nested_calls(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(x: int, q: qubit @inout) -> int: ...
@@ -71,7 +71,7 @@ def test_nested_calls(validate):
 
 def test_struct(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.struct(module)
     class MyStruct:
@@ -102,7 +102,7 @@ def test_struct(validate):
 
 def test_control_flow(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(q: qubit @inout) -> None: ...
@@ -141,7 +141,7 @@ def test_control_flow(validate):
 
 def test_tensor(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.struct(module)
     class A:
@@ -179,7 +179,7 @@ def test_tensor(validate):
 
 def test_basic_def(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def h(q: qubit @inout) -> None: ...
@@ -200,7 +200,7 @@ def test_basic_def(validate):
 
 def test_empty_def(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test(q: qubit @inout) -> None:
@@ -216,7 +216,7 @@ def test_empty_def(validate):
 
 def test_mixed_def(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(q: qubit @ inout) -> None: ...
@@ -233,7 +233,7 @@ def test_mixed_def(validate):
 
 def test_move_back(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.struct(module)
     class MyStruct:
@@ -268,7 +268,7 @@ def test_move_back(validate):
 
 def test_move_back_branch(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.struct(module)
     class MyStruct:
@@ -307,7 +307,7 @@ def test_move_back_branch(validate):
 
 def test_self(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy.declare(module)
     def foo(q: qubit @inout) -> None: ...

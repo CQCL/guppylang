@@ -5,7 +5,7 @@ from guppylang.prelude.quantum import qubit
 from guppylang.prelude.builtins import linst
 
 module = GuppyModule("test")
-module.load(quantum)
+module.load_all(quantum)
 
 
 @guppy.struct(module)

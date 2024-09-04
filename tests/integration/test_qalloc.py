@@ -8,7 +8,7 @@ from guppylang.prelude.quantum import cx, measure, dirty_qubit
 
 def test_dirty_qubit(validate):
     module = GuppyModule("test")
-    module.load(quantum)
+    module.load_all(quantum)
 
     @guppy(module)
     def test() -> tuple[bool, bool]:

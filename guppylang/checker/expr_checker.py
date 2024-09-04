@@ -47,6 +47,8 @@ from guppylang.checker.core import (
     SubscriptAccess,
     Variable,
 )
+from guppylang.definition.common import Definition
+from guppylang.definition.module import ModuleDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef, ValueDef
 from guppylang.error import (
@@ -351,26 +353,40 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             var = self.ctx.locals[x]
             return with_loc(node, PlaceNode(place=var)), var.ty
         elif x in self.ctx.globals:
-            # Look-up what kind of definition it is
-            match self.ctx.globals[x]:
-                case ValueDef() as defn:
-                    return with_loc(node, GlobalName(id=x, def_id=defn.id)), defn.ty
-                # For types, we return their `__new__` constructor
-                case TypeDef() as defn if constr := self.ctx.globals.get_instance_func(
-                    defn, "__new__"
-                ):
-                    return with_loc(node, GlobalName(id=x, def_id=constr.id)), constr.ty
-                case defn:
-                    raise GuppyError(
-                        f"Expected a value, got {defn.description} `{x}`", node
-                    )
+            defn = self.ctx.globals[x]
+            return self._check_global(defn, x, node)
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in `TypeSynthesiser`. This should have "
             "been caught by program analysis!"
         )
 
+    def _check_global(
+        self, defn: Definition, name: str, node: ast.expr
+    ) -> tuple[ast.expr, Type]:
+        """Checks a global definition in an expression position."""
+        match defn:
+            case ValueDef() as defn:
+                return with_loc(node, GlobalName(id=name, def_id=defn.id)), defn.ty
+            # For types, we return their `__new__` constructor
+            case TypeDef() as defn if constr := self.ctx.globals.get_instance_func(
+                defn, "__new__"
+            ):
+                return with_loc(node, GlobalName(id=name, def_id=constr.id)), constr.ty
+            case defn:
+                raise GuppyError(
+                    f"Expected a value, got {defn.description} `{name}`", node
+                )
+
     def visit_Attribute(self, node: ast.Attribute) -> tuple[ast.expr, Type]:
         # A `value.attr` attribute access
+        if module_def := self._is_module_def(node.value):
+            if node.attr not in module_def.globals:
+                raise GuppyError(
+                    f"Module `{module_def.name}` has no member `{node.attr}`", node
+                )
+            defn = module_def.globals[node.attr]
+            qual_name = f"{module_def.name}.{defn.name}"
+            return self._check_global(defn, qual_name, node)
         node.value, ty = self.synthesize(node.value)
         if isinstance(ty, StructType) and node.attr in ty.field_dict:
             field = ty.field_dict[node.attr]
@@ -403,6 +419,14 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             # to use `node` as the error location
             node,
         )
+
+    def _is_module_def(self, node: ast.expr) -> ModuleDef | None:
+        """Checks whether an AST node corresponds to a defined module."""
+        if isinstance(node, ast.Name) and node.id in self.ctx.globals:
+            defn = self.ctx.globals[node.id]
+            if isinstance(defn, ModuleDef):
+                return defn
+        return None
 
     def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, Type]:
         elems = [self.synthesize(elem) for elem in node.elts]
