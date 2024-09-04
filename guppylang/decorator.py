@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
-from typing import Any, TypeVar
+from typing import Any, TypeVar, overload
 
 from hugr import Hugr, ops
 from hugr import tys as ht
@@ -60,6 +60,12 @@ class _Guppy:
 
     def __init__(self) -> None:
         self._modules = {}
+
+    @overload
+    def __call__(self, arg: PyFunc) -> RawFunctionDef: ...
+
+    @overload
+    def __call__(self, arg: GuppyModule) -> FuncDefDecorator: ...
 
     @pretty_errors
     def __call__(self, arg: PyFunc | GuppyModule) -> FuncDefDecorator | RawFunctionDef:
