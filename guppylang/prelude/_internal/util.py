@@ -16,6 +16,7 @@ from hugr import ops
 from hugr import tys as ht
 
 from guppylang.compiler.hugr_extension import UnsupportedOp
+from guppylang.prelude._internal.quantum_ops import QUANTUM_EXTENSION
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 
@@ -164,6 +165,33 @@ def logic_op(
             op_def,
             ty,
             args,
+        )
+
+    return op
+
+
+def quantum_op(
+    op_name: str,
+    ext: he.Extension = QUANTUM_EXTENSION,
+) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+    """Utility method to create Hugr logic ops.
+
+    args:
+        op_name: The name of the operation.
+        parametric_size: Whether the input count is a parameter to the operation.
+        ext: The extension of the operation.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
+    """
+    op_def = ext.get_op(op_name)
+
+    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
+        return ops.ExtOp(
+            op_def,
+            ty,
+            args=[],
         )
 
     return op

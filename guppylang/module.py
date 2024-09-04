@@ -323,10 +323,12 @@ class GuppyModule:
         # TODO: Currently we just include a hardcoded list of extensions. We should
         # compute this dynamically from the imported dependencies instead.
         #
-        # The hugr prelude extensions are not included.
+        # The hugr prelude extensions are implicit.
+        from guppylang.prelude._internal.quantum_ops import QUANTUM_EXTENSION
+
         extensions = [
             guppylang.compiler.hugr_extension.EXTENSION,
-            # TODO: tket2 extension definition
+            QUANTUM_EXTENSION,
         ]
 
         package = Package(modules=[hugr], extensions=extensions)

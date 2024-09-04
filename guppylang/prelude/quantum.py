@@ -2,38 +2,15 @@
 
 # mypy: disable-error-code="empty-body, misc"
 
-from collections.abc import Callable
-
-from hugr import ops
 from hugr import tys as ht
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal.compiler import MeasureCompiler, QAllocCompiler
-from guppylang.tys.subst import Inst
+from guppylang.prelude._internal.quantum_ops import HSERIES_EXTENSION
+from guppylang.prelude._internal.util import quantum_op
 
 quantum = GuppyModule("quantum")
-
-
-def quantum_op(
-    op_name: str,
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
-    """Utility method to create Hugr quantum ops.
-
-    Args:
-        op_name: The name of the quantum operation.
-
-    Returns:
-        A function that takes an instantiation of the type arguments and returns
-        a concrete HUGR op.
-    """
-
-    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
-        return ops.Custom(
-            op_name=op_name, extension="quantum.tket2", signature=ty, args=[]
-        )
-
-    return op
 
 
 @guppy.type(quantum, ht.Qubit, linear=True)
@@ -86,7 +63,7 @@ def tdg(q: qubit) -> qubit: ...
 def sdg(q: qubit) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("ZZMax"))
+@guppy.hugr_op(quantum, quantum_op("ZZMax", ext=HSERIES_EXTENSION))
 def zz_max(q1: qubit, q2: qubit) -> tuple[qubit, qubit]: ...
 
 
@@ -94,24 +71,20 @@ def zz_max(q1: qubit, q2: qubit) -> tuple[qubit, qubit]: ...
 def measure_return(q: qubit) -> tuple[qubit, bool]: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("RzF64"))
+@guppy.hugr_op(quantum, quantum_op("Rz"))
 def rz(q: qubit, angle: float) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("RxF64"))
+@guppy.hugr_op(quantum, quantum_op("Rx"))
 def rx(q: qubit, angle: float) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("PhasedX"))
+@guppy.hugr_op(quantum, quantum_op("PhasedX", ext=HSERIES_EXTENSION))
 def phased_x(q: qubit, angle1: float, angle2: float) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("ZZPhase"))
+@guppy.hugr_op(quantum, quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
 def zz_phase(q1: qubit, q2: qubit, angle: float) -> tuple[qubit, qubit]: ...
-
-
-@guppy.hugr_op(quantum, quantum_op("TK1"))
-def tk1(q: qubit, angle1: float, angle2: float, angle3: float) -> qubit: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("QFree"))

@@ -12,8 +12,16 @@ repos:
       - id: detect-private-key
       # - id: end-of-file-fixer
       # - id: trailing-whitespace
-      - id: fix-byte-order-marker
-      - id: mixed-line-ending
+      - id: end-of-file-fixer
+        exclude: |
+          (?x)^(
+            .*\.json
+          )$
+      - id: trailing-whitespace
+        exclude: |
+          (?x)^(
+            .*\.json
+          )$
       # Python-specific
       - id: check-ast
       - id: check-docstring-first

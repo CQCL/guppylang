@@ -222,7 +222,7 @@ class MeasureCompiler(CustomCallCompiler):
     """Compiler for the `measure` function."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude.quantum import quantum_op
+        from guppylang.prelude._internal.util import quantum_op
 
         [q] = args
         [q, bit] = self.builder.add_op(
@@ -237,7 +237,7 @@ class QAllocCompiler(CustomCallCompiler):
     """Compiler for the `qubit` function."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude.quantum import quantum_op
+        from guppylang.prelude._internal.util import quantum_op
 
         assert not args, "qubit() does not take any arguments"
         q = self.builder.add_op(
