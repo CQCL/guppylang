@@ -355,9 +355,6 @@ def test_while_move_back(validate):
     validate(module.compile())
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_for(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
@@ -373,9 +370,6 @@ def test_for(validate):
     validate(module.compile())
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_for_measure(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
@@ -390,9 +384,6 @@ def test_for_measure(validate):
     validate(module.compile())
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_for_continue(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
@@ -409,9 +400,6 @@ def test_for_continue(validate):
     validate(module.compile())
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_for_nonlinear_break(validate):
     module = GuppyModule("test")
     module.load_all(quantum)

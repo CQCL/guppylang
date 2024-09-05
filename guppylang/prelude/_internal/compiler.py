@@ -2,7 +2,7 @@ import hugr
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
-from hugr.dfg import _DfBase
+from hugr.build.dfg import _DfBase
 from hugr.std.float import FLOAT_T
 
 from guppylang.definition.custom import (

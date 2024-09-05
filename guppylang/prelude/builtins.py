@@ -22,8 +22,6 @@ from guppylang.prelude._internal.checker import (
     UnsupportedChecker,
 )
 from guppylang.prelude._internal.compiler import (
-    ArrayGetitemCompiler,
-    ArraySetitemCompiler,
     FloatBoolCompiler,
     FloatDivmodCompiler,
     FloatFloordivCompiler,

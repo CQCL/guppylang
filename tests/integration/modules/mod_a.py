@@ -22,4 +22,3 @@ class MyType:
     @guppy.declare(mod_a)
     def __neg__(self: "MyType") -> "MyType":
         ...
-
