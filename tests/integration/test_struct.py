@@ -3,6 +3,8 @@ from typing import Generic, TYPE_CHECKING
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 
+import pytest
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -77,6 +79,9 @@ def test_forward_ref(validate):
     validate(module.compile())
 
 
+@pytest.mark.skip(
+    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
+)
 def test_generic(validate):
     module = GuppyModule("module")
     S = guppy.type_var(module, "S")

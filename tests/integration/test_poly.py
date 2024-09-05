@@ -144,6 +144,9 @@ def test_infer_basic(validate):
     validate(module.compile())
 
 
+@pytest.mark.skip(
+    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
+)
 def test_infer_list(validate):
     module = GuppyModule("test")
     T = guppy.type_var(module, "T")

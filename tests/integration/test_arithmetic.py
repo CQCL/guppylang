@@ -1,3 +1,4 @@
+import pytest
 from guppylang.decorator import guppy
 from guppylang.prelude.builtins import nat
 from guppylang.module import GuppyModule
@@ -57,6 +58,7 @@ def test_aug_assign(validate, run_int_fn):
     run_int_fn(compiled, 6)
 
 
+@pytest.mark.skip(reason="trunc_u has an invalid signature")
 def test_nat(validate):
     @compile_guppy
     def foo(
@@ -70,6 +72,7 @@ def test_nat(validate):
     validate(foo)
 
 
+@pytest.mark.skip(reason="trunc_u has an invalid signature")
 def test_nat2(validate):
     @compile_guppy
     def foo(
@@ -139,6 +142,7 @@ def test_shortcircuit_assign4(validate):
         return z
 
     validate(foo)
+
 
 def test_supported_ops(validate, run_int_fn):
     module = GuppyModule("supported_ops")
