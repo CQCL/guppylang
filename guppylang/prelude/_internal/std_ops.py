@@ -38,7 +38,7 @@ def new_array(length: int, elem_ty: ht.Type) -> ops.ExtOp:
     """Returns an operation that creates a new fixed length array."""
     op_def = hugr.std.PRELUDE.get_op("new_array")
     sig = ht.FunctionType([elem_ty] * length, [array_type(length, elem_ty)])
-    return ops.ExtOp(op_def, sig, [ht.TypeTypeArg(elem_ty)])
+    return ops.ExtOp(op_def, sig, [ht.BoundedNatArg(length), ht.TypeTypeArg(elem_ty)])
 
 
 @dataclass
