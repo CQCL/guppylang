@@ -4,46 +4,19 @@ multiple nodes.
 
 from __future__ import annotations
 
-from abc import ABC
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.std.collections import ListVal
 
-from guppylang.definition.custom import CustomCallCompiler
 from guppylang.error import InternalGuppyError
 from guppylang.prelude._internal.std_ops import (
     list_push,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from hugr.build.dfg import DfBase
-
-
-@dataclass
-class ListOpCompiler(CustomCallCompiler, ABC):
-    """Generic compiler for list operations that involve multiple nodes.
-
-    args:
-        builder: The function builder where the function should be defined.
-        type_args: The type arguments for the function.
-        globals: The compiled globals.
-        node: The AST node where the function is defined.
-        ty: The type of the function, if known.
-        fn: The builder function to use. See `guppylang.prelude._internal.list_compiler`
-        elem_type: The type of the elements in the list. If None, the compiler must
-            only be used with non-empty lists.
-    """
-
-    fn: Callable[[DfBase[ops.DfParentOp], ht.Type | None, list[Wire]], list[Wire]]
-    elem_type: ht.Type | None = None
-
-    def compile(self, args: list[Wire]) -> list[Wire]:
-        return self.fn(self.builder, self.elem_type, args)
 
 
 def _get_elem_type(

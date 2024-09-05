@@ -4,86 +4,169 @@ multiple nodes.
 
 from __future__ import annotations
 
-from abc import ABC
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from hugr import Wire, ops
 from hugr import tys as ht
 
+from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import CustomCallCompiler
+from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
+from guppylang.prelude._internal.compiler import build_error, build_panic
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from hugr.build.dfg import DfBase
 
 
-@dataclass
-class ArrayOpCompiler(CustomCallCompiler, ABC):
-    """Generic compiler for array operations that involve multiple nodes.
+class ArrayGetitemCompiler(CustomCallCompiler):
+    """Compiler for the `array.__getitem__` function."""
 
-    args:
-        builder: The function builder where the function should be defined.
-        type_args: The type arguments for the function.
-        globals: The compiled globals.
-        node: The AST node where the function is defined.
-        ty: The type of the function, if known.
-        fn: The builder function to use. See `guppylang.prelude._internal.list_compiler`
-        length: The length of the array.
-        elem_type: The type of the elements in the list. If None, the compiler must
-            only be used with non-empty lists.
-    """
+    def build_classical_getitem(
+        self,
+        array: Wire,
+        array_ty: ht.Type,
+        idx: Wire,
+        idx_ty: ht.Type,
+        elem_ty: ht.Type,
+    ) -> CallReturnWires:
+        """Lowers a call to `array.__getitem__` for classical arrays."""
+        [ty_arg, len_arg] = self.type_args
+        # TODO: The `get` operation in hugr returns an option
+        op = UnsupportedOp(
+            op_name="prelude.get",
+            inputs=[array_ty, idx_ty],
+            outputs=[array_ty, elem_ty],
+        )
+        node = self.builder.add_op(op, array, idx)
+        return CallReturnWires(regular_returns=[node[1]], inout_returns=[node[0]])
 
-    fn: Callable[
-        [DfBase[ops.DfParentOp], int | None, ht.Type | None, list[Wire]], list[Wire]
-    ]
-    length: int | None = None
-    elem_type: ht.Type | None = None
+    def build_linear_getitem(
+        self,
+        array: Wire,
+        array_ty: ht.Type,
+        idx: Wire,
+        idx_ty: ht.Type,
+        elem_ty: ht.Type,
+    ) -> CallReturnWires:
+        """Lowers a call to `array.__getitem__` for linear arrays."""
+        # Swap out the element at the given index with `None`. The `to_hugr`
+        # implementation of the array type ensures that linear element types are turned
+        # into optionals.
+        elem_opt_ty = ht.Sum([[elem_ty], []])
+        none = self.builder.add_op(ops.Tag(1, elem_opt_ty))
+        length = self.type_args[1].to_hugr()
+        array, elem_opt = build_array_set(
+            self.builder,
+            array,
+            array_ty,
+            idx,
+            idx_ty,
+            none,
+            elem_opt_ty,
+            length,
+        )
+        # Make sure that the element we got out is not None
+        conditional = self.builder.add_conditional(elem_opt)
+        with conditional.add_case(0) as case:
+            case.set_outputs(*case.inputs())
+        with conditional.add_case(1) as case:
+            error = build_error(case, 1, "Linear array element has already been used")
+            case.set_outputs(build_panic(case, [], [elem_ty], error))
+        return CallReturnWires(regular_returns=[conditional], inout_returns=[array])
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [array, idx] = args
+        [array_ty, idx_ty] = self.ty.input
+        [elem_ty, *_] = self.ty.output
+        if elem_ty.type_bound() == ht.TypeBound.Any:
+            return self.build_linear_getitem(array, array_ty, idx, idx_ty, elem_ty)
+        else:
+            return self.build_classical_getitem(array, array_ty, idx, idx_ty, elem_ty)
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        return self.fn(self.builder, self.length, self.elem_type, args)
+        raise InternalGuppyError("Call compile_with_inouts instead")
 
 
-def _get_elem_type(
+class ArraySetitemCompiler(CustomCallCompiler):
+    """Compiler for the `array.__setitem__` function."""
+
+    def build_classical_setitem(
+        self,
+        array: Wire,
+        array_ty: ht.Type,
+        idx: Wire,
+        idx_ty: ht.Type,
+        elem: Wire,
+        elem_ty: ht.Type,
+        length: ht.TypeArg,
+    ) -> CallReturnWires:
+        """Lowers a call to `array.__setitem__` for classical arrays."""
+        array, _ = build_array_set(
+            self.builder, array, array_ty, idx, idx_ty, elem, elem_ty, length
+        )
+        return CallReturnWires(regular_returns=[], inout_returns=[array])
+
+    def build_linear_setitem(
+        self,
+        array: Wire,
+        array_ty: ht.Type,
+        idx: Wire,
+        idx_ty: ht.Type,
+        elem: Wire,
+        elem_ty: ht.Type,
+        length: ht.TypeArg,
+    ) -> CallReturnWires:
+        """Lowers a call to `array.__setitem__` for linear arrays."""
+        # Embed the element into an optional
+        elem_opt_ty = ht.Sum([[elem_ty], []])
+        elem = self.builder.add_op(ops.Tag(0, elem_opt_ty), elem)
+        array, old_elem = build_array_set(
+            self.builder, array, array_ty, idx, idx_ty, elem, elem_opt_ty, length
+        )
+        # Check that the old element was `None`
+        conditional = self.builder.add_conditional(old_elem)
+        with conditional.add_case(0) as case:
+            error = build_error(case, 1, "Linear array element has not been used")
+            build_panic(case, [elem_ty], [], error, *case.inputs())
+            case.set_outputs()
+        with conditional.add_case(1) as case:
+            case.set_outputs()
+        return CallReturnWires(regular_returns=[], inout_returns=[array])
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [array, idx, elem] = args
+        [array_ty, idx_ty, elem_ty] = self.ty.input
+        length = self.type_args[1].to_hugr()
+        if elem_ty.type_bound() == ht.TypeBound.Any:
+            return self.build_linear_setitem(
+                array, array_ty, idx, idx_ty, elem, elem_ty, length
+            )
+        else:
+            return self.build_classical_setitem(
+                array, array_ty, idx, idx_ty, elem, elem_ty, length
+            )
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        raise InternalGuppyError("Call compile_with_inouts instead")
+
+
+def build_array_set(
     builder: DfBase[ops.DfParentOp],
-    elem_type: ht.Type | None,
-    *,
-    arr: Wire | None = None,
-    elem: Wire | None = None,
-) -> ht.Type:
-    """Returns the element type of the array, extracted either from the preset
-    `elem_type`, from an array wire, or from an element wire.
-    """
-    if elem_type is not None:
-        return elem_type
-    if elem is not None:
-        builder.hugr.port_type(elem.out_port())
-    if arr is not None:
-        list_t = builder.hugr.port_type(arr.out_port())
-        assert isinstance(list_t, ht.ExtType)
-        arg = list_t.args[1]
-        assert isinstance(arg, ht.TypeTypeArg)
-        return arg.ty
-    raise InternalGuppyError("Could not get the element type")
-
-
-def _get_arr_length(
-    builder: DfBase[ops.DfParentOp],
-    length: int | None,
-    *,
-    arr: Wire | None = None,
-) -> int:
-    """Returns the length of the array, extracted either from the preset
-    `elem_type`, or from an array wire
-    """
-    if length is not None:
-        return length
-    if arr is not None:
-        list_t = builder.hugr.port_type(arr.out_port())
-        assert isinstance(list_t, ht.ExtType)
-        arg = list_t.args[0]
-        assert isinstance(arg, ht.BoundedNatArg)
-        return arg.n
-    raise InternalGuppyError("Could not get the array length of the input")
+    array: Wire,
+    array_ty: ht.Type,
+    idx: Wire,
+    idx_ty: ht.Type,
+    elem: Wire,
+    elem_ty: ht.Type,
+    length: ht.TypeArg,
+) -> tuple[Wire, Wire]:
+    """Builds an array set operation, returning the original element."""
+    # TODO: The `set` operation in hugr returns an either
+    op = UnsupportedOp(
+        op_name="prelude.set",
+        inputs=[array_ty, idx_ty, elem_ty],
+        outputs=[array_ty, elem_ty],
+    )
+    array, swapped_elem = iter(builder.add_op(op, array, idx, elem))
+    return array, swapped_elem

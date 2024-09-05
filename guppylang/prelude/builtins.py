@@ -10,6 +10,10 @@ from guppylang.decorator import guppy
 from guppylang.definition.custom import DefaultCallChecker, NoopCompiler
 from guppylang.error import GuppyError
 from guppylang.module import GuppyModule
+from guppylang.prelude._internal.array_compiler import (
+    ArrayGetitemCompiler,
+    ArraySetitemCompiler,
+)
 from guppylang.prelude._internal.checker import (
     ArrayLenChecker,
     CallableChecker,
@@ -646,10 +650,10 @@ n = guppy.nat_var(builtins, "n")
 
 @guppy.extend_type(builtins, array_type_def)
 class Array:
-    @guppy.hugr_op(builtins, unsupported_op("set"))
+    @guppy.custom(builtins, ArrayGetitemCompiler())
     def __getitem__(self: array[L, n] @ inout, idx: int) -> L: ...
 
-    @guppy.hugr_op(builtins, unsupported_op("set"))
+    @guppy.custom(builtins, ArraySetitemCompiler())
     def __setitem__(self: array[L, n] @ inout, idx: int, value: L) -> None: ...
 
     @guppy.custom(builtins, checker=ArrayLenChecker())
