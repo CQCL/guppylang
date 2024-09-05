@@ -1,6 +1,6 @@
 import ast
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, KeysView
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -27,7 +27,7 @@ from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
-from guppylang.module import GuppyModule, PyFunc
+from guppylang.module import GuppyModule, PyFunc, find_guppy_module_in_py_module
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 
@@ -299,15 +299,21 @@ class _Guppy:
         if id is None:
             id = self._get_python_caller()
         if id not in self._modules:
-            self._modules[id] = GuppyModule(id.name)
+            self._modules[id] = GuppyModule(id.name.split(".")[-1])
         module = self._modules[id]
         # Update implicit imports
         if id.module:
-            defs = {
-                x: v
-                for x, v in id.module.__dict__.items()
-                if isinstance(v, Definition) and v.id.module != module
-            }
+            defs: dict[str, Definition | ModuleType] = {}
+            for x, value in id.module.__dict__.items():
+                if isinstance(value, Definition) and value.id.module != module:
+                    defs[x] = value
+                elif isinstance(value, ModuleType):
+                    try:
+                        other_module = find_guppy_module_in_py_module(value)
+                        if other_module and other_module != module:
+                            defs[x] = value
+                    except GuppyError:
+                        pass
             module.load(**defs)
         return module
 
@@ -323,9 +329,9 @@ class _Guppy:
             raise MissingModuleError(err)
         return module.compile()
 
-    def registered_modules(self) -> list[ModuleIdentifier]:
+    def registered_modules(self) -> KeysView[ModuleIdentifier]:
         """Returns a list of all currently registered modules for local contexts."""
-        return list(self._modules.keys())
+        return self._modules.keys()
 
 
 guppy = _Guppy()

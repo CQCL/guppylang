@@ -1,6 +1,7 @@
 import inspect
 import sys
 from collections.abc import Callable, Mapping
+from pathlib import Path
 from types import ModuleType
 from typing import Any
 
@@ -351,6 +352,14 @@ def find_guppy_module_in_py_module(module: ModuleType) -> GuppyModule:
     Raises a user-error if no unique module can be found.
     """
     mods = [val for val in module.__dict__.values() if isinstance(val, GuppyModule)]
+    # Also include implicit modules
+    from guppylang.decorator import ModuleIdentifier, guppy
+
+    if hasattr(module, "__file__") and module.__file__:
+        module_id = ModuleIdentifier(Path(module.__file__), module.__name__, module)
+        if module_id in guppy.registered_modules():
+            mods.append(guppy.get_module(module_id))
+
     if not mods:
         msg = f"No Guppy modules found in `{module.__name__}`"
         raise GuppyError(msg)
