@@ -13,12 +13,10 @@ def f(x: int) -> int:
 
 
 @guppy.declare(mod_a)
-def g() -> int:
-    ...
+def g() -> int: ...
 
 
 @guppy.type(mod_a, ht.Bool)
 class MyType:
     @guppy.declare(mod_a)
-    def __neg__(self: "MyType") -> "MyType":
-        ...
+    def __neg__(self: "MyType") -> "MyType": ...

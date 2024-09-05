@@ -22,10 +22,6 @@ def run_error_test(file, capsys):
         exp_err = f.read()
 
     exp_err = exp_err.replace("$FILE", str(file))
-
-    print(f"Expected error:\n\n{exp_err}\n\n")
-    print(f"Got error:\n\n{err}\n\n")
-
     assert err == exp_err
 
 
