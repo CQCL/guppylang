@@ -26,7 +26,9 @@ from guppylang.prelude._internal.compiler.arithmetic import (
     FloatDivmodCompiler,
     FloatFloordivCompiler,
     FloatModCompiler,
+    IFromBoolCompiler,
     IntTruedivCompiler,
+    IToBoolCompiler,
     NatTruedivCompiler,
 )
 from guppylang.prelude._internal.compiler.array import (
@@ -101,10 +103,10 @@ class Bool:
     @guppy.hugr_op(builtins, logic_op("Eq"))
     def __eq__(self: bool, other: bool) -> bool: ...
 
-    @guppy.hugr_op(builtins, unsupported_op("ifrombool"))  # TODO: Widen to INT_WIDTH
+    @guppy.custom(builtins, IFromBoolCompiler())
     def __int__(self: bool) -> int: ...
 
-    @guppy.hugr_op(builtins, unsupported_op("ifrombool"))  # TODO: Widen to INT_WIDTH
+    @guppy.custom(builtins, IFromBoolCompiler())
     def __nat__(self: bool) -> nat: ...
 
     @guppy.custom(builtins, checker=DunderChecker("__bool__"), higher_order_value=False)
@@ -128,9 +130,7 @@ class Nat:
     @guppy.hugr_op(builtins, int_op("iand"))
     def __and__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(
-        builtins, unsupported_op("itobool")
-    )  # TODO: itobool only supports single bit ints
+    @guppy.custom(builtins, IToBoolCompiler())
     def __bool__(self: nat) -> bool: ...
 
     @guppy.custom(builtins, NoopCompiler())
@@ -273,9 +273,7 @@ class Int:
     @guppy.hugr_op(builtins, int_op("iand"))
     def __and__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(
-        builtins, unsupported_op("itobool")
-    )  # TODO: itobool only supports single bit ints
+    @guppy.custom(builtins, IToBoolCompiler())
     def __bool__(self: int) -> bool: ...
 
     @guppy.custom(builtins, NoopCompiler())
