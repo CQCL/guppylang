@@ -8,20 +8,16 @@ The example Hamiltonian and numbers are taken from https://arxiv.org/abs/2206.12
 import math
 from collections.abc import Callable
 
-import guppylang.prelude.quantum as quantum
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.prelude.builtins import py, result
 from guppylang.prelude.quantum import cx, discard, h, measure, qubit, rz, x
 
-module = GuppyModule("test")
-module.load_all(quantum)
 
 sqrt_e = math.sqrt(math.e)
 sqrt_e_div = math.sqrt((math.e - 1) / math.e)
 
 
-@guppy(module)
+@guppy
 def random_walk_phase_estimation(
     eigenstate: Callable[[], qubit],
     controlled_oracle: Callable[[qubit, qubit, float], tuple[qubit, qubit]],
@@ -64,7 +60,7 @@ def random_walk_phase_estimation(
     return mu
 
 
-@guppy(module)
+@guppy
 def example_controlled_oracle(q1: qubit, q2: qubit, t: float) -> tuple[qubit, qubit]:
     """A controlled e^itH gate for the example Hamiltonian H = -0.5 * Z"""
     # This is just a controlled rz gate
@@ -75,14 +71,14 @@ def example_controlled_oracle(q1: qubit, q2: qubit, t: float) -> tuple[qubit, qu
     return cx(q1, q2)
 
 
-@guppy(module)
+@guppy
 def example_eigenstate() -> qubit:
     """The eigenstate of e^itH for the example Hamiltonian H = -0.5 * Z"""
     # This is just |1>
     return x(qubit())
 
 
-@guppy(module)
+@guppy
 def main() -> int:
     num_iters = 24  # To avoid underflows
     reset_rate = 8
@@ -100,4 +96,4 @@ def main() -> int:
     return 0
 
 
-hugr = module.compile()
+hugr = guppy.compile_module()

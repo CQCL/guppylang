@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:6
+
+4:    @guppy
+5:    def foo() -> int:
+6:        return 1.0
+                 ^^^
+GuppyTypeError: Expected return value of type `int`, got `float`

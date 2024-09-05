@@ -9,8 +9,9 @@ from typing import Any, TypeVar
 from hugr import Hugr, ops
 from hugr import tys as ht
 
+import guppylang
 from guppylang.ast_util import annotate_location, has_empty_body
-from guppylang.definition.common import DefId
+from guppylang.definition.common import DefId, Definition
 from guppylang.definition.custom import (
     CustomCallChecker,
     CustomCallCompiler,
@@ -49,13 +50,14 @@ class ModuleIdentifier:
     #: module, we only take the module path into account.
     name: str = field(compare=False)
 
+    #: A reference to the python module
+    module: ModuleType | None = field(compare=False)
+
 
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
-    # The currently-alive GuppyModules, associated with a Python file/module.
-    #
-    # Only contains **uncompiled** modules.
+    # The currently-alive GuppyModules, associated with a Python file/module
     _modules: dict[ModuleIdentifier, GuppyModule]
 
     def __init__(self) -> None:
@@ -72,11 +74,7 @@ class _Guppy:
             # Decorator used without any arguments.
             # We default to a module associated with the caller of the decorator.
             f = arg
-
-            caller = self._get_python_caller(f)
-            if caller not in self._modules:
-                self._modules[caller] = GuppyModule(caller.name)
-            module = self._modules[caller]
+            module = self.get_module()
             return module.register_func_def(f)
 
         if isinstance(arg, GuppyModule):
@@ -101,12 +99,14 @@ class _Guppy:
                 if s.filename != __file__:
                     filename = s.filename
                     module = inspect.getmodule(s.frame)
-                    break
+                    # Skip frames from the `pretty_error` decorator
+                    if module != guppylang.error:
+                        break
             else:
                 raise GuppyError("Could not find a caller for the `@guppy` decorator")
         module_path = Path(filename)
         return ModuleIdentifier(
-            module_path, module.__name__ if module else module_path.name
+            module_path, module.__name__ if module else module_path.name, module
         )
 
     @pretty_errors
@@ -294,23 +294,26 @@ class _Guppy:
         module = self._modules[caller]
         module.load_all(m)
 
-    def take_module(self, id: ModuleIdentifier | None = None) -> GuppyModule:
-        """Returns the local GuppyModule, removing it from the local state."""
-        orig_id = id
+    def get_module(self, id: ModuleIdentifier | None = None) -> GuppyModule:
+        """Returns the local GuppyModule."""
         if id is None:
             id = self._get_python_caller()
         if id not in self._modules:
-            err = (
-                f"Module {orig_id.name} not found."
-                if orig_id
-                else "No Guppy functions or types defined in this module."
-            )
-            raise MissingModuleError(err)
-        return self._modules.pop(id)
+            self._modules[id] = GuppyModule(id.name)
+        module = self._modules[id]
+        # Update implicit imports
+        if id.module:
+            defs = {
+                x: v
+                for x, v in id.module.__dict__.items()
+                if isinstance(v, Definition) and v.id.module != module
+            }
+            module.load(**defs)
+        return module
 
     def compile_module(self, id: ModuleIdentifier | None = None) -> Hugr[ops.Module]:
         """Compiles the local module into a Hugr."""
-        module = self.take_module(id)
+        module = self.get_module(id)
         if not module:
             err = (
                 f"Module {id.name} not found."

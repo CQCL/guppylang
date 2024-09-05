@@ -17,7 +17,7 @@ def test_decorator():
     def c() -> None:
         pass
 
-    default_module = guppy.take_module()
+    default_module = guppy.get_module()
 
     assert not module.contains("a")
     assert module.contains("b")
@@ -34,7 +34,7 @@ def test_nested():
         def a() -> None:
             pass
 
-        return guppy.take_module()
+        return guppy.get_module()
 
     module_a = make_module()
     module_b = make_module()
