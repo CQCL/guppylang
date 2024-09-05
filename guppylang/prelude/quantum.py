@@ -6,8 +6,11 @@ from hugr import tys as ht
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude._internal.compiler import MeasureCompiler, QAllocCompiler
-from guppylang.prelude._internal.quantum_ops import HSERIES_EXTENSION
+from guppylang.prelude._internal.compiler.quantum import (
+    HSERIES_EXTENSION,
+    MeasureCompiler,
+    QAllocCompiler,
+)
 from guppylang.prelude._internal.util import quantum_op, unsupported_op
 
 quantum = GuppyModule("quantum")

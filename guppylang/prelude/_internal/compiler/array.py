@@ -1,11 +1,10 @@
-"""Compilers building array functions on top of hugr standard operations, that involve
-multiple nodes.
-"""
+"""Compilers building array functions on top of hugr standard operations."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import hugr.std
 from hugr import Wire, ops
 from hugr import tys as ht
 
@@ -13,10 +12,36 @@ from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
-from guppylang.prelude._internal.compiler import build_error, build_panic
+from guppylang.prelude._internal.compiler.prelude import build_error, build_panic
+from guppylang.tys.arg import ConstArg, TypeArg
+from guppylang.tys.const import ConstValue
 
 if TYPE_CHECKING:
     from hugr.build.dfg import DfBase
+
+
+def array_type(length: int, elem_ty: ht.Type) -> ht.ExtType:
+    """Returns the hugr type of a fixed length array."""
+    length_arg = ht.BoundedNatArg(length)
+    elem_arg = ht.TypeTypeArg(elem_ty)
+    return hugr.std.PRELUDE.types["array"].instantiate([length_arg, elem_arg])
+
+
+# ------------------------------------------------------
+# --------- Custom compilers for non-native ops --------
+# ------------------------------------------------------
+
+
+class NewArrayCompiler(CustomCallCompiler):
+    """Compiler for the `array.__new__` function."""
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        match self.type_args:
+            case [TypeArg(ty=elem_ty), ConstArg(ConstValue(value=int(length)))]:
+                op = new_array(length, elem_ty.to_hugr())
+                return [self.builder.add_op(op, *args)]
+            case type_args:
+                raise InternalGuppyError(f"Invalid array type args: {type_args}")
 
 
 class ArrayGetitemCompiler(CustomCallCompiler):
@@ -170,3 +195,10 @@ def build_array_set(
     )
     array, swapped_elem = iter(builder.add_op(op, array, idx, elem))
     return array, swapped_elem
+
+
+def new_array(length: int, elem_ty: ht.Type) -> ops.ExtOp:
+    """Returns an operation that creates a new fixed length array."""
+    op_def = hugr.std.PRELUDE.get_op("new_array")
+    sig = ht.FunctionType([elem_ty] * length, [array_type(length, elem_ty)])
+    return ops.ExtOp(op_def, sig, [ht.BoundedNatArg(length), ht.TypeTypeArg(elem_ty)])

@@ -40,9 +40,9 @@ from guppylang.nodes import (
     TensorCall,
     TypeApply,
 )
-from guppylang.prelude._internal import list_compiler
-from guppylang.prelude._internal.std_ops import (
+from guppylang.prelude._internal.compiler.list import (
     list_elem_type,
+    list_new,
     list_push,
 )
 from guppylang.tys.builtin import (
@@ -214,7 +214,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         inputs = [self.visit(e) for e in node.elts]
         list_ty = get_type(node)
         elem_ty = list_elem_type(list_ty)
-        return list_compiler.list_new(self.builder, elem_ty.to_hugr(), inputs)[0]
+        return list_new(self.builder, elem_ty.to_hugr(), inputs)[0]
 
     def _unpack_tuple(self, wire: Wire, types: Sequence[Type]) -> Sequence[Wire]:
         """Add a tuple unpack operation to the graph"""
@@ -463,9 +463,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         elem_ty = list_elem_type(list_ty)
         list_place = Variable(next(tmp_vars), list_ty, node)
         list_name = with_type(list_ty, with_loc(node, PlaceNode(place=list_place)))
-        self.dfg[list_place] = list_compiler.list_new(
-            self.builder, elem_ty.to_hugr(), []
-        )[0]
+        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])[0]
 
         def compile_generators(elt: ast.expr, gens: list[DesugaredGenerator]) -> None:
             """Helper function to generate nested TailLoop nodes for generators"""

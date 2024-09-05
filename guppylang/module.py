@@ -324,7 +324,7 @@ class GuppyModule:
         # compute this dynamically from the imported dependencies instead.
         #
         # The hugr prelude extensions are implicit.
-        from guppylang.prelude._internal.quantum_ops import (
+        from guppylang.prelude._internal.compiler.quantum import (
             HSERIES_EXTENSION,
             QUANTUM_EXTENSION,
             RESULT_EXTENSION,

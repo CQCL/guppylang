@@ -10,10 +10,6 @@ from guppylang.decorator import guppy
 from guppylang.definition.custom import DefaultCallChecker, NoopCompiler
 from guppylang.error import GuppyError
 from guppylang.module import GuppyModule
-from guppylang.prelude._internal.array_compiler import (
-    ArrayGetitemCompiler,
-    ArraySetitemCompiler,
-)
 from guppylang.prelude._internal.checker import (
     ArrayLenChecker,
     CallableChecker,
@@ -25,13 +21,17 @@ from guppylang.prelude._internal.checker import (
     ReversingChecker,
     UnsupportedChecker,
 )
-from guppylang.prelude._internal.compiler import (
+from guppylang.prelude._internal.compiler.arithmetic import (
     FloatBoolCompiler,
     FloatDivmodCompiler,
     FloatFloordivCompiler,
     FloatModCompiler,
     IntTruedivCompiler,
     NatTruedivCompiler,
+)
+from guppylang.prelude._internal.compiler.array import (
+    ArrayGetitemCompiler,
+    ArraySetitemCompiler,
     NewArrayCompiler,
 )
 from guppylang.prelude._internal.util import (

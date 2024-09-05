@@ -16,7 +16,7 @@ from hugr import ops
 from hugr import tys as ht
 
 from guppylang.compiler.hugr_extension import UnsupportedOp
-from guppylang.prelude._internal.quantum_ops import QUANTUM_EXTENSION
+from guppylang.prelude._internal.compiler.quantum import QUANTUM_EXTENSION
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 

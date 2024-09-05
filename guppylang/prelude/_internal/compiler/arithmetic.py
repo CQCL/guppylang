@@ -1,20 +1,94 @@
+"""Native arithmetic operations from the HUGR std, and compilers for non native ones."""
+
+from collections.abc import Sequence
+
 import hugr
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr.build.dfg import DfBase
 from hugr.std.float import FLOAT_T
+from hugr.std.int import int_t
 
 from guppylang.definition.custom import (
     CustomCallCompiler,
 )
-from guppylang.error import InternalGuppyError
-from guppylang.prelude._internal import std_ops
-from guppylang.tys.arg import ConstArg, TypeArg
-from guppylang.tys.const import ConstValue
 from guppylang.tys.ty import NumericType
 
-# Note: Hugr's INT_T is 64bits, but guppy defaults to 32bits
-INT_T = NumericType(NumericType.Kind.Int).to_hugr()
+INT_T = int_t(NumericType.INT_WIDTH)
+
+# ------------------------------------------------------
+# --------- std.arithmetic.int operations --------------
+# ------------------------------------------------------
+
+
+def _instantiate_int_op(
+    name: str,
+    int_width: int | Sequence[int],
+    inp: list[ht.Type],
+    out: list[ht.Type],
+) -> ops.ExtOp:
+    op_def = hugr.std.int.INT_OPS_EXTENSION.get_op(name)
+    int_width = [int_width] if isinstance(int_width, int) else int_width
+    return ops.ExtOp(
+        op_def,
+        ht.FunctionType(inp, out),
+        [ht.BoundedNatArg(w) for w in int_width],
+    )
+
+
+def ieq(width: int) -> ops.ExtOp:
+    """Returns a `std.arithmetic.int.ieq` operation."""
+    return _instantiate_int_op("ieq", width, [int_t(width), int_t(width)], [ht.Bool])
+
+
+def ine(width: int) -> ops.ExtOp:
+    """Returns a `std.arithmetic.int.ine` operation."""
+    return _instantiate_int_op("ine", width, [int_t(width), int_t(width)], [ht.Bool])
+
+
+# ------------------------------------------------------
+# --------- std.arithmetic.conversions ops -------------
+# ------------------------------------------------------
+
+
+def convert_ifromusize() -> ops.ExtOp:
+    """Returns a `std.arithmetic.conversions.ifromusize` operation."""
+    op_def = hugr.std.int.CONVERSIONS_EXTENSION.get_op("ifromusize")
+    return ops.ExtOp(
+        op_def,
+        ht.FunctionType([ht.USize()], [int_t(6)]),
+    )
+
+
+def convert_itousize() -> ops.ExtOp:
+    """Returns a `std.arithmetic.conversions.itousize` operation."""
+    op_def = hugr.std.int.CONVERSIONS_EXTENSION.get_op("itousize")
+    return ops.ExtOp(
+        op_def,
+        ht.FunctionType([int_t(6)], [ht.USize()]),
+    )
+
+
+def convert_ifrombool() -> ops.ExtOp:
+    """Returns a `std.arithmetic.conversions.ifrombool` operation."""
+    op_def = hugr.std.int.CONVERSIONS_EXTENSION.get_op("ifrombool")
+    return ops.ExtOp(
+        op_def,
+        ht.FunctionType([ht.Bool], [int_t(1)]),
+    )
+
+
+def convert_itobool() -> ops.ExtOp:
+    """Returns a `std.arithmetic.conversions.itobool` operation."""
+    op_def = hugr.std.int.CONVERSIONS_EXTENSION.get_op("itobool")
+    return ops.ExtOp(
+        op_def,
+        ht.FunctionType([int_t(1)], [ht.Bool]),
+    )
+
+
+# ------------------------------------------------------
+# --------- Custom compilers for non-native ops --------
+# ------------------------------------------------------
 
 
 class NatTruedivCompiler(CustomCallCompiler):
@@ -190,65 +264,3 @@ class FloatDivmodCompiler(CustomCallCompiler):
             ht.FunctionType([FLOAT_T] * len(args), [FLOAT_T]),
         )
         return list(self.builder.add(ops.MakeTuple()(div, mod)))
-
-
-class NewArrayCompiler(CustomCallCompiler):
-    """Compiler for the `array.__new__` function."""
-
-    def compile(self, args: list[Wire]) -> list[Wire]:
-        match self.type_args:
-            case [TypeArg(ty=elem_ty), ConstArg(ConstValue(value=int(length)))]:
-                op = std_ops.new_array(length, elem_ty.to_hugr())
-                return [self.builder.add_op(op, *args)]
-            case type_args:
-                raise InternalGuppyError(f"Invalid array type args: {type_args}")
-
-
-class MeasureCompiler(CustomCallCompiler):
-    """Compiler for the `measure` function."""
-
-    def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude._internal.util import quantum_op
-
-        [q] = args
-        [q, bit] = self.builder.add_op(
-            quantum_op("Measure")(ht.FunctionType([ht.Qubit], [ht.Qubit, ht.Bool]), []),
-            q,
-        )
-        self.builder.add_op(quantum_op("QFree")(ht.FunctionType([ht.Qubit], []), []), q)
-        return [bit]
-
-
-class QAllocCompiler(CustomCallCompiler):
-    """Compiler for the `qubit` function."""
-
-    def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude._internal.util import quantum_op
-
-        assert not args, "qubit() does not take any arguments"
-        q = self.builder.add_op(
-            quantum_op("QAlloc")(ht.FunctionType([], [ht.Qubit]), [])
-        )
-        q = self.builder.add_op(
-            quantum_op("Reset")(ht.FunctionType([ht.Qubit], [ht.Qubit]), []), q
-        )
-        return [q]
-
-
-def build_panic(
-    # TODO: Change to `DfBase[ops.DfParentOp]` once `DfBase` is covariant
-    builder: DfBase[ops.Case],
-    in_tys: ht.TypeRow,
-    out_tys: ht.TypeRow,
-    err: Wire,
-    *args: Wire,
-) -> Wire:
-    """Builds a panic operation."""
-    op = std_ops.panic(in_tys, out_tys)
-    return builder.add_op(op, err, *args)
-
-
-def build_error(builder: DfBase[ops.Case], signal: int, msg: str) -> Wire:
-    """Constructs and loads a static error value."""
-    val = std_ops.ErrorVal(signal, msg)
-    return builder.load(builder.add_const(val))
