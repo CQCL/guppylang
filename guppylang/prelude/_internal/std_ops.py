@@ -5,15 +5,74 @@ https://github.com/CQCL/hugr/issues/1512
 """
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 import hugr.std.collections
 import hugr.std.int
 from hugr import ops
 from hugr import tys as ht
+from hugr import val as hv
 from hugr.std.int import int_t
 
 from guppylang.tys.arg import TypeArg
 from guppylang.tys.ty import OpaqueType, Type
+
+# --------------------------------------------
+# --------------- prelude --------------------
+# --------------------------------------------
+
+
+def array_type(length: int, elem_ty: ht.Type) -> ht.ExtType:
+    """Returns the hugr type of a fixed length array."""
+    length_arg = ht.BoundedNatArg(length)
+    elem_arg = ht.TypeTypeArg(elem_ty)
+    return hugr.std.PRELUDE.types["array"].instantiate([length_arg, elem_arg])
+
+
+def error_type() -> ht.ExtType:
+    """Returns the hugr type of an error value."""
+    return hugr.std.PRELUDE.types["error"].instantiate([])
+
+
+def new_array(length: int, elem_ty: ht.Type) -> ops.ExtOp:
+    """Returns an operation that creates a new fixed length array."""
+    op_def = hugr.std.PRELUDE.get_op("new_array")
+    sig = ht.FunctionType([elem_ty] * length, [array_type(length, elem_ty)])
+    return ops.ExtOp(op_def, sig, [ht.TypeTypeArg(elem_ty)])
+
+
+@dataclass
+class ErrorVal(hv.ExtensionValue):
+    """Custom value for a floating point number."""
+
+    signal: int
+    message: str
+
+    def to_value(self) -> hv.Extension:
+        name = "ConstError"
+        payload = {"signal": self.signal, "message": self.message}
+        return hv.Extension(
+            name, typ=error_type(), val=payload, extensions=[hugr.std.PRELUDE.name]
+        )
+
+    def __str__(self) -> str:
+        return f"Error({self.signal}): {self.message}"
+
+
+def panic(inputs: list[ht.Type], outputs: list[ht.Type]) -> ops.ExtOp:
+    """Returns an operation that panics."""
+    op_def = hugr.std.PRELUDE.get_op("panic")
+    args: list[ht.TypeArg] = [
+        ht.SequenceArg([ht.TypeTypeArg(ty) for ty in inputs]),
+        ht.SequenceArg([ht.TypeTypeArg(ty) for ty in outputs]),
+    ]
+    sig = ht.FunctionType([error_type(), *inputs], outputs)
+    return ops.ExtOp(op_def, sig, args)
+
+
+# --------------------------------------------
+# --------------- std.collections ------------
+# --------------------------------------------
 
 
 def list_elem_type(ty: Type) -> Type:
@@ -23,11 +82,6 @@ def list_elem_type(ty: Type) -> Type:
     arg = ty.args[0]
     assert isinstance(arg, TypeArg)
     return arg.ty
-
-
-# --------------------------------------------
-# --------------- std.collections ------------
-# --------------------------------------------
 
 
 def _instantiate_list_op(

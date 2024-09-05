@@ -1,17 +1,17 @@
 import hugr
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr import val as hv
-from hugr.build.dfg import _DfBase
+from hugr.build.dfg import DfBase
 from hugr.std.float import FLOAT_T
 
+from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import (
     CustomCallCompiler,
 )
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
+from guppylang.prelude._internal import std_ops
 from guppylang.tys.arg import ConstArg, TypeArg
-from guppylang.tys.builtin import array_type
 from guppylang.tys.const import ConstValue
 from guppylang.tys.ty import NumericType
 
@@ -199,20 +199,8 @@ class NewArrayCompiler(CustomCallCompiler):
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         match self.type_args:
-            case [
-                TypeArg(ty=elem_ty) as ty_arg,
-                ConstArg(ConstValue(value=int(length))) as len_arg,
-            ]:
-                sig = ht.FunctionType(
-                    [elem_ty.to_hugr()] * len(args),
-                    [array_type(elem_ty, length).to_hugr()],
-                )
-                op = ops.Custom(
-                    extension="prelude",
-                    signature=sig,
-                    name="new_array",
-                    args=[len_arg.to_hugr(), ty_arg.to_hugr()],
-                )
+            case [TypeArg(ty=elem_ty), ConstArg(ConstValue(value=int(length)))]:
+                op = std_ops.new_array(length, elem_ty.to_hugr())
                 return [self.builder.add_op(op, *args)]
             case type_args:
                 raise InternalGuppyError(f"Invalid array type args: {type_args}")
@@ -262,11 +250,11 @@ class ArrayGetitemCompiler(CustomCallCompiler):
     ) -> CallReturnWires:
         """Lowers a call to `array.__getitem__` for classical arrays."""
         [ty_arg, len_arg] = self.type_args
-        op = ops.Custom(
-            extension="guppy.unsupported.array",
-            signature=ht.FunctionType([array_ty, idx_ty], [array_ty, elem_ty]),
-            name="get",
-            args=[len_arg.to_hugr(), ty_arg.to_hugr()],
+        # TODO: The `get` operation in hugr returns an option
+        op = UnsupportedOp(
+            op_name="prelude.get",
+            inputs=[array_ty, idx_ty],
+            outputs=[array_ty, elem_ty],
         )
         node = self.builder.add_op(op, array, idx)
         return CallReturnWires(regular_returns=[node[1]], inout_returns=[node[0]])
@@ -381,46 +369,27 @@ class ArraySetitemCompiler(CustomCallCompiler):
         raise InternalGuppyError("Call compile_with_inouts instead")
 
 
-#: The Hugr error type
-error_ty = ht.Opaque(
-    id="error", bound=ht.TypeBound.Copyable, args=[], extension="prelude"
-)
-
-
 def build_panic(
-    # TODO: Change to `_DfBase[ops.DfParentOp]` once `_DfBase` is covariant
-    builder: _DfBase[ops.Case],
+    # TODO: Change to `DfBase[ops.DfParentOp]` once `DfBase` is covariant
+    builder: DfBase[ops.Case],
     in_tys: ht.TypeRow,
     out_tys: ht.TypeRow,
     err: Wire,
     *args: Wire,
 ) -> Wire:
     """Builds a panic operation."""
-    op = ops.Custom(
-        extension="prelude",
-        signature=ht.FunctionType([error_ty, *in_tys], out_tys),
-        name="panic",
-        args=[
-            ht.SequenceArg([ht.TypeTypeArg(ty) for ty in in_tys]),
-            ht.SequenceArg([ht.TypeTypeArg(ty) for ty in out_tys]),
-        ],
-    )
+    op = std_ops.panic(in_tys, out_tys)
     return builder.add_op(op, err, *args)
 
 
-def build_error(builder: _DfBase[ops.Case], signal: int, msg: str) -> Wire:
+def build_error(builder: DfBase[ops.Case], signal: int, msg: str) -> Wire:
     """Constructs and loads a static error value."""
-    val = hv.Extension(
-        name="ConstError",
-        typ=error_ty,
-        val={"signal": signal, "message": msg},
-        extensions=["prelude"],
-    )
+    val = std_ops.ErrorVal(signal, msg)
     return builder.load(builder.add_const(val))
 
 
 def build_array_set(
-    builder: _DfBase[ops.DfParentOp],
+    builder: DfBase[ops.DfParentOp],
     array: Wire,
     array_ty: ht.Type,
     idx: Wire,
@@ -430,11 +399,11 @@ def build_array_set(
     length: ht.TypeArg,
 ) -> tuple[Wire, Wire]:
     """Builds an array set operation, returning the original element."""
-    op = ops.Custom(
-        extension="guppy.unsupported.array",
-        signature=ht.FunctionType([array_ty, idx_ty, elem_ty], [array_ty, elem_ty]),
-        name="get",
-        args=[length, ht.TypeTypeArg(elem_ty)],
+    # TODO: The `set` operation in hugr returns an either
+    op = UnsupportedOp(
+        op_name="prelude.set",
+        inputs=[array_ty, idx_ty, elem_ty],
+        outputs=[array_ty, elem_ty],
     )
     array, swapped_elem = iter(builder.add_op(op, array, idx, elem))
     return array, swapped_elem
