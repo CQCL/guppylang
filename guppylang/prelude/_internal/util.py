@@ -29,9 +29,8 @@ def int_arg(n: int = NumericType.INT_WIDTH) -> ht.TypeArg:
     return ht.BoundedNatArg(n=n)
 
 
-def type_arg(idx: int = 0, bound: ht.TypeBound | None = None) -> ht.TypeArg:
+def type_arg(idx: int = 0, bound: ht.TypeBound = ht.TypeBound.Any) -> ht.TypeArg:
     """A generic type argument."""
-    bound = bound or ht.TypeBound.Any
     return ht.VariableArg(idx=idx, param=ht.TypeTypeParam(bound=bound))
 
 
@@ -174,11 +173,10 @@ def quantum_op(
     op_name: str,
     ext: he.Extension = QUANTUM_EXTENSION,
 ) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
-    """Utility method to create Hugr logic ops.
+    """Utility method to create Hugr quantum ops.
 
     args:
         op_name: The name of the operation.
-        parametric_size: Whether the input count is a parameter to the operation.
         ext: The extension of the operation.
 
     Returns:
