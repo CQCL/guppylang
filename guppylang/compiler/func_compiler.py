@@ -8,7 +8,6 @@ from guppylang.compiler.cfg_compiler import compile_cfg
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.nodes import CheckedNestedFunctionDef
-from guppylang.tys.ty import type_to_row
 
 if TYPE_CHECKING:
     from guppylang.definition.function import CheckedFunctionDef
@@ -43,10 +42,8 @@ def compile_local_func_def(
     recursive = func.name in func.cfg.live_before[func.cfg.entry_bb]
 
     # Prepend captured variables to the function arguments
-    closure_ty = ht.FunctionType(
-        captured_types + [v.ty.to_hugr() for v in func.ty.inputs],
-        [ty.to_hugr() for ty in type_to_row(func.ty.output)],
-    )
+    func_ty = func.ty.to_hugr()
+    closure_ty = ht.FunctionType([*captured_types, *func_ty.input], func_ty.output)
     func_builder = dfg.builder.define_function(
         func.name, closure_ty.input, closure_ty.output
     )
