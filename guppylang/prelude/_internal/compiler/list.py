@@ -12,8 +12,6 @@ from hugr import tys as ht
 from hugr.std.collections import ListVal
 
 from guppylang.error import InternalGuppyError
-from guppylang.tys.arg import TypeArg
-from guppylang.tys.ty import OpaqueType, Type
 
 if TYPE_CHECKING:
     from hugr.build.dfg import DfBase
@@ -22,15 +20,6 @@ if TYPE_CHECKING:
 # ------------------------------------------------------
 # --------- std.collections operations -----------------
 # ------------------------------------------------------
-
-
-def list_elem_type(ty: Type) -> Type:
-    """Returns the guppy element type of a list type."""
-    assert isinstance(ty, OpaqueType)
-    assert len(ty.args) == 1
-    arg = ty.args[0]
-    assert isinstance(arg, TypeArg)
-    return arg.ty
 
 
 def _instantiate_list_op(
