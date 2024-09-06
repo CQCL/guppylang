@@ -29,8 +29,7 @@ def get_validator() -> Path | None:
 @pytest.fixture
 def validate(request, export_test_cases_dir: Path):
     def validate_json(hugr: str):
-        # Install and run the `hugr-cli` validator
-
+        # Check if the validator is installed
         validator = get_validator()
         if validator is None:
             pytest.skip(
