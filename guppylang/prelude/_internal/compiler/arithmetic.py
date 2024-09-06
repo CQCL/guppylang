@@ -55,7 +55,7 @@ def convert_ifromusize() -> ops.ExtOp:
     op_def = hugr.std.int.CONVERSIONS_EXTENSION.get_op("ifromusize")
     return ops.ExtOp(
         op_def,
-        ht.FunctionType([ht.USize()], [int_t(6)]),
+        ht.FunctionType([ht.USize()], [INT_T]),
     )
 
 
@@ -64,7 +64,7 @@ def convert_itousize() -> ops.ExtOp:
     op_def = hugr.std.int.CONVERSIONS_EXTENSION.get_op("itousize")
     return ops.ExtOp(
         op_def,
-        ht.FunctionType([int_t(6)], [ht.USize()]),
+        ht.FunctionType([INT_T], [ht.USize()]),
     )
 
 
