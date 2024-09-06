@@ -59,7 +59,6 @@ def panic(inputs: list[ht.Type], outputs: list[ht.Type]) -> ops.ExtOp:
 
 
 def build_panic(
-    # TODO: Change to `DfBase[ops.DfParentOp]` once `DfBase` is covariant
     builder: DfBase[ops.Case],
     in_tys: ht.TypeRow,
     out_tys: ht.TypeRow,
