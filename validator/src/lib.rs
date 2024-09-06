@@ -118,7 +118,7 @@ impl DependencyInfo {
             }
 
             if let Some(tag) = &self.dep.detail().and_then(|d| d.tag.clone()) {
-                cmd.arg("--branch").arg(tag);
+                cmd.arg("--tag").arg(tag);
             }
         }
 
