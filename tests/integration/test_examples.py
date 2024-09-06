@@ -14,9 +14,6 @@ def test_random_walk_qpe(validate):
     validate(hugr)
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_t_factory(validate):
     from examples.t_factory import hugr
 

@@ -1,0 +1,1051 @@
+{
+  "version": "0.1.0",
+  "name": "tket2.quantum",
+  "extension_reqs": [],
+  "types": {
+    "angle": {
+      "extension": "tket2.quantum",
+      "name": "angle",
+      "params": [],
+      "description": "angle type expressed as dyadic rational multiples of 2π",
+      "bound": {
+        "b": "Explicit",
+        "bound": "C"
+      }
+    }
+  },
+  "values": {},
+  "operations": {
+    "CRz": {
+      "extension": "tket2.quantum",
+      "name": "CRz",
+      "description": "CRz",
+      "misc": {
+        "commutation": []
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "CX": {
+      "extension": "tket2.quantum",
+      "name": "CX",
+      "description": "CX",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "Z"
+          ],
+          [
+            1,
+            "X"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "CY": {
+      "extension": "tket2.quantum",
+      "name": "CY",
+      "description": "CY",
+      "misc": {
+        "commutation": []
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "CZ": {
+      "extension": "tket2.quantum",
+      "name": "CZ",
+      "description": "CZ",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "Z"
+          ],
+          [
+            1,
+            "Z"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "H": {
+      "extension": "tket2.quantum",
+      "name": "H",
+      "description": "H",
+      "misc": {
+        "commutation": []
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Measure": {
+      "extension": "tket2.quantum",
+      "name": "Measure",
+      "description": "Measure",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "Z"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Sum",
+              "s": "Unit",
+              "size": 2
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "QAlloc": {
+      "extension": "tket2.quantum",
+      "name": "QAlloc",
+      "description": "QAlloc",
+      "misc": {
+        "commutation": []
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "QFree": {
+      "extension": "tket2.quantum",
+      "name": "QFree",
+      "description": "QFree",
+      "misc": {
+        "commutation": []
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Reset": {
+      "extension": "tket2.quantum",
+      "name": "Reset",
+      "description": "Reset",
+      "misc": {
+        "commutation": []
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Rx": {
+      "extension": "tket2.quantum",
+      "name": "Rx",
+      "description": "Rx",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "X"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Ry": {
+      "extension": "tket2.quantum",
+      "name": "Ry",
+      "description": "Ry",
+      "misc": {
+        "commutation": []
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Rz": {
+      "extension": "tket2.quantum",
+      "name": "Rz",
+      "description": "Rz",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "Z"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "S": {
+      "extension": "tket2.quantum",
+      "name": "S",
+      "description": "S",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "Z"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Sdg": {
+      "extension": "tket2.quantum",
+      "name": "Sdg",
+      "description": "Sdg",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "Z"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "T": {
+      "extension": "tket2.quantum",
+      "name": "T",
+      "description": "T",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "Z"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Tdg": {
+      "extension": "tket2.quantum",
+      "name": "Tdg",
+      "description": "Tdg",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "Z"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Toffoli": {
+      "extension": "tket2.quantum",
+      "name": "Toffoli",
+      "description": "Toffoli",
+      "misc": {
+        "commutation": []
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "X": {
+      "extension": "tket2.quantum",
+      "name": "X",
+      "description": "X",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "X"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Y": {
+      "extension": "tket2.quantum",
+      "name": "Y",
+      "description": "Y",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "Y"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Z": {
+      "extension": "tket2.quantum",
+      "name": "Z",
+      "description": "Z",
+      "misc": {
+        "commutation": [
+          [
+            0,
+            "Z"
+          ]
+        ]
+      },
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "add": {
+      "extension": "tket2.quantum",
+      "name": "add",
+      "description": "addition of angles",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            },
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "adiv": {
+      "extension": "tket2.quantum",
+      "name": "adiv",
+      "description": "Divide angle by an integer. If the integer is not a power of 2, or if the resulting denominator would exceed 2^64, the result is rounded to the nearest multiple of 2 pi / 2^ 64",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            },
+            {
+              "t": "I"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "aeq": {
+      "extension": "tket2.quantum",
+      "name": "aeq",
+      "description": "check angle equality",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            },
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Sum",
+              "s": "Unit",
+              "size": 2
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "afromrad": {
+      "extension": "tket2.quantum",
+      "name": "afromrad",
+      "description": "construct angle from radians, rounding given a log-denominator",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "I"
+            },
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "amul": {
+      "extension": "tket2.quantum",
+      "name": "amul",
+      "description": "multiply angle by a scalar",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            },
+            {
+              "t": "I"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "aneg": {
+      "extension": "tket2.quantum",
+      "name": "aneg",
+      "description": "negation of an angle",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "anew": {
+      "extension": "tket2.quantum",
+      "name": "anew",
+      "description": "construct angle from numerator and log-denominator, returning an error if invalid",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "I"
+            },
+            {
+              "t": "I"
+            }
+          ],
+          "output": [
+            {
+              "t": "Sum",
+              "s": "General",
+              "rows": [
+                [
+                  {
+                    "t": "Opaque",
+                    "extension": "prelude",
+                    "id": "error",
+                    "args": [],
+                    "bound": "C"
+                  }
+                ],
+                [
+                  {
+                    "t": "Opaque",
+                    "extension": "tket2.quantum",
+                    "id": "angle",
+                    "args": [],
+                    "bound": "C"
+                  }
+                ]
+              ]
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "aparts": {
+      "extension": "tket2.quantum",
+      "name": "aparts",
+      "description": "decompose angle into numerator and log-denominator",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "I"
+            },
+            {
+              "t": "I"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "asub": {
+      "extension": "tket2.quantum",
+      "name": "asub",
+      "description": "subtraction of the second angle from the first",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            },
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "atorad": {
+      "extension": "tket2.quantum",
+      "name": "atorad",
+      "description": "convert angle to radians",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "atrunc": {
+      "extension": "tket2.quantum",
+      "name": "atrunc",
+      "description": "truncate an angle to one with a lower log-denominator with the nearest value, rounding down in [0, 2π) if necessary",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            },
+            {
+              "t": "I"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "symbolic_angle": {
+      "extension": "tket2.quantum",
+      "name": "symbolic_angle",
+      "description": "Store a sympy expression that can be evaluated to an angle.",
+      "signature": {
+        "params": [
+          {
+            "tp": "String"
+          }
+        ],
+        "body": {
+          "input": [],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.quantum",
+              "id": "angle",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    }
+  }
+}

@@ -2,7 +2,7 @@ import ast
 from dataclasses import dataclass, field
 
 from hugr import Node, Wire, val
-from hugr.dfg import OpVar, _DefinitionBuilder
+from hugr.build.dfg import DefinitionBuilder, OpVar
 
 from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals
@@ -39,13 +39,13 @@ class RawExternDef(ParsableDef):
 class ExternDef(RawExternDef, ValueDef, CompilableDef):
     """An extern symbol definition."""
 
-    def compile_outer(self, graph: _DefinitionBuilder[OpVar]) -> "CompiledExternDef":
+    def compile_outer(self, graph: DefinitionBuilder[OpVar]) -> "CompiledExternDef":
         """Adds a Hugr constant node for the extern definition to the provided graph."""
         # The `typ` field must be serialized at this point, to ensure that the
         # `Extension` is serializable.
         custom_const = {
             "symbol": self.symbol,
-            "typ": self.ty.to_hugr().to_serial_root(),
+            "typ": self.ty.to_hugr()._to_serial_root(),
             "constant": self.constant,
         }
         value = val.Extension(

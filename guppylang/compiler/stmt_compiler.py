@@ -2,7 +2,7 @@ import ast
 from collections.abc import Sequence
 
 from hugr import Wire, ops
-from hugr.dfg import _DfBase
+from hugr.build.dfg import DfBase
 
 from guppylang.ast_util import AstVisitor, get_type
 from guppylang.checker.core import Variable
@@ -45,7 +45,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         return self.dfg
 
     @property
-    def builder(self) -> _DfBase[ops.DfParentOp]:
+    def builder(self) -> DfBase[ops.DfParentOp]:
         """The Hugr dataflow graph builder."""
         return self.dfg.builder
 

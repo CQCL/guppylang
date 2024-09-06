@@ -1,4 +1,5 @@
 from hugr import Hugr
+from hugr.ext import Package
 
 from pathlib import Path
 import pytest
@@ -47,7 +48,7 @@ def validate(request, export_test_cases_dir: Path):
         if p.returncode != 0:
             raise RuntimeError(f"{p.stderr}")
 
-    def validate_impl(hugr: Hugr, name=None):
+    def validate_impl(hugr: Package | Hugr, name=None):
         # Validate via the json encoding
         js = hugr.to_json()
 

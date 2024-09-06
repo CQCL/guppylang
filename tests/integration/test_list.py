@@ -2,13 +2,6 @@ import pytest
 
 from tests.util import compile_guppy
 
-import pytest
-
-pytest.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-    allow_module_level=True,
-)
-
 
 def test_types(validate):
     @compile_guppy

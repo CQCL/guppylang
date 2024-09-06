@@ -58,7 +58,6 @@ def test_aug_assign(validate, run_int_fn):
     run_int_fn(compiled, 6)
 
 
-@pytest.mark.skip(reason="trunc_u has an invalid signature")
 def test_nat(validate):
     @compile_guppy
     def foo(
@@ -72,7 +71,6 @@ def test_nat(validate):
     validate(foo)
 
 
-@pytest.mark.skip(reason="trunc_u has an invalid signature")
 def test_nat2(validate):
     @compile_guppy
     def foo(
