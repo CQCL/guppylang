@@ -1,6 +1,7 @@
 """Guppy module for builtin types and operations."""
 
-# mypy: disable-error-code="empty-body, misc, override, valid-type, no-untyped-def"
+# ruff: noqa: E501  # line too long (can't wrap this mypy directive:)
+# mypy: disable-error-code="call-arg, empty-body, misc, override, valid-type, no-untyped-def"
 
 from typing import Any, Generic, TypeVar
 
@@ -888,7 +889,7 @@ class Range:
 
     @guppy(builtins)
     def __iter__(self: "Range") -> "RangeIter":
-        return RangeIter(0, self.stop)  # type: ignore[call-arg]
+        return RangeIter(0, self.stop)
 
 
 @guppy.struct(builtins)
@@ -909,7 +910,7 @@ class RangeIter:
         # Fine not to check bounds while we can only be called from inside a `for` loop.
         # if self.start >= self.stop:
         #    raise StopIteration
-        return (self.next, RangeIter(self.next + 1, self.stop))  # type: ignore[call-arg]
+        return (self.next, RangeIter(self.next + 1, self.stop))
 
     @guppy(builtins)
     def __end__(self: "RangeIter") -> None:
@@ -920,7 +921,7 @@ class RangeIter:
 def range(stop: int) -> Range:
     """Limited version of python range().
     Only a single argument (stop/limit) is supported."""
-    return Range(stop)  # type: ignore[call-arg]
+    return Range(stop)
 
 
 @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
