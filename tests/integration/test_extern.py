@@ -5,7 +5,6 @@ from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 
 
-@pytest.mark.xfail(reason="hugr-includes-whole-stdlib")
 def test_extern_float(validate):
     module = GuppyModule("module")
 
@@ -18,12 +17,14 @@ def test_extern_float(validate):
     hg = module.compile()
     validate(hg)
 
-    [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    consts = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    if len(consts) > 1:
+        pytest.xfail(reason="hugr-includes-whole-stdlib")
+    [c] = consts
     assert isinstance(c.val, val.Extension)
     assert c.val.val["symbol"] == "ext"
 
 
-@pytest.mark.xfail(reason="hugr-includes-whole-stdlib")
 def test_extern_alt_symbol(validate):
     module = GuppyModule("module")
 
@@ -36,7 +37,10 @@ def test_extern_alt_symbol(validate):
     hg = module.compile()
     validate(hg)
 
-    [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    consts = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    if len(consts) > 1:
+        pytest.xfail(reason="hugr-includes-whole-stdlib")
+    [c] = consts
     assert isinstance(c.val, val.Extension)
     assert c.val.val["symbol"] == "foo"
 

@@ -64,15 +64,17 @@ def test_assign_expr(validate):
     validate(foo)
 
 
-@pytest.mark.xfail(reason="hugr-includes-whole-stdlib")
 def test_func_def_name():
     @compile_guppy
     def func_name() -> None:
         return
 
-    [def_op] = [
+    defs = [
         data.op for n, data in func_name.nodes() if isinstance(data.op, ops.FuncDefn)
     ]
+    if len(defs) > 1:
+        pytest.xfail(reason="hugr-includes-whole-stdlib")
+    [def_op] = defs
     assert isinstance(def_op, ops.FuncDefn)
     assert def_op.name == "func_name"
 

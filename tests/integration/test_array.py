@@ -11,7 +11,6 @@ from guppylang.prelude.quantum import qubit
 import guppylang.prelude.quantum as quantum
 
 
-@pytest.mark.xfail(reason="hugr-includes-whole-stdlib")
 def test_len(validate):
     module = GuppyModule("test")
 
@@ -21,8 +20,10 @@ def test_len(validate):
 
     hg = module.compile()
     validate(hg)
-
-    [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    vals = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    if len(vals) > 1:
+        pytest.xfail(reason="hugr-includes-whole-stdlib")
+    [val] = vals
     assert isinstance(val, ops.Const)
     assert isinstance(val.val, IntVal)
     assert val.val.v == 42
