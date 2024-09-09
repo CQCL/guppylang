@@ -226,7 +226,8 @@ class CheckedStructDef(TypeDef, CompiledDef):
 
 def parse_py_class(cls: type) -> ast.ClassDef:
     """Parses a Python class object into an AST."""
-    # We cannot use `inspect.getsourcelines` if we're running in IPython. See
+    # If we are running IPython, `inspect.getsourcelines` works only for builtins
+    # (guppy stdlib), but not for most/user-defined classes - see:
     #  - https://bugs.python.org/issue33826
     #  - https://github.com/ipython/ipython/issues/11249
     #  - https://github.com/wandb/weave/pull/1864
@@ -237,14 +238,8 @@ def parse_py_class(cls: type) -> ast.ClassDef:
             if not isinstance(defn.node, ast.ClassDef):
                 raise GuppyError("Expected a class definition", defn.node)
             return defn.node
-        # inspect.getsourcelines works for classes defined in the guppy stdlib/builtins
-        try:
-            source_lines, line_offset = inspect.getsourcelines(cls)
-        except OSError as e:
-            # Not a guppy builtin
-            raise ValueError(f"Couldn't find source for class `{cls.__name__}`") from e
-    else:
-        source_lines, line_offset = inspect.getsourcelines(cls)
+        # else, fall through to handle builtins.
+    source_lines, line_offset = inspect.getsourcelines(cls)
     source = "".join(source_lines)  # Lines already have trailing \n's
     source = textwrap.dedent(source)
     cls_ast = ast.parse(source).body[0]
