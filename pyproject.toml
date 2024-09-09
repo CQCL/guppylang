@@ -19,13 +19,12 @@ dependencies = [
     "networkx >=3.2.1,<4",
     "pydantic >=2.7.0b1,<3",
     "typing-extensions >=4.9.0,<5",
-    "hugr >=0.7.0,<0.8",
+    "hugr >=0.8.1,<0.9",
 ]
 
 [project.optional-dependencies]
-pytket = ["pytket >=1.30.0,<2", "tket2 >=0.2.1,<0.3"]
+pytket = ["pytket >=1.30.0,<2", "tket2 >=0.3.0,<0.4"]
 docs = ["sphinx >=7.2.6,<9", "sphinx-book-theme >=1.1.2,<2"]
-validation = ["guppyval"]
 execution = ["execute-llvm"]
 
 [project.urls]
@@ -43,18 +42,19 @@ dev-dependencies = [
     "ruff >=0.6.2,<0.7",
     "maturin >=1.4.0,<2",
     "pytket >=1.30.0,<2",
+    # Required to run `maturin develop`
+    "pip >=24",
 ]
 
 [tool.uv.workspace]
-members = ["execute_llvm", "validator"]
+members = ["execute_llvm"]
 
 [tool.uv.sources]
-guppyval = { workspace = true }
 execute-llvm = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
-#hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-cli" }
-#tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py" }
+#hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "4cbe890ab4e72090708ff83592c0771caf2335df" }
+#tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", rev = "e3f9da1abe28f31cb249de2e06be846ab48d9708" }
 
 [build-system]
 requires = ["hatchling"]

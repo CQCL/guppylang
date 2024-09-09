@@ -1,6 +1,6 @@
 import ast
 import json
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any, TypeGuard, TypeVar
 
@@ -11,8 +11,9 @@ import hugr.std.logic
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
-from hugr.cond_loop import Conditional
-from hugr.dfg import DP, _DfBase
+from hugr.build.cond_loop import Conditional
+from hugr.build.dfg import DP, DfBase
+from hugr.std.collections import ListVal
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
@@ -20,6 +21,7 @@ from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import Variable
 from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import CompilerBase, DFContainer
+from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.error import GuppyError, InternalGuppyError
@@ -37,6 +39,10 @@ from guppylang.nodes import (
     SubscriptAccessAndDrop,
     TensorCall,
     TypeApply,
+)
+from guppylang.prelude._internal.compiler.list import (
+    list_new,
+    list_push,
 )
 from guppylang.tys.builtin import (
     get_element_type,
@@ -78,13 +84,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return [self.compile(e, dfg) for e in expr_to_row(expr)]
 
     @property
-    def builder(self) -> _DfBase[ops.DfParentOp]:
+    def builder(self) -> DfBase[ops.DfParentOp]:
         """The current Hugr dataflow graph builder."""
         return self.dfg.builder
 
     @contextmanager
     def _new_dfcontainer(
-        self, inputs: list[PlaceNode], builder: _DfBase[DP]
+        self, inputs: list[PlaceNode], builder: DfBase[DP]
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `DFContainer`.
 
@@ -205,12 +211,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def visit_List(self, node: ast.List) -> Wire:
         # Note that this is a list literal (i.e. `[e1, e2, ...]`), not a comprehension
         inputs = [self.visit(e) for e in node.elts]
-        in_types = [get_type(e) for e in node.elts]
-        out_type = get_type(node)
-        return self.builder.add_op(
-            make_list_op(in_types, out_type),
-            *inputs,
-        )
+        list_ty = get_type(node)
+        elem_ty = get_element_type(list_ty)
+        return list_new(self.builder, elem_ty.to_hugr(), inputs)[0]
 
     def _unpack_tuple(self, wire: Wire, types: Sequence[Type]) -> Sequence[Wire]:
         """Add a tuple unpack operation to the graph"""
@@ -265,9 +268,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
         args = [self.visit(arg) for arg in node.args]
         call = self.builder.add_op(ops.CallIndirect(func_ty.to_hugr()), func, *args)
-        # TODO: Replace below with `list(call[:num_returns])` once
-        #  https://github.com/CQCL/hugr/issues/1454 is fixed.
-        regular_returns = [call[i] for i in range(num_returns)]
+        regular_returns = list(call[:num_returns])
         inout_returns = call[num_returns:]
         self._update_inout_ports(node.args, inout_returns, func_ty)
         return self._pack_returns(regular_returns, func_ty.output)
@@ -355,11 +356,11 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         raise InternalGuppyError("Node should have been removed during type checking.")
 
     def visit_PartialApply(self, node: PartialApply) -> Wire:
-        from guppylang.compiler.func_compiler import make_partial_op
-
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
-        op = make_partial_op(func_ty, [get_type(arg) for arg in node.args])
+        op = PartialOp.from_closure(
+            func_ty.to_hugr(), [get_type(arg).to_hugr() for arg in node.args]
+        )
         return self.builder.add_op(
             op, self.visit(node.func), *(self.visit(arg) for arg in node.args)
         )
@@ -442,19 +443,11 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                     assert_never(c)
         else:
             op_name = f"result_{base_name}"
-        args = [
-            ht.StringArg(node.tag),
-            *extra_args,
-        ]
-        sig = ht.FunctionType(
-            input=[get_type(node.value).to_hugr()],
-            output=[],
-        )
-        op = ops.Custom(
-            extension="tket2.result",
-            name=op_name,
-            args=args,
-            signature=sig,
+        op = tket2_result_op(
+            op_name=op_name,
+            typ=get_type(node.value).to_hugr(),
+            tag=node.tag,
+            extra_args=extra_args,
         )
         self.builder.add_op(op, self.visit(node.value))
         return self._pack_returns([], NoneType())
@@ -466,9 +459,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
         # Make up a name for the list under construction and bind it to an empty list
         list_ty = get_type(node)
+        elem_ty = get_element_type(list_ty)
         list_place = Variable(next(tmp_vars), list_ty, node)
         list_name = with_type(list_ty, with_loc(node, PlaceNode(place=list_place)))
-        self.dfg[list_place] = self.builder.add_op(make_list_op([], list_ty))
+        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])[0]
 
         def compile_generators(elt: ast.expr, gens: list[DesugaredGenerator]) -> None:
             """Helper function to generate nested TailLoop nodes for generators"""
@@ -477,7 +471,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 list_port, elt_port = self.visit(list_name), self.visit(elt)
                 elt_ty = get_type(elt)
                 push = self.builder.add_op(
-                    list_push_op(list_ty, elt_ty), list_port, elt_port
+                    list_push(elt_ty.to_hugr()), list_port, elt_port
                 )
                 self.dfg[list_place] = push
                 return
@@ -540,8 +534,6 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
 
     Returns None if the Python value cannot be represented in Guppy.
     """
-    from guppylang.prelude._internal.util import ListVal
-
     match v:
         case bool():
             return hv.bool_value(v)
@@ -561,7 +553,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
             assert is_list_type(exp_ty)
             vs = [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
             if doesnt_contain_none(vs):
-                return ListVal(vs, get_element_type(exp_ty))
+                return ListVal(vs, get_element_type(exp_ty).to_hugr())
         case _:
             # Pytket conversion is an optional feature
             try:
@@ -579,25 +571,27 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
     return None
 
 
-def make_dummy_op(
-    name: str, inp: Sequence[Type], out: Sequence[Type]
+def tket2_result_op(
+    op_name: str,
+    typ: ht.Type,
+    tag: str,
+    extra_args: Iterable[ht.TypeArg],
 ) -> ops.DataflowOp:
-    """Dummy operation."""
-    input = [ty.to_hugr() for ty in inp]
-    output = [ty.to_hugr() for ty in out]
-
-    sig = ht.FunctionType(input=input, output=output)
-    return ops.Custom(name=name, extension="dummy", signature=sig, args=[])
-
-
-def make_list_op(in_types: Sequence[Type], out_type: Type) -> ops.DataflowOp:
     """Creates a dummy operation for constructing a list."""
-    return make_dummy_op("MakeList", in_types, [out_type])
-
-
-def list_push_op(list_ty: Type, elem_ty: Type) -> ops.DataflowOp:
-    """Creates a dummy operation for constructing a list."""
-    return make_dummy_op("Push", [list_ty, elem_ty], [list_ty])
+    args = [
+        ht.StringArg(tag),
+        *extra_args,
+    ]
+    sig = ht.FunctionType(
+        input=[typ],
+        output=[],
+    )
+    return ops.Custom(
+        extension="tket2.result",
+        op_name=op_name,
+        args=args,
+        signature=sig,
+    )
 
 
 T = TypeVar("T")

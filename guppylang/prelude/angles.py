@@ -10,17 +10,13 @@ from hugr import val as hv
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal.checker import CoercingChecker
-from guppylang.prelude._internal.compiler import (
-    AngleOpCompiler,
-)
+from guppylang.prelude._internal.compiler.angle import AngleOpCompiler
 from guppylang.prelude.builtins import nat
 
 angles = GuppyModule("angles")
 
 
-_hugr_angle_type = ht.Opaque(
-    "angle", ht.TypeBound.Copyable, [ht.BoundedNatArg(1)], "quantum.tket2"
-)
+_hugr_angle_type = ht.Opaque("angle", ht.TypeBound.Copyable, [], "tket2.quantum")
 
 
 def _hugr_angle_value(numerator: int, log_denominator: int) -> hv.Value:

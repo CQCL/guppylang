@@ -157,7 +157,7 @@ class BBLinearityChecker(ast.NodeVisitor):
             # Visiting the `__getitem__(place.parent, place.item)` call ensures that we
             # linearity-check the parent and element.
             self.visit(subscript.getitem_call)
-        # For all other places, we record uses of all leafs
+        # For all other places, we record uses of all leaves
         else:
             for place in leaf_places(node.place):
                 x = place.id
