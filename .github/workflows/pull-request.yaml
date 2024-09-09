@@ -63,6 +63,9 @@ jobs:
       - name: Install Guppy with llvm-based execution
         run: uv sync --extra execution
 
+      - name: Cargo build validator
+        run: cargo build -p validator --release
+
       - name: Run tests
         run: uv run pytest
 
@@ -105,6 +108,9 @@ jobs:
 
       - name: Install Guppy with execution and pytket
         run: uv sync --extra execution --extra pytket
+
+      - name: Cargo build validator
+        run: cargo build -p validator --release
 
       - name: Run python tests with coverage instrumentation
         run: uv run pytest --cov=./ --cov-report=xml
