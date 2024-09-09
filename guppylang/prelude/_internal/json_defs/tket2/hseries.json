@@ -1,0 +1,260 @@
+{
+  "version": "0.1.0",
+  "name": "tket2.hseries",
+  "extension_reqs": [],
+  "types": {},
+  "values": {},
+  "operations": {
+    "LazyMeasure": {
+      "extension": "tket2.hseries",
+      "name": "LazyMeasure",
+      "description": "LazyMeasure",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Opaque",
+              "extension": "tket2.futures",
+              "id": "Future",
+              "args": [
+                {
+                  "tya": "Type",
+                  "ty": {
+                    "t": "Sum",
+                    "s": "Unit",
+                    "size": 2
+                  }
+                }
+              ],
+              "bound": "A"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Measure": {
+      "extension": "tket2.hseries",
+      "name": "Measure",
+      "description": "Measure",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Sum",
+              "s": "Unit",
+              "size": 2
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "PhasedX": {
+      "extension": "tket2.hseries",
+      "name": "PhasedX",
+      "description": "PhasedX",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            },
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "QAlloc": {
+      "extension": "tket2.hseries",
+      "name": "QAlloc",
+      "description": "QAlloc",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "QFree": {
+      "extension": "tket2.hseries",
+      "name": "QFree",
+      "description": "QFree",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Reset": {
+      "extension": "tket2.hseries",
+      "name": "Reset",
+      "description": "Reset",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "Rz": {
+      "extension": "tket2.hseries",
+      "name": "Rz",
+      "description": "Rz",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "ZZMax": {
+      "extension": "tket2.hseries",
+      "name": "ZZMax",
+      "description": "ZZMax",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "ZZPhase": {
+      "extension": "tket2.hseries",
+      "name": "ZZPhase",
+      "description": "ZZPhase",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Q"
+            },
+            {
+              "t": "Q"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    }
+  }
+}

@@ -2,9 +2,9 @@ import ast
 from dataclasses import dataclass, field
 
 from hugr import Node, Wire
-from hugr import function as hf
 from hugr import tys as ht
-from hugr.dfg import OpVar, _DefinitionBuilder
+from hugr.build import function as hf
+from hugr.build.dfg import DefinitionBuilder, OpVar
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals
@@ -72,9 +72,7 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
         node = with_loc(node, GlobalCall(def_id=self.id, args=args, type_args=inst))
         return node, ty
 
-    def compile_outer(
-        self, module: _DefinitionBuilder[OpVar]
-    ) -> "CompiledFunctionDecl":
+    def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledFunctionDecl":
         """Adds a Hugr `FuncDecl` node for this function to the Hugr."""
         assert isinstance(
             module, hf.Module

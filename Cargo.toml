@@ -1,0 +1,39 @@
+[workspace]
+resolver = "2"
+members = ["execute_llvm", "validator"]
+
+# Building "execute_llvm" requires having LLVM14 installed
+default-members = ["validator"]
+
+[workspace.package]
+rust-version = "1.75"
+edition = "2021"
+homepage = "https://github.com/CQCL/hugr"
+repository = "https://github.com/CQCL/hugr"
+license = "Apache-2.0"
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(ci_run)'] }
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+# Unstable check, may cause false positives.
+# https://github.com/rust-lang/rust-clippy/issues/5112
+debug_assert_with_mut_call = "warn"
+
+[workspace.dependencies]
+pyo3 = "0.19.0"
+hugr = "0.12.1"
+hugr-cli = "0.6.0"
+hugr-llvm = "0.4.0"
+serde_json = "1.0.111"
+inkwell = "0.4.0"
+cargo_toml = "0.20.4"
+thiserror = "1.0.37"
+
+[patch.crates-io]
+
+# Uncomment these to test the latest dependency version during development
+#hugr = { git = "https://github.com/CQCL/hugr", rev = "6bf6c82c9ec9d801ab43e311e5f815a3eea7d9c1" }
+#hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "6bf6c82c9ec9d801ab43e311e5f815a3eea7d9c1" }
+#hugr-llvm = { git = "https://github.com/CQCL/hugr-llvm", commit = "7245ca91b45b828ddb49456e9e0a895d79f1d739" }

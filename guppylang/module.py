@@ -5,8 +5,10 @@ from types import ModuleType
 from typing import Any
 
 from hugr import Hugr, ops
-from hugr.function import Module
+from hugr.build.function import Module
+from hugr.ext import Package
 
+import guppylang.compiler.hugr_extension
 from guppylang.checker.core import Globals, PyScope
 from guppylang.definition.common import (
     CheckableDef,
@@ -43,7 +45,7 @@ class GuppyModule:
 
     # If the hugr has already been compiled, keeps a reference that can be returned
     # from `compile`.
-    _compiled_hugr: Hugr[ops.Module] | None
+    _compiled_hugr: Package | None
 
     # Map of raw definitions in this module
     _raw_defs: dict[DefId, RawDef]
@@ -142,7 +144,7 @@ class GuppyModule:
                     def_id: all_checked_defs[def_id]
                     for def_id in all_globals.impls[def_id].values()
                 }
-        self._imported_globals |= Globals(defs, names, impls, {})
+        self._imported_globals |= Globals(dict(defs), names, impls, {})
         self._imported_checked_defs |= defs
 
         # We also need to include transitively imported checked definitions so we can
@@ -182,6 +184,10 @@ class GuppyModule:
         if self._instance_func_buffer is not None and not isinstance(defn, TypeDef):
             self._instance_func_buffer[defn.name] = defn
         else:
+            # If this overrides an already defined name, we need to purge the old
+            # definition to avoid checking it later
+            if self.contains(defn.name):
+                self.unregister(self._globals[defn.name])
             if isinstance(defn, TypeDef | ParamDef):
                 self._raw_type_defs[defn.id] = defn
             else:
@@ -191,6 +197,7 @@ class GuppyModule:
                 self._globals.impls[instance.id][defn.name] = defn.id
             else:
                 self._globals.names[defn.name] = defn.id
+            self._globals.defs[defn.id] = defn
 
     def register_func_def(
         self, f: PyFunc, instance: TypeDef | None = None
@@ -215,6 +222,22 @@ class GuppyModule:
         for defn in buffer.values():
             self.register_def(defn, instance)
 
+    def unregister(self, defn: Definition) -> None:
+        """Removes a definition from this module.
+
+        Also removes all methods when unregistering a type.
+        """
+        self._checked = False
+        self._compiled = False
+        self._compiled_hugr = None
+        self._raw_defs.pop(defn.id, None)
+        self._raw_type_defs.pop(defn.id, None)
+        self._globals.defs.pop(defn.id, None)
+        self._globals.names.pop(defn.name, None)
+        if impls := self._globals.impls.pop(defn.id, None):
+            for impl in impls.values():
+                self.unregister(self._globals[impl])
+
     @property
     def checked(self) -> bool:
         return self._checked
@@ -228,12 +251,12 @@ class GuppyModule:
         raw_defs: Mapping[DefId, RawDef], globals: Globals
     ) -> dict[DefId, CheckedDef]:
         """Helper method to parse and check raw definitions."""
-        raw_globals = globals | Globals(raw_defs, {}, {}, {})
+        raw_globals = globals | Globals(dict(raw_defs), {}, {}, {})
         parsed = {
             def_id: defn.parse(raw_globals) if isinstance(defn, ParsableDef) else defn
             for def_id, defn in raw_defs.items()
         }
-        parsed_globals = globals | Globals(parsed, {}, {}, {})
+        parsed_globals = globals | Globals(dict(parsed), {}, {}, {})
         return {
             def_id: (
                 defn.check(parsed_globals) if isinstance(defn, CheckableDef) else defn
@@ -263,7 +286,7 @@ class GuppyModule:
         type_defs = self._check_defs(
             self._raw_type_defs, self._imported_globals | self._globals
         )
-        self._globals = self._globals.update_defs(type_defs)
+        self._globals.defs.update(type_defs)
 
         # Collect auto-generated methods
         generated: dict[DefId, RawDef] = {}
@@ -278,13 +301,25 @@ class GuppyModule:
         other_defs = self._check_defs(
             self._raw_defs | generated, self._imported_globals | self._globals
         )
-        self._globals = self._globals.update_defs(other_defs)
+        self._globals.defs.update(other_defs)
         self._checked_defs = type_defs | other_defs
         self._checked = True
 
-    @pretty_errors
-    def compile(self) -> Hugr[ops.Module]:
+    def compile_hugr(self) -> Hugr[ops.Module]:
         """Compiles the module and returns the final Hugr."""
+        # This function does not use the `pretty_errors` decorator since it is
+        # is wrapping around `compile_package` which does use it already.
+        package = self.compile()
+        hugr = package.modules[0]
+        return hugr
+
+    @pretty_errors
+    def compile(self) -> Package:
+        """Compiles the module and returns the final Hugr package.
+
+        The package contains the single Hugr graph as well as the required
+        extensions definitions.
+        """
         if self.compiled:
             assert self._compiled_hugr is not None, "Module is compiled but has no Hugr"
             return self._compiled_hugr
@@ -305,9 +340,29 @@ class GuppyModule:
             defn.compile_inner(compiled_defs)
 
         hugr = graph.hugr
+
+        # TODO: Currently we just include a hardcoded list of extensions. We should
+        # compute this dynamically from the imported dependencies instead.
+        #
+        # The hugr prelude extensions are implicit.
+        from guppylang.prelude._internal.compiler.quantum import (
+            HSERIES_EXTENSION,
+            QUANTUM_EXTENSION,
+            RESULT_EXTENSION,
+        )
+
+        extensions = [
+            guppylang.compiler.hugr_extension.EXTENSION,
+            QUANTUM_EXTENSION,
+            HSERIES_EXTENSION,
+            RESULT_EXTENSION,
+        ]
+
+        package = Package(modules=[hugr], extensions=extensions)
         self._compiled = True
-        self._compiled_hugr = hugr
-        return hugr
+        self._compiled_hugr = package
+
+        return package
 
     def contains(self, name: str) -> bool:
         """Returns 'True' if the module contains an object with the given name."""

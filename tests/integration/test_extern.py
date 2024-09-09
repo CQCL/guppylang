@@ -14,9 +14,10 @@ def test_extern_float(validate):
     def main() -> float:
         return ext + ext  # noqa: F821
 
-    hg = module.compile()
-    validate(hg)
+    package = module.compile()
+    validate(package)
 
+    hg = package.modules[0]
     consts = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
     if len(consts) > 1:
         pytest.xfail(reason="hugr-includes-whole-stdlib")
@@ -34,9 +35,10 @@ def test_extern_alt_symbol(validate):
     def main() -> int:
         return ext  # noqa: F821
 
-    hg = module.compile()
-    validate(hg)
+    package = module.compile()
+    validate(package)
 
+    hg = package.modules[0]
     consts = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
     if len(consts) > 1:
         pytest.xfail(reason="hugr-includes-whole-stdlib")

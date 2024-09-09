@@ -185,7 +185,7 @@ class ConstParam(ParameterBase):
             case NumericType(kind=NumericType.Kind.Nat):
                 return ht.BoundedNatParam(upper_bound=None)
             case _:
-                assert isinstance(self.ty.to_hugr(), ht.Opaque)
+                assert isinstance(self.ty.to_hugr(), ht.ExtType)
                 return ht.StringParam()
 
 

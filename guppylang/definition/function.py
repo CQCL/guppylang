@@ -5,10 +5,10 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-import hugr.function as hf
+import hugr.build.function as hf
 import hugr.tys as ht
 from hugr import Wire
-from hugr.dfg import OpVar, _DefinitionBuilder
+from hugr.build.dfg import DefinitionBuilder, OpVar
 
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
@@ -142,7 +142,7 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
 
     cfg: CheckedCFG[Place]
 
-    def compile_outer(self, module: _DefinitionBuilder[OpVar]) -> "CompiledFunctionDef":
+    def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledFunctionDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr.
 
         Note that we don't compile the function body at this point since we don't have

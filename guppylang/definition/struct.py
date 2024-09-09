@@ -2,7 +2,7 @@ import ast
 import inspect
 import textwrap
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from hugr import Wire, ops
@@ -314,6 +314,6 @@ def check_not_recursive(defn: ParsedStructDef, globals: Globals) -> None:
         **globals.defs,
         defn.id: DummyStructDef(defn.id, defn.name, defn.defined_at),
     }
-    dummy_globals = globals.update_defs(dummy_defs)
+    dummy_globals = replace(globals, defs=globals.defs | dummy_defs)
     for field in defn.fields:
         type_from_ast(field.type_ast, dummy_globals, {})
