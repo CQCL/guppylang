@@ -1,7 +1,7 @@
 import ast
 import copy
 import itertools
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, replace
 from functools import cached_property
 from typing import (
@@ -204,7 +204,7 @@ class Globals:
     user names to definition id and instance implementation id.
     """
 
-    defs: Mapping[DefId, Definition]
+    defs: dict[DefId, Definition]
 
     names: dict[str, DefId]
     impls: dict[DefId, dict[str, DefId]]
@@ -269,14 +269,6 @@ class Globals:
             if isinstance(defn, CallableDef):
                 return defn
         return None
-
-    def update_defs(self, defs: Mapping[DefId, Definition]) -> "Globals":
-        """Returns a new `Globals` instance with updated definitions.
-
-        This method is needed since in-place definition updates are impossible as the
-        definition map is immutable.
-        """
-        return Globals({**self.defs, **defs}, self.names, self.impls, self.python_scope)
 
     def __or__(self, other: "Globals") -> "Globals":
         impls = {
