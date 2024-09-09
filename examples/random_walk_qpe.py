@@ -11,11 +11,13 @@ from collections.abc import Callable
 import guppylang.prelude.quantum as quantum
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.prelude.angles import angle
 from guppylang.prelude.builtins import py, result
 from guppylang.prelude.quantum import cx, discard, h, measure, qubit, rz, x
 
 module = GuppyModule("test")
 module.load_all(quantum)
+module.load(angle)
 
 sqrt_e = math.sqrt(math.e)
 sqrt_e_div = math.sqrt((math.e - 1) / math.e)
@@ -46,7 +48,7 @@ def random_walk_phase_estimation(
     while i < num_iters:
         aux = h(qubit())
         t = 1 / sigma
-        aux = rz(h(aux), (sigma - mu) * t)
+        aux = rz(h(aux), angle((sigma - mu) * t))
         aux, tgt = controlled_oracle(aux, tgt, t)
         if measure(h(aux)):
             mu += sigma / py(sqrt_e)
@@ -68,10 +70,10 @@ def random_walk_phase_estimation(
 def example_controlled_oracle(q1: qubit, q2: qubit, t: float) -> tuple[qubit, qubit]:
     """A controlled e^itH gate for the example Hamiltonian H = -0.5 * Z"""
     # This is just a controlled rz gate
-    angle = -0.5 * t
-    q2 = rz(q2, angle / 2)
+    a = angle(-0.5 * t)
+    q2 = rz(q2, a / 2)
     q1, q2 = cx(q1, q2)
-    q2 = rz(q2, -angle / 2)
+    q2 = rz(q2, -a / 2)
     return cx(q1, q2)
 
 
