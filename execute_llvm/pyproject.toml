@@ -2,6 +2,7 @@
 name = "execute-llvm"
 requires-python = ">=3.10,<3.13"
 classifiers = [
+    "Private :: Do Not Upload",
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
@@ -14,6 +15,3 @@ build-backend = "maturin"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
-
-[tool.uv]
-no-build = true

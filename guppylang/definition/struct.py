@@ -2,7 +2,7 @@ import ast
 import inspect
 import textwrap
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from hugr import Wire, ops
@@ -226,30 +226,30 @@ class CheckedStructDef(TypeDef, CompiledDef):
 
 def parse_py_class(cls: type) -> ast.ClassDef:
     """Parses a Python class object into an AST."""
-    # We cannot use `inspect.getsourcelines` if we're running in IPython. See
+    # If we are running IPython, `inspect.getsourcelines` works only for builtins
+    # (guppy stdlib), but not for most/user-defined classes - see:
     #  - https://bugs.python.org/issue33826
     #  - https://github.com/ipython/ipython/issues/11249
     #  - https://github.com/wandb/weave/pull/1864
     if is_running_ipython():
         defn = find_ipython_def(cls.__name__)
-        if defn is None:
-            raise ValueError(f"Couldn't find source for class `{cls.__name__}`")
-        annotate_location(defn.node, defn.cell_source, f"<{defn.cell_name}>", 1)
-        if not isinstance(defn.node, ast.ClassDef):
-            raise GuppyError("Expected a class definition", defn.node)
-        return defn.node
-    else:
-        source_lines, line_offset = inspect.getsourcelines(cls)
-        source = "".join(source_lines)  # Lines already have trailing \n's
-        source = textwrap.dedent(source)
-        cls_ast = ast.parse(source).body[0]
-        file = inspect.getsourcefile(cls)
-        if file is None:
-            raise GuppyError("Couldn't determine source file for class")
-        annotate_location(cls_ast, source, file, line_offset)
-        if not isinstance(cls_ast, ast.ClassDef):
-            raise GuppyError("Expected a class definition", cls_ast)
-        return cls_ast
+        if defn is not None:
+            annotate_location(defn.node, defn.cell_source, f"<{defn.cell_name}>", 1)
+            if not isinstance(defn.node, ast.ClassDef):
+                raise GuppyError("Expected a class definition", defn.node)
+            return defn.node
+        # else, fall through to handle builtins.
+    source_lines, line_offset = inspect.getsourcelines(cls)
+    source = "".join(source_lines)  # Lines already have trailing \n's
+    source = textwrap.dedent(source)
+    cls_ast = ast.parse(source).body[0]
+    file = inspect.getsourcefile(cls)
+    if file is None:
+        raise GuppyError("Couldn't determine source file for class")
+    annotate_location(cls_ast, source, file, line_offset)
+    if not isinstance(cls_ast, ast.ClassDef):
+        raise GuppyError("Expected a class definition", cls_ast)
+    return cls_ast
 
 
 def try_parse_generic_base(node: ast.expr) -> list[ast.expr] | None:
@@ -314,6 +314,6 @@ def check_not_recursive(defn: ParsedStructDef, globals: Globals) -> None:
         **globals.defs,
         defn.id: DummyStructDef(defn.id, defn.name, defn.defined_at),
     }
-    dummy_globals = globals.update_defs(dummy_defs)
+    dummy_globals = replace(globals, defs=globals.defs | dummy_defs)
     for field in defn.fields:
         type_from_ast(field.type_ast, dummy_globals, {})

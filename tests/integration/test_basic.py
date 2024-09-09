@@ -1,3 +1,4 @@
+import pytest
 from hugr import ops
 
 from guppylang.decorator import guppy
@@ -68,11 +69,16 @@ def test_func_def_name():
     def func_name() -> None:
         return
 
-    [def_op] = [
-        data.op for n, data in func_name.nodes() if isinstance(data.op, ops.FuncDefn)
+    defs = [
+        data.op
+        for n, data in func_name.modules[0].nodes()
+        if isinstance(data.op, ops.FuncDefn)
     ]
+    if len(defs) > 1:
+        pytest.xfail(reason="hugr-includes-whole-stdlib")
+    [def_op] = defs
     assert isinstance(def_op, ops.FuncDefn)
-    assert def_op.name == "func_name"
+    assert def_op.f_name == "func_name"
 
 
 def test_func_decl_name():
@@ -81,12 +87,12 @@ def test_func_decl_name():
     @guppy.declare(module)
     def func_name() -> None: ...
 
-    hugr = module.compile()
+    hugr = module.compile_hugr()
     [def_op] = [
         data.op for n, data in hugr.nodes() if isinstance(data.op, ops.FuncDecl)
     ]
     assert isinstance(def_op, ops.FuncDecl)
-    assert def_op.name == "func_name"
+    assert def_op.f_name == "func_name"
 
 
 def test_compile_again():

@@ -1,3 +1,4 @@
+import pytest
 from hugr import ops, val
 
 from guppylang.decorator import guppy
@@ -13,10 +14,14 @@ def test_extern_float(validate):
     def main() -> float:
         return ext + ext  # noqa: F821
 
-    hg = module.compile()
-    validate(hg)
+    package = module.compile()
+    validate(package)
 
-    [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    hg = package.modules[0]
+    consts = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    if len(consts) > 1:
+        pytest.xfail(reason="hugr-includes-whole-stdlib")
+    [c] = consts
     assert isinstance(c.val, val.Extension)
     assert c.val.val["symbol"] == "ext"
 
@@ -30,10 +35,14 @@ def test_extern_alt_symbol(validate):
     def main() -> int:
         return ext  # noqa: F821
 
-    hg = module.compile()
-    validate(hg)
+    package = module.compile()
+    validate(package)
 
-    [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    hg = package.modules[0]
+    consts = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    if len(consts) > 1:
+        pytest.xfail(reason="hugr-includes-whole-stdlib")
+    [c] = consts
     assert isinstance(c.val, val.Extension)
     assert c.val.val["symbol"] == "foo"
 

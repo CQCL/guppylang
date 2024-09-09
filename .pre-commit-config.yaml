@@ -10,8 +10,26 @@ repos:
       - id: check-vcs-permalinks
       - id: check-yaml
       - id: detect-private-key
-      # - id: end-of-file-fixer
-      # - id: trailing-whitespace
+      - id: end-of-file-fixer
+        exclude: |
+          (?x)^(
+            .*\.json|
+            .*\.err|
+            tests/.*|
+            .*CHANGELOG.md|
+            \.github/.*|
+            .release-please-manifest.json
+          )$
+      - id: trailing-whitespace
+        exclude: |
+          (?x)^(
+            .*\.json|
+            .*\.err|
+            tests/.*|
+            .*CHANGELOG.md|
+            \.github/.*|
+            .release-please-manifest.json
+          )$
       - id: fix-byte-order-marker
       - id: mixed-line-ending
       # Python-specific

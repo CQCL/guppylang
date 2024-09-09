@@ -1,0 +1,360 @@
+{
+  "version": "0.1.0",
+  "name": "tket2.result",
+  "extension_reqs": [
+    "arithmetic.float.types",
+    "arithmetic.int.types"
+  ],
+  "types": {},
+  "values": {},
+  "operations": {
+    "result_array_bool": {
+      "extension": "tket2.result",
+      "name": "result_array_bool",
+      "description": "Report an array of boolean results.",
+      "signature": {
+        "params": [
+          {
+            "tp": "String"
+          },
+          {
+            "tp": "BoundedNat",
+            "bound": null
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "prelude",
+              "id": "array",
+              "args": [
+                {
+                  "tya": "Variable",
+                  "idx": 1,
+                  "cached_decl": {
+                    "tp": "BoundedNat",
+                    "bound": null
+                  }
+                },
+                {
+                  "tya": "Type",
+                  "ty": {
+                    "t": "Sum",
+                    "s": "Unit",
+                    "size": 2
+                  }
+                }
+              ],
+              "bound": "C"
+            }
+          ],
+          "output": [],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "result_array_f64": {
+      "extension": "tket2.result",
+      "name": "result_array_f64",
+      "description": "Report an array of floating-point results.",
+      "signature": {
+        "params": [
+          {
+            "tp": "String"
+          },
+          {
+            "tp": "BoundedNat",
+            "bound": null
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "prelude",
+              "id": "array",
+              "args": [
+                {
+                  "tya": "Variable",
+                  "idx": 1,
+                  "cached_decl": {
+                    "tp": "BoundedNat",
+                    "bound": null
+                  }
+                },
+                {
+                  "tya": "Type",
+                  "ty": {
+                    "t": "Opaque",
+                    "extension": "arithmetic.float.types",
+                    "id": "float64",
+                    "args": [],
+                    "bound": "C"
+                  }
+                }
+              ],
+              "bound": "C"
+            }
+          ],
+          "output": [],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "result_array_int": {
+      "extension": "tket2.result",
+      "name": "result_array_int",
+      "description": "Report an array of signed integer results.",
+      "signature": {
+        "params": [
+          {
+            "tp": "String"
+          },
+          {
+            "tp": "BoundedNat",
+            "bound": null
+          },
+          {
+            "tp": "BoundedNat",
+            "bound": 7
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "prelude",
+              "id": "array",
+              "args": [
+                {
+                  "tya": "Variable",
+                  "idx": 1,
+                  "cached_decl": {
+                    "tp": "BoundedNat",
+                    "bound": null
+                  }
+                },
+                {
+                  "tya": "Type",
+                  "ty": {
+                    "t": "Opaque",
+                    "extension": "arithmetic.int.types",
+                    "id": "int",
+                    "args": [
+                      {
+                        "tya": "Variable",
+                        "idx": 2,
+                        "cached_decl": {
+                          "tp": "BoundedNat",
+                          "bound": 7
+                        }
+                      }
+                    ],
+                    "bound": "C"
+                  }
+                }
+              ],
+              "bound": "C"
+            }
+          ],
+          "output": [],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "result_array_uint": {
+      "extension": "tket2.result",
+      "name": "result_array_uint",
+      "description": "Report an array of unsigned integer results.",
+      "signature": {
+        "params": [
+          {
+            "tp": "String"
+          },
+          {
+            "tp": "BoundedNat",
+            "bound": null
+          },
+          {
+            "tp": "BoundedNat",
+            "bound": 7
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "prelude",
+              "id": "array",
+              "args": [
+                {
+                  "tya": "Variable",
+                  "idx": 1,
+                  "cached_decl": {
+                    "tp": "BoundedNat",
+                    "bound": null
+                  }
+                },
+                {
+                  "tya": "Type",
+                  "ty": {
+                    "t": "Opaque",
+                    "extension": "arithmetic.int.types",
+                    "id": "int",
+                    "args": [
+                      {
+                        "tya": "Variable",
+                        "idx": 2,
+                        "cached_decl": {
+                          "tp": "BoundedNat",
+                          "bound": 7
+                        }
+                      }
+                    ],
+                    "bound": "C"
+                  }
+                }
+              ],
+              "bound": "C"
+            }
+          ],
+          "output": [],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "result_bool": {
+      "extension": "tket2.result",
+      "name": "result_bool",
+      "description": "Report a boolean result.",
+      "signature": {
+        "params": [
+          {
+            "tp": "String"
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "Sum",
+              "s": "Unit",
+              "size": 2
+            }
+          ],
+          "output": [],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "result_f64": {
+      "extension": "tket2.result",
+      "name": "result_f64",
+      "description": "Report a floating-point result.",
+      "signature": {
+        "params": [
+          {
+            "tp": "String"
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "result_int": {
+      "extension": "tket2.result",
+      "name": "result_int",
+      "description": "Report a signed integer result.",
+      "signature": {
+        "params": [
+          {
+            "tp": "String"
+          },
+          {
+            "tp": "BoundedNat",
+            "bound": 7
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.int.types",
+              "id": "int",
+              "args": [
+                {
+                  "tya": "Variable",
+                  "idx": 1,
+                  "cached_decl": {
+                    "tp": "BoundedNat",
+                    "bound": 7
+                  }
+                }
+              ],
+              "bound": "C"
+            }
+          ],
+          "output": [],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "result_uint": {
+      "extension": "tket2.result",
+      "name": "result_uint",
+      "description": "Report an unsigned integer result.",
+      "signature": {
+        "params": [
+          {
+            "tp": "String"
+          },
+          {
+            "tp": "BoundedNat",
+            "bound": 7
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.int.types",
+              "id": "int",
+              "args": [
+                {
+                  "tya": "Variable",
+                  "idx": 1,
+                  "cached_decl": {
+                    "tp": "BoundedNat",
+                    "bound": 7
+                  }
+                }
+              ],
+              "bound": "C"
+            }
+          ],
+          "output": [],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    }
+  }
+}

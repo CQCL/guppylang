@@ -1,4 +1,6 @@
+import pytest
 from guppylang.decorator import guppy
+from guppylang.prelude.angles import angle, pi
 from guppylang.prelude.builtins import nat
 from guppylang.module import GuppyModule
 from tests.util import compile_guppy
@@ -101,6 +103,46 @@ def test_arith_big(validate):
     validate(arith)
 
 
+def test_angle_arith(validate):
+    module = GuppyModule("test")
+    module.load(angle)
+
+    @guppy(module)
+    def main(a1: angle, a2: angle) -> bool:
+        a3 = -a1 + a2 * -3
+        a3 -= a1
+        a3 += 2 * a1
+        return a3 / 3 == -a2
+
+    validate(module.compile())
+
+
+def test_angle_float_coercion(validate):
+    module = GuppyModule("test")
+    module.load(angle)
+
+    @guppy(module)
+    def main(f: float) -> tuple[angle, float]:
+        a = angle(f)
+        return a, float(a)
+
+    validate(module.compile())
+
+
+def test_angle_pi(validate):
+    module = GuppyModule("test")
+    module.load(angle, pi)
+
+    @guppy(module)
+    def main() -> angle:
+        a = 2 * pi
+        a += -pi / 3
+        a += 3 * pi / 2
+        return a
+
+    validate(module.compile())
+
+
 def test_shortcircuit_assign1(validate):
     @compile_guppy
     def foo(x: bool, y: int) -> bool:
@@ -139,6 +181,7 @@ def test_shortcircuit_assign4(validate):
         return z
 
     validate(foo)
+
 
 def test_supported_ops(validate, run_int_fn):
     module = GuppyModule("supported_ops")
