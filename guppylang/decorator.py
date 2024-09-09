@@ -6,7 +6,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, TypeVar
 
-from hugr import Hugr, ops
+import hugr.ext
+from hugr import ops
 from hugr import tys as ht
 
 from guppylang.ast_util import annotate_location, has_empty_body
@@ -308,7 +309,7 @@ class _Guppy:
             raise MissingModuleError(err)
         return self._modules.pop(id)
 
-    def compile_module(self, id: ModuleIdentifier | None = None) -> Hugr[ops.Module]:
+    def compile_module(self, id: ModuleIdentifier | None = None) -> hugr.ext.Package:
         """Compiles the local module into a Hugr."""
         module = self.take_module(id)
         if not module:

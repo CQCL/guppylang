@@ -76,4 +76,3 @@ def test_method_call(validate):
         return x.__add__(2)
 
     validate(module.compile())
-

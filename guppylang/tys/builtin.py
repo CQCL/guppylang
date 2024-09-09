@@ -2,6 +2,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, TypeGuard
 
+import hugr.std
+import hugr.std.collections
 from hugr import tys as ht
 
 from guppylang.ast_util import AstNode
@@ -120,12 +122,7 @@ def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # Type checker ensures that we get a single arg of kind type
     [arg] = args
     assert isinstance(arg, TypeArg)
-    return ht.Opaque(
-        extension="Collections",
-        id="List",
-        args=[arg.to_hugr()],
-        bound=arg.ty.hugr_bound,
-    )
+    return hugr.std.collections.list_type(arg.ty.to_hugr())
 
 
 def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
@@ -133,6 +130,7 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
     assert isinstance(len_arg, ConstArg)
+
     # Linear elements are turned into an optional to enable unsafe indexing.
     # See `ArrayGetitemCompiler` for details.
     elem_ty: ht.Type
@@ -140,12 +138,9 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
         elem_ty = ht.Sum([[ty_arg.ty.to_hugr()], []])
     else:
         elem_ty = ty_arg.ty.to_hugr()
-    return ht.Opaque(
-        extension="prelude",
-        id="array",
-        args=[len_arg.to_hugr(), ht.TypeTypeArg(elem_ty)],
-        bound=ty_arg.ty.hugr_bound,
-    )
+
+    array = hugr.std.PRELUDE.get_type("array")
+    return array.instantiate([len_arg.to_hugr(), ht.TypeTypeArg(elem_ty)])
 
 
 callable_type_def = CallableTypeDef(DefId.fresh(), None)

@@ -2,10 +2,10 @@ import functools
 from collections.abc import Sequence
 
 from hugr import Wire, ops
-from hugr import cfg as hc
 from hugr import tys as ht
-from hugr.dfg import DP, _DfBase
-from hugr.node_port import ToNode
+from hugr.build import cfg as hc
+from hugr.build.dfg import DP, DfBase
+from hugr.hugr.node_port import ToNode
 
 from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
 from guppylang.checker.core import Place, Variable
@@ -22,7 +22,7 @@ from guppylang.tys.ty import SumType, row_to_type, type_to_row
 
 def compile_cfg(
     cfg: CheckedCFG[Place],
-    container: _DfBase[DP],
+    container: DfBase[DP],
     inputs: Sequence[Wire],
     globals: CompiledGlobals,
 ) -> hc.Cfg:

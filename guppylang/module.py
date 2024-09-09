@@ -5,8 +5,10 @@ from types import ModuleType
 from typing import Any
 
 from hugr import Hugr, ops
-from hugr.function import Module
+from hugr.build.function import Module
+from hugr.ext import Package
 
+import guppylang.compiler.hugr_extension
 from guppylang.checker.core import Globals, PyScope
 from guppylang.definition.common import (
     CheckableDef,
@@ -43,7 +45,7 @@ class GuppyModule:
 
     # If the hugr has already been compiled, keeps a reference that can be returned
     # from `compile`.
-    _compiled_hugr: Hugr[ops.Module] | None
+    _compiled_hugr: Package | None
 
     # Map of raw definitions in this module
     _raw_defs: dict[DefId, RawDef]
@@ -282,9 +284,21 @@ class GuppyModule:
         self._checked_defs = type_defs | other_defs
         self._checked = True
 
-    @pretty_errors
-    def compile(self) -> Hugr[ops.Module]:
+    def compile_hugr(self) -> Hugr[ops.Module]:
         """Compiles the module and returns the final Hugr."""
+        # This function does not use the `pretty_errors` decorator since it is
+        # is wrapping around `compile_package` which does use it already.
+        package = self.compile()
+        hugr = package.modules[0]
+        return hugr
+
+    @pretty_errors
+    def compile(self) -> Package:
+        """Compiles the module and returns the final Hugr package.
+
+        The package contains the single Hugr graph as well as the required
+        extensions definitions.
+        """
         if self.compiled:
             assert self._compiled_hugr is not None, "Module is compiled but has no Hugr"
             return self._compiled_hugr
@@ -305,9 +319,29 @@ class GuppyModule:
             defn.compile_inner(compiled_defs)
 
         hugr = graph.hugr
+
+        # TODO: Currently we just include a hardcoded list of extensions. We should
+        # compute this dynamically from the imported dependencies instead.
+        #
+        # The hugr prelude extensions are implicit.
+        from guppylang.prelude._internal.compiler.quantum import (
+            HSERIES_EXTENSION,
+            QUANTUM_EXTENSION,
+            RESULT_EXTENSION,
+        )
+
+        extensions = [
+            guppylang.compiler.hugr_extension.EXTENSION,
+            QUANTUM_EXTENSION,
+            HSERIES_EXTENSION,
+            RESULT_EXTENSION,
+        ]
+
+        package = Package(modules=[hugr], extensions=extensions)
         self._compiled = True
-        self._compiled_hugr = hugr
-        return hugr
+        self._compiled_hugr = package
+
+        return package
 
     def contains(self, name: str) -> bool:
         """Returns 'True' if the module contains an object with the given name."""

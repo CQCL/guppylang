@@ -1,3 +1,4 @@
+import pytest
 from guppylang.decorator import guppy
 from guppylang.prelude.angles import angle
 from guppylang.prelude.builtins import nat
@@ -166,6 +167,7 @@ def test_shortcircuit_assign4(validate):
         return z
 
     validate(foo)
+
 
 def test_supported_ops(validate, run_int_fn):
     module = GuppyModule("supported_ops")
