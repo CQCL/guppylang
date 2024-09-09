@@ -5,6 +5,7 @@ from typing import ClassVar
 from hugr import Wire, ops
 from hugr import tys as ht
 
+from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import (
     CustomCallCompiler,
 )
@@ -28,7 +29,7 @@ class AngleOpCompiler(CustomCallCompiler):
             op_name="itousize",
             signature=ht.FunctionType([self.NAT_TYPE], [ht.USize()]),
             extension="arithmetic.conversions",
-            args=[ht.BoundedNatArg(NumericType.INT_WIDTH)],
+            args=[],
         )
         return self.builder.add_op(op, value)
 
@@ -47,7 +48,7 @@ class AngleOpCompiler(CustomCallCompiler):
             if ty == self.NAT_TYPE:
                 args[i] = self.nat_to_usize(args[i])
                 sig.input[i] = ht.USize()
-        op = ops.Custom(self.op_name, sig, extension="guppy.unsupported", args=[])
+        op = UnsupportedOp(self.op_name, sig.input, sig.output)
         outs: list[Wire] = [*self.builder.add_op(op, *args)]
         for i, ty in enumerate(sig.input):
             if ty == self.NAT_TYPE:

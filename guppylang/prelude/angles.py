@@ -15,9 +15,7 @@ from guppylang.prelude.builtins import nat
 angles = GuppyModule("angles")
 
 
-_hugr_angle_type = ht.Opaque(
-    "angle", ht.TypeBound.Copyable, [ht.BoundedNatArg(1)], "quantum.tket2"
-)
+_hugr_angle_type = ht.Opaque("angle", ht.TypeBound.Copyable, [], "tket2.quantum")
 
 
 @guppy.type(angles, _hugr_angle_type)
