@@ -96,8 +96,10 @@ uv run pre-commit install
 Run tests using
 
 ```sh
-uv run pytest -v
+uv run pytest [-v]  # -v just enables verbose test output
 ```
+
+(If you have not build the validator, you can `uv run pytest --no_validation`)
 
 You have to install extra dependencies to test automatic circuit conversion from `pytket`.
 
