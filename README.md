@@ -68,12 +68,13 @@ These instructions will get you a copy of the project up and running on your loc
 Run the following to setup your virtual environment and install dependencies:
 
 ```sh
-uv sync --extra execution --extra validation
+uv sync --extra execution
+cargo build --release  # Builds the validator (optional)
 ```
 
-Note that the `--extra` flags are optional and only needed to run integration tests.
+Note that the `--extra` flag, and the `cargo build` line, are both optional, but enable some integration tests.
 
-The `validation` extra allows the tests to validate that the hugrs guppy outputs are well formed, and the `execution` extra allows tests to compile these hugrs to native code using [hugr-llvm](https://github.com/CQCL/hugr-llvm) to check the results are as expected.
+The validator allows the tests to validate that the hugrs guppy outputs are well formed, and the `execution` extra allows tests to compile these hugrs to native code using [hugr-llvm](https://github.com/CQCL/hugr-llvm) to check the results are as expected.
 This requires `llvm-14` as described in the `hugr-llvm` repo.
 
 Consider using [direnv](https://direnv.net/docs/installation.html) to
