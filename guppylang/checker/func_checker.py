@@ -163,7 +163,9 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     )
 
 
-def parse_docstring(func_ast: ast.FunctionDef) -> tuple[ast.FunctionDef, str | None]:
+def parse_function_with_docstring(
+    func_ast: ast.FunctionDef,
+) -> tuple[ast.FunctionDef, str | None]:
     """Check if the first line of a function is a docstring.
 
     If it is, return the function with the docstring removed, plus the docstring.
