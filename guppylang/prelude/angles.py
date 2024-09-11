@@ -8,11 +8,9 @@ from hugr import tys as ht
 from hugr import val as hv
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.prelude._internal.checker import CoercingChecker
 from guppylang.prelude._internal.compiler.angle import AngleOpCompiler
 from guppylang.prelude.builtins import nat
-
 
 _hugr_angle_type = ht.Opaque("angle", ht.TypeBound.Copyable, [], "tket2.quantum")
 

@@ -345,9 +345,7 @@ class Int:
     @guppy.hugr_op(int_op("idiv_s"), ReversingChecker())
     def __rfloordiv__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(
-        int_op("ishl"), ReversingChecker()
-    )  # TODO: RHS is unsigned
+    @guppy.hugr_op(int_op("ishl"), ReversingChecker())  # TODO: RHS is unsigned
     def __rlshift__(self: int, other: int) -> int: ...
 
     @guppy.hugr_op(int_op("imod_s"), ReversingChecker())
@@ -365,9 +363,7 @@ class Int:
     @guppy.hugr_op(int_op("ipow"), ReversingChecker())
     def __rpow__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(
-        int_op("ishr"), ReversingChecker()
-    )  # TODO: RHS is unsigned
+    @guppy.hugr_op(int_op("ishr"), ReversingChecker())  # TODO: RHS is unsigned
     def __rrshift__(self: int, other: int) -> int: ...
 
     @guppy.hugr_op(int_op("ishr"))  # TODO: RHS is unsigned
@@ -458,9 +454,7 @@ class Float:
     @guppy.hugr_op(float_op("fneg"), CoercingChecker())
     def __neg__(self: float) -> float: ...
 
-    @guppy.custom(
-        checker=DunderChecker("__float__"), higher_order_value=False
-    )
+    @guppy.custom(checker=DunderChecker("__float__"), higher_order_value=False)
     def __new__(x): ...
 
     @guppy.custom(NoopCompiler(), CoercingChecker())
@@ -475,9 +469,7 @@ class Float:
     @guppy.custom(FloatDivmodCompiler(), ReversingChecker(CoercingChecker()))
     def __rdivmod__(self: float, other: float) -> tuple[float, float]: ...
 
-    @guppy.custom(
-        FloatFloordivCompiler(), ReversingChecker(CoercingChecker())
-    )
+    @guppy.custom(FloatFloordivCompiler(), ReversingChecker(CoercingChecker()))
     def __rfloordiv__(self: float, other: float) -> float: ...
 
     @guppy.custom(FloatModCompiler(), ReversingChecker(CoercingChecker()))
@@ -647,9 +639,7 @@ class Array:
     @guppy.custom(checker=ArrayLenChecker())
     def __len__(self: array[T, n]) -> int: ...
 
-    @guppy.custom(
-        NewArrayCompiler(), NewArrayChecker(), higher_order_value=False
-    )
+    @guppy.custom(NewArrayCompiler(), NewArrayChecker(), higher_order_value=False)
     def __new__(): ...
 
 
@@ -666,9 +656,7 @@ def abs(x): ...
 def callable(x): ...
 
 
-@guppy.custom(
-    checker=DunderChecker("__divmod__", num_args=2), higher_order_value=False
-)
+@guppy.custom(checker=DunderChecker("__divmod__", num_args=2), higher_order_value=False)
 def divmod(x, y): ...
 
 
@@ -676,9 +664,7 @@ def divmod(x, y): ...
 def len(x): ...
 
 
-@guppy.custom(
-    checker=DunderChecker("__pow__", num_args=2), higher_order_value=False
-)
+@guppy.custom(checker=DunderChecker("__pow__", num_args=2), higher_order_value=False)
 def pow(x, y): ...
 
 

@@ -30,8 +30,12 @@ from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, MissingModuleError, pretty_errors
-from guppylang.module import GuppyModule, PyFunc, find_guppy_module_in_py_module, \
-    PyClass
+from guppylang.module import (
+    GuppyModule,
+    PyClass,
+    PyFunc,
+    find_guppy_module_in_py_module,
+)
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 
@@ -84,12 +88,15 @@ class _Guppy:
         Optionally, the `GuppyModule` in which the function should be placed can
         be passed to the decorator.
         """
+
         def dec(f: Callable[..., Any], module: GuppyModule) -> RawFunctionDef:
             return module.register_func_def(f)
 
         return self._with_optional_module(dec, arg)
 
-    def _with_optional_module(self, dec: Callable[[S, GuppyModule], T], arg: S | GuppyModule) -> Callable[[S], T] | T:
+    def _with_optional_module(
+        self, dec: Callable[[S, GuppyModule], T], arg: S | GuppyModule
+    ) -> Callable[[S], T] | T:
         """Helper function to define decorators that take an optional `GuppyModule`
         argument but no other arguments.
 
@@ -138,7 +145,9 @@ class _Guppy:
         self._modules[module_id] = GuppyModule(module_id.name, import_builtins)
 
     @pretty_errors
-    def extend_type(self, defn: TypeDef, module: GuppyModule | None = None) -> ClassDecorator:
+    def extend_type(
+        self, defn: TypeDef, module: GuppyModule | None = None
+    ) -> ClassDecorator:
         """Decorator to add new instance functions to a type."""
         mod = module or self.get_module()
         mod._instance_func_buffer = {}
@@ -184,7 +193,9 @@ class _Guppy:
         return dec
 
     @property
-    def struct(self) -> Callable[[PyClass | GuppyModule], StructDecorator | RawStructDef]:
+    def struct(
+        self,
+    ) -> Callable[[PyClass | GuppyModule], StructDecorator | RawStructDef]:
         """Decorator to define a new struct."""
         # Note that this is a property. Thus, the code below is executed *before*
         # the members of the decorated class are executed.
@@ -212,7 +223,7 @@ class _Guppy:
                     self._modules.pop(caller_id)
             return defn
 
-        def higher_dec(arg: GuppyModule | PyFunc) -> StructDecorator | RawStructDef:
+        def higher_dec(arg: GuppyModule | PyClass) -> StructDecorator | RawStructDef:
             if isinstance(arg, GuppyModule):
                 arg._instance_func_buffer = {}
             return self._with_optional_module(dec, arg)
@@ -220,7 +231,9 @@ class _Guppy:
         return higher_dec
 
     @pretty_errors
-    def type_var(self, name: str, linear: bool = False, module: GuppyModule | None = None) -> TypeVar:
+    def type_var(
+        self, name: str, linear: bool = False, module: GuppyModule | None = None
+    ) -> TypeVar:
         """Creates a new type variable in a module."""
         module = module or self.get_module()
         defn = TypeVarDef(DefId.fresh(module), name, None, linear)
@@ -346,7 +359,9 @@ class _Guppy:
         module = self._modules[caller]
         module.load_all(m)
 
-    def get_module(self, id: ModuleIdentifier | None = None, resolve_implicit_imports: bool = True) -> GuppyModule:
+    def get_module(
+        self, id: ModuleIdentifier | None = None, resolve_implicit_imports: bool = True
+    ) -> GuppyModule:
         """Returns the local GuppyModule."""
         if id is None:
             id = self._get_python_caller()
