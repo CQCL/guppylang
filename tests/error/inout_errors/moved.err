@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:21
 
-19:    def test(q: qubit @inout) -> None:
+19:    def test(q: qubit) -> None:
 20:        foo(q)
 21:        use(q)
                ^

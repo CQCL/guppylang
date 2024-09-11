@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:20
 
 18:    @guppy(module)
-19:    def test(s: MyStruct @inout, b: bool) -> None:
-                ^^^^^^^^^^^^^^^^^^
+19:    def test(s: MyStruct, b: bool) -> None:
+                ^^^^^^^^^^^
 GuppyError: Argument `s` annotated as `@inout` cannot be returned to the caller since `s.q` is used at 22:12. Consider writing a value back into `s.q` before returning.
