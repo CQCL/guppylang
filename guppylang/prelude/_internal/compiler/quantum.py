@@ -18,18 +18,19 @@ FUTURES_EXTENSION = load_extension("tket2.futures")
 HSERIES_EXTENSION = load_extension("tket2.hseries")
 QUANTUM_EXTENSION = load_extension("tket2.quantum")
 RESULT_EXTENSION = load_extension("tket2.result")
-
+ANGLE_EXTENSION = load_extension("tket2.angle")
 
 TKET2_EXTENSIONS = [
     FUTURES_EXTENSION,
     HSERIES_EXTENSION,
     QUANTUM_EXTENSION,
     RESULT_EXTENSION,
+    ANGLE_EXTENSION,
 ]
 
 
-ANGLE_T = QUANTUM_EXTENSION.get_type("angle")
-
+ANGLE_T_DEF = ANGLE_EXTENSION.get_type("angle")
+ANGLE_T = ht.ExtType(ANGLE_T_DEF)
 # ------------------------------------------------------
 # --------- Custom compilers for non-native ops --------
 # ------------------------------------------------------

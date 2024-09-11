@@ -1,7 +1,12 @@
 {
   "version": "0.1.0",
   "name": "tket2.hseries",
-  "extension_reqs": [],
+  "extension_reqs": [
+    "arithmetic.float.types",
+    "prelude",
+    "tket2.angle",
+    "tket2.futures"
+  ],
   "types": {},
   "values": {},
   "operations": {

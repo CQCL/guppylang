@@ -4,19 +4,18 @@
 
 from typing import no_type_check
 
-from hugr import tys as ht
 from hugr import val as hv
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal.checker import CoercingChecker
 from guppylang.prelude._internal.compiler.angle import AngleOpCompiler
+from guppylang.prelude._internal.compiler.quantum import ANGLE_T
 from guppylang.prelude.builtins import nat
 
 angles = GuppyModule("angles")
 
 
-_hugr_angle_type = ht.Opaque("angle", ht.TypeBound.Copyable, [], "tket2.quantum")
 
 
 def _hugr_angle_value(numerator: int, log_denominator: int) -> hv.Value:
@@ -26,16 +25,16 @@ def _hugr_angle_value(numerator: int, log_denominator: int) -> hv.Value:
     }
     return hv.Extension(
         name="ConstAngle",
-        typ=_hugr_angle_type,
+        typ=ANGLE_T,
         val=custom_const,
-        extensions=["quantum.tket2"],
+        extensions=["tket2.angle"],
     )
 
 
 pi = guppy.constant(angles, "pi", ty="angle", value=_hugr_angle_value(1, 1))
 
 
-@guppy.type(angles, _hugr_angle_type)
+@guppy.type(angles, ANGLE_T)
 class angle:
     """The type of angles represented as dyadic rational multiples of 2π."""
 
