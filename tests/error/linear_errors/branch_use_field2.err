@@ -1,7 +1,7 @@
-Guppy compilation failed. Error in file $FILE:21
+Guppy compilation failed. Error in file $FILE:22
 
-19:    if b:
-20:        measure(s.q2)
-21:    return s
+20:    if b:
+21:        measure(s.q2)
+22:    return s
               ^
-GuppyError: Field `s.q2` with linear type `qubit` was already used (at 20:16)
+GuppyError: Field `s.q2` with linear type `qubit` was already used (at 21:16)
