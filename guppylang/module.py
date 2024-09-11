@@ -29,6 +29,7 @@ from guppylang.definition.struct import CheckedStructDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, pretty_errors
 
+PyClass = type
 PyFunc = Callable[..., Any]
 PyFuncDefOrDecl = tuple[bool, PyFunc]
 

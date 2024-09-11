@@ -81,8 +81,8 @@ def test_forward_ref(validate):
 
 def test_generic(validate):
     module = GuppyModule("module")
-    S = guppy.type_var(module, "S")
-    T = guppy.type_var(module, "T")
+    S = guppy.type_var("S", module=module)
+    T = guppy.type_var("T", module=module)
 
     @guppy.struct(module)
     class StructA(Generic[T]):

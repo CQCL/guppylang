@@ -19,7 +19,8 @@ from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude.angles import pi
 from guppylang.prelude.builtins import py
-from guppylang.prelude.quantum import qubit, quantum
+from guppylang.prelude import quantum
+from guppylang.prelude.quantum import qubit
 from guppylang.prelude.quantum import measure, phased_x, rz, zz_max
 from tests.util import guppy_to_circuit
 

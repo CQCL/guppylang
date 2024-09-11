@@ -5,7 +5,6 @@
 from hugr import tys as ht
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.prelude._internal.compiler.quantum import (
     HSERIES_EXTENSION,
     MeasureCompiler,
@@ -14,91 +13,88 @@ from guppylang.prelude._internal.compiler.quantum import (
 from guppylang.prelude._internal.util import quantum_op
 from guppylang.prelude.angles import angle
 
-quantum = GuppyModule("quantum")
-quantum.load(angle)
 
-
-@guppy.type(quantum, ht.Qubit, linear=True)
+@guppy.type(ht.Qubit, linear=True)
 class qubit:
-    @guppy.custom(quantum, QAllocCompiler())
+    @guppy.custom(QAllocCompiler())
     def __new__() -> "qubit": ...
 
 
-@guppy.hugr_op(quantum, quantum_op("QAlloc"))
+@guppy.hugr_op(quantum_op("QAlloc"))
 def dirty_qubit() -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("H"))
+@guppy.hugr_op(quantum_op("H"))
 def h(q: qubit) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("CZ"))
+@guppy.hugr_op(quantum_op("CZ"))
 def cz(control: qubit, target: qubit) -> tuple[qubit, qubit]: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("CX"))
+@guppy.hugr_op(quantum_op("CX"))
 def cx(control: qubit, target: qubit) -> tuple[qubit, qubit]: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("T"))
+@guppy.hugr_op(quantum_op("T"))
 def t(q: qubit) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("S"))
+@guppy.hugr_op(quantum_op("S"))
 def s(q: qubit) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("X"))
+@guppy.hugr_op(quantum_op("X"))
 def x(q: qubit) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Y"))
+@guppy.hugr_op(quantum_op("Y"))
 def y(q: qubit) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Z"))
+@guppy.hugr_op(quantum_op("Z"))
 def z(q: qubit) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Tdg"))
+@guppy.hugr_op(quantum_op("Tdg"))
 def tdg(q: qubit) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Sdg"))
+@guppy.hugr_op(quantum_op("Sdg"))
 def sdg(q: qubit) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("ZZMax", ext=HSERIES_EXTENSION))
+@guppy.hugr_op(quantum_op("ZZMax", ext=HSERIES_EXTENSION))
 def zz_max(q1: qubit, q2: qubit) -> tuple[qubit, qubit]: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Measure"))
+@guppy.hugr_op(quantum_op("Measure"))
 def measure_return(q: qubit) -> tuple[qubit, bool]: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Rz"))
+@guppy.hugr_op(quantum_op("Rz"))
 def rz(q: qubit, angle: angle) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Rz"))
+@guppy.hugr_op(quantum_op("Rx"))
 def rx(q: qubit, angle: angle) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("PhasedX", ext=HSERIES_EXTENSION))
+@guppy.hugr_op(quantum_op("PhasedX", ext=HSERIES_EXTENSION))
 def phased_x(q: qubit, angle1: angle, angle2: angle) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
+@guppy.hugr_op(quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
 def zz_phase(q1: qubit, q2: qubit, angle: angle) -> tuple[qubit, qubit]: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("QFree"))
+@guppy.hugr_op(quantum_op("QFree"))
 def discard(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Reset"))
+@guppy.hugr_op(quantum_op("Reset"))
 def reset(q: qubit) -> qubit: ...
 
 
-@guppy.custom(quantum, MeasureCompiler())
+@guppy.custom(MeasureCompiler())
 def measure(q: qubit) -> bool: ...

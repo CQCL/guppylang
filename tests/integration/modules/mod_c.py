@@ -16,7 +16,7 @@ def h(x: int) -> int:
 
 
 # Extend type defined in module A
-@guppy.extend_type(mod_c, MyType)
+@guppy.extend_type(MyType, module=mod_c)
 class _:
     @guppy(mod_c)
     def __int__(self: "MyType") -> int:

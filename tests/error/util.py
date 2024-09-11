@@ -29,7 +29,7 @@ util = GuppyModule("test")
 
 
 @decorator.guppy.type(
-    util, tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable)
+    tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable), module=util
 )
 class NonBool:
     pass
