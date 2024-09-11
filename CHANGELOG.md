@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0](https://github.com/CQCL/guppylang/compare/v0.10.0...v0.11.0) (2024-09-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* `guppy.take_module` renamed to `guppy.get_module` and no longer removes the module from the state.
+* Quantum operations `rx`, `rz`, `phased_x`, and `zz_max` use the `angle` type instead of floats.
+
+### Features
+
+* Add implicit importing of modules ([#461](https://github.com/CQCL/guppylang/issues/461)) ([1b73032](https://github.com/CQCL/guppylang/commit/1b730320d6f6b7d6a1062f5322ccec0cd888380f))
+* Use angle type in quantum operations ([#467](https://github.com/CQCL/guppylang/issues/467)) ([ce0f746](https://github.com/CQCL/guppylang/commit/ce0f746dfe6702c68a850380ef8965e58f666354))
+
+
+### Bug Fixes
+
+* hseries ops use floats instead of angles ([#483](https://github.com/CQCL/guppylang/issues/483)) ([7ed3853](https://github.com/CQCL/guppylang/commit/7ed38531bed8dba65859c2185858bee5bb22a000)), closes [#477](https://github.com/CQCL/guppylang/issues/477)
+* Keep track of definitions that are implicitly imported ([#481](https://github.com/CQCL/guppylang/issues/481)) ([a89f225](https://github.com/CQCL/guppylang/commit/a89f2251eb753803c2e67aee4bd21ae40f83a5ba)), closes [#480](https://github.com/CQCL/guppylang/issues/480)
+
 ## [0.10.0](https://github.com/CQCL/guppylang/compare/v0.9.0...v0.10.0) (2024-09-11)
 
 
