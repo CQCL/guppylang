@@ -2,14 +2,16 @@ import numpy as np
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import linst, py
+from guppylang.prelude.builtins import linst, owned, py
 from guppylang.prelude.quantum import (
-    cz,
     discard,
-    h,
     measure,
     quantum,
     qubit,
+)
+from guppylang.prelude.quantum_functional import (
+    cz,
+    h,
     rx,
     rz,
 )
@@ -22,16 +24,15 @@ pi = np.pi
 
 
 @guppy(module)
-def ry(q: qubit, theta: float) -> qubit:
+def ry(q: qubit @owned, theta: float) -> qubit:
     q = rx(q, py(pi / 2))
     q = rz(q, theta + py(pi))
     q = rx(q, py(pi / 2))
     return rz(q, py(pi))
 
-
 # Preparation of approximate T state, from https://arxiv.org/abs/2310.12106
 @guppy(module)
-def prepare_approx(q: qubit) -> qubit:
+def prepare_approx(q: qubit @owned) -> qubit:
     phi_ = py(phi)
     pi_ = py(pi)
 
@@ -39,10 +40,10 @@ def prepare_approx(q: qubit) -> qubit:
     return rz(q, pi_ / 4.0)
 
 
-# The inverse of the [[5,3,1]] encoder in figure 3 of https://arxiv.org/abs/2208.01863
+## The inverse of the [[5,3,1]] encoder in figure 3 of https://arxiv.org/abs/2208.01863
 @guppy(module)
 def distill(
-    target: qubit, q0: qubit, q1: qubit, q2: qubit, q3: qubit
+    target: qubit @owned, q0: qubit @owned, q1: qubit @owned, q2: qubit @owned, q3: qubit @owned
 ) -> tuple[qubit, bool]:
     """First argument is the target qubit which will be returned from the circuit.
     Other arguments are ancillae, which should also be in an approximate T state.

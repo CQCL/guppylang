@@ -65,6 +65,8 @@ build-backend = "hatchling.build"
 plugins = ["pydantic.mypy"]
 strict = true
 allow_redefinition = true
+disable_error_code = ['valid-type' # Otherwise mypy will complain about @owned annotations
+                     ]
 
 
 [tool.coverage.report]

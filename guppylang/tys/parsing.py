@@ -207,6 +207,9 @@ def parse_function_io_types(
             raise GuppyError(
                 f"Non-linear type `{ty}` cannot be annotated as `@inout`", loc
             )
+        if ty.linear and InputFlags.Owned not in flags:
+            flags |= InputFlags.Inout
+
         inputs.append(FuncInput(ty, flags))
     output = type_from_ast(output_node, globals, param_var_mapping)
     return inputs, output
@@ -220,18 +223,18 @@ def type_with_flags_from_ast(
     globals: Globals,
     param_var_mapping: dict[str, Parameter] | None = None,
 ) -> tuple[Type, InputFlags]:
-    """Turns an AST expression into a Guppy type with some optional @flags."""
-    # Check for `type @flag` annotations
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.MatMult):
         ty, flags = type_with_flags_from_ast(node.left, globals, param_var_mapping)
         match node.right:
-            case ast.Name(id="inout"):
+            case ast.Name(id="owned"):
                 if not ty.linear:
                     raise GuppyError(
-                        f"Non-linear type `{ty}` cannot be annotated as `@inout`",
+                        f"Non-linear type `{ty}` cannot be annotated as `@owned`",
                         node.right,
                     )
-                flags |= InputFlags.Inout
+                flags |= InputFlags.Owned
+            case ast.Name(name):
+                raise GuppyError(f"Invalid annotation: {name}", node.right)
             case _:
                 raise GuppyError("Invalid annotation", node.right)
         return ty, flags
@@ -242,7 +245,8 @@ def type_with_flags_from_ast(
     else:
         # Parse an argument and check that it's valid for a `TypeParam`
         arg = arg_from_ast(node, globals, param_var_mapping)
-        return _type_param.check_arg(arg, node).ty, InputFlags.NoFlags
+        tyarg = _type_param.check_arg(arg, node)
+        return tyarg.ty, InputFlags.NoFlags
 
 
 def type_from_ast(
@@ -252,8 +256,11 @@ def type_from_ast(
 ) -> Type:
     """Turns an AST expression into a Guppy type."""
     ty, flags = type_with_flags_from_ast(node, globals, param_var_mapping)
-    if flags != InputFlags.NoFlags:
-        raise GuppyError("`@` type annotations are not allowed in this position", node)
+    if flags != InputFlags.NoFlags and flags != InputFlags.Inout:
+        raise GuppyError(
+            "`@` type annotations are not allowed in this position",
+            node,
+        )
     return ty
 
 

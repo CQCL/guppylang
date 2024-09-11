@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:17
 
-15:    def test(q: qubit @inout, b: bool) -> None:
+15:    def test(q: qubit, b: bool) -> None:
 16:        if b:
 17:            use(q)
                    ^

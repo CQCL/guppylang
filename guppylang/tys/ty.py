@@ -308,6 +308,7 @@ class InputFlags(Flag):
 
     NoFlags = 0
     Inout = auto()
+    Owned = auto()
 
 
 @dataclass(frozen=True)

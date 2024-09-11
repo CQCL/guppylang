@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:12
 
 10:    @guppy.declare(module)
-11:    def foo(x: list[qubit @inout]) -> qubit: ...
-                       ^^^^^^^^^^^^
+11:    def foo(x: list[qubit]) -> qubit: ...
+                       ^^^^^
 GuppyError: Not a valid type argument
