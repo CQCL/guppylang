@@ -4,7 +4,7 @@ from guppylang.module import GuppyModule
 
 module = GuppyModule("test")
 
-T = guppy.type_var(module, "T")
+T = guppy.type_var("T", module=module)
 
 
 @guppy.declare(module)

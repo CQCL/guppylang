@@ -10,7 +10,7 @@ module = GuppyModule("test")
 module.load_all(quantum)
 
 
-T = guppy.type_var(module, "T")
+T = guppy.type_var("T", module=module)
 
 
 @guppy.declare(module)

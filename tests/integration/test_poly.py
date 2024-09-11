@@ -283,7 +283,7 @@ def test_custom_higher_order():
             return args
 
     module = GuppyModule("test")
-    T = guppy.type_var(module, "T")
+    T = guppy.type_var("T", module=module)
 
     @guppy.custom(module, CustomCompiler())
     def foo(x: T) -> T: ...
