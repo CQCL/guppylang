@@ -11,9 +11,11 @@ from guppylang.prelude._internal.compiler.quantum import (
     MeasureCompiler,
     QAllocCompiler,
 )
-from guppylang.prelude._internal.util import quantum_op, unsupported_op
+from guppylang.prelude._internal.util import quantum_op
+from guppylang.prelude.angles import angle
 
 quantum = GuppyModule("quantum")
+quantum.load(angle)
 
 
 @guppy.type(quantum, ht.Qubit, linear=True)
@@ -74,24 +76,20 @@ def zz_max(q1: qubit, q2: qubit) -> tuple[qubit, qubit]: ...
 def measure_return(q: qubit) -> tuple[qubit, bool]: ...
 
 
-@guppy.hugr_op(
-    quantum, quantum_op("Rz", ext=HSERIES_EXTENSION)
-)  # TODO: Use the `tket.quantum` operation once we support angles
-def rz(q: qubit, angle: float) -> qubit: ...
+@guppy.hugr_op(quantum, quantum_op("Rz"))
+def rz(q: qubit, angle: angle) -> qubit: ...
 
 
-@guppy.hugr_op(
-    quantum, unsupported_op("Rx")
-)  # TODO: Use the `tket.quantum` operation once we support angles
-def rx(q: qubit, angle: float) -> qubit: ...
+@guppy.hugr_op(quantum, quantum_op("Rz"))
+def rx(q: qubit, angle: angle) -> qubit: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("PhasedX", ext=HSERIES_EXTENSION))
-def phased_x(q: qubit, angle1: float, angle2: float) -> qubit: ...
+def phased_x(q: qubit, angle1: angle, angle2: angle) -> qubit: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
-def zz_phase(q1: qubit, q2: qubit, angle: float) -> tuple[qubit, qubit]: ...
+def zz_phase(q1: qubit, q2: qubit, angle: angle) -> tuple[qubit, qubit]: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("QFree"))

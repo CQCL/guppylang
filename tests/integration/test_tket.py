@@ -17,6 +17,7 @@ import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.prelude.angles import pi
 from guppylang.prelude.builtins import py
 from guppylang.prelude.quantum import qubit, quantum
 from guppylang.prelude.quantum import measure, phased_x, rz, zz_max
@@ -31,23 +32,24 @@ def test_lower_pure_circuit():
 
     module = GuppyModule("test")
     module.load_all(quantum)
+    module.load(pi)
 
     @guppy(module)
     def my_func(
         q0: qubit,
         q1: qubit,
     ) -> tuple[qubit, qubit]:
-        q0 = phased_x(q0, py(math.pi / 2), py(-math.pi / 2))
-        q0 = rz(q0, py(math.pi))
-        q1 = phased_x(q1, py(math.pi / 2), py(-math.pi / 2))
-        q1 = rz(q1, py(math.pi))
+        q0 = phased_x(q0, pi / 2, pi / 2)
+        q0 = rz(q0, pi)
+        q1 = phased_x(q1, pi / 2, -pi / 2)
+        q1 = rz(q1, pi)
         q0, q1 = zz_max(q0, q1)
-        q0 = rz(q0, py(math.pi))
-        q1 = rz(q1, py(math.pi))
+        q0 = rz(q0, pi)
+        q1 = rz(q1, pi)
         return (q0, q1)
 
     circ = guppy_to_circuit(my_func)
-    assert circ.num_operations() == 7
+    assert circ.num_operations() == 8
 
     tk1 = circ.to_tket1()
     assert tk1.n_qubits == 2
@@ -64,24 +66,26 @@ def test_lower_hybrid_circuit():
 
     module = GuppyModule("test")
     module.load_all(quantum)
+    module.load(pi)
 
     @guppy(module)
     def my_func(
         q0: qubit,
         q1: qubit,
     ) -> tuple[bool,]:
-        q0 = phased_x(q0, py(math.pi / 2), py(-math.pi / 2))
-        q0 = rz(q0, py(math.pi))
-        q1 = phased_x(q1, py(math.pi / 2), py(-math.pi / 2))
-        q1 = rz(q1, py(math.pi))
+        q0 = phased_x(q0, pi / 2, pi / 2)
+        q0 = rz(q0, pi)
+        q1 = phased_x(q1, pi / 2, -pi / 2)
+        q1 = rz(q1, pi)
         q0, q1 = zz_max(q0, q1)
         _ = measure(q0)
         return (measure(q1),)
 
     circ = guppy_to_circuit(my_func)
 
-    # The 7 operations in the function, plus two implicit QFree
-    assert circ.num_operations() == 9
+    # The 7 operations in the function, plus two implicit QFree, plus one angle
+    # division op (only counted once since it's in a function?)
+    assert circ.num_operations() == 10
 
     tk1 = circ.to_tket1()
     assert tk1.n_qubits == 2

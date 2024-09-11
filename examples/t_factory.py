@@ -1,6 +1,7 @@
 import numpy as np
 
 from guppylang.decorator import guppy
+from guppylang.prelude.angles import angle, pi
 from guppylang.prelude.builtins import linst, py
 from guppylang.prelude.quantum import (
     cz,
@@ -14,25 +15,21 @@ from guppylang.prelude.quantum import (
 
 
 phi = np.arccos(1 / 3)
-pi = np.pi
 
 
 @guppy
-def ry(q: qubit, theta: float) -> qubit:
-    q = rx(q, py(pi / 2))
-    q = rz(q, theta + py(pi))
-    q = rx(q, py(pi / 2))
-    return rz(q, py(pi))
+def ry(q: qubit, theta: angle) -> qubit:
+    q = rx(q, pi / 2)
+    q = rz(q, theta + pi)
+    q = rx(q, pi / 2)
+    return rz(q, pi)
 
 
 # Preparation of approximate T state, from https://arxiv.org/abs/2310.12106
 @guppy
 def prepare_approx(q: qubit) -> qubit:
-    phi_ = py(phi)
-    pi_ = py(pi)
-
-    q = ry(q, phi_)
-    return rz(q, pi_ / 4.0)
+    q = ry(q, angle(py(phi)))
+    return rz(q, pi / 4)
 
 
 # The inverse of the [[5,3,1]] encoder in figure 3 of https://arxiv.org/abs/2208.01863
