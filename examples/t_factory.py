@@ -1,7 +1,6 @@
 import numpy as np
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.prelude.angles import angle, pi
 from guppylang.prelude.builtins import linst, py
 from guppylang.prelude.quantum import (
@@ -9,20 +8,16 @@ from guppylang.prelude.quantum import (
     discard,
     h,
     measure,
-    quantum,
     qubit,
     rx,
     rz,
 )
 
-module = GuppyModule("t_factory")
-module.load_all(quantum)
-module.load(angle, pi)
 
 phi = np.arccos(1 / 3)
 
 
-@guppy(module)
+@guppy
 def ry(q: qubit, theta: angle) -> qubit:
     q = rx(q, pi / 2)
     q = rz(q, theta + pi)
@@ -31,14 +26,14 @@ def ry(q: qubit, theta: angle) -> qubit:
 
 
 # Preparation of approximate T state, from https://arxiv.org/abs/2310.12106
-@guppy(module)
+@guppy
 def prepare_approx(q: qubit) -> qubit:
     q = ry(q, angle(py(phi)))
     return rz(q, pi / 4)
 
 
 # The inverse of the [[5,3,1]] encoder in figure 3 of https://arxiv.org/abs/2208.01863
-@guppy(module)
+@guppy
 def distill(
     target: qubit, q0: qubit, q1: qubit, q2: qubit, q3: qubit
 ) -> tuple[qubit, bool]:
@@ -61,7 +56,7 @@ def distill(
     return target, success
 
 
-@guppy(module)
+@guppy
 def t_state(timeout: int) -> tuple[linst[qubit], bool]:
     """Create a T state using magic state distillation with `timeout` attempts.
 
@@ -91,4 +86,4 @@ def t_state(timeout: int) -> tuple[linst[qubit], bool]:
     return [], False
 
 
-hugr = module.compile()
+hugr = guppy.compile_module()

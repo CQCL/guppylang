@@ -28,6 +28,19 @@ def test_import_type(validate):
     validate(module.compile())
 
 
+def test_import_implicit(validate):
+    from tests.integration.modules.implicit_mod import foo
+
+    module = GuppyModule("test")
+    module.load(foo)
+
+    @guppy(module)
+    def test(x: int) -> int:
+        return foo(x)
+
+    validate(module.compile())
+
+
 def test_func_alias(validate):
     from tests.integration.modules.mod_a import f as g
 
@@ -149,5 +162,18 @@ def test_qualified_types(validate):
     @guppy(module)
     def test(x: mod_a.MyType, y: mod_b.MyType) -> tuple[mod_a.MyType, mod_b.MyType]:
         return -x, +y
+
+    validate(module.compile())
+
+
+def test_qualified_implicit(validate):
+    import tests.integration.modules.implicit_mod as implicit_mod
+
+    module = GuppyModule("test")
+    module.load(implicit_mod)
+
+    @guppy(module)
+    def test(x: int) -> int:
+        return implicit_mod.foo(x)
 
     validate(module.compile())
