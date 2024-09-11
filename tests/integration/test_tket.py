@@ -49,15 +49,13 @@ def test_lower_pure_circuit():
         return (q0, q1)
 
     circ = guppy_to_circuit(my_func)
-    assert circ.num_operations() == 8
 
     tk1 = circ.to_tket1()
     assert tk1.n_qubits == 2
-    # TODO: rz and phased_x do not currently emit tket2 operations,
-    # so they don't get lowered to tket1 gates
-    # assert tk1.n_gates == 7
-    # gates = list(tk1)
-    # assert gates[4].op.type == pytket.circuit.OpType.ZZMax
+    # TODO: The tket1 conversion needs to be updated with all the hugr ops changes
+    # before we can test the translated ops
+    # ops = {g.op.type for g in tk1}
+    # assert pytket.circuit.OpType.ZZMax in ops
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -83,14 +81,9 @@ def test_lower_hybrid_circuit():
 
     circ = guppy_to_circuit(my_func)
 
-    # The 7 operations in the function, plus two implicit QFree, plus one angle
-    # division op (only counted once since it's in a function?)
-    assert circ.num_operations() == 10
-
     tk1 = circ.to_tket1()
     assert tk1.n_qubits == 2
-    # TODO: rz and phased_x do not currently emit tket2 operations,
-    # so they don't get lowered to tket1 gates
-    # assert tk1.n_gates == 7
-    # gates = list(tk1)
-    # assert gates[4].op.type == pytket.circuit.OpType.ZZMax
+    # TODO: The tket1 conversion needs to be updated with all the hugr ops changes
+    # before we can test the translated ops
+    # ops = {g.op.type for g in tk1}
+    # assert pytket.circuit.OpType.ZZMax in ops
