@@ -2,13 +2,13 @@ from pytket import Circuit
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.quantum import quantum, qubit
+from guppylang.prelude.quantum import qubit
 
 circ = Circuit(1)
 circ.H(0)
 
 module = GuppyModule("test")
-module.load_all(quantum)
+module.load_all(qubit)
 
 
 @guppy(module)
