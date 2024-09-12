@@ -196,16 +196,16 @@ def parse_function_io_types(
 ) -> tuple[list[FuncInput], Type]:
     """Parses the inputs and output types of a function type.
 
-    This function takes care of parsing `@inout` annotations and any related checks.
+    This function takes care of parsing annotations and any related checks.
 
     Returns the parsed input and output types.
     """
     inputs = []
     for inp in input_nodes:
         ty, flags = type_with_flags_from_ast(inp, globals, param_var_mapping)
-        if InputFlags.Inout in flags and not ty.linear:
+        if InputFlags.Owned in flags and not ty.linear:
             raise GuppyError(
-                f"Non-linear type `{ty}` cannot be annotated as `@inout`", loc
+                f"Non-linear type `{ty}` cannot be annotated as `@owned`", loc
             )
         if ty.linear and InputFlags.Owned not in flags:
             flags |= InputFlags.Inout

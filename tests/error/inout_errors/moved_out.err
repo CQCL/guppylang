@@ -3,4 +3,4 @@ Guppy compilation failed. Error in file $FILE:20
 18:    @guppy(module)
 19:    def test(s: MyStruct) -> None:
                 ^^^^^^^^^^^
-GuppyError: Argument `s` annotated as `@inout` cannot be returned to the caller since `s.q` is used at 21:8. Consider writing a value back into `s.q` before returning.
+GuppyError: Borrowed argument `s` cannot be returned to the caller since `s.q` is used at 21:8. Consider writing a value back into `s.q` before returning.

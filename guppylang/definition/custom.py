@@ -269,7 +269,7 @@ class CustomCallChecker(ABC):
 
 
 class CustomInoutCallCompiler(ABC):
-    """Abstract base class for custom function call compilers with @inout args.
+    """Abstract base class for custom function call compilers with borrowed args.
 
     Args:
         builder: The function builder where the function should be defined.
@@ -303,13 +303,13 @@ class CustomInoutCallCompiler(ABC):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         """Compiles a custom function call.
 
-        Returns the outputs of the call together with any @inout arguments that are
+        Returns the outputs of the call together with any borrowed arguments that are
         passed through the function.
         """
 
 
 class CustomCallCompiler(CustomInoutCallCompiler, ABC):
-    """Abstract base class for custom function call compilers without @inout args."""
+    """Abstract base class for custom function call compilers with only owned args."""
 
     @abstractmethod
     def compile(self, args: list[Wire]) -> list[Wire]:

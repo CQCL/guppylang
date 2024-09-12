@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:15
 14:    def test() -> None:
 15:       foo(qubit())
               ^^^^^^^
-GuppyError: Inout argument with linear type `qubit` would be dropped after this function call. Consider assigning the expression to a local variable before passing it to the function.
+GuppyError: Borrowed argument with linear type `qubit` would be dropped after this function call. Consider assigning the expression to a local variable before passing it to the function.

@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:11
 10:    def test(q: qubit) -> qubit:
 11:        r = q
                ^
-GuppyError: Variable `q` may only be used in an `@inout` position since it is annotated as `@inout`. Consider removing the annotation to get ownership of the value.
+GuppyError: Variable `q` may not be used in an `@owned` position since it lacks an `@owned` annotation. Consider adding `@owned` to get ownership of the value.

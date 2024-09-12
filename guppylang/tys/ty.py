@@ -302,8 +302,7 @@ class NumericType(TypeBase):
 class InputFlags(Flag):
     """Flags that can be set on inputs of function types.
 
-    Currently, the only supported flag is `Inout`. In the future, we could add
-    additional flags like `Frozen`, `Owned`, etc.
+    In the future, we could add  additional flags like `Frozen`, `Owned`, etc.
     """
 
     NoFlags = 0
@@ -381,7 +380,7 @@ class FunctionType(ParametrizedTypeBase):
         ins = [inp.ty.to_hugr() for inp in self.inputs]
         outs = [
             *(t.to_hugr() for t in type_to_row(self.output)),
-            # We might have additional @inout args that will be also outputted
+            # We might have additional borrowed args that will be also outputted
             *(inp.ty.to_hugr() for inp in self.inputs if InputFlags.Inout in inp.flags),
         ]
         return ht.FunctionType(input=ins, output=outs)

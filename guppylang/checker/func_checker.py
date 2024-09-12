@@ -187,7 +187,7 @@ def parse_function_with_docstring(
 
 
 def inout_var_names(func_ty: FunctionType) -> list[str]:
-    """Returns the names of all `@inout` arguments of a function type."""
+    """Returns the names of all borrowed arguments in a function type."""
     assert func_ty.input_names is not None
     return [
         x

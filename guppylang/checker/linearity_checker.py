@@ -134,13 +134,13 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.scope = scope
 
     def visit_PlaceNode(self, node: PlaceNode, /, is_inout_arg: bool = False) -> None:
-        # Usage of @inout variables is generally forbidden. The only exception is using
-        # them in another @inout position of a function call. In that case, our
+        # Usage of borrowed variables is generally forbidden. The only exception is
+        # letting them be borrowed by another  function call. In that case, our
         # `_visit_call_args` helper will set `is_inout_arg=True`.
         if is_inout_var(node.place) and not is_inout_arg:
             raise GuppyError(
-                f"{node.place.describe} may only be used in an `@inout` position since "
-                "it is annotated as `@inout`. Consider removing the annotation to get "
+                f"{node.place.describe} may not be used in an `@owned` position since "
+                "it lacks an `@owned` annotation. Consider adding `@owned` to get "
                 "ownership of the value.",
                 node,
             )
@@ -150,7 +150,7 @@ class BBLinearityChecker(ast.NodeVisitor):
             if not is_inout_arg and subscript.parent.ty.linear:
                 raise GuppyError(
                     "Subscripting on expression with linear type "
-                    f"`{subscript.parent.ty}` is only allowed in `@inout` position",
+                    f"`{subscript.parent.ty}` is not allowed in `@owned` position",
                     node,
                 )
             self.scope.assign(subscript.item)
@@ -187,7 +187,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                 self.visit(arg)
 
     def _reassign_inout_args(self, func_ty: FunctionType, args: list[ast.expr]) -> None:
-        """Helper function to reassign the @inout arguments after a function call."""
+        """Helper function to reassign the borrowed arguments after a function call."""
         for inp, arg in zip(func_ty.inputs, args, strict=True):
             if InputFlags.Inout in inp.flags:
                 match arg:
@@ -195,7 +195,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                         self._reassign_single_inout_arg(place, arg)
                     case arg if inp.ty.linear:
                         raise GuppyError(
-                            f"Inout argument with linear type `{inp.ty}` would be "
+                            f"Borrowed argument with linear type `{inp.ty}` would be "
                             "dropped after this function call. Consider assigning the "
                             "expression to a local variable before passing it to the "
                             "function.",
@@ -203,7 +203,8 @@ class BBLinearityChecker(ast.NodeVisitor):
                         )
 
     def _reassign_single_inout_arg(self, place: Place, node: ast.expr) -> None:
-        """Helper function to reassign a single inout argument after a function call."""
+        """Helper function to reassign a single borrowed argument after a function
+        call."""
         # Places involving subscripts are given back by visiting the `__setitem__` call
         if subscript := contains_subscript(place):
             assert subscript.setitem_call is not None
@@ -311,11 +312,11 @@ class BBLinearityChecker(ast.NodeVisitor):
         [target] = targets
         for tgt in find_nodes(lambda n: isinstance(n, PlaceNode), target):
             assert isinstance(tgt, PlaceNode)
-            # Special error message for shadowing of @inout vars
+            # Special error message for shadowing of borrowed vars
             x = tgt.place.id
             if x in self.scope.vars and is_inout_var(self.scope[x]):
                 raise GuppyError(
-                    f"Assignment shadows argument `{tgt.place}` annotated as `@inout`. "
+                    f"Assignment shadows borrowed argument `{tgt.place}`. "
                     "Consider assigning to a different name.",
                     tgt,
                 )
@@ -432,7 +433,7 @@ def contains_subscript(place: Place) -> SubscriptAccess | None:
 
 
 def is_inout_var(place: Place) -> TypeGuard[Variable]:
-    """Checks whether a place is an @inout variable."""
+    """Checks whether a place is a borrowed variable."""
     return isinstance(place, Variable) and InputFlags.Inout in place.flags
 
 
@@ -452,7 +453,7 @@ def check_cfg_linearity(
         for bb in cfg.bbs
     }
 
-    # Check that @inout vars are not being shadowed. This would also be caught by
+    # Check that borrowed vars are not being shadowed. This would also be caught by
     # the dataflow analysis below, however we can give nicer error messages here.
     for bb, scope in scopes.items():
         if bb == cfg.entry_bb:
@@ -466,12 +467,12 @@ def check_cfg_linearity(
                 entry_place = entry_scope[x]
                 if is_inout_var(entry_place):
                     raise GuppyError(
-                        f"Assignment shadows argument `{entry_place}` annotated as "
-                        "`@inout`. Consider assigning to a different name.",
+                        f"Assignment shadows borrowed argument `{entry_place}`. "
+                        "Consider assigning to a different name.",
                         place.defined_at,
                     )
 
-    # Mark the @inout variables as implicitly used in the exit BB
+    # Mark the borrowed variables as implicitly used in the exit BB
     exit_scope = scopes[cfg.exit_bb]
     for var in cfg.entry_bb.sig.input_row:
         if InputFlags.Inout in var.flags:
@@ -498,13 +499,13 @@ def check_cfg_linearity(
                 if place.ty.linear and (prev_use := scope.used(x)):
                     use = use_scope.used_parent[x]
                     # Special case if this is a use arising from the implicit returning
-                    # of an @inout argument
+                    # of a borrowed argument
                     if isinstance(use, InoutReturnSentinel):
                         assert isinstance(use.var, Variable)
                         assert InputFlags.Inout in use.var.flags
                         raise GuppyError(
-                            f"Argument `{use.var}` annotated as `@inout` cannot be "
-                            f"returned to the caller since `{place}` is used at {{0}}. "
+                            f"Borrowed argument `{use.var}` cannot be returned "
+                            f"to the caller since `{place}` is used at {{0}}. "
                             f"Consider writing a value back into `{place}` before "
                             "returning.",
                             use.var.defined_at,

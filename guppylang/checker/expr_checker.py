@@ -816,7 +816,7 @@ def type_check_args(
 
 
 def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
-    """Performs additional checks for place arguments in @inout position.
+    """Performs additional checks for borrowed place arguments.
 
     In particular, we need to check that places involving `place[item]` subscripts
     implement the corresponding `__setitem__` method.
@@ -845,7 +845,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 setitem_args[0],
                 setitem_args[1:],
                 "__setitem__",
-                "not allowed in a subscripted `@inout` position",
+                "unable to have subscripted elements borrowed",
                 exp_sig,
                 True,
             )

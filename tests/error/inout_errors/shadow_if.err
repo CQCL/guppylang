@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:13
 12:        if b:
 13:            q = qubit()
                ^
-GuppyError: Assignment shadows argument `q` annotated as `@inout`. Consider assigning to a different name.
+GuppyError: Assignment shadows borrowed argument `q`. Consider assigning to a different name.
