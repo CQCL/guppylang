@@ -1,12 +1,11 @@
 import numpy as np
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
+from guppylang.prelude.angles import angle, pi
 from guppylang.prelude.builtins import linst, owned, py
 from guppylang.prelude.quantum import (
     discard,
     measure,
-    quantum,
     qubit,
 )
 from guppylang.prelude.quantum_functional import (
@@ -16,32 +15,26 @@ from guppylang.prelude.quantum_functional import (
     rz,
 )
 
-module = GuppyModule("t_factory")
-module.load_all(quantum)
 
 phi = np.arccos(1 / 3)
-pi = np.pi
 
 
-@guppy(module)
-def ry(q: qubit @owned, theta: float) -> qubit:
-    q = rx(q, py(pi / 2))
-    q = rz(q, theta + py(pi))
-    q = rx(q, py(pi / 2))
-    return rz(q, py(pi))
+@guppy
+def ry(q: qubit @owned, theta: angle) -> qubit:
+    q = rx(q, pi / 2)
+    q = rz(q, theta + pi)
+    q = rx(q, pi / 2)
+    return rz(q, pi)
 
 # Preparation of approximate T state, from https://arxiv.org/abs/2310.12106
-@guppy(module)
+@guppy
 def prepare_approx(q: qubit @owned) -> qubit:
-    phi_ = py(phi)
-    pi_ = py(pi)
-
-    q = ry(q, phi_)
-    return rz(q, pi_ / 4.0)
+    q = ry(q, angle(py(phi)))
+    return rz(q, pi / 4)
 
 
-## The inverse of the [[5,3,1]] encoder in figure 3 of https://arxiv.org/abs/2208.01863
-@guppy(module)
+# The inverse of the [[5,3,1]] encoder in figure 3 of https://arxiv.org/abs/2208.01863
+@guppy
 def distill(
     target: qubit @owned, q0: qubit @owned, q1: qubit @owned, q2: qubit @owned, q3: qubit @owned
 ) -> tuple[qubit, bool]:
@@ -64,7 +57,7 @@ def distill(
     return target, success
 
 
-@guppy(module)
+@guppy
 def t_state(timeout: int) -> tuple[linst[qubit], bool]:
     """Create a T state using magic state distillation with `timeout` attempts.
 
@@ -94,4 +87,4 @@ def t_state(timeout: int) -> tuple[linst[qubit], bool]:
     return [], False
 
 
-hugr = module.compile()
+hugr = guppy.compile_module()

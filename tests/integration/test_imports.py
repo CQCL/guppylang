@@ -28,6 +28,19 @@ def test_import_type(validate):
     validate(module.compile())
 
 
+def test_import_implicit(validate):
+    from tests.integration.modules.implicit_mod import foo
+
+    module = GuppyModule("test")
+    module.load(foo)
+
+    @guppy(module)
+    def test(x: int) -> int:
+        return foo(x)
+
+    validate(module.compile())
+
+
 def test_func_alias(validate):
     from tests.integration.modules.mod_a import f as g
 
@@ -151,3 +164,41 @@ def test_qualified_types(validate):
         return -x, +y
 
     validate(module.compile())
+
+
+def test_qualified_implicit(validate):
+    import tests.integration.modules.implicit_mod as implicit_mod
+
+    module = GuppyModule("test")
+    module.load(implicit_mod)
+
+    @guppy(module)
+    def test(x: int) -> int:
+        return implicit_mod.foo(x)
+
+    validate(module.compile())
+
+
+def test_private_func(validate):
+    # First, define a module with a public function
+    # that calls an internal one
+    internal_module = GuppyModule("test_internal")
+
+    @guppy(internal_module)
+    def _internal(x: int) -> int:
+        return x
+
+    @guppy(internal_module)
+    def g(x: int) -> int:
+        return _internal(x)
+
+    # The test module
+    module = GuppyModule("test")
+    module.load_all(internal_module)
+
+    @guppy(module)
+    def f(x: int) -> int:
+        return g(x)
+
+    hugr = module.compile()
+    validate(hugr)

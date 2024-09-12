@@ -11,9 +11,11 @@ from guppylang.prelude._internal.compiler.quantum import (
     QAllocCompiler,
 )
 from guppylang.prelude._internal.util import quantum_op
+from guppylang.prelude.angles import angle
 from guppylang.prelude.builtins import owned
 
 quantum = GuppyModule("quantum")
+quantum.load(angle)
 
 
 @guppy.type(quantum, ht.Qubit, linear=True)

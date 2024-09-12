@@ -1,6 +1,7 @@
 import inspect
 import sys
 from collections.abc import Callable, Mapping
+from pathlib import Path
 from types import ModuleType
 from typing import Any
 
@@ -112,7 +113,6 @@ class GuppyModule:
                 module = imp.id.module
                 assert module is not None
                 module.check()
-                defs[imp.id] = module._checked_defs[imp.id]
                 names[alias or imp.name] = imp.id
                 modules.add(module)
             elif isinstance(imp, GuppyModule):
@@ -122,7 +122,6 @@ class GuppyModule:
                 defn = ModuleDef(def_id, name, None, imp._globals)
                 defs[def_id] = defn
                 names[name] = def_id
-                defs |= imp._checked_defs
                 modules.add(imp)
             elif isinstance(imp, ModuleType):
                 mod = find_guppy_module_in_py_module(imp)
@@ -134,16 +133,15 @@ class GuppyModule:
         # Also include any impls that are defined by the imported modules
         impls: dict[DefId, dict[str, DefId]] = {}
         for module in modules:
+            # We need to include everything defined in the module, including stuff that
+            # is not directly imported, in order to lower everything into a single Hugr
+            defs |= module._imported_checked_defs
+            defs |= module._checked_defs
             # We also need to include any impls that are transitively imported
             all_globals = module._imported_globals | module._globals
-            all_checked_defs = module._imported_checked_defs | module._checked_defs
             for def_id in all_globals.impls:
                 impls.setdefault(def_id, {})
                 impls[def_id] |= all_globals.impls[def_id]
-                defs |= {
-                    def_id: all_checked_defs[def_id]
-                    for def_id in all_globals.impls[def_id].values()
-                }
         self._imported_globals |= Globals(dict(defs), names, impls, {})
         self._imported_checked_defs |= defs
 
@@ -406,6 +404,14 @@ def find_guppy_module_in_py_module(module: ModuleType) -> GuppyModule:
     Raises a user-error if no unique module can be found.
     """
     mods = [val for val in module.__dict__.values() if isinstance(val, GuppyModule)]
+    # Also include implicit modules
+    from guppylang.decorator import ModuleIdentifier, guppy
+
+    if hasattr(module, "__file__") and module.__file__:
+        module_id = ModuleIdentifier(Path(module.__file__), module.__name__, module)
+        if module_id in guppy.registered_modules():
+            mods.append(guppy.get_module(module_id))
+
     if not mods:
         msg = f"No Guppy modules found in `{module.__name__}`"
         raise GuppyError(msg)

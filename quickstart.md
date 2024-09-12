@@ -3,14 +3,12 @@ allows you to write high-level hybrid quantum programs with classical control
 flow and mid-circuit measurements using Pythonic syntax:
 
 ```python
-from guppylang import guppy, qubit, quantum
+from guppylang import guppy
+from guppylang.prelude.quantum import cx, h, measure, qubit, x, z
 
-guppy.load_all(quantum)
-
-
-# Teleports the state in `src` to `tgt`.
 @guppy
 def teleport(src: qubit, tgt: qubit) -> qubit:
+    """Teleports the state in `src` to `tgt`."""
     # Create ancilla and entangle it with src and tgt
     tmp = qubit()
     tmp, tgt = cx(h(tmp), tgt)
@@ -22,4 +20,6 @@ def teleport(src: qubit, tgt: qubit) -> qubit:
     if measure(tmp):
         tgt = x(tgt)
     return tgt
+
+guppy.compile_module()
 ```

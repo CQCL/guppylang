@@ -32,7 +32,7 @@ def test_docstring(validate):
             string.
             """
 
-    default_module = guppy.take_module()
+    default_module = guppy.get_module()
     validate(default_module.compile())
 
 

@@ -2,9 +2,12 @@
 
 # mypy: disable-error-code="empty-body, misc"
 
+import typing
+
 from guppylang.decorator import guppy
 from guppylang.prelude._internal.compiler.quantum import HSERIES_EXTENSION
-from guppylang.prelude._internal.util import quantum_op, unsupported_op
+from guppylang.prelude._internal.util import quantum_op
+from guppylang.prelude.angles import angle
 from guppylang.prelude.builtins import owned
 from guppylang.prelude.quantum import quantum, qubit
 
@@ -53,27 +56,53 @@ def sdg(q: qubit @ owned) -> qubit: ...
 def zz_max(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]: ...
 
 
-@guppy.hugr_op(
-    quantum, quantum_op("Rz", ext=HSERIES_EXTENSION)
-)  # TODO: Use the `tket.quantum` operation once we support angles
-def rz(q: qubit @ owned, angle: float) -> qubit: ...
+@guppy.hugr_op(quantum, quantum_op("Rz"))
+def rz(q: qubit @ owned, angle: angle) -> qubit: ...
 
 
-@guppy.hugr_op(
-    quantum, unsupported_op("Rx")
-)  # TODO: Use the `tket.quantum` operation once we support angles
-def rx(q: qubit @ owned, angle: float) -> qubit: ...
+@guppy.hugr_op(quantum, quantum_op("Rx"))
+def rx(q: qubit @ owned, angle: angle) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("PhasedX", ext=HSERIES_EXTENSION))
-def phased_x(q: qubit @ owned, angle1: float, angle2: float) -> qubit: ...
+@guppy(quantum)
+@typing.no_type_check
+def phased_x(q: qubit @ owned, angle1: angle, angle2: angle) -> qubit:
+    f1 = float(angle1)
+    f2 = float(angle2)
+    return _phased_x(q, f1, f2)
 
 
-@guppy.hugr_op(quantum, quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
-def zz_phase(
-    q1: qubit @ owned, q2: qubit @ owned, angle: float
-) -> tuple[qubit, qubit]: ...
+@guppy(quantum)
+@typing.no_type_check
+def zz_phase(q1: qubit @ owned, q2: qubit @ owned, angle: angle) -> tuple[qubit, qubit]:
+    f = float(angle)
+    return _zz_phase(q1, q2, f)
 
 
 @guppy.hugr_op(quantum, quantum_op("Reset"))
 def reset(q: qubit @ owned) -> qubit: ...
+
+
+# ------------------------------------------------------
+# --------- Internal definitions -----------------------
+# ------------------------------------------------------
+
+
+@guppy.hugr_op(quantum, quantum_op("PhasedX", ext=HSERIES_EXTENSION))
+def _phased_x(q: qubit @ owned, angle1: float, angle2: float) -> qubit:
+    """PhasedX operation from the hseries extension.
+
+    See `guppylang.prelude.quantum.phased_x` for a public definition that
+    accepts angle parameters.
+    """
+
+
+@guppy.hugr_op(quantum, quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
+def _zz_phase(
+    q1: qubit @ owned, q2: qubit @ owned, angle: float
+) -> tuple[qubit, qubit]:
+    """ZZPhase operation from the hseries extension.
+
+    See `guppylang.prelude.quantum.phased_x` for a public definition that
+    accepts angle parameters.
+    """

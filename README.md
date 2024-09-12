@@ -12,14 +12,12 @@ Guppy is a quantum programming language that is fully embedded into Python.
 It allows you to write high-level hybrid quantum programs with classical control flow and mid-circuit measurements using Pythonic syntax:
 
 ```python
-from guppylang import guppy, qubit, quantum
+from guppylang import guppy
+from guppylang.prelude.quantum import cx, h, measure, qubit, x, z
 
-guppy.load_all(quantum)
-
-
-# Teleports the state in `src` to `tgt`.
 @guppy
 def teleport(src: qubit, tgt: qubit) -> qubit:
+    """Teleports the state in `src` to `tgt`."""
     # Create ancilla and entangle it with src and tgt
     tmp = qubit()
     tmp, tgt = cx(h(tmp), tgt)
@@ -31,6 +29,8 @@ def teleport(src: qubit, tgt: qubit) -> qubit:
     if measure(tmp):
         tgt = x(tgt)
     return tgt
+
+guppy.compile_module()
 ```
 
 More examples and tutorials are available [here][examples].
@@ -68,12 +68,13 @@ These instructions will get you a copy of the project up and running on your loc
 Run the following to setup your virtual environment and install dependencies:
 
 ```sh
-uv sync --extra execution --extra validation
+uv sync --extra execution
+cargo build --release  # Builds the validator (optional)
 ```
 
-Note that the `--extra` flags are optional and only needed to run integration tests.
+Note that the `--extra` flag, and the `cargo build` line, are both optional, but enable some integration tests.
 
-The `validation` extra allows the tests to validate that the hugrs guppy outputs are well formed, and the `execution` extra allows tests to compile these hugrs to native code using [hugr-llvm](https://github.com/CQCL/hugr-llvm) to check the results are as expected.
+The validator allows the tests to validate that the hugrs guppy outputs are well formed, and the `execution` extra allows tests to compile these hugrs to native code using [hugr-llvm](https://github.com/CQCL/hugr-llvm) to check the results are as expected.
 This requires `llvm-14` as described in the `hugr-llvm` repo.
 
 Consider using [direnv](https://direnv.net/docs/installation.html) to

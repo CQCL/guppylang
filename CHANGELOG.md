@@ -1,5 +1,69 @@
 # Changelog
 
+## [0.11.0](https://github.com/CQCL/guppylang/compare/v0.10.0...v0.11.0) (2024-09-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* `guppy.take_module` renamed to `guppy.get_module` and no longer removes the module from the state.
+* Quantum operations `rx`, `rz`, `phased_x`, and `zz_max` use the `angle` type instead of floats.
+
+### Features
+
+* Add implicit importing of modules ([#461](https://github.com/CQCL/guppylang/issues/461)) ([1b73032](https://github.com/CQCL/guppylang/commit/1b730320d6f6b7d6a1062f5322ccec0cd888380f))
+* Use angle type in quantum operations ([#467](https://github.com/CQCL/guppylang/issues/467)) ([ce0f746](https://github.com/CQCL/guppylang/commit/ce0f746dfe6702c68a850380ef8965e58f666354))
+
+
+### Bug Fixes
+
+* hseries ops use floats instead of angles ([#483](https://github.com/CQCL/guppylang/issues/483)) ([7ed3853](https://github.com/CQCL/guppylang/commit/7ed38531bed8dba65859c2185858bee5bb22a000)), closes [#477](https://github.com/CQCL/guppylang/issues/477)
+* Keep track of definitions that are implicitly imported ([#481](https://github.com/CQCL/guppylang/issues/481)) ([a89f225](https://github.com/CQCL/guppylang/commit/a89f2251eb753803c2e67aee4bd21ae40f83a5ba)), closes [#480](https://github.com/CQCL/guppylang/issues/480)
+
+## [0.10.0](https://github.com/CQCL/guppylang/compare/v0.9.0...v0.10.0) (2024-09-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* Bumped the `hugr` dependency to `0.8.0`
+* `GuppyModule.load` no longer loads the content of modules but instead just brings the name of the module into scope. Use `GuppyModule.load_all` to get the old behaviour.
+* Removed `guppylang.hugr_builder.hugr.Hugr`, compiling a module returns a `hugr.Package` instead.
+
+### Features
+
+* Add `__version__` field to guppylang ([#473](https://github.com/CQCL/guppylang/issues/473)) ([b996c62](https://github.com/CQCL/guppylang/commit/b996c62a5f1f5d643fb9a2be893911f6021dd0e9))
+* Add angle type ([#449](https://github.com/CQCL/guppylang/issues/449)) ([12e41e0](https://github.com/CQCL/guppylang/commit/12e41e02354a504b8a527a48b6df8f2ed51891df))
+* Add array literals ([#446](https://github.com/CQCL/guppylang/issues/446)) ([a255c02](https://github.com/CQCL/guppylang/commit/a255c02f7e1c525b7534f5b08a5c3d6f1fb79392))
+* Add equality test for booleans ([#394](https://github.com/CQCL/guppylang/issues/394)) ([dd702ce](https://github.com/CQCL/guppylang/commit/dd702ce5e5e5f363b3a31e0075690703f2fe6d29)), closes [#363](https://github.com/CQCL/guppylang/issues/363)
+* Add pi constant ([#451](https://github.com/CQCL/guppylang/issues/451)) ([9d35a78](https://github.com/CQCL/guppylang/commit/9d35a78b784ba0c00bcdf3d2a1256606fb797644))
+* Add qualified imports and make them the default ([#443](https://github.com/CQCL/guppylang/issues/443)) ([553ec51](https://github.com/CQCL/guppylang/commit/553ec51d071ed6f195322685590335fa1712c4a7))
+* Allow calling of methods ([#440](https://github.com/CQCL/guppylang/issues/440)) ([5a59da3](https://github.com/CQCL/guppylang/commit/5a59da359ee7a098ce069db5cdebd5eb98ec9781))
+* Allow imports of function definitions and aliased imports ([#432](https://github.com/CQCL/guppylang/issues/432)) ([e23b666](https://github.com/CQCL/guppylang/commit/e23b6668ef0716f7dabb91be73a217c11ca32ecc))
+* Array indexing ([#415](https://github.com/CQCL/guppylang/issues/415)) ([2199b48](https://github.com/CQCL/guppylang/commit/2199b48d777c28cf5584f537d78360d15d4c924b)), closes [#421](https://github.com/CQCL/guppylang/issues/421) [#422](https://github.com/CQCL/guppylang/issues/422) [#447](https://github.com/CQCL/guppylang/issues/447)
+* Inout arguments ([#311](https://github.com/CQCL/guppylang/issues/311)) ([060649b](https://github.com/CQCL/guppylang/commit/060649b8e1249489dd5851e0a8578ab715e093ce)), closes [#315](https://github.com/CQCL/guppylang/issues/315) [#316](https://github.com/CQCL/guppylang/issues/316) [#349](https://github.com/CQCL/guppylang/issues/349) [#344](https://github.com/CQCL/guppylang/issues/344) [#321](https://github.com/CQCL/guppylang/issues/321) [#331](https://github.com/CQCL/guppylang/issues/331) [#350](https://github.com/CQCL/guppylang/issues/350) [#340](https://github.com/CQCL/guppylang/issues/340) [#351](https://github.com/CQCL/guppylang/issues/351)
+* range() with single-argument ([#452](https://github.com/CQCL/guppylang/issues/452)) ([d05f369](https://github.com/CQCL/guppylang/commit/d05f369041edbb10772117161d3a74414769361d))
+* Skip checking of redefined functions ([#457](https://github.com/CQCL/guppylang/issues/457)) ([7f9ad32](https://github.com/CQCL/guppylang/commit/7f9ad32906e909c552025063c062d8b79d43325a))
+* Support `nat`/`int` ↔ `bool` cast operations ([#459](https://github.com/CQCL/guppylang/issues/459)) ([3b778c3](https://github.com/CQCL/guppylang/commit/3b778c3649b8c54b29faa907e3fd95e9ae87e5bd))
+* Use `hugr-cli` for validation ([#455](https://github.com/CQCL/guppylang/issues/455)) ([1d0667b](https://github.com/CQCL/guppylang/commit/1d0667bc06998a6682352b46758f5465ef4ae22c))
+* Use cell name instead of file for notebook errors ([#382](https://github.com/CQCL/guppylang/issues/382)) ([d542601](https://github.com/CQCL/guppylang/commit/d5426017320efba8ed8cf2024c37a0b64b0cdce9))
+* Use the hugr builder ([536abf9](https://github.com/CQCL/guppylang/commit/536abf9ff82899332c960695da9e620bbdbf3d8b))
+
+
+### Bug Fixes
+
+* Fix and update demo notebook ([#376](https://github.com/CQCL/guppylang/issues/376)) ([23b2a15](https://github.com/CQCL/guppylang/commit/23b2a1559271ce36a348384616603bef67c73992))
+* Fix linearity checking bug ([#441](https://github.com/CQCL/guppylang/issues/441)) ([0b8ea21](https://github.com/CQCL/guppylang/commit/0b8ea21763fd3611a2b5ec2a978b14954d5a9582))
+* Fix struct definitions in notebooks ([#374](https://github.com/CQCL/guppylang/issues/374)) ([b009465](https://github.com/CQCL/guppylang/commit/b009465d8221bb22576bfb079d05b01e1872d500))
+
+
+### Documentation
+
+* Update readme, `cargo build` instead of  `--extra validation` ([#471](https://github.com/CQCL/guppylang/issues/471)) ([c2a4c86](https://github.com/CQCL/guppylang/commit/c2a4c86a81378447ecaa64ba5090da22971d7303))
+
+
+### Miscellaneous Chores
+
+* Update hugr to `0.8.0` ([#454](https://github.com/CQCL/guppylang/issues/454)) ([b02e0d0](https://github.com/CQCL/guppylang/commit/b02e0d017e60469051ddfc84c8cd28003a40286d))
+
 ## [0.9.0](https://github.com/CQCL/guppylang/compare/v0.8.1...v0.9.0) (2024-08-12)
 
 
