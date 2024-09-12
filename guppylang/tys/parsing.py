@@ -86,7 +86,7 @@ def _try_parse_defn(node: AstNode, globals: Globals) -> Definition | None:
             return globals[x]
         case ast.Attribute(value=ast.Name(id=module_name) as value, attr=x):
             if module_name not in globals:
-                raise GuppyError(f"Unknown identifier: {module_name}.{x}", value)
+                raise GuppyError(f"Unknown identifier: {module_name}", value)
             module_def = globals[module_name]
             if not isinstance(module_def, ModuleDef):
                 raise GuppyError(
