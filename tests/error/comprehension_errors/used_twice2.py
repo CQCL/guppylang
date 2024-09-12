@@ -9,7 +9,7 @@ module.load_all(quantum)
 
 
 @guppy.declare(module)
-def bar(q: qubit) -> bool:
+def bar(q: qubit @owned) -> bool:
     ...
 
 

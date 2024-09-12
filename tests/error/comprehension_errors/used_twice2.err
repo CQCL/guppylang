@@ -3,5 +3,5 @@ Guppy compilation failed. Error in file $FILE:18
 16:    @guppy(module)
 17:    def foo(qs: linst[qubit] @owned) -> linst[qubit]:
 18:        return [q for q in qs if bar(q)]
-                                        ^
-GuppyTypeError: Variable `q` with linear type `qubit` is not used on all control-flow paths of the list comprehension
+                   ^
+GuppyError: Variable `q` with linear type `qubit` was already used (at 18:33)
