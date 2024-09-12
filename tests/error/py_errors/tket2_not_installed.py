@@ -8,7 +8,7 @@ circ = Circuit(1)
 circ.H(0)
 
 module = GuppyModule("test")
-module.load_all(qubit)
+module.load(qubit)
 
 
 @guppy(module)
