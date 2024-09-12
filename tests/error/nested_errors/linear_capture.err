@@ -1,7 +1,7 @@
-Guppy compilation failed. Error in file $FILE:14
+Guppy compilation failed. Error in file $FILE:15
 
-12:    def foo(q: qubit) -> qubit:
-13:        def bar() -> qubit:
-14:            return q
+13:    def foo(q: qubit @owned) -> qubit:
+14:        def bar() -> qubit:
+15:            return q
                       ^
-GuppyError: Variable `q` with linear type `qubit` may not be used here because it was defined in an outer scope (at 12:8)
+GuppyError: Variable `q` with linear type `qubit` may not be used here because it was defined in an outer scope (at 13:8)

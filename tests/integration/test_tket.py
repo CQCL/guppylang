@@ -17,7 +17,7 @@ import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import py
+from guppylang.prelude.builtins import owned, py
 from guppylang.prelude.quantum import measure, qubit, quantum
 from guppylang.prelude.quantum_functional import phased_x, rz, zz_max
 from tests.util import guppy_to_circuit

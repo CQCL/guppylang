@@ -1,4 +1,4 @@
-Guppy compilation failed. Error in file $FILE:16
+Guppy compilation failed. Error in file $FILE:15
 
 13:    @guppy(module)
 14:    def test() -> None:

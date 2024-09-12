@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:14
 
-11:    @guppy.declare(module)
-12:    def foo(f: "Callable[[], qubit @owned]") -> None: ...
+12:    @guppy.declare(module)
+13:    def foo(f: "Callable[[], qubit @owned]") -> None: ...
                                 ^^^^^^^^^^^^
 GuppyError: `@` type annotations are not allowed in this position
