@@ -73,9 +73,6 @@ def test_tuple_implicit(validate):
     validate(foo)
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_list_basic(validate):
     @compile_guppy
     def foo() -> list[int]:
@@ -85,9 +82,6 @@ def test_list_basic(validate):
     validate(foo)
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_list_empty(validate):
     @compile_guppy
     def foo() -> list[int]:
@@ -96,9 +90,6 @@ def test_list_empty(validate):
     validate(foo)
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_list_empty_nested(validate):
     @compile_guppy
     def foo() -> None:
@@ -107,9 +98,6 @@ def test_list_empty_nested(validate):
     validate(foo)
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_list_empty_multiple(validate):
     @compile_guppy
     def foo() -> None:
