@@ -7,15 +7,16 @@ from hugr import tys as ht
 from hugr import val as hv
 from hugr.std.float import FLOAT_T
 
-# from guppylang.compiler.hugr_extension import UnsupportedOp
-from guppylang.prelude._internal.compiler.arithmetic import (
-    convert_itousize,
-    convert_ifromusize,
-)
-from guppylang.prelude._internal.compiler.quantum import ANGLE_EXTENSION, ANGLE_T
 from guppylang.definition.custom import (
     CustomCallCompiler,
 )
+
+# from guppylang.compiler.hugr_extension import UnsupportedOp
+from guppylang.prelude._internal.compiler.arithmetic import (
+    convert_ifromusize,
+    convert_itousize,
+)
+from guppylang.prelude._internal.compiler.quantum import ANGLE_EXTENSION, ANGLE_T
 from guppylang.tys.ty import NumericType
 
 

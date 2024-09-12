@@ -344,10 +344,10 @@ class GuppyModule:
         #
         # The hugr prelude and std_extensions are implicit.
         from guppylang.prelude._internal.compiler.quantum import (
+            ANGLE_EXTENSION,
             HSERIES_EXTENSION,
             QUANTUM_EXTENSION,
             RESULT_EXTENSION,
-            ANGLE_EXTENSION,
         )
 
         extensions = [

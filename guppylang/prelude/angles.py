@@ -9,8 +9,8 @@ from hugr import val as hv
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal.checker import CoercingChecker
-from guppylang.prelude._internal.compiler.angle import AngleOpCompiler, AfromradCompiler
-from guppylang.prelude._internal.compiler.quantum import ANGLE_T, ANGLE_EXTENSION
+from guppylang.prelude._internal.compiler.angle import AfromradCompiler, AngleOpCompiler
+from guppylang.prelude._internal.compiler.quantum import ANGLE_EXTENSION, ANGLE_T
 from guppylang.prelude.builtins import nat
 
 angles = GuppyModule("angles")
