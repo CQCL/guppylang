@@ -177,3 +177,28 @@ def test_qualified_implicit(validate):
         return implicit_mod.foo(x)
 
     validate(module.compile())
+
+
+def test_private_func(validate):
+    # First, define a module with a public function
+    # that calls an internal one
+    internal_module = GuppyModule("test_internal")
+
+    @guppy(internal_module)
+    def _internal(x: int) -> int:
+        return x
+
+    @guppy(internal_module)
+    def g(x: int) -> int:
+        return _internal(x)
+
+    # The test module
+    module = GuppyModule("test")
+    module.load_all(internal_module)
+
+    @guppy(module)
+    def f(x: int) -> int:
+        return g(x)
+
+    hugr = module.compile()
+    validate(hugr)
