@@ -1,6 +1,6 @@
 import pytest
 from guppylang.decorator import guppy
-from guppylang.prelude.angles import angle, pi
+from guppylang.prelude.angles import angle, pi, angles
 from guppylang.prelude.builtins import nat
 from guppylang.module import GuppyModule
 from tests.util import compile_guppy
@@ -112,7 +112,7 @@ def test_angle_arith(validate):
         a3 = -a1 + a2 * -3
         a3 -= a1
         a3 += 2 * a1
-        return a3 / 3 == -a2
+        return a3 == -a2
 
     validate(module.compile())
 

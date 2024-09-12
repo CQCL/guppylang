@@ -9,13 +9,11 @@ from hugr import val as hv
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude._internal.checker import CoercingChecker
-from guppylang.prelude._internal.compiler.angle import AngleOpCompiler
-from guppylang.prelude._internal.compiler.quantum import ANGLE_T
+from guppylang.prelude._internal.compiler.angle import AngleOpCompiler, AfromradCompiler
+from guppylang.prelude._internal.compiler.quantum import ANGLE_T, ANGLE_EXTENSION
 from guppylang.prelude.builtins import nat
 
 angles = GuppyModule("angles")
-
-
 
 
 def _hugr_angle_value(numerator: int, log_denominator: int) -> hv.Value:
@@ -27,7 +25,7 @@ def _hugr_angle_value(numerator: int, log_denominator: int) -> hv.Value:
         name="ConstAngle",
         typ=ANGLE_T,
         val=custom_const,
-        extensions=["tket2.angle"],
+        extensions=[ANGLE_EXTENSION.name],
     )
 
 
@@ -38,7 +36,7 @@ pi = guppy.constant(angles, "pi", ty="angle", value=_hugr_angle_value(1, 1))
 class angle:
     """The type of angles represented as dyadic rational multiples of 2π."""
 
-    @guppy.custom(angles, AngleOpCompiler("afromrad"), CoercingChecker())
+    @guppy.custom(angles, AfromradCompiler(), CoercingChecker())
     def __new__(radians: float) -> "angle": ...
 
     @guppy.custom(angles, AngleOpCompiler("aadd"))
@@ -80,7 +78,7 @@ class angle:
     @guppy.custom(angles, AngleOpCompiler("amul"))
     def _nat_mul(self: "angle", other: nat) -> "angle": ...
 
-    @guppy.custom(angles, AngleOpCompiler("aneg"))
+    @guppy.custom(angles, AngleOpCompiler("adiv"))
     def _nat_div(self: "angle", other: nat) -> "angle": ...
 
     @guppy.custom(angles, AngleOpCompiler("aparts"))
