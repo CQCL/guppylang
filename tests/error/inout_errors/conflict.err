@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:19
 18:    def test() -> Callable[[qubit @owned], qubit]:
 19:        return foo
                   ^^^
-GuppyTypeError: Expected return value of type `qubit -> qubit`, got `qubit @inout -> qubit`
+GuppyTypeError: Expected return value of type `qubit @owned -> qubit`, got `qubit -> qubit`

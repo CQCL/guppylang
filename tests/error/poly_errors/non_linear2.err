@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:23
 22:    def main() -> None:
 23:        foo(h)
                ^
-GuppyTypeError: Expected argument of type `?T -> ?T`, got `qubit -> qubit`
+GuppyTypeError: Expected argument of type `?T -> ?T`, got `qubit @owned -> qubit`
