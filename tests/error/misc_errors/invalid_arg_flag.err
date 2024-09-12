@@ -3,4 +3,4 @@ Guppy compilation failed. Error in file $FILE:12
 10:    @guppy.declare(module)
 11:    def foo(x: int @blah) -> qubit: ...
                        ^^^^
-GuppyError: Invalid annotation: blah
+GuppyError: Invalid annotation: `blah`

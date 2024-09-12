@@ -1,4 +1,4 @@
-Guppy compilation failed. Error in file /Users/croy/work/guppy/tests/error/poly_errors/non_linear3.py:25
+Guppy compilation failed. Error in file $FILE:25
 
 23:    @guppy(module)
 24:    def main() -> None:
