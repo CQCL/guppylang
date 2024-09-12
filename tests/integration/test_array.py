@@ -31,7 +31,6 @@ def test_len(validate):
     assert val.val.v == 42
 
 
-@pytest.mark.skip("Skipped until Hugr lowering is updated")
 def test_index(validate):
     @compile_guppy
     def main(xs: array[int, 5], i: int) -> int:
@@ -85,7 +84,7 @@ def test_linear_subscript(validate):
     module.load_all(quantum)
 
     @guppy.declare(module)
-    def foo(q: qubit @inout) -> None: ...
+    def foo(q: qubit @ inout) -> None: ...
 
     @guppy(module)
     def main(qs: array[qubit, 42], i: int) -> array[qubit, 42]:
@@ -100,10 +99,10 @@ def test_inout_subscript(validate):
     module.load_all(quantum)
 
     @guppy.declare(module)
-    def foo(q: qubit @inout) -> None: ...
+    def foo(q: qubit @ inout) -> None: ...
 
     @guppy(module)
-    def main(qs: array[qubit, 42] @inout, i: int) -> None:
+    def main(qs: array[qubit, 42] @ inout, i: int) -> None:
         foo(qs[i])
 
     validate(module.compile())
@@ -114,7 +113,7 @@ def test_multi_subscripts(validate):
     module.load_all(quantum)
 
     @guppy.declare(module)
-    def foo(q1: qubit @inout, q2: qubit @inout) -> None: ...
+    def foo(q1: qubit @ inout, q2: qubit @ inout) -> None: ...
 
     @guppy(module)
     def main(qs: array[qubit, 42]) -> array[qubit, 42]:
@@ -135,7 +134,7 @@ def test_struct_array(validate):
         q2: qubit
 
     @guppy.declare(module)
-    def foo(q1: qubit @inout, q2: qubit @inout) -> None: ...
+    def foo(q1: qubit @ inout, q2: qubit @ inout) -> None: ...
 
     @guppy(module)
     def main(ss: array[S, 10]) -> array[S, 10]:
@@ -153,11 +152,11 @@ def test_nested_subscripts(validate):
     module.load_all(quantum)
 
     @guppy.declare(module)
-    def foo(q: qubit @inout) -> None: ...
+    def foo(q: qubit @ inout) -> None: ...
 
     @guppy.declare(module)
     def bar(
-        q1: qubit @inout, q2: qubit @inout, q3: qubit @inout, q4: qubit @inout
+        q1: qubit @ inout, q2: qubit @ inout, q3: qubit @ inout, q4: qubit @ inout
     ) -> None: ...
 
     @guppy(module)
@@ -193,7 +192,7 @@ def test_struct_nested_subscript(validate):
         baz: tuple[B, B]
 
     @guppy.declare(module)
-    def foo(q1: qubit @inout) -> None: ...
+    def foo(q1: qubit @ inout) -> None: ...
 
     @guppy(module)
     def main(a: A, i: int, j: int, k: int) -> A:
