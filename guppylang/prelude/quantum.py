@@ -29,12 +29,12 @@ def dirty_qubit() -> qubit: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("Measure"))
-def measure_return(q: qubit @ owned) -> tuple[qubit, bool]: ...
+def measure_return(q: qubit @ owned) -> tuple[qubit, bool]: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("QFree"))
-def discard(q: qubit @ owned) -> None: ...
+def discard(q: qubit @ owned) -> None: ...  # type: ignore[valid-type]
 
 
 @guppy.custom(quantum, MeasureCompiler())
-def measure(q: qubit @ owned) -> bool: ...
+def measure(q: qubit @ owned) -> bool: ...  # type: ignore[valid-type]

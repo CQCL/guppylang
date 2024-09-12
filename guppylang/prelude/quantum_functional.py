@@ -13,55 +13,55 @@ from guppylang.prelude.quantum import quantum, qubit
 
 
 @guppy.hugr_op(quantum, quantum_op("H"))
-def h(q: qubit @ owned) -> qubit: ...
+def h(q: qubit @ owned) -> qubit: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("CZ"))
-def cz(control: qubit @ owned, target: qubit @ owned) -> tuple[qubit, qubit]: ...
+def cz(control: qubit @ owned, target: qubit @ owned) -> tuple[qubit, qubit]: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("CX"))
-def cx(control: qubit @ owned, target: qubit @ owned) -> tuple[qubit, qubit]: ...
+def cx(control: qubit @ owned, target: qubit @ owned) -> tuple[qubit, qubit]: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("T"))
-def t(q: qubit @ owned) -> qubit: ...
+def t(q: qubit @ owned) -> qubit: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("S"))
-def s(q: qubit @ owned) -> qubit: ...
+def s(q: qubit @ owned) -> qubit: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("X"))
-def x(q: qubit @ owned) -> qubit: ...
+def x(q: qubit @ owned) -> qubit: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("Y"))
-def y(q: qubit @ owned) -> qubit: ...
+def y(q: qubit @ owned) -> qubit: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("Z"))
-def z(q: qubit @ owned) -> qubit: ...
+def z(q: qubit @ owned) -> qubit: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("Tdg"))
-def tdg(q: qubit @ owned) -> qubit: ...
+def tdg(q: qubit @ owned) -> qubit: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("Sdg"))
-def sdg(q: qubit @ owned) -> qubit: ...
+def sdg(q: qubit @ owned) -> qubit: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("ZZMax", ext=HSERIES_EXTENSION))
-def zz_max(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]: ...
+def zz_max(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("Rz"))
-def rz(q: qubit @ owned, angle: angle) -> qubit: ...
+def rz(q: qubit @ owned, angle: angle) -> qubit: ...  # type: ignore[valid-type]
 
 
 @guppy.hugr_op(quantum, quantum_op("Rx"))
-def rx(q: qubit @ owned, angle: angle) -> qubit: ...
+def rx(q: qubit @ owned, angle: angle) -> qubit: ...  # type: ignore[valid-type]
 
 
 @guppy(quantum)
@@ -80,7 +80,7 @@ def zz_phase(q1: qubit @ owned, q2: qubit @ owned, angle: angle) -> tuple[qubit,
 
 
 @guppy.hugr_op(quantum, quantum_op("Reset"))
-def reset(q: qubit @ owned) -> qubit: ...
+def reset(q: qubit @ owned) -> qubit: ...  # type: ignore[valid-type]
 
 
 # ------------------------------------------------------
@@ -89,7 +89,7 @@ def reset(q: qubit @ owned) -> qubit: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("PhasedX", ext=HSERIES_EXTENSION))
-def _phased_x(q: qubit @ owned, angle1: float, angle2: float) -> qubit:
+def _phased_x(q: qubit @ owned, angle1: float, angle2: float) -> qubit:  # type: ignore[valid-type]
     """PhasedX operation from the hseries extension.
 
     See `guppylang.prelude.quantum.phased_x` for a public definition that
@@ -99,7 +99,9 @@ def _phased_x(q: qubit @ owned, angle1: float, angle2: float) -> qubit:
 
 @guppy.hugr_op(quantum, quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
 def _zz_phase(
-    q1: qubit @ owned, q2: qubit @ owned, angle: float
+    q1: qubit @ owned,  # type: ignore[valid-type]
+    q2: qubit @ owned,  # type: ignore[valid-type]
+    angle: float,
 ) -> tuple[qubit, qubit]:
     """ZZPhase operation from the hseries extension.
 
