@@ -85,6 +85,10 @@ def test_linear_struct(validate):
     def g(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]: ...
 
     @guppy(module)
+    def construct(q1: qubit @owned, q2: qubit @owned) -> MyStruct:
+        return MyStruct(q1, q2)
+
+    @guppy(module)
     def test(s: MyStruct @owned, t: MyStruct @owned) -> tuple[qubit, qubit, qubit, qubit]:
         s.q1, s.q2 = f(s.q2, s.q1)
         t.q1, t.q2 = f(t.q1, t.q2)
