@@ -302,7 +302,7 @@ class NumericType(TypeBase):
 class InputFlags(Flag):
     """Flags that can be set on inputs of function types.
 
-    In the future, we could add  additional flags like `Frozen`, `Owned`, etc.
+    In the future, we could add  additional flags like `Frozen`.
     """
 
     NoFlags = 0
