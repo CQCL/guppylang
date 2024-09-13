@@ -256,7 +256,8 @@ def type_from_ast(
 ) -> Type:
     """Turns an AST expression into a Guppy type."""
     ty, flags = type_with_flags_from_ast(node, globals, param_var_mapping)
-    if flags != InputFlags.NoFlags and flags != InputFlags.Inout:
+    if flags != InputFlags.NoFlags:
+        assert flags != InputFlags.Inout  # Users shouldn't be able to set this
         raise GuppyError(
             "`@` type annotations are not allowed in this position",
             node,
