@@ -5,6 +5,7 @@ from guppylang.prelude.quantum_functional import h
 
 module = GuppyModule("test")
 module.load_all(quantum)
+module.load(h)
 
 
 @guppy(module)

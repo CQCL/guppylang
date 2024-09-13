@@ -128,7 +128,7 @@ binary_table: dict[type[AstOp], tuple[str, str, str]] = {
     ast.BitAnd:   ("__and__",      "__rand__",      "&"),
     ast.MatMult:  ("__matmul__",   "__rmatmul__",   "@"),
     ast.Eq:       ("__eq__",       "__eq__",        "=="),
-    ast.NotEq:    ("__neq__",      "__neq__",       "!="),
+    ast.NotEq:    ("__ne__",       "__ne__",        "!="),
     ast.Lt:       ("__lt__",       "__gt__",        "<"),
     ast.LtE:      ("__le__",       "__ge__",        "<="),
     ast.Gt:       ("__gt__",       "__lt__",        ">"),
