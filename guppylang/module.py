@@ -295,6 +295,7 @@ class GuppyModule:
                 for method_def in defn.generated_methods():
                     generated[method_def.id] = method_def
                     self._globals.impls[defn.id][method_def.name] = method_def.id
+        self._globals.defs.update(generated)
 
         # Now, we can check all other definitions
         other_defs = self._check_defs(
