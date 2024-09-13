@@ -140,7 +140,7 @@ class BBLinearityChecker(ast.NodeVisitor):
         if is_inout_var(node.place) and not is_inout_arg:
             raise GuppyError(
                 f"{node.place.describe} may not be used in an `@owned` position since "
-                "it lacks an `@owned` annotation. Consider adding `@owned` to get "
+                "it isn't owned. Consider adding a `@owned` annotation to get "
                 "ownership of the value.",
                 node,
             )
