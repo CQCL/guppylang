@@ -339,3 +339,18 @@ def test_subtype(validate):
         return q
 
     validate(module.compile())
+
+def test_shadow_check(validate):
+    module = GuppyModule("test")
+
+    module.load(quantum, qubit)
+
+    @guppy.declare(module)
+    def foo(i: qubit) -> None: ...
+
+    @guppy(module)
+    def main(i: qubit) -> None:
+        if True:
+            foo(i)
+
+    validate(module.compile())
