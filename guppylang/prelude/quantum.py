@@ -1,6 +1,6 @@
 """Guppy standard module for quantum operations."""
 
-# mypy: disable-error-code="empty-body, misc"
+# mypy: disable-error-code="empty-body, misc, valid-type"
 
 from hugr import tys as ht
 
@@ -29,12 +29,12 @@ def dirty_qubit() -> qubit: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("Measure"))
-def measure_return(q: qubit @ owned) -> tuple[qubit, bool]: ...  # type: ignore[valid-type]
+def measure_return(q: qubit @ owned) -> tuple[qubit, bool]: ...
 
 
 @guppy.hugr_op(quantum, quantum_op("QFree"))
-def discard(q: qubit @ owned) -> None: ...  # type: ignore[valid-type]
+def discard(q: qubit @ owned) -> None: ...
 
 
 @guppy.custom(quantum, MeasureCompiler())
-def measure(q: qubit @ owned) -> bool: ...  # type: ignore[valid-type]
+def measure(q: qubit @ owned) -> bool: ...

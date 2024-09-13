@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:21
 20:        foo(q)
 21:        use(q)
                ^
-GuppyError: Variable `q` may not be used in an `@owned` position since it lacks an `@owned` annotation. Consider adding `@owned` to get ownership of the value.
+GuppyError: Variable `q` may not be used in an `@owned` position since it isn't owned. Consider adding a `@owned` annotation to get ownership of the value.
