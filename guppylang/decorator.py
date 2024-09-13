@@ -127,6 +127,8 @@ class _Guppy:
                 frame = frame.f_back
             else:
                 raise GuppyError("Could not find a caller for the `@guppy` decorator")
+        if "ipykernel_" in filename:
+            filename = "__guppy_ipykernel__"
         module_path = Path(filename)
         return ModuleIdentifier(
             module_path, module.__name__ if module else module_path.name, module
@@ -372,6 +374,8 @@ class _Guppy:
         if resolve_implicit_imports and id.module:
             defs: dict[str, Definition | ModuleType] = {}
             for x, value in id.module.__dict__.items():
+                if "quantum" in id.name:
+                    print(x)
                 if isinstance(value, Definition):
                     other_module = value.id.module
                     if other_module and other_module != module:
