@@ -101,10 +101,11 @@ class BBLinearityChecker(ast.NodeVisitor):
 
     scope: Scope
     stats: VariableStats[PlaceId]
+    func_inputs: dict[PlaceId, Variable]
     globals: Globals
 
     def check(
-        self, bb: "CheckedBB[Variable]", is_entry: bool, globals: Globals
+        self, bb: "CheckedBB[Variable]", is_entry: bool, func_inputs: dict[PlaceId, Variable], globals: Globals
     ) -> Scope:
         # Manufacture a scope that holds all places that are live at the start
         # of this BB
@@ -112,6 +113,7 @@ class BBLinearityChecker(ast.NodeVisitor):
         for var in bb.sig.input_row:
             for place in leaf_places(var):
                 input_scope.assign(place)
+        self.func_inputs = func_inputs
         self.globals = globals
 
         # Open up a new nested scope to check the BB contents. This way we can track
@@ -173,6 +175,20 @@ class BBLinearityChecker(ast.NodeVisitor):
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
         self._check_assign_targets(node.targets)
+
+        # Check that borrowed vars are not being shadowed. This would also be caught by
+        # the dataflow analysis later, however we can give nicer error messages here.
+        [target] = node.targets
+        for tgt in find_nodes(lambda n: isinstance(n, PlaceNode), target):
+            assert isinstance(tgt, PlaceNode)
+            if tgt.place.id in self.func_inputs:
+                entry_place = self.func_inputs[tgt.place.id]
+                if is_inout_var(entry_place):
+                    raise GuppyError(
+                        f"Assignment shadows borrowed argument `{entry_place}`. "
+                        "Consider assigning to a different name.",
+                        tgt.place.defined_at,
+                    )
 
     def _visit_call_args(self, func_ty: FunctionType, args: list[ast.expr]) -> None:
         """Helper function to check the arguments of a function call.
@@ -448,39 +464,13 @@ def check_cfg_linearity(
     than just variables.
     """
     bb_checker = BBLinearityChecker()
+    func_inputs = {v.id: v for v in cfg.entry_bb.sig.input_row}
     scopes: dict[BB, Scope] = {
-        bb: bb_checker.check(bb, is_entry=bb == cfg.entry_bb, globals=globals)
+        bb: bb_checker.check(
+            bb, is_entry=bb == cfg.entry_bb, func_inputs=func_inputs, globals=globals
+        )
         for bb in cfg.bbs
     }
-
-    # Check that borrowed vars are not being shadowed. This would also be caught by
-    # the dataflow analysis below, however we can give nicer error messages here.
-    for bb in scopes:
-        if bb == cfg.entry_bb:
-            # Arguments are assigned in the entry BB, so would yield a false positive
-            # in the check below. Shadowing in the entry BB will be caught by the check
-            # in `_check_assign_targets`.
-            continue
-        entry_scope = scopes[cfg.entry_bb]
-        for stmt in bb.statements:
-            match stmt:
-                case ast.Assign:
-                    tgts = stmt.targets
-                case ast.AnnAssign:
-                    tgts = [stmt.target]
-                case ast.AugAssign:
-                    tgts = [stmt.target]
-                case _:
-                    continue
-            for tgt in tgts:
-                if isinstance(tgt, PlaceNode) and tgt.place.id in entry_scope:
-                    entry_place = entry_scope[tgt.place.id]
-                    if is_inout_var(entry_place):
-                        raise GuppyError(
-                            f"Assignment shadows borrowed argument `{entry_place}`."
-                            " Consider assigning to a different name.",
-                            tgt.place.defined_at,
-                        )
 
     # Mark the borrowed variables as implicitly used in the exit BB
     exit_scope = scopes[cfg.exit_bb]
