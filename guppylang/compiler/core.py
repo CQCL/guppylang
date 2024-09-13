@@ -3,15 +3,53 @@ from dataclasses import dataclass, field
 from typing import cast
 
 from hugr import Wire, ops
-from hugr.build.dfg import DP, DfBase
+from hugr.build.dfg import DP, DefinitionBuilder, DfBase
 
 from guppylang.checker.core import FieldAccess, Place, PlaceId, Variable
-from guppylang.definition.common import CompiledDef, DefId
+from guppylang.definition.common import CheckedDef, CompilableDef, CompiledDef, DefId
 from guppylang.error import InternalGuppyError
 from guppylang.tys.ty import StructType
 
-CompiledGlobals = dict[DefId, CompiledDef]
 CompiledLocals = dict[PlaceId, Wire]
+
+
+class CompiledGlobals:
+    """Compilation context containing all available definitions.
+
+    This context drives the Hugr lowering by keeping track of which definitions are
+    used when lowering the definitions provided via the `required` keyword. The
+    `worklist` field contains all definitions whose contents still need to lowered.
+    """
+
+    module: DefinitionBuilder[ops.Module]
+    checked: dict[DefId, CheckedDef]
+    compiled: dict[DefId, CompiledDef]
+    worklist: set[DefId]
+
+    def __init__(
+        self,
+        checked: dict[DefId, CheckedDef],
+        required: set[DefId],
+        module: DefinitionBuilder[ops.Module],
+    ) -> None:
+        self.module = module
+        self.checked = checked
+        self.worklist = required
+        self.compiled = {}
+        for def_id in required:
+            self.compiled[def_id] = self._compile(checked[def_id])
+
+    def __getitem__(self, def_id: DefId) -> CompiledDef:
+        if def_id not in self.compiled:
+            defn = self.checked[def_id]
+            self.compiled[def_id] = self._compile(defn)
+            self.worklist.add(def_id)
+        return self.compiled[def_id]
+
+    def _compile(self, defn: CheckedDef) -> CompiledDef:
+        if isinstance(defn, CompilableDef):
+            return defn.compile_outer(self.module)
+        return defn
 
 
 @dataclass

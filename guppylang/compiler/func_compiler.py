@@ -62,26 +62,25 @@ def compile_local_func_def(
 
         call_args.append(partial)
         func.cfg.input_tys.append(func.ty)
+
+        # Compile the CFG
+        cfg = compile_cfg(func.cfg, func_builder, call_args, globals)
+        func_builder.set_outputs(*cfg)
     else:
         # Otherwise, we treat the function like a normal global variable
         from guppylang.definition.function import CompiledFunctionDef
 
-        globals = globals | {
-            func.def_id: CompiledFunctionDef(
-                func.def_id,
-                func.name,
-                func,
-                func.ty,
-                {},
-                None,
-                func.cfg,
-                func_builder,
-            )
-        }
-
-    # Compile the CFG
-    cfg = compile_cfg(func.cfg, func_builder, call_args, globals)
-    func_builder.set_outputs(*cfg)
+        globals.compiled[func.def_id] = CompiledFunctionDef(
+            func.def_id,
+            func.name,
+            func,
+            func.ty,
+            {},
+            None,
+            func.cfg,
+            func_builder,
+        )
+        globals.worklist.add(func.def_id)
 
     # Finally, load the function into the local data-flow graph
     loaded = dfg.builder.load_function(func_builder, closure_ty)

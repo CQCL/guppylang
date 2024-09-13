@@ -11,6 +11,7 @@ from hugr.ext import Package
 
 import guppylang.compiler.hugr_extension
 from guppylang.checker.core import Globals, PyScope
+from guppylang.compiler.core import CompiledGlobals
 from guppylang.definition.common import (
     CheckableDef,
     CheckedDef,
@@ -325,19 +326,19 @@ class GuppyModule:
             return self._compiled_hugr
 
         self.check()
+        checked_defs = self._imported_checked_defs | self._checked_defs
 
         # Prepare Hugr for this module
         graph = Module()
         graph.metadata["name"] = self.name
 
-        # Compile definitions to Hugr
-        compiled_defs = self._compile_defs(self._imported_checked_defs, graph)
-        compiled_defs |= self._compile_defs(self._checked_defs, graph)
-
-        # Finally, compile the definition contents to Hugr. For example, this compiles
-        # the bodies of functions.
-        for defn in compiled_defs.values():
-            defn.compile_inner(compiled_defs)
+        # Lower definitions to Hugr
+        required = set(self._checked_defs.keys())
+        ctx = CompiledGlobals(checked_defs, required, graph)
+        while ctx.worklist:
+            next_id = ctx.worklist.pop()
+            next_def = ctx[next_id]
+            next_def.compile_inner(ctx)
 
         hugr = graph.hugr
 
