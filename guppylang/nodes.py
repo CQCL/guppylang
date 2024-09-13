@@ -232,8 +232,8 @@ class ResultExpr(ast.expr):
 
 
 class InoutReturnSentinel(ast.expr):
-    """An invisible expression corresponding to an implicit use of @inout vars whenever
-    a function returns."""
+    """An invisible expression corresponding to an implicit use of borrowed vars
+    whenever a function returns."""
 
     var: "Place | str"
 

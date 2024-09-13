@@ -1,6 +1,7 @@
 import guppylang.prelude.quantum as quantum
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.prelude.builtins import owned
 from guppylang.prelude.quantum import qubit
 
 
@@ -14,7 +15,7 @@ class MyStruct:
 
 
 @guppy(module)
-def foo(s: MyStruct) -> tuple[qubit, qubit]:
+def foo(s: MyStruct @owned) -> tuple[qubit, qubit]:
     t = s
     return s.q, t.q
 

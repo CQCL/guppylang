@@ -624,8 +624,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
+        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
         exp_sig = FunctionType(
-            [FuncInput(ty, InputFlags.NoFlags)], ExistentialTypeVar.fresh("Iter", False)
+            [FuncInput(ty, flags)], ExistentialTypeVar.fresh("Iter", False)
         )
         expr, ty = self.synthesize_instance_func(
             node.value, [], "__iter__", "not iterable", exp_sig
@@ -648,17 +649,17 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType(
-            [FuncInput(ty, InputFlags.NoFlags)], TupleType([bool_type(), ty])
-        )
+        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
+        exp_sig = FunctionType([FuncInput(ty, flags)], TupleType([bool_type(), ty]))
         return self.synthesize_instance_func(
             node.value, [], "__hasnext__", "not an iterator", exp_sig, True
         )
 
     def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
+        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
         exp_sig = FunctionType(
-            [FuncInput(ty, InputFlags.NoFlags)],
+            [FuncInput(ty, flags)],
             TupleType([ExistentialTypeVar.fresh("T", False), ty]),
         )
         return self.synthesize_instance_func(
@@ -667,7 +668,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType([FuncInput(ty, InputFlags.NoFlags)], NoneType())
+        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
+        exp_sig = FunctionType([FuncInput(ty, flags)], NoneType())
         return self.synthesize_instance_func(
             node.value, [], "__end__", "not an iterator", exp_sig, True
         )
@@ -814,7 +816,7 @@ def type_check_args(
 
 
 def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
-    """Performs additional checks for place arguments in @inout position.
+    """Performs additional checks for borrowed place arguments.
 
     In particular, we need to check that places involving `place[item]` subscripts
     implement the corresponding `__setitem__` method.
@@ -830,7 +832,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 [
                     FuncInput(parent.ty, InputFlags.Inout),
                     FuncInput(item.ty, InputFlags.NoFlags),
-                    FuncInput(ty, InputFlags.NoFlags),
+                    FuncInput(ty, InputFlags.Owned),
                 ],
                 NoneType(),
             )
@@ -843,7 +845,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 setitem_args[0],
                 setitem_args[1:],
                 "__setitem__",
-                "not allowed in a subscripted `@inout` position",
+                "unable to have subscripted elements borrowed",
                 exp_sig,
                 True,
             )

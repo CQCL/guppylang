@@ -1,6 +1,6 @@
 Guppy compilation failed. Error in file $FILE:17
 
-15:    def test(q: qubit) -> tuple[int, qubit]:
+15:    def test(q: qubit @owned) -> tuple[int, qubit]:
 16:        # This doesn't work since arguments are evaluated from left to right
 17:        return foo(q, foo(q, foo(q, 0))), q
                              ^

@@ -18,9 +18,9 @@ import pytest
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude.angles import pi
-from guppylang.prelude.builtins import py
-from guppylang.prelude.quantum import qubit, quantum
-from guppylang.prelude.quantum import measure, phased_x, rz, zz_max
+from guppylang.prelude.builtins import owned, py
+from guppylang.prelude.quantum import measure, qubit, quantum
+from guppylang.prelude.quantum_functional import phased_x, rz, zz_max
 from tests.util import guppy_to_circuit
 
 tket2_installed = find_spec("tket2") is not None
@@ -36,8 +36,8 @@ def test_lower_pure_circuit():
 
     @guppy(module)
     def my_func(
-        q0: qubit,
-        q1: qubit,
+        q0: qubit @owned,
+        q1: qubit @owned,
     ) -> tuple[qubit, qubit]:
         q0 = phased_x(q0, pi / 2, pi / 2)
         q0 = rz(q0, pi)
@@ -68,8 +68,8 @@ def test_lower_hybrid_circuit():
 
     @guppy(module)
     def my_func(
-        q0: qubit,
-        q1: qubit,
+        q0: qubit @owned,
+        q1: qubit @owned,
     ) -> tuple[bool,]:
         q0 = phased_x(q0, pi / 2, pi / 2)
         q0 = rz(q0, pi)

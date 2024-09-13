@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import inout
+from guppylang.prelude.builtins import owned
 from guppylang.prelude.quantum import quantum, qubit
 
 
@@ -11,11 +11,11 @@ module.load_all(quantum)
 
 
 @guppy.declare(module)
-def foo(x: qubit @inout) -> qubit: ...
+def foo(x: qubit) -> qubit: ...
 
 
 @guppy(module)
-def test() -> Callable[[qubit], qubit]:
+def test() -> Callable[[qubit @owned], qubit]:
     return foo
 
 

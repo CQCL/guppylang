@@ -68,7 +68,7 @@ class CFG(BaseCFG[BB]):
         inout_vars: list[str],
     ) -> dict[BB, VariableStats[str]]:
         stats = {bb: bb.compute_variable_stats() for bb in self.bbs}
-        # Mark all @inout variables as implicitly used in the exit BB
+        # Mark all borrowed variables as implicitly used in the exit BB
         stats[self.exit_bb].used |= {x: InoutReturnSentinel(var=x) for x in inout_vars}
         self.live_before = LivenessAnalysis(stats).run(self.bbs)
         self.ass_before, self.maybe_ass_before = AssignmentAnalysis(

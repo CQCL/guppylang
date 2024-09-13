@@ -204,7 +204,10 @@ class CheckedStructDef(TypeDef, CompiledDef):
                 return list(self.builder.add(ops.MakeTuple()(*args)))
 
         constructor_sig = FunctionType(
-            inputs=[FuncInput(f.ty, InputFlags.NoFlags) for f in self.fields],
+            inputs=[
+                FuncInput(f.ty, InputFlags.Owned if f.ty.linear else InputFlags.NoFlags)
+                for f in self.fields
+            ],
             output=StructType(
                 defn=self, args=[p.to_bound(i) for i, p in enumerate(self.params)]
             ),

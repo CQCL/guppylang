@@ -82,11 +82,11 @@ def _try_parse_defn(node: AstNode, globals: Globals) -> Definition | None:
     match node:
         case ast.Name(id=x):
             if x not in globals:
-                raise GuppyError(f"Unknown identifier `{x}`", node)
+                raise GuppyError(f"Unknown identifier: `{x}`", node)
             return globals[x]
         case ast.Attribute(value=ast.Name(id=module_name) as value, attr=x):
             if module_name not in globals:
-                raise GuppyError("Unknown identifier", value)
+                raise GuppyError(f"Unknown identifier: `{module_name}`", value)
             module_def = globals[module_name]
             if not isinstance(module_def, ModuleDef):
                 raise GuppyError(
@@ -196,17 +196,20 @@ def parse_function_io_types(
 ) -> tuple[list[FuncInput], Type]:
     """Parses the inputs and output types of a function type.
 
-    This function takes care of parsing `@inout` annotations and any related checks.
+    This function takes care of parsing annotations and any related checks.
 
     Returns the parsed input and output types.
     """
     inputs = []
     for inp in input_nodes:
         ty, flags = type_with_flags_from_ast(inp, globals, param_var_mapping)
-        if InputFlags.Inout in flags and not ty.linear:
+        if InputFlags.Owned in flags and not ty.linear:
             raise GuppyError(
-                f"Non-linear type `{ty}` cannot be annotated as `@inout`", loc
+                f"Non-linear type `{ty}` cannot be annotated as `@owned`", loc
             )
+        if ty.linear and InputFlags.Owned not in flags:
+            flags |= InputFlags.Inout
+
         inputs.append(FuncInput(ty, flags))
     output = type_from_ast(output_node, globals, param_var_mapping)
     return inputs, output
@@ -220,18 +223,18 @@ def type_with_flags_from_ast(
     globals: Globals,
     param_var_mapping: dict[str, Parameter] | None = None,
 ) -> tuple[Type, InputFlags]:
-    """Turns an AST expression into a Guppy type with some optional @flags."""
-    # Check for `type @flag` annotations
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.MatMult):
         ty, flags = type_with_flags_from_ast(node.left, globals, param_var_mapping)
         match node.right:
-            case ast.Name(id="inout"):
+            case ast.Name(id="owned"):
                 if not ty.linear:
                     raise GuppyError(
-                        f"Non-linear type `{ty}` cannot be annotated as `@inout`",
+                        f"Non-linear type `{ty}` cannot be annotated as `@owned`",
                         node.right,
                     )
-                flags |= InputFlags.Inout
+                flags |= InputFlags.Owned
+            case ast.Name(name):
+                raise GuppyError(f"Invalid annotation: `{name}`", node.right)
             case _:
                 raise GuppyError("Invalid annotation", node.right)
         return ty, flags
@@ -242,7 +245,8 @@ def type_with_flags_from_ast(
     else:
         # Parse an argument and check that it's valid for a `TypeParam`
         arg = arg_from_ast(node, globals, param_var_mapping)
-        return _type_param.check_arg(arg, node).ty, InputFlags.NoFlags
+        tyarg = _type_param.check_arg(arg, node)
+        return tyarg.ty, InputFlags.NoFlags
 
 
 def type_from_ast(
@@ -253,7 +257,11 @@ def type_from_ast(
     """Turns an AST expression into a Guppy type."""
     ty, flags = type_with_flags_from_ast(node, globals, param_var_mapping)
     if flags != InputFlags.NoFlags:
-        raise GuppyError("`@` type annotations are not allowed in this position", node)
+        assert InputFlags.Inout not in flags  # Users shouldn't be able to set this
+        raise GuppyError(
+            "`@` type annotations are not allowed in this position",
+            node,
+        )
     return ty
 
 

@@ -1,7 +1,8 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import linst
-from guppylang.prelude.quantum import qubit, h
+from guppylang.prelude.builtins import linst, owned
+from guppylang.prelude.quantum import qubit
+from guppylang.prelude.quantum_functional import h
 
 import guppylang.prelude.quantum as quantum
 
@@ -12,7 +13,7 @@ def test_types(validate):
 
     @guppy(module)
     def test(
-        xs: linst[qubit], ys: linst[tuple[int, qubit]]
+        xs: linst[qubit] @owned, ys: linst[tuple[int, qubit]] @owned
     ) -> tuple[linst[qubit], linst[tuple[int, qubit]]]:
         return xs, ys
 
@@ -24,7 +25,7 @@ def test_len(validate):
     module.load_all(quantum)
 
     @guppy(module)
-    def test(xs: linst[qubit]) -> tuple[int, linst[qubit]]:
+    def test(xs: linst[qubit] @owned) -> tuple[int, linst[qubit]]:
         return len(xs)
 
     validate(module.compile())
@@ -35,7 +36,7 @@ def test_literal(validate):
     module.load_all(quantum)
 
     @guppy(module)
-    def test(q1: qubit, q2: qubit) -> linst[qubit]:
+    def test(q1: qubit @owned, q2: qubit @owned) -> linst[qubit]:
         return [q1, h(q2)]
 
     validate(module.compile())
@@ -46,7 +47,7 @@ def test_arith(validate):
     module.load_all(quantum)
 
     @guppy(module)
-    def test(xs: linst[qubit], ys: linst[qubit], q: qubit) -> linst[qubit]:
+    def test(xs: linst[qubit] @owned, ys: linst[qubit] @owned, q: qubit @owned) -> linst[qubit]:
         xs += [q]
         return xs + ys
 

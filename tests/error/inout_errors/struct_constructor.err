@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:15
+
+13:    @guppy(module)
+14:    def test(q: qubit) -> MyStruct:
+15:        return MyStruct(q)
+                           ^
+GuppyError: Variable `q` may not be used in an `@owned` position since it isn't owned. Consider adding a `@owned` annotation to get ownership of the value.

@@ -1,7 +1,7 @@
-Guppy compilation failed. Error in file $FILE:25
+Guppy compilation failed. Error in file $FILE:26
 
-23:    def foo(s: MyStruct1) -> MyStruct1:
-24:        measure(s.x.q1)
-25:        return MyStruct1(s.x)
+24:    def foo(s: MyStruct1 @owned) -> MyStruct1:
+25:        measure(s.x.q1)
+26:        return MyStruct1(s.x)
                             ^^^
-GuppyError: Field `s.x.q1` with linear type `qubit` was already used (at 24:12)
+GuppyError: Field `s.x.q1` with linear type `qubit` was already used (at 25:12)
