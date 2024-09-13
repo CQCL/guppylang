@@ -603,6 +603,7 @@ class Linst:
     @guppy.hugr_op(unsupported_op("Pop"))
     def __next__(self: linst[L] @ owned) -> tuple[L, linst[L]]: ...
 
+
 #    @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
 #    def __new__(x): ...
 #
