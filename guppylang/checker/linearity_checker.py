@@ -455,22 +455,32 @@ def check_cfg_linearity(
 
     # Check that borrowed vars are not being shadowed. This would also be caught by
     # the dataflow analysis below, however we can give nicer error messages here.
-    for bb, scope in scopes.items():
+    for bb in scopes:
         if bb == cfg.entry_bb:
             # Arguments are assigned in the entry BB, so would yield a false positive
             # in the check below. Shadowing in the entry BB will be caught by the check
             # in `_check_assign_targets`.
             continue
         entry_scope = scopes[cfg.entry_bb]
-        for x, place in scope.vars.items():
-            if x in entry_scope:
-                entry_place = entry_scope[x]
-                if is_inout_var(entry_place):
-                    raise GuppyError(
-                        f"Assignment shadows borrowed argument `{entry_place}`. "
-                        "Consider assigning to a different name.",
-                        place.defined_at,
-                    )
+        for stmt in bb.statements:
+            match stmt:
+                case ast.Assign:
+                    tgts = stmt.targets
+                case ast.AnnAssign:
+                    tgts = [stmt.target]
+                case ast.AugAssign:
+                    tgts = [stmt.target]
+                case _:
+                    continue
+            for tgt in tgts:
+                if isinstance(tgt, PlaceNode) and tgt.place.id in entry_scope:
+                    entry_place = entry_scope[tgt.place.id]
+                    if is_inout_var(entry_place):
+                        raise GuppyError(
+                            f"Assignment shadows borrowed argument `{entry_place}`."
+                            " Consider assigning to a different name.",
+                            tgt.place.defined_at,
+                        )
 
     # Mark the borrowed variables as implicitly used in the exit BB
     exit_scope = scopes[cfg.exit_bb]
