@@ -9,7 +9,7 @@ module = GuppyModule("test")
 module.load(qubit)
 
 
-T = guppy.type_var(module, "T")
+T = guppy.type_var("T", module=module)
 
 
 @guppy.declare(module)
