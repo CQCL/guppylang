@@ -105,7 +105,11 @@ class BBLinearityChecker(ast.NodeVisitor):
     globals: Globals
 
     def check(
-        self, bb: "CheckedBB[Variable]", is_entry: bool, func_inputs: dict[PlaceId, Variable], globals: Globals
+        self,
+        bb: "CheckedBB[Variable]",
+        is_entry: bool,
+        func_inputs: dict[PlaceId, Variable],
+        globals: Globals,
     ) -> Scope:
         # Manufacture a scope that holds all places that are live at the start
         # of this BB
@@ -464,7 +468,7 @@ def check_cfg_linearity(
     than just variables.
     """
     bb_checker = BBLinearityChecker()
-    func_inputs = {v.id: v for v in cfg.entry_bb.sig.input_row}
+    func_inputs: dict[PlaceId, Variable] = {v.id: v for v in cfg.entry_bb.sig.input_row}
     scopes: dict[BB, Scope] = {
         bb: bb_checker.check(
             bb, is_entry=bb == cfg.entry_bb, func_inputs=func_inputs, globals=globals
