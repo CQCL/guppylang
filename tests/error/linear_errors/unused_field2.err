@@ -1,6 +1,6 @@
-Guppy compilation failed. Error in file $FILE:18
+Guppy compilation failed. Error in file $FILE:19
 
-16:    @guppy(module)
-17:    def foo(s: MyStruct) -> qubit:
-               ^^^^^^^^^^^
+17:    @guppy(module)
+18:    def foo(s: MyStruct @owned) -> qubit:
+               ^^^^^^^^^^^^^^^^^^
 GuppyError: Field `s.q2` with linear type `qubit` is not used on all control-flow paths

@@ -294,7 +294,7 @@ def test_custom_higher_order():
         return f(x)
 
 
-@pytest.mark.skip("Not yet supported")
+@pytest.mark.skip("Higher-order polymorphic functions are not yet supported")
 def test_higher_order_value(validate):
     module = GuppyModule("test")
     T = guppy.type_var(module, "T")

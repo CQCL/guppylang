@@ -39,6 +39,11 @@ class DefId:
     def fresh(cls, module: "GuppyModule | None" = None) -> "DefId":
         return DefId(next(cls._ids), module)
 
+    def __str__(self) -> str:
+        if self.module is None:
+            return f"DefId({self.id}, None)"
+        return f"DefId({self.id}, {self.module.name})"
+
 
 @dataclass(frozen=True)
 class Definition(ABC):

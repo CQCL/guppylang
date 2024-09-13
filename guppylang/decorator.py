@@ -17,7 +17,7 @@ from guppylang.definition.common import DefId, Definition
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
     CustomCallChecker,
-    CustomCallCompiler,
+    CustomInoutCallCompiler,
     DefaultCallChecker,
     NotImplementedCallCompiler,
     OpCompiler,
@@ -255,7 +255,7 @@ class _Guppy:
     @pretty_errors
     def custom(
         self,
-        compiler: CustomCallCompiler | None = None,
+        compiler: CustomInoutCallCompiler | None = None,
         checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",

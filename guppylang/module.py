@@ -77,6 +77,7 @@ class GuppyModule:
         self._globals = Globals({}, {}, {}, {})
         self._imported_globals = Globals.default()
         self._imported_checked_defs = {}
+        self._checked = False
         self._compiled = False
         self._compiled_hugr = None
         self._instance_func_buffer = None

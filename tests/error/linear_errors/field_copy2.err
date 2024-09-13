@@ -1,7 +1,7 @@
-Guppy compilation failed. Error in file $FILE:17
+Guppy compilation failed. Error in file $FILE:18
 
-15:    @guppy(module)
-16:    def foo(s: MyStruct) -> tuple[MyStruct, qubit]:
-17:        return s, s.q
+16:    @guppy(module)
+17:    def foo(s: MyStruct @owned) -> tuple[MyStruct, qubit]:
+18:        return s, s.q
                      ^^^
-GuppyError: Field `s.q` with linear type `qubit` was already used (at 17:11)
+GuppyError: Field `s.q` with linear type `qubit` was already used (at 18:11)

@@ -243,10 +243,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         inout_ports: Iterator[Wire],
         func_ty: FunctionType,
     ) -> None:
-        """Helper method that updates the ports for @inout arguments after a call."""
+        """Helper method that updates the ports for borrowed arguments after a call."""
         for inp, arg in zip(func_ty.inputs, args, strict=True):
             if InputFlags.Inout in inp.flags:
-                # Linearity checker ensures that inout arguments that are not places
+                # Linearity checker ensures that borrowed arguments that are not places
                 # can be safely dropped after the call returns
                 if not isinstance(arg, PlaceNode):
                     next(inout_ports)
@@ -254,7 +254,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 self.dfg[arg.place] = next(inout_ports)
                 # Places involving subscripts need to generate code for the appropriate
                 # `__setitem__` call. Nested subscripts are handled automatically since
-                # `arg.place.parent` occurs as an inout arg of this call, so will also
+                # `arg.place.parent` occurs as an arg of this call, so will also
                 # be recursively reassigned.
                 if subscript := contains_subscript(arg.place):
                     self.visit(subscript.setitem_call)

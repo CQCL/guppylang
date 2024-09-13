@@ -74,7 +74,7 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
     ) -> "CallReturnWires":
         """Compiles a call to the function.
 
-        Returns the outputs of the call together with any @inout arguments that are
+        Returns the outputs of the call together with any borrowed arguments that are
         passed through the function.
         """
 
@@ -101,7 +101,7 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
 class CallReturnWires(NamedTuple):
     """Output wires that are given back from a call.
 
-    Contains the regular function returns together with any @inout arguments that are
+    Contains the regular function returns together with any borrowed arguments that are
     passed through the function.
     """
 

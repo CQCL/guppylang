@@ -1,6 +1,7 @@
 import guppylang.prelude.quantum as quantum
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.prelude.builtins import owned
 from guppylang.prelude.quantum import qubit
 
 
@@ -14,7 +15,7 @@ def new_qubit() -> qubit:
 
 
 @guppy(module)
-def foo(q: qubit) -> qubit:
+def foo(q: qubit @owned) -> qubit:
     q = new_qubit()
     return q
 

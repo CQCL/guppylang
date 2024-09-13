@@ -73,8 +73,8 @@ class TypePrinter:
     @staticmethod
     def _print_flags(flags: InputFlags) -> str:
         s = ""
-        if InputFlags.Inout in flags:
-            s += " @inout"
+        if InputFlags.Owned in flags:
+            s += " @owned"
         return s
 
     @_visit.register
