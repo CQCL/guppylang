@@ -1,6 +1,10 @@
 import argparse
 from pathlib import Path
 
+import guppylang
+
+guppylang.enable_experimental_features()
+
 
 def pytest_addoption(parser):
     def dir_path(s):

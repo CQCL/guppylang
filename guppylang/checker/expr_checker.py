@@ -27,6 +27,7 @@ from contextlib import suppress
 from dataclasses import replace
 from typing import Any, NoReturn, cast
 
+import guppylang
 from guppylang.ast_util import (
     AstNode,
     AstVisitor,
@@ -78,6 +79,7 @@ from guppylang.nodes import (
 from guppylang.tys.arg import TypeArg
 from guppylang.tys.builtin import (
     bool_type,
+    check_lists_enabled,
     get_element_type,
     is_bool_type,
     is_linst_type,
@@ -214,6 +216,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         return node, subst
 
     def visit_List(self, node: ast.List, ty: Type) -> tuple[ast.expr, Subst]:
+        check_lists_enabled(node)
         if not is_list_type(ty) and not is_linst_type(ty):
             return self._fail(ty, node)
         el_ty = get_element_type(ty)
@@ -265,6 +268,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         if isinstance(func_ty, TupleType) and (
             function_elements := parse_function_tensor(func_ty)
         ):
+            check_function_tensors_enabled(node.func)
             if any(f.parametrized for f in function_elements):
                 raise GuppyTypeError(
                     "Polymorphic functions in tuples are not supported", node.func
@@ -435,6 +439,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         return node, TupleType([ty for _, ty in elems])
 
     def visit_List(self, node: ast.List) -> tuple[ast.expr, Type]:
+        check_lists_enabled(node)
         if len(node.elts) == 0:
             raise GuppyTypeInferenceError(
                 "Cannot infer type variable in expression of type `list[?T]`", node
@@ -602,6 +607,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         elif isinstance(ty, TupleType) and (
             function_elems := parse_function_tensor(ty)
         ):
+            check_function_tensors_enabled(node.func)
             if any(f.parametrized for f in function_elems):
                 raise GuppyTypeError(
                     "Polymorphic functions in tuples are not supported", node.func
@@ -988,6 +994,15 @@ def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
         node = with_loc(node, TypeApply(value=with_type(ty, node), inst=inst))
         return with_type(ty.instantiate(inst), node)
     return with_type(ty, node)
+
+
+def check_function_tensors_enabled(node: ast.expr | None = None) -> None:
+    if not guppylang.experimental.EXPERIMENTAL_FEATURES_ENABLED:
+        raise GuppyError(
+            "Function tensors are an experimental feature. Call "
+            "`guppylang.enable_experimental_features()` to enable them.",
+            node,
+        )
 
 
 def to_bool(node: ast.expr, node_ty: Type, ctx: Context) -> tuple[ast.expr, Type]:

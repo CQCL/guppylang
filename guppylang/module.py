@@ -28,6 +28,7 @@ from guppylang.definition.parameter import ParamDef
 from guppylang.definition.struct import CheckedStructDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, pretty_errors
+from guppylang.experimental import enable_experimental_features
 
 PyFunc = Callable[..., Any]
 PyFuncDefOrDecl = tuple[bool, PyFunc]
@@ -88,7 +89,9 @@ class GuppyModule:
         if import_builtins:
             import guppylang.prelude.builtins as builtins
 
-            self.load_all(builtins)
+            # Std lib is allowed to use experimental features
+            with enable_experimental_features():
+                self.load_all(builtins)
 
     def load(
         self,

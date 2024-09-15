@@ -26,6 +26,7 @@ from guppylang.nodes import (
     NestedFunctionDef,
     PyExpr,
 )
+from guppylang.tys.builtin import check_lists_enabled
 from guppylang.tys.ty import NoneType
 
 # In order to build expressions, need an endless stream of unique temporary variables
@@ -304,6 +305,7 @@ class ExprBuilder(ast.NodeTransformer):
         return make_var(tmp, node)
 
     def visit_ListComp(self, node: ast.ListComp) -> ast.AST:
+        check_lists_enabled(node)
         # Check for illegal expressions
         illegals = find_nodes(is_illegal_in_list_comp, node)
         if illegals:

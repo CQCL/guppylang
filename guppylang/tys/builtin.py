@@ -6,6 +6,7 @@ import hugr.std
 import hugr.std.collections
 from hugr import tys as ht
 
+import guppylang
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
@@ -109,6 +110,7 @@ class _ListTypeDef(OpaqueTypeDef):
     def check_instantiate(
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> OpaqueType:
+        check_lists_enabled(loc)
         if len(args) == 1:
             [arg] = args
             if isinstance(arg, TypeArg) and arg.ty.linear:
@@ -116,6 +118,30 @@ class _ListTypeDef(OpaqueTypeDef):
                     "Type `list` cannot store linear data, use `linst` instead", loc
                 )
         return super().check_instantiate(args, globals, loc)
+
+
+@dataclass(frozen=True)
+class _LinstTypeDef(OpaqueTypeDef):
+    """Type definition associated with the builtin `linst` type.
+
+    We have a custom definition to disable usage of linsts unless experimental features
+    are enabled.
+    """
+
+    def check_instantiate(
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+    ) -> OpaqueType:
+        check_lists_enabled(loc)
+        return super().check_instantiate(args, globals, loc)
+
+
+def check_lists_enabled(loc: AstNode | None = None) -> None:
+    if not guppylang.experimental.EXPERIMENTAL_FEATURES_ENABLED:
+        raise GuppyError(
+            "Lists are an experimental feature and not fully supported yet. Call "
+            "`guppylang.enable_experimental_features()` to enable them.",
+            loc,
+        )
 
 
 def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
@@ -163,7 +189,7 @@ int_type_def = _NumericTypeDef(
 float_type_def = _NumericTypeDef(
     DefId.fresh(), "float", None, NumericType(NumericType.Kind.Float)
 )
-linst_type_def = OpaqueTypeDef(
+linst_type_def = _LinstTypeDef(
     id=DefId.fresh(),
     name="linst",
     defined_at=None,
