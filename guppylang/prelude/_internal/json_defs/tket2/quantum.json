@@ -24,8 +24,8 @@
             },
             {
               "t": "Opaque",
-              "extension": "tket2.angle",
-              "id": "angle",
+              "extension": "tket2.rotation",
+              "id": "rotation",
               "args": [],
               "bound": "C"
             }
@@ -302,8 +302,8 @@
             },
             {
               "t": "Opaque",
-              "extension": "tket2.angle",
-              "id": "angle",
+              "extension": "tket2.rotation",
+              "id": "rotation",
               "args": [],
               "bound": "C"
             }
@@ -334,8 +334,8 @@
             },
             {
               "t": "Opaque",
-              "extension": "tket2.angle",
-              "id": "angle",
+              "extension": "tket2.rotation",
+              "id": "rotation",
               "args": [],
               "bound": "C"
             }
@@ -371,8 +371,8 @@
             },
             {
               "t": "Opaque",
-              "extension": "tket2.angle",
-              "id": "angle",
+              "extension": "tket2.rotation",
+              "id": "rotation",
               "args": [],
               "bound": "C"
             }
@@ -649,8 +649,8 @@
           "output": [
             {
               "t": "Opaque",
-              "extension": "tket2.angle",
-              "id": "angle",
+              "extension": "tket2.rotation",
+              "id": "rotation",
               "args": [],
               "bound": "C"
             }

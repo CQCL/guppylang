@@ -1,0 +1,117 @@
+{
+  "version": "0.1.0",
+  "name": "tket2.rotation",
+  "extension_reqs": [],
+  "types": {
+    "rotation": {
+      "extension": "tket2.rotation",
+      "name": "rotation",
+      "params": [],
+      "description": "rotation type expressed as number of half turns",
+      "bound": {
+        "b": "Explicit",
+        "bound": "C"
+      }
+    }
+  },
+  "values": {},
+  "operations": {
+    "fromturns": {
+      "extension": "tket2.rotation",
+      "name": "fromturns",
+      "description": "Construct rotation from number of turns (would be multiples of π in radians).",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.rotation",
+              "id": "rotation",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "radd": {
+      "extension": "tket2.rotation",
+      "name": "radd",
+      "description": "Add two angles together (experimental).",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.rotation",
+              "id": "rotation",
+              "args": [],
+              "bound": "C"
+            },
+            {
+              "t": "Opaque",
+              "extension": "tket2.rotation",
+              "id": "rotation",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.rotation",
+              "id": "rotation",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "toturns": {
+      "extension": "tket2.rotation",
+      "name": "toturns",
+      "description": "Convert rotation to number of turns (would be multiples of π in radians).",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.rotation",
+              "id": "rotation",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    }
+  }
+}

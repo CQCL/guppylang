@@ -4,8 +4,9 @@ multiple nodes.
 
 from __future__ import annotations
 
-from hugr import Wire
+from hugr import Wire, ops
 from hugr import tys as ht
+from hugr.std.float import FLOAT_T
 
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.prelude._internal.json_defs import load_extension
@@ -18,19 +19,26 @@ FUTURES_EXTENSION = load_extension("tket2.futures")
 HSERIES_EXTENSION = load_extension("tket2.hseries")
 QUANTUM_EXTENSION = load_extension("tket2.quantum")
 RESULT_EXTENSION = load_extension("tket2.result")
-ANGLE_EXTENSION = load_extension("tket2.angle")
+ROTATION_EXTENSION = load_extension("tket2.rotation")
+
+ROTATION_T_DEF = ROTATION_EXTENSION.get_type("rotation")
+ROTATION_T = ht.ExtType(ROTATION_T_DEF)
 
 TKET2_EXTENSIONS = [
     FUTURES_EXTENSION,
     HSERIES_EXTENSION,
     QUANTUM_EXTENSION,
     RESULT_EXTENSION,
-    ANGLE_EXTENSION,
+    ROTATION_EXTENSION,
 ]
 
 
-ANGLE_T_DEF = ANGLE_EXTENSION.get_type("angle")
-ANGLE_T = ht.ExtType(ANGLE_T_DEF)
+def fromturns() -> ops.ExtOp:
+    return ops.ExtOp(
+        ROTATION_EXTENSION.get_op("fromturns"), ht.FunctionType([FLOAT_T], [ROTATION_T])
+    )
+
+
 # ------------------------------------------------------
 # --------- Custom compilers for non-native ops --------
 # ------------------------------------------------------
@@ -63,5 +71,27 @@ class QAllocCompiler(CustomCallCompiler):
         )
         q = self.builder.add_op(
             quantum_op("Reset")(ht.FunctionType([ht.Qubit], [ht.Qubit]), []), q
+        )
+        return [q]
+
+
+class RotationCompiler(CustomCallCompiler):
+    opname: str
+
+    def __init__(self, opname: str):
+        self.opname = opname
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        from guppylang.prelude._internal.util import quantum_op
+
+        [q, angle] = args
+        [halfturns] = self.builder.add_op(ops.UnpackTuple([FLOAT_T]), angle)
+        [rot] = self.builder.add_op(fromturns(), halfturns)
+        q = self.builder.add_op(
+            quantum_op(self.opname)(
+                ht.FunctionType([ht.Qubit, ROTATION_T], [ht.Qubit]), []
+            ),
+            q,
+            rot,
         )
         return [q]

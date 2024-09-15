@@ -12,6 +12,7 @@ from guppylang.prelude._internal.compiler.quantum import (
     HSERIES_EXTENSION,
     MeasureCompiler,
     QAllocCompiler,
+    RotationCompiler,
 )
 from guppylang.prelude._internal.util import quantum_op
 from guppylang.prelude.angles import angle
@@ -78,11 +79,11 @@ def zz_max(q1: qubit, q2: qubit) -> tuple[qubit, qubit]: ...
 def measure_return(q: qubit) -> tuple[qubit, bool]: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Rz"))
+@guppy.custom(quantum, RotationCompiler("Rz"))
 def rz(q: qubit, angle: angle) -> qubit: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Rz"))
+@guppy.custom(quantum, RotationCompiler("Rz"))
 def rx(q: qubit, angle: angle) -> qubit: ...
 
 
