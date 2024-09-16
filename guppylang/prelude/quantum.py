@@ -1,8 +1,9 @@
 """Guppy standard module for quantum operations."""
 
-import typing
-
 # mypy: disable-error-code="empty-body, misc, valid-type"
+
+from typing import no_type_check
+
 from hugr import tys as ht
 
 from guppylang.decorator import guppy
@@ -18,7 +19,7 @@ from guppylang.prelude.builtins import owned
 @guppy.type(ht.Qubit, linear=True)
 class qubit:
     @guppy
-    @typing.no_type_check
+    @no_type_check
     def __new__() -> "qubit":
         q = dirty_qubit()
         reset(q)
@@ -90,7 +91,7 @@ def discard(q: qubit @ owned) -> None: ...
 
 
 @guppy
-@typing.no_type_check
+@no_type_check
 def measure(q: qubit @ owned) -> bool:
     res = measure_return(q)
     discard(q)
@@ -98,7 +99,7 @@ def measure(q: qubit @ owned) -> bool:
 
 
 @guppy
-@typing.no_type_check
+@no_type_check
 def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
     f1 = float(angle1)
     f2 = float(angle2)
@@ -106,7 +107,7 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
 
 
 @guppy
-@typing.no_type_check
+@no_type_check
 def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
     f = float(angle)
     _zz_phase(q1, q2, f)
