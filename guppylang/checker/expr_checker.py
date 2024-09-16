@@ -27,7 +27,6 @@ from contextlib import suppress
 from dataclasses import replace
 from typing import Any, NoReturn, cast
 
-import guppylang
 from guppylang.ast_util import (
     AstNode,
     AstVisitor,
@@ -58,6 +57,7 @@ from guppylang.error import (
     GuppyTypeInferenceError,
     InternalGuppyError,
 )
+from guppylang.experimental import check_function_tensors_enabled, check_lists_enabled
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
@@ -79,7 +79,6 @@ from guppylang.nodes import (
 from guppylang.tys.arg import TypeArg
 from guppylang.tys.builtin import (
     bool_type,
-    check_lists_enabled,
     get_element_type,
     is_bool_type,
     is_linst_type,
@@ -994,15 +993,6 @@ def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
         node = with_loc(node, TypeApply(value=with_type(ty, node), inst=inst))
         return with_type(ty.instantiate(inst), node)
     return with_type(ty, node)
-
-
-def check_function_tensors_enabled(node: ast.expr | None = None) -> None:
-    if not guppylang.experimental.EXPERIMENTAL_FEATURES_ENABLED:
-        raise GuppyError(
-            "Function tensors are an experimental feature. Use "
-            "`guppylang.enable_experimental_features()` to enable them.",
-            node,
-        )
 
 
 def to_bool(node: ast.expr, node_ty: Type, ctx: Context) -> tuple[ast.expr, Type]:

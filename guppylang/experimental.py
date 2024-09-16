@@ -1,4 +1,8 @@
+from ast import expr
 from types import TracebackType
+
+from guppylang.ast_util import AstNode
+from guppylang.error import GuppyError
 
 EXPERIMENTAL_FEATURES_ENABLED = False
 
@@ -49,3 +53,21 @@ class disable_experimental_features:
     ) -> None:
         global EXPERIMENTAL_FEATURES_ENABLED
         EXPERIMENTAL_FEATURES_ENABLED = self.original
+
+
+def check_function_tensors_enabled(node: expr | None = None) -> None:
+    if not EXPERIMENTAL_FEATURES_ENABLED:
+        raise GuppyError(
+            "Function tensors are an experimental feature. Use "
+            "`guppylang.enable_experimental_features()` to enable them.",
+            node,
+        )
+
+
+def check_lists_enabled(loc: AstNode | None = None) -> None:
+    if not EXPERIMENTAL_FEATURES_ENABLED:
+        raise GuppyError(
+            "Lists are an experimental feature and not fully supported yet. Use "
+            "`guppylang.enable_experimental_features()` to enable them.",
+            loc,
+        )

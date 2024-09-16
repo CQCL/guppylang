@@ -6,11 +6,11 @@ import hugr.std
 import hugr.std.collections
 from hugr import tys as ht
 
-import guppylang
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
+from guppylang.experimental import check_lists_enabled
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import ConstValue
 from guppylang.tys.param import ConstParam, TypeParam
@@ -133,15 +133,6 @@ class _LinstTypeDef(OpaqueTypeDef):
     ) -> OpaqueType:
         check_lists_enabled(loc)
         return super().check_instantiate(args, globals, loc)
-
-
-def check_lists_enabled(loc: AstNode | None = None) -> None:
-    if not guppylang.experimental.EXPERIMENTAL_FEATURES_ENABLED:
-        raise GuppyError(
-            "Lists are an experimental feature and not fully supported yet. Use "
-            "`guppylang.enable_experimental_features()` to enable them.",
-            loc,
-        )
 
 
 def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
