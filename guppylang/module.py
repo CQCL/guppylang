@@ -15,8 +15,6 @@ from guppylang.compiler.core import CompiledGlobals
 from guppylang.definition.common import (
     CheckableDef,
     CheckedDef,
-    CompilableDef,
-    CompiledDef,
     DefId,
     Definition,
     ParsableDef,
@@ -263,18 +261,6 @@ class GuppyModule:
                 defn.check(parsed_globals) if isinstance(defn, CheckableDef) else defn
             )
             for def_id, defn in parsed.items()
-        }
-
-    @staticmethod
-    def _compile_defs(
-        checked_defs: Mapping[DefId, CheckedDef], hugr_module: Module
-    ) -> dict[DefId, CompiledDef]:
-        """Helper method to compile checked definitions to Hugr."""
-        return {
-            def_id: defn.compile_outer(hugr_module)
-            if isinstance(defn, CompilableDef)
-            else defn
-            for def_id, defn in checked_defs.items()
         }
 
     def check(self) -> None:
