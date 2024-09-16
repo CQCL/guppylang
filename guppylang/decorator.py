@@ -98,9 +98,19 @@ class _Guppy:
 
         return self._with_optional_module(dec, arg)
 
+    @overload
+    def _with_optional_module(
+        self, dec: Callable[[S, GuppyModule], T], arg: S
+    ) -> T: ...
+
+    @overload
+    def _with_optional_module(
+        self, dec: Callable[[S, GuppyModule], T], arg: GuppyModule
+    ) -> Decorator[S]: ...
+
     def _with_optional_module(
         self, dec: Callable[[S, GuppyModule], T], arg: S | GuppyModule
-    ) -> Callable[[S], T] | T:
+    ) -> Decorator[S, T] | T:
         """Helper function to define decorators that take an optional `GuppyModule`
         argument but no other arguments.
 
