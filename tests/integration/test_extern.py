@@ -8,7 +8,7 @@ from guppylang.module import GuppyModule
 def test_extern_float(validate):
     module = GuppyModule("module")
 
-    guppy.extern(module, "ext", ty="float")
+    guppy.extern("ext", ty="float", module=module)
 
     @guppy(module)
     def main() -> float:
@@ -29,7 +29,7 @@ def test_extern_float(validate):
 def test_extern_alt_symbol(validate):
     module = GuppyModule("module")
 
-    guppy.extern(module, "ext", ty="int", symbol="foo")
+    guppy.extern("ext", ty="int", symbol="foo", module=module)
 
     @guppy(module)
     def main() -> int:
@@ -50,7 +50,7 @@ def test_extern_alt_symbol(validate):
 def test_extern_tuple(validate):
     module = GuppyModule("module")
 
-    guppy.extern(module, "ext", ty="tuple[int, float]")
+    guppy.extern("ext", ty="tuple[int, float]", module=module)
 
     @guppy(module)
     def main() -> float:

@@ -11,7 +11,7 @@ def f(x: bool) -> bool:
     return not x
 
 
-@guppy.hugr_op(mod_b, unsupported_op("h"))
+@guppy.hugr_op(unsupported_op("h"), module=mod_b)
 def h() -> int: ...
 
 

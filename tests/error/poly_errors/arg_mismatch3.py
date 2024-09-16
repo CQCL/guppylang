@@ -4,7 +4,7 @@ from guppylang.prelude.builtins import array
 
 module = GuppyModule("test")
 
-n = guppy.nat_var(module, "n")
+n = guppy.nat_var("n", module=module)
 
 
 @guppy.declare(module)

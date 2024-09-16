@@ -6,7 +6,7 @@ from guppylang.tys.ty import NoneType
 module = GuppyModule("test")
 
 
-@guppy.type(module, NoneType())
+@guppy.type(NoneType(), module=module)
 class MyType:
     """A non-iterable type."""
 
