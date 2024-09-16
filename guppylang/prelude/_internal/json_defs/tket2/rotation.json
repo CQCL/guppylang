@@ -34,11 +34,20 @@
           ],
           "output": [
             {
-              "t": "Opaque",
-              "extension": "tket2.rotation",
-              "id": "rotation",
-              "args": [],
-              "bound": "C"
+              "t": "Sum",
+              "s": "General",
+              "rows": [
+                [],
+                [
+                  {
+                    "t": "Opaque",
+                    "extension": "tket2.rotation",
+                    "id": "rotation",
+                    "args": [],
+                    "bound": "C"
+                  }
+                ]
+              ]
             }
           ],
           "extension_reqs": []

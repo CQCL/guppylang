@@ -4,8 +4,7 @@
   "extension_reqs": [
     "arithmetic.float.types",
     "prelude",
-    "tket2.futures",
-    "tket2.rotation"
+    "tket2.futures"
   ],
   "types": {},
   "values": {},
