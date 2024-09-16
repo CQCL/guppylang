@@ -240,6 +240,7 @@ class _Guppy:
             # If we mistakenly initialised the method buffer of the implicit module
             # we can just clear it here
             if module != implicit_module:
+                assert len(implicit_module._instance_func_buffer) == 0
                 implicit_module._instance_func_buffer = None
                 if not implicit_module_existed:
                     self._modules.pop(caller_id)
