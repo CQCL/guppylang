@@ -138,7 +138,7 @@ class _LinstTypeDef(OpaqueTypeDef):
 def check_lists_enabled(loc: AstNode | None = None) -> None:
     if not guppylang.experimental.EXPERIMENTAL_FEATURES_ENABLED:
         raise GuppyError(
-            "Lists are an experimental feature and not fully supported yet. Call "
+            "Lists are an experimental feature and not fully supported yet. Use "
             "`guppylang.enable_experimental_features()` to enable them.",
             loc,
         )

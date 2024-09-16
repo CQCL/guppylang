@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:9
 8:    def main() -> None:
 9:        [i for i in range(10)]
           ^^^^^^^^^^^^^^^^^^^^^^
-GuppyError: Lists are an experimental feature and not fully supported yet. Call `guppylang.enable_experimental_features()` to enable them.
+GuppyError: Lists are an experimental feature and not fully supported yet. Use `guppylang.enable_experimental_features()` to enable them.

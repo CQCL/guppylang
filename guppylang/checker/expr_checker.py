@@ -999,7 +999,7 @@ def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
 def check_function_tensors_enabled(node: ast.expr | None = None) -> None:
     if not guppylang.experimental.EXPERIMENTAL_FEATURES_ENABLED:
         raise GuppyError(
-            "Function tensors are an experimental feature. Call "
+            "Function tensors are an experimental feature. Use "
             "`guppylang.enable_experimental_features()` to enable them.",
             node,
         )
