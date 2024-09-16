@@ -98,15 +98,15 @@ class _Guppy:
 
         return self._with_optional_module(dec, arg)
 
-    @overload
-    def _with_optional_module(
+    @overload  # Always S != GuppyModule, hence ok to:
+    def _with_optional_module(  # type: ignore[overload-overlap]
         self, dec: Callable[[S, GuppyModule], T], arg: S
     ) -> T: ...
 
     @overload
     def _with_optional_module(
         self, dec: Callable[[S, GuppyModule], T], arg: GuppyModule
-    ) -> Decorator[S]: ...
+    ) -> Decorator[S, T]: ...
 
     def _with_optional_module(
         self, dec: Callable[[S, GuppyModule], T], arg: S | GuppyModule
