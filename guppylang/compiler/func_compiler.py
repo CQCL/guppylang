@@ -80,7 +80,7 @@ def compile_local_func_def(
             func.cfg,
             func_builder,
         )
-        globals.worklist.add(func.def_id)
+        globals.worklist.add(func.def_id) # will compile the CFG later
 
     # Finally, load the function into the local data-flow graph
     loaded = dfg.builder.load_function(func_builder, closure_ty)
