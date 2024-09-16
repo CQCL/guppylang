@@ -92,7 +92,7 @@ class RawCustomFunctionDef(ParsableDef):
     ) -> Sequence[Wire]:
         """Compiles a call to the function."""
         # Note: We have _compiled_ globals rather than `Globals` here,
-        # so we cannot use `self._get_signature()`.
+        # so we cannot use `self._get_signature()` to build a `CustomFunctionDef`.
         self.call_compiler._setup(
             type_args,
             dfg,
