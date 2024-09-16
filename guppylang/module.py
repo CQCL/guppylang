@@ -334,7 +334,8 @@ class GuppyModule:
 
         # Lower definitions to Hugr
         required = set(self._checked_defs.keys())
-        ctx = CompiledGlobals(checked_defs, required, graph)
+        ctx = CompiledGlobals(checked_defs, graph)
+        _request_compilation = [ctx[def_id] for def_id in required]
         while ctx.worklist:
             next_id = ctx.worklist.pop()
             next_def = ctx[next_id]
