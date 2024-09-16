@@ -9,6 +9,7 @@ from hugr import tys as ht
 from hugr.std.float import FLOAT_T
 
 from guppylang.definition.custom import CustomCallCompiler
+from guppylang.prelude._internal.compiler.prelude import build_error, build_panic
 from guppylang.prelude._internal.json_defs import load_extension
 
 # ----------------------------------------------
@@ -35,7 +36,8 @@ TKET2_EXTENSIONS = [
 
 def fromturns() -> ops.ExtOp:
     return ops.ExtOp(
-        ROTATION_EXTENSION.get_op("fromturns"), ht.FunctionType([FLOAT_T], [ROTATION_T])
+        ROTATION_EXTENSION.get_op("fromturns"),
+        ht.FunctionType([FLOAT_T], [ht.Sum([[], [ROTATION_T]])]),
     )
 
 
@@ -86,12 +88,20 @@ class RotationCompiler(CustomCallCompiler):
 
         [q, angle] = args
         [halfturns] = self.builder.add_op(ops.UnpackTuple([FLOAT_T]), angle)
-        [rot] = self.builder.add_op(fromturns(), halfturns)
+        [mb_rot] = self.builder.add_op(fromturns(), halfturns)
+
+        conditional = self.builder.add_conditional(mb_rot)
+        with conditional.add_case(0) as case:
+            error = build_error(case, 1, "Non-finite number of half-turns")
+            case.set_outputs(build_panic(case, [], [ROTATION_T], error))
+        with conditional.add_case(1) as case:
+            case.set_outputs(*case.inputs())
+
         q = self.builder.add_op(
             quantum_op(self.opname)(
                 ht.FunctionType([ht.Qubit, ROTATION_T], [ht.Qubit]), []
             ),
             q,
-            rot,
+            conditional,
         )
         return [q]

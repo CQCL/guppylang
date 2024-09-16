@@ -345,7 +345,7 @@ class GuppyModule:
         # The hugr prelude and std_extensions are implicit.
         from guppylang.prelude._internal.compiler.quantum import TKET2_EXTENSIONS
 
-        extensions = TKET2_EXTENSIONS + [guppylang.compiler.hugr_extension.EXTENSION]
+        extensions = [*TKET2_EXTENSIONS, guppylang.compiler.hugr_extension.EXTENSION]
 
         package = Package(modules=[hugr], extensions=extensions)
         self._compiled = True
