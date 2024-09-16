@@ -16,10 +16,10 @@
   },
   "values": {},
   "operations": {
-    "fromturns": {
+    "from_halfturns": {
       "extension": "tket2.rotation",
-      "name": "fromturns",
-      "description": "Construct rotation from number of turns (would be multiples of π in radians).",
+      "name": "from_halfturns",
+      "description": "Construct rotation from number of half-turns (would be multiples of π in radians).",
       "signature": {
         "params": [],
         "body": {
@@ -92,10 +92,10 @@
       },
       "binary": false
     },
-    "toturns": {
+    "to_halfturns": {
       "extension": "tket2.rotation",
-      "name": "toturns",
-      "description": "Convert rotation to number of turns (would be multiples of π in radians).",
+      "name": "to_halfturns",
+      "description": "Convert rotation to number of half-turns (would be multiples of π in radians).",
       "signature": {
         "params": [],
         "body": {

@@ -4,9 +4,11 @@ multiple nodes.
 
 from __future__ import annotations
 
+import math
+
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr.std.float import FLOAT_T
+from hugr.std.float import FLOAT_OPS_EXTENSION, FLOAT_T, FloatVal
 
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.prelude._internal.compiler.prelude import build_error, build_panic
@@ -34,9 +36,9 @@ TKET2_EXTENSIONS = [
 ]
 
 
-def fromturns() -> ops.ExtOp:
+def from_halfturns() -> ops.ExtOp:
     return ops.ExtOp(
-        ROTATION_EXTENSION.get_op("fromturns"),
+        ROTATION_EXTENSION.get_op("from_halfturns"),
         ht.FunctionType([FLOAT_T], [ht.Sum([[], [ROTATION_T]])]),
     )
 
@@ -87,10 +89,17 @@ class RotationCompiler(CustomCallCompiler):
         from guppylang.prelude._internal.util import quantum_op
 
         [q, angle] = args
-        [halfturns] = self.builder.add_op(ops.UnpackTuple([FLOAT_T]), angle)
-        [mb_rot] = self.builder.add_op(fromturns(), halfturns)
+        [radians] = self.builder.add_op(ops.UnpackTuple([FLOAT_T]), angle)
+        [pi] = self.builder.load(FloatVal(math.pi))
+        op = ops.ExtOp(
+            FLOAT_OPS_EXTENSION.get_op("fdiv"),
+            ht.FunctionType([FLOAT_T, FLOAT_T], [FLOAT_T]),
+            [],
+        )
+        [halfturns] = self.builder.add_op(op, radians, pi)
+        [mb_rotation] = self.builder.add_op(from_halfturns(), halfturns)
 
-        conditional = self.builder.add_conditional(mb_rot)
+        conditional = self.builder.add_conditional(mb_rotation)
         with conditional.add_case(0) as case:
             error = build_error(case, 1, "Non-finite number of half-turns")
             case.set_outputs(build_panic(case, [], [ROTATION_T], error))
