@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import hugr.std
 from hugr import Wire, ops
@@ -50,7 +50,7 @@ class ArrayGetitemCompiler(CustomCallCompiler):
     def build_classical_getitem(
         self,
         array: Wire,
-        array_ty: ht.Array,
+        array_ty: ht.Type,
         idx: Wire,
         idx_ty: ht.Type,
         elem_ty: ht.Type,
@@ -93,13 +93,12 @@ class ArrayGetitemCompiler(CustomCallCompiler):
             case.set_outputs(*case.inputs())
         with conditional.add_case(1) as case:
             error = build_error(case, 1, "Linear array element has already been used")
-            case.set_outputs(build_panic(case, [], [elem_ty], error))
+            case.set_outputs(*build_panic(case, [], [elem_ty], error))
         return CallReturnWires(regular_returns=[conditional], inout_returns=[array])
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [array, idx] = args
         [array_ty, idx_ty] = self.ty.input
-        array_ty = cast(ht.Array, array_ty)
         [elem_ty, *_] = self.ty.output
         if elem_ty.type_bound() == ht.TypeBound.Any:
             return self.build_linear_getitem(array, array_ty, idx, idx_ty, elem_ty)
@@ -228,7 +227,7 @@ def build_array_get(
     conditional = builder.add_conditional(result)
     with conditional.add_case(0) as case:
         error = build_error(case, 1, "array get index out of bounds")
-        case.set_outputs(build_panic(case, [], [elem_ty], error))
+        case.set_outputs(*build_panic(case, [], [elem_ty], error))
     with conditional.add_case(1) as case:
         case.set_outputs(*case.inputs())
     return conditional

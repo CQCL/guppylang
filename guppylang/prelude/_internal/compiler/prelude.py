@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import hugr.std.collections
 import hugr.std.int
-from hugr import Wire, ops
+from hugr import Node, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
 
@@ -64,7 +64,7 @@ def build_panic(
     out_tys: ht.TypeRow,
     err: Wire,
     *args: Wire,
-) -> Wire:
+) -> Node:
     """Builds a panic operation."""
     op = panic(in_tys, out_tys)
     return builder.add_op(op, err, *args)
