@@ -17,7 +17,14 @@ from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, NoneType, Type
+from guppylang.tys.ty import (
+    FuncInput,
+    FunctionType,
+    InputFlags,
+    NoneType,
+    Type,
+    type_to_row,
+)
 
 
 @dataclass(frozen=True)
@@ -41,7 +48,7 @@ class RawCustomFunctionDef(ParsableDef):
 
     defined_at: ast.FunctionDef
     call_checker: "CustomCallChecker"
-    call_compiler: "CustomCallCompiler"
+    call_compiler: "CustomInoutCallCompiler"
 
     # Whether the function may be used as a higher-order value. This is only possible
     # if a static type for the function is provided.
@@ -85,15 +92,16 @@ class RawCustomFunctionDef(ParsableDef):
     ) -> Sequence[Wire]:
         """Compiles a call to the function."""
         # Note: We have _compiled_ globals rather than `Globals` here,
-        # so we cannot use `self._get_signature()`.
+        # so we cannot use `self._get_signature()` to build a `CustomFunctionDef`.
         self.call_compiler._setup(
             type_args,
             dfg,
             globals,
             node,
             function_ty,
+            None,
         )
-        return self.call_compiler.compile(args)
+        return self.call_compiler.compile_with_inouts(args).regular_returns
 
     def _get_signature(self, globals: Globals) -> FunctionType | None:
         """Returns the type of the function, if known.
@@ -237,7 +245,7 @@ class CustomFunctionDef(CompiledCallableDef):
             )
         hugr_ty = concrete_ty.to_hugr()
 
-        self.call_compiler._setup(type_args, dfg, globals, node, hugr_ty)
+        self.call_compiler._setup(type_args, dfg, globals, node, hugr_ty, self)
         return self.call_compiler.compile_with_inouts(args)
 
 
@@ -284,6 +292,7 @@ class CustomInoutCallCompiler(ABC):
     globals: CompiledGlobals
     node: AstNode
     ty: ht.FunctionType
+    func: CustomFunctionDef | None
 
     def _setup(
         self,
@@ -292,12 +301,14 @@ class CustomInoutCallCompiler(ABC):
         globals: CompiledGlobals,
         node: AstNode,
         hugr_ty: ht.FunctionType,
+        func: CustomFunctionDef | None,
     ) -> None:
         self.type_args = type_args
         self.dfg = dfg
         self.globals = globals
         self.node = node
         self.ty = hugr_ty
+        self.func = func
 
     @abstractmethod
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
@@ -306,6 +317,11 @@ class CustomInoutCallCompiler(ABC):
         Returns the outputs of the call together with any borrowed arguments that are
         passed through the function.
         """
+
+    @property
+    def builder(self) -> DfBase[ops.DfParentOp]:
+        """The hugr dataflow builder."""
+        return self.dfg.builder
 
 
 class CustomCallCompiler(CustomInoutCallCompiler, ABC):
@@ -317,11 +333,6 @@ class CustomCallCompiler(CustomInoutCallCompiler, ABC):
 
         Use the provided `self.builder` to add nodes to the Hugr graph.
         """
-
-    @property
-    def builder(self) -> DfBase[ops.DfParentOp]:
-        """The hugr dataflow builder."""
-        return self.dfg.builder
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         return CallReturnWires(self.compile(args), inout_returns=[])
@@ -353,7 +364,7 @@ class NotImplementedCallCompiler(CustomCallCompiler):
         raise InternalGuppyError("Function should have been removed during checking")
 
 
-class OpCompiler(CustomCallCompiler):
+class OpCompiler(CustomInoutCallCompiler):
     """Call compiler for functions that are directly implemented via Hugr ops.
 
     args:
@@ -366,10 +377,16 @@ class OpCompiler(CustomCallCompiler):
     def __init__(self, op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]) -> None:
         self.op = op
 
-    def compile(self, args: list[Wire]) -> list[Wire]:
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         op = self.op(self.ty, self.type_args)
         node = self.builder.add_op(op, *args)
-        return list(node)
+        num_returns = (
+            len(type_to_row(self.func.ty.output)) if self.func else len(self.ty.output)
+        )
+        return CallReturnWires(
+            regular_returns=list(node[:num_returns]),
+            inout_returns=list(node[num_returns:]),
+        )
 
 
 class NoopCompiler(CustomCallCompiler):

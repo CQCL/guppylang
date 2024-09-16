@@ -13,9 +13,7 @@ from guppylang.prelude.builtins import owned, py
 from guppylang.prelude.quantum import (
     dirty_qubit,
     discard,
-    quantum,
     measure,
-    measure_return,
     qubit
 )
 from guppylang.prelude.quantum_functional import (
@@ -35,6 +33,8 @@ from guppylang.prelude.quantum_functional import (
     rz,
     zz_phase,
     reset,
+    quantum_functional,
+    measure_return,
 )
 
 
@@ -49,8 +49,8 @@ def compile_quantum_guppy(fn) -> Package:
     ), "`@compile_quantum_guppy` does not support extra arguments."
 
     module = GuppyModule("module")
-    module.load(angle)
-    module.load_all(quantum)
+    module.load(angle, qubit, dirty_qubit, discard, measure)
+    module.load_all(quantum_functional)
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
 

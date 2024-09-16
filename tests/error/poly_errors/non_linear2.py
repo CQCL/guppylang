@@ -8,7 +8,7 @@ import guppylang.prelude.quantum as quantum
 
 module = GuppyModule("test")
 module.load_all(quantum)
-
+module.load(h)
 
 T = guppy.type_var(module, "T")
 

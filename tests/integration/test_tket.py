@@ -32,7 +32,7 @@ def test_lower_pure_circuit():
 
     module = GuppyModule("test")
     module.load_all(quantum)
-    module.load(pi)
+    module.load(pi, phased_x, rz, zz_max)
 
     @guppy(module)
     def my_func(
@@ -64,7 +64,7 @@ def test_lower_hybrid_circuit():
 
     module = GuppyModule("test")
     module.load_all(quantum)
-    module.load(pi)
+    module.load(pi, phased_x, rz, zz_max)
 
     @guppy(module)
     def my_func(

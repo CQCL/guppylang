@@ -7,7 +7,8 @@ from __future__ import annotations
 from hugr import Wire
 from hugr import tys as ht
 
-from guppylang.definition.custom import CustomCallCompiler
+from guppylang.definition.custom import CustomInoutCallCompiler
+from guppylang.definition.value import CallReturnWires
 from guppylang.prelude._internal.json_defs import load_extension
 
 # ----------------------------------------------
@@ -35,10 +36,10 @@ ANGLE_T = QUANTUM_EXTENSION.get_type("angle")
 # ------------------------------------------------------
 
 
-class MeasureCompiler(CustomCallCompiler):
-    """Compiler for the `measure` function."""
+class MeasureReturnCompiler(CustomInoutCallCompiler):
+    """Compiler for the `measure_return` function."""
 
-    def compile(self, args: list[Wire]) -> list[Wire]:
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         from guppylang.prelude._internal.util import quantum_op
 
         [q] = args
@@ -46,21 +47,4 @@ class MeasureCompiler(CustomCallCompiler):
             quantum_op("Measure")(ht.FunctionType([ht.Qubit], [ht.Qubit, ht.Bool]), []),
             q,
         )
-        self.builder.add_op(quantum_op("QFree")(ht.FunctionType([ht.Qubit], []), []), q)
-        return [bit]
-
-
-class QAllocCompiler(CustomCallCompiler):
-    """Compiler for the `qubit` function."""
-
-    def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude._internal.util import quantum_op
-
-        assert not args, "qubit() does not take any arguments"
-        q = self.builder.add_op(
-            quantum_op("QAlloc")(ht.FunctionType([], [ht.Qubit]), [])
-        )
-        q = self.builder.add_op(
-            quantum_op("Reset")(ht.FunctionType([ht.Qubit], [ht.Qubit]), []), q
-        )
-        return [q]
+        return CallReturnWires(regular_returns=[bit], inout_returns=[q])
