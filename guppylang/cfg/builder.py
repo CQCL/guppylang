@@ -16,6 +16,7 @@ from guppylang.cfg.bb import BB, BBStatement
 from guppylang.cfg.cfg import CFG
 from guppylang.checker.core import Globals
 from guppylang.error import GuppyError, InternalGuppyError
+from guppylang.experimental import check_lists_enabled
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
@@ -304,6 +305,7 @@ class ExprBuilder(ast.NodeTransformer):
         return make_var(tmp, node)
 
     def visit_ListComp(self, node: ast.ListComp) -> ast.AST:
+        check_lists_enabled(node)
         # Check for illegal expressions
         illegals = find_nodes(is_illegal_in_list_comp, node)
         if illegals:
