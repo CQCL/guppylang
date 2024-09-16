@@ -6,7 +6,7 @@ import pytest
 import subprocess
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def export_test_cases_dir(request):
     r = request.config.getoption("--export-test-cases")
     if r and not r.exists():
@@ -26,16 +26,17 @@ def get_validator() -> Path | None:
     return None
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def validate(request, export_test_cases_dir: Path):
-    def validate_json(hugr: str):
+    if request.config.getoption("validation"):
         # Check if the validator is installed
         validator = get_validator()
         if validator is None:
-            pytest.skip(
-                "Skipping validation: Run `cargo build` to install the validator"
-            )
+            pytest.fail("Run `cargo build -p release` to install the validator")
+    else:
+        pytest.skip("Skipping validation tests as requested")
 
+    def validate_json(hugr: str):
         # Executes `cargo run -p validator -- validate -`
         # passing the hugr JSON as stdin
         p = subprocess.run(  # noqa: S603
