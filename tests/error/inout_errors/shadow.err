@@ -1,7 +1,7 @@
 Guppy compilation failed. Error in file $FILE:12
 
 10:    @guppy(module)
-11:    def test(q: qubit @inout) -> None:
+11:    def test(q: qubit) -> None:
 12:        q = qubit()
            ^
-GuppyError: Assignment shadows argument `q` annotated as `@inout`. Consider assigning to a different name.
+GuppyError: Assignment shadows borrowed argument `q`. Consider assigning to a different name.

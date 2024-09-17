@@ -1,7 +1,7 @@
 """Tools for inspecting source code when running in IPython."""
 
 import ast
-from typing import NamedTuple, cast
+from typing import Any, NamedTuple, cast
 
 
 def is_running_ipython() -> bool:
@@ -54,3 +54,11 @@ def find_ipython_def(name: str) -> IPythonDef | None:
                 cell_name = f"In [{len(cell_sources) - i}]"
                 return IPythonDef(node, cell_name, cell_source)
     return None
+
+
+def get_ipython_globals() -> dict[str, Any]:
+    """Returns the globals of the current IPython kernel."""
+    try:
+        return get_ipython().user_ns  # type: ignore[name-defined, no-any-return]
+    except NameError:
+        raise RuntimeError("Not running in IPython") from None

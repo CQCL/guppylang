@@ -7,7 +7,8 @@ import pytest
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude.builtins import py
-from guppylang.prelude.quantum import qubit, quantum
+from guppylang.prelude import quantum
+from guppylang.prelude.quantum import qubit
 from tests.util import compile_guppy
 
 tket2_installed = find_spec("tket2") is not None
@@ -73,9 +74,6 @@ def test_tuple_implicit(validate):
     validate(foo)
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_list_basic(validate):
     @compile_guppy
     def foo() -> list[int]:
@@ -85,9 +83,6 @@ def test_list_basic(validate):
     validate(foo)
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_list_empty(validate):
     @compile_guppy
     def foo() -> list[int]:
@@ -96,9 +91,6 @@ def test_list_empty(validate):
     validate(foo)
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_list_empty_nested(validate):
     @compile_guppy
     def foo() -> None:
@@ -107,9 +99,6 @@ def test_list_empty_nested(validate):
     validate(foo)
 
 
-@pytest.mark.skip(
-    reason="collections extensions not defined in the validator. Remove once updated to hugr 0.8",
-)
 def test_list_empty_multiple(validate):
     @compile_guppy
     def foo() -> None:

@@ -1,6 +1,7 @@
 import guppylang.prelude.quantum as quantum
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.prelude.builtins import owned
 from guppylang.prelude.quantum import qubit, measure
 
 
@@ -19,11 +20,11 @@ class MyStruct2:
 
 
 @guppy.declare(module)
-def use(s: MyStruct1) -> None: ...
+def use(s: MyStruct1 @owned) -> None: ...
 
 
 @guppy(module)
-def foo(s: MyStruct1) -> MyStruct1:
+def foo(s: MyStruct1 @owned) -> MyStruct1:
     use(s)
     return s
 

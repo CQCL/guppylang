@@ -1,6 +1,6 @@
-Guppy compilation failed. Error in file $FILE:17
+Guppy compilation failed. Error in file $FILE:18
 
-15:    @guppy(module)
-16:    def foo(q: qubit) -> tuple[qubit, qubit]:
-               ^^^^^^^^
+16:    @guppy(module)
+17:    def foo(q: qubit @owned) -> tuple[qubit, qubit]:
+               ^^^^^^^^^^^^^^^
 GuppyError: Variable `q` with linear type `qubit` is not used

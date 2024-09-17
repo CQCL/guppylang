@@ -17,7 +17,7 @@ from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import (
     check_global_func_def,
     check_signature,
-    parse_docstring,
+    parse_function_with_docstring,
 )
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.compiler.func_compiler import compile_global_func_def
@@ -241,4 +241,4 @@ def parse_py_func(f: PyFunc) -> tuple[ast.FunctionDef, str | None]:
     annotate_location(func_ast, source, file, line_offset)
     if not isinstance(func_ast, ast.FunctionDef):
         raise GuppyError("Expected a function definition", func_ast)
-    return parse_docstring(func_ast)
+    return parse_function_with_docstring(func_ast)

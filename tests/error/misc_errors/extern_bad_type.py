@@ -7,6 +7,6 @@ import guppylang.prelude.quantum as quantum
 
 module = GuppyModule("test")
 
-guppy.extern(module, "x", ty="float[int]")
+guppy.extern("x", ty="float[int]", module=module)
 
 module.compile()

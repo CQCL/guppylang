@@ -2,6 +2,6 @@ Guppy compilation failed. Error in file $FILE:9
 
 7:    module = GuppyModule("test")
 8:    
-9:    guppy.extern(module, "x", ty="float[int]")
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+9:    guppy.extern("x", ty="float[int]", module=module)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 GuppyError: Type `float` is not parameterized

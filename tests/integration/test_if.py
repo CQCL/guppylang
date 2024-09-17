@@ -232,7 +232,7 @@ def test_break_different_types2(validate):
     validate(foo)
 
 
-@pytest.mark.skip("Known bug")
+@pytest.mark.skip("Known bug, `z` redefined with different type")
 def test_continue_different_types1(validate):
     @compile_guppy
     def foo(x: int) -> int:
@@ -249,7 +249,7 @@ def test_continue_different_types1(validate):
     validate(foo)
 
 
-@pytest.mark.skip("Known bug")
+@pytest.mark.skip("Known bug, `z` redefined with different type")
 def test_continue_different_types2(validate):
     @compile_guppy
     def foo(x: int) -> int:

@@ -8,7 +8,7 @@ from guppylang.module import GuppyModule
 def test_extern_float(validate):
     module = GuppyModule("module")
 
-    guppy.extern(module, "ext", ty="float")
+    guppy.extern("ext", ty="float", module=module)
 
     @guppy(module)
     def main() -> float:
@@ -18,10 +18,7 @@ def test_extern_float(validate):
     validate(package)
 
     hg = package.modules[0]
-    consts = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
-    if len(consts) > 1:
-        pytest.xfail(reason="hugr-includes-whole-stdlib")
-    [c] = consts
+    [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(c.val, val.Extension)
     assert c.val.val["symbol"] == "ext"
 
@@ -29,7 +26,7 @@ def test_extern_float(validate):
 def test_extern_alt_symbol(validate):
     module = GuppyModule("module")
 
-    guppy.extern(module, "ext", ty="int", symbol="foo")
+    guppy.extern("ext", ty="int", symbol="foo", module=module)
 
     @guppy(module)
     def main() -> int:
@@ -39,10 +36,7 @@ def test_extern_alt_symbol(validate):
     validate(package)
 
     hg = package.modules[0]
-    consts = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
-    if len(consts) > 1:
-        pytest.xfail(reason="hugr-includes-whole-stdlib")
-    [c] = consts
+    [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(c.val, val.Extension)
     assert c.val.val["symbol"] == "foo"
 
@@ -50,7 +44,7 @@ def test_extern_alt_symbol(validate):
 def test_extern_tuple(validate):
     module = GuppyModule("module")
 
-    guppy.extern(module, "ext", ty="tuple[int, float]")
+    guppy.extern("ext", ty="tuple[int, float]", module=module)
 
     @guppy(module)
     def main() -> float:

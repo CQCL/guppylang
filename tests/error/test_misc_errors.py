@@ -28,4 +28,4 @@ def test_extern_bad_type_syntax():
     module = GuppyModule("test")
 
     with pytest.raises(GuppyError, match="Not a valid Guppy type: `foo bar`"):
-        guppy.extern(module, name="x", ty="foo bar")
+        guppy.extern(name="x", ty="foo bar", module=module)

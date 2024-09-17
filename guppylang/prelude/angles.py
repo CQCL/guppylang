@@ -32,27 +32,27 @@ class angle:
     def __sub__(self: "angle", other: "angle") -> "angle":
         return angle(self.radians - other.radians)
 
-    @guppy(angles)
+    @guppy
     @no_type_check
     def __mul__(self: "angle", other: int) -> "angle":
         return angle(self.radians * other)
 
-    @guppy(angles)
+    @guppy
     @no_type_check
     def __rmul__(self: "angle", other: int) -> "angle":
         return angle(self.radians * other)
 
-    @guppy(angles)
+    @guppy
     @no_type_check
     def __truediv__(self: "angle", other: int) -> "angle":
         return angle(self.radians / other)
 
-    @guppy(angles)
+    @guppy
     @no_type_check
     def __rtruediv__(self: "angle", other: int) -> "angle":
         return angle(other / self.radians)
 
-    @guppy(angles)
+    @guppy
     @no_type_check
     def __neg__(self: "angle") -> "angle":
         return angle(-self.radians)

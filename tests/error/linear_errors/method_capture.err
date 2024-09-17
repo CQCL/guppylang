@@ -1,7 +1,7 @@
-Guppy compilation failed. Error in file $FILE:22
+Guppy compilation failed. Error in file $FILE:23
 
-20:    @guppy(module)
-21:    def foo(s: Struct) -> Struct:
-22:        f = s.foo
+21:    @guppy(module)
+22:    def foo(s: Struct @owned) -> Struct:
+23:        f = s.foo
                ^^^^^
 GuppyError: Capturing a value with linear type `Struct` in a closure is not allowed. Try calling the function directly instead of using it as a higher-order value.

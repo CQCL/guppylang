@@ -57,6 +57,7 @@ from guppylang.error import (
     GuppyTypeInferenceError,
     InternalGuppyError,
 )
+from guppylang.experimental import check_function_tensors_enabled, check_lists_enabled
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
@@ -128,7 +129,7 @@ binary_table: dict[type[AstOp], tuple[str, str, str]] = {
     ast.BitAnd:   ("__and__",      "__rand__",      "&"),
     ast.MatMult:  ("__matmul__",   "__rmatmul__",   "@"),
     ast.Eq:       ("__eq__",       "__eq__",        "=="),
-    ast.NotEq:    ("__neq__",      "__neq__",       "!="),
+    ast.NotEq:    ("__ne__",       "__ne__",        "!="),
     ast.Lt:       ("__lt__",       "__gt__",        "<"),
     ast.LtE:      ("__le__",       "__ge__",        "<="),
     ast.Gt:       ("__gt__",       "__lt__",        ">"),
@@ -214,6 +215,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         return node, subst
 
     def visit_List(self, node: ast.List, ty: Type) -> tuple[ast.expr, Subst]:
+        check_lists_enabled(node)
         if not is_list_type(ty) and not is_linst_type(ty):
             return self._fail(ty, node)
         el_ty = get_element_type(ty)
@@ -265,6 +267,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         if isinstance(func_ty, TupleType) and (
             function_elements := parse_function_tensor(func_ty)
         ):
+            check_function_tensors_enabled(node.func)
             if any(f.parametrized for f in function_elements):
                 raise GuppyTypeError(
                     "Polymorphic functions in tuples are not supported", node.func
@@ -435,6 +438,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         return node, TupleType([ty for _, ty in elems])
 
     def visit_List(self, node: ast.List) -> tuple[ast.expr, Type]:
+        check_lists_enabled(node)
         if len(node.elts) == 0:
             raise GuppyTypeInferenceError(
                 "Cannot infer type variable in expression of type `list[?T]`", node
@@ -602,6 +606,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         elif isinstance(ty, TupleType) and (
             function_elems := parse_function_tensor(ty)
         ):
+            check_function_tensors_enabled(node.func)
             if any(f.parametrized for f in function_elems):
                 raise GuppyTypeError(
                     "Polymorphic functions in tuples are not supported", node.func
@@ -624,8 +629,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
+        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
         exp_sig = FunctionType(
-            [FuncInput(ty, InputFlags.NoFlags)], ExistentialTypeVar.fresh("Iter", False)
+            [FuncInput(ty, flags)], ExistentialTypeVar.fresh("Iter", False)
         )
         expr, ty = self.synthesize_instance_func(
             node.value, [], "__iter__", "not iterable", exp_sig
@@ -648,17 +654,17 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType(
-            [FuncInput(ty, InputFlags.NoFlags)], TupleType([bool_type(), ty])
-        )
+        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
+        exp_sig = FunctionType([FuncInput(ty, flags)], TupleType([bool_type(), ty]))
         return self.synthesize_instance_func(
             node.value, [], "__hasnext__", "not an iterator", exp_sig, True
         )
 
     def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
+        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
         exp_sig = FunctionType(
-            [FuncInput(ty, InputFlags.NoFlags)],
+            [FuncInput(ty, flags)],
             TupleType([ExistentialTypeVar.fresh("T", False), ty]),
         )
         return self.synthesize_instance_func(
@@ -667,7 +673,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        exp_sig = FunctionType([FuncInput(ty, InputFlags.NoFlags)], NoneType())
+        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
+        exp_sig = FunctionType([FuncInput(ty, flags)], NoneType())
         return self.synthesize_instance_func(
             node.value, [], "__end__", "not an iterator", exp_sig, True
         )
@@ -814,7 +821,7 @@ def type_check_args(
 
 
 def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
-    """Performs additional checks for place arguments in @inout position.
+    """Performs additional checks for borrowed place arguments.
 
     In particular, we need to check that places involving `place[item]` subscripts
     implement the corresponding `__setitem__` method.
@@ -830,7 +837,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 [
                     FuncInput(parent.ty, InputFlags.Inout),
                     FuncInput(item.ty, InputFlags.NoFlags),
-                    FuncInput(ty, InputFlags.NoFlags),
+                    FuncInput(ty, InputFlags.Owned),
                 ],
                 NoneType(),
             )
@@ -843,7 +850,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 setitem_args[0],
                 setitem_args[1:],
                 "__setitem__",
-                "not allowed in a subscripted `@inout` position",
+                "unable to have subscripted elements borrowed",
                 exp_sig,
                 True,
             )
@@ -1117,10 +1124,8 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
                             [], globals
                         )
                         return FunctionType(
-                            [FuncInput(qubit, InputFlags.NoFlags)] * v.n_qubits,
-                            row_to_type(
-                                [qubit] * v.n_qubits + [bool_type()] * v.n_bits
-                            ),
+                            [FuncInput(qubit, InputFlags.Inout)] * v.n_qubits,
+                            row_to_type([bool_type()] * v.n_bits),
                         )
                     except ImportError:
                         raise GuppyError(

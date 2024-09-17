@@ -2,14 +2,14 @@ import guppylang.prelude.quantum as quantum
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude.quantum import qubit
-from guppylang.prelude.builtins import linst
+from guppylang.prelude.builtins import linst, owned
 
 module = GuppyModule("test")
 module.load_all(quantum)
 
 
 @guppy(module)
-def foo(xs: list[int], q: qubit) -> linst[qubit]:
+def foo(xs: list[int], q: qubit @owned) -> linst[qubit]:
     return [q for x in xs]
 
 

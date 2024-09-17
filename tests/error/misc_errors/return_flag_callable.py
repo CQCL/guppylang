@@ -2,16 +2,16 @@ from typing import Callable
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import inout
-from guppylang.prelude.quantum import quantum, qubit
+from guppylang.prelude.builtins import owned
+from guppylang.prelude.quantum import qubit
 
 
 module = GuppyModule("test")
-module.load_all(quantum)
+module.load(qubit)
 
 
 @guppy.declare(module)
-def foo(f: "Callable[[], qubit @inout]") -> None: ...
+def foo(f: "Callable[[], qubit @owned]") -> None: ...
 
 
 module.compile()
