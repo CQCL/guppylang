@@ -431,7 +431,7 @@ def test_for_nonlinear_break(validate):
     module.load_all(quantum_functional)
     module.load(qubit)
 
-    @guppy.type(module, NoneType().to_hugr())
+    @guppy.type(NoneType().to_hugr(), module=module)
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
@@ -444,7 +444,7 @@ def test_for_nonlinear_break(validate):
         @guppy.declare(module)
         def __end__(self: "MyIter") -> None: ...
 
-    @guppy.type(module, NoneType().to_hugr())
+    @guppy.type(NoneType().to_hugr(), module=module)
     class MyType:
         """Type that produces the iterator above."""
 

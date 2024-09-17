@@ -6,7 +6,7 @@ from guppylang.tys.ty import NoneType
 module = GuppyModule("test")
 
 
-@guppy.type(module, NoneType().to_hugr())
+@guppy.type(NoneType().to_hugr(), module=module)
 class MyType:
     """A type where the `__iter__` method has the wrong signature."""
 

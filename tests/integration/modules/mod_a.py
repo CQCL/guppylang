@@ -16,7 +16,7 @@ def f(x: int) -> int:
 def g() -> int: ...
 
 
-@guppy.type(mod_a, ht.Bool)
+@guppy.type(ht.Bool, module=mod_a)
 class MyType:
     @guppy.declare(mod_a)
     def __neg__(self: "MyType") -> "MyType": ...

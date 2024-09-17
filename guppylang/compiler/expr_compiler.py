@@ -1,5 +1,4 @@
 import ast
-import json
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any, TypeGuard, TypeVar
@@ -8,7 +7,7 @@ import hugr
 import hugr.std.float
 import hugr.std.int
 import hugr.std.logic
-from hugr import Wire, ops
+from hugr import Hugr, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
 from hugr.build.cond_loop import Conditional
@@ -564,7 +563,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
                         Tk2Circuit,
                     )
 
-                    circ = json.loads(Tk2Circuit(v).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
+                    circ = Hugr.load_json(Tk2Circuit(v).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
                     return hv.Function(circ)
             except ImportError:
                 pass

@@ -10,6 +10,7 @@ from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
+from guppylang.experimental import check_lists_enabled
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import ConstValue
 from guppylang.tys.param import ConstParam, TypeParam
@@ -109,12 +110,28 @@ class _ListTypeDef(OpaqueTypeDef):
     def check_instantiate(
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> OpaqueType:
+        check_lists_enabled(loc)
         if len(args) == 1:
             [arg] = args
             if isinstance(arg, TypeArg) and arg.ty.linear:
                 raise GuppyError(
                     "Type `list` cannot store linear data, use `linst` instead", loc
                 )
+        return super().check_instantiate(args, globals, loc)
+
+
+@dataclass(frozen=True)
+class _LinstTypeDef(OpaqueTypeDef):
+    """Type definition associated with the builtin `linst` type.
+
+    We have a custom definition to disable usage of linsts unless experimental features
+    are enabled.
+    """
+
+    def check_instantiate(
+        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+    ) -> OpaqueType:
+        check_lists_enabled(loc)
         return super().check_instantiate(args, globals, loc)
 
 
@@ -163,7 +180,7 @@ int_type_def = _NumericTypeDef(
 float_type_def = _NumericTypeDef(
     DefId.fresh(), "float", None, NumericType(NumericType.Kind.Float)
 )
-linst_type_def = OpaqueTypeDef(
+linst_type_def = _LinstTypeDef(
     id=DefId.fresh(),
     name="linst",
     defined_at=None,

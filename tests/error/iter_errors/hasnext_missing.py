@@ -6,7 +6,7 @@ from guppylang.tys.ty import NoneType
 module = GuppyModule("test")
 
 
-@guppy.type(module, NoneType().to_hugr())
+@guppy.type(NoneType().to_hugr(), module=module)
 class MyIter:
     """An iterator that is missing the `__hasnext__` method."""
 
@@ -19,7 +19,7 @@ class MyIter:
         ...
 
 
-@guppy.type(module, NoneType().to_hugr())
+@guppy.type(NoneType().to_hugr(), module=module)
 class MyType:
     """Type that produces the iterator above."""
 

@@ -247,7 +247,7 @@ def test_linear_next_nonlinear_iter(validate):
     module.load_all(quantum)
     module.load(qubit)
 
-    @guppy.type(module, NoneType().to_hugr())
+    @guppy.type(NoneType().to_hugr(), module=module)
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
@@ -260,7 +260,7 @@ def test_linear_next_nonlinear_iter(validate):
         @guppy.declare(module)
         def __end__(self: "MyIter") -> None: ...
 
-    @guppy.type(module, NoneType().to_hugr())
+    @guppy.type(NoneType().to_hugr(), module=module)
     class MyType:
         """Type that produces the iterator above."""
 
@@ -281,9 +281,9 @@ def test_nonlinear_next_linear_iter(validate):
     module.load(qubit)
 
     @guppy.type(
-        module,
         tys.Opaque(extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Any),
         linear=True,
+        module=module,
     )
     class MyIter:
         """A linear iterator that yields non-linear values."""
@@ -297,7 +297,7 @@ def test_nonlinear_next_linear_iter(validate):
         @guppy.declare(module)
         def __end__(self: "MyIter" @owned) -> None: ...
 
-    @guppy.type(module, NoneType().to_hugr())
+    @guppy.type(NoneType().to_hugr(), module=module)
     class MyType:
         """Type that produces the iterator above."""
 

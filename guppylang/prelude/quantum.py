@@ -7,7 +7,6 @@ from typing import no_type_check
 from hugr import tys as ht
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.prelude._internal.compiler.quantum import (
     HSERIES_EXTENSION,
     MeasureReturnCompiler,
@@ -16,13 +15,10 @@ from guppylang.prelude._internal.util import quantum_op
 from guppylang.prelude.angles import angle
 from guppylang.prelude.builtins import owned
 
-quantum = GuppyModule("quantum")
-quantum.load(angle)
 
-
-@guppy.type(quantum, ht.Qubit, linear=True)
+@guppy.type(ht.Qubit, linear=True)
 class qubit:
-    @guppy(quantum)
+    @guppy
     @no_type_check
     def __new__() -> "qubit":
         q = dirty_qubit()
@@ -30,71 +26,71 @@ class qubit:
         return q
 
 
-@guppy.hugr_op(quantum, quantum_op("H"))
+@guppy.hugr_op(quantum_op("H"))
 def h(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("CZ"))
+@guppy.hugr_op(quantum_op("CZ"))
 def cz(control: qubit, target: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("CX"))
+@guppy.hugr_op(quantum_op("CX"))
 def cx(control: qubit, target: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("T"))
+@guppy.hugr_op(quantum_op("T"))
 def t(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("S"))
+@guppy.hugr_op(quantum_op("S"))
 def s(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("X"))
+@guppy.hugr_op(quantum_op("X"))
 def x(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Y"))
+@guppy.hugr_op(quantum_op("Y"))
 def y(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Z"))
+@guppy.hugr_op(quantum_op("Z"))
 def z(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Tdg"))
+@guppy.hugr_op(quantum_op("Tdg"))
 def tdg(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Sdg"))
+@guppy.hugr_op(quantum_op("Sdg"))
 def sdg(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("ZZMax", ext=HSERIES_EXTENSION))
+@guppy.hugr_op(quantum_op("ZZMax", ext=HSERIES_EXTENSION))
 def zz_max(q1: qubit, q2: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Rz"))
+@guppy.hugr_op(quantum_op("Rz"))
 def rz(q: qubit, angle: angle) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("Rx"))
+@guppy.hugr_op(quantum_op("Rx"))
 def rx(q: qubit, angle: angle) -> None: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("QAlloc"))
+@guppy.hugr_op(quantum_op("QAlloc"))
 def dirty_qubit() -> qubit: ...
 
 
-@guppy.custom(quantum, MeasureReturnCompiler())
+@guppy.custom(MeasureReturnCompiler())
 def measure_return(q: qubit) -> bool: ...
 
 
-@guppy.hugr_op(quantum, quantum_op("QFree"))
+@guppy.hugr_op(quantum_op("QFree"))
 def discard(q: qubit @ owned) -> None: ...
 
 
-@guppy(quantum)
+@guppy
 @no_type_check
 def measure(q: qubit @ owned) -> bool:
     res = measure_return(q)
@@ -102,7 +98,7 @@ def measure(q: qubit @ owned) -> bool:
     return res
 
 
-@guppy(quantum)
+@guppy
 @no_type_check
 def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
     f1 = float(angle1)
@@ -110,14 +106,14 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
     _phased_x(q, f1, f2)
 
 
-@guppy(quantum)
+@guppy
 @no_type_check
 def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
     f = float(angle)
     _zz_phase(q1, q2, f)
 
 
-@guppy.hugr_op(quantum, quantum_op("Reset"))
+@guppy.hugr_op(quantum_op("Reset"))
 def reset(q: qubit) -> None: ...
 
 
@@ -126,7 +122,7 @@ def reset(q: qubit) -> None: ...
 # ------------------------------------------------------
 
 
-@guppy.hugr_op(quantum, quantum_op("PhasedX", ext=HSERIES_EXTENSION))
+@guppy.hugr_op(quantum_op("PhasedX", ext=HSERIES_EXTENSION))
 def _phased_x(q: qubit, angle1: float, angle2: float) -> None:
     """PhasedX operation from the hseries extension.
 
@@ -135,7 +131,7 @@ def _phased_x(q: qubit, angle1: float, angle2: float) -> None:
     """
 
 
-@guppy.hugr_op(quantum, quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
+@guppy.hugr_op(quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
 def _zz_phase(q1: qubit, q2: qubit, angle: float) -> None:
     """ZZPhase operation from the hseries extension.
 

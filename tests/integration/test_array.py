@@ -1,4 +1,3 @@
-import pytest
 from hugr import ops
 from hugr.std.int import IntVal
 
@@ -22,10 +21,7 @@ def test_len(validate):
     validate(package)
 
     hg = package.modules[0]
-    vals = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
-    if len(vals) > 1:
-        pytest.xfail(reason="hugr-includes-whole-stdlib")
-    [val] = vals
+    [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(val, ops.Const)
     assert isinstance(val.val, IntVal)
     assert val.val.v == 42

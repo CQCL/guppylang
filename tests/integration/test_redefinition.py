@@ -36,6 +36,33 @@ def test_method_redefinition(validate):
     validate(module.compile())
 
 
+def test_redefine_after_error(validate):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class Foo:
+        x: int
+
+    @guppy(module)
+    def foo() -> int:
+        return y
+
+    try:
+        module.compile()
+    except:
+        pass
+
+    @guppy.struct(module)
+    class Foo:
+        x: int
+
+    @guppy(module)
+    def foo(f: Foo) -> int:
+        return f.x
+
+    validate(module.compile())
+
+
 @pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/456")
 def test_struct_redefinition(validate):
     module = GuppyModule("test")
