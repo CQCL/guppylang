@@ -1,6 +1,6 @@
 """Guppy standard module for dyadic rational angles."""
 
-# mypy: disable-error-code="empty-body, misc, override"
+# mypy: disable-error-code="empty-body, misc, override, operator"
 
 import math
 from typing import no_type_check

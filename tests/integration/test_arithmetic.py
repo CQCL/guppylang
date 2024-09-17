@@ -234,7 +234,7 @@ def test_supported_ops(validate, run_int_fn):
 
 def test_angle_exec(validate, run_float_fn):
     module = GuppyModule("test_angle_exec")
-    module.load(angle,pi)
+    module.load_all(angles)
 
     @guppy(module)
     def main() -> float:

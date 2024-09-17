@@ -7,12 +7,13 @@ from guppylang.decorator import guppy
 
 # mypy: disable-error-code="empty-body, misc, valid-type"
 from guppylang.module import GuppyModule
-from guppylang.prelude.angles import angle
+from guppylang.prelude.angles import angle, angles
 from guppylang.prelude.builtins import owned
 from guppylang.prelude.quantum import qubit
 
 quantum_functional = GuppyModule("quantum_functional")
-quantum_functional.load(angle, qubit, quantum)
+quantum_functional.load_all(angles)
+quantum_functional.load(qubit, quantum)
 
 
 @guppy(quantum_functional)
