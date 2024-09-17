@@ -112,7 +112,7 @@ def test_angle_arith(validate):
         a3 = -a1 + a2 * -3
         a3 -= a1
         a3 += 2 * a1
-        return a3 == -a2
+        return a3 / 3 == -a2
 
     validate(module.compile())
 
