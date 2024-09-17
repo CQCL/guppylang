@@ -73,10 +73,6 @@ class Definition(ABC):
         a function, but got {description of this definition} instead".
         """
 
-    def compile(self) -> Package:
-        assert self.id.module is not None
-        return self.id.module.compile()
-
 
 class ParsableDef(Definition):
     """Abstract base class for raw definitions that still require parsing.
