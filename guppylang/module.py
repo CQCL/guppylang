@@ -11,11 +11,10 @@ from hugr.ext import Package
 
 import guppylang.compiler.hugr_extension
 from guppylang.checker.core import Globals, PyScope
+from guppylang.compiler.core import CompiledGlobals
 from guppylang.definition.common import (
     CheckableDef,
     CheckedDef,
-    CompilableDef,
-    CompiledDef,
     DefId,
     Definition,
     ParsableDef,
@@ -267,18 +266,6 @@ class GuppyModule:
             for def_id, defn in parsed.items()
         }
 
-    @staticmethod
-    def _compile_defs(
-        checked_defs: Mapping[DefId, CheckedDef], hugr_module: Module
-    ) -> dict[DefId, CompiledDef]:
-        """Helper method to compile checked definitions to Hugr."""
-        return {
-            def_id: defn.compile_outer(hugr_module)
-            if isinstance(defn, CompilableDef)
-            else defn
-            for def_id, defn in checked_defs.items()
-        }
-
     def check(self) -> None:
         """Type-checks the module."""
         if self.checked:
@@ -329,19 +316,20 @@ class GuppyModule:
             return self._compiled_hugr
 
         self.check()
+        checked_defs = self._imported_checked_defs | self._checked_defs
 
         # Prepare Hugr for this module
         graph = Module()
         graph.metadata["name"] = self.name
 
-        # Compile definitions to Hugr
-        compiled_defs = self._compile_defs(self._imported_checked_defs, graph)
-        compiled_defs |= self._compile_defs(self._checked_defs, graph)
-
-        # Finally, compile the definition contents to Hugr. For example, this compiles
-        # the bodies of functions.
-        for defn in compiled_defs.values():
-            defn.compile_inner(compiled_defs)
+        # Lower definitions to Hugr
+        required = set(self._checked_defs.keys())
+        ctx = CompiledGlobals(checked_defs, graph)
+        _request_compilation = [ctx[def_id] for def_id in required]
+        while ctx.worklist:
+            next_id = ctx.worklist.pop()
+            next_def = ctx[next_id]
+            next_def.compile_inner(ctx)
 
         hugr = graph.hugr
 
