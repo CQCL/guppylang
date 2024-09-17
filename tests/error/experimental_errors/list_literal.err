@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:9
+
+7:    @guppy(module)
+8:    def main() -> None:
+9:        [1, 2, 3]
+          ^^^^^^^^^
+GuppyError: Lists are an experimental feature and not fully supported yet. Use `guppylang.enable_experimental_features()` to enable them.

@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
 from hugr.build.dfg import DefinitionBuilder, OpVar
-from hugr.ext import Package
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -72,10 +71,6 @@ class Definition(ABC):
         The returned text should fit into messages of the following form: "expected
         a function, but got {description of this definition} instead".
         """
-
-    def compile(self) -> Package:
-        assert self.id.module is not None
-        return self.id.module.compile()
 
 
 class ParsableDef(Definition):

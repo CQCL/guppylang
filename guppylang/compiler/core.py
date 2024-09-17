@@ -16,9 +16,9 @@ CompiledLocals = dict[PlaceId, Wire]
 class CompiledGlobals:
     """Compilation context containing all available definitions.
 
-    This context drives the Hugr lowering by keeping track of which definitions are
-    used when lowering the definitions provided via the `required` keyword. The
-    `worklist` field contains all definitions whose contents still need to lowered.
+    Maintains a `worklist` of definitions which have been used by other compiled code
+    (i.e. `compile_outer` has been called) but have not yet been compiled/lowered
+    themselves (i.e. `compile_inner` has not yet been called).
     """
 
     module: DefinitionBuilder[ops.Module]
@@ -29,15 +29,12 @@ class CompiledGlobals:
     def __init__(
         self,
         checked: dict[DefId, CheckedDef],
-        required: set[DefId],
         module: DefinitionBuilder[ops.Module],
     ) -> None:
         self.module = module
         self.checked = checked
-        self.worklist = required
+        self.worklist = set()
         self.compiled = {}
-        for def_id in required:
-            self.compiled[def_id] = self._compile(checked[def_id])
 
     def __getitem__(self, def_id: DefId) -> CompiledDef:
         if def_id not in self.compiled:

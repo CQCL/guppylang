@@ -57,6 +57,7 @@ from guppylang.error import (
     GuppyTypeInferenceError,
     InternalGuppyError,
 )
+from guppylang.experimental import check_function_tensors_enabled, check_lists_enabled
 from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
@@ -214,6 +215,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         return node, subst
 
     def visit_List(self, node: ast.List, ty: Type) -> tuple[ast.expr, Subst]:
+        check_lists_enabled(node)
         if not is_list_type(ty) and not is_linst_type(ty):
             return self._fail(ty, node)
         el_ty = get_element_type(ty)
@@ -265,6 +267,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         if isinstance(func_ty, TupleType) and (
             function_elements := parse_function_tensor(func_ty)
         ):
+            check_function_tensors_enabled(node.func)
             if any(f.parametrized for f in function_elements):
                 raise GuppyTypeError(
                     "Polymorphic functions in tuples are not supported", node.func
@@ -435,6 +438,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         return node, TupleType([ty for _, ty in elems])
 
     def visit_List(self, node: ast.List) -> tuple[ast.expr, Type]:
+        check_lists_enabled(node)
         if len(node.elts) == 0:
             raise GuppyTypeInferenceError(
                 "Cannot infer type variable in expression of type `list[?T]`", node
@@ -602,6 +606,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         elif isinstance(ty, TupleType) and (
             function_elems := parse_function_tensor(ty)
         ):
+            check_function_tensors_enabled(node.func)
             if any(f.parametrized for f in function_elems):
                 raise GuppyTypeError(
                     "Polymorphic functions in tuples are not supported", node.func
