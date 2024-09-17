@@ -16,6 +16,7 @@ env:
   RUSTC_WRAPPER: "sccache"
   # A constant location for the uv cache
   UV_CACHE_DIR: /tmp/.uv-cache
+  CI: "true"
 
 
 jobs:
