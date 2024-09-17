@@ -71,11 +71,11 @@ def sdg(q: qubit) -> None: ...
 def zz_max(q1: qubit, q2: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum_op("Rz"))
+@guppy.custom(RotationCompiler("Rz"))
 def rz(q: qubit, angle: angle) -> None: ...
 
 
-@guppy.hugr_op(quantum_op("Rx"))
+@guppy.custom(RotationCompiler("Rx"))
 def rx(q: qubit, angle: angle) -> None: ...
 
 

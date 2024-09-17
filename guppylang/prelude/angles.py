@@ -11,6 +11,7 @@ from hugr.std.float import FloatVal
 # from hugr.std.float import FLOAT_T, FloatValue
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.prelude.builtins import py
 
 # from guppylang.prelude._internal.compiler.angle import guppy
 # from guppylang.prelude._internal.compiler.quantum import ANGLE_EXTENSION, ANGLE_T
@@ -20,52 +21,52 @@ angles = GuppyModule("angles")
 
 @guppy.struct(angles)
 class angle:
-    radians: float
+    halfturns: float
 
     @guppy(angles)
     @no_type_check
     def __add__(self: "angle", other: "angle") -> "angle":
-        return angle(self.radians + other.radians)
+        return angle(self.halfturns + other.halfturns)
 
     @guppy(angles)
     @no_type_check
     def __sub__(self: "angle", other: "angle") -> "angle":
-        return angle(self.radians - other.radians)
+        return angle(self.halfturns - other.halfturns)
 
-    @guppy
+    @guppy(angles)
     @no_type_check
     def __mul__(self: "angle", other: int) -> "angle":
-        return angle(self.radians * other)
+        return angle(self.halfturns * other)
 
-    @guppy
+    @guppy(angles)
     @no_type_check
     def __rmul__(self: "angle", other: int) -> "angle":
-        return angle(self.radians * other)
+        return angle(self.halfturns * other)
 
-    @guppy
+    @guppy(angles)
     @no_type_check
     def __truediv__(self: "angle", other: int) -> "angle":
-        return angle(self.radians / other)
+        return angle(self.halfturns / other)
 
-    @guppy
+    @guppy(angles)
     @no_type_check
     def __rtruediv__(self: "angle", other: int) -> "angle":
-        return angle(other / self.radians)
+        return angle(other / self.halfturns)
 
-    @guppy
+    @guppy(angles)
     @no_type_check
     def __neg__(self: "angle") -> "angle":
-        return angle(-self.radians)
+        return angle(-self.halfturns)
 
     @guppy(angles)
     @no_type_check
     def __float__(self: "angle") -> float:
-        return self.radians
+        return self.halfturns * py(math.pi)
 
     @guppy(angles)
     @no_type_check
     def __eq__(self: "angle", other: "angle") -> bool:
-        return self.radians == other.radians
+        return self.halfturns == other.halfturns
 
 
-pi = guppy.constant(angles, "pi", ty="angle", value=hv.Tuple(FloatVal(math.pi)))
+pi = guppy.constant("pi", ty="angle", value=hv.Tuple(FloatVal(1.0)), module=angles)

@@ -62,24 +62,17 @@ class MeasureReturnCompiler(CustomInoutCallCompiler):
         )
         return CallReturnWires(regular_returns=[bit], inout_returns=[q])
 
-class RotationCompiler(CustomCallCompiler):
+class RotationCompiler(CustomInoutCallCompiler):
     opname: str
 
     def __init__(self, opname: str):
         self.opname = opname
 
-    def compile(self, args: list[Wire]) -> list[Wire]:
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         from guppylang.prelude._internal.util import quantum_op
 
         [q, angle] = args
-        [radians] = self.builder.add_op(ops.UnpackTuple([FLOAT_T]), angle)
-        [pi] = self.builder.load(FloatVal(math.pi))
-        op = ops.ExtOp(
-            FLOAT_OPS_EXTENSION.get_op("fdiv"),
-            ht.FunctionType([FLOAT_T, FLOAT_T], [FLOAT_T]),
-            [],
-        )
-        [halfturns] = self.builder.add_op(op, radians, pi)
+        [halfturns] = self.builder.add_op(ops.UnpackTuple([FLOAT_T]), angle)
         [mb_rotation] = self.builder.add_op(from_halfturns(), halfturns)
 
         conditional = self.builder.add_conditional(mb_rotation)
@@ -96,4 +89,4 @@ class RotationCompiler(CustomCallCompiler):
             q,
             conditional,
         )
-        return [q]
+        return CallReturnWires(regular_returns=[], inout_returns=[q])

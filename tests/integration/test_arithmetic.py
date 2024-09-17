@@ -230,3 +230,20 @@ def test_supported_ops(validate, run_int_fn):
     run_int_fn(hugr, expected=-42, fn_name="run_neg")
     run_int_fn(hugr, expected=-2, fn_name="run_div")
     run_int_fn(hugr, expected=2, fn_name="run_rem")
+
+
+def test_angle_exec(validate, run_float_fn):
+    module = GuppyModule("test_angle_exec")
+    module.load(angle,pi)
+
+    @guppy(module)
+    def main() -> float:
+        a1 = pi * 2
+        a2 = pi * 4
+        a3 = -a1 + a2 * -3
+        a3 -= a1
+        a3 += 2 * a1
+        return float(a3)
+    hugr = module.compile()
+    validate(hugr)
+    run_float_fn(hugr, expected=168.0)

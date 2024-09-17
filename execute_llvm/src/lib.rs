@@ -86,7 +86,7 @@ fn compile_module_to_string(hugr_json: &str) -> PyResult<String> {
 fn run_function<T>(
     hugr_json: &str,
     fn_name: &str,
-    parse_result: impl FnOnce(GenericValue) -> PyResult<T>,
+    parse_result: impl FnOnce(&Context, GenericValue) -> PyResult<T>,
 ) -> PyResult<T> {
     let hugr = parse_hugr(hugr_json)?;
     let ctx = Context::create();
@@ -105,12 +105,12 @@ fn run_function<T>(
         .create_execution_engine()
         .map_err(|_| pyerr!("Failed to create execution engine"))?;
     let llvm_result = unsafe { ee.run_function(fv, &[]) };
-    parse_result(llvm_result)
+    parse_result(&ctx, llvm_result)
 }
 
 #[pyfunction]
 fn run_int_function(hugr_json: &str, fn_name: &str) -> PyResult<i64> {
-    run_function::<i64>(hugr_json, fn_name, |llvm_val| {
+    run_function::<i64>(hugr_json, fn_name, |_, llvm_val| {
         // GenericVal is 64 bits wide
         let int_with_sign = llvm_val.as_int(true);
         let unsigned_int =
@@ -120,9 +120,17 @@ fn run_int_function(hugr_json: &str, fn_name: &str) -> PyResult<i64> {
     })
 }
 
+#[pyfunction]
+fn run_float_function(hugr_json: &str, fn_name: &str) -> PyResult<f64> {
+    run_function::<f64>(hugr_json, fn_name, |ctx, llvm_val| {
+        Ok(llvm_val.as_float(&ctx.f64_type()))
+    })
+}
+
 #[pymodule]
 fn execute_llvm(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compile_module_to_string, m)?)?;
     m.add_function(wrap_pyfunction!(run_int_function, m)?)?;
+    m.add_function(wrap_pyfunction!(run_float_function, m)?)?;
     Ok(())
 }
