@@ -238,12 +238,13 @@ def test_angle_exec(validate, run_float_fn):
 
     @guppy(module)
     def main() -> float:
-        a1 = pi * 2
-        a2 = pi * 4
+        a1 = pi
+        a2 = pi * 2
         a3 = -a1 + a2 * -3
         a3 -= a1
         a3 += 2 * a1
         return float(a3)
     hugr = module.compile()
     validate(hugr)
-    run_float_fn(hugr, expected=168.0)
+    import math
+    run_float_fn(hugr, expected=-6 * math.pi)
