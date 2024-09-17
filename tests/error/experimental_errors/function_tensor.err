@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:19
+
+17:    @guppy(module)
+18:    def main() -> tuple[int, int]:
+19:        return (f, g)(1, 2)
+                  ^^^^^^
+GuppyError: Function tensors are an experimental feature. Use `guppylang.enable_experimental_features()` to enable them.
