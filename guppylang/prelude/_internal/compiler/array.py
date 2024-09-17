@@ -8,10 +8,10 @@ import hugr.std
 from hugr import Wire, ops
 from hugr import tys as ht
 
-from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
+from guppylang.prelude._internal.compiler.arithmetic import convert_itousize
 from guppylang.prelude._internal.compiler.prelude import build_error, build_panic
 from guppylang.tys.arg import ConstArg, TypeArg
 from guppylang.tys.const import ConstValue
@@ -56,15 +56,11 @@ class ArrayGetitemCompiler(CustomCallCompiler):
         elem_ty: ht.Type,
     ) -> CallReturnWires:
         """Lowers a call to `array.__getitem__` for classical arrays."""
-        [ty_arg, len_arg] = self.type_args
-        # TODO: The `get` operation in hugr returns an option
-        op = UnsupportedOp(
-            op_name="prelude.get",
-            inputs=[array_ty, idx_ty],
-            outputs=[array_ty, elem_ty],
+        length = self.type_args[1].to_hugr()
+        elem = build_array_get(
+            self.builder, array, array_ty, idx, idx_ty, elem_ty, length
         )
-        node = self.builder.add_op(op, array, idx)
-        return CallReturnWires(regular_returns=[node[1]], inout_returns=[node[0]])
+        return CallReturnWires(regular_returns=[elem], inout_returns=[array])
 
     def build_linear_getitem(
         self,
@@ -97,7 +93,7 @@ class ArrayGetitemCompiler(CustomCallCompiler):
             case.set_outputs(*case.inputs())
         with conditional.add_case(1) as case:
             error = build_error(case, 1, "Linear array element has already been used")
-            case.set_outputs(build_panic(case, [], [elem_ty], error))
+            case.set_outputs(*build_panic(case, [], [elem_ty], error))
         return CallReturnWires(regular_returns=[conditional], inout_returns=[array])
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
@@ -187,14 +183,54 @@ def build_array_set(
     length: ht.TypeArg,
 ) -> tuple[Wire, Wire]:
     """Builds an array set operation, returning the original element."""
-    # TODO: The `set` operation in hugr returns an either
-    op = UnsupportedOp(
-        op_name="prelude.set",
-        inputs=[array_ty, idx_ty, elem_ty],
-        outputs=[array_ty, elem_ty],
+    sig = ht.FunctionType(
+        [array_ty, ht.USize(), elem_ty],
+        [ht.Sum([[elem_ty, array_ty], [elem_ty, array_ty]])],
     )
-    array, swapped_elem = iter(builder.add_op(op, array, idx, elem))
-    return array, swapped_elem
+    if idx_ty != ht.USize():
+        idx = builder.add_op(convert_itousize(), idx)
+    op = ops.ExtOp(
+        hugr.std.PRELUDE.get_op("set"), sig, [length, ht.TypeTypeArg(elem_ty)]
+    )
+    [result] = builder.add_op(op, array, idx, elem)
+    conditional = builder.add_conditional(result)
+    with conditional.add_case(0) as case:
+        error = build_error(case, 1, "array set index out of bounds")
+        case.set_outputs(
+            *build_panic(
+                case, [elem_ty, array_ty], [elem_ty, array_ty], error, *case.inputs()
+            )
+        )
+    with conditional.add_case(1) as case:
+        case.set_outputs(*case.inputs())
+    [elem, array] = conditional
+    return (array, elem)
+
+
+def build_array_get(
+    builder: DfBase[ops.DfParentOp],
+    array: Wire,
+    array_ty: ht.Type,
+    idx: Wire,
+    idx_ty: ht.Type,
+    elem_ty: ht.Type,
+    length: ht.TypeArg,
+) -> Wire:
+    """Builds an array get operation, returning the original element."""
+    sig = ht.FunctionType([array_ty, ht.USize()], [ht.Sum([[], [elem_ty]])])
+    op = ops.ExtOp(
+        hugr.std.PRELUDE.get_op("get"), sig, [length, ht.TypeTypeArg(elem_ty)]
+    )
+    if idx_ty != ht.USize():
+        idx = builder.add_op(convert_itousize(), idx)
+    [result] = builder.add_op(op, array, idx)
+    conditional = builder.add_conditional(result)
+    with conditional.add_case(0) as case:
+        error = build_error(case, 1, "array get index out of bounds")
+        case.set_outputs(*build_panic(case, [], [elem_ty], error))
+    with conditional.add_case(1) as case:
+        case.set_outputs(*case.inputs())
+    return conditional
 
 
 def new_array(length: int, elem_ty: ht.Type) -> ops.ExtOp:
