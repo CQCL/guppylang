@@ -4,7 +4,10 @@ from hugr.ext import Package
 from pathlib import Path
 import pytest
 import subprocess
+import os
 
+
+IN_CI = len(os.getenv("CI", "")) > 0
 
 @pytest.fixture(scope="session")
 def export_test_cases_dir(request):
@@ -32,9 +35,12 @@ def validate(request, export_test_cases_dir: Path):
         # Check if the validator is installed
         validator = get_validator()
         if validator is None:
-            pytest.fail("Run `cargo build -p release` to install the validator")
-    else:
-        pytest.skip("Skipping validation tests as requested")
+            if IN_CI:
+                pytest.fail("Validator not installed")
+            else:
+                pytest.skip(
+                    "Skipping validation: Run `cargo build` to install the validator"
+                )
 
     def validate_json(hugr: str):
         # Executes `cargo run -p validator -- validate -`
@@ -74,7 +80,10 @@ def run_int_fn():
             import execute_llvm
 
             if not hasattr(execute_llvm, "run_int_function"):
-                pytest.skip("Skipping llvm execution")
+                if IN_CI:
+                    pytest.fail("run_int_function not available in CI")
+                else:
+                    pytest.skip("Skipping llvm execution")
 
             hugr_json: str = hugr.modules[0].to_json()
             res = execute_llvm.run_int_function(hugr_json, fn_name)
@@ -82,7 +91,9 @@ def run_int_fn():
                 raise LLVMException(
                     f"Expected value ({expected}) doesn't match actual value ({res})"
                 )
-        except ImportError:
-            pytest.skip("Skipping llvm execution")
-
+        except ImportError as e:
+            if IN_CI:
+                pytest.fail(f"run_int_fn failed in CI: {e}")
+            else:
+                pytest.skip("Skipping llvm execution")
     return f
