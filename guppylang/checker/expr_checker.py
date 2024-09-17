@@ -1124,10 +1124,8 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
                             [], globals
                         )
                         return FunctionType(
-                            [FuncInput(qubit, InputFlags.NoFlags)] * v.n_qubits,
-                            row_to_type(
-                                [qubit] * v.n_qubits + [bool_type()] * v.n_bits
-                            ),
+                            [FuncInput(qubit, InputFlags.Inout)] * v.n_qubits,
+                            row_to_type([bool_type()] * v.n_bits),
                         )
                     except ImportError:
                         raise GuppyError(
