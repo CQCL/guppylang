@@ -4,13 +4,11 @@ multiple nodes.
 
 from __future__ import annotations
 
-import math
-
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr.std.float import FLOAT_OPS_EXTENSION, FLOAT_T, FloatVal
+from hugr.std.float import FLOAT_T
 
-from guppylang.definition.custom import CustomInoutCallCompiler, CustomCallCompiler
+from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.prelude._internal.compiler.prelude import build_error, build_panic
 from guppylang.prelude._internal.json_defs import load_extension
@@ -61,6 +59,7 @@ class MeasureReturnCompiler(CustomInoutCallCompiler):
             q,
         )
         return CallReturnWires(regular_returns=[bit], inout_returns=[q])
+
 
 class RotationCompiler(CustomInoutCallCompiler):
     opname: str

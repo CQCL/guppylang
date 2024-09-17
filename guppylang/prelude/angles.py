@@ -8,13 +8,9 @@ from typing import no_type_check
 from hugr import val as hv
 from hugr.std.float import FloatVal
 
-# from hugr.std.float import FLOAT_T, FloatValue
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude.builtins import py
-
-# from guppylang.prelude._internal.compiler.angle import guppy
-# from guppylang.prelude._internal.compiler.quantum import ANGLE_EXTENSION, ANGLE_T
 
 angles = GuppyModule("angles")
 

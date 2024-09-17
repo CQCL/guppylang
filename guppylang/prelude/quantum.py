@@ -9,8 +9,8 @@ from hugr import tys as ht
 from guppylang.decorator import guppy
 from guppylang.prelude._internal.compiler.quantum import (
     HSERIES_EXTENSION,
-    RotationCompiler,
     MeasureReturnCompiler,
+    RotationCompiler,
 )
 from guppylang.prelude._internal.util import quantum_op
 from guppylang.prelude.angles import angle
