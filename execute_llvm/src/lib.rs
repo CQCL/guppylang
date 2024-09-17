@@ -62,7 +62,10 @@ fn compile_module<'a>(
     let extensions = hugr_llvm::custom::CodegenExtsMap::default()
         .add_int_extensions()
         .add_default_prelude_extensions()
-        .add_float_extensions();
+        .add_float_extensions()
+        .add_rotation_extensions();
+    let extensions = hugr_llvm::custom::conversions::add_conversions_extension(extensions);
+
     let emitter =
         hugr_llvm::emit::EmitHugr::new(&ctx, llvm_module, namer.into(), extensions.into());
     let hugr_module = hugr.fat_root().unwrap();

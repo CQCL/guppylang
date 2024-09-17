@@ -196,3 +196,15 @@ def test_struct_nested_subscript(validate):
         return a
 
     validate(module.compile())
+
+def test_exec_array(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        a = array(1,2,3)
+        return a[0] + a[1] + a[2]
+
+    package = module.compile()
+    validate(package)
+    run_int_fn(package, expected=6)
