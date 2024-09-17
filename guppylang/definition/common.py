@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
 from hugr.build.dfg import DefinitionBuilder, OpVar
-from hugr.ext import Package
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
