@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.12.0](https://github.com/CQCL/guppylang/compare/v0.11.0...v0.12.0) (2024-09-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* Pytket circuits loaded via a `py` expression no longer take ownership of the passed qubits.
+* Lists and function tensors are no longer available by default. `guppylang.enable_experimental_features()` must be called before compilation to enable them.
+* The `GuppyModule` argument is now optional for all decorators and no longer the first positional argument. Removed the explicit module objects `builtins`, `quantum`, and `angle`.
+* `quantum_functional` is now its own Guppy module and no longer implicitly comes with `quantum`.
+* Linear function arguments are now borrowed by default; removed the now redundant `@inout` annotation
+
+### Features
+
+* Add functions to quantum module and make quantum_functional independent ([#494](https://github.com/CQCL/guppylang/issues/494)) ([0b0b1af](https://github.com/CQCL/guppylang/commit/0b0b1afbf5bf481d8fdcbe5050dcf9d5fb85d263))
+* Hide lists and function tensors behind experimental flag ([#501](https://github.com/CQCL/guppylang/issues/501)) ([c867f48](https://github.com/CQCL/guppylang/commit/c867f48d6dc555454db69943f0b420cb53676d3d))
+* Make linear types [@inout](https://github.com/inout) by default; add [@owned](https://github.com/owned) annotation ([#486](https://github.com/CQCL/guppylang/issues/486)) ([e900c96](https://github.com/CQCL/guppylang/commit/e900c96eb3755ad5d4304eb721e791b8185c8f09))
+* Only lower definitions to Hugr if they are used ([#496](https://github.com/CQCL/guppylang/issues/496)) ([cc2c8a4](https://github.com/CQCL/guppylang/commit/cc2c8a4f09f43f8913c49ff0dfe0da601a85b7c6))
+* Support implicit modules for all decorators and turn builtins into implicit module ([#476](https://github.com/CQCL/guppylang/issues/476)) ([cc8a424](https://github.com/CQCL/guppylang/commit/cc8a424ad9a8b8c3c5a3b5cc700ccdb7a5ff8fa9))
+* Use inout for pytket circuits ([#500](https://github.com/CQCL/guppylang/issues/500)) ([a980ec2](https://github.com/CQCL/guppylang/commit/a980ec2c89e2ebecb16b0ea12750ecf6781f3ee3))
+
+
+### Bug Fixes
+
+* `angle` is now a struct and emitted as a rotation  ([#485](https://github.com/CQCL/guppylang/issues/485)) ([992b138](https://github.com/CQCL/guppylang/commit/992b138a312dace5a6f846e99013a0a0bcfe74e6))
+* Evade false positives for inout variable usage ([#493](https://github.com/CQCL/guppylang/issues/493)) ([6fdb5d6](https://github.com/CQCL/guppylang/commit/6fdb5d6ff1fb4c2e4db89f885480fbe818fd32a0))
+* Fix redefinition of structs ([#499](https://github.com/CQCL/guppylang/issues/499)) ([0b156e9](https://github.com/CQCL/guppylang/commit/0b156e9f9894b45fc2ca6c566e496d9242634434))
+* Initialise _checked in GuppyModule ([#491](https://github.com/CQCL/guppylang/issues/491)) ([3dd5dd3](https://github.com/CQCL/guppylang/commit/3dd5dd3797f1da8b1bd0acdee692d1d5e8a19d98)), closes [#489](https://github.com/CQCL/guppylang/issues/489)
+* use correct array ops ([#503](https://github.com/CQCL/guppylang/issues/503)) ([720d8b8](https://github.com/CQCL/guppylang/commit/720d8b814bbd3f76e788cedc4db4cef96ff24160))
+
 ## [0.11.0](https://github.com/CQCL/guppylang/compare/v0.10.0...v0.11.0) (2024-09-11)
 
 
