@@ -58,7 +58,7 @@
     "radd": {
       "extension": "tket2.rotation",
       "name": "radd",
-      "description": "Add two angles together (experimental).",
+      "description": "Add two rotations together (experimental).",
       "signature": {
         "params": [],
         "body": {

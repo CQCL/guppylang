@@ -112,7 +112,7 @@ def test_angle_arith(validate):
         a3 = -a1 + a2 * -3
         a3 -= a1
         a3 += 2 * a1
-        return a3 == -a2
+        return a3 / 3 == -a2
 
     validate(module.compile())
 
@@ -247,4 +247,4 @@ def test_angle_exec(validate, run_float_fn):
     hugr = module.compile()
     validate(hugr)
     import math
-    run_float_fn(hugr, expected=-6 * math.pi)
+    run_float_fn(hugr, expected=pytest.approx(-6 * math.pi))
