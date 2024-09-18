@@ -4,6 +4,7 @@ from hugr.ext import Package
 from pathlib import Path
 import pytest
 import subprocess
+from typing import Any
 
 
 @pytest.fixture(scope="session")
@@ -67,17 +68,17 @@ class LLVMException(Exception):
     pass
 
 
-@pytest.fixture
-def run_int_fn():
-    def f(hugr: Package, expected: int, fn_name: str = "main"):
+def _run_fn(run_fn_name: str):
+    def f(hugr: Package, expected: Any, fn_name: str = "main"):
         try:
             import execute_llvm
 
-            if not hasattr(execute_llvm, "run_int_function"):
+            fn = getattr(execute_llvm, run_fn_name)
+            if not fn:
                 pytest.skip("Skipping llvm execution")
 
             hugr_json: str = hugr.modules[0].to_json()
-            res = execute_llvm.run_int_function(hugr_json, fn_name)
+            res = fn(hugr_json, fn_name)
             if res != expected:
                 raise LLVMException(
                     f"Expected value ({expected}) doesn't match actual value ({res})"
@@ -86,3 +87,13 @@ def run_int_fn():
             pytest.skip("Skipping llvm execution")
 
     return f
+
+
+
+@pytest.fixture
+def run_int_fn():
+    return _run_fn("run_int_function")
+
+@pytest.fixture
+def run_float_fn():
+    return _run_fn("run_float_function")

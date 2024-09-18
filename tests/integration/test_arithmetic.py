@@ -1,6 +1,6 @@
 import pytest
 from guppylang.decorator import guppy
-from guppylang.prelude.angles import angle, pi
+from guppylang.prelude.angles import angle, pi, angles
 from guppylang.prelude.builtins import nat
 from guppylang.module import GuppyModule
 from tests.util import compile_guppy
@@ -230,3 +230,21 @@ def test_supported_ops(validate, run_int_fn):
     run_int_fn(hugr, expected=-42, fn_name="run_neg")
     run_int_fn(hugr, expected=-2, fn_name="run_div")
     run_int_fn(hugr, expected=2, fn_name="run_rem")
+
+
+def test_angle_exec(validate, run_float_fn):
+    module = GuppyModule("test_angle_exec")
+    module.load_all(angles)
+
+    @guppy(module)
+    def main() -> float:
+        a1 = pi
+        a2 = pi * 2
+        a3 = -a1 + a2 * -3
+        a3 -= a1
+        a3 += 2 * a1
+        return float(a3)
+    hugr = module.compile()
+    validate(hugr)
+    import math
+    run_float_fn(hugr, expected=pytest.approx(-6 * math.pi))

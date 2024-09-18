@@ -1,96 +1,72 @@
 """Guppy standard module for dyadic rational angles."""
 
-# mypy: disable-error-code="empty-body, misc, override"
+# mypy: disable-error-code="empty-body, misc, override, operator"
 
+import math
 from typing import no_type_check
 
-from hugr import tys as ht
 from hugr import val as hv
+from hugr.std.float import FloatVal
 
 from guppylang.decorator import guppy
-from guppylang.prelude._internal.checker import CoercingChecker
-from guppylang.prelude._internal.compiler.angle import AngleOpCompiler
-from guppylang.prelude.builtins import nat
+from guppylang.module import GuppyModule
+from guppylang.prelude.builtins import py
 
-_hugr_angle_type = ht.Opaque("angle", ht.TypeBound.Copyable, [], "tket2.quantum")
-
-
-def _hugr_angle_value(numerator: int, log_denominator: int) -> hv.Value:
-    custom_const = {
-        "log_denominator": log_denominator,
-        "value": numerator,
-    }
-    return hv.Extension(
-        name="ConstAngle",
-        typ=_hugr_angle_type,
-        val=custom_const,
-        extensions=["quantum.tket2"],
-    )
+angles = GuppyModule("angles")
 
 
-pi = guppy.constant("pi", ty="angle", value=_hugr_angle_value(1, 1))
-
-
-@guppy.type(_hugr_angle_type)
+@guppy.struct(angles)
 class angle:
-    """The type of angles represented as dyadic rational multiples of 2π."""
+    """Not an angle in the truest sense but a rotation by a number of half-turns
+    (does not wrap or identify with itself modulo any number of complete turns).
+    """
 
-    @guppy.custom(AngleOpCompiler("afromrad"), CoercingChecker())
-    def __new__(radians: float) -> "angle": ...
+    halfturns: float
 
-    @guppy.custom(AngleOpCompiler("aadd"))
-    def __add__(self: "angle", other: "angle") -> "angle": ...
+    @guppy(angles)
+    @no_type_check
+    def __add__(self: "angle", other: "angle") -> "angle":
+        return angle(self.halfturns + other.halfturns)
 
-    @guppy.custom(AngleOpCompiler("asub"))
-    def __sub__(self: "angle", other: "angle") -> "angle": ...
+    @guppy(angles)
+    @no_type_check
+    def __sub__(self: "angle", other: "angle") -> "angle":
+        return angle(self.halfturns - other.halfturns)
 
-    @guppy.custom(AngleOpCompiler("aneg"))
-    def __neg__(self: "angle") -> "angle": ...
-
-    @guppy.custom(AngleOpCompiler("atorad"))
-    def __float__(self: "angle") -> float: ...
-
-    @guppy.custom(AngleOpCompiler("aeq"))
-    def __eq__(self: "angle", other: "angle") -> bool: ...
-
-    @guppy
+    @guppy(angles)
     @no_type_check
     def __mul__(self: "angle", other: int) -> "angle":
-        if other < 0:
-            return self._nat_mul(nat(other))
-        else:
-            return -self._nat_mul(nat(other))
+        return angle(self.halfturns * other)
 
-    @guppy
+    @guppy(angles)
     @no_type_check
     def __rmul__(self: "angle", other: int) -> "angle":
-        return self * other
+        return angle(self.halfturns * other)
 
-    @guppy
+    @guppy(angles)
     @no_type_check
     def __truediv__(self: "angle", other: int) -> "angle":
-        if other < 0:
-            return self._nat_div(nat(other))
-        else:
-            return -self._nat_div(nat(other))
+        return angle(self.halfturns / other)
 
-    @guppy.custom(AngleOpCompiler("amul"))
-    def _nat_mul(self: "angle", other: nat) -> "angle": ...
-
-    @guppy.custom(AngleOpCompiler("aneg"))
-    def _nat_div(self: "angle", other: nat) -> "angle": ...
-
-    @guppy.custom(AngleOpCompiler("aparts"))
-    def _parts(self: "angle") -> tuple[nat, nat]: ...
-
-    @guppy
+    @guppy(angles)
     @no_type_check
-    def numerator(self: "angle") -> nat:
-        numerator, _ = self._parts()
-        return numerator
+    def __rtruediv__(self: "angle", other: int) -> "angle":
+        return angle(other / self.halfturns)
 
-    @guppy
+    @guppy(angles)
     @no_type_check
-    def log_denominator(self: "angle") -> nat:
-        _, log_denominator = self._parts()
-        return log_denominator
+    def __neg__(self: "angle") -> "angle":
+        return angle(-self.halfturns)
+
+    @guppy(angles)
+    @no_type_check
+    def __float__(self: "angle") -> float:
+        return self.halfturns * py(math.pi)
+
+    @guppy(angles)
+    @no_type_check
+    def __eq__(self: "angle", other: "angle") -> bool:
+        return self.halfturns == other.halfturns
+
+
+pi = guppy.constant("pi", ty="angle", value=hv.Tuple(FloatVal(1.0)), module=angles)

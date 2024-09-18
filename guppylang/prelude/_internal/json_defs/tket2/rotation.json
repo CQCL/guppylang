@@ -1,0 +1,126 @@
+{
+  "version": "0.1.0",
+  "name": "tket2.rotation",
+  "extension_reqs": [],
+  "types": {
+    "rotation": {
+      "extension": "tket2.rotation",
+      "name": "rotation",
+      "params": [],
+      "description": "rotation type expressed as number of half turns",
+      "bound": {
+        "b": "Explicit",
+        "bound": "C"
+      }
+    }
+  },
+  "values": {},
+  "operations": {
+    "from_halfturns": {
+      "extension": "tket2.rotation",
+      "name": "from_halfturns",
+      "description": "Construct rotation from number of half-turns (would be multiples of π in radians).",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Sum",
+              "s": "General",
+              "rows": [
+                [],
+                [
+                  {
+                    "t": "Opaque",
+                    "extension": "tket2.rotation",
+                    "id": "rotation",
+                    "args": [],
+                    "bound": "C"
+                  }
+                ]
+              ]
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "radd": {
+      "extension": "tket2.rotation",
+      "name": "radd",
+      "description": "Add two rotations together (experimental).",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.rotation",
+              "id": "rotation",
+              "args": [],
+              "bound": "C"
+            },
+            {
+              "t": "Opaque",
+              "extension": "tket2.rotation",
+              "id": "rotation",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.rotation",
+              "id": "rotation",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
+    "to_halfturns": {
+      "extension": "tket2.rotation",
+      "name": "to_halfturns",
+      "description": "Convert rotation to number of half-turns (would be multiples of π in radians).",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.rotation",
+              "id": "rotation",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    }
+  }
+}
