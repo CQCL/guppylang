@@ -69,16 +69,20 @@ class LLVMException(Exception):
 
 
 def _run_fn(run_fn_name: str):
-    def f(hugr: Package, fn_name: str = "main"):
+    def f(hugr: Package, expected: Any, fn_name: str = "main"):
         try:
             import execute_llvm
 
             fn = getattr(execute_llvm, run_fn_name)
             if not fn:
-                pytest.skip(f"Skipping llvm execution, {run_fn_name} not found")
+                pytest.skip("Skipping llvm execution")
 
             hugr_json: str = hugr.modules[0].to_json()
-            return fn(hugr_json, fn_name)
+            res = fn(hugr_json, fn_name)
+            if res != expected:
+                raise LLVMException(
+                    f"Expected value ({expected}) doesn't match actual value ({res})"
+                )
         except ImportError:
             pytest.skip("Skipping llvm execution")
 
@@ -88,14 +92,7 @@ def _run_fn(run_fn_name: str):
 
 @pytest.fixture
 def run_int_fn():
-    run_to_res = _run_fn("run_int_function")
-    def run_and_check(hugr: Package, expected: int, fn_name: str = "main"):
-        res = run_to_res(hugr, fn_name)
-        if res != expected:
-            raise LLVMException(
-                f"Expected value ({expected}) doesn't match actual value ({res})"
-            )
-    return run_and_check
+    return _run_fn("run_int_function")
 
 @pytest.fixture
 def run_float_fn():

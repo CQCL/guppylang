@@ -246,6 +246,5 @@ def test_angle_exec(validate, run_float_fn):
         return float(a3)
     hugr = module.compile()
     validate(hugr)
-    res = run_float_fn(hugr)
-    from math import pi
-    assert res == pytest.approx(-6 * pi)
+    import math
+    run_float_fn(hugr, expected=-6 * math.pi)
