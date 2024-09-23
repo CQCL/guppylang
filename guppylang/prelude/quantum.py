@@ -9,7 +9,6 @@ from hugr import tys as ht
 from guppylang.decorator import guppy
 from guppylang.prelude._internal.compiler.quantum import (
     HSERIES_EXTENSION,
-    QUANTUM_EXTENSION,
     MeasureReturnCompiler,
     RotationCompiler,
 )
