@@ -35,6 +35,10 @@ def h(q: qubit) -> None: ...
 def cz(control: qubit, target: qubit) -> None: ...
 
 
+@guppy.hugr_op(quantum_op("CY"))
+def cy(control: qubit, target: qubit) -> None: ...
+
+
 @guppy.hugr_op(quantum_op("CX"))
 def cx(control: qubit, target: qubit) -> None: ...
 
@@ -77,6 +81,18 @@ def rz(q: qubit, angle: angle) -> None: ...
 
 @guppy.custom(RotationCompiler("Rx"))
 def rx(q: qubit, angle: angle) -> None: ...
+
+
+@guppy.custom(RotationCompiler("Ry"))
+def ry(q: qubit, angle: angle) -> None: ...
+
+
+@guppy.custom(RotationCompiler("CRz"))
+def crz(control: qubit, target: qubit, angle: angle) -> None: ...
+
+
+@guppy.hugr_op(quantum_op("Toffoli"))
+def toffoli(control1: qubit, control2: qubit, target: qubit) -> None: ...
 
 
 @guppy.hugr_op(quantum_op("QAlloc"))

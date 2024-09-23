@@ -18,6 +18,7 @@ from guppylang.prelude.quantum import (
 )
 from guppylang.prelude.quantum_functional import (
     cx,
+    cy,
     cz,
     h,
     t,
@@ -30,7 +31,10 @@ from guppylang.prelude.quantum_functional import (
     zz_max,
     phased_x,
     rx,
+    ry,
     rz,
+    crz,
+    toffoli,
     zz_phase,
     reset,
     quantum_functional,
@@ -85,9 +89,19 @@ def test_2qb_op(validate):
     @compile_quantum_guppy
     def test(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]:
         q1, q2 = cx(q1, q2)
+        q1, q2 = cy(q1, q2)
         q1, q2 = cz(q1, q2)
         q1, q2 = zz_max(q1, q2)
         return (q1, q2)
+
+    validate(test)
+
+
+def test_3qb_op(validate):
+    @compile_quantum_guppy
+    def test(q1: qubit @owned, q2: qubit @owned, q3: qubit @owned) -> tuple[qubit, qubit, qubit]:
+        q1, q2, q3 = toffoli(q1, q2, q3)
+        return (q1, q2, q3)
 
     validate(test)
 
@@ -110,9 +124,11 @@ def test_parametric(validate):
     """Compile various parametric operations."""
 
     @compile_quantum_guppy
-    def test(q1: qubit @owned, q2: qubit @owned, a1: angle, a2: angle) -> tuple[qubit, qubit]:
+    def test(q1: qubit @owned, q2: qubit @owned, a1: angle, a2: angle, a3: angle) -> tuple[qubit, qubit]:
         q1 = rx(q1, a1)
-        q2 = rz(q2, a2)
+        q1 = ry(q1, a1)
+        q2 = rz(q2, a3)
         q1 = phased_x(q1, a1, a2)
         q1, q2 = zz_phase(q1, q2, a1)
+        q1, q2 = crz(q1, q2, a3)
         return (q1, q2)
