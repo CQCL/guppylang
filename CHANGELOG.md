@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.12.1](https://github.com/CQCL/guppylang/compare/v0.12.0...v0.12.1) (2024-09-23)
+
+
+### Features
+
+* Add Definition.compile producing Hugr Package ([#504](https://github.com/CQCL/guppylang/issues/504)) ([d8c8bec](https://github.com/CQCL/guppylang/commit/d8c8bec33075e015dc12d8142891f566c3249c92))
+* Add missing tket2 quantum gates, generalise RotationCompile ([#510](https://github.com/CQCL/guppylang/issues/510)) ([18d4b4c](https://github.com/CQCL/guppylang/commit/18d4b4c8b324b0f202e262768617d450745004dc))
+
+
+### Miscellaneous Chores
+
+* release 0.12.1 ([#512](https://github.com/CQCL/guppylang/issues/512)) ([b309a94](https://github.com/CQCL/guppylang/commit/b309a944af3d45a6afbdf6fd253b3b764e36c029))
+
 ## [0.12.0](https://github.com/CQCL/guppylang/compare/v0.11.0...v0.12.0) (2024-09-18)
 
 
