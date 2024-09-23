@@ -31,8 +31,8 @@ def compile_guppy(fn) -> Package:
     ), "`@compile_guppy` does not support extra arguments."
 
     module = GuppyModule("module")
-    guppylang.decorator.guppy(module)(fn)
-    return module.compile()
+    defn = guppylang.decorator.guppy(module)(fn)
+    return defn.compile()
 
 
 def dump_llvm(hugr: Hugr | Package):
