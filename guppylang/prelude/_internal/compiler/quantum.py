@@ -88,4 +88,4 @@ class RotationCompiler(CustomInoutCallCompiler):
             *qs,
             conditional,
         )
-        return CallReturnWires(regular_returns=[], inout_returns=qs)
+        return CallReturnWires(regular_returns=[], inout_returns=list(*qs))
