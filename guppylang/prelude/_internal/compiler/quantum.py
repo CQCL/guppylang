@@ -70,7 +70,7 @@ class RotationCompiler(CustomInoutCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         from guppylang.prelude._internal.util import quantum_op
 
-        qs, angle = args[:-1], args[-1]
+        [*qs, angle] = args
         [halfturns] = self.builder.add_op(ops.UnpackTuple([FLOAT_T]), angle)
         [mb_rotation] = self.builder.add_op(from_halfturns(), halfturns)
 
