@@ -83,7 +83,10 @@ class RotationCompiler(CustomInoutCallCompiler):
 
         qs = self.builder.add_op(
             quantum_op(self.opname)(
-                ht.FunctionType([ht.Qubit for _ in qs] + [ROTATION_T], [ht.Qubit for _ in qs]), []
+                ht.FunctionType(
+                    [ht.Qubit for _ in qs] + [ROTATION_T], [ht.Qubit for _ in qs]
+                ),
+                [],
             ),
             *qs,
             conditional,

@@ -41,6 +41,13 @@ def cx(control: qubit @ owned, target: qubit @ owned) -> tuple[qubit, qubit]:
 
 @guppy(quantum_functional)
 @no_type_check
+def cy(control: qubit @ owned, target: qubit @ owned) -> tuple[qubit, qubit]:
+    quantum.cy(control, target)
+    return control, target
+
+
+@guppy(quantum_functional)
+@no_type_check
 def t(q: qubit @ owned) -> qubit:
     quantum.t(q)
     return q
@@ -107,6 +114,31 @@ def rz(q: qubit @ owned, angle: angle) -> qubit:
 def rx(q: qubit @ owned, angle: angle) -> qubit:
     quantum.rx(q, angle)
     return q
+
+
+@guppy(quantum_functional)
+@no_type_check
+def ry(q: qubit @ owned, angle: angle) -> qubit:
+    quantum.ry(q, angle)
+    return q
+
+
+@guppy(quantum_functional)
+@no_type_check
+def crz(
+    control: qubit @ owned, target: qubit @ owned, angle: angle
+) -> tuple[qubit, qubit]:
+    quantum.crz(control, target, angle)
+    return control, target
+
+
+@guppy(quantum_functional)
+@no_type_check
+def toffoli(
+    control1: qubit @ owned, control2: qubit @ owned, target: qubit @ owned
+) -> tuple[qubit, qubit, qubit]:
+    quantum.toffoli(control1, control2, target)
+    return control1, control2, target
 
 
 @guppy(quantum_functional)
