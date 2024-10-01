@@ -128,12 +128,12 @@ class TypePrinter:
     @_visit.register
     def _visit_TypeParam(self, param: TypeParam, inside_row: bool) -> str:
         # TODO: Print linearity?
-        return self.bound_names[-param.idx - 1]
+        return self.bound_names[param.idx]
 
     @_visit.register
     def _visit_ConstParam(self, param: ConstParam, inside_row: bool) -> str:
         kind = self._visit(param.ty, True)
-        name = self.bound_names[-param.idx - 1]
+        name = self.bound_names[param.idx]
         return f"{name}: {kind}"
 
     @_visit.register
