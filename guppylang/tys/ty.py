@@ -226,7 +226,7 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
 
 @dataclass(frozen=True)
 class NoneType(TypeBase):
-    """Type of tuples."""
+    """Type of `None`."""
 
     linear: bool = field(default=False, init=False)
     hugr_bound: ht.TypeBound = field(default=ht.TypeBound.Copyable, init=False)
