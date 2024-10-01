@@ -2,7 +2,7 @@ import inspect
 import sys
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from types import ModuleType
+from types import FrameType, ModuleType
 from typing import Any
 
 from hugr import Hugr, ops
@@ -10,6 +10,7 @@ from hugr.build.function import Module
 from hugr.ext import Package
 
 import guppylang.compiler.hugr_extension
+from guppylang import decorator
 from guppylang.checker.core import Globals, PyScope
 from guppylang.compiler.core import CompiledGlobals
 from guppylang.definition.common import (
@@ -213,7 +214,7 @@ class GuppyModule:
         self, f: PyFunc, instance: TypeDef | None = None
     ) -> RawFunctionDecl:
         """Registers a Python function declaration as belonging to this Guppy module."""
-        decl = RawFunctionDecl(DefId.fresh(self), f.__name__, None, f)
+        decl = RawFunctionDecl(DefId.fresh(self), f.__name__, None, f, get_py_scope(f))
         self.register_def(decl, instance)
         return decl
 
@@ -353,7 +354,8 @@ class GuppyModule:
 
 
 def get_py_scope(f: PyFunc) -> PyScope:
-    """Returns a mapping of all variables captured by a Python function.
+    """Returns a mapping of all variables captured by a Python function together with
+    the `f_locals` and `f_globals` of the frame that called this function.
 
     Note that this function only works in CPython. On other platforms, an empty
     dictionary is returned.
@@ -361,8 +363,12 @@ def get_py_scope(f: PyFunc) -> PyScope:
     Relies on inspecting the `__globals__` and `__closure__` attributes of the function.
     See https://docs.python.org/3/reference/datamodel.html#special-read-only-attributes
     """
+    # Get variables from the calling frame
+    frame = get_calling_frame()
+    frame_vars = frame.f_globals | frame.f_locals if frame else {}
+
     if sys.implementation.name != "cpython":
-        return {}
+        return frame_vars
 
     if inspect.ismethod(f):
         f = f.__func__
@@ -379,7 +385,7 @@ def get_py_scope(f: PyFunc) -> PyScope:
                 continue
             nonlocals[var] = value
 
-    return nonlocals | f.__globals__.copy()
+    return frame_vars | nonlocals | f.__globals__.copy()
 
 
 def find_guppy_module_in_py_module(module: ModuleType) -> GuppyModule:
@@ -407,3 +413,16 @@ def find_guppy_module_in_py_module(module: ModuleType) -> GuppyModule:
         )
         raise GuppyError(msg)
     return mods[0]
+
+
+def get_calling_frame() -> FrameType | None:
+    """Finds the first frame that called this function outside the compiler modules."""
+    frame = inspect.currentframe()
+    while frame:
+        module = inspect.getmodule(frame)
+        if module is None:
+            break
+        if module.__file__ != __file__ and module != decorator:
+            return frame
+        frame = frame.f_back
+    return None
