@@ -110,7 +110,7 @@ class TypeParam(ParameterBase):
         var = ExistentialTypeVar.fresh(self.name, self.can_be_linear)
         return TypeArg(var), var
 
-    def to_bound(self, idx: int | None = None) -> Argument:
+    def to_bound(self, idx: int | None = None) -> TypeArg:
         """Creates a bound variable with a given index that can be instantiated for this
         parameter.
         """
@@ -169,7 +169,7 @@ class ConstParam(ParameterBase):
         var = ExistentialConstVar.fresh(self.name, self.ty)
         return ConstArg(var), var
 
-    def to_bound(self, idx: int | None = None) -> Argument:
+    def to_bound(self, idx: int | None = None) -> ConstArg:
         """Creates a bound variable with a given index that can be instantiated for this
         parameter.
         """
