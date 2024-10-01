@@ -4,4 +4,4 @@ Guppy compilation failed. Error in file $FILE:14
 13:    def main(qs: array[qubit, 42]) -> int:
 14:        return len(qs)
                   ^^^^^^^
-GuppyTypeError: Cannot instantiate non-linear type variable `T` in type `forall n, T: nat. array[T, n] -> int` with linear type `qubit`
+GuppyTypeError: Cannot instantiate non-linear type variable `T` in type `forall T, n: nat. array[T, n] -> int` with linear type `qubit`
