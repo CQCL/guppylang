@@ -56,7 +56,7 @@ class RawFunctionDef(ParsableDef):
     def parse(self, globals: Globals) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func)
-        ty = check_signature(func_ast, globals)
+        ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
         if ty.parametrized:
             raise GuppyError(
                 "Generic function definitions are not supported yet", func_ast
@@ -92,7 +92,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
     def check(self, globals: Globals) -> "CheckedFunctionDef":
         """Type checks the body of the function."""
         # Add python variable scope to the globals
-        globals = globals | Globals({}, {}, {}, self.python_scope)
+        globals = globals.with_python_scope(self.python_scope)
         cfg = check_global_func_def(self.defined_at, self.ty, globals)
         return CheckedFunctionDef(
             self.id,

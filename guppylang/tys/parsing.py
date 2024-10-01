@@ -6,7 +6,9 @@ from guppylang.ast_util import (
     set_location_from,
     shift_loc,
 )
-from guppylang.checker.core import Globals
+from guppylang.cfg.builder import is_py_expression
+from guppylang.checker.core import Context, Globals, Locals
+from guppylang.checker.expr_checker import eval_py_expr
 from guppylang.definition.common import Definition
 from guppylang.definition.module import ModuleDef
 from guppylang.definition.parameter import ParamDef
@@ -68,6 +70,19 @@ def arg_from_ast(
         assert node.value >= 0
         nat_ty = NumericType(NumericType.Kind.Nat)
         return ConstArg(ConstValue(nat_ty, node.value))
+
+    # Py-expressions can also be used to specify static numbers
+    if py_expr := is_py_expression(node):
+        v = eval_py_expr(py_expr, Context(globals, Locals({})))
+        if isinstance(v, int):
+            nat_ty = NumericType(NumericType.Kind.Nat)
+            return ConstArg(ConstValue(nat_ty, v))
+        else:
+            raise GuppyError(
+                f"Compile-time `py(...)` expression with type `{type(v)}` is not a "
+                "valid type argument",
+                node,
+            )
 
     # Finally, we also support delayed annotations in strings
     if isinstance(node, ast.Constant) and isinstance(node.value, str):

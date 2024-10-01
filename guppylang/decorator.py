@@ -3,7 +3,7 @@ import inspect
 from collections.abc import Callable, KeysView
 from dataclasses import dataclass, field
 from pathlib import Path
-from types import FrameType, ModuleType
+from types import ModuleType
 from typing import Any, TypeVar, overload
 
 import hugr.ext
@@ -36,6 +36,7 @@ from guppylang.module import (
     PyClass,
     PyFunc,
     find_guppy_module_in_py_module,
+    get_calling_frame,
 )
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
@@ -233,8 +234,14 @@ class _Guppy:
         )
         implicit_module._instance_func_buffer = {}
 
+        # Extract Python scope from the frame that called `guppy.struct`
+        frame = get_calling_frame()
+        python_scope = frame.f_globals | frame.f_locals if frame else {}
+
         def dec(cls: type, module: GuppyModule) -> RawStructDef:
-            defn = RawStructDef(DefId.fresh(module), cls.__name__, None, cls)
+            defn = RawStructDef(
+                DefId.fresh(module), cls.__name__, None, cls, python_scope
+            )
             module.register_def(defn)
             module._register_buffered_instance_funcs(defn)
             # If we mistakenly initialised the method buffer of the implicit module
@@ -450,7 +457,7 @@ def _parse_expr_string(ty_str: str, parse_err: str) -> ast.expr:
 
     # Try to annotate the type AST with source information. This requires us to
     # inspect the stack frame of the caller
-    if caller_frame := _get_calling_frame():
+    if caller_frame := get_calling_frame():
         info = inspect.getframeinfo(caller_frame)
         if caller_module := inspect.getmodule(caller_frame):
             source_lines, _ = inspect.getsourcelines(caller_module)
@@ -463,16 +470,3 @@ def _parse_expr_string(ty_str: str, parse_err: str) -> ast.expr:
                 node.lineno, node.col_offset = info.lineno, 0
                 node.end_col_offset = len(source_lines[info.lineno - 1])
     return expr_ast
-
-
-def _get_calling_frame() -> FrameType | None:
-    """Finds the first frame that called this function outside the current module."""
-    frame = inspect.currentframe()
-    while frame:
-        module = inspect.getmodule(frame)
-        if module is None:
-            break
-        if module.__file__ != __file__:
-            return frame
-        frame = frame.f_back
-    return None

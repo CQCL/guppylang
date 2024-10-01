@@ -7,7 +7,7 @@ from hugr.build import function as hf
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
-from guppylang.checker.core import Context, Globals
+from guppylang.checker.core import Context, Globals, PyScope
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
@@ -29,18 +29,25 @@ class RawFunctionDecl(ParsableDef):
     """
 
     python_func: PyFunc
+    python_scope: PyScope
     description: str = field(default="function", init=False)
 
     def parse(self, globals: Globals) -> "CheckedFunctionDecl":
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func)
-        ty = check_signature(func_ast, globals)
+        ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
         if not has_empty_body(func_ast):
             raise GuppyError(
                 "Body of function declaration must be empty", func_ast.body[0]
             )
         return CheckedFunctionDecl(
-            self.id, self.name, func_ast, ty, self.python_func, docstring
+            self.id,
+            self.name,
+            func_ast,
+            ty,
+            self.python_func,
+            self.python_scope,
+            docstring,
         )
 
 
@@ -86,6 +93,7 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
             self.defined_at,
             self.ty,
             self.python_func,
+            self.python_scope,
             self.docstring,
             node,
         )

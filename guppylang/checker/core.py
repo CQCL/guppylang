@@ -270,6 +270,11 @@ class Globals:
                 return defn
         return None
 
+    def with_python_scope(self, python_scope: PyScope) -> "Globals":
+        return Globals(
+            self.defs, self.names, self.impls, self.python_scope | python_scope
+        )
+
     def __or__(self, other: "Globals") -> "Globals":
         impls = {
             def_id: self.impls.get(def_id, {}) | other.impls.get(def_id, {})
