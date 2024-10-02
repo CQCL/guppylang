@@ -114,21 +114,6 @@ class _ListTypeDef(OpaqueTypeDef):
         return super().check_instantiate(args, globals, loc)
 
 
-@dataclass(frozen=True)
-class _LinstTypeDef(OpaqueTypeDef):
-    """Type definition associated with the builtin `linst` type.
-
-    We have a custom definition to disable usage of linsts unless experimental features
-    are enabled.
-    """
-
-    def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
-    ) -> OpaqueType:
-        check_lists_enabled(loc)
-        return super().check_instantiate(args, globals, loc)
-
-
 def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # Type checker ensures that we get a single arg of kind type
     [arg] = args
@@ -174,14 +159,6 @@ int_type_def = _NumericTypeDef(
 float_type_def = _NumericTypeDef(
     DefId.fresh(), "float", None, NumericType(NumericType.Kind.Float)
 )
-linst_type_def = _LinstTypeDef(
-    id=DefId.fresh(),
-    name="linst",
-    defined_at=None,
-    params=[TypeParam(0, "T", can_be_linear=True)],
-    always_linear=False,
-    to_hugr=_list_to_hugr,
-)
 list_type_def = _ListTypeDef(
     id=DefId.fresh(),
     name="list",
@@ -215,10 +192,6 @@ def list_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], list_type_def)
 
 
-def linst_type(element_ty: Type) -> OpaqueType:
-    return OpaqueType([TypeArg(element_ty)], linst_type_def)
-
-
 def array_type(element_ty: Type, length: int) -> OpaqueType:
     nat_type = NumericType(NumericType.Kind.Nat)
     return OpaqueType(
@@ -234,17 +207,13 @@ def is_list_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == list_type_def
 
 
-def is_linst_type(ty: Type) -> bool:
-    return isinstance(ty, OpaqueType) and ty.defn == linst_type_def
-
-
 def is_array_type(ty: Type) -> TypeGuard[OpaqueType]:
     return isinstance(ty, OpaqueType) and ty.defn == array_type_def
 
 
 def get_element_type(ty: Type) -> Type:
     assert isinstance(ty, OpaqueType)
-    assert ty.defn in (list_type_def, linst_type_def)
+    assert ty.defn == list_type_def
     (arg,) = ty.args
     assert isinstance(arg, TypeArg)
     return arg.ty

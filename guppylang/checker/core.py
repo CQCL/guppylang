@@ -26,7 +26,6 @@ from guppylang.tys.builtin import (
     callable_type_def,
     float_type_def,
     int_type_def,
-    linst_type_def,
     list_type_def,
     nat_type_def,
     none_type_def,
@@ -222,7 +221,6 @@ class Globals:
             int_type_def,
             float_type_def,
             list_type_def,
-            linst_type_def,
             array_type_def,
         ]
         defs = {defn.id: defn for defn in builtins}

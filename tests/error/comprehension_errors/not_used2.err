@@ -1,7 +1,7 @@
 Guppy compilation failed. Error in file $FILE:19
 
 17:    @guppy(module)
-18:    def foo(ss: linst[MyStruct] @owned) -> linst[qubit]:
+18:    def foo(ss: list[MyStruct] @owned) -> list[qubit]:
 19:        return [s.q1 for s in ss]
                             ^
 GuppyTypeError: Field `s.q2` with linear type `qubit` is not used

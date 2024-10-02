@@ -2,7 +2,7 @@ from hugr import tys
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import linst, owned
+from guppylang.prelude.builtins import owned
 from guppylang.prelude.quantum import qubit
 from guppylang.prelude.quantum_functional import h, cx
 
@@ -25,7 +25,7 @@ def test_basic_linear(validate):
     module.load(qubit)
 
     @guppy(module)
-    def test(qs: linst[qubit] @owned) -> linst[qubit]:
+    def test(qs: list[qubit] @owned) -> list[qubit]:
         return [h(q) for q in qs]
 
     validate(module.compile())
@@ -54,10 +54,10 @@ def test_multiple_struct(validate):
 
     @guppy.struct(module)
     class MyStruct:
-        qs: linst[qubit]
+        qs: list[qubit]
 
     @guppy(module)
-    def test(ss: linst[MyStruct] @owned) -> linst[qubit]:
+    def test(ss: list[MyStruct] @owned) -> list[qubit]:
         return [h(q) for s in ss for q in s.qs]
 
     validate(module.compile())
@@ -77,7 +77,7 @@ def test_tuple_pat_linear(validate):
     module.load(qubit)
 
     @guppy(module)
-    def test(qs: linst[tuple[int, qubit, qubit]] @owned) -> linst[tuple[qubit, qubit]]:
+    def test(qs: list[tuple[int, qubit, qubit]] @owned) -> list[tuple[qubit, qubit]]:
         return [cx(q1, q2) for _, q1, q2 in qs]
 
     validate(module.compile())
@@ -159,19 +159,19 @@ def test_nested_linear(validate):
     module.load(qubit)
 
     @guppy(module)
-    def test(qs: linst[qubit] @owned) -> linst[qubit]:
+    def test(qs: list[qubit] @owned) -> list[qubit]:
         return [h(q) for q in [h(q) for q in qs]]
 
     validate(module.compile())
 
 
-def test_classical_linst_comp(validate):
+def test_classical_list_comp(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
     module.load(qubit)
 
     @guppy(module)
-    def test(xs: list[int]) -> linst[int]:
+    def test(xs: list[int]) -> list[int]:
         return [x for x in xs]
 
     validate(module.compile())
@@ -186,7 +186,7 @@ def test_linear_discard(validate):
     def discard(q: qubit @owned) -> None: ...
 
     @guppy(module)
-    def test(qs: linst[qubit] @owned) -> list[None]:
+    def test(qs: list[qubit] @owned) -> list[None]:
         return [discard(q) for q in qs]
 
     validate(module.compile())
@@ -206,7 +206,7 @@ def test_linear_discard_struct(validate):
     def discard(q1: qubit @owned, q2: qubit @owned) -> None: ...
 
     @guppy(module)
-    def test(ss: linst[MyStruct] @owned) -> list[None]:
+    def test(ss: list[MyStruct] @owned) -> list[None]:
         return [discard(s.q1, s.q2) for s in ss]
 
     validate(module.compile())
@@ -221,7 +221,7 @@ def test_linear_consume_in_guard(validate):
     def cond(q: qubit @owned) -> bool: ...
 
     @guppy(module)
-    def test(qs: linst[tuple[int, qubit]] @owned) -> list[int]:
+    def test(qs: list[tuple[int, qubit]] @owned) -> list[int]:
         return [x for x, q in qs if cond(q)]
 
     validate(module.compile())
@@ -236,7 +236,7 @@ def test_linear_consume_in_iter(validate):
     def make_list(q: qubit @owned) -> list[int]: ...
 
     @guppy(module)
-    def test(qs: linst[qubit] @owned) -> list[int]:
+    def test(qs: list[qubit] @owned) -> list[int]:
         return [x for q in qs for x in make_list(q)]
 
     validate(module.compile())
@@ -268,7 +268,7 @@ def test_linear_next_nonlinear_iter(validate):
         def __iter__(self: "MyType") -> MyIter: ...
 
     @guppy(module)
-    def test(mt: MyType, xs: list[int]) -> linst[tuple[int, qubit]]:
+    def test(mt: MyType, xs: list[int]) -> list[tuple[int, qubit]]:
         # We can use `mt` in an inner loop since it's not linear
         return [(x, q) for x in xs for q in mt]
 
@@ -305,7 +305,7 @@ def test_nonlinear_next_linear_iter(validate):
         def __iter__(self: "MyType") -> MyIter: ...
 
     @guppy(module)
-    def test(mt: MyType, xs: list[int]) -> linst[tuple[int, int]]:
+    def test(mt: MyType, xs: list[int]) -> list[tuple[int, int]]:
         # We can use `mt` in an outer loop since the target `x` is not linear
         return [(x, x + y) for x in mt for y in xs]
 
