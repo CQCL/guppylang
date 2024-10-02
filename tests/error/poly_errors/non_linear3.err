@@ -3,5 +3,5 @@ Guppy compilation failed. Error in file $FILE:25
 23:    @guppy(module)
 24:    def main() -> None:
 25:        foo(h)
-               ^
-GuppyTypeError: Expected argument of type `?T -> None`, got `qubit -> None`
+           ^^^^^^
+GuppyTypeError: Cannot instantiate non-linear type variable `T` in type `forall T. (T -> None) -> None` with linear type `qubit`
