@@ -74,3 +74,21 @@ def build_error(builder: DfBase[ops.Case], signal: int, msg: str) -> Wire:
     """Constructs and loads a static error value."""
     val = ErrorVal(signal, msg)
     return builder.load(builder.add_const(val))
+
+
+def build_unwrap(
+    builder: DfBase[ops.DfParentOp], result: Wire, error_msg: str, error_signal: int = 1
+) -> Node:
+    """Unwraps an `hugr.tys.Option` value, panicking with the given message if the
+    result is an error.
+    """
+    conditional = builder.add_conditional(result)
+    result_ty = builder.hugr.port_type(result.out_port())
+    assert isinstance(result_ty, ht.Sum)
+    [_, ok_tys] = result_ty.variant_rows
+    with conditional.add_case(0) as case:
+        error = build_error(case, error_signal, error_msg)
+        case.set_outputs(*build_panic(case, [], ok_tys, error))
+    with conditional.add_case(1) as case:
+        case.set_outputs(*case.inputs())
+    return conditional.to_node()

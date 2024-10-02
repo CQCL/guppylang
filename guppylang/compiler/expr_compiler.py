@@ -212,7 +212,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         inputs = [self.visit(e) for e in node.elts]
         list_ty = get_type(node)
         elem_ty = get_element_type(list_ty)
-        return list_new(self.builder, elem_ty.to_hugr(), inputs)[0]
+        return list_new(self.builder, elem_ty.to_hugr(), inputs)
 
     def _unpack_tuple(self, wire: Wire, types: Sequence[Type]) -> Sequence[Wire]:
         """Add a tuple unpack operation to the graph"""
@@ -461,7 +461,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         elem_ty = get_element_type(list_ty)
         list_place = Variable(next(tmp_vars), list_ty, node)
         list_name = with_type(list_ty, with_loc(node, PlaceNode(place=list_place)))
-        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])[0]
+        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])
 
         def compile_generators(elt: ast.expr, gens: list[DesugaredGenerator]) -> None:
             """Helper function to generate nested TailLoop nodes for generators"""
@@ -469,9 +469,16 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             if not gens:
                 list_port, elt_port = self.visit(list_name), self.visit(elt)
                 elt_ty = get_type(elt)
-                push = self.builder.add_op(
-                    list_push(elt_ty.to_hugr()), list_port, elt_port
-                )
+                if elt_ty.linear:
+                    elt_ty_opt = ht.Option(elt_ty.to_hugr())
+                    elt_opt_port = self.builder.add_op(ops.Tag(1, elt_ty_opt), elt_port)
+                    push = self.builder.add_op(
+                        list_push(elt_ty_opt), list_port, elt_opt_port
+                    )
+                else:
+                    push = self.builder.add_op(
+                        list_push(elt_ty.to_hugr()), list_port, elt_port
+                    )
                 self.dfg[list_place] = push
                 return
 
