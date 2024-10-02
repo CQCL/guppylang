@@ -507,7 +507,7 @@ class List:
     @guppy.hugr_op(unsupported_op("pop"))  # TODO: unwrap and swap None
     def __getitem__(self: list[L], idx: int) -> L: ...
 
-    @guppy.hugr_op(unsupported_op("pop"))  # TODO: check None and unwrap
+    @guppy.hugr_op(unsupported_op("set"))  # TODO: check None and unwrap
     def __setitem__(self: list[L], idx: int, value: L @ owned) -> None: ...
 
     @guppy.hugr_op(unsupported_op("length"))  # TODO: inout return in wrong order
@@ -525,7 +525,7 @@ class List:
     @guppy.hugr_op(unsupported_op("AssertEmpty"))  # TODO
     def __end__(self: list[L] @ owned) -> None: ...
 
-    @guppy.hugr_op(unsupported_op("Pop"))
+    @guppy.hugr_op(unsupported_op("pop"))
     def __next__(self: list[L] @ owned) -> tuple[L, list[L]]: ...
 
     @guppy.hugr_op(unsupported_op("push"))
