@@ -33,6 +33,12 @@ from guppylang.prelude._internal.compiler.array import (
     ArraySetitemCompiler,
     NewArrayCompiler,
 )
+from guppylang.prelude._internal.compiler.list import (
+    ListGetitemCompiler,
+    ListPopCompiler,
+    ListPushCompiler,
+    ListSetitemCompiler,
+)
 from guppylang.prelude._internal.util import (
     float_op,
     int_op,
@@ -503,13 +509,14 @@ class Float:
 
 @guppy.extend_type(list_type_def)
 class List:
-    @guppy.hugr_op(unsupported_op("pop"))  # TODO: unwrap and swap None
+    @guppy.custom(ListGetitemCompiler())
     def __getitem__(self: list[L], idx: int) -> L: ...
 
-    @guppy.hugr_op(unsupported_op("set"))  # TODO: check None and unwrap
+    @guppy.custom(ListSetitemCompiler())
     def __setitem__(self: list[L], idx: int, value: L @ owned) -> None: ...
 
-    @guppy.hugr_op(unsupported_op("length"))  # TODO: inout return in wrong order
+    # TODO: https://github.com/CQCL/hugr/issues/1543
+    @guppy.hugr_op(unsupported_op("length"))
     def __len__(self: list[L]) -> int: ...
 
     @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
@@ -527,10 +534,10 @@ class List:
     @guppy.hugr_op(unsupported_op("pop"))
     def __next__(self: list[L] @ owned) -> tuple[L, list[L]]: ...
 
-    @guppy.hugr_op(unsupported_op("push"))
+    @guppy.custom(ListPushCompiler())
     def append(self: list[L], item: L @ owned) -> None: ...
 
-    @guppy.hugr_op(unsupported_op("pop"))  # TODO
+    @guppy.custom(ListPopCompiler())
     def pop(self: list[L]) -> L: ...
 
 

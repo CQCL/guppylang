@@ -118,7 +118,10 @@ def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # Type checker ensures that we get a single arg of kind type
     [arg] = args
     assert isinstance(arg, TypeArg)
-    return hugr.std.collections.list_type(arg.ty.to_hugr())
+    # Linear elements are turned into an optional to enable unsafe indexing.
+    # See `ListGetitemCompiler` for details.
+    elem_ty = ht.Option(arg.ty.to_hugr()) if arg.ty.linear else arg.ty.to_hugr()
+    return hugr.std.collections.list_type(elem_ty)
 
 
 def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
