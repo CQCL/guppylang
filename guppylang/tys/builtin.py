@@ -103,20 +103,14 @@ class _NumericTypeDef(TypeDef):
 class _ListTypeDef(OpaqueTypeDef):
     """Type definition associated with the builtin `list` type.
 
-    We have a custom definition to give a nicer error message if the user tries to put
-    linear data into a regular list.
+    We have a custom definition to disable usage of lists unless experimental features
+    are enabled.
     """
 
     def check_instantiate(
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> OpaqueType:
         check_lists_enabled(loc)
-        if len(args) == 1:
-            [arg] = args
-            if isinstance(arg, TypeArg) and arg.ty.linear:
-                raise GuppyError(
-                    "Type `list` cannot store linear data, use `linst` instead", loc
-                )
         return super().check_instantiate(args, globals, loc)
 
 
@@ -192,7 +186,7 @@ list_type_def = _ListTypeDef(
     id=DefId.fresh(),
     name="list",
     defined_at=None,
-    params=[TypeParam(0, "T", can_be_linear=False)],
+    params=[TypeParam(0, "T", can_be_linear=True)],
     always_linear=False,
     to_hugr=_list_to_hugr,
 )

@@ -1,4 +1,6 @@
 import pytest
+from guppylang import qubit, guppy, GuppyModule
+from guppylang.prelude.builtins import owned
 
 from tests.util import compile_guppy
 
@@ -29,6 +31,17 @@ def test_literal(validate):
     validate(test)
 
 
+def test_push_pop(validate):
+    @compile_guppy
+    def test(xs: list[int]) -> bool:
+        xs.append(3)
+        x = xs.pop()
+        return x == 3
+
+    validate(test)
+
+
+@pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/528")
 def test_arith(validate):
     @compile_guppy
     def test(xs: list[int]) -> list[int]:
@@ -39,10 +52,21 @@ def test_arith(validate):
     validate(test)
 
 
-@pytest.mark.skip("Requires updating lists to use inout")
 def test_subscript(validate):
     @compile_guppy
     def test(xs: list[float], i: int) -> float:
         return xs[2 * i]
 
     validate(test)
+
+
+def test_linear(validate):
+    module = GuppyModule("test")
+    module.load(qubit)
+
+    @guppy(module)
+    def test(xs: list[qubit], q: qubit @owned) -> int:
+        xs.append(q)
+        return len(xs)
+
+    validate(module.compile())
