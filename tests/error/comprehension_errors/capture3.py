@@ -2,7 +2,7 @@ import guppylang.prelude.quantum as quantum
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.prelude.quantum import qubit
-from guppylang.prelude.builtins import linst, owned
+from guppylang.prelude.builtins import owned
 
 module = GuppyModule("test")
 module.load_all(quantum)
@@ -14,7 +14,7 @@ class MyStruct:
 
 
 @guppy(module)
-def foo(xs: list[int], s: MyStruct @owned) -> linst[MyStruct]:
+def foo(xs: list[int], s: MyStruct @owned) -> list[MyStruct]:
     return [s for x in xs]
 
 

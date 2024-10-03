@@ -1,6 +1,7 @@
 import pytest
 from guppylang import qubit, guppy, GuppyModule
 from guppylang.prelude.builtins import owned
+from guppylang.prelude.quantum_functional import quantum_functional, h
 
 from tests.util import compile_guppy
 
@@ -31,6 +32,18 @@ def test_literal(validate):
     validate(test)
 
 
+def test_literal_linear(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum_functional)
+    module.load(qubit)
+
+    @guppy(module)
+    def test(q1: qubit @owned, q2: qubit @owned) -> list[qubit]:
+        return [q1, h(q2)]
+
+    validate(module.compile())
+
+
 def test_push_pop(validate):
     @compile_guppy
     def test(xs: list[int]) -> bool:
@@ -50,6 +63,20 @@ def test_arith(validate):
         return xs * 4
 
     validate(test)
+
+
+@pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/528")
+def test_arith_linear(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum_functional)
+    module.load(qubit)
+
+    @guppy(module)
+    def test(xs: list[qubit] @owned, ys: list[qubit] @owned, q: qubit @owned) -> list[qubit]:
+        xs += [q]
+        return xs + ys
+
+    validate(module.compile())
 
 
 def test_subscript(validate):

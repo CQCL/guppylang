@@ -1,7 +1,7 @@
 Guppy compilation failed. Error in file $FILE:13
 
 11:    @guppy(module)
-12:    def foo(qs: linst[qubit] @owned) -> linst[tuple[qubit, qubit]]:
+12:    def foo(qs: list[qubit] @owned) -> list[tuple[qubit, qubit]]:
 13:        return [(q, q) for q in qs]
                        ^
 GuppyError: Variable `q` with linear type `qubit` was already used (at 13:13)

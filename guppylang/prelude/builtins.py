@@ -44,7 +44,6 @@ from guppylang.tys.builtin import (
     bool_type_def,
     float_type_def,
     int_type_def,
-    linst_type_def,
     list_type_def,
     nat_type_def,
 )
@@ -533,52 +532,6 @@ class List:
 
     @guppy.hugr_op(unsupported_op("pop"))  # TODO
     def pop(self: list[L]) -> L: ...
-
-
-linst = list
-
-
-@guppy.extend_type(linst_type_def)
-class Linst:
-    @guppy.hugr_op(unsupported_op("Append"))
-    def __add__(self: linst[L] @ owned, other: linst[L] @ owned) -> linst[L]: ...
-
-    @guppy.hugr_op(unsupported_op("AssertEmpty"))
-    def __end__(self: linst[L] @ owned) -> None: ...
-
-    @guppy.hugr_op(unsupported_op("IsNotEmpty"))
-    def __hasnext__(self: linst[L] @ owned) -> tuple[bool, linst[L]]: ...
-
-    @guppy.custom(NoopCompiler())
-    def __iter__(self: linst[L] @ owned) -> linst[L]: ...
-
-    @guppy.hugr_op(unsupported_op("Length"))
-    def __len__(self: linst[L] @ owned) -> tuple[int, linst[L]]: ...
-
-    @guppy.hugr_op(unsupported_op("Pop"))
-    def __next__(self: linst[L] @ owned) -> tuple[L, linst[L]]: ...
-
-
-#    @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
-#    def __new__(x): ...
-#
-#    @guppy.hugr_op(builtins, unsupported_op("Append"), ReversingChecker())
-#    def __radd__(self: linst[L] @owned, other: linst[L] @owned) -> linst[L]: ...
-#
-#    @guppy.hugr_op(unsupported_op("Repeat"))
-#    def __rmul__(self: linst[L] @owned, other: int) -> linst[L]: ...
-#
-#    @guppy.hugr_op(unsupported_op("Push"))
-#    def append(self: linst[L] @owned, elt: L @owned) -> linst[L]: ...
-#
-#    @guppy.hugr_op(unsupported_op("PopAt"))
-#    def pop(self: linst[L] @owned, idx: int) -> tuple[L, linst[L]]: ...
-#
-#    @guppy.hugr_op(unsupported_op("Reverse"))
-#    def reverse(self: linst[L] @owned) -> linst[L]: ...
-#
-#    @guppy.custom(checker=FailingChecker("Guppy lists are immutable"))
-#    def sort(self: linst[T] @owned) -> None: ...
 
 
 n = guppy.nat_var("n")
