@@ -50,6 +50,7 @@ class Span:
 
     @property
     def file(self) -> str:
+        """The file containing this span."""
         return self.start.file
 
 
@@ -58,6 +59,7 @@ ToSpan: TypeAlias = ast.AST | Span
 
 
 def to_span(x: ToSpan) -> Span:
+    """Extracts a source span from an object."""
     if isinstance(x, Span):
         return x
     file, line_offset = get_file(x), get_line_offset(x)
