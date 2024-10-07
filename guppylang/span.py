@@ -1,0 +1,70 @@
+"""Source spans representing locations in the code being compiled."""
+
+import ast
+from dataclasses import dataclass
+from typing import TypeAlias
+
+from guppylang.ast_util import get_file, get_line_offset
+from guppylang.error import InternalGuppyError
+
+
+@dataclass(frozen=True, order=True)
+class Loc:
+    """A location in a source file."""
+
+    file: str
+    line: int
+    column: int
+
+
+@dataclass(frozen=True)
+class Span:
+    """A continuous sequence of source code within a file."""
+
+    start: Loc
+    end: Loc
+
+    def __post_init__(self) -> None:
+        if self.start.file != self.end.file:
+            raise InternalGuppyError("Span: Source spans multiple files")
+        if self.start > self.end:
+            raise InternalGuppyError("Span: Start after end")
+
+    def __contains__(self, x: "Span | Loc") -> bool:
+        """Determines whether another span or location is completely contained in this
+        span."""
+        if self.file != x.file:
+            return False
+        if isinstance(x, Span):
+            return self.start <= x.start <= self.end <= x.end
+        return self.start <= x <= self.end
+
+    def __and__(self, other: "Span") -> "Span | None":
+        """Returns the intersection with the given span or `None` if they don't
+        intersect."""
+        if self.file != other.file:
+            return None
+        if self.start > other.end or other.start > self.end:
+            return None
+        return Span(max(self.start, other.start), min(self.end, other.end))
+
+    @property
+    def file(self) -> str:
+        return self.start.file
+
+
+#: Objects in the compiler that are associated with a source span
+ToSpan: TypeAlias = ast.AST | Span
+
+
+def to_span(x: ToSpan) -> Span:
+    if isinstance(x, Span):
+        return x
+    file, line_offset = get_file(x), get_line_offset(x)
+    assert file is not None
+    assert line_offset is not None
+    start = Loc(file, x.lineno + line_offset, x.col_offset)
+    end = Loc(
+        file, (x.end_lineno or x.lineno) + line_offset, x.end_col_offset or x.col_offset
+    )
+    return Span(start, end)
