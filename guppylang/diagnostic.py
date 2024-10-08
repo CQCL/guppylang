@@ -40,7 +40,7 @@ class Diagnostic(Protocol):
     """
 
     #: Severity level of the diagnostic.
-    level: DiagnosticLevel
+    level: ClassVar[DiagnosticLevel]
 
     #: Primary span of the source location associated with this diagnostic. The span
     #: is optional, but provided in almost all cases.
@@ -83,7 +83,7 @@ class SubDiagnostic(Protocol):
     """
 
     #: Severity level of the sub-diagnostic.
-    level: DiagnosticLevel
+    level: ClassVar[DiagnosticLevel]
 
     #: Optional span of the source location associated with this sub-diagnostic.
     span: ToSpan | None
@@ -102,10 +102,9 @@ class SubDiagnostic(Protocol):
             raise InternalGuppyError("SubDiagnostic: Empty diagnostic")
 
 
+@runtime_checkable
 @dataclass(frozen=True)
-class Error(Diagnostic):
+class Error(Diagnostic, Protocol):
     """Compiler diagnostic for regular error that are encountered during compilation."""
 
-    level: Literal[DiagnosticLevel.ERROR] = field(
-        default=DiagnosticLevel.ERROR, init=False
-    )
+    level: ClassVar[Literal[DiagnosticLevel.ERROR]] = DiagnosticLevel.ERROR
