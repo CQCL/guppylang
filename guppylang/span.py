@@ -13,7 +13,11 @@ class Loc:
     """A location in a source file."""
 
     file: str
+
+    #: Line number starting at 1
     line: int
+
+    #: Column number starting at 1
     column: int
 
 
@@ -21,7 +25,10 @@ class Loc:
 class Span:
     """A continuous sequence of source code within a file."""
 
+    #: Starting location of the span (inclusive)
     start: Loc
+
+    # Ending location of the span (exclusive)
     end: Loc
 
     def __post_init__(self) -> None:
@@ -65,8 +72,11 @@ def to_span(x: ToSpan) -> Span:
     file, line_offset = get_file(x), get_line_offset(x)
     assert file is not None
     assert line_offset is not None
-    start = Loc(file, x.lineno + line_offset, x.col_offset)
+    # line_offset starts at 1, so we have to do subtract 1
+    start = Loc(file, x.lineno + line_offset - 1, x.col_offset)
     end = Loc(
-        file, (x.end_lineno or x.lineno) + line_offset, x.end_col_offset or x.col_offset
+        file,
+        (x.end_lineno or x.lineno) + line_offset - 1,
+        x.end_col_offset or x.col_offset,
     )
     return Span(start, end)
