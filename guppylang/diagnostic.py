@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Literal
+from typing import ClassVar, Literal, Protocol, runtime_checkable
 
 from typing_extensions import Self
 
@@ -31,8 +31,9 @@ class DiagnosticLevel(Enum):
     HELP = auto()
 
 
+@runtime_checkable
 @dataclass(frozen=True)
-class Diagnostic:
+class Diagnostic(Protocol):
     """Abstract base class for compiler diagnostics that are reported to users.
 
     These could be fatal errors, regular errors, or warnings (see `DiagnosticLevel`).
@@ -43,17 +44,17 @@ class Diagnostic:
 
     #: Primary span of the source location associated with this diagnostic. The span
     #: is optional, but provided in almost all cases.
-    span: ToSpan | None = field(default=None, init=False)
+    span: ToSpan | None
 
     #: Short title for the diagnostic that is displayed at the top.
-    title: str | None = field(default=None, init=False)
+    title: ClassVar[str]
 
-    #: Label that is printed below the span.
-    label: str | None = field(default=None, init=False)
+    #: Longer message that is printed below the span.
+    long_message: ClassVar[str | None] = None
 
     #: Label that is printed next to the span highlight. Can only be used if a span is
     #: provided.
-    span_label: str | None = field(default=None, init=False)
+    span_label: ClassVar[str | None] = None
 
     #: Optional sub-diagnostics giving some additional context.
     children: list["SubDiagnostic"] = field(default_factory=list, init=False)
@@ -68,8 +69,9 @@ class Diagnostic:
         return self
 
 
+@runtime_checkable
 @dataclass(frozen=True)
-class SubDiagnostic:
+class SubDiagnostic(Protocol):
     """A sub-diagnostic attached to a parent diagnostic.
 
     Can be used to give some additional context, for example a note attached to an
@@ -80,17 +82,14 @@ class SubDiagnostic:
     level: DiagnosticLevel
 
     #: Optional span of the source location associated with this sub-diagnostic.
-    span: ToSpan | None = field(default=None, init=False)
-
-    #: Short title for the diagnostic that is displayed at the top.
-    title: str | None = field(default=None, init=False)
-
-    #: Label that is printed below the span.
-    label: str | None = field(default=None, init=False)
+    span: ToSpan | None
 
     #: Label that is printed next to the span highlight. Can only be used if a span is
     #: provided.
-    span_label: str | None = field(default=None, init=False)
+    span_label: ClassVar[str | None] = None
+
+    #: Message that is printed if no span is provided.
+    message: ClassVar[str | None] = None
 
 
 @dataclass(frozen=True)
