@@ -5,7 +5,7 @@ from typing import ClassVar, Literal, Protocol, runtime_checkable
 from typing_extensions import Self
 
 from guppylang.error import InternalGuppyError
-from guppylang.span import ToSpan
+from guppylang.span import ToSpan, to_span
 
 
 class DiagnosticLevel(Enum):
@@ -65,6 +65,10 @@ class Diagnostic(Protocol):
 
     def add_sub_diagnostic(self, sub: "SubDiagnostic") -> Self:
         """Adds a new sub-diagnostic."""
+        if self.span and sub.span and to_span(sub.span).file != to_span(self.span).file:
+            raise InternalGuppyError(
+                "Diagnostic: Cross-file sub-diagnostics are not supported"
+            )
         self.children.append(sub)
         return self
 
@@ -90,6 +94,12 @@ class SubDiagnostic(Protocol):
 
     #: Message that is printed if no span is provided.
     message: ClassVar[str | None] = None
+
+    def __post_init__(self) -> None:
+        if self.span_label and not self.span:
+            raise InternalGuppyError("SubDiagnostic: Span label provided without span")
+        if not self.span and not self.message:
+            raise InternalGuppyError("SubDiagnostic: Empty diagnostic")
 
 
 @dataclass(frozen=True)
