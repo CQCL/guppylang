@@ -1,5 +1,9 @@
 version = 1
 requires-python = ">=3.10, <3.13"
+resolution-markers = [
+    "python_full_version < '3.13'",
+    "python_full_version >= '3.13'",
+]
 
 [manifest]
 members = [
@@ -518,7 +522,7 @@ wheels = [
 
 [[package]]
 name = "guppylang"
-version = "0.10.0"
+version = "0.12.1"
 source = { editable = "." }
 dependencies = [
     { name = "graphviz" },
@@ -551,6 +555,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
+    { name = "pytest-snapshot" },
     { name = "pytket" },
     { name = "ruff" },
 ]
@@ -579,6 +584,7 @@ dev = [
     { name = "pytest", specifier = ">=8.3.2,<9" },
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
+    { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.30.0,<2" },
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
 ]
@@ -1499,6 +1505,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3e/03/8ea56929a6e0675d2c420555b3092c9a74a9a04e70417bcfe5b4b5ef1413/pytest_notebook-0.10.0.tar.gz", hash = "sha256:0a38a73b04c40137402b5f39a053395b418028cb3994a04dbcffe603c7b2a646", size = 3414910 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/40/31/7ed17c3f929b0b7537ceaab0d06c7ce1d2ec56ddd9dd69306f8bfcd515e8/pytest_notebook-0.10.0-py3-none-any.whl", hash = "sha256:482ab2f8fbac6ecb417226e9b7e68476332262a03f555e49d89a164ee16581f6", size = 37694 },
+]
+
+[[package]]
+name = "pytest-snapshot"
+version = "0.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9b/7b/ab8f1fc1e687218aa66acec1c3674d9c443f6a2dc8cb6a50f464548ffa34/pytest-snapshot-0.9.0.tar.gz", hash = "sha256:c7013c3abc3e860f9feff899f8b4debe3708650d8d8242a61bf2625ff64db7f3", size = 19877 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/29/518f32faf6edad9f56d6e0107217f7de6b79f297a47170414a2bd4be7f01/pytest_snapshot-0.9.0-py3-none-any.whl", hash = "sha256:4b9fe1c21c868fe53a545e4e3184d36bc1c88946e3f5c1d9dd676962a9b3d4ab", size = 10715 },
 ]
 
 [[package]]

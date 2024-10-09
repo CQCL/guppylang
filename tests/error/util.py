@@ -10,19 +10,17 @@ from guppylang.module import GuppyModule
 import guppylang.decorator as decorator
 
 
-def run_error_test(file, capsys):
+def run_error_test(file, capsys, snapshot):
     file = pathlib.Path(file)
 
     with pytest.raises(GuppyError):
         importlib.import_module(f"tests.error.{file.parent.name}.{file.name}")
 
     err = capsys.readouterr().err
+    err = err.replace(str(file), "$FILE")
 
-    with pathlib.Path(file.with_suffix(".err")).open() as f:
-        exp_err = f.read()
-
-    exp_err = exp_err.replace("$FILE", str(file))
-    assert err == exp_err
+    snapshot.snapshot_dir = str(file.parent)
+    snapshot.assert_match(err, file.with_suffix(".err").name)
 
 
 util = GuppyModule("test")

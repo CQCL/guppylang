@@ -16,6 +16,6 @@ files = [str(f) for f in files]
 
 
 @pytest.mark.parametrize("file", files)
-def test_experimental_errors(file, capsys):
+def test_experimental_errors(file, capsys, snapshot):
     with disable_experimental_features():
-        run_error_test(file, capsys)
+        run_error_test(file, capsys, snapshot)
