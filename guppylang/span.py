@@ -72,7 +72,7 @@ def to_span(x: ToSpan) -> Span:
     file, line_offset = get_file(x), get_line_offset(x)
     assert file is not None
     assert line_offset is not None
-    # line_offset starts at 1, so we have to do subtract 1
+    # x.lineno and line_offset both start at 1, so we have to subtract 1
     start = Loc(file, x.lineno + line_offset - 1, x.col_offset)
     end = Loc(
         file,

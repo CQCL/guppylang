@@ -105,6 +105,6 @@ class SubDiagnostic(Protocol):
 @runtime_checkable
 @dataclass(frozen=True)
 class Error(Diagnostic, Protocol):
-    """Compiler diagnostic for regular error that are encountered during compilation."""
+    """Compiler diagnostic for regular errors that are encountered during compilation."""
 
     level: ClassVar[Literal[DiagnosticLevel.ERROR]] = DiagnosticLevel.ERROR
