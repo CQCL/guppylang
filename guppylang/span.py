@@ -21,6 +21,19 @@ class Loc:
     #: Column number starting at 1
     column: int
 
+    def __str__(self) -> str:
+        """Returns the string representation of this source location."""
+        return f"{self.file}:{self.line}:{self.column}"
+
+    def shift_left(self, cols: int) -> "Loc":
+        """Returns a new location shifted to left by the given number of columns."""
+        assert self.column >= cols
+        return Loc(self.file, self.line, self.column - cols)
+
+    def shift_right(self, cols: int) -> "Loc":
+        """Returns a new location shifted to right by the given number of columns."""
+        return Loc(self.file, self.line, self.column + cols)
+
 
 @dataclass(frozen=True)
 class Span:
@@ -56,10 +69,34 @@ class Span:
             return None
         return Span(max(self.start, other.start), min(self.end, other.end))
 
+    def __len__(self) -> int:
+        """Returns the length of a single-line span in columns.
+
+        Querying the length of multiline spans raises an `InternalGuppyError`.
+        """
+        if self.is_multiline:
+            raise InternalGuppyError("Span: Tried to compute length of multi-line span")
+        return self.end.column - self.start.column
+
     @property
     def file(self) -> str:
         """The file containing this span."""
         return self.start.file
+
+    @property
+    def is_multiline(self) -> bool:
+        """Whether this source sequence spans multiple lines."""
+        return self.start.line != self.end.line
+
+    def shift_left(self, cols: int) -> "Span":
+        """Returns a new span that is shifted to the left by the given number of
+        columns."""
+        return Span(self.start.shift_left(cols), self.end.shift_left(cols))
+
+    def shift_right(self, cols: int) -> "Span":
+        """Returns a new span that is shifted to the right by the given number of
+        columns."""
+        return Span(self.start.shift_right(cols), self.end.shift_right(cols))
 
 
 #: Objects in the compiler that are associated with a source span
