@@ -16,6 +16,7 @@ from guppylang.definition.common import ParsableDef
 from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
+from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     FuncInput,
@@ -56,7 +57,7 @@ class RawCustomFunctionDef(ParsableDef):
 
     description: str = field(default="function", init=False)
 
-    def parse(self, globals: "Globals") -> "CustomFunctionDef":
+    def parse(self, globals: "Globals", sources: SourceMap) -> "CustomFunctionDef":
         """Parses and checks the user-provided signature of the custom function.
 
         The signature is optional if custom type checking logic is provided by the user.

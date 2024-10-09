@@ -16,6 +16,7 @@ from guppylang.definition.function import PyFunc, parse_py_func
 from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
+from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import Type, type_to_row
 
@@ -32,9 +33,9 @@ class RawFunctionDecl(ParsableDef):
     python_scope: PyScope
     description: str = field(default="function", init=False)
 
-    def parse(self, globals: Globals) -> "CheckedFunctionDecl":
+    def parse(self, globals: Globals, sources: SourceMap) -> "CheckedFunctionDecl":
         """Parses and checks the user-provided signature of the function."""
-        func_ast, docstring = parse_py_func(self.python_func)
+        func_ast, docstring = parse_py_func(self.python_func, sources)
         ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
         if not has_empty_body(func_ast):
             raise GuppyError(

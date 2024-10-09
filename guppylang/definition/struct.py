@@ -25,6 +25,7 @@ from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
+from guppylang.span import SourceMap
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.parsing import type_from_ast
@@ -63,9 +64,9 @@ class RawStructDef(TypeDef, ParsableDef):
         """
         return self
 
-    def parse(self, globals: Globals) -> "ParsedStructDef":
+    def parse(self, globals: Globals, sources: SourceMap) -> "ParsedStructDef":
         """Parses the raw class object into an AST and checks that it is well-formed."""
-        cls_def = parse_py_class(self.python_class)
+        cls_def = parse_py_class(self.python_class, sources)
         if cls_def.keywords:
             raise GuppyError("Unexpected keyword", cls_def.keywords[0])
 
@@ -232,7 +233,7 @@ class CheckedStructDef(TypeDef, CompiledDef):
         return [constructor_def]
 
 
-def parse_py_class(cls: type) -> ast.ClassDef:
+def parse_py_class(cls: type, sources: SourceMap) -> ast.ClassDef:
     """Parses a Python class object into an AST."""
     # If we are running IPython, `inspect.getsourcelines` works only for builtins
     # (guppy stdlib), but not for most/user-defined classes - see:
@@ -254,6 +255,8 @@ def parse_py_class(cls: type) -> ast.ClassDef:
     file = inspect.getsourcefile(cls)
     if file is None:
         raise GuppyError("Couldn't determine source file for class")
+    # Store the source file in our cache
+    sources.add_file(file)
     annotate_location(cls_ast, source, file, line_offset)
     if not isinstance(cls_ast, ast.ClassDef):
         raise GuppyError("Expected a class definition", cls_ast)
