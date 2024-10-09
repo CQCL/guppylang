@@ -24,8 +24,8 @@ import ast
 import sys
 import traceback
 from contextlib import suppress
-from dataclasses import replace
-from typing import Any, NoReturn, cast
+from dataclasses import dataclass, replace
+from typing import Any, ClassVar, NoReturn, cast
 
 from guppylang.ast_util import (
     AstNode,
@@ -51,6 +51,7 @@ from guppylang.definition.common import Definition
 from guppylang.definition.module import ModuleDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef, ValueDef
+from guppylang.diagnostic import Error
 from guppylang.error import (
     GuppyError,
     GuppyTypeError,
@@ -135,6 +136,18 @@ binary_table: dict[type[AstOp], tuple[str, str, str]] = {
 }  # fmt: skip
 
 
+@dataclass(frozen=True)
+class TypeMismatchError(Error):
+    """Error diagnostic for expressions with the wrong type."""
+
+    expected: Type
+    actual: Type
+    kind: str = "expression"
+
+    title: ClassVar[str] = "Type mismatch"
+    span_label: ClassVar[str] = "Expected {kind} of type `{expected}`, got `{actual}`"
+
+
 class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
     """Checks an expression against a type and produces a new type-annotated AST.
 
@@ -164,9 +177,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             _, actual = self._synthesize(actual, allow_free_vars=True)
         if loc is None:
             raise InternalGuppyError("Failure location is required")
-        raise GuppyTypeError(
-            f"Expected {self._kind} of type `{expected}`, got `{actual}`", loc
-        )
+        raise GuppyTypeError(TypeMismatchError(loc, expected, actual))
 
     def check(
         self, expr: ast.expr, ty: Type, kind: str = "expression"
@@ -731,7 +742,7 @@ def check_type_against(
         unquantified, free_vars = act.unquantified()
         subst = unify(exp, unquantified, {})
         if subst is None:
-            raise GuppyTypeError(f"Expected {kind} of type `{exp}`, got `{act}`", node)
+            raise GuppyTypeError(TypeMismatchError(node, exp, act, kind))
         # Check that we have found a valid instantiation for all params
         for i, v in enumerate(free_vars):
             if v not in subst:
@@ -760,7 +771,7 @@ def check_type_against(
     assert not act.unsolved_vars
     subst = unify(exp, act, {})
     if subst is None:
-        raise GuppyTypeError(f"Expected {kind} of type `{exp}`, got `{act}`", node)
+        raise GuppyTypeError(TypeMismatchError(node, exp, act, kind))
     return subst, []
 
 
@@ -927,7 +938,7 @@ def check_call(
         synth, inst = res
         subst = unify(ty, synth, {})
         if subst is None:
-            raise GuppyTypeError(f"Expected {kind} of type `{ty}`, got `{synth}`", node)
+            raise GuppyTypeError(TypeMismatchError(node, ty, synth, kind))
         return inputs, subst, inst
 
     # If synthesis fails, we try again, this time also using information from the
@@ -935,9 +946,7 @@ def check_call(
     unquantified, free_vars = func_ty.unquantified()
     subst = unify(ty, unquantified.output, {})
     if subst is None:
-        raise GuppyTypeError(
-            f"Expected {kind} of type `{ty}`, got `{unquantified.output}`", node
-        )
+        raise GuppyTypeError(TypeMismatchError(node, ty, unquantified.output, kind))
 
     # Try to infer more by checking against the arguments
     inputs, subst = type_check_args(inputs, unquantified, subst, ctx, node)
