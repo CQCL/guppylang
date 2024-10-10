@@ -366,14 +366,4 @@ class DiagnosticsRenderer:
     @staticmethod
     def level_str(level: DiagnosticLevel) -> str:
         """Returns the text used to identify the different kinds of diagnostics."""
-        match level:
-            case DiagnosticLevel.FATAL:
-                return "Fatal"
-            case DiagnosticLevel.ERROR:
-                return "Error"
-            case DiagnosticLevel.WARNING:
-                return "Warning"
-            case DiagnosticLevel.NOTE:
-                return "Note"
-            case DiagnosticLevel.HELP:
-                return "Help"
+        return level.name.lower().capitalize()
