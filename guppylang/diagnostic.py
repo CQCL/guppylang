@@ -1,7 +1,7 @@
 import textwrap
 from dataclasses import dataclass, field, fields
 from enum import Enum, auto
-from typing import ClassVar, Final, Literal, Protocol, runtime_checkable
+from typing import ClassVar, Final, Literal, Protocol, runtime_checkable, overload
 
 from typing_extensions import Self
 
@@ -67,9 +67,7 @@ class Diagnostic(Protocol):
     @property
     def rendered_title(self) -> str:
         """The title of this diagnostic with formatted placeholders."""
-        title = self._render(self.title)
-        assert title is not None
-        return title
+        return self._render(self.title)
 
     @property
     def rendered_long_message(self) -> str | None:
@@ -80,6 +78,12 @@ class Diagnostic(Protocol):
     def rendered_span_label(self) -> str | None:
         """The span label of this diagnostic with formatted placeholders if provided."""
         return self._render(self.span_label)
+
+    @overload
+    def _render(self, s: str) -> str: ...
+
+    @overload
+    def _render(self, s: None) -> None: ...
 
     def _render(self, s: str | None) -> str | None:
         """Helper method to fill in placeholder values in strings with fields of this
@@ -135,6 +139,12 @@ class SubDiagnostic(Protocol):
     def rendered_span_label(self) -> str | None:
         """The span label of this diagnostic with formatted placeholders if provided."""
         return self._render(self.span_label)
+
+    @overload
+    def _render(self, s: str) -> str: ...
+
+    @overload
+    def _render(self, s: None) -> None: ...
 
     def _render(self, s: str | None) -> str | None:
         """Helper method to fill in placeholder values in strings with fields of this
