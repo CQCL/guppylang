@@ -1,0 +1,7 @@
+Error: Can't compare apples with oranges (at <unknown>:1:5)
+  | 
+1 | apple.compare(
+  |      ^^^^^^^^^
+  | ...
+3 | ) == EQUAL
+  | ^ Comparison attempted here
