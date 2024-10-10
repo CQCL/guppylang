@@ -326,7 +326,7 @@ class DiagnosticsRenderer:
         if span.is_multiline:
             [first, *middle, last] = span_lines
             render_line(first, span.start.line)
-            # Compute the subspan that only covers the first line and render it's
+            # Compute the subspan that only covers the first line and render its
             # highlight banner
             first_span = Span(span.start, Loc(span.file, span.start.line, len(first)))
             first_highlight = " " * first_span.start.column + highlight_char * len(
