@@ -29,6 +29,7 @@ from guppylang.definition.struct import CheckedStructDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, pretty_errors
 from guppylang.experimental import enable_experimental_features
+from guppylang.span import SourceMap
 
 PyClass = type
 PyFunc = Callable[..., Any]
@@ -73,6 +74,9 @@ class GuppyModule:
     # `_register_buffered_instance_funcs` is called. This way, we can associate
     _instance_func_buffer: dict[str, RawDef] | None
 
+    # Storage for source code that has been read by the compiler
+    _sources: SourceMap
+
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
         self._globals = Globals({}, {}, {}, {})
@@ -85,6 +89,10 @@ class GuppyModule:
         self._raw_defs = {}
         self._raw_type_defs = {}
         self._checked_defs = {}
+
+        from guppylang.decorator import guppy
+
+        self._sources = guppy._sources
 
         # Import builtin module
         if import_builtins:
@@ -249,14 +257,15 @@ class GuppyModule:
     def compiled(self) -> bool:
         return self._compiled
 
-    @staticmethod
     def _check_defs(
-        raw_defs: Mapping[DefId, RawDef], globals: Globals
+        self, raw_defs: Mapping[DefId, RawDef], globals: Globals
     ) -> dict[DefId, CheckedDef]:
         """Helper method to parse and check raw definitions."""
         raw_globals = globals | Globals(dict(raw_defs), {}, {}, {})
         parsed = {
-            def_id: defn.parse(raw_globals) if isinstance(defn, ParsableDef) else defn
+            def_id: defn.parse(raw_globals, self._sources)
+            if isinstance(defn, ParsableDef)
+            else defn
             for def_id, defn in raw_defs.items()
         }
         parsed_globals = globals | Globals(dict(parsed), {}, {}, {})

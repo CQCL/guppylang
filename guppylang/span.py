@@ -1,6 +1,7 @@
 """Source spans representing locations in the code being compiled."""
 
 import ast
+import linecache
 from dataclasses import dataclass
 from typing import TypeAlias
 
@@ -80,3 +81,31 @@ def to_span(x: ToSpan) -> Span:
         x.end_col_offset or x.col_offset,
     )
     return Span(start, end)
+
+
+#: List of source lines in a file
+SourceLines: TypeAlias = list[str]
+
+
+class SourceMap:
+    """Map holding the source code for all files accessed by the compiler.
+
+    Can be used to look up the source code associated with a span.
+    """
+
+    sources: dict[str, SourceLines]
+
+    def __init__(self) -> None:
+        self.sources = {}
+
+    def add_file(self, file: str, content: str | None = None) -> None:
+        """Registers a new source file."""
+        if content is None:
+            self.sources[file] = [line.rstrip() for line in linecache.getlines(file)]
+        else:
+            self.sources[file] = content.splitlines(keepends=False)
+
+    def span_lines(self, span: Span, prefix_lines: int = 0) -> list[str]:
+        return self.sources[span.file][
+            span.start.line - prefix_lines - 1 : span.end.line
+        ]

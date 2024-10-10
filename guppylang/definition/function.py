@@ -26,6 +26,7 @@ from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCal
 from guppylang.error import GuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.nodes import GlobalCall
+from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type, type_to_row
 
@@ -53,9 +54,9 @@ class RawFunctionDef(ParsableDef):
 
     description: str = field(default="function", init=False)
 
-    def parse(self, globals: Globals) -> "ParsedFunctionDef":
+    def parse(self, globals: Globals, sources: SourceMap) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
-        func_ast, docstring = parse_py_func(self.python_func)
+        func_ast, docstring = parse_py_func(self.python_func, sources)
         ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
         if ty.parametrized:
             raise GuppyError(
@@ -220,7 +221,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         compile_global_func_def(self, self.func_def, globals)
 
 
-def parse_py_func(f: PyFunc) -> tuple[ast.FunctionDef, str | None]:
+def parse_py_func(f: PyFunc, sources: SourceMap) -> tuple[ast.FunctionDef, str | None]:
     source_lines, line_offset = inspect.getsourcelines(f)
     source = "".join(source_lines)  # Lines already have trailing \n's
     source = textwrap.dedent(source)
@@ -234,10 +235,12 @@ def parse_py_func(f: PyFunc) -> tuple[ast.FunctionDef, str | None]:
             defn = find_ipython_def(func_ast.name)
             if defn is not None:
                 file = f"<{defn.cell_name}>"
+        sources.add_file(file, source)
     else:
         file = inspect.getsourcefile(f)
-    if file is None:
-        raise GuppyError("Couldn't determine source file for function")
+        if file is None:
+            raise GuppyError("Couldn't determine source file for function")
+        sources.add_file(file)
     annotate_location(func_ast, source, file, line_offset)
     if not isinstance(func_ast, ast.FunctionDef):
         raise GuppyError("Expected a function definition", func_ast)
