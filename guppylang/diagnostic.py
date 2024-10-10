@@ -194,7 +194,7 @@ class DiagnosticsRenderer:
     #: Maximum length of span labels after which we insert a newline
     MAX_LABEL_LINE_LEN: Final[int] = 60
 
-    #: Maximum length of span labels after which we insert a newline
+    #: Maximum length of messages after which we insert a newline
     MAX_MESSAGE_LINE_LEN: Final[int] = 80
 
     #: Number of preceding source lines we show to give additional context
