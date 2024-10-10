@@ -139,6 +139,13 @@ def test_context(snapshot, request):
     run_test(source, diagnostic, snapshot, request)
 
 
+def test_justify_line_number(snapshot, request):
+    source = "foo\n" * 99 + "apple == orange"
+    span = Span(Loc(file, 100, 6), Loc(file, 100, 8))
+    diagnostic = MyError(span)
+    run_test(source, diagnostic, snapshot, request)
+
+
 def test_indented(snapshot, request):
     source = " " * 50 + "super_apple := apple ** 2\n"
     source += " " * 50 + "    lemon := orange - apple\n"
