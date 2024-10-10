@@ -20,8 +20,8 @@ files = [str(f) for f in files]
 
 
 @pytest.mark.parametrize("file", files)
-def test_misc_errors(file, capsys):
-    run_error_test(file, capsys)
+def test_misc_errors(file, capsys, snapshot):
+    run_error_test(file, capsys, snapshot)
 
 
 def test_extern_bad_type_syntax():

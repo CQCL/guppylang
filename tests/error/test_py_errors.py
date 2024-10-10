@@ -23,13 +23,13 @@ files = [str(f) for f in files]
 
 
 @pytest.mark.parametrize("file", files)
-def test_py_errors(file, capsys):
-    run_error_test(file, capsys)
+def test_py_errors(file, capsys, snapshot):
+    run_error_test(file, capsys, snapshot)
 
 
 @pytest.mark.skipif(tket2_installed, reason="tket2 is installed")
-def test_tket2_not_installed(capsys):
+def test_tket2_not_installed(capsys, snapshot):
     path = (
         pathlib.Path(__file__).parent.resolve() / "py_errors" / "tket2_not_installed.py"
     )
-    run_error_test(str(path), capsys)
+    run_error_test(str(path), capsys, snapshot)
