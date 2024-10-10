@@ -96,6 +96,13 @@ class Diagnostic(SubDiagnostic, Protocol):
     #: Optional sub-diagnostics giving some additional context.
     children: list["SubDiagnostic"] = field(default_factory=list, init=False)
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.span is None and self.children:
+            raise InternalGuppyError(
+                "Diagnostic: Span-less diagnostics can't have children (FIXME)"
+            )
+
     @property
     def rendered_title(self) -> str:
         """The title of this diagnostic with formatted placeholders."""
