@@ -1,0 +1,6 @@
+Error: Can't compare apples with oranges (at <unknown>:100:6)
+    | 
+ 98 | foo
+ 99 | foo
+100 | apple == orange
+    |       ^^ Comparison attempted here
