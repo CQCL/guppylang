@@ -304,7 +304,7 @@ class DiagnosticsRenderer:
         def render_line(line: str, line_number: int | None = None) -> None:
             """Helper method to render a line with the line number bar on the left."""
             ll = "" if line_number is None else str(line_number)
-            self.buffer.append(ll + " " * (ll_length - len(ll)) + " | " + line)
+            self.buffer.append(" " * (ll_length - len(ll)) + ll + " | " + line)
 
         # One line of padding
         render_line("")
