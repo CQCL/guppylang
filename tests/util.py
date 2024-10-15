@@ -59,7 +59,7 @@ def guppy_to_circuit(guppy_func: RawFunctionDef) -> Tk2Circuit:
     module = guppy_func.id.module
     assert module is not None, "Function definition must belong to a module"
 
-    hugr = module.compile_hugr()
+    hugr = module.compile()
     assert hugr is not None, "Module must be compilable"
 
     json = hugr.to_json()
