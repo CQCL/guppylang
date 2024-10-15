@@ -10,7 +10,6 @@ from hugr.std.float import FLOAT_T
 
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
-from guppylang.prelude._internal.compiler.prelude import build_error, build_panic
 from guppylang.prelude._internal.json_defs import load_extension
 
 # ----------------------------------------------
@@ -35,10 +34,10 @@ TKET2_EXTENSIONS = [
 ]
 
 
-def from_halfturns() -> ops.ExtOp:
+def from_halfturns_unchecked() -> ops.ExtOp:
     return ops.ExtOp(
-        ROTATION_EXTENSION.get_op("from_halfturns"),
-        ht.FunctionType([FLOAT_T], [ht.Sum([[], [ROTATION_T]])]),
+        ROTATION_EXTENSION.get_op("from_halfturns_unchecked"),
+        ht.FunctionType([FLOAT_T], [ROTATION_T]),
     )
 
 
@@ -72,14 +71,7 @@ class RotationCompiler(CustomInoutCallCompiler):
 
         [*qs, angle] = args
         [halfturns] = self.builder.add_op(ops.UnpackTuple([FLOAT_T]), angle)
-        [mb_rotation] = self.builder.add_op(from_halfturns(), halfturns)
-
-        conditional = self.builder.add_conditional(mb_rotation)
-        with conditional.add_case(0) as case:
-            error = build_error(case, 1, "Non-finite number of half-turns")
-            case.set_outputs(build_panic(case, [], [ROTATION_T], error))
-        with conditional.add_case(1) as case:
-            case.set_outputs(*case.inputs())
+        [rotation] = self.builder.add_op(from_halfturns_unchecked(), halfturns)
 
         qs = self.builder.add_op(
             quantum_op(self.opname)(
@@ -89,6 +81,6 @@ class RotationCompiler(CustomInoutCallCompiler):
                 [],
             ),
             *qs,
-            conditional,
+            rotation,
         )
         return CallReturnWires(regular_returns=[], inout_returns=list(qs))

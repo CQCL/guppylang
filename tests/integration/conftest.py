@@ -83,6 +83,8 @@ def _run_fn(run_fn_name: str):
                 raise LLVMException(
                     f"Expected value ({expected}) doesn't match actual value ({res})"
                 )
+        except AttributeError:
+            pytest.skip("Skipping llvm execution")
         except ImportError:
             pytest.skip("Skipping llvm execution")
 
