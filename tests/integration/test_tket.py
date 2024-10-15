@@ -28,6 +28,7 @@ tket2_installed = find_spec("tket2") is not None
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skip("Pytket encoding currently disabled")
 def test_lower_pure_circuit():
     import pytket
 
@@ -60,6 +61,7 @@ def test_lower_pure_circuit():
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skip("Pytket encoding currently disabled")
 def test_lower_hybrid_circuit():
     import pytket
 
