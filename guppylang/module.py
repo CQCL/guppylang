@@ -7,7 +7,7 @@ from typing import Any
 
 from hugr import Hugr, ops
 from hugr.build.function import Module
-from hugr.ext import Package
+from hugr.package import Package
 
 import guppylang.compiler.hugr_extension
 from guppylang import decorator
