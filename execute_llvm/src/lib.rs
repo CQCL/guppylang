@@ -1,8 +1,8 @@
 //! This module provides a Python interface to compile and execute a Hugr program to LLVM IR.
 use hugr::{extension::ExtensionRegistry, ops, HugrView};
 use hugr_llvm::hugr::{self, ops::custom::resolve_extension_ops, std_extensions};
-use hugr_llvm::utils::fat::FatExt;
 use hugr_llvm::inkwell::{context::Context, module::Module, values::GenericValue};
+use hugr_llvm::utils::fat::FatExt;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
