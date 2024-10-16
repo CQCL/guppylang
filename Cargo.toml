@@ -33,4 +33,6 @@ hugr-llvm = "0.5.1"
 # Uncomment these to test the latest dependency version during development
 #hugr = { git = "https://github.com/CQCL/hugr", rev = "6bf6c82c9ec9d801ab43e311e5f815a3eea7d9c1" }
 #hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "6bf6c82c9ec9d801ab43e311e5f815a3eea7d9c1" }
-hugr-llvm = { git = "https://github.com/CQCL/hugr-llvm", branch = "doug/reexport-deps" }
+
+# TODO update to 0.6 when released https://github.com/CQCL/guppylang/issues/564
+hugr-llvm = { git = "https://github.com/CQCL/hugr-llvm", rev = "c1e6407" }

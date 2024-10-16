@@ -640,7 +640,7 @@ dependencies = [
 [[package]]
 name = "hugr-llvm"
 version = "0.5.1"
-source = "git+https://github.com/CQCL/hugr-llvm?branch=doug/reexport-deps#c1e6407db73bf0b23cd3724d135c3241b8a5d55c"
+source = "git+https://github.com/CQCL/hugr-llvm?rev=c1e6407#c1e6407db73bf0b23cd3724d135c3241b8a5d55c"
 dependencies = [
  "anyhow",
  "delegate 0.12.0",
