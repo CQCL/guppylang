@@ -11,6 +11,6 @@ publish = false
 workspace = true
 
 [dependencies]
-hugr-cli.workspace = true
+hugr-cli = "0.13.1"
 cargo_toml.workspace = true
 thiserror.workspace = true

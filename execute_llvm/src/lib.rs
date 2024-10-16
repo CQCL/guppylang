@@ -1,8 +1,8 @@
-use hugr::{self, ops::custom::resolve_extension_ops, std_extensions};
+//! This module provides a Python interface to compile and execute a Hugr program to LLVM IR.
 use hugr::{extension::ExtensionRegistry, ops, HugrView};
-use hugr_llvm;
-use hugr_llvm::fat::FatExt;
-use inkwell::{context::Context, module::Module, values::GenericValue};
+use hugr_llvm::hugr::{self, ops::custom::resolve_extension_ops, std_extensions};
+use hugr_llvm::inkwell::{context::Context, module::Module, values::GenericValue};
+use hugr_llvm::utils::fat::FatExt;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -59,15 +59,15 @@ fn compile_module<'a>(
 ) -> PyResult<Module<'a>> {
     let llvm_module = ctx.create_module("guppy_llvm");
     // TODO: Handle tket2 codegen extension
-    let extensions = hugr_llvm::custom::CodegenExtsMap::default()
+    let extensions = hugr_llvm::custom::CodegenExtsBuilder::default()
         .add_int_extensions()
         .add_default_prelude_extensions()
         .add_float_extensions()
+        .add_conversion_extensions()
         .add_rotation_extensions();
-    let extensions = hugr_llvm::custom::conversions::add_conversions_extension(extensions);
 
     let emitter =
-        hugr_llvm::emit::EmitHugr::new(&ctx, llvm_module, namer.into(), extensions.into());
+        hugr_llvm::emit::EmitHugr::new(ctx, llvm_module, namer.into(), extensions.finish().into());
     let hugr_module = hugr.fat_root().unwrap();
     let emitter = emitter
         .emit_module(hugr_module)
@@ -116,9 +116,7 @@ fn run_int_function(hugr_json: &str, fn_name: &str) -> PyResult<i64> {
     run_function::<i64>(hugr_json, fn_name, |_, llvm_val| {
         // GenericVal is 64 bits wide
         let int_with_sign = llvm_val.as_int(true);
-        let unsigned_int =
-            u64::try_from(int_with_sign).map_err(|e| pyerr!("Reading back llvm value: {}", e))?;
-        let signed_int = unsigned_int as i64;
+        let signed_int = int_with_sign as i64;
         Ok(signed_int)
     })
 }

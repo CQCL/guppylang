@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from hugr.ext import Package
+from hugr.package import Package
 
 import guppylang
 from guppylang.module import GuppyModule

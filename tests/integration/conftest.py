@@ -1,5 +1,5 @@
 from hugr import Hugr
-from hugr.ext import Package
+from hugr.package import Package
 
 from pathlib import Path
 import pytest

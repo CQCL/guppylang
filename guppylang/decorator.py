@@ -424,7 +424,9 @@ class _Guppy:
                 module.load(**defs)
         return module
 
-    def compile_module(self, id: ModuleIdentifier | None = None) -> hugr.ext.Package:
+    def compile_module(
+        self, id: ModuleIdentifier | None = None
+    ) -> hugr.package.Package:
         """Compiles the local module into a Hugr."""
         module = self.get_module(id)
         if not module:

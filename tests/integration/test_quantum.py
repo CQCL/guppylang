@@ -2,7 +2,7 @@
 
 import pytest
 
-from hugr.ext import Package
+from hugr.package import Package
 
 import guppylang.decorator
 from guppylang.decorator import guppy

@@ -20,6 +20,8 @@ check:
 test *PYTEST_FLAGS:
     # Build the validator binary if rust is installed. Otherwise, skip it.
     cargo build --release -p validator || true
+    # Build the execution binary if rust is installed. Otherwise, skip it.
+    uv run maturin build -m execute_llvm/Cargo.toml --release || true
     uv run pytest {{PYTEST_FLAGS}}
 
 # Auto-fix all clippy warnings.

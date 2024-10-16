@@ -1109,7 +1109,8 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
         case list():
             return _python_list_to_guppy_type(v, node, globals)
         case _:
-            # Pytket conversion is an optional feature
+            # Pytket conversion is an experimental feature
+            # if pytket and tket2 are installed
             try:
                 import pytket
 
@@ -1127,8 +1128,8 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
                         )
                     except ImportError:
                         raise GuppyError(
-                            "Pytket compatibility requires `tket2` to be installed. "
-                            "See https://github.com/CQCL/tket2/tree/main/tket2-py",
+                            "Experimental pytket compatibility requires `tket2` to be"
+                            " installed. See https://github.com/CQCL/tket2/tree/main/tket2-py",
                             node,
                         ) from None
             except ImportError:
