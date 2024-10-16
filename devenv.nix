@@ -21,7 +21,7 @@
 
   enterShell = ''
     just setup-extras
-    source .venv/bin/activate
+    source .devenv/state/venv/activate
   '';
 
   languages.python = {
