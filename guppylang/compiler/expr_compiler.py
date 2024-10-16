@@ -7,7 +7,6 @@ import hugr
 import hugr.std.float
 import hugr.std.int
 import hugr.std.logic
-from hugr.package import FuncDeclPointer, FuncDefnPointer
 from hugr import Hugr, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
@@ -561,9 +560,8 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
             vs = [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
             if doesnt_contain_none(vs):
                 return ListVal(vs, get_element_type(exp_ty).to_hugr())
-        case FuncDefnPointer(_) | FuncDeclPointer(_):
+        case _:
             # Pytket conversion is an optional feature
-            v.module
             try:
                 import pytket
 
