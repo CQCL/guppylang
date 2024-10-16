@@ -1128,8 +1128,8 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
                         )
                     except ImportError:
                         raise GuppyError(
-                            "Experimental pytket compatibility requires `tket2` to be installed. "
-                            "See https://github.com/CQCL/tket2/tree/main/tket2-py",
+                            "Experimental pytket compatibility requires `tket2` to be"
+                            " installed. See https://github.com/CQCL/tket2/tree/main/tket2-py",
                             node,
                         ) from None
             except ImportError:
