@@ -446,9 +446,9 @@ class _Guppy:
         if not module:
             raise GuppyError("Function definition must belong to a module")
         compiled_module = module.compile()
-        globs = module._compiled_globals
+        assert module._compiled is not None, "Module should be compiled"
+        globs = module._compiled.globs
         assert globs is not None
-        # print(list(globs.compiled.keys()))
         compiled_def = globs[f_def.id]
         assert isinstance(compiled_def, CompiledFunctionDef)
         node = compiled_def.func_def.parent_node

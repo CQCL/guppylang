@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import inspect
 import sys
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from types import FrameType, ModuleType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from hugr import Hugr, ops
 from hugr.build.function import Module
 from hugr.package import ModulePointer, Package
 
@@ -30,6 +32,9 @@ from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, pretty_errors
 from guppylang.experimental import enable_experimental_features
 
+if TYPE_CHECKING:
+    from hugr import Hugr, ops
+
 PyClass = type
 PyFunc = Callable[..., Any]
 PyFuncDefOrDecl = tuple[bool, PyFunc]
@@ -43,12 +48,9 @@ class GuppyModule:
     # Whether the module has already been checked
     _checked: bool
 
-    # Whether the module has already been compiled
-    _compiled: bool
-
     # If the hugr has already been compiled, keeps a reference that can be returned
     # from `compile`.
-    _compiled_globals: CompiledGlobals | None
+    _compiled: _CompiledModule | None
 
     # Map of raw definitions in this module
     _raw_defs: dict[DefId, RawDef]
@@ -79,8 +81,7 @@ class GuppyModule:
         self._imported_globals = Globals.default()
         self._imported_checked_defs = {}
         self._checked = False
-        self._compiled = False
-        self._compiled_globals = None
+        self._compiled = None
         self._instance_func_buffer = None
         self._raw_defs = {}
         self._raw_type_defs = {}
@@ -96,8 +97,8 @@ class GuppyModule:
 
     def load(
         self,
-        *args: "Definition | GuppyModule | ModuleType",
-        **kwargs: "Definition | GuppyModule | ModuleType",
+        *args: Definition | GuppyModule | ModuleType,
+        **kwargs: Definition | GuppyModule | ModuleType,
     ) -> None:
         """Imports another Guppy module or selected definitions from a module.
 
@@ -155,7 +156,7 @@ class GuppyModule:
         for module in modules:
             self._imported_checked_defs |= module._imported_checked_defs
 
-    def load_all(self, mod: "GuppyModule | ModuleType") -> None:
+    def load_all(self, mod: GuppyModule | ModuleType) -> None:
         """Imports all public members of a module."""
         if isinstance(mod, GuppyModule):
             mod.check()
@@ -182,8 +183,7 @@ class GuppyModule:
         corresponding instance type definition.
         """
         self._checked = False
-        self._compiled = False
-        self._compiled_globals = None
+        self._compiled = None
         if self._instance_func_buffer is not None and not isinstance(defn, TypeDef):
             self._instance_func_buffer[defn.name] = defn
         else:
@@ -231,8 +231,7 @@ class GuppyModule:
         Also removes all methods when unregistering a type.
         """
         self._checked = False
-        self._compiled = False
-        self._compiled_globals = None
+        self._compiled = None
         self._raw_defs.pop(defn.id, None)
         self._raw_type_defs.pop(defn.id, None)
         self._globals.defs.pop(defn.id, None)
@@ -247,7 +246,7 @@ class GuppyModule:
 
     @property
     def compiled(self) -> bool:
-        return self._compiled
+        return self._compiled is not None
 
     @staticmethod
     def _check_defs(
@@ -310,9 +309,8 @@ class GuppyModule:
         The package contains the single Hugr graph as well as the required
         extensions definitions.
         """
-        if self.compiled:
-            assert self._compiled_hugr is not None, "Module is compiled but has no Hugr"
-            return self._compiled_hugr
+        if self._compiled is not None:
+            return self._compiled.module
 
         self.check()
         checked_defs = self._imported_checked_defs | self._checked_defs
@@ -330,14 +328,6 @@ class GuppyModule:
             next_id = ctx.worklist.pop()
             next_def = ctx[next_id]
             next_def.compile_inner(ctx)
-        self._compiled_globals = ctx
-        self._compiled = True
-        return self._compiled_hugr
-
-    @property
-    def _compiled_hugr(self) -> ModulePointer:
-        assert self._compiled_globals is not None, "Module is not compiled"
-        hugr = self._compiled_globals.module.hugr
 
         # TODO: Currently we just include a hardcoded list of extensions. We should
         # compute this dynamically from the imported dependencies instead.
@@ -347,11 +337,21 @@ class GuppyModule:
 
         extensions = [*TKET2_EXTENSIONS, guppylang.compiler.hugr_extension.EXTENSION]
 
-        return ModulePointer(Package(modules=[hugr], extensions=extensions), 0)
+        mod_ptr = ModulePointer(Package(modules=[graph.hugr], extensions=extensions), 0)
+        self._compiled = _CompiledModule(ctx, mod_ptr)
+        return self._compiled.module
 
     def contains(self, name: str) -> bool:
         """Returns 'True' if the module contains an object with the given name."""
         return name in self._globals.names
+
+
+@dataclass(frozen=True)
+class _CompiledModule:
+    """Cached compiled module and definitions"""
+
+    globs: CompiledGlobals
+    module: ModulePointer
 
 
 def get_py_scope(f: PyFunc) -> PyScope:
