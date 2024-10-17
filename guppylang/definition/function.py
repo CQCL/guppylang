@@ -9,6 +9,7 @@ import hugr.build.function as hf
 import hugr.tys as ht
 from hugr import Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
+from hugr.package import FuncDefnPointer
 
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
@@ -64,6 +65,11 @@ class RawFunctionDef(ParsableDef):
         return ParsedFunctionDef(
             self.id, self.name, func_ast, ty, self.python_scope, docstring
         )
+
+    def compile(self) -> FuncDefnPointer:
+        from guppylang.decorator import guppy
+
+        return guppy.compile_function(self)
 
 
 @dataclass(frozen=True)

@@ -48,7 +48,7 @@ class GuppyModule:
 
     # If the hugr has already been compiled, keeps a reference that can be returned
     # from `compile`.
-    _compiled_hugr: ModulePointer | None
+    _compiled_globals: CompiledGlobals | None
 
     # Map of raw definitions in this module
     _raw_defs: dict[DefId, RawDef]
@@ -80,7 +80,7 @@ class GuppyModule:
         self._imported_checked_defs = {}
         self._checked = False
         self._compiled = False
-        self._compiled_hugr = None
+        self._compiled_globals = None
         self._instance_func_buffer = None
         self._raw_defs = {}
         self._raw_type_defs = {}
@@ -183,7 +183,7 @@ class GuppyModule:
         """
         self._checked = False
         self._compiled = False
-        self._compiled_hugr = None
+        self._compiled_globals = None
         if self._instance_func_buffer is not None and not isinstance(defn, TypeDef):
             self._instance_func_buffer[defn.name] = defn
         else:
@@ -232,7 +232,7 @@ class GuppyModule:
         """
         self._checked = False
         self._compiled = False
-        self._compiled_hugr = None
+        self._compiled_globals = None
         self._raw_defs.pop(defn.id, None)
         self._raw_type_defs.pop(defn.id, None)
         self._globals.defs.pop(defn.id, None)
@@ -324,13 +324,20 @@ class GuppyModule:
         # Lower definitions to Hugr
         required = set(self._checked_defs.keys())
         ctx = CompiledGlobals(checked_defs, graph)
+        # evil side effect - compilation happens on ctx[get_item] calls
         _request_compilation = [ctx[def_id] for def_id in required]
         while ctx.worklist:
             next_id = ctx.worklist.pop()
             next_def = ctx[next_id]
             next_def.compile_inner(ctx)
+        self._compiled_globals = ctx
+        self._compiled = True
+        return self._compiled_hugr
 
-        hugr = graph.hugr
+    @property
+    def _compiled_hugr(self) -> ModulePointer:
+        assert self._compiled_globals is not None, "Module is not compiled"
+        hugr = self._compiled_globals.module.hugr
 
         # TODO: Currently we just include a hardcoded list of extensions. We should
         # compute this dynamically from the imported dependencies instead.
@@ -340,11 +347,7 @@ class GuppyModule:
 
         extensions = [*TKET2_EXTENSIONS, guppylang.compiler.hugr_extension.EXTENSION]
 
-        module = ModulePointer(Package(modules=[hugr], extensions=extensions), 0)
-        self._compiled = True
-        self._compiled_hugr = module
-
-        return module
+        return ModulePointer(Package(modules=[hugr], extensions=extensions), 0)
 
     def contains(self, name: str) -> bool:
         """Returns 'True' if the module contains an object with the given name."""

@@ -6,8 +6,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
 from hugr.build.dfg import DefinitionBuilder, OpVar
-from hugr.ops import FuncDecl, FuncDefn
-from hugr.package import FuncDeclPointer, FuncDefnPointer
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -74,21 +72,21 @@ class Definition(ABC):
         a function, but got {description of this definition} instead".
         """
 
-    def compile(self) -> FuncDefnPointer | FuncDeclPointer:
-        assert self.id.module is not None
-        module = self.id.module.compile()
-        hugr = module.module
+    # def compile(self) -> ModulePointer:
+    #     assert self.id.module is not None
+    #     return self.id.module.compile()
+    #     hugr = module.module
 
-        for node in hugr:
-            op = hugr[node].op
-            match op:
-                case FuncDefn(f_name=self.name):
-                    return FuncDefnPointer(module.package, module.module_index, node)
-                case FuncDecl(f_name=self.name):
-                    return FuncDeclPointer(module.package, module.module_index, node)
-                case _:
-                    continue
-        raise ValueError(f"Unexpected op {op}")
+    #     for node in hugr:
+    #         op = hugr[node].op
+    #         match op:
+    #             case FuncDefn(f_name=self.name):
+    #                 return FuncDefnPointer(module.package, module.module_index, node)
+    #             case FuncDecl(f_name=self.name):
+    #                 return FuncDeclPointer(module.package, module.module_index, node)
+    #             case _:
+    #                 continue
+    #     raise ValueError(f"Unexpected op {op}")
 
 
 class ParsableDef(Definition):

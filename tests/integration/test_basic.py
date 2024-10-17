@@ -92,7 +92,7 @@ def test_compile_again():
     def identity(x: int) -> int:
         return x
 
-    hugr = module.compile()
+    hugr = module.compile().module
 
     # Compiling again should return the same Hugr
-    assert hugr is module.compile()
+    assert hugr is module.compile().module
