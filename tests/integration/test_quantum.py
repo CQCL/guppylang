@@ -2,7 +2,7 @@
 
 import pytest
 
-from hugr.package import Package
+from hugr.package import ModulePointer
 
 import guppylang.decorator
 from guppylang.decorator import guppy
@@ -42,7 +42,7 @@ from guppylang.prelude.quantum_functional import (
 )
 
 
-def compile_quantum_guppy(fn) -> Package:
+def compile_quantum_guppy(fn) -> ModulePointer:
     """A decorator that combines @guppy with HUGR compilation.
 
     Modified version of `tests.util.compile_guppy` that loads the quantum module.
