@@ -19,6 +19,7 @@ from guppylang.prelude._internal.compiler.prelude import (
     build_error,
     build_panic,
     build_unwrap,
+    build_unwrap_right,
 )
 from guppylang.tys.arg import TypeArg
 
@@ -133,7 +134,7 @@ class ListGetitemCompiler(CustomCallCompiler):
         list_wire, result = self.builder.add_op(
             list_set(elem_opt_ty), list_wire, idx, none
         )
-        elem_opt = build_unwrap(self.builder, result, "List index out of bounds")
+        elem_opt = build_unwrap_right(self.builder, result, "List index out of bounds")
         elem = build_unwrap(
             self.builder, elem_opt, "Linear list element has already been used"
         )
@@ -168,7 +169,7 @@ class ListSetitemCompiler(CustomCallCompiler):
         idx = self.builder.add_op(convert_itousize(), idx)
         list_wire, result = self.builder.add_op(list_set(elem_ty), list_wire, idx, elem)
         # Unwrap the result, but we don't have to hold onto the returned old value
-        build_unwrap(self.builder, result, "List index out of bounds")
+        build_unwrap_right(self.builder, result, "List index out of bounds")
         return CallReturnWires(regular_returns=[], inout_returns=[list_wire])
 
     def build_linear_setitem(
@@ -186,7 +187,9 @@ class ListSetitemCompiler(CustomCallCompiler):
         list_wire, result = self.builder.add_op(
             list_set(elem_opt_ty), list_wire, idx, elem
         )
-        old_elem_opt = build_unwrap(self.builder, result, "List index out of bounds")
+        old_elem_opt = build_unwrap_right(
+            self.builder, result, "List index out of bounds"
+        )
         # Check that the old element was `None`
         conditional = self.builder.add_conditional(old_elem_opt, list_wire)
         with conditional.add_case(0) as case:
@@ -195,7 +198,7 @@ class ListSetitemCompiler(CustomCallCompiler):
             # Note: This case can only happen if users manually call `xs.__setitem__`
             # since regular indexing `xs[i]` is only allowed in inout position. An error
             # in that situation would be a compiler bug!
-            list_wire, old_elem = case.inputs()
+            old_elem, list_wire = case.inputs()
             error = build_error(case, 1, "Linear list element has not been used")
             build_panic(case, [elem_ty], [], error, old_elem)
             case.set_outputs(list_wire)
