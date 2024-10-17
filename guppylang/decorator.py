@@ -6,10 +6,10 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, TypeVar, overload
 
-import hugr.ext
 from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
+from hugr.package import ModulePointer
 
 import guppylang
 from guppylang.ast_util import annotate_location, has_empty_body
@@ -424,9 +424,7 @@ class _Guppy:
                 module.load(**defs)
         return module
 
-    def compile_module(
-        self, id: ModuleIdentifier | None = None
-    ) -> hugr.package.Package:
+    def compile_module(self, id: ModuleIdentifier | None = None) -> ModulePointer:
         """Compiles the local module into a Hugr."""
         module = self.get_module(id)
         if not module:

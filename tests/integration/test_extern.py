@@ -17,7 +17,7 @@ def test_extern_float(validate):
     package = module.compile()
     validate(package)
 
-    hg = package.modules[0]
+    hg = package.module
     [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(c.val, val.Extension)
     assert c.val.val["symbol"] == "ext"
@@ -35,7 +35,7 @@ def test_extern_alt_symbol(validate):
     package = module.compile()
     validate(package)
 
-    hg = package.modules[0]
+    hg = package.module
     [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(c.val, val.Extension)
     assert c.val.val["symbol"] == "foo"

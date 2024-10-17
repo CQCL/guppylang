@@ -20,7 +20,7 @@ def test_len(validate):
     package = module.compile()
     validate(package)
 
-    hg = package.modules[0]
+    hg = package.module
     [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(val, ops.Const)
     assert isinstance(val.val, IntVal)

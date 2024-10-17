@@ -7,7 +7,7 @@ from typing import Any
 
 from hugr import Hugr, ops
 from hugr.build.function import Module
-from hugr.package import Package
+from hugr.package import ModulePointer, Package
 
 import guppylang.compiler.hugr_extension
 from guppylang import decorator
@@ -48,7 +48,7 @@ class GuppyModule:
 
     # If the hugr has already been compiled, keeps a reference that can be returned
     # from `compile`.
-    _compiled_hugr: Package | None
+    _compiled_hugr: ModulePointer | None
 
     # Map of raw definitions in this module
     _raw_defs: dict[DefId, RawDef]
@@ -301,12 +301,10 @@ class GuppyModule:
         """Compiles the module and returns the final Hugr."""
         # This function does not use the `pretty_errors` decorator since it is
         # is wrapping around `compile_package` which does use it already.
-        package = self.compile()
-        hugr = package.modules[0]
-        return hugr
+        return self.compile().module
 
     @pretty_errors
-    def compile(self) -> Package:
+    def compile(self) -> ModulePointer:
         """Compiles the module and returns the final Hugr package.
 
         The package contains the single Hugr graph as well as the required
@@ -342,11 +340,11 @@ class GuppyModule:
 
         extensions = [*TKET2_EXTENSIONS, guppylang.compiler.hugr_extension.EXTENSION]
 
-        package = Package(modules=[hugr], extensions=extensions)
+        module = ModulePointer(Package(modules=[hugr], extensions=extensions), 0)
         self._compiled = True
-        self._compiled_hugr = package
+        self._compiled_hugr = module
 
-        return package
+        return module
 
     def contains(self, name: str) -> bool:
         """Returns 'True' if the module contains an object with the given name."""

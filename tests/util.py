@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from hugr.package import Package
+from hugr.package import FuncDefnPointer, ModulePointer
 
 import guppylang
 from guppylang.module import GuppyModule
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
         Tk2Circuit = Any
 
 
-def compile_guppy(fn) -> Package:
+def compile_guppy(fn) -> FuncDefnPointer:
     """A decorator that combines @guppy with HUGR compilation.
 
     Creates a temporary module that only contains the defined function.
@@ -35,10 +35,10 @@ def compile_guppy(fn) -> Package:
     return defn.compile()
 
 
-def dump_llvm(hugr: Hugr | Package):
+def dump_llvm(hugr: Hugr | ModulePointer):
     # TODO: Support multiple modules?
-    if isinstance(hugr, Package):
-        hugr = hugr.modules[0]
+    if isinstance(hugr, ModulePointer):
+        hugr = hugr.module
 
     try:
         from execute_llvm import compile_module_to_string
