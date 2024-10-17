@@ -61,6 +61,18 @@ def test_new_array_infer_nested(validate):
     validate(main)
 
 
+def test_return_linear_array(validate ):
+    module = GuppyModule("test")
+    module.load(qubit)
+
+    @guppy(module)
+    def foo() -> array[qubit, 2]:
+        a = array(qubit(), qubit())
+        return a
+
+    validate(module.compile())
+
+
 def test_subscript_drop_rest(validate):
     module = GuppyModule("test")
     module.load_all(quantum)

@@ -16,9 +16,8 @@ from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
 from guppylang.prelude._internal.compiler.arithmetic import convert_itousize
 from guppylang.prelude._internal.compiler.prelude import (
-    build_error,
-    build_panic,
     build_unwrap,
+    build_unwrap_left,
     build_unwrap_right,
 )
 from guppylang.tys.arg import TypeArg
@@ -191,18 +190,9 @@ class ListSetitemCompiler(CustomCallCompiler):
             self.builder, result, "List index out of bounds"
         )
         # Check that the old element was `None`
-        conditional = self.builder.add_conditional(old_elem_opt, list_wire)
-        with conditional.add_case(0) as case:
-            case.set_outputs(*case.inputs())
-        with conditional.add_case(1) as case:
-            # Note: This case can only happen if users manually call `xs.__setitem__`
-            # since regular indexing `xs[i]` is only allowed in inout position. An error
-            # in that situation would be a compiler bug!
-            old_elem, list_wire = case.inputs()
-            error = build_error(case, 1, "Linear list element has not been used")
-            build_panic(case, [elem_ty], [], error, old_elem)
-            case.set_outputs(list_wire)
-        (list_wire,) = conditional.outputs()
+        build_unwrap_left(
+            self.builder, old_elem_opt, "Linear list element has not been used"
+        )
         return CallReturnWires(regular_returns=[], inout_returns=[list_wire])
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
