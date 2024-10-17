@@ -26,11 +26,8 @@ from guppylang.tys.const import ConstValue
 def _instantiate_array_op(
     name: str, elem_ty: ht.Type, length: int, inp: list[ht.Type], out: list[ht.Type]
 ) -> ops.ExtOp:
-    op_def = hugr.std.PRELUDE.get_op(name)
-    return ops.ExtOp(
-        op_def,
-        ht.FunctionType(inp, out),
-        [ht.BoundedNatArg(length), ht.TypeTypeArg(elem_ty)],
+    return hugr.std.PRELUDE.get_op(name).instantiate(
+        [ht.BoundedNatArg(length), ht.TypeTypeArg(elem_ty)], ht.FunctionType(inp, out)
     )
 
 
