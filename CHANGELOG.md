@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.13.0](https://github.com/CQCL/guppylang/compare/v0.12.1...v0.13.0) (2024-10-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* decorator `compile_module` and `GuppyModule.compile` return `ModulePointer` rather than `Package` (package can be retrieved using `ModulePointer.package`. `Definition.compile` returns a `Func{Defn/Decl}Pointer`.
+* pytket optional depenedencies removed
+* Removed the `linst` type, use `list` instead.
+* Unsupported list methods have been removed.
+
+### Features
+
+* Allow linear data inside lists ([#531](https://github.com/CQCL/guppylang/issues/531)) ([229be2e](https://github.com/CQCL/guppylang/commit/229be2e6c0e048d431683707a2532503e2f3dad1))
+* Allow py expressions in type arguments ([#515](https://github.com/CQCL/guppylang/issues/515)) ([b4fae3f](https://github.com/CQCL/guppylang/commit/b4fae3f7a29b384f8bbe0069dc6131ec115e17ee))
+* Emit infallible `float`→`rotation` conversions ([#560](https://github.com/CQCL/guppylang/issues/560)) ([74944a7](https://github.com/CQCL/guppylang/commit/74944a7cbb60ce514b8e3f8fab15ca3f5573a34a))
+* return packages with pointers when compiling ([#568](https://github.com/CQCL/guppylang/issues/568)) ([7a9d5da](https://github.com/CQCL/guppylang/commit/7a9d5da396fee52ff979fdd03eb0de4515d474a7))
+* Update Hugr lowering for lists ([#534](https://github.com/CQCL/guppylang/issues/534)) ([7083760](https://github.com/CQCL/guppylang/commit/7083760a9807375a2e6453826e5a453a0415aff7))
+
+
+### Bug Fixes
+
+* Fix list lowering bugs ([#572](https://github.com/CQCL/guppylang/issues/572)) ([2d454f3](https://github.com/CQCL/guppylang/commit/2d454f30495b7ceebd1c81719fb962ec0931da07))
+* Fix lowering of list.__len__ ([#577](https://github.com/CQCL/guppylang/issues/577)) ([c698b43](https://github.com/CQCL/guppylang/commit/c698b43010ad0c13319c2c47073a8a54fff84006))
+* Fix printing of generic function parameters ([#516](https://github.com/CQCL/guppylang/issues/516)) ([5c18ef6](https://github.com/CQCL/guppylang/commit/5c18ef63237ad76a4b0f74d8b3c4d77a438052ef)), closes [#482](https://github.com/CQCL/guppylang/issues/482)
+
+
+### Miscellaneous Chores
+
+* Remove linst type ([#533](https://github.com/CQCL/guppylang/issues/533)) ([3717bae](https://github.com/CQCL/guppylang/commit/3717bae2967de210b665869efbe8fb69fc45247a))
+* update hugr-py to 0.9 ([#562](https://github.com/CQCL/guppylang/issues/562)) ([6449184](https://github.com/CQCL/guppylang/commit/64491843503fce51177a1afa402b1ce7a00d646f))
+
 ## [0.12.1](https://github.com/CQCL/guppylang/compare/v0.12.0...v0.12.1) (2024-09-23)
 
 
