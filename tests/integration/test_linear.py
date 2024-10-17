@@ -9,6 +9,19 @@ from guppylang.tys.ty import NoneType
 
 import pytest
 
+def test_discard_bug(validate):
+    # https://github.com/CQCL/guppylang/issues/565
+    from guppylang.prelude import quantum
+    bad_module = GuppyModule("test")
+    bad_module.load_all(quantum)
+    @guppy(bad_module)
+    def bad(q: qubit @owned) -> qubit:
+        tmp = qubit()
+        cx(tmp, q)
+        # discard(tmp)  # Compiler hangs if tmp is not explicitly discarded
+        return q
+
+    validate(bad_module.compile())
 
 def test_id(validate):
     module = GuppyModule("test")
