@@ -14,7 +14,10 @@ from hugr.std.collections import ListVal
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
-from guppylang.prelude._internal.compiler.arithmetic import convert_itousize
+from guppylang.prelude._internal.compiler.arithmetic import (
+    convert_ifromusize,
+    convert_itousize,
+)
 from guppylang.prelude._internal.compiler.prelude import (
     build_error,
     build_panic,
@@ -91,10 +94,7 @@ def list_length(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `length` operation."""
     list_type = hugr.std.collections.list_type(elem_type)
     return _instantiate_list_op(
-        "length",
-        elem_type,
-        [list_type],
-        [list_type, ht.Either([elem_type], [ht.Unit])],
+        "length", elem_type, [list_type], [list_type, ht.USize()]
     )
 
 
@@ -296,6 +296,24 @@ class ListPushCompiler(CustomCallCompiler):
             return self.build_linear_push(list_wire, elem, elem_ty_arg.ty.to_hugr())
         else:
             return self.build_classical_push(list_wire, elem, elem_ty_arg.ty.to_hugr())
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        raise InternalGuppyError("Call compile_with_inouts instead")
+
+
+class ListLengthCompiler(CustomCallCompiler):
+    """Compiler for the `list.__len__` function."""
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [list_wire] = args
+        [elem_ty_arg] = self.type_args
+        assert isinstance(elem_ty_arg, TypeArg)
+        elem_ty = elem_ty_arg.ty.to_hugr()
+        if elem_ty_arg.ty.linear:
+            elem_ty = ht.Option(elem_ty)
+        list_wire, length = self.builder.add_op(list_length(elem_ty), list_wire)
+        length = self.builder.add_op(convert_ifromusize(), length)
+        return CallReturnWires(regular_returns=[length], inout_returns=[list_wire])
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
