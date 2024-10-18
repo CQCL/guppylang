@@ -74,3 +74,52 @@ def build_error(builder: DfBase[ops.Case], signal: int, msg: str) -> Wire:
     """Constructs and loads a static error value."""
     val = ErrorVal(signal, msg)
     return builder.load(builder.add_const(val))
+
+
+# TODO: Common up build_unwrap_right and build_unwrap_left below once
+#  https://github.com/CQCL/hugr/issues/1596 is fixed
+
+
+def build_unwrap_right(
+    builder: DfBase[ops.DfParentOp], either: Wire, error_msg: str, error_signal: int = 1
+) -> Node:
+    """Unwraps the right value from a `hugr.tys.Either` value, panicking with the given
+    message if the result is left.
+    """
+    conditional = builder.add_conditional(either)
+    result_ty = builder.hugr.port_type(either.out_port())
+    assert isinstance(result_ty, ht.Sum)
+    [left_tys, right_tys] = result_ty.variant_rows
+    with conditional.add_case(0) as case:
+        error = build_error(case, error_signal, error_msg)
+        case.set_outputs(*build_panic(case, left_tys, right_tys, error, *case.inputs()))
+    with conditional.add_case(1) as case:
+        case.set_outputs(*case.inputs())
+    return conditional.to_node()
+
+
+def build_unwrap_left(
+    builder: DfBase[ops.DfParentOp], either: Wire, error_msg: str, error_signal: int = 1
+) -> Node:
+    """Unwraps the left value from a `hugr.tys.Either` value, panicking with the given
+    message if the result is right.
+    """
+    conditional = builder.add_conditional(either)
+    result_ty = builder.hugr.port_type(either.out_port())
+    assert isinstance(result_ty, ht.Sum)
+    [left_tys, right_tys] = result_ty.variant_rows
+    with conditional.add_case(0) as case:
+        case.set_outputs(*case.inputs())
+    with conditional.add_case(1) as case:
+        error = build_error(case, error_signal, error_msg)
+        case.set_outputs(*build_panic(case, right_tys, left_tys, error, *case.inputs()))
+    return conditional.to_node()
+
+
+def build_unwrap(
+    builder: DfBase[ops.DfParentOp], result: Wire, error_msg: str, error_signal: int = 1
+) -> Node:
+    """Unwraps an `hugr.tys.Option` value, panicking with the given message if the
+    result is an error.
+    """
+    return build_unwrap_right(builder, result, error_msg, error_signal)
