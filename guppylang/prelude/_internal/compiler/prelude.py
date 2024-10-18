@@ -76,6 +76,10 @@ def build_error(builder: DfBase[ops.Case], signal: int, msg: str) -> Wire:
     return builder.load(builder.add_const(val))
 
 
+# TODO: Common up build_unwrap_right and build_unwrap_left below once
+#  https://github.com/CQCL/hugr/issues/1596 is fixed
+
+
 def build_unwrap_right(
     builder: DfBase[ops.DfParentOp], either: Wire, error_msg: str, error_signal: int = 1
 ) -> Node:
