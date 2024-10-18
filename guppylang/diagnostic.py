@@ -127,13 +127,6 @@ class Diagnostic(SubDiagnostic, Protocol):
         """The span label of this diagnostic with formatted placeholders if provided."""
         return self._render(self.span_label)
 
-    def _render(self, s: str | None) -> str | None:
-        """Helper method to fill in placeholder values in strings with fields of this
-        diagnostic.
-        """
-        values = {f.name: getattr(self, f.name) for f in fields(self)}
-        return s.format(**values) if s is not None else None
-
 
 @runtime_checkable
 @dataclass(frozen=True)
