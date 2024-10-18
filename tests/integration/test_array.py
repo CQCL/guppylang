@@ -27,6 +27,24 @@ def test_len(validate):
     assert val.val.v == 42
 
 
+def test_len_linear(validate):
+    module = GuppyModule("test")
+    module.load(qubit)
+
+    @guppy(module)
+    def main(qs: array[qubit, 42]) -> int:
+        return len(qs)
+
+    package = module.compile()
+    validate(package)
+
+    hg = package.module
+    [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    assert isinstance(val, ops.Const)
+    assert isinstance(val.val, IntVal)
+    assert val.val.v == 42
+
+
 def test_index(validate):
     @compile_guppy
     def main(xs: array[int, 5], i: int) -> int:
