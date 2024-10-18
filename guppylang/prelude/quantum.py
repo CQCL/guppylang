@@ -43,8 +43,18 @@ class qubit:
 
     @guppy
     @no_type_check
+    def measure(self: "qubit" @owned) -> bool:
+        return measure(self)
+
+    @guppy
+    @no_type_check
+    def measure_return(self: "qubit") -> bool:
+        return measure_return(self)
+
+    @guppy
+    @no_type_check
     def measure_reset(self: "qubit") -> bool:
-        res = measure_return(self)
+        res = self.measure_return()
         if res:
             self.x()
         return res
