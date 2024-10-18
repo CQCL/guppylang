@@ -117,6 +117,16 @@ class Diagnostic(SubDiagnostic, Protocol):
         self.children.append(sub)
         return self
 
+    @property
+    def rendered_message(self) -> str | None:
+        """The message of this diagnostic with formatted placeholders if provided."""
+        return self._render(self.message)
+
+    @property
+    def rendered_span_label(self) -> str | None:
+        """The span label of this diagnostic with formatted placeholders if provided."""
+        return self._render(self.span_label)
+
 
 @runtime_checkable
 @dataclass(frozen=True)

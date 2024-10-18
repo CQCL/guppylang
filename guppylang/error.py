@@ -7,10 +7,13 @@ from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from guppylang.ast_util import AstNode, get_file, get_line_offset, get_source
 from guppylang.ipython_inspect import is_running_ipython
+
+if TYPE_CHECKING:
+    from guppylang.diagnostic import Diagnostic
 
 
 @dataclass(frozen=True)
@@ -49,7 +52,7 @@ class GuppyError(Exception):
     The error message can also refer to AST locations using format placeholders `{0}`,
     `{1}`, etc. and passing the corresponding AST nodes to `locs_in_msg`."""
 
-    raw_msg: str
+    raw_msg: "str | Diagnostic"
     location: AstNode | None = None
     # The message can also refer to AST locations using format placeholders `{0}`, `{1}`
     locs_in_msg: Sequence[AstNode | None] = field(default_factory=list)
@@ -59,6 +62,7 @@ class GuppyError(Exception):
 
         A line offset is needed to translate AST locations mentioned in the message into
         source locations in the actual file."""
+        assert isinstance(self.raw_msg, str)
         return self.raw_msg.format(
             *(
                 SourceLoc.from_ast(loc) if loc is not None else "???"
@@ -157,6 +161,18 @@ def pretty_errors(f: FuncT) -> FuncT:
         excty: type[BaseException], err: BaseException, traceback: TracebackType | None
     ) -> None:
         """Custom `excepthook` that intercepts `GuppyExceptions` for pretty printing."""
+        from guppylang.diagnostic import Diagnostic, DiagnosticsRenderer
+
+        # Check for errors using our new diagnostics system
+        if isinstance(err, GuppyError) and isinstance(err.raw_msg, Diagnostic):
+            from guppylang.decorator import guppy
+
+            renderer = DiagnosticsRenderer(guppy._sources)
+            renderer.render_diagnostic(err.raw_msg)
+            sys.stderr.write("\n".join(renderer.buffer))
+            sys.stderr.write("\n\nGuppy compilation failed due to 1 previous error\n")
+            return
+
         # Fall back to default hook if it's not a GuppyException or we're missing an
         # error location
         if not isinstance(err, GuppyError) or err.location is None:
