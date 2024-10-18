@@ -1,6 +1,6 @@
 Error: Type mismatch (at $FILE:11:11)
    | 
-9  |         return x > 0
+ 9 |         return x > 0
 10 | 
 11 |     return bar
    |            ^^^ Expected return value of type `int -> int`, got `int ->

@@ -1,6 +1,6 @@
 Error: Type mismatch (at $FILE:11:15)
    | 
-9  |         return f(42)
+ 9 |         return f(42)
 10 | 
 11 |     return bar(foo)
    |                ^^^ Expected argument of type `int -> bool`, got `int -> int`

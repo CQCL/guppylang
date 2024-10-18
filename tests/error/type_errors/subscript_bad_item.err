@@ -1,7 +1,7 @@
 Error: Type mismatch (at $FILE:10:14)
    | 
-8  | @guppy(module)
-9  | def foo(xs: array[int, 42]) -> int:
+ 8 | @guppy(module)
+ 9 | def foo(xs: array[int, 42]) -> int:
 10 |     return xs[1.0]
    |               ^^^ Expected argument of type `int`, got `float`
 

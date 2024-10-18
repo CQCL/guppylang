@@ -1,7 +1,7 @@
 import textwrap
 from dataclasses import dataclass, field, fields
 from enum import Enum, auto
-from typing import ClassVar, Final, Literal, Protocol, runtime_checkable
+from typing import ClassVar, Final, Literal, Protocol, overload, runtime_checkable
 
 from typing_extensions import Self
 
@@ -34,72 +34,6 @@ class DiagnosticLevel(Enum):
 
 @runtime_checkable
 @dataclass(frozen=True)
-class Diagnostic(Protocol):
-    """Abstract base class for compiler diagnostics that are reported to users.
-
-    These could be fatal errors, regular errors, or warnings (see `DiagnosticLevel`).
-    """
-
-    #: Severity level of the diagnostic.
-    level: ClassVar[DiagnosticLevel]
-
-    #: Primary span of the source location associated with this diagnostic. The span
-    #: is optional, but provided in almost all cases.
-    span: ToSpan | None
-
-    #: Short title for the diagnostic that is displayed at the top.
-    title: ClassVar[str]
-
-    #: Longer message that is printed below the span.
-    long_message: ClassVar[str | None] = None
-
-    #: Label that is printed next to the span highlight. Can only be used if a span is
-    #: provided.
-    span_label: ClassVar[str | None] = None
-
-    #: Optional sub-diagnostics giving some additional context.
-    children: list["SubDiagnostic"] = field(default_factory=list, init=False)
-
-    def __post_init__(self) -> None:
-        if self.span_label and self.span is None:
-            raise InternalGuppyError("Diagnostic: Span label provided without span")
-
-    @property
-    def rendered_title(self) -> str:
-        """The title of this diagnostic with formatted placeholders."""
-        title = self._render(self.title)
-        assert title is not None
-        return title
-
-    @property
-    def rendered_long_message(self) -> str | None:
-        """The message of this diagnostic with formatted placeholders if provided."""
-        return self._render(self.long_message)
-
-    @property
-    def rendered_span_label(self) -> str | None:
-        """The span label of this diagnostic with formatted placeholders if provided."""
-        return self._render(self.span_label)
-
-    def _render(self, s: str | None) -> str | None:
-        """Helper method to fill in placeholder values in strings with fields of this
-        diagnostic.
-        """
-        values = {f.name: getattr(self, f.name) for f in fields(self)}
-        return s.format(**values) if s is not None else None
-
-    def add_sub_diagnostic(self, sub: "SubDiagnostic") -> Self:
-        """Adds a new sub-diagnostic."""
-        if self.span and sub.span and to_span(sub.span).file != to_span(self.span).file:
-            raise InternalGuppyError(
-                "Diagnostic: Cross-file sub-diagnostics are not supported"
-            )
-        self.children.append(sub)
-        return self
-
-
-@runtime_checkable
-@dataclass(frozen=True)
 class SubDiagnostic(Protocol):
     """A sub-diagnostic attached to a parent diagnostic.
 
@@ -121,10 +55,67 @@ class SubDiagnostic(Protocol):
     message: ClassVar[str | None] = None
 
     def __post_init__(self) -> None:
-        if self.span_label and not self.span:
+        if self.span_label and self.span is None:
             raise InternalGuppyError("SubDiagnostic: Span label provided without span")
-        if not self.span and not self.message:
-            raise InternalGuppyError("SubDiagnostic: Empty diagnostic")
+
+    @property
+    def rendered_message(self) -> str | None:
+        """The message of this diagnostic with formatted placeholders if provided."""
+        return self._render(self.message)
+
+    @property
+    def rendered_span_label(self) -> str | None:
+        """The span label of this diagnostic with formatted placeholders if provided."""
+        return self._render(self.span_label)
+
+    @overload
+    def _render(self, s: str) -> str: ...
+
+    @overload
+    def _render(self, s: None) -> None: ...
+
+    def _render(self, s: str | None) -> str | None:
+        """Helper method to fill in placeholder values in strings with fields of this
+        diagnostic.
+        """
+        values = {f.name: getattr(self, f.name) for f in fields(self)}
+        return s.format(**values) if s is not None else None
+
+
+@runtime_checkable
+@dataclass(frozen=True)
+class Diagnostic(SubDiagnostic, Protocol):
+    """Abstract base class for compiler diagnostics that are reported to users.
+
+    These could be fatal errors, regular errors, or warnings (see `DiagnosticLevel`).
+    """
+
+    #: Short title for the diagnostic that is displayed at the top.
+    title: ClassVar[str]
+
+    #: Optional sub-diagnostics giving some additional context.
+    children: list["SubDiagnostic"] = field(default_factory=list, init=False)
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.span is None and self.children:
+            raise InternalGuppyError(
+                "Diagnostic: Span-less diagnostics can't have children (FIXME)"
+            )
+
+    @property
+    def rendered_title(self) -> str:
+        """The title of this diagnostic with formatted placeholders."""
+        return self._render(self.title)
+
+    def add_sub_diagnostic(self, sub: "SubDiagnostic") -> Self:
+        """Adds a new sub-diagnostic."""
+        if self.span and sub.span and to_span(sub.span).file != to_span(self.span).file:
+            raise InternalGuppyError(
+                "Diagnostic: Cross-file sub-diagnostics are not supported"
+            )
+        self.children.append(sub)
+        return self
 
     @property
     def rendered_message(self) -> str | None:
@@ -184,7 +175,7 @@ class DiagnosticsRenderer:
     #: Maximum length of span labels after which we insert a newline
     MAX_LABEL_LINE_LEN: Final[int] = 60
 
-    #: Maximum length of span labels after which we insert a newline
+    #: Maximum length of messages after which we insert a newline
     MAX_MESSAGE_LINE_LEN: Final[int] = 80
 
     #: Number of preceding source lines we show to give additional context
@@ -216,7 +207,7 @@ class DiagnosticsRenderer:
         if diag.span is None:
             # Omit the title if we don't have a span, but a long message. This case
             # should be fairly rare.
-            msg = diag.rendered_long_message or diag.rendered_title
+            msg = diag.rendered_message or diag.rendered_title
             self.buffer += textwrap.wrap(
                 f"{self.level_str(diag.level)}: {msg}",
                 self.MAX_MESSAGE_LINE_LEN,
@@ -239,10 +230,10 @@ class DiagnosticsRenderer:
                         sub_diag.rendered_span_label,
                         is_primary=False,
                     )
-            if diag.long_message:
+            if diag.message:
                 self.buffer.append("")
                 self.buffer += textwrap.wrap(
-                    f"{diag.rendered_long_message}", self.MAX_MESSAGE_LINE_LEN
+                    f"{diag.rendered_message}", self.MAX_MESSAGE_LINE_LEN
                 )
         # Finally, render all sub-diagnostics that have a non-span message
         for sub_diag in diag.children:
@@ -293,11 +284,8 @@ class DiagnosticsRenderer:
 
         def render_line(line: str, line_number: int | None = None) -> None:
             """Helper method to render a line with the line number bar on the left."""
-            if line_number is not None:
-                ll = str(line_number)
-                self.buffer.append(ll + " " * (ll_length - len(ll)) + " | " + line)
-            else:
-                self.buffer.append(" " * ll_length + " | " + line)
+            ll = "" if line_number is None else str(line_number)
+            self.buffer.append(" " * (ll_length - len(ll)) + ll + " | " + line)
 
         # One line of padding
         render_line("")
@@ -319,7 +307,7 @@ class DiagnosticsRenderer:
         if span.is_multiline:
             [first, *middle, last] = span_lines
             render_line(first, span.start.line)
-            # Compute the subspan that only covers the first line and render it's
+            # Compute the subspan that only covers the first line and render its
             # highlight banner
             first_span = Span(span.start, Loc(span.file, span.start.line, len(first)))
             first_highlight = " " * first_span.start.column + highlight_char * len(
@@ -359,14 +347,4 @@ class DiagnosticsRenderer:
     @staticmethod
     def level_str(level: DiagnosticLevel) -> str:
         """Returns the text used to identify the different kinds of diagnostics."""
-        match level:
-            case DiagnosticLevel.FATAL:
-                return "Fatal"
-            case DiagnosticLevel.ERROR:
-                return "Error"
-            case DiagnosticLevel.WARNING:
-                return "Warning"
-            case DiagnosticLevel.NOTE:
-                return "Note"
-            case DiagnosticLevel.HELP:
-                return "Help"
+        return level.name.lower().capitalize()

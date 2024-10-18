@@ -48,7 +48,7 @@ def test_only_message(snapshot, request):
     @dataclass(frozen=True)
     class MyDiagnostic(Error):
         title: ClassVar[str] = "Can't compare apples with oranges"
-        long_message: ClassVar[str] = (
+        message: ClassVar[str] = (
             "Can't compare apples with oranges. Please refer to Barone (BMJ, 2000), "
             "https://doi.org/10.1136%2Fbmj.321.7276.1569 for further details."
         )
@@ -69,7 +69,7 @@ def test_message_with_span(snapshot, request):
     @dataclass(frozen=True)
     class MyDiagnostic(Error):
         title: ClassVar[str] = "Can't compare apples with oranges"
-        long_message: ClassVar[str] = (
+        message: ClassVar[str] = (
             "Please refer to Barone (BMJ, 2000), "
             "https://doi.org/10.1136%2Fbmj.321.7276.1569 for further details."
         )
@@ -135,6 +135,13 @@ def test_note(snapshot, request):
 def test_context(snapshot, request):
     source = "super_apple := apple ** 2\nlemon := orange - apple\napple == orange"
     span = Span(Loc(file, 3, 6), Loc(file, 3, 8))
+    diagnostic = MyError(span)
+    run_test(source, diagnostic, snapshot, request)
+
+
+def test_justify_line_number(snapshot, request):
+    source = "foo\n" * 99 + "apple == orange"
+    span = Span(Loc(file, 100, 6), Loc(file, 100, 8))
     diagnostic = MyError(span)
     run_test(source, diagnostic, snapshot, request)
 
