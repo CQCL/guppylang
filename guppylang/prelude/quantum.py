@@ -26,6 +26,101 @@ class qubit:
         reset(q)
         return q
 
+    @guppy
+    @no_type_check
+    def h(self: "qubit") -> None:
+        h(self)
+
+    @guppy
+    @no_type_check
+    def cz(self: "qubit", target: "qubit") -> None:
+        cz(self, target)
+
+    @guppy
+    @no_type_check
+    def cx(self: "qubit", target: "qubit") -> None:
+        cx(self, target)
+
+    @guppy
+    @no_type_check
+    def measure_reset(self: "qubit") -> bool:
+        res = measure_return(self)
+        if res:
+            self.x()
+        return res
+
+    @guppy
+    @no_type_check
+    def discard(self: "qubit" @ owned) -> None:
+        discard(self)
+
+    @guppy
+    @no_type_check
+    def x(self: "qubit") -> None:
+        x(self)
+
+    @guppy
+    @no_type_check
+    def y(self: "qubit") -> None:
+        y(self)
+
+    @guppy
+    @no_type_check
+    def z(self: "qubit") -> None:
+        z(self)
+
+    @guppy
+    @no_type_check
+    def t(self: "qubit") -> None:
+        t(self)
+
+    @guppy
+    @no_type_check
+    def s(self: "qubit") -> None:
+        s(self)
+
+    @guppy
+    @no_type_check
+    def tdg(self: "qubit") -> None:
+        tdg(self)
+
+    @guppy
+    @no_type_check
+    def sdg(self: "qubit") -> None:
+        sdg(self)
+
+    @guppy
+    @no_type_check
+    def rz(self: "qubit", angle: angle) -> None:
+        rz(self, angle)
+
+    @guppy
+    @no_type_check
+    def rx(self: "qubit", angle: angle) -> None:
+        rx(self, angle)
+
+    @guppy
+    @no_type_check
+    def ry(self: "qubit", angle: angle) -> None:
+        ry(self, angle)
+
+    @guppy
+    @no_type_check
+    def crz(self: "qubit", target: "qubit", angle: angle) -> None:
+        crz(self, target, angle)
+
+    # TODO toffoli doesn't make much sense with two controls
+
+    # @guppy
+    # @no_type_check
+    # def toffoli(self: "qubit", control2: "qubit", target: "qubit") -> None:
+    #     toffoli(self, control2, target)
+
+    @guppy
+    @no_type_check
+    def zz_max(self: "qubit", q2: "qubit") -> None:
+        zz_max(self, q2)
+
 
 @guppy.hugr_op(quantum_op("H"))
 def h(q: qubit) -> None: ...
