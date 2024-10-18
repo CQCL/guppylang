@@ -68,13 +68,7 @@ def test_func_def_name():
     def func_name() -> None:
         return
 
-    [def_op] = [
-        data.op
-        for n, data in func_name.modules[0].nodes()
-        if isinstance(data.op, ops.FuncDefn)
-    ]
-    assert isinstance(def_op, ops.FuncDefn)
-    assert def_op.f_name == "func_name"
+    assert func_name.func_defn.f_name == "func_name"
 
 
 def test_func_decl_name():

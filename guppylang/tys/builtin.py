@@ -132,11 +132,9 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
 
     # Linear elements are turned into an optional to enable unsafe indexing.
     # See `ArrayGetitemCompiler` for details.
-    elem_ty: ht.Type
-    if ty_arg.ty.linear:
-        elem_ty = ht.Sum([[ty_arg.ty.to_hugr()], []])
-    else:
-        elem_ty = ty_arg.ty.to_hugr()
+    elem_ty = (
+        ht.Option(ty_arg.ty.to_hugr()) if ty_arg.ty.linear else ty_arg.ty.to_hugr()
+    )
 
     array = hugr.std.PRELUDE.get_type("array")
     return array.instantiate([len_arg.to_hugr(), ht.TypeTypeArg(elem_ty)])

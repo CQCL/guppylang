@@ -6,10 +6,10 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, TypeVar, overload
 
-import hugr.ext
 from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
+from hugr.package import FuncDefnPointer, ModulePointer
 
 import guppylang
 from guppylang.ast_util import annotate_location, has_empty_body
@@ -25,7 +25,11 @@ from guppylang.definition.custom import (
 )
 from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.extern import RawExternDef
-from guppylang.definition.function import RawFunctionDef, parse_py_func
+from guppylang.definition.function import (
+    CompiledFunctionDef,
+    RawFunctionDef,
+    parse_py_func,
+)
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
@@ -433,7 +437,7 @@ class _Guppy:
                 module.load(**defs)
         return module
 
-    def compile_module(self, id: ModuleIdentifier | None = None) -> hugr.ext.Package:
+    def compile_module(self, id: ModuleIdentifier | None = None) -> ModulePointer:
         """Compiles the local module into a Hugr."""
         module = self.get_module(id)
         if not module:
@@ -444,6 +448,22 @@ class _Guppy:
             )
             raise MissingModuleError(err)
         return module.compile()
+
+    def compile_function(self, f_def: RawFunctionDef) -> FuncDefnPointer:
+        """Compiles a single function definition."""
+        module = f_def.id.module
+        if not module:
+            raise GuppyError("Function definition must belong to a module")
+        compiled_module = module.compile()
+        assert module._compiled is not None, "Module should be compiled"
+        globs = module._compiled.globs
+        assert globs is not None
+        compiled_def = globs[f_def.id]
+        assert isinstance(compiled_def, CompiledFunctionDef)
+        node = compiled_def.func_def.parent_node
+        return FuncDefnPointer(
+            compiled_module.package, compiled_module.module_index, node
+        )
 
     def registered_modules(self) -> KeysView[ModuleIdentifier]:
         """Returns a list of all currently registered modules for local contexts."""

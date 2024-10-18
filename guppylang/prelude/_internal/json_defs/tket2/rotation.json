@@ -19,7 +19,7 @@
     "from_halfturns": {
       "extension": "tket2.rotation",
       "name": "from_halfturns",
-      "description": "Construct rotation from number of half-turns (would be multiples of π in radians).",
+      "description": "Construct rotation from number of half-turns (would be multiples of π in radians). Returns None if the float is non-finite.",
       "signature": {
         "params": [],
         "body": {
@@ -55,10 +55,40 @@
       },
       "binary": false
     },
+    "from_halfturns_unchecked": {
+      "extension": "tket2.rotation",
+      "name": "from_halfturns_unchecked",
+      "description": "Construct rotation from number of half-turns (would be multiples of π in radians). Panics if the float is non-finite.",
+      "signature": {
+        "params": [],
+        "body": {
+          "input": [
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.float.types",
+              "id": "float64",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "Opaque",
+              "extension": "tket2.rotation",
+              "id": "rotation",
+              "args": [],
+              "bound": "C"
+            }
+          ],
+          "extension_reqs": []
+        }
+      },
+      "binary": false
+    },
     "radd": {
       "extension": "tket2.rotation",
       "name": "radd",
-      "description": "Add two rotations together (experimental).",
+      "description": "Add two angles together (experimental).",
       "signature": {
         "params": [],
         "body": {

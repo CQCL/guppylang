@@ -35,6 +35,7 @@ from guppylang.prelude._internal.compiler.array import (
 )
 from guppylang.prelude._internal.compiler.list import (
     ListGetitemCompiler,
+    ListLengthCompiler,
     ListPopCompiler,
     ListPushCompiler,
     ListSetitemCompiler,
@@ -515,8 +516,7 @@ class List:
     @guppy.custom(ListSetitemCompiler())
     def __setitem__(self: list[L], idx: int, value: L @ owned) -> None: ...
 
-    # TODO: https://github.com/CQCL/hugr/issues/1543
-    @guppy.hugr_op(unsupported_op("length"))
+    @guppy.custom(ListLengthCompiler())
     def __len__(self: list[L]) -> int: ...
 
     @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
@@ -553,7 +553,7 @@ class Array:
     def __setitem__(self: array[L, n], idx: int, value: L @ owned) -> None: ...
 
     @guppy.custom(checker=ArrayLenChecker())
-    def __len__(self: array[T, n]) -> int: ...
+    def __len__(self: array[L, n]) -> int: ...
 
     @guppy.custom(NewArrayCompiler(), NewArrayChecker(), higher_order_value=False)
     def __new__(): ...

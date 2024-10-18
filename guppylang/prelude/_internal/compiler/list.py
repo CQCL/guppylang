@@ -14,11 +14,14 @@ from hugr.std.collections import ListVal
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
-from guppylang.prelude._internal.compiler.arithmetic import convert_itousize
+from guppylang.prelude._internal.compiler.arithmetic import (
+    convert_ifromusize,
+    convert_itousize,
+)
 from guppylang.prelude._internal.compiler.prelude import (
-    build_error,
-    build_panic,
     build_unwrap,
+    build_unwrap_left,
+    build_unwrap_right,
 )
 from guppylang.tys.arg import TypeArg
 
@@ -90,10 +93,7 @@ def list_length(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `length` operation."""
     list_type = hugr.std.collections.list_type(elem_type)
     return _instantiate_list_op(
-        "length",
-        elem_type,
-        [list_type],
-        [list_type, ht.Either([elem_type], [ht.Unit])],
+        "length", elem_type, [list_type], [list_type, ht.USize()]
     )
 
 
@@ -133,7 +133,7 @@ class ListGetitemCompiler(CustomCallCompiler):
         list_wire, result = self.builder.add_op(
             list_set(elem_opt_ty), list_wire, idx, none
         )
-        elem_opt = build_unwrap(self.builder, result, "List index out of bounds")
+        elem_opt = build_unwrap_right(self.builder, result, "List index out of bounds")
         elem = build_unwrap(
             self.builder, elem_opt, "Linear list element has already been used"
         )
@@ -168,7 +168,7 @@ class ListSetitemCompiler(CustomCallCompiler):
         idx = self.builder.add_op(convert_itousize(), idx)
         list_wire, result = self.builder.add_op(list_set(elem_ty), list_wire, idx, elem)
         # Unwrap the result, but we don't have to hold onto the returned old value
-        build_unwrap(self.builder, result, "List index out of bounds")
+        build_unwrap_right(self.builder, result, "List index out of bounds")
         return CallReturnWires(regular_returns=[], inout_returns=[list_wire])
 
     def build_linear_setitem(
@@ -186,20 +186,13 @@ class ListSetitemCompiler(CustomCallCompiler):
         list_wire, result = self.builder.add_op(
             list_set(elem_opt_ty), list_wire, idx, elem
         )
-        old_elem_opt = build_unwrap(self.builder, result, "List index out of bounds")
+        old_elem_opt = build_unwrap_right(
+            self.builder, result, "List index out of bounds"
+        )
         # Check that the old element was `None`
-        conditional = self.builder.add_conditional(old_elem_opt, list_wire)
-        with conditional.add_case(0) as case:
-            case.set_outputs(*case.inputs())
-        with conditional.add_case(1) as case:
-            # Note: This case can only happen if users manually call `xs.__setitem__`
-            # since regular indexing `xs[i]` is only allowed in inout position. An error
-            # in that situation would be a compiler bug!
-            list_wire, old_elem = case.inputs()
-            error = build_error(case, 1, "Linear list element has not been used")
-            build_panic(case, [elem_ty], [], error, old_elem)
-            case.set_outputs(list_wire)
-        (list_wire,) = conditional.outputs()
+        build_unwrap_left(
+            self.builder, old_elem_opt, "Linear list element has not been used"
+        )
         return CallReturnWires(regular_returns=[], inout_returns=[list_wire])
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
@@ -293,6 +286,24 @@ class ListPushCompiler(CustomCallCompiler):
             return self.build_linear_push(list_wire, elem, elem_ty_arg.ty.to_hugr())
         else:
             return self.build_classical_push(list_wire, elem, elem_ty_arg.ty.to_hugr())
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        raise InternalGuppyError("Call compile_with_inouts instead")
+
+
+class ListLengthCompiler(CustomCallCompiler):
+    """Compiler for the `list.__len__` function."""
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [list_wire] = args
+        [elem_ty_arg] = self.type_args
+        assert isinstance(elem_ty_arg, TypeArg)
+        elem_ty = elem_ty_arg.ty.to_hugr()
+        if elem_ty_arg.ty.linear:
+            elem_ty = ht.Option(elem_ty)
+        list_wire, length = self.builder.add_op(list_length(elem_ty), list_wire)
+        length = self.builder.add_op(convert_ifromusize(), length)
+        return CallReturnWires(regular_returns=[length], inout_returns=[list_wire])
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")

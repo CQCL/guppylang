@@ -561,7 +561,9 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
             if doesnt_contain_none(vs):
                 return ListVal(vs, get_element_type(exp_ty).to_hugr())
         case _:
-            # Pytket conversion is an optional feature
+            # TODO replace with hugr protocol handling: https://github.com/CQCL/guppylang/issues/563
+            # Pytket conversion is an experimental feature
+            # if pytket and tket2 are installed
             try:
                 import pytket
 

@@ -19,11 +19,11 @@ dependencies = [
     "networkx >=3.2.1,<4",
     "pydantic >=2.7.0b1,<3",
     "typing-extensions >=4.9.0,<5",
-    "hugr >=0.8.1,<0.9",
+    "hugr >=0.9.0,<0.10",
 ]
 
 [project.optional-dependencies]
-pytket = ["pytket >=1.30.0,<2", "tket2 >=0.3.0,<0.4"]
+# pytket = ["pytket >=1.30.0,<2", "tket2 >=0.4.1,<0.5"]
 docs = ["sphinx >=7.2.6,<9", "sphinx-book-theme >=1.1.2,<2"]
 execution = ["execute-llvm"]
 
