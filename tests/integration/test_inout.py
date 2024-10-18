@@ -362,7 +362,7 @@ def test_shadow_check(validate):
     validate(module.compile())
 
 
-def test_self(validate):
+def test_self_qubit(validate):
     module = GuppyModule("test")
     module.load(qubit)
 

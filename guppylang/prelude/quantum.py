@@ -43,7 +43,7 @@ class qubit:
 
     @guppy
     @no_type_check
-    def measure(self: "qubit" @owned) -> bool:
+    def measure(self: "qubit" @ owned) -> bool:
         return measure(self)
 
     @guppy
