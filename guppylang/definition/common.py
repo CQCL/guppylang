@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
+from guppylang.span import SourceMap
+
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
     from guppylang.compiler.core import CompiledGlobals
@@ -87,7 +89,7 @@ class ParsableDef(Definition):
     """
 
     @abstractmethod
-    def parse(self, globals: "Globals") -> ParsedDef:
+    def parse(self, globals: "Globals", sources: SourceMap) -> ParsedDef:
         """Performs parsing and validation, returning a definition that can be checked.
 
         The provided globals contain all other raw definitions that have been defined.

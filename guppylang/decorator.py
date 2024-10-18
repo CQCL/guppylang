@@ -42,6 +42,7 @@ from guppylang.module import (
     find_guppy_module_in_py_module,
     get_calling_frame,
 )
+from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 
@@ -81,8 +82,12 @@ class _Guppy:
     # The currently-alive GuppyModules, associated with a Python file/module
     _modules: dict[ModuleIdentifier, GuppyModule]
 
+    # Storage for source code that has been read by the compiler
+    _sources: SourceMap
+
     def __init__(self) -> None:
         self._modules = {}
+        self._sources = SourceMap()
 
     @overload
     def __call__(self, arg: PyFunc) -> RawFunctionDef: ...
@@ -304,7 +309,7 @@ class _Guppy:
         mod = module or self.get_module()
 
         def dec(f: PyFunc) -> RawCustomFunctionDef:
-            func_ast, docstring = parse_py_func(f)
+            func_ast, docstring = parse_py_func(f, self._sources)
             if not has_empty_body(func_ast):
                 raise GuppyError(
                     "Body of custom function declaration must be empty",
@@ -364,7 +369,9 @@ class _Guppy:
     ) -> RawConstDef:
         """Adds a constant to a module, backed by a `hugr.val.Value`."""
         module = module or self.get_module()
-        type_ast = _parse_expr_string(ty, f"Not a valid Guppy type: `{ty}`")
+        type_ast = _parse_expr_string(
+            ty, f"Not a valid Guppy type: `{ty}`", self._sources
+        )
         defn = RawConstDef(DefId.fresh(module), name, None, type_ast, value)
         module.register_def(defn)
         return defn
@@ -379,7 +386,9 @@ class _Guppy:
     ) -> RawExternDef:
         """Adds an extern symbol to a module."""
         module = module or self.get_module()
-        type_ast = _parse_expr_string(ty, f"Not a valid Guppy type: `{ty}`")
+        type_ast = _parse_expr_string(
+            ty, f"Not a valid Guppy type: `{ty}`", self._sources
+        )
         defn = RawExternDef(
             DefId.fresh(module), name, None, symbol or name, constant, type_ast
         )
@@ -464,7 +473,7 @@ class _Guppy:
 guppy = _Guppy()
 
 
-def _parse_expr_string(ty_str: str, parse_err: str) -> ast.expr:
+def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.expr:
     """Helper function to parse expressions that are provided as strings.
 
     Tries to infer the source location were the given string was defined by inspecting
@@ -480,6 +489,7 @@ def _parse_expr_string(ty_str: str, parse_err: str) -> ast.expr:
     if caller_frame := get_calling_frame():
         info = inspect.getframeinfo(caller_frame)
         if caller_module := inspect.getmodule(caller_frame):
+            sources.add_file(info.filename)
             source_lines, _ = inspect.getsourcelines(caller_module)
             source = "".join(source_lines)
             annotate_location(expr_ast, source, info.filename, 0)

@@ -10,6 +10,7 @@ from guppylang.checker.core import Globals
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.value import CompiledValueDef, ValueDef
+from guppylang.span import SourceMap
 from guppylang.tys.parsing import type_from_ast
 
 
@@ -22,7 +23,7 @@ class RawConstDef(ParsableDef):
 
     description: str = field(default="constant", init=False)
 
-    def parse(self, globals: Globals) -> "ConstDef":
+    def parse(self, globals: Globals, sources: SourceMap) -> "ConstDef":
         """Parses and checks the user-provided signature of the function."""
         return ConstDef(
             self.id,

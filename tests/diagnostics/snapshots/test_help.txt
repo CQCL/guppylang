@@ -1,0 +1,6 @@
+Error: Can't compare apples with oranges (at <unknown>:1:6)
+  | 
+1 | apple == orange
+  |       ^^ Comparison attempted here
+
+Help: Have you tried peeling the orange?
