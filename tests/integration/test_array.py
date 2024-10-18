@@ -61,7 +61,7 @@ def test_new_array_infer_nested(validate):
     validate(main)
 
 
-def test_return_linear_array(validate ):
+def test_return_linear_array(validate):
     module = GuppyModule("test")
     module.load(qubit)
 
