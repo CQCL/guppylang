@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.12.2](https://github.com/CQCL/guppylang/compare/v0.12.1...v0.12.2) (2024-10-21)
+
+
+### Features
+
+* Allow py expressions in type arguments ([#515](https://github.com/CQCL/guppylang/issues/515)) ([b4fae3f](https://github.com/CQCL/guppylang/commit/b4fae3f7a29b384f8bbe0069dc6131ec115e17ee))
+* remove python python 3 upper bound (support python 3.13) ([#578](https://github.com/CQCL/guppylang/issues/578)) ([73bb94a](https://github.com/CQCL/guppylang/commit/73bb94a76731afff7edfce681b556122fef486c7)), closes [#558](https://github.com/CQCL/guppylang/issues/558)
+
+
+### Bug Fixes
+
+* Enable len for linear arrays ([#576](https://github.com/CQCL/guppylang/issues/576)) ([117b68e](https://github.com/CQCL/guppylang/commit/117b68e6b74221ec85822f721c23c8245e2294fe)), closes [#570](https://github.com/CQCL/guppylang/issues/570)
+* Fix array lowering bugs ([#575](https://github.com/CQCL/guppylang/issues/575)) ([83b9f31](https://github.com/CQCL/guppylang/commit/83b9f312e3465d83318feaf0f5a8af6a5ed9fa45))
+* Fix printing of generic function parameters ([#516](https://github.com/CQCL/guppylang/issues/516)) ([5c18ef6](https://github.com/CQCL/guppylang/commit/5c18ef63237ad76a4b0f74d8b3c4d77a438052ef)), closes [#482](https://github.com/CQCL/guppylang/issues/482)
+
+
 ## [0.12.1](https://github.com/CQCL/guppylang/compare/v0.12.0...v0.12.1) (2024-09-23)
 
 
