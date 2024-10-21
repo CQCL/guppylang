@@ -23,9 +23,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-pytket = ["pytket >=1.30.0,<2", "tket2 >=0.3.0,<0.4"]
+# pytket = ["pytket >=1.30.0,<2", "tket2 >=0.4.1,<0.5"]
 docs = ["sphinx >=7.2.6,<9", "sphinx-book-theme >=1.1.2,<2"]
-# execution = ["execute-llvm"]
+execution = ["execute-llvm"]
 
 [project.urls]
 homepage = "https://github.com/CQCL/guppylang"
