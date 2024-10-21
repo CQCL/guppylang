@@ -130,7 +130,7 @@ We use automation to bump the version number and generate changelog entries
 based on the [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) labels. Release PRs are created automatically
 for each package when new changes are merged into the `main` branch. Once the PR is
 approved by someone in the [release team](.github/CODEOWNERS) and is merged, the new package
-is published on PyPI or crates.io as appropriate.
+is published on PyPI.
 
 The changelog can be manually edited before merging the release PR. Note however
 that modifying the diff before other changes are merged will cause the
@@ -155,6 +155,11 @@ You will need to modify the version and changelog manually in this case. Check
 the existing release PRs for examples on how to do this. Once the branch is
 ready, create a draft PR so that the release team can review it.
 
-The wheel building process and publication to PyPI is handled by the CI.
-Just create a [github release](https://github.com/CQCL/guppylang/releases/new) from the **unmerged** branch.
-The release tag should follow the format used in the previous releases, e.g. `hugr-py-v0.1.1`.
+The wheel building process and publication to PyPI is handled by the CI. Just
+create a [github release](https://github.com/CQCL/guppylang/releases/new) from
+the **unmerged** branch, and the CI will take care of the rest. The release tag
+should follow the format used in the previous releases, e.g. `v0.1.1`.
+
+After the release is published, make sure to merge the changes to the CHANGELOG
+and versions back into the `main` branch. This may be done by cherry-picking the
+PR used to create the release.
