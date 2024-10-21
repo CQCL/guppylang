@@ -38,7 +38,7 @@ def test_len_linear(validate):
     package = module.compile()
     validate(package)
 
-    hg = package.module
+    hg = package.modules[0]
     [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(val, ops.Const)
     assert isinstance(val.val, IntVal)
