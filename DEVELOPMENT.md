@@ -28,13 +28,13 @@ shell by setting up [direnv](https://devenv.sh/automatic-shell-activation/).
 
 To setup the environment manually you will need:
 
-- Just: https://just.systems/
-- uv `>=0.3`: docs.astral.sh/uv/getting-started/installation
+- Just: [just.systems](https://just.systems/)
+- uv `>=0.3`: [docs.astral.sh](https://docs.astral.sh/uv/getting-started/installation/)
 
 The extended test suite has additional requirements. These are **optional**; tests that require them will be skipped if they are not installed.
 
-- Rust `>=1.75`: https://www.rust-lang.org/tools/install
-- `llvm-14`: https://apt.llvm.org/
+- Rust `>=1.75`: [rust-lang.org](https://www.rust-lang.org/tools/install)
+- `llvm-14`: [llvm.org](https://llvm.org/)
 
 Once you have these installed, you can install the required python dependencies and setup pre-commit hooks with:
 
