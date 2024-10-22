@@ -1,7 +1,11 @@
-Guppy compilation failed. Error in file $FILE:17
+Error: Break in linear loop (at $FILE:17:12)
+   | 
+15 |         rs += [q]
+16 |         if b:
+17 |             break
+   |             ^^^^^ Early exit in linear loops is not allowed
+   | 
+14 |     for q, b in qs:
+   |                 -- Iterator has linear type `list[(qubit, bool)]`
 
-15:    rs += [q]
-16:    if b:
-17:        break
-           ^^^^^
-GuppyTypeError: Loop over iterator with linear type `list[(qubit, bool)]` cannot be terminated prematurely
+Guppy compilation failed due to 1 previous error
