@@ -1,7 +1,10 @@
-Guppy compilation failed. Error in file $FILE:12
+Error: Not truthy (at $FILE:12:15)
+   | 
+10 | @guppy(module)
+11 | def foo(x: NonBool) -> bool:
+12 |     return not x
+   |                ^ Expression of type `NonBool` is not truthy
 
-10:    @guppy(module)
-11:    def foo(x: NonBool) -> bool:
-12:        return not x
-                      ^
-GuppyTypeError: Expression of type `NonBool` cannot be interpreted as a `bool`
+Help: Implement missing method: `__bool__: NonBool -> bool`
+
+Guppy compilation failed due to 1 previous error
