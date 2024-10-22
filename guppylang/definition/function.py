@@ -241,7 +241,13 @@ def parse_py_func(f: PyFunc, sources: SourceMap) -> tuple[ast.FunctionDef, str |
             defn = find_ipython_def(func_ast.name)
             if defn is not None:
                 file = f"<{defn.cell_name}>"
-        sources.add_file(file, source)
+                sources.add_file(file, defn.cell_source)
+            else:
+                # If we couldn't find the defining cell, just use the source code we
+                # got from inspect. Line numbers will be wrong, but that's the best we
+                # can do.
+                sources.add_file(file, source)
+                line_offset = 1
     else:
         file = inspect.getsourcefile(f)
         if file is None:
