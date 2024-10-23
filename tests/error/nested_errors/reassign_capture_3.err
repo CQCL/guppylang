@@ -1,7 +1,12 @@
-Guppy compilation failed. Error in file $FILE:11
+Error: Illegal assignment (at $FILE:11:12)
+   | 
+ 9 | 
+10 |         def baz() -> None:
+11 |             y += 2
+   |             ^^^^^^ Variable `y` may not be assigned to since `y` is captured
+   |                    from an outer scope
+   | 
+ 6 |     y = x + 1
+   |     - `y` defined here
 
-9:     
-10:    def baz() -> None:
-11:        y += 2
-           ^^^^^^
-GuppyError: Variable `y` defined in an outer scope (at 6:4) may not be assigned to
+Guppy compilation failed due to 1 previous error
