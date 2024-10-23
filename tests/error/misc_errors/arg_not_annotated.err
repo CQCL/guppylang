@@ -1,6 +1,8 @@
-Guppy compilation failed. Error in file $FILE:5
+Error: Missing type annotation (at $FILE:5:17)
+  | 
+3 | 
+4 | @compile_guppy
+5 | def foo(x: bool, y) -> int:
+  |                  ^ Argument type must be annotated
 
-3:    @compile_guppy
-4:    def foo(x: bool, y) -> int:
-                       ^
-GuppyError: Argument type must be annotated
+Guppy compilation failed due to 1 previous error
