@@ -1,7 +1,8 @@
-Guppy compilation failed. Error in file $FILE:7
+Error: Variable not defined (at $FILE:7:15)
+  | 
+5 | def foo() -> int:
+6 |     def bar() -> int:
+7 |         return x
+  |                ^ `x` is not defined
 
-5:    def foo() -> int:
-6:        def bar() -> int:
-7:            return x
-                     ^
-GuppyError: Variable `x` is not defined
+Guppy compilation failed due to 1 previous error

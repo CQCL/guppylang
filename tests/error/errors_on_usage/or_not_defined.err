@@ -1,7 +1,11 @@
-Guppy compilation failed. Error in file $FILE:7
+Error: Variable not defined (at $FILE:7:15)
+  | 
+5 | def foo(x: bool, y: int) -> int:
+6 |     if x or (z := y + 1):
+7 |         return z
+  |                ^ `z` might be undefined ...
+  | 
+6 |     if x or (z := y + 1):
+  |        - ... if this expression is `True`
 
-5:    def foo(x: bool, y: int) -> int:
-6:        if x or (z := y + 1):
-7:            return z
-                     ^
-GuppyError: Variable `z` is not defined on all control-flow paths.
+Guppy compilation failed due to 1 previous error

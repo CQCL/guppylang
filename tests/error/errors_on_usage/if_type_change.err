@@ -1,7 +1,14 @@
-Guppy compilation failed. Error in file $FILE:9
+Error: Different types (at $FILE:9:8)
+  | 
+7 |     if x:
+8 |         y = False
+9 |     z = y
+  |         ^ Variable `y` may refer to different types
+  | 
+6 |     y = 3
+  |     - This is of type `int`
+  | 
+8 |         y = False
+  |         - This is of type `bool`
 
-7:    if x:
-8:        y = False
-9:    z = y
-          ^
-GuppyError: Variable `y` can refer to different types: `int` (at 6:4) vs `bool` (at 8:8)
+Guppy compilation failed due to 1 previous error
