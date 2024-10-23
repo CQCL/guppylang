@@ -177,7 +177,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         b = make_var(next(tmp_vars), node.iter)
         new_nodes = template_replace(
             template,
-            node,
+            node.iter,
             it=it,
             b=b,
             x=node.target,
