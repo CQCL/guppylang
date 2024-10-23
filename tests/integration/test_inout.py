@@ -368,13 +368,12 @@ def test_self_qubit(validate):
 
     @guppy(module)
     def test() -> bool:
-        q0, q1 = qubit(), qubit()
-        q0.h()
-        q1.h()
-        q0.cx(q1)
+        q0 = qubit()
+
         result = q0.measure_reset()
-        q0.discard()
-        q1.discard()
+        q0.measure_return()
+        q0.measure()
+        qubit().discard()
         return result
 
     validate(module.compile())
