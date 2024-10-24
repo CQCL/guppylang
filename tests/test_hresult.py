@@ -1,11 +1,13 @@
-from collections import Counter
 import re
+from collections import Counter
+
 import pytest
-from guppylang.hresult import REG_INDEX_PATTERN, Results, ShotResults
+
+from guppylang.hresult import REG_INDEX_PATTERN, HResult, Shots
 
 
 @pytest.mark.parametrize(
-    "identifier,match",
+    ("identifier", "match"),
     [
         ("sadfj", None),
         ("asdf_sdf", None),
@@ -28,7 +30,7 @@ def test_reg_index_pattern_match(identifier, match: tuple[str, int] | None):
 
 
 def test_as_dict():
-    results = Results()
+    results = HResult()
     results.append("tag1", 1)
     results.append("tag2", 2)
     results.append("tag2", 3)
@@ -36,7 +38,7 @@ def test_as_dict():
 
 
 def test_to_register_bitstrings():
-    results = Results()
+    results = HResult()
     results.append("c[0]", True)
     results.append("c[1]", False)
     results.append("c[3]", 1)
@@ -46,7 +48,7 @@ def test_to_register_bitstrings():
 
     assert results.to_register_bitstrings() == {"c": "1001", "d": "1010", "x": "0"}
 
-    shots = ShotResults([results, results])
+    shots = Shots([results, results])
     assert shots.register_counts() == {
         "c": Counter({"1001": 2}),
         "d": Counter({"1010": 2}),
@@ -57,27 +59,27 @@ def test_to_register_bitstrings():
 @pytest.mark.parametrize(
     "results",
     [
-        Results([("t", 1.0)]),
-        Results([("t[1]", 1.0)]),
-        Results([("t", [1.0])]),
-        Results([("t[0]", [False])]),
-        Results([("t[0]", 3)]),
+        HResult([("t", 1.0)]),
+        HResult([("t[1]", 1.0)]),
+        HResult([("t", [1.0])]),
+        HResult([("t[0]", [False])]),
+        HResult([("t[0]", 3)]),
     ],
 )
-def test_to_register_bad(results: Results):
-    with pytest.raises(ValueError):
+def test_to_register_bad(results: HResult):
+    with pytest.raises(ValueError, match="Expected bool"):
         _ = results.to_register_bits()
 
 
 def test_counter():
-    shot1 = Results()
+    shot1 = HResult()
     shot1.append("c", [True, False, 1, 0])
     shot1.append("d", [True, False, 1])
 
-    shot2 = Results()
+    shot2 = HResult()
     shot2.append("c", [True, False, 1])
 
-    shots = ShotResults([shot1, shot2])
+    shots = Shots([shot1, shot2])
     assert shots.register_counts() == {
         "c": Counter({"1010": 1, "101": 1}),
         "d": Counter({"101": 1}),
@@ -92,17 +94,17 @@ def test_counter():
 def test_pytket():
     pytest.importorskip("pytket", reason="pytket not installed")
 
-    hsim_shots = ShotResults(
+    hsim_shots = Shots(
         [
-            Results([("c", [1, 0]), ("d", [1, 0])]),
-            Results([("c", [0, 0]), ("d", [1, 0])]),
+            HResult([("c", [1, 0]), ("d", [1, 0])]),
+            HResult([("c", [0, 0]), ("d", [1, 0])]),
         ]
     )
 
     pytket_result = hsim_shots.to_pytket()
 
-    from pytket.backends.backendresult import BackendResult
     from pytket._tket.unit_id import Bit
+    from pytket.backends.backendresult import BackendResult
     from pytket.utils.outcomearray import OutcomeArray
 
     bits = [Bit("c", 0), Bit("c", 1), Bit("d", 0), Bit("d", 1)]
