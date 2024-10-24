@@ -6,7 +6,10 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from pytket.backends.backendresult import BackendResult
+
 #: Primitive data types that can be returned by a result
 DataPrimitive = int | float | bool
 #: Data value that can be returned by a result: a primitive or a list of primitives
@@ -22,8 +25,8 @@ class HResult:
 
     entries: list[TaggedResult] = field(default_factory=list)
 
-    def __init__(self, entries: list[TaggedResult] | None = None):
-        self.entries = entries or []
+    def __init__(self, entries: Iterable[TaggedResult] | None = None):
+        self.entries = list(entries or [])
 
     def append(self, tag: str, data: DataValue):
         self.entries.append((tag, data))
@@ -103,6 +106,13 @@ class Shots:
     """Results accumulated over multiple shots."""
 
     results: list[HResult] = field(default_factory=list)
+
+    def __init__(
+        self, results: Iterable[HResult | Iterable[TaggedResult]] | None = None
+    ):
+        self.results = [
+            res if isinstance(res, HResult) else HResult(res) for res in results or []
+        ]
 
     def register_counts(
         self, strict_names: bool = False, strict_lengths: bool = False

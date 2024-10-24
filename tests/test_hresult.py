@@ -94,12 +94,7 @@ def test_counter():
 def test_pytket():
     pytest.importorskip("pytket", reason="pytket not installed")
 
-    hsim_shots = Shots(
-        [
-            HResult([("c", [1, 0]), ("d", [1, 0])]),
-            HResult([("c", [0, 0]), ("d", [1, 0])]),
-        ]
-    )
+    hsim_shots = Shots(([("c", [1, 0]), ("d", [1, 0])], [("c", [0, 0]), ("d", [1, 0])]))
 
     pytket_result = hsim_shots.to_pytket()
 
