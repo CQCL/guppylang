@@ -1,3 +1,28 @@
+r"""
+Quantinuum system results and utilities.
+
+Includes conversions to traditional distributions over bitstrings if a tagging
+convention is used, including conversion to a pytket BackendResult.
+
+Under this convention, tags are assumed to be a name of a bit register unless they fit
+the regex pattern `^([a-z][\w_]*)\[(\d+)\]$` (like `my_Reg[12]`) in which case they
+are assumed to refer to the nth element of a bit register.
+
+For results of the form ``` result("<register>", value) ``` `value` can be `{0, 1, True,
+False}`, wherein the register is assumed to be length 1, or lists over those values,
+wherein the list is taken to be the value of the entire register.
+
+For results of the form ``` result("<register>[n]", value) ``` `value` can only be `{0,
+1, True, False}`. The register is assumed to be at least `n+1` in size and unset
+elements are assumed to be `0`.
+
+Subsequent writes to the same register/element in the same shot will overwrite.
+
+To convert to a `BackendResult` all registers must be present in all shots, and register
+sizes cannot change between shots.
+
+"""
+
 from __future__ import annotations
 
 import re
