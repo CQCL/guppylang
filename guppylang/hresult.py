@@ -53,7 +53,7 @@ class HResult:
     def __init__(self, entries: Iterable[TaggedResult] | None = None):
         self.entries = list(entries or [])
 
-    def append(self, tag: str, data: DataValue):
+    def append(self, tag: str, data: DataValue) -> None:
         self.entries.append((tag, data))
 
     def as_dict(self) -> dict[str, DataValue]:
@@ -169,7 +169,7 @@ class Shots:
 
         """
 
-        shot_dct = defaultdict(list)
+        shot_dct: dict[str, list[str]] = defaultdict(list)
         for shot in self.results:
             bitstrs = shot.to_register_bitstrings()
             for reg, bitstr in bitstrs.items():
