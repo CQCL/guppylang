@@ -111,7 +111,7 @@ class HResult:
 def _cast_primitive_bit(data: DataValue) -> BitChar:
     if isinstance(data, int) and data in {0, 1}:
         return str(data)  # type: ignore[return-value]
-    raise ValueError(f"Expected bool data for register value found {data}")
+    raise ValueError(f"Expected bit data for register value found {data}")
 
 
 @dataclass

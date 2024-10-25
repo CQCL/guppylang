@@ -68,7 +68,7 @@ def test_to_register_bits():
     ],
 )
 def test_to_register_bits_bad(results: HResult):
-    with pytest.raises(ValueError, match="Expected bool"):
+    with pytest.raises(ValueError, match="Expected bit"):
         _ = results.to_register_bits()
 
 
