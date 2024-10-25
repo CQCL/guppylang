@@ -109,15 +109,9 @@ class HResult:
 
 
 def _cast_primitive_bit(data: DataValue) -> BitChar:
-    match data:
-        case bool(v):
-            return "1" if v else "0"
-        case int(1):
-            return "1"
-        case int(0):
-            return "0"
-        case _:
-            raise ValueError(f"Expected bool data for register value found {data}")
+    if isinstance(data, int) and data in {0, 1}:
+        return str(data)  # type: ignore[return-value]
+    raise ValueError(f"Expected bool data for register value found {data}")
 
 
 @dataclass
