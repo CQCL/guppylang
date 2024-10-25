@@ -21,6 +21,7 @@ from guppylang.hresult import REG_INDEX_PATTERN, HResult, Shots
     ],
 )
 def test_reg_index_pattern_match(identifier, match: tuple[str, int] | None):
+    """Test regex pattern matches tags indexing in to registers."""
     mtch = re.match(REG_INDEX_PATTERN, identifier)
     if mtch is None:
         assert match is None
@@ -66,7 +67,7 @@ def test_to_register_bitstrings():
         HResult([("t[0]", 3)]),
     ],
 )
-def test_to_register_bad(results: HResult):
+def test_to_register_bits_bad(results: HResult):
     with pytest.raises(ValueError, match="Expected bool"):
         _ = results.to_register_bits()
 
@@ -92,6 +93,8 @@ def test_counter():
 
 
 def test_pytket():
+    """Test that results observing strict tagging conventions can be converted to pytket
+    shot results."""
     pytest.importorskip("pytket", reason="pytket not installed")
 
     hsim_shots = Shots(([("c", [1, 0]), ("d", [1, 0])], [("c", [0, 0]), ("d", [1, 0])]))
