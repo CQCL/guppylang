@@ -8,12 +8,13 @@ Under this convention, tags are assumed to be a name of a bit register unless th
 the regex pattern `^([a-z][\w_]*)\[(\d+)\]$` (like `my_Reg[12]`) in which case they
 are assumed to refer to the nth element of a bit register.
 
-For results of the form ``` result("<register>", value) ``` `value` can be `{0, 1, True,
-False}`, wherein the register is assumed to be length 1, or lists over those values,
+For results of the form ``` result("<register>", value) ``` `value` can be `{0, 1}`,
+wherein the register is assumed to be length 1, or lists over those values,
 wherein the list is taken to be the value of the entire register.
 
-For results of the form ``` result("<register>[n]", value) ``` `value` can only be `{0,
-1, True, False}`. The register is assumed to be at least `n+1` in size and unset
+For results of the form ``` result("<register>[n]", value) ``` `value` can only be
+`{0,1}`.
+The register is assumed to be at least `n+1` in size and unset
 elements are assumed to be `0`.
 
 Subsequent writes to the same register/element in the same shot will overwrite.
@@ -28,7 +29,7 @@ from __future__ import annotations
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -42,6 +43,8 @@ DataValue = DataPrimitive | list[DataPrimitive]
 TaggedResult = tuple[str, DataValue]
 # Pattern to match register index in tag, e.g. "reg[0]"
 REG_INDEX_PATTERN = re.compile(r"^([a-z][\w_]*)\[(\d+)\]$")
+
+BitChar = Literal["0", "1"]
 
 
 @dataclass
@@ -75,9 +78,9 @@ class HResult:
         """
         return dict(self.entries)
 
-    def to_register_bits(self) -> dict[str, list[bool]]:
+    def to_register_bits(self) -> dict[str, str]:
         """Convert results to a dictionary of register bit values."""
-        reg_bits: dict[str, list[bool]] = {}
+        reg_bits: dict[str, list[BitChar]] = {}
 
         res_dict = self.as_dict()
         for tag, data in res_dict.items():
@@ -88,40 +91,31 @@ class HResult:
 
                 if reg_name not in reg_bits:
                     # Initialize register counts to False
-                    reg_bits[reg_name] = [False] * (reg_index + 1)
+                    reg_bits[reg_name] = ["0"] * (reg_index + 1)
                 bitlst = reg_bits[reg_name]
                 if reg_index >= len(bitlst):
-                    # Extend register counts with False
-                    bitlst += [False] * (reg_index - len(bitlst) + 1)
+                    # Extend register counts with "0"
+                    bitlst += ["0"] * (reg_index - len(bitlst) + 1)
 
-                bitlst[reg_index] = _cast_primitive_bool(data)
+                bitlst[reg_index] = _cast_primitive_bit(data)
                 continue
             match data:
                 case list(vs):
-                    reg_bits[tag] = [_cast_primitive_bool(v) for v in vs]
+                    reg_bits[tag] = [_cast_primitive_bit(v) for v in vs]
                 case _:
-                    reg_bits[tag] = [_cast_primitive_bool(data)]
+                    reg_bits[tag] = [_cast_primitive_bit(data)]
 
-        return reg_bits
-
-    def to_register_bitstrings(self) -> dict[str, str]:
-        """Convert results to a dictionary of register bitstrings."""
-        reg_bits = self.to_register_bits()
-        return {reg: bools_to_bitstring(bits) for reg, bits in reg_bits.items()}
+        return {reg: "".join(bits) for reg, bits in reg_bits.items()}
 
 
-def bools_to_bitstring(bools: list[bool]) -> str:
-    return "".join("1" if b else "0" for b in bools)
-
-
-def _cast_primitive_bool(data: DataValue) -> bool:
+def _cast_primitive_bit(data: DataValue) -> BitChar:
     match data:
         case bool(v):
-            return v
+            return "1" if v else "0"
         case int(1):
-            return True
+            return "1"
         case int(0):
-            return False
+            return "0"
         case _:
             raise ValueError(f"Expected bool data for register value found {data}")
 
@@ -171,7 +165,7 @@ class Shots:
 
         shot_dct: dict[str, list[str]] = defaultdict(list)
         for shot in self.results:
-            bitstrs = shot.to_register_bitstrings()
+            bitstrs = shot.to_register_bits()
             for reg, bitstr in bitstrs.items():
                 if (
                     strict_lengths

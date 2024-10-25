@@ -38,16 +38,16 @@ def test_as_dict():
     assert results.as_dict() == {"tag1": 1, "tag2": 3}
 
 
-def test_to_register_bitstrings():
+def test_to_register_bits():
     results = HResult()
-    results.append("c[0]", True)
-    results.append("c[1]", False)
+    results.append("c[0]", 1)
+    results.append("c[1]", 0)
     results.append("c[3]", 1)
-    results.append("d", [True, False, 1, 0])
-    results.append("x[5]", True)
-    results.append("x", False)
+    results.append("d", [1, 0, 1, 0])
+    results.append("x[5]", 1)
+    results.append("x", 0)
 
-    assert results.to_register_bitstrings() == {"c": "1001", "d": "1010", "x": "0"}
+    assert results.to_register_bits() == {"c": "1001", "d": "1010", "x": "0"}
 
     shots = Shots([results, results])
     assert shots.register_counts() == {
@@ -63,7 +63,7 @@ def test_to_register_bitstrings():
         HResult([("t", 1.0)]),
         HResult([("t[1]", 1.0)]),
         HResult([("t", [1.0])]),
-        HResult([("t[0]", [False])]),
+        HResult([("t[0]", [0])]),
         HResult([("t[0]", 3)]),
     ],
 )
@@ -74,11 +74,11 @@ def test_to_register_bits_bad(results: HResult):
 
 def test_counter():
     shot1 = HResult()
-    shot1.append("c", [True, False, 1, 0])
-    shot1.append("d", [True, False, 1])
+    shot1.append("c", [1, 0, 1, 0])
+    shot1.append("d", [1, 0, 1])
 
     shot2 = HResult()
-    shot2.append("c", [True, False, 1])
+    shot2.append("c", [1, 0, 1])
 
     shots = Shots([shot1, shot2])
     assert shots.register_counts() == {
