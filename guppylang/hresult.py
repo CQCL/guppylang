@@ -88,11 +88,11 @@ class HResult:
 
                 if reg_name not in reg_bits:
                     # Initialize register counts to False
-                    reg_bits[reg_name] = [False] * (int(reg_index) + 1)
+                    reg_bits[reg_name] = [False] * (reg_index + 1)
                 bitlst = reg_bits[reg_name]
                 if reg_index >= len(bitlst):
                     # Extend register counts with False
-                    bitlst += [False] * (int(reg_index) - len(bitlst) + 1)
+                    bitlst += [False] * (reg_index - len(bitlst) + 1)
 
                 bitlst[reg_index] = _cast_primitive_bool(data)
                 continue
