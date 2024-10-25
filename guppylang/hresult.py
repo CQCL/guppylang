@@ -115,7 +115,7 @@ def _cast_primitive_bit(data: DataValue) -> BitChar:
 
 
 @dataclass
-class Shots:
+class HShots:
     """Results accumulated over multiple shots."""
 
     results: list[HResult] = field(default_factory=list)

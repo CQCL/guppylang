@@ -3,7 +3,7 @@ from collections import Counter
 
 import pytest
 
-from guppylang.hresult import REG_INDEX_PATTERN, HResult, Shots
+from guppylang.hresult import REG_INDEX_PATTERN, HResult, HShots
 
 
 @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ def test_to_register_bits():
 
     assert results.to_register_bits() == {"c": "1001", "d": "1010", "x": "0"}
 
-    shots = Shots([results, results])
+    shots = HShots([results, results])
     assert shots.register_counts() == {
         "c": Counter({"1001": 2}),
         "d": Counter({"1010": 2}),
@@ -80,7 +80,7 @@ def test_counter():
     shot2 = HResult()
     shot2.append("c", [1, 0, 1])
 
-    shots = Shots([shot1, shot2])
+    shots = HShots([shot1, shot2])
     assert shots.register_counts() == {
         "c": Counter({"1010": 1, "101": 1}),
         "d": Counter({"101": 1}),
@@ -97,7 +97,7 @@ def test_pytket():
     shot results."""
     pytest.importorskip("pytket", reason="pytket not installed")
 
-    hsim_shots = Shots(([("c", [1, 0]), ("d", [1, 0])], [("c", [0, 0]), ("d", [1, 0])]))
+    hsim_shots = HShots(([("c", [1, 0]), ("d", [1, 0])], [("c", [0, 0]), ("d", [1, 0])]))
 
     pytket_result = hsim_shots.to_pytket()
 
