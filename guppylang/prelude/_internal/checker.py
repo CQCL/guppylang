@@ -233,6 +233,9 @@ class NewArrayChecker(CustomCallChecker):
                 raise InternalGuppyError(f"Invalid array type args: {type_args}")
 
 
+TAG_MAX_LEN = 1 << 8
+
+
 class ResultChecker(CustomCallChecker):
     """Call checker for the `result` function."""
 
@@ -241,6 +244,10 @@ class ResultChecker(CustomCallChecker):
         [tag, value] = args
         if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
             raise GuppyTypeError("Expected a string literal", tag)
+        if len(tag.value.encode("utf-8")) > TAG_MAX_LEN:
+            raise GuppyTypeError(
+                f"Tag is too long, limited to {TAG_MAX_LEN} bytes", tag
+            )
         value, ty = ExprSynthesizer(self.ctx).synthesize(value)
         # We only allow numeric values or vectors of numeric values
         err = (
