@@ -233,7 +233,8 @@ class NewArrayChecker(CustomCallChecker):
                 raise InternalGuppyError(f"Invalid array type args: {type_args}")
 
 
-TAG_MAX_LEN = 1 << 8
+#: Maximum length of a tag in the `result` function.
+TAG_MAX_LEN = 200
 
 
 class ResultChecker(CustomCallChecker):
