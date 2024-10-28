@@ -31,21 +31,30 @@ execution = ["execute-llvm"]
 homepage = "https://github.com/CQCL/guppylang"
 repository = "https://github.com/CQCL/guppylang"
 
-[tool.uv]
-dev-dependencies = [
-    "ipykernel >=6.29.5,<7",
+[dependency-groups]
+# Default dev dependency group
+dev = [
+    { include-group = "lint" },
+    { include-group = "test" },
+    { include-group = "llvm_integration" },
+    { include-group = "validation" },
+]
+lint = ["pre-commit >=3.6.0,<4", "ruff >=0.6.2,<0.7", "mypy ==1.10.0"]
+test = [
     "pytest >=8.3.2,<9",
     "pytest-cov >=5.0.0,<6",
     "pytest-notebook >=0.10.0,<0.11",
     "pytest-snapshot >=0.9.0,<1",
-    "mypy ==1.10.0",
-    "pre-commit >=3.6.0,<4",
-    "ruff >=0.6.2,<0.7",
-    "maturin >=1.4.0,<2",
     "pytket >=1.30.0,<2",
-    # Required to run `maturin develop`
+    "ipykernel >=6.29.5,<7",
+]
+llvm_integration = [
+    { include-group = "test" },
+    # Required to run the llvm integration tests
+    "maturin >=1.4.0,<2",
     "pip >=24",
 ]
+validation = [{ include-group = "test" }, "pytket >=1.30.0,<2"]
 
 [tool.uv.workspace]
 members = ["execute_llvm"]
