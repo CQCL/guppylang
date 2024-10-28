@@ -588,20 +588,20 @@ llvm-integration = [
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
 ]
-test = [
-    { name = "ipykernel" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-notebook" },
-    { name = "pytest-snapshot" },
-]
-validation = [
+pytket-integration = [
     { name = "ipykernel" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
     { name = "pytket" },
+]
+test = [
+    { name = "ipykernel" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "pytest-notebook" },
+    { name = "pytest-snapshot" },
 ]
 
 [package.metadata]
@@ -644,20 +644,20 @@ llvm-integration = [
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
 ]
-test = [
-    { name = "ipykernel", specifier = ">=6.29.5,<7" },
-    { name = "pytest", specifier = ">=8.3.2,<9" },
-    { name = "pytest-cov", specifier = ">=5.0.0,<6" },
-    { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
-    { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
-]
-validation = [
+pytket-integration = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "pytest", specifier = ">=8.3.2,<9" },
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0,<2" },
+]
+test = [
+    { name = "ipykernel", specifier = ">=6.29.5,<7" },
+    { name = "pytest", specifier = ">=8.3.2,<9" },
+    { name = "pytest-cov", specifier = ">=5.0.0,<6" },
+    { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
+    { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
 ]
 
 [[package]]
