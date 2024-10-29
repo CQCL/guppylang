@@ -1,5 +1,6 @@
 import ast
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 from hugr import Node, Wire
 from hugr import tys as ht
@@ -14,11 +15,19 @@ from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.function import PyFunc, parse_py_func
 from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
+from guppylang.diagnostic import Error
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import Type, type_to_row
+
+
+@dataclass(frozen=True)
+class BodyNotEmptyError(Error):
+    title: ClassVar[str] = "Unexpected function body"
+    span_label: ClassVar[str] = "Body of declared function `{name}` must be empty"
+    name: str
 
 
 @dataclass(frozen=True)
@@ -38,9 +47,7 @@ class RawFunctionDecl(ParsableDef):
         func_ast, docstring = parse_py_func(self.python_func, sources)
         ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
         if not has_empty_body(func_ast):
-            raise GuppyError(
-                "Body of function declaration must be empty", func_ast.body[0]
-            )
+            raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
         return CheckedFunctionDecl(
             self.id,
             self.name,

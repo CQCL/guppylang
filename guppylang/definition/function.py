@@ -14,6 +14,7 @@ from hugr.package import FuncDefnPointer
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
 from guppylang.checker.core import Context, Globals, Place, PyScope
+from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import (
     check_global_func_def,
@@ -22,7 +23,12 @@ from guppylang.checker.func_checker import (
 )
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.compiler.func_compiler import compile_global_func_def
-from guppylang.definition.common import CheckableDef, CompilableDef, ParsableDef
+from guppylang.definition.common import (
+    CheckableDef,
+    CompilableDef,
+    ParsableDef,
+    UnknownSourceError,
+)
 from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
@@ -60,9 +66,7 @@ class RawFunctionDef(ParsableDef):
         func_ast, docstring = parse_py_func(self.python_func, sources)
         ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
         if ty.parametrized:
-            raise GuppyError(
-                "Generic function definitions are not supported yet", func_ast
-            )
+            raise GuppyError(UnsupportedError(func_ast, "Generic function definitions"))
         return ParsedFunctionDef(
             self.id, self.name, func_ast, ty, self.python_scope, docstring
         )
@@ -251,9 +255,9 @@ def parse_py_func(f: PyFunc, sources: SourceMap) -> tuple[ast.FunctionDef, str |
     else:
         file = inspect.getsourcefile(f)
         if file is None:
-            raise GuppyError("Couldn't determine source file for function")
+            raise GuppyError(UnknownSourceError(None, f))
         sources.add_file(file)
     annotate_location(func_ast, source, file, line_offset)
     if not isinstance(func_ast, ast.FunctionDef):
-        raise GuppyError("Expected a function definition", func_ast)
+        raise GuppyError(ExpectedError(func_ast, "a function definition"))
     return parse_function_with_docstring(func_ast)

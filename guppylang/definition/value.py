@@ -7,7 +7,6 @@ from hugr import Wire
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
-from guppylang.error import GuppyError
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type
 
@@ -55,7 +54,7 @@ class CallableDef(ValueDef):
         """Synthesizes the return type of a function call."""
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        raise GuppyError("Guppy functions can only be called in a Guppy context")
+        raise RuntimeError("Guppy functions can only be called in a Guppy context")
 
 
 class CompiledCallableDef(CallableDef, CompiledValueDef):
