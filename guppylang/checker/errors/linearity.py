@@ -191,8 +191,8 @@ class BorrowSubPlaceUsedError(Error):
     @dataclass(frozen=True)
     class PrevUse(Note):
         span_label: ClassVar[str] = (
-            "since `{sub_place}` with linear type `{sub_place.ty}` was already {kind} "
-            "here"
+            "since `{sub_place}` with linear type `{sub_place.ty}` was already "
+            "{kind.subjunctive} here"
         )
         kind: "UseKind"
 
