@@ -208,10 +208,15 @@ class DiagnosticsRenderer:
         else:
             span = to_span(diag.span)
             level = self.level_str(diag.level)
+            all_spans = [span] + [
+                to_span(child.span) for child in diag.children if child.span
+            ]
+            max_lineno = max(s.end.line for s in all_spans)
             self.buffer.append(f"{level}: {diag.rendered_title} (at {span.start})")
             self.render_snippet(
                 span,
                 diag.rendered_span_label,
+                max_lineno,
                 is_primary=True,
                 prefix_lines=self.PREFIX_CONTEXT_LINES,
             )
@@ -221,6 +226,7 @@ class DiagnosticsRenderer:
                     self.render_snippet(
                         to_span(sub_diag.span),
                         sub_diag.rendered_span_label,
+                        max_lineno,
                         is_primary=False,
                     )
             if diag.message:
@@ -238,7 +244,12 @@ class DiagnosticsRenderer:
                 )
 
     def render_snippet(
-        self, span: Span, label: str | None, is_primary: bool, prefix_lines: int = 0
+        self,
+        span: Span,
+        label: str | None,
+        max_lineno: int,
+        is_primary: bool,
+        prefix_lines: int = 0,
     ) -> None:
         """Renders the source associated with a span together with an optional label.
 
@@ -272,7 +283,7 @@ class DiagnosticsRenderer:
         additional context.
         """
         # Check how much space we need to reserve for the leading line numbers
-        ll_length = len(str(span.end.line))
+        ll_length = len(str(max_lineno))
         highlight_char = "^" if is_primary else "-"
 
         def render_line(line: str, line_number: int | None = None) -> None:

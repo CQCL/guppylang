@@ -146,6 +146,19 @@ def test_justify_line_number(snapshot, request):
     run_test(source, diagnostic, snapshot, request)
 
 
+def test_two_spans_different_lineno_lens(snapshot, request):
+    @dataclass(frozen=True)
+    class MySubDiagnostic(Note):
+        span_label: ClassVar[str] = "This is an apple"
+
+    source = 99 * "apple == orange\n" + "This apple is on another line"
+    span1 = Span(Loc(file, 99, 6), Loc(file, 99, 8))
+    span2 = Span(Loc(file, 100, 5), Loc(file, 100, 10))
+    diagnostic = MyError(span1)
+    diagnostic.add_sub_diagnostic(MySubDiagnostic(span2))
+    run_test(source, diagnostic, snapshot, request)
+
+
 def test_indented(snapshot, request):
     source = " " * 50 + "super_apple := apple ** 2\n"
     source += " " * 50 + "    lemon := orange - apple\n"
