@@ -83,6 +83,7 @@ class HResult:
         reg_bits: dict[str, list[BitChar]] = {}
 
         res_dict = self.as_dict()
+        # relies on the fact that dict preserves insertion order
         for tag, data in res_dict.items():
             match = re.match(REG_INDEX_PATTERN, tag)
             if match is not None:
@@ -118,7 +119,7 @@ def _cast_primitive_bit(data: DataValue) -> BitChar:
 class HShots:
     """Results accumulated over multiple shots."""
 
-    results: list[HResult] = field(default_factory=list)
+    results: list[HResult]
 
     def __init__(
         self, results: Iterable[HResult | Iterable[TaggedResult]] | None = None
