@@ -492,11 +492,12 @@ def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.e
             sources.add_file(info.filename)
             source_lines, _ = inspect.getsourcelines(caller_module)
             source = "".join(source_lines)
-            annotate_location(expr_ast, source, info.filename, 0)
+            annotate_location(expr_ast, source, info.filename, 1)
             # Modify the AST so that all sub-nodes span the entire line. We
             # can't give a better location since we don't know the column
             # offset of the `ty` argument
             for node in [expr_ast, *ast.walk(expr_ast)]:
-                node.lineno, node.col_offset = info.lineno, 0
-                node.end_col_offset = len(source_lines[info.lineno - 1])
+                node.lineno = node.end_lineno = info.lineno
+                node.col_offset = 0
+                node.end_col_offset = len(source_lines[info.lineno - 1]) - 1
     return expr_ast

@@ -11,6 +11,7 @@ from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr
 from guppylang.tys.const import BoundConstVar, ExistentialConstVar
+from guppylang.tys.errors import WrongNumberOfTypeArgsError
 from guppylang.tys.var import ExistentialVar
 
 if TYPE_CHECKING:
@@ -201,12 +202,11 @@ def check_all_args(
     invalid.
     """
     exp, act = len(params), len(args)
-    if exp > act:
-        raise GuppyError(f"Missing parameter for type `{type_name}`", loc)
-    elif 0 == exp < act:
-        raise GuppyError(f"Type `{type_name}` is not parameterized", loc)
-    elif 0 < exp < act:
-        raise GuppyError(f"Too many parameters for type `{type_name}`", loc)
+    if exp != act:
+        # TODO: Adjust the error span to only point to the offending arguments (similar
+        #  to how we deal with call args in the expression checker). This requires
+        #  threading the type arg spans down to this point
+        raise GuppyError(WrongNumberOfTypeArgsError(loc, exp, act, type_name))
 
     # Now check that the kinds match up
     for param, arg in zip(params, args, strict=True):
