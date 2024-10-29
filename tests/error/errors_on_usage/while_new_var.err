@@ -1,7 +1,11 @@
-Guppy compilation failed. Error in file $FILE:8
+Error: Variable not defined (at $FILE:8:11)
+  | 
+6 |     while x:
+7 |         y = 5
+8 |     return y
+  |            ^ `y` might be undefined ...
+  | 
+6 |     while x:
+  |           - ... if this expression is `False`
 
-6:    while x:
-7:        y = 5
-8:    return y
-             ^
-GuppyError: Variable `y` is not defined on all control-flow paths.
+Guppy compilation failed due to 1 previous error
