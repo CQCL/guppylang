@@ -208,9 +208,8 @@ class DiagnosticsRenderer:
         else:
             span = to_span(diag.span)
             level = self.level_str(diag.level)
-            all_spans = [
-                span,
-                *(to_span(child.span) for child in diag.children if child.span),
+            all_spans = [span] + [
+                to_span(child.span) for child in diag.children if child.span
             ]
             max_lineno = max(s.end.line for s in all_spans)
             self.buffer.append(f"{level}: {diag.rendered_title} (at {span.start})")
