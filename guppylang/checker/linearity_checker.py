@@ -6,7 +6,8 @@ Linearity checking across control-flow is done by the `CFGChecker`.
 import ast
 from collections.abc import Generator, Iterator
 from contextlib import contextmanager
-from typing import TypeGuard
+from enum import Enum, auto
+from typing import TYPE_CHECKING, NamedTuple, TypeGuard
 
 from guppylang.ast_util import AstNode, find_nodes, get_type
 from guppylang.cfg.analysis import LivenessAnalysis
@@ -21,10 +22,26 @@ from guppylang.checker.core import (
     SubscriptAccess,
     Variable,
 )
+from guppylang.checker.errors.linearity import (
+    AlreadyUsedError,
+    BorrowShadowedError,
+    BorrowSubPlaceUsedError,
+    ComprAlreadyUsedError,
+    DropAfterCallError,
+    LinearCaptureError,
+    LinearPartialApplyError,
+    MoveOutOfSubscriptError,
+    NotOwnedError,
+    PlaceNotUsedError,
+    UnnamedExprNotUsedError,
+    UnnamedFieldNotUsedError,
+    UnnamedSubscriptNotUsedError,
+)
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
+    AnyCall,
     CheckedNestedFunctionDef,
     DesugaredGenerator,
     DesugaredListComp,
@@ -44,6 +61,64 @@ from guppylang.tys.ty import (
     StructType,
 )
 
+if TYPE_CHECKING:
+    from guppylang.diagnostic import Error
+
+
+class UseKind(Enum):
+    """The different ways places can be used."""
+
+    #: A classical value is copied
+    COPY = auto()
+
+    #: A value is borrowed when passing it to a function
+    BORROW = auto()
+
+    #: Ownership of an owned value is transferred by passing it to a function
+    CONSUME = auto()
+
+    #: Ownership of an owned value is transferred by returning it
+    RETURN = auto()
+
+    #: An owned value is renamed or stored in a tuple/list
+    MOVE = auto()
+
+    @property
+    def indicative(self) -> str:
+        """Describes a use in an indicative mood.
+
+        For example: "You cannot *consume* this qubit."
+        """
+        return self.name.lower()
+
+    @property
+    def subjunctive(self) -> str:
+        """Describes a use in a subjunctive mood.
+
+        For example: "This qubit cannot be *consumed*"
+        """
+        match self:
+            case UseKind.COPY:
+                return "copied"
+            case UseKind.BORROW:
+                return "borrowed"
+            case UseKind.CONSUME:
+                return "consumed"
+            case UseKind.RETURN:
+                return "returned"
+            case UseKind.MOVE:
+                return "moved"
+
+
+class Use(NamedTuple):
+    """Records data associated with a use of a place."""
+
+    #: The AST node corresponding to the use
+    node: AstNode
+
+    #: The kind of use, i.e. is the value consumed, borrowed, returned, ...?
+    kind: UseKind
+
 
 class Scope(Locals[PlaceId, Place]):
     """Scoped collection of assigned places indexed by their id.
@@ -52,33 +127,33 @@ class Scope(Locals[PlaceId, Place]):
     """
 
     parent_scope: "Scope | None"
-    used_local: dict[PlaceId, AstNode]
-    used_parent: dict[PlaceId, AstNode]
+    used_local: dict[PlaceId, Use]
+    used_parent: dict[PlaceId, Use]
 
     def __init__(self, parent: "Scope | None" = None):
         self.used_local = {}
         self.used_parent = {}
         super().__init__({}, parent)
 
-    def used(self, x: PlaceId) -> AstNode | None:
+    def used(self, x: PlaceId) -> Use | None:
         """Checks whether a place has already been used."""
         if x in self.vars:
             return self.used_local.get(x, None)
         assert self.parent_scope is not None
         return self.parent_scope.used(x)
 
-    def use(self, x: PlaceId, node: AstNode) -> None:
+    def use(self, x: PlaceId, node: AstNode, kind: UseKind) -> None:
         """Records a use of a place.
 
         Works for places in the current scope as well as places in any parent scope.
         """
         if x in self.vars:
-            self.used_local[x] = node
+            self.used_local[x] = Use(node, kind)
         else:
             assert self.parent_scope is not None
             assert x in self.parent_scope
-            self.used_parent[x] = node
-            self.parent_scope.use(x, node)
+            self.used_parent[x] = Use(node, kind)
+            self.parent_scope.use(x, node, kind)
 
     def assign(self, place: Place) -> None:
         """Records an assignment of a place."""
@@ -93,7 +168,8 @@ class Scope(Locals[PlaceId, Place]):
         for x, place in self.vars.items():
             assert place.defined_at is not None
             assigned[x] = place.defined_at
-        return VariableStats(assigned, self.used_parent)
+        used = {x: use.node for x, use in self.used_parent.items()}
+        return VariableStats(assigned, used)
 
 
 class BBLinearityChecker(ast.NodeVisitor):
@@ -139,26 +215,35 @@ class BBLinearityChecker(ast.NodeVisitor):
         yield new_scope
         self.scope = scope
 
-    def visit_PlaceNode(self, node: PlaceNode, /, is_inout_arg: bool = False) -> None:
+    def visit_PlaceNode(
+        self,
+        node: PlaceNode,
+        /,
+        use_kind: UseKind = UseKind.MOVE,
+        is_call_arg: AnyCall | None = None,
+    ) -> None:
         # Usage of borrowed variables is generally forbidden. The only exception is
-        # letting them be borrowed by another  function call. In that case, our
-        # `_visit_call_args` helper will set `is_inout_arg=True`.
+        # letting them be reborrowed by another function call. In that case, our
+        # `_visit_call_args` helper will set `use_kind=UseKind.BORROW`.
+        is_inout_arg = use_kind == UseKind.BORROW
         if is_inout_var(node.place) and not is_inout_arg:
-            raise GuppyError(
-                f"{node.place.describe} may not be used in an `@owned` position since "
-                "it isn't owned. Consider adding a `@owned` annotation to get "
-                "ownership of the value.",
+            err: Error = NotOwnedError(
                 node,
+                node.place,
+                use_kind,
+                is_call_arg is not None,
+                self._call_name(is_call_arg),
             )
+            arg_span = self.func_inputs[node.place.root.id].defined_at
+            err.add_sub_diagnostic(NotOwnedError.MakeOwned(arg_span))
+            raise GuppyError(err)
         # Places involving subscripts are handled differently since we ignore everything
         # after the subscript for the purposes of linearity checking
         if subscript := contains_subscript(node.place):
             if not is_inout_arg and subscript.parent.ty.linear:
-                raise GuppyError(
-                    "Subscripting on expression with linear type "
-                    f"`{subscript.parent.ty}` is not allowed in `@owned` position",
-                    node,
-                )
+                err = MoveOutOfSubscriptError(node, use_kind, subscript.parent)
+                err.add_sub_diagnostic(MoveOutOfSubscriptError.Explanation(None))
+                raise GuppyError(err)
             self.visit(subscript.item_expr)
             self.scope.assign(subscript.item)
             # Visiting the `__getitem__(place.parent, place.item)` call ensures that we
@@ -168,14 +253,13 @@ class BBLinearityChecker(ast.NodeVisitor):
         else:
             for place in leaf_places(node.place):
                 x = place.id
-                if (use := self.scope.used(x)) and place.ty.linear:
-                    raise GuppyError(
-                        f"{place.describe} with linear type `{place.ty}` was already "
-                        "used (at {0})",
-                        node,
-                        [use],
+                if (prev_use := self.scope.used(x)) and place.ty.linear:
+                    err = AlreadyUsedError(node, place, use_kind)
+                    err.add_sub_diagnostic(
+                        AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
                     )
-                self.scope.use(x, node)
+                    raise GuppyError(err)
+                self.scope.use(x, node, use_kind)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
@@ -189,39 +273,50 @@ class BBLinearityChecker(ast.NodeVisitor):
             if tgt.place.id in self.func_inputs:
                 entry_place = self.func_inputs[tgt.place.id]
                 if is_inout_var(entry_place):
-                    raise GuppyError(
-                        f"Assignment shadows borrowed argument `{entry_place}`. "
-                        "Consider assigning to a different name.",
-                        tgt.place.defined_at,
-                    )
+                    err = BorrowShadowedError(tgt.place.defined_at, entry_place)
+                    err.add_sub_diagnostic(BorrowShadowedError.Rename(None))
+                    raise GuppyError(err)
 
-    def _visit_call_args(self, func_ty: FunctionType, args: list[ast.expr]) -> None:
+    def visit_Return(self, node: ast.Return) -> None:
+        # Intercept returns of places, so we can set the appropriate `use_kind` to get
+        # nicer error messages
+        if isinstance(node.value, PlaceNode):
+            self.visit_PlaceNode(node.value, use_kind=UseKind.RETURN)
+        elif isinstance(node.value, ast.Tuple):
+            for elt in node.value.elts:
+                if isinstance(elt, PlaceNode):
+                    self.visit_PlaceNode(elt, use_kind=UseKind.RETURN)
+                else:
+                    self.visit(elt)
+        elif node.value:
+            self.visit(node.value)
+
+    def _visit_call_args(self, func_ty: FunctionType, call: AnyCall) -> None:
         """Helper function to check the arguments of a function call.
 
-        Populates the `is_inout_arg` kwarg of `visit_PlaceNode` in case some of the
+        Populates the `use_kind` kwarg of `visit_PlaceNode` in case some of the
         arguments are places.
         """
-        for inp, arg in zip(func_ty.inputs, args, strict=True):
+        for inp, arg in zip(func_ty.inputs, call.args, strict=True):
             if isinstance(arg, PlaceNode):
-                self.visit_PlaceNode(arg, is_inout_arg=InputFlags.Inout in inp.flags)
+                use_kind = (
+                    UseKind.BORROW if InputFlags.Inout in inp.flags else UseKind.CONSUME
+                )
+                self.visit_PlaceNode(arg, use_kind=use_kind, is_call_arg=call)
             else:
                 self.visit(arg)
 
-    def _reassign_inout_args(self, func_ty: FunctionType, args: list[ast.expr]) -> None:
+    def _reassign_inout_args(self, func_ty: FunctionType, call: AnyCall) -> None:
         """Helper function to reassign the borrowed arguments after a function call."""
-        for inp, arg in zip(func_ty.inputs, args, strict=True):
+        for inp, arg in zip(func_ty.inputs, call.args, strict=True):
             if InputFlags.Inout in inp.flags:
                 match arg:
                     case PlaceNode(place=place):
                         self._reassign_single_inout_arg(place, arg)
                     case arg if inp.ty.linear:
-                        raise GuppyError(
-                            f"Borrowed argument with linear type `{inp.ty}` would be "
-                            "dropped after this function call. Consider assigning the "
-                            "expression to a local variable before passing it to the "
-                            "function.",
-                            arg,
-                        )
+                        err = DropAfterCallError(arg, inp.ty, self._call_name(call))
+                        err.add_sub_diagnostic(DropAfterCallError.Assign(None))
+                        raise GuppyError(err)
 
     def _reassign_single_inout_arg(self, place: Place, node: ast.expr) -> None:
         """Helper function to reassign a single borrowed argument after a function
@@ -237,6 +332,14 @@ class BBLinearityChecker(ast.NodeVisitor):
                 leaf = leaf.replace_defined_at(node)
                 self.scope.assign(leaf)
 
+    def _call_name(self, node: AnyCall | None) -> str | None:
+        """Tries to extract the name of a called function from a call AST node."""
+        if isinstance(node, LocalCall):
+            return node.func.id if isinstance(node.func, ast.Name) else None
+        elif isinstance(node, GlobalCall):
+            return self.globals[node.def_id].name
+        return None
+
     def visit_GlobalCall(self, node: GlobalCall) -> None:
         func = self.globals[node.def_id]
         assert isinstance(func, CallableDef)
@@ -247,32 +350,29 @@ class BBLinearityChecker(ast.NodeVisitor):
             )
         else:
             func_ty = func.ty.instantiate(node.type_args)
-        self._visit_call_args(func_ty, node.args)
-        self._reassign_inout_args(func_ty, node.args)
+        self._visit_call_args(func_ty, node)
+        self._reassign_inout_args(func_ty, node)
 
     def visit_LocalCall(self, node: LocalCall) -> None:
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
         self.visit(node.func)
-        self._visit_call_args(func_ty, node.args)
-        self._reassign_inout_args(func_ty, node.args)
+        self._visit_call_args(func_ty, node)
+        self._reassign_inout_args(func_ty, node)
 
     def visit_TensorCall(self, node: TensorCall) -> None:
         for arg in node.args:
             self.visit(arg)
-        self._reassign_inout_args(node.tensor_ty, node.args)
+        self._reassign_inout_args(node.tensor_ty, node)
 
     def visit_PartialApply(self, node: PartialApply) -> None:
         self.visit(node.func)
         for arg in node.args:
             ty = get_type(arg)
             if ty.linear:
-                raise GuppyError(
-                    f"Capturing a value with linear type `{ty}` in a closure is not "
-                    "allowed. Try calling the function directly instead of using it as "
-                    "a higher-order value.",
-                    node,
-                )
+                err = LinearPartialApplyError(node)
+                err.add_sub_diagnostic(LinearPartialApplyError.Captured(arg, ty))
+                raise GuppyError(err)
             self.visit(arg)
 
     def visit_FieldAccessAndDrop(self, node: FieldAccessAndDrop) -> None:
@@ -282,11 +382,9 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.visit(node.value)
         for field in node.struct_ty.fields:
             if field.name != node.field.name and field.ty.linear:
-                raise GuppyTypeError(
-                    f"Linear field `{field.name}` of expression with type "
-                    f"`{node.struct_ty}` is not used",
-                    node.value,
-                )
+                err = UnnamedFieldNotUsedError(node.value, field, node.struct_ty)
+                err.add_sub_diagnostic(UnnamedFieldNotUsedError.Fix(None, node.field))
+                raise GuppyError(err)
 
     def visit_SubscriptAccessAndDrop(self, node: SubscriptAccessAndDrop) -> None:
         # A subscript access on a value that is not a place. This means the value can no
@@ -294,9 +392,13 @@ class BBLinearityChecker(ast.NodeVisitor):
         # legal if the items in the container are not linear
         elem_ty = get_type(node.getitem_expr)
         if elem_ty.linear:
-            raise GuppyTypeError(
-                f"Remaining linear items with type `{elem_ty}` are not used", node
+            value = node.original_expr.value
+            err = UnnamedSubscriptNotUsedError(value, get_type(value))
+            err.add_sub_diagnostic(
+                UnnamedSubscriptNotUsedError.SubscriptHint(node.item_expr)
             )
+            err.add_sub_diagnostic(UnnamedSubscriptNotUsedError.Fix(None))
+            raise GuppyTypeError(err)
         self.visit(node.item_expr)
         self.scope.assign(node.item)
         self.visit(node.getitem_expr)
@@ -306,7 +408,9 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.visit(node.value)
         ty = get_type(node.value)
         if ty.linear:
-            raise GuppyTypeError(f"Value with linear type `{ty}` is not used", node)
+            err = UnnamedExprNotUsedError(node, ty)
+            err.add_sub_diagnostic(UnnamedExprNotUsedError.Fix(None))
+            raise GuppyTypeError(err)
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> None:
         self._check_comprehension(node, node.generators)
@@ -317,14 +421,11 @@ class BBLinearityChecker(ast.NodeVisitor):
         # TODO: In the future, we could support capturing of non-linear subplaces
         for var, use in node.captured.values():
             if var.ty.linear:
-                raise GuppyError(
-                    f"{var.describe} with linear type `{var.ty}` may not be used here "
-                    f"because it was defined in an outer scope (at {{0}})",
-                    use,
-                    [var.defined_at],
-                )
+                err = LinearCaptureError(use, var)
+                err.add_sub_diagnostic(LinearCaptureError.DefinedHere(var.defined_at))
+                raise GuppyError(err)
             for place in leaf_places(var):
-                self.scope.use(place.id, use)
+                self.scope.use(place.id, use, UseKind.COPY)
         self.scope.assign(Variable(node.name, node.ty, node))
 
     def _check_assign_targets(self, targets: list[ast.expr]) -> None:
@@ -336,11 +437,9 @@ class BBLinearityChecker(ast.NodeVisitor):
             # Special error message for shadowing of borrowed vars
             x = tgt.place.id
             if x in self.scope.vars and is_inout_var(self.scope[x]):
-                raise GuppyError(
-                    f"Assignment shadows borrowed argument `{tgt.place}`. "
-                    "Consider assigning to a different name.",
-                    tgt,
-                )
+                err: Error = BorrowShadowedError(tgt, tgt.place)
+                err.add_sub_diagnostic(BorrowShadowedError.Rename(None))
+                raise GuppyError(err)
             for tgt_place in leaf_places(tgt.place):
                 x = tgt_place.id
                 # Only check for overrides of places locally defined in this BB. Global
@@ -348,11 +447,9 @@ class BBLinearityChecker(ast.NodeVisitor):
                 if x in self.scope.vars and x not in self.scope.used_local:
                     place = self.scope[x]
                     if place.ty.linear:
-                        raise GuppyError(
-                            f"{place.describe} with linear type `{place.ty}` is not "
-                            "used",
-                            place.defined_at,
-                        )
+                        err = PlaceNotUsedError(place.defined_at, place)
+                        err.add_sub_diagnostic(PlaceNotUsedError.Fix(None))
+                        raise GuppyError(err)
                 self.scope.assign(tgt_place)
 
     def _check_comprehension(
@@ -392,12 +489,11 @@ class BBLinearityChecker(ast.NodeVisitor):
                     for leaf in leaf_places(place):
                         x = leaf.id
                         if not self.scope.used(x) and place.ty.linear:
-                            raise GuppyTypeError(
-                                f"{place.describe} with linear type `{place.ty}` is "
-                                "not used on all control-flow paths of the list "
-                                "comprehension",
-                                place.defined_at,
+                            err = PlaceNotUsedError(place.defined_at, place)
+                            err.add_sub_diagnostic(
+                                PlaceNotUsedError.Branch(first_if, False)
                             )
+                            raise GuppyTypeError(err)
                 for expr in other_ifs:
                     self.visit(expr)
 
@@ -413,10 +509,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                 for leaf in leaf_places(place):
                     x = leaf.id
                     if leaf.ty.linear and not inner_scope.used(x):
-                        raise GuppyTypeError(
-                            f"{leaf.describe} with linear type `{leaf.ty}` is not used",
-                            leaf.defined_at,
-                        )
+                        raise GuppyTypeError(PlaceNotUsedError(leaf.defined_at, leaf))
 
             # On the other hand, we have to ensure that no linear places from the
             # outer scope have been used inside the comprehension (they would be used
@@ -425,9 +518,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                 place = inner_scope[x]
                 if place.ty.linear:
                     raise GuppyTypeError(
-                        f"{place.describe} with linear type `{place.ty}` would be used "
-                        "multiple times when evaluating this comprehension",
-                        use,
+                        ComprAlreadyUsedError(use.node, place, use.kind)
                     )
 
 
@@ -482,7 +573,7 @@ def check_cfg_linearity(
     for var in cfg.entry_bb.sig.input_row:
         if InputFlags.Inout in var.flags:
             for leaf in leaf_places(var):
-                exit_scope.use(leaf.id, InoutReturnSentinel(var=var))
+                exit_scope.use(leaf.id, InoutReturnSentinel(var=var), UseKind.RETURN)
 
     # Run liveness analysis
     stats = {bb: scope.stats() for bb, scope in scopes.items()}
@@ -505,46 +596,51 @@ def check_cfg_linearity(
                     use = use_scope.used_parent[x]
                     # Special case if this is a use arising from the implicit returning
                     # of a borrowed argument
-                    if isinstance(use, InoutReturnSentinel):
-                        assert isinstance(use.var, Variable)
-                        assert InputFlags.Inout in use.var.flags
-                        raise GuppyError(
-                            f"Borrowed argument `{use.var}` cannot be returned "
-                            f"to the caller since `{place}` is used at {{0}}. "
-                            f"Consider writing a value back into `{place}` before "
-                            "returning.",
-                            use.var.defined_at,
-                            [prev_use],
+                    if isinstance(use.node, InoutReturnSentinel):
+                        assert isinstance(use.node.var, Variable)
+                        assert InputFlags.Inout in use.node.var.flags
+                        err: Error = BorrowSubPlaceUsedError(
+                            use.node.var.defined_at, use.node.var, place
                         )
-                    raise GuppyError(
-                        f"{place.describe} with linear type `{place.ty}` was "
-                        "already used (at {0})",
-                        use,
-                        [prev_use],
+                        err.add_sub_diagnostic(
+                            BorrowSubPlaceUsedError.PrevUse(
+                                prev_use.node, prev_use.kind
+                            )
+                        )
+                        err.add_sub_diagnostic(BorrowSubPlaceUsedError.Fix(None))
+                        raise GuppyError(err)
+                    err = AlreadyUsedError(use.node, place, use.kind)
+                    err.add_sub_diagnostic(
+                        AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
                     )
+                    raise GuppyError(err)
 
-            # On the other hand, unused linear variables *must* be outputted
-            for place in scope.values():
-                for leaf in leaf_places(place):
-                    x = leaf.id
-                    # Some values are just in scope because the type checker determined
-                    # them as live in the first (less precises) dataflow analysis. It
-                    # might be the case that x is actually not live when considering
-                    # the second, more fine-grained, analysis based on places.
-                    if x not in live_before_bb and x not in scope.vars:
-                        continue
-                    used_later = x in live
-                    if leaf.ty.linear and not scope.used(x) and not used_later:
-                        # TODO: This should be "Variable x with linear type ty is not
-                        #  used in {bb}". But for this we need a way to associate BBs
-                        #  with source locations.
-                        raise GuppyError(
-                            f"{leaf.describe} with linear type `{leaf.ty}` is "
-                            "not used on all control-flow paths",
-                            # Re-lookup defined_at in scope because we might have a
-                            # more precise location
-                            scope[x].defined_at,
+        # On the other hand, unused linear variables *must* be outputted
+        for place in scope.values():
+            for leaf in leaf_places(place):
+                x = leaf.id
+                # Some values are just in scope because the type checker determined
+                # them as live in the first (less precises) dataflow analysis. It
+                # might be the case that x is actually not live when considering
+                # the second, more fine-grained, analysis based on places.
+                if x not in live_before_bb and x not in scope.vars:
+                    continue
+                used_later = all(x in live_before[succ] for succ in bb.successors)
+                if leaf.ty.linear and not scope.used(x) and not used_later:
+                    err = PlaceNotUsedError(scope[x].defined_at, leaf)
+                    # If there are some paths that lead to a consumption, we can give
+                    # a nicer error message by highlighting the branch that leads to
+                    # the leak
+                    if any(x in live_before[succ] for succ in bb.successors):
+                        assert bb.branch_pred is not None
+                        [left_succ, _] = bb.successors
+                        err.add_sub_diagnostic(
+                            PlaceNotUsedError.Branch(
+                                bb.branch_pred, x in live_before[left_succ]
+                            )
                         )
+                    err.add_sub_diagnostic(PlaceNotUsedError.Fix(None))
+                    raise GuppyError(err)
 
         def live_places_row(bb: BB, original_row: Row[Variable]) -> Row[Place]:
             """Construct a row of all places that are live at the start of a given BB.

@@ -586,7 +586,10 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             # other indices after this one has been projected out (e.g. `f()[0]` makes
             # you loose access to all elements besides 0).
             expr = SubscriptAccessAndDrop(
-                item=item, item_expr=item_expr, getitem_expr=getitem_expr
+                item=item,
+                item_expr=item_expr,
+                getitem_expr=getitem_expr,
+                original_expr=node,
             )
         return with_loc(node, expr), result_ty
 

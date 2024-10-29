@@ -1,7 +1,11 @@
-Guppy compilation failed. Error in file $FILE:18
+Error: Linearity violation (at $FILE:18:16)
+   | 
+16 | @guppy(module)
+17 | def foo(s: MyStruct @owned) -> tuple[qubit, MyStruct]:
+18 |     return s.q, s
+   |                 ^ Field `s.q` with linear type `qubit` cannot be returned ...
+   | 
+18 |     return s.q, s
+   |            --- since it was already returned here
 
-16:    @guppy(module)
-17:    def foo(s: MyStruct @owned) -> tuple[qubit, MyStruct]:
-18:        return s.q, s
-                       ^
-GuppyError: Field `s.q` with linear type `qubit` was already used (at 18:11)
+Guppy compilation failed due to 1 previous error

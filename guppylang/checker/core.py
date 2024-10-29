@@ -85,6 +85,11 @@ class Variable:
         """The unique `PlaceId` identifier for this place."""
         return Variable.Id(self.name)
 
+    @cached_property
+    def root(self) -> "Variable":
+        """The root variable of this place."""
+        return self
+
     @property
     def describe(self) -> str:
         """A human-readable description of this place for error messages."""
@@ -122,6 +127,11 @@ class FieldAccess:
     def id(self) -> "FieldAccess.Id":
         """The unique `PlaceId` identifier for this place."""
         return FieldAccess.Id(self.parent.id, self.field.name)
+
+    @cached_property
+    def root(self) -> "Variable":
+        """The root variable of this place."""
+        return self.parent.root
 
     @property
     def ty(self) -> Type:
@@ -181,6 +191,11 @@ class SubscriptAccess:
     def defined_at(self) -> AstNode | None:
         """Optional location where this place was last assigned to."""
         return self.parent.defined_at
+
+    @cached_property
+    def root(self) -> "Variable":
+        """The root variable of this place."""
+        return self.parent.root
 
     @property
     def describe(self) -> str:
