@@ -1,0 +1,7 @@
+Error: Can't compare apples with oranges (at <unknown>:1:0)
+  | 
+1 | apple == orange
+  | ^^^^^ This is an apple
+  | 
+1 | apple == orange
+  |          ------ This is not an apple

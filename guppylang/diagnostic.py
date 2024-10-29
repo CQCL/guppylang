@@ -1,7 +1,17 @@
+import string
 import textwrap
-from dataclasses import dataclass, field, fields
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import ClassVar, Final, Literal, Protocol, overload, runtime_checkable
+from typing import (
+    Any,
+    ClassVar,
+    Final,
+    Literal,
+    Protocol,
+    overload,
+    runtime_checkable,
+)
 
 from typing_extensions import Self
 
@@ -54,6 +64,9 @@ class SubDiagnostic(Protocol):
     #: Message that is printed if no span is provided.
     message: ClassVar[str | None] = None
 
+    #: The parent main diagnostic this sub-diagnostic is attached to.
+    _parent: "Diagnostic | None" = field(default=None, init=False)
+
     def __post_init__(self) -> None:
         if self.span_label and self.span is None:
             raise InternalGuppyError("SubDiagnostic: Span label provided without span")
@@ -78,8 +91,17 @@ class SubDiagnostic(Protocol):
         """Helper method to fill in placeholder values in strings with fields of this
         diagnostic.
         """
-        values = {f.name: getattr(self, f.name) for f in fields(self)}
-        return s.format(**values) if s is not None else None
+
+        class CustomFormatter(string.Formatter):
+            def get_value(
+                _self, key: int | str, args: Sequence[Any], kwargs: Mapping[str, Any]
+            ) -> Any:
+                assert isinstance(key, str)
+                if hasattr(self, key):
+                    return getattr(self, key)
+                return getattr(self._parent, key)
+
+        return CustomFormatter().format(s) if s is not None else None
 
 
 @runtime_checkable
@@ -114,6 +136,7 @@ class Diagnostic(SubDiagnostic, Protocol):
             raise InternalGuppyError(
                 "Diagnostic: Cross-file sub-diagnostics are not supported"
             )
+        object.__setattr__(sub, "_parent", self)
         self.children.append(sub)
         return self
 

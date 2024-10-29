@@ -96,6 +96,38 @@ def test_three_labels_formatted(snapshot, request):
     run_test(source, diagnostic, snapshot, request)
 
 
+def test_advanced_formatting(snapshot, request):
+    @dataclass(frozen=True)
+    class MyDiagnostic(Error):
+        title: ClassVar[str] = "Can't compare apples with oranges"
+        span_label: ClassVar[str] = "This is an {a}{pp}{le}"
+        a: str
+
+        @property
+        def pp(self) -> str:
+            return "pp"
+
+        @property
+        def le(self) -> str:
+            return "le"
+
+    @dataclass(frozen=True)
+    class MySubDiagnostic(Note):
+        span_label: ClassVar[str] = "This is not an {a}{pp}{p}{le}"
+        p: str
+
+        @property
+        def pp(self) -> str:
+            return "p"
+
+    source = "apple == orange"
+    span_apple = Span(Loc(file, 1, 0), Loc(file, 1, 5))
+    span_orange = Span(Loc(file, 1, 9), Loc(file, 1, 15))
+    diagnostic = MyDiagnostic(span_apple, "a")
+    diagnostic.add_sub_diagnostic(MySubDiagnostic(span_orange, "p"))
+    run_test(source, diagnostic, snapshot, request)
+
+
 def test_long_label(snapshot, request):
     @dataclass(frozen=True)
     class MyDiagnostic(Error):
