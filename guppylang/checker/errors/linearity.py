@@ -5,19 +5,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
-from guppylang.checker.core import (
-    Place,
-    Variable,
-)
-from guppylang.definition.struct import StructField
 from guppylang.diagnostic import Error, Help, Note
-from guppylang.tys.ty import (
-    StructType,
-    Type,
-)
 
 if TYPE_CHECKING:
+    from guppylang.checker.core import (
+        Place,
+        Variable,
+    )
     from guppylang.checker.linearity_checker import UseKind
+    from guppylang.definition.struct import StructField
+    from guppylang.tys.ty import (
+        StructType,
+        Type,
+    )
 
 
 @dataclass(frozen=True)
