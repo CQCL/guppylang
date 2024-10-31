@@ -73,7 +73,7 @@ def check_global_func_def(
         Variable(x, inp.ty, loc, inp.flags)
         for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
     ]
-    return check_cfg(cfg, inputs, ty.output, globals)
+    return check_cfg(cfg, inputs, ty.output, func_def.name, globals)
 
 
 def check_nested_func_def(
@@ -136,7 +136,7 @@ def check_nested_func_def(
             # Otherwise, we treat it like a local name
             inputs.append(Variable(func_def.name, func_def.ty, func_def))
 
-    checked_cfg = check_cfg(cfg, inputs, func_ty.output, globals)
+    checked_cfg = check_cfg(cfg, inputs, func_ty.output, func_def.name, globals)
     checked_def = CheckedNestedFunctionDef(
         def_id,
         checked_cfg,
