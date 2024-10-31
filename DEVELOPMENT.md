@@ -29,7 +29,7 @@ shell by setting up [direnv](https://devenv.sh/automatic-shell-activation/).
 To setup the environment manually you will need:
 
 - Just: [just.systems](https://just.systems/)
-- uv `>=0.3`: [docs.astral.sh](https://docs.astral.sh/uv/getting-started/installation/)
+- uv `>=0.4.27`: [docs.astral.sh](https://docs.astral.sh/uv/getting-started/installation/)
 
 The extended test suite has additional requirements. These are **optional**; tests that require them will be skipped if they are not installed.
 
