@@ -133,16 +133,20 @@ class NotOwnedError(Error):
     kind: UseKind
     is_call_arg: bool
     func_name: str | None
+    calling_func_name: str
 
     @property
     def rendered_span_label(self) -> str:
         if self.is_call_arg:
             f = f"Function `{self.func_name}`" if self.func_name else "Function"
             return (
-                f"{f} wants to take ownership of this argument, but you don't own "
-                f"`{self.place}`"
+                f"{f} wants to take ownership of this argument, but "
+                f"`{self.calling_func_name}` doesn't own `{self.place}`"
             )
-        return f"Cannot {self.kind.indicative} `{self.place}` since you don't own it"
+        return (
+            f"Cannot {self.kind.indicative} `{self.place}` since "
+            f"`{self.calling_func_name}` doesn't own it"
+        )
 
     @dataclass(frozen=True)
     class MakeOwned(Help):

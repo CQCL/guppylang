@@ -177,6 +177,7 @@ class BBLinearityChecker(ast.NodeVisitor):
 
     scope: Scope
     stats: VariableStats[PlaceId]
+    func_name: str
     func_inputs: dict[PlaceId, Variable]
     globals: Globals
 
@@ -184,6 +185,7 @@ class BBLinearityChecker(ast.NodeVisitor):
         self,
         bb: "CheckedBB[Variable]",
         is_entry: bool,
+        func_name: str,
         func_inputs: dict[PlaceId, Variable],
         globals: Globals,
     ) -> Scope:
@@ -193,6 +195,7 @@ class BBLinearityChecker(ast.NodeVisitor):
         for var in bb.sig.input_row:
             for place in leaf_places(var):
                 input_scope.assign(place)
+        self.func_name = func_name
         self.func_inputs = func_inputs
         self.globals = globals
 
@@ -233,6 +236,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                 use_kind,
                 is_call_arg is not None,
                 self._call_name(is_call_arg),
+                self.func_name,
             )
             arg_span = self.func_inputs[node.place.root.id].defined_at
             err.add_sub_diagnostic(NotOwnedError.MakeOwned(arg_span))
@@ -550,7 +554,7 @@ def is_inout_var(place: Place) -> TypeGuard[Variable]:
 
 
 def check_cfg_linearity(
-    cfg: "CheckedCFG[Variable]", globals: Globals
+    cfg: "CheckedCFG[Variable]", func_name: str, globals: Globals
 ) -> "CheckedCFG[Place]":
     """Checks whether a CFG satisfies the linearity requirements.
 
@@ -563,7 +567,11 @@ def check_cfg_linearity(
     func_inputs: dict[PlaceId, Variable] = {v.id: v for v in cfg.entry_bb.sig.input_row}
     scopes: dict[BB, Scope] = {
         bb: bb_checker.check(
-            bb, is_entry=bb == cfg.entry_bb, func_inputs=func_inputs, globals=globals
+            bb,
+            is_entry=bb == cfg.entry_bb,
+            func_name=func_name,
+            func_inputs=func_inputs,
+            globals=globals,
         )
         for bb in cfg.bbs
     }
