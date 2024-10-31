@@ -7,6 +7,7 @@ from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     NamedTuple,
     TypeAlias,
@@ -20,6 +21,7 @@ from guppylang.cfg.bb import VId
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
+from guppylang.diagnostic import Error
 from guppylang.tys.builtin import (
     array_type_def,
     bool_type_def,
@@ -47,6 +49,13 @@ from guppylang.tys.ty import (
 
 if TYPE_CHECKING:
     from guppylang.definition.struct import StructField
+
+
+@dataclass(frozen=True)
+class UnsupportedError(Error):
+    title: ClassVar[str] = "Unsupported"
+    span_label: ClassVar[str] = "{things} are not supported"
+    things: str
 
 
 #: A "place" is a description for a storage location of a local value that users
