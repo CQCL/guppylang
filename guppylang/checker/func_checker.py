@@ -41,10 +41,15 @@ class IllegalAssignError(Error):
 
 
 @dataclass(frozen=True)
-class MissingAnnotationError(Error):
+class MissingArgAnnotationError(Error):
     title: ClassVar[str] = "Missing type annotation"
-    span_label: ClassVar[str] = "{thing} type must be annotated"
-    thing: str
+    span_label: ClassVar[str] = "Argument requires a type annotation"
+
+
+@dataclass(frozen=True)
+class MissingReturnAnnotationError(Error):
+    title: ClassVar[str] = "Missing type annotation"
+    span_label: ClassVar[str] = "Return type must be annotated"
 
     @dataclass(frozen=True)
     class ReturnNone(Help):
@@ -163,11 +168,11 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     if func_def.args.kwarg is not None:
         raise GuppyError(UnsupportedError(func_def.args.kwarg, "Keyword args"))
     if func_def.returns is None:
-        err = MissingAnnotationError(func_def, "Return")
+        err = MissingReturnAnnotationError(func_def)
         # TODO: Error location is incorrect
         if all(r.value is None for r in return_nodes_in_ast(func_def)):
             err.add_sub_diagnostic(
-                MissingAnnotationError.ReturnNone(None, func_def.name)
+                MissingReturnAnnotationError.ReturnNone(None, func_def.name)
             )
         raise GuppyError(err)
 
@@ -178,7 +183,7 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     for inp in func_def.args.args:
         ty_ast = inp.annotation
         if ty_ast is None:
-            raise GuppyError(MissingAnnotationError(inp, "Argument"))
+            raise GuppyError(MissingArgAnnotationError(inp))
         input_nodes.append(ty_ast)
         input_names.append(inp.arg)
     inputs, output = parse_function_io_types(
