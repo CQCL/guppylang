@@ -1,5 +1,7 @@
 """Collection of error messages emitted during linearity checking."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
@@ -26,12 +28,12 @@ class AlreadyUsedError(Error):
         "..."
     )
     place: Place
-    kind: "UseKind"
+    kind: UseKind
 
     @dataclass(frozen=True)
     class PrevUse(Note):
         span_label: ClassVar[str] = "since it was already {prev_kind.subjunctive} here"
-        prev_kind: "UseKind"
+        prev_kind: UseKind
 
 
 @dataclass(frozen=True)
@@ -42,12 +44,12 @@ class ComprAlreadyUsedError(Error):
         "multiple times when evaluating this comprehension"
     )
     place: Place
-    kind: "UseKind"
+    kind: UseKind
 
     @dataclass(frozen=True)
     class PrevUse(Note):
         span_label: ClassVar[str] = "since it was already {prev_kind.subjunctive} here"
-        prev_kind: "UseKind"
+        prev_kind: UseKind
 
 
 @dataclass(frozen=True)
@@ -128,7 +130,7 @@ class UnnamedSubscriptNotUsedError(Error):
 class NotOwnedError(Error):
     title: ClassVar[str] = "Not owned"
     place: Place
-    kind: "UseKind"
+    kind: UseKind
     is_call_arg: bool
     func_name: str | None
 
@@ -157,7 +159,7 @@ class MoveOutOfSubscriptError(Error):
         "Cannot {kind.indicative} a subscript of `{parent}` with linear type "
         "`{parent.ty}`"
     )
-    kind: "UseKind"
+    kind: UseKind
     parent: Place
 
     @dataclass(frozen=True)
@@ -194,7 +196,7 @@ class BorrowSubPlaceUsedError(Error):
             "since `{sub_place}` with linear type `{sub_place.ty}` was already "
             "{kind.subjunctive} here"
         )
-        kind: "UseKind"
+        kind: UseKind
 
     @dataclass(frozen=True)
     class Fix(Help):
