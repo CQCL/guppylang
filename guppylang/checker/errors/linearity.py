@@ -140,7 +140,7 @@ class NotOwnedError(Error):
                 f"{f} wants to take ownership of this argument, but you don't own "
                 f"`{self.place}`"
             )
-        return f"Cannot {self.kind.subjunctive} `{self.place}` since you don't own it"
+        return f"Cannot {self.kind.indicative} `{self.place}` since you don't own it"
 
     @dataclass(frozen=True)
     class MakeOwned(Help):
