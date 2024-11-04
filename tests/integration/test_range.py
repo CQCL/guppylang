@@ -42,3 +42,5 @@ def test_static_size(validate):
     def negative() -> SizedIter[Range, 10]:
         return range(10)
 
+    validate(module.compile())
+
