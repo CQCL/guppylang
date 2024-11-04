@@ -140,6 +140,13 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     return array.instantiate([len_arg.to_hugr(), ht.TypeTypeArg(elem_ty)])
 
 
+def _sized_iter_to_hugr(args: Sequence[Argument]) -> ht.Type:
+    [ty_arg, len_arg] = args
+    assert isinstance(ty_arg, TypeArg)
+    assert isinstance(len_arg, ConstArg)
+    return ty_arg.ty.to_hugr()
+
+
 callable_type_def = CallableTypeDef(DefId.fresh(), None)
 tuple_type_def = _TupleTypeDef(DefId.fresh(), None)
 none_type_def = _NoneTypeDef(DefId.fresh(), None)
@@ -179,6 +186,17 @@ array_type_def = OpaqueTypeDef(
     always_linear=False,
     to_hugr=_array_to_hugr,
 )
+sized_iter_type_def = OpaqueTypeDef(
+    id=DefId.fresh(),
+    name="SizedIter",
+    defined_at=None,
+    params=[
+        TypeParam(0, "T", can_be_linear=True),
+        ConstParam(1, "n", NumericType(NumericType.Kind.Nat)),
+    ],
+    always_linear=False,
+    to_hugr=_sized_iter_to_hugr,
+)
 
 
 def bool_type() -> OpaqueType:
@@ -200,6 +218,13 @@ def array_type(element_ty: Type, length: int) -> OpaqueType:
     )
 
 
+def sized_iter_type(iter_type: Type, size: int) -> OpaqueType:
+    nat_type = NumericType(NumericType.Kind.Nat)
+    return OpaqueType(
+        [TypeArg(iter_type), ConstArg(ConstValue(nat_type, size))], sized_iter_type_def
+    )
+
+
 def is_bool_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == bool_type_def
 
@@ -212,9 +237,23 @@ def is_array_type(ty: Type) -> TypeGuard[OpaqueType]:
     return isinstance(ty, OpaqueType) and ty.defn == array_type_def
 
 
+def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
+    return isinstance(ty, OpaqueType) and ty.defn == sized_iter_type_def
+
+
 def get_element_type(ty: Type) -> Type:
     assert isinstance(ty, OpaqueType)
     assert ty.defn == list_type_def
     (arg,) = ty.args
     assert isinstance(arg, TypeArg)
     return arg.ty
+
+
+def get_iter_size(ty: Type) -> int:
+    assert isinstance(ty, OpaqueType)
+    assert ty.defn == sized_iter_type_def
+    match ty.args:
+        case [_, ConstArg(ConstValue(value=int(size)))]:
+            return size
+        case _:
+            raise InternalGuppyError("Unexpected type args")
