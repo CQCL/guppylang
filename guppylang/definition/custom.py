@@ -261,12 +261,16 @@ class CustomCallChecker(ABC):
         self.node = node
         self.func = func
 
-    @abstractmethod
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         """Checks the return value against a given type.
 
         Returns a (possibly) transformed and annotated AST node for the call.
         """
+        from guppylang.checker.expr_checker import check_type_against
+
+        expr, res_ty = self.synthesize(args)
+        subst, _ = check_type_against(res_ty, ty, self.node)
+        return expr, subst
 
     @abstractmethod
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:

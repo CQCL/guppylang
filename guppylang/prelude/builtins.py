@@ -14,6 +14,7 @@ from guppylang.prelude._internal.checker import (
     CoercingChecker,
     DunderChecker,
     NewArrayChecker,
+    RangeChecker,
     ResultChecker,
     ReversingChecker,
     UnsupportedChecker,
@@ -53,6 +54,7 @@ from guppylang.tys.builtin import (
     int_type_def,
     list_type_def,
     nat_type_def,
+    sized_iter_type_def,
 )
 
 guppy.init_module(import_builtins=False)
@@ -559,6 +561,27 @@ class Array:
     def __new__(): ...
 
 
+@guppy.extend_type(sized_iter_type_def)
+class SizedIter:
+    """A wrapper around an iterator type `T` promising that the iterator will yield
+    exactly `n` values.
+
+    Annotating an iterator with an incorrect size is undefined behaviour.
+    """
+
+    @guppy.custom(NoopCompiler())
+    def __new__(iterator: L @ owned) -> "SizedIter[L, n]":  # type: ignore[type-arg]
+        """Casts an iterator into a `SizedIter`."""
+
+    @guppy.custom(NoopCompiler())
+    def unwrap_iter(self: "SizedIter[L, n]" @ owned) -> L:
+        """Extracts the actual iterator."""
+
+    @guppy.custom(NoopCompiler())
+    def __iter__(self: "SizedIter[L, n]" @ owned) -> L:
+        """Extracts the actual iterator."""
+
+
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.
 @guppy.custom(checker=ResultChecker(), higher_order_value=False)
 def result(tag, value): ...
@@ -769,43 +792,33 @@ def property(x): ...
 
 @guppy.struct
 class Range:
-    stop: int
-
-    @guppy
-    def __iter__(self: "Range") -> "RangeIter":
-        return RangeIter(0, self.stop)  # type: ignore[call-arg]
-
-
-@guppy.struct
-class RangeIter:
     next: int
     stop: int
 
     @guppy
-    def __iter__(self: "RangeIter") -> "RangeIter":
+    def __iter__(self: "Range") -> "Range":
         return self
 
     @guppy
-    def __hasnext__(self: "RangeIter") -> tuple[bool, "RangeIter"]:
+    def __hasnext__(self: "Range") -> tuple[bool, "Range"]:
         return (self.next < self.stop, self)
 
     @guppy
-    def __next__(self: "RangeIter") -> tuple[int, "RangeIter"]:
+    def __next__(self: "Range") -> tuple[int, "Range"]:
         # Fine not to check bounds while we can only be called from inside a `for` loop.
         # if self.start >= self.stop:
         #    raise StopIteration
-        return (self.next, RangeIter(self.next + 1, self.stop))  # type: ignore[call-arg]
+        return (self.next, Range(self.next + 1, self.stop))  # type: ignore[call-arg]
 
     @guppy
-    def __end__(self: "RangeIter") -> None:
+    def __end__(self: "Range") -> None:
         pass
 
 
-@guppy
+@guppy.custom(checker=RangeChecker(), higher_order_value=False)
 def range(stop: int) -> Range:
     """Limited version of python range().
     Only a single argument (stop/limit) is supported."""
-    return Range(stop)  # type: ignore[call-arg]
 
 
 @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
