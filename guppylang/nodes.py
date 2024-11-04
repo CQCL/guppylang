@@ -199,6 +199,18 @@ class DesugaredGenerator(ast.expr):
     )
 
 
+class DesugaredGeneratorExpr(ast.expr):
+    """A desugared generator expression."""
+
+    elt: ast.expr
+    generators: list[DesugaredGenerator]
+
+    _fields = (
+        "elt",
+        "generators",
+    )
+
+
 class DesugaredListComp(ast.expr):
     """A desugared list comprehension."""
 
@@ -208,6 +220,22 @@ class DesugaredListComp(ast.expr):
     _fields = (
         "elt",
         "generators",
+    )
+
+
+class DesugaredArrayComp(ast.expr):
+    """A desugared array comprehension."""
+
+    elt: ast.expr
+    generator: DesugaredGenerator
+    length: int
+    elt_ty: Type
+
+    _fields = (
+        "elt",
+        "generator",
+        "length",
+        "elt_ty",
     )
 
 
