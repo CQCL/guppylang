@@ -48,6 +48,19 @@ class CompiledGlobals:
             return defn.compile_outer(self.module)
         return defn
 
+    def compile(self, defn: CheckedDef) -> None:
+        """Compiles the given definition and all of its dependencies into the current
+        Hugr."""
+        if defn.id in self.compiled:
+            return
+
+        self.compiled[defn.id] = self._compile(defn)
+        self.worklist.add(defn.id)
+        while self.worklist:
+            next_id = self.worklist.pop()
+            next_def = self[next_id]
+            next_def.compile_inner(self)
+
 
 @dataclass
 class DFContainer:
