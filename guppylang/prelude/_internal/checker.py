@@ -1,6 +1,8 @@
 import ast
 from typing import cast
 
+from typing_extensions import assert_never
+
 from guppylang.ast_util import AstNode, with_loc, with_type
 from guppylang.checker.core import Context
 from guppylang.checker.expr_checker import (
@@ -10,6 +12,7 @@ from guppylang.checker.expr_checker import (
     check_num_args,
     check_type_against,
     synthesize_call,
+    synthesize_comprehension,
 )
 from guppylang.definition.custom import (
     CustomCallChecker,
@@ -19,14 +22,22 @@ from guppylang.definition.custom import (
 from guppylang.definition.struct import CheckedStructDef, RawStructDef
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
-from guppylang.nodes import GlobalCall, ResultExpr
+from guppylang.nodes import (
+    DesugaredArrayComp,
+    DesugaredGeneratorExpr,
+    GlobalCall,
+    MakeIter,
+    ResultExpr,
+)
 from guppylang.tys.arg import ConstArg, TypeArg
 from guppylang.tys.builtin import (
     array_type,
     bool_type,
+    get_iter_size,
     int_type,
     is_array_type,
     is_bool_type,
+    is_sized_iter_type,
     sized_iter_type,
 )
 from guppylang.tys.const import Const, ConstValue
@@ -195,46 +206,106 @@ class NewArrayChecker(CustomCallChecker):
     """Function call checker for the `array.__new__` function."""
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        if len(args) == 0:
-            raise GuppyTypeError(
-                "Cannot infer the array element type. Consider adding a type "
-                "annotation.",
-                self.node,
-            )
-        [fst, *rest] = args
-        fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
-        checker = ExprChecker(self.ctx)
-        for i in range(len(rest)):
-            rest[i], subst = checker.check(rest[i], ty)
-            assert len(subst) == 0, "Array element type is closed"
-        result_ty = array_type(ty, len(args))
-        call = GlobalCall(
-            def_id=self.func.id, args=[fst, *rest], type_args=result_ty.args
-        )
-        return with_loc(self.node, call), result_ty
+        match args:
+            case []:
+                raise GuppyTypeError(
+                    "Cannot infer the array element type. Consider adding a type "
+                    "annotation.",
+                    self.node,
+                )
+            # Either an array comprehension
+            case [DesugaredGeneratorExpr() as compr]:
+                return self.synthesize_array_comprehension(compr)
+            # Or a list of array elements
+            case [fst, *rest]:
+                fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
+                checker = ExprChecker(self.ctx)
+                for i in range(len(rest)):
+                    rest[i], subst = checker.check(rest[i], ty)
+                    assert len(subst) == 0, "Array element type is closed"
+                result_ty = array_type(ty, len(args))
+                call = GlobalCall(
+                    def_id=self.func.id, args=[fst, *rest], type_args=result_ty.args
+                )
+                return with_loc(self.node, call), result_ty
+            case args:
+                return assert_never(args)  # type: ignore[arg-type]
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         if not is_array_type(ty):
             raise GuppyTypeError(
                 f"Expected expression of type `{ty}`, got `array`", self.node
             )
+        subst: Subst = {}
         match ty.args:
             case [TypeArg(ty=elem_ty), ConstArg(ConstValue(value=int(length)))]:
-                subst: Subst = {}
-                checker = ExprChecker(self.ctx)
-                for i in range(len(args)):
-                    args[i], s = checker.check(args[i], elem_ty.substitute(subst))
-                    subst |= s
-                if len(args) != length:
-                    raise GuppyTypeError(
-                        f"Expected expression of type `{ty}`, got "
-                        f"`array[{elem_ty}, {len(args)}]`",
-                        self.node,
-                    )
-                call = GlobalCall(def_id=self.func.id, args=args, type_args=ty.args)
-                return with_loc(self.node, call), subst
+                match args:
+                    # Either an array comprehension
+                    case [DesugaredGeneratorExpr() as compr]:
+                        # TODO: We could use the type information to infer some stuff
+                        #  in the comprehension
+                        arr_compr, res_ty = self.synthesize_array_comprehension(compr)
+                        subst, _ = check_type_against(res_ty, ty, self.node)
+                        return arr_compr, subst
+                    # Or a list of array elements
+                    case args:
+                        checker = ExprChecker(self.ctx)
+                        for i in range(len(args)):
+                            args[i], s = checker.check(
+                                args[i], elem_ty.substitute(subst)
+                            )
+                            subst |= s
+                        if len(args) != length:
+                            raise GuppyTypeError(
+                                f"Expected expression of type `{ty}`, got "
+                                f"`array[{elem_ty}, {len(args)}]`",
+                                self.node,
+                            )
+                        call = GlobalCall(
+                            def_id=self.func.id, args=args, type_args=ty.args
+                        )
+                        return with_loc(self.node, call), subst
             case type_args:
                 raise InternalGuppyError(f"Invalid array type args: {type_args}")
+
+    def synthesize_array_comprehension(
+        self, compr: DesugaredGeneratorExpr
+    ) -> tuple[DesugaredArrayComp, Type]:
+        # Array comprehensions require a static size. To keep things simple, we'll only
+        # allow a single generator for now, so we don't have to reason about products
+        # of iterator sizes.
+        if len(compr.generators) > 1:
+            # Individual generator objects unfortunately don't have a span in Python's
+            # AST, so we have to use the whole expression span
+            raise GuppyError("Nested array comprehensions are not supported", compr)
+        [gen] = compr.generators
+        # Similarly, dynamic if guards are not allowed
+        if gen.ifs:
+            raise GuppyError(
+                "If guards are not allowed in array comprehensions", gen.ifs[0]
+            )
+        # Extract the iterator size
+        match gen.iter_assign:
+            case ast.Assign(value=MakeIter() as make_iter):
+                make_iter.value, iter_ty = ExprSynthesizer(self.ctx).synthesize(
+                    make_iter.value
+                )
+                # The iterator must have a static size hint
+                if not is_sized_iter_type(iter_ty):
+                    raise GuppyError(
+                        f"Iterator of type `{iter_ty}` doesn't have a static size "
+                        "require for array comprehensions",
+                        make_iter,
+                    )
+                size = get_iter_size(iter_ty)
+            case _:
+                raise InternalGuppyError("Invalid iterator assign statement")
+        # Finally, type check the comprehension
+        [gen], elt, elt_ty = synthesize_comprehension(compr, [gen], compr.elt, self.ctx)
+        array_compr = DesugaredArrayComp(
+            elt=elt, generator=gen, length=size, elt_ty=elt_ty
+        )
+        return with_loc(compr, array_compr), array_type(elt_ty, size)
 
 
 #: Maximum length of a tag in the `result` function.

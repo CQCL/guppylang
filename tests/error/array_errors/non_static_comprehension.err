@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:13
+
+11:    @guppy(module)
+12:    def main(n: int) -> None:
+13:        array(i for i in range(n))
+                            ^^^^^^^^
+GuppyError: Iterator of type `Range` doesn't have a static size require for array comprehensions

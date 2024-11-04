@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:13
+
+11:    @guppy(module)
+12:    def main() -> None:
+13:        array(i for i in range(100) if i % 2 == 0)
+                                          ^^^^^^^^^^
+GuppyError: If guards are not allowed in array comprehensions
