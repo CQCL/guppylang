@@ -1,0 +1,7 @@
+Guppy compilation failed. Error in file $FILE:12
+
+10:    @guppy(module)
+11:    def foo(x: T) -> None:
+12:        y = T
+               ^
+GuppyError: Expected a value, got type `T`

@@ -58,10 +58,6 @@ class RawFunctionDef(ParsableDef):
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func)
         ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
-        if ty.parametrized:
-            raise GuppyError(
-                "Generic function definitions are not supported yet", func_ast
-            )
         return ParsedFunctionDef(
             self.id, self.name, func_ast, ty, self.python_scope, docstring
         )
@@ -155,9 +151,10 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        func_type = self.ty.to_hugr()
-        func_def = module.define_function(self.name, func_type.input)
-        func_def.declare_outputs(func_type.output)
+        func_type = self.ty.to_hugr_poly()
+        func_def = module.define_function(
+            self.name, func_type.body.input, func_type.body.output, func_type.params
+        )
         return CompiledFunctionDef(
             self.id,
             self.name,

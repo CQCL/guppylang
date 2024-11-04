@@ -132,7 +132,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             raise GuppyError(
                 "Variable declaration is not supported. Assignment is required", node
             )
-        ty = type_from_ast(node.annotation, self.ctx.globals)
+        ty = type_from_ast(node.annotation, self.ctx.globals, self.ctx.generic_params)
         node.value, subst = self._check_expr(node.value, ty)
         assert not ty.unsolved_vars  # `ty` must be closed!
         assert len(subst) == 0

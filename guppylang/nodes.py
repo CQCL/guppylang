@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from guppylang.checker.core import Place, Variable
     from guppylang.definition.common import DefId
     from guppylang.definition.struct import StructField
+    from guppylang.tys.param import ConstParam
 
 
 class PlaceNode(ast.expr):
@@ -30,6 +31,16 @@ class GlobalName(ast.Name):
     _fields = (
         "id",
         "def_id",
+    )
+
+
+class GenericParamValue(ast.Name):
+    id: str
+    param: "ConstParam"
+
+    _fields = (
+        "id",
+        "param",
     )
 
 

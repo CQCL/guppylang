@@ -32,6 +32,7 @@ from guppylang.tys.builtin import (
     sized_iter_type_def,
     tuple_type_def,
 )
+from guppylang.tys.param import Parameter
 from guppylang.tys.ty import (
     BoundTypeVar,
     ExistentialTypeVar,
@@ -366,6 +367,7 @@ class Context(NamedTuple):
 
     globals: Globals
     locals: Locals[str, Variable]
+    generic_params: dict[str, Parameter]
 
 
 class DummyEvalDict(PyScope):
