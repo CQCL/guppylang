@@ -169,6 +169,32 @@ def logic_op(
     return op
 
 
+def list_op(
+    op_name: str,
+    ext: he.Extension = hugr.std.collections.EXTENSION,
+) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+    """Utility method to create Hugr list ops.
+
+    Args:
+        op_name: The name of the operation.
+        ext: The extension of the operation.
+
+    Returns:
+        A function that takes an instantiation of the type arguments and returns
+        a concrete HUGR op.
+    """
+    op_def = ext.get_op(op_name)
+
+    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
+        return ops.ExtOp(
+            op_def,
+            ty,
+            [arg.to_hugr() for arg in inst],
+        )
+
+    return op
+
+
 def quantum_op(
     op_name: str,
     ext: he.Extension = QUANTUM_EXTENSION,

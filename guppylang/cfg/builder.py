@@ -343,20 +343,7 @@ class ExprBuilder(ast.NodeTransformer):
         return with_loc(node, DesugaredListComp(elt=node.elt, generators=gens))
 
     def visit_Call(self, node: ast.Call) -> ast.AST:
-        # Parse compile-time evaluated `py(...)` expression
-        if isinstance(node.func, ast.Name) and node.func.id == "py":
-            match node.args:
-                case []:
-                    raise GuppyError(
-                        "Compile-time `py(...)` expression requires an argument",
-                        node,
-                    )
-                case [arg]:
-                    pass
-                case args:
-                    arg = with_loc(node, ast.Tuple(elts=args, ctx=ast.Load))
-            return with_loc(node, PyExpr(value=arg))
-        return self.generic_visit(node)
+        return is_py_expression(node) or self.generic_visit(node)
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
         # Short-circuit expressions must be built using the `BranchBuilder`. However, we
@@ -490,6 +477,31 @@ def is_functional_annotation(stmt: ast.stmt) -> bool:
         ):
             return op.left.id == "_" and op.right.id == "functional"
     return False
+
+
+def is_py_expression(node: ast.AST) -> PyExpr | None:
+    """Checks if the given node is a compile-time `py(...)` expression and turns it into
+    a `PyExpr` AST node.
+
+    Otherwise, returns `None`.
+    """
+    if (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "py"
+    ):
+        match node.args:
+            case []:
+                raise GuppyError(
+                    "Compile-time `py(...)` expression requires an argument",
+                    node,
+                )
+            case [arg]:
+                pass
+            case args:
+                arg = with_loc(node, ast.Tuple(elts=args, ctx=ast.Load))
+        return with_loc(node, PyExpr(value=arg))
+    return None
 
 
 def is_short_circuit_expr(node: ast.AST) -> bool:

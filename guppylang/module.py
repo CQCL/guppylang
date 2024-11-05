@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 import inspect
 import sys
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
-from types import ModuleType
-from typing import Any
+from types import FrameType, ModuleType
+from typing import TYPE_CHECKING, Any
 
-from hugr import Hugr, ops
 from hugr.build.function import Module
-from hugr.ext import Package
+from hugr.package import ModulePointer, Package
 
 import guppylang.compiler.hugr_extension
+from guppylang import decorator
 from guppylang.checker.core import Globals, PyScope
 from guppylang.compiler.core import CompiledGlobals
 from guppylang.definition.common import (
@@ -29,6 +32,9 @@ from guppylang.definition.ty import TypeDef
 from guppylang.error import GuppyError, pretty_errors
 from guppylang.experimental import enable_experimental_features
 
+if TYPE_CHECKING:
+    from hugr import Hugr, ops
+
 PyClass = type
 PyFunc = Callable[..., Any]
 PyFuncDefOrDecl = tuple[bool, PyFunc]
@@ -42,12 +48,9 @@ class GuppyModule:
     # Whether the module has already been checked
     _checked: bool
 
-    # Whether the module has already been compiled
-    _compiled: bool
-
     # If the hugr has already been compiled, keeps a reference that can be returned
     # from `compile`.
-    _compiled_hugr: Package | None
+    _compiled: _CompiledModule | None
 
     # Map of raw definitions in this module
     _raw_defs: dict[DefId, RawDef]
@@ -78,8 +81,7 @@ class GuppyModule:
         self._imported_globals = Globals.default()
         self._imported_checked_defs = {}
         self._checked = False
-        self._compiled = False
-        self._compiled_hugr = None
+        self._compiled = None
         self._instance_func_buffer = None
         self._raw_defs = {}
         self._raw_type_defs = {}
@@ -95,13 +97,18 @@ class GuppyModule:
 
     def load(
         self,
-        *args: "Definition | GuppyModule | ModuleType",
-        **kwargs: "Definition | GuppyModule | ModuleType",
+        *args: Definition | GuppyModule | ModuleType,
+        **kwargs: Definition | GuppyModule | ModuleType,
     ) -> None:
         """Imports another Guppy module or selected definitions from a module.
 
         Keyword args may be used to specify alias names for the imports.
         """
+        # Note that we shouldn't evaluate imports during a sphinx build since the @guppy
+        # decorator is mocked in that case
+        if sphinx_running():
+            return
+
         modules: set[GuppyModule] = set()
         defs: dict[DefId, CheckedDef] = {}
         names: dict[str, DefId] = {}
@@ -154,8 +161,13 @@ class GuppyModule:
         for module in modules:
             self._imported_checked_defs |= module._imported_checked_defs
 
-    def load_all(self, mod: "GuppyModule | ModuleType") -> None:
+    def load_all(self, mod: GuppyModule | ModuleType) -> None:
         """Imports all public members of a module."""
+        # Note that we shouldn't evaluate imports during a sphinx build since the @guppy
+        # decorator is mocked in that case
+        if sphinx_running():
+            return
+
         if isinstance(mod, GuppyModule):
             mod.check()
             self.load(
@@ -181,8 +193,7 @@ class GuppyModule:
         corresponding instance type definition.
         """
         self._checked = False
-        self._compiled = False
-        self._compiled_hugr = None
+        self._compiled = None
         if self._instance_func_buffer is not None and not isinstance(defn, TypeDef):
             self._instance_func_buffer[defn.name] = defn
         else:
@@ -213,7 +224,7 @@ class GuppyModule:
         self, f: PyFunc, instance: TypeDef | None = None
     ) -> RawFunctionDecl:
         """Registers a Python function declaration as belonging to this Guppy module."""
-        decl = RawFunctionDecl(DefId.fresh(self), f.__name__, None, f)
+        decl = RawFunctionDecl(DefId.fresh(self), f.__name__, None, f, get_py_scope(f))
         self.register_def(decl, instance)
         return decl
 
@@ -230,8 +241,7 @@ class GuppyModule:
         Also removes all methods when unregistering a type.
         """
         self._checked = False
-        self._compiled = False
-        self._compiled_hugr = None
+        self._compiled = None
         self._raw_defs.pop(defn.id, None)
         self._raw_type_defs.pop(defn.id, None)
         self._globals.defs.pop(defn.id, None)
@@ -246,7 +256,7 @@ class GuppyModule:
 
     @property
     def compiled(self) -> bool:
-        return self._compiled
+        return self._compiled is not None
 
     @staticmethod
     def _check_defs(
@@ -300,20 +310,17 @@ class GuppyModule:
         """Compiles the module and returns the final Hugr."""
         # This function does not use the `pretty_errors` decorator since it is
         # is wrapping around `compile_package` which does use it already.
-        package = self.compile()
-        hugr = package.modules[0]
-        return hugr
+        return self.compile().module
 
     @pretty_errors
-    def compile(self) -> Package:
+    def compile(self) -> ModulePointer:
         """Compiles the module and returns the final Hugr package.
 
         The package contains the single Hugr graph as well as the required
         extensions definitions.
         """
-        if self.compiled:
-            assert self._compiled_hugr is not None, "Module is compiled but has no Hugr"
-            return self._compiled_hugr
+        if self._compiled is not None:
+            return self._compiled.module
 
         self.check()
         checked_defs = self._imported_checked_defs | self._checked_defs
@@ -323,15 +330,9 @@ class GuppyModule:
         graph.metadata["name"] = self.name
 
         # Lower definitions to Hugr
-        required = set(self._checked_defs.keys())
         ctx = CompiledGlobals(checked_defs, graph)
-        _request_compilation = [ctx[def_id] for def_id in required]
-        while ctx.worklist:
-            next_id = ctx.worklist.pop()
-            next_def = ctx[next_id]
-            next_def.compile_inner(ctx)
-
-        hugr = graph.hugr
+        for defn in self._checked_defs.values():
+            ctx.compile(defn)
 
         # TODO: Currently we just include a hardcoded list of extensions. We should
         # compute this dynamically from the imported dependencies instead.
@@ -341,19 +342,26 @@ class GuppyModule:
 
         extensions = [*TKET2_EXTENSIONS, guppylang.compiler.hugr_extension.EXTENSION]
 
-        package = Package(modules=[hugr], extensions=extensions)
-        self._compiled = True
-        self._compiled_hugr = package
-
-        return package
+        mod_ptr = ModulePointer(Package(modules=[graph.hugr], extensions=extensions), 0)
+        self._compiled = _CompiledModule(ctx, mod_ptr)
+        return self._compiled.module
 
     def contains(self, name: str) -> bool:
         """Returns 'True' if the module contains an object with the given name."""
         return name in self._globals.names
 
 
+@dataclass(frozen=True)
+class _CompiledModule:
+    """Cached compiled module and definitions"""
+
+    globs: CompiledGlobals
+    module: ModulePointer
+
+
 def get_py_scope(f: PyFunc) -> PyScope:
-    """Returns a mapping of all variables captured by a Python function.
+    """Returns a mapping of all variables captured by a Python function together with
+    the `f_locals` and `f_globals` of the frame that called this function.
 
     Note that this function only works in CPython. On other platforms, an empty
     dictionary is returned.
@@ -361,8 +369,12 @@ def get_py_scope(f: PyFunc) -> PyScope:
     Relies on inspecting the `__globals__` and `__closure__` attributes of the function.
     See https://docs.python.org/3/reference/datamodel.html#special-read-only-attributes
     """
+    # Get variables from the calling frame
+    frame = get_calling_frame()
+    frame_vars = frame.f_globals | frame.f_locals if frame else {}
+
     if sys.implementation.name != "cpython":
-        return {}
+        return frame_vars
 
     if inspect.ismethod(f):
         f = f.__func__
@@ -379,7 +391,7 @@ def get_py_scope(f: PyFunc) -> PyScope:
                 continue
             nonlocals[var] = value
 
-    return nonlocals | f.__globals__.copy()
+    return frame_vars | nonlocals | f.__globals__.copy()
 
 
 def find_guppy_module_in_py_module(module: ModuleType) -> GuppyModule:
@@ -407,3 +419,28 @@ def find_guppy_module_in_py_module(module: ModuleType) -> GuppyModule:
         )
         raise GuppyError(msg)
     return mods[0]
+
+
+def get_calling_frame() -> FrameType | None:
+    """Finds the first frame that called this function outside the compiler modules."""
+    frame = inspect.currentframe()
+    while frame:
+        module = inspect.getmodule(frame)
+        if module is None:
+            break
+        if module.__file__ != __file__ and module != decorator:
+            return frame
+        frame = frame.f_back
+    return None
+
+
+def sphinx_running() -> bool:
+    """Checks if this module was imported during a sphinx build."""
+    # This is the most general solution available at the moment.
+    # See: https://github.com/sphinx-doc/sphinx/issues/9805
+    try:
+        import sphinx  # type: ignore[import-untyped, import-not-found, unused-ignore]
+
+        return hasattr(sphinx, "application")
+    except ImportError:
+        return False

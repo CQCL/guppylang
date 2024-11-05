@@ -16,11 +16,20 @@ setup-extras:
 check:
     uv run pre-commit run --all-files
 
-# Run the tests that don't require the validator or execution.
-test *PYTEST_FLAGS:
+# Compile integration test binaries.
+_prepare-test:
     # Build the validator binary if rust is installed. Otherwise, skip it.
     cargo build --release -p validator || true
+    # Build the execution binary if rust is installed. Otherwise, skip it.
+    uv run maturin build -m execute_llvm/Cargo.toml --release || true
+
+# Run the tests.
+test *PYTEST_FLAGS: _prepare-test
     uv run pytest {{PYTEST_FLAGS}}
+
+# Export the integration test cases to a directory.
+export-integration-tests directory="guppy-exports": _prepare-test
+    uv run pytest --export-test-cases="{{ directory }}"
 
 # Auto-fix all clippy warnings.
 fix:

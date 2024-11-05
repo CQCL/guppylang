@@ -1,5 +1,5 @@
 from hugr import Hugr
-from hugr.ext import Package
+from hugr.package import Package, PackagePointer, ModulePointer
 
 from pathlib import Path
 import pytest
@@ -50,7 +50,9 @@ def validate(request, export_test_cases_dir: Path):
         if p.returncode != 0:
             raise RuntimeError(f"{p.stderr}")
 
-    def validate_impl(hugr: Package | Hugr, name=None):
+    def validate_impl(hugr: Package | PackagePointer | Hugr, name=None):
+        if isinstance(hugr, PackagePointer):
+            hugr = hugr.package
         # Validate via the json encoding
         js = hugr.to_json()
 
@@ -69,7 +71,7 @@ class LLVMException(Exception):
 
 
 def _run_fn(run_fn_name: str):
-    def f(hugr: Package, expected: Any, fn_name: str = "main"):
+    def f(module: ModulePointer, expected: Any, fn_name: str = "main"):
         try:
             import execute_llvm
 
@@ -77,17 +79,18 @@ def _run_fn(run_fn_name: str):
             if not fn:
                 pytest.skip("Skipping llvm execution")
 
-            hugr_json: str = hugr.modules[0].to_json()
+            hugr_json: str = module.module.to_json()
             res = fn(hugr_json, fn_name)
             if res != expected:
                 raise LLVMException(
                     f"Expected value ({expected}) doesn't match actual value ({res})"
                 )
+        except AttributeError:
+            pytest.skip("Skipping llvm execution")
         except ImportError:
             pytest.skip("Skipping llvm execution")
 
     return f
-
 
 
 @pytest.fixture

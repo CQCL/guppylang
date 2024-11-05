@@ -1,0 +1,6 @@
+Guppy compilation failed. Error in file $FILE:7
+
+5:    @compile_guppy
+6:    def foo(xs: array[int, py(1.0)]) -> None:
+                             ^^^^^^^
+GuppyError: Compile-time `py(...)` expression with type `<class 'float'>` is not a valid type argument

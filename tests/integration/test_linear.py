@@ -1,6 +1,6 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import linst, owned
+from guppylang.prelude.builtins import owned
 from guppylang.prelude.quantum import qubit, measure
 
 import guppylang.prelude.quantum_functional as quantum_functional
@@ -384,11 +384,12 @@ def test_for(validate):
     module.load(qubit)
 
     @guppy(module)
-    def test(qs: linst[tuple[qubit, qubit]] @owned) -> linst[qubit]:
-        rs: linst[qubit] = []
+    def test(qs: list[tuple[qubit, qubit]] @owned) -> list[qubit]:
+        rs: list[qubit] = []
         for q1, q2 in qs:
             q1, q2 = cx(q1, q2)
-            rs += [q1, q2]
+            rs.append(q1)
+            rs.append(q2)
         return rs
 
     validate(module.compile())
@@ -400,7 +401,7 @@ def test_for_measure(validate):
     module.load(qubit, measure)
 
     @guppy(module)
-    def test(qs: linst[qubit] @owned) -> bool:
+    def test(qs: list[qubit] @owned) -> bool:
         parity = False
         for q in qs:
             parity |= measure(q)
@@ -415,7 +416,7 @@ def test_for_continue(validate):
     module.load(qubit, measure)
 
     @guppy(module)
-    def test(qs: linst[qubit] @owned) -> int:
+    def test(qs: list[qubit] @owned) -> int:
         x = 0
         for q in qs:
             if measure(q):
@@ -480,25 +481,25 @@ def test_rus(validate):
 
     validate(module.compile())
 
-def test_linst_iter_arg(validate):
+def test_list_iter_arg(validate):
     module = GuppyModule("test")
     module.load_all(quantum_functional)
     module.load(qubit)
 
     @guppy(module)
-    def owned_arg(qs: linst[qubit] @owned) -> linst[qubit]:
+    def owned_arg(qs: list[qubit] @owned) -> list[qubit]:
         qs = [h(q) for q in qs]
         return qs
 
     validate(module.compile())
 
-def test_linst_iter(validate):
+def test_list_iter(validate):
     module = GuppyModule("test")
     module.load_all(quantum_functional)
     module.load(qubit)
 
     @guppy(module)
-    def owned_arg() -> linst[qubit]:
+    def owned_arg() -> list[qubit]:
         qs = [qubit() for _ in [0,1,2]]
         qs = [h(q) for q in qs]
         return qs

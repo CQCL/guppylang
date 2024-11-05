@@ -8,14 +8,13 @@ import hugr.std.int
 
 from guppylang.decorator import guppy
 from guppylang.definition.custom import DefaultCallChecker, NoopCompiler
-from guppylang.error import GuppyError
 from guppylang.prelude._internal.checker import (
     ArrayLenChecker,
     CallableChecker,
     CoercingChecker,
     DunderChecker,
-    FailingChecker,
     NewArrayChecker,
+    RangeChecker,
     ResultChecker,
     ReversingChecker,
     UnsupportedChecker,
@@ -35,6 +34,13 @@ from guppylang.prelude._internal.compiler.array import (
     ArraySetitemCompiler,
     NewArrayCompiler,
 )
+from guppylang.prelude._internal.compiler.list import (
+    ListGetitemCompiler,
+    ListLengthCompiler,
+    ListPopCompiler,
+    ListPushCompiler,
+    ListSetitemCompiler,
+)
 from guppylang.prelude._internal.util import (
     float_op,
     int_op,
@@ -46,9 +52,9 @@ from guppylang.tys.builtin import (
     bool_type_def,
     float_type_def,
     int_type_def,
-    linst_type_def,
     list_type_def,
     nat_type_def,
+    sized_iter_type_def,
 )
 
 guppy.init_module(import_builtins=False)
@@ -57,13 +63,12 @@ T = guppy.type_var("T")
 L = guppy.type_var("L", linear=True)
 
 
-def py(*_args: Any) -> Any:
+def py(*args: Any) -> Any:
     """Function to tag compile-time evaluated Python expressions in a Guppy context.
 
-    This function throws an error when execute in a Python context. It is only intended
-    to be used inside Guppy functions.
+    This function acts like the identity when execute in a Python context.
     """
-    raise GuppyError("`py` can only by used in a Guppy context")
+    return tuple(args)
 
 
 class _Owned:
@@ -507,123 +512,35 @@ class Float:
 
 @guppy.extend_type(list_type_def)
 class List:
-    @guppy.hugr_op(unsupported_op("Append"))
-    def __add__(self: list[T], other: list[T]) -> list[T]: ...
+    @guppy.custom(ListGetitemCompiler())
+    def __getitem__(self: list[L], idx: int) -> L: ...
 
-    @guppy.hugr_op(unsupported_op("IsEmpty"))
-    def __bool__(self: list[T]) -> bool: ...
+    @guppy.custom(ListSetitemCompiler())
+    def __setitem__(self: list[L], idx: int, value: L @ owned) -> None: ...
 
-    @guppy.hugr_op(unsupported_op("Contains"))
-    def __contains__(self: list[T], el: T) -> bool: ...
-
-    @guppy.hugr_op(unsupported_op("AssertEmpty"))
-    def __end__(self: list[T]) -> None: ...
-
-    @guppy.hugr_op(unsupported_op("Lookup"))
-    def __getitem__(self: list[T], idx: int) -> T: ...
-
-    @guppy.hugr_op(unsupported_op("IsNotEmpty"))
-    def __hasnext__(self: list[T]) -> tuple[bool, list[T]]: ...
-
-    @guppy.custom(NoopCompiler())
-    def __iter__(self: list[T]) -> list[T]: ...
-
-    @guppy.hugr_op(unsupported_op("Length"))
-    def __len__(self: list[T]) -> int: ...
-
-    @guppy.hugr_op(unsupported_op("Repeat"))
-    def __mul__(self: list[T], other: int) -> list[T]: ...
-
-    @guppy.hugr_op(unsupported_op("Pop"))
-    def __next__(self: list[T]) -> tuple[T, list[T]]: ...
+    @guppy.custom(ListLengthCompiler())
+    def __len__(self: list[L]) -> int: ...
 
     @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
     def __new__(x): ...
 
-    @guppy.custom(checker=FailingChecker("Guppy lists are immutable"))
-    def __setitem__(self: list[T], idx: int, value: T) -> None: ...
+    @guppy.custom(NoopCompiler())  # TODO: define via Guppy source instead
+    def __iter__(self: list[L] @ owned) -> list[L]: ...
 
-    @guppy.hugr_op(unsupported_op("Append"), ReversingChecker())
-    def __radd__(self: list[T], other: list[T]) -> list[T]: ...
+    @guppy.hugr_op(unsupported_op("IsNotEmpty"))  # TODO
+    def __hasnext__(self: list[L] @ owned) -> tuple[bool, list[L]]: ...
 
-    @guppy.hugr_op(unsupported_op("Repeat"))
-    def __rmul__(self: list[T], other: int) -> list[T]: ...
+    @guppy.hugr_op(unsupported_op("AssertEmpty"))  # TODO
+    def __end__(self: list[L] @ owned) -> None: ...
 
-    @guppy.custom(checker=FailingChecker("Guppy lists are immutable"))
-    def append(self: list[T], elt: T) -> None: ...
+    @guppy.hugr_op(unsupported_op("pop"))
+    def __next__(self: list[L] @ owned) -> tuple[L, list[L]]: ...
 
-    @guppy.custom(checker=FailingChecker("Guppy lists are immutable"))
-    def clear(self: list[T]) -> None: ...
+    @guppy.custom(ListPushCompiler())
+    def append(self: list[L], item: L @ owned) -> None: ...
 
-    @guppy.custom(NoopCompiler())  # Can be noop since lists are immutable
-    def copy(self: list[T]) -> list[T]: ...
-
-    @guppy.hugr_op(unsupported_op("Count"))
-    def count(self: list[T], elt: T) -> int: ...
-
-    @guppy.custom(checker=FailingChecker("Guppy lists are immutable"))
-    def extend(self: list[T], seq: None) -> None: ...
-
-    @guppy.hugr_op(unsupported_op("Find"))
-    def index(self: list[T], elt: T) -> int: ...
-
-    @guppy.custom(checker=FailingChecker("Guppy lists are immutable"))
-    def pop(self: list[T], idx: int) -> None: ...
-
-    @guppy.custom(checker=FailingChecker("Guppy lists are immutable"))
-    def remove(self: list[T], elt: T) -> None: ...
-
-    @guppy.custom(checker=FailingChecker("Guppy lists are immutable"))
-    def reverse(self: list[T]) -> None: ...
-
-    @guppy.custom(checker=FailingChecker("Guppy lists are immutable"))
-    def sort(self: list[T]) -> None: ...
-
-
-linst = list
-
-
-@guppy.extend_type(linst_type_def)
-class Linst:
-    @guppy.hugr_op(unsupported_op("Append"))
-    def __add__(self: linst[L] @ owned, other: linst[L] @ owned) -> linst[L]: ...
-
-    @guppy.hugr_op(unsupported_op("AssertEmpty"))
-    def __end__(self: linst[L] @ owned) -> None: ...
-
-    @guppy.hugr_op(unsupported_op("IsNotEmpty"))
-    def __hasnext__(self: linst[L] @ owned) -> tuple[bool, linst[L]]: ...
-
-    @guppy.custom(NoopCompiler())
-    def __iter__(self: linst[L] @ owned) -> linst[L]: ...
-
-    @guppy.hugr_op(unsupported_op("Length"))
-    def __len__(self: linst[L] @ owned) -> tuple[int, linst[L]]: ...
-
-    @guppy.hugr_op(unsupported_op("Pop"))
-    def __next__(self: linst[L] @ owned) -> tuple[L, linst[L]]: ...
-
-
-#    @guppy.custom(builtins, checker=UnsupportedChecker(), higher_order_value=False)
-#    def __new__(x): ...
-#
-#    @guppy.hugr_op(builtins, unsupported_op("Append"), ReversingChecker())
-#    def __radd__(self: linst[L] @owned, other: linst[L] @owned) -> linst[L]: ...
-#
-#    @guppy.hugr_op(unsupported_op("Repeat"))
-#    def __rmul__(self: linst[L] @owned, other: int) -> linst[L]: ...
-#
-#    @guppy.hugr_op(unsupported_op("Push"))
-#    def append(self: linst[L] @owned, elt: L @owned) -> linst[L]: ...
-#
-#    @guppy.hugr_op(unsupported_op("PopAt"))
-#    def pop(self: linst[L] @owned, idx: int) -> tuple[L, linst[L]]: ...
-#
-#    @guppy.hugr_op(unsupported_op("Reverse"))
-#    def reverse(self: linst[L] @owned) -> linst[L]: ...
-#
-#    @guppy.custom(checker=FailingChecker("Guppy lists are immutable"))
-#    def sort(self: linst[T] @owned) -> None: ...
+    @guppy.custom(ListPopCompiler())
+    def pop(self: list[L]) -> L: ...
 
 
 n = guppy.nat_var("n")
@@ -638,10 +555,36 @@ class Array:
     def __setitem__(self: array[L, n], idx: int, value: L @ owned) -> None: ...
 
     @guppy.custom(checker=ArrayLenChecker())
-    def __len__(self: array[T, n]) -> int: ...
+    def __len__(self: array[L, n]) -> int: ...
 
     @guppy.custom(NewArrayCompiler(), NewArrayChecker(), higher_order_value=False)
     def __new__(): ...
+
+
+@guppy.extend_type(sized_iter_type_def)
+class SizedIter:
+    """A wrapper around an iterator type `T` promising that the iterator will yield
+    exactly `n` values.
+
+    Annotating an iterator with an incorrect size is undefined behaviour.
+    """
+
+    def __class_getitem__(cls, item: Any) -> type:
+        # Dummy implementation to allow subscripting of the `SizedIter` type in
+        # positions that are evaluated by the Python interpreter
+        return cls
+
+    @guppy.custom(NoopCompiler())
+    def __new__(iterator: L @ owned) -> "SizedIter[L, n]":  # type: ignore[type-arg]
+        """Casts an iterator into a `SizedIter`."""
+
+    @guppy.custom(NoopCompiler())
+    def unwrap_iter(self: "SizedIter[L, n]" @ owned) -> L:
+        """Extracts the actual iterator."""
+
+    @guppy.custom(NoopCompiler())
+    def __iter__(self: "SizedIter[L, n]" @ owned) -> L:
+        """Extracts the actual iterator."""
 
 
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.
@@ -854,43 +797,33 @@ def property(x): ...
 
 @guppy.struct
 class Range:
-    stop: int
-
-    @guppy
-    def __iter__(self: "Range") -> "RangeIter":
-        return RangeIter(0, self.stop)  # type: ignore[call-arg]
-
-
-@guppy.struct
-class RangeIter:
     next: int
     stop: int
 
     @guppy
-    def __iter__(self: "RangeIter") -> "RangeIter":
+    def __iter__(self: "Range") -> "Range":
         return self
 
     @guppy
-    def __hasnext__(self: "RangeIter") -> tuple[bool, "RangeIter"]:
+    def __hasnext__(self: "Range") -> tuple[bool, "Range"]:
         return (self.next < self.stop, self)
 
     @guppy
-    def __next__(self: "RangeIter") -> tuple[int, "RangeIter"]:
+    def __next__(self: "Range") -> tuple[int, "Range"]:
         # Fine not to check bounds while we can only be called from inside a `for` loop.
         # if self.start >= self.stop:
         #    raise StopIteration
-        return (self.next, RangeIter(self.next + 1, self.stop))  # type: ignore[call-arg]
+        return (self.next, Range(self.next + 1, self.stop))  # type: ignore[call-arg]
 
     @guppy
-    def __end__(self: "RangeIter") -> None:
+    def __end__(self: "Range") -> None:
         pass
 
 
-@guppy
+@guppy.custom(checker=RangeChecker(), higher_order_value=False)
 def range(stop: int) -> Range:
     """Limited version of python range().
     Only a single argument (stop/limit) is supported."""
-    return Range(stop)  # type: ignore[call-arg]
 
 
 @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)

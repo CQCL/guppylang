@@ -185,7 +185,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self.dfg[node.place]
 
     def visit_GlobalName(self, node: GlobalName) -> Wire:
-        defn = self.globals[node.def_id]
+        defn = self.globals.build_compiled_def(node.def_id)
         assert isinstance(defn, CompiledValueDef)
         if isinstance(defn, CompiledCallableDef) and defn.ty.parametrized:
             raise GuppyError(
@@ -212,7 +212,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         inputs = [self.visit(e) for e in node.elts]
         list_ty = get_type(node)
         elem_ty = get_element_type(list_ty)
-        return list_new(self.builder, elem_ty.to_hugr(), inputs)[0]
+        return list_new(self.builder, elem_ty.to_hugr(), inputs)
 
     def _unpack_tuple(self, wire: Wire, types: Sequence[Type]) -> Sequence[Wire]:
         """Add a tuple unpack operation to the graph"""
@@ -334,7 +334,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
     def visit_GlobalCall(self, node: GlobalCall) -> Wire:
-        func = self.globals[node.def_id]
+        func = self.globals.build_compiled_def(node.def_id)
         assert isinstance(func, CompiledCallableDef)
 
         args = [self.visit(arg) for arg in node.args]
@@ -368,7 +368,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # For now, we can only TypeApply global FunctionDefs/Decls.
         if not isinstance(node.value, GlobalName):
             raise InternalGuppyError("Dynamic TypeApply not supported yet!")
-        defn = self.globals[node.value.def_id]
+        defn = self.globals.build_compiled_def(node.value.def_id)
         assert isinstance(defn, CompiledCallableDef)
 
         # We have to be very careful here: If we instantiate `foo: forall T. T -> T`
@@ -461,7 +461,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         elem_ty = get_element_type(list_ty)
         list_place = Variable(next(tmp_vars), list_ty, node)
         list_name = with_type(list_ty, with_loc(node, PlaceNode(place=list_place)))
-        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])[0]
+        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])
 
         def compile_generators(elt: ast.expr, gens: list[DesugaredGenerator]) -> None:
             """Helper function to generate nested TailLoop nodes for generators"""
@@ -469,9 +469,16 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             if not gens:
                 list_port, elt_port = self.visit(list_name), self.visit(elt)
                 elt_ty = get_type(elt)
-                push = self.builder.add_op(
-                    list_push(elt_ty.to_hugr()), list_port, elt_port
-                )
+                if elt_ty.linear:
+                    elt_ty_opt = ht.Option(elt_ty.to_hugr())
+                    elt_opt_port = self.builder.add_op(ops.Tag(1, elt_ty_opt), elt_port)
+                    push = self.builder.add_op(
+                        list_push(elt_ty_opt), list_port, elt_opt_port
+                    )
+                else:
+                    push = self.builder.add_op(
+                        list_push(elt_ty.to_hugr()), list_port, elt_port
+                    )
                 self.dfg[list_place] = push
                 return
 
@@ -554,7 +561,9 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
             if doesnt_contain_none(vs):
                 return ListVal(vs, get_element_type(exp_ty).to_hugr())
         case _:
-            # Pytket conversion is an optional feature
+            # TODO replace with hugr protocol handling: https://github.com/CQCL/guppylang/issues/563
+            # Pytket conversion is an experimental feature
+            # if pytket and tket2 are installed
             try:
                 import pytket
 

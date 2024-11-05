@@ -159,6 +159,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                     f"`{subscript.parent.ty}` is not allowed in `@owned` position",
                     node,
                 )
+            self.visit(subscript.item_expr)
             self.scope.assign(subscript.item)
             # Visiting the `__getitem__(place.parent, place.item)` call ensures that we
             # linearity-check the parent and element.

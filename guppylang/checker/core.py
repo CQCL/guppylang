@@ -26,10 +26,10 @@ from guppylang.tys.builtin import (
     callable_type_def,
     float_type_def,
     int_type_def,
-    linst_type_def,
     list_type_def,
     nat_type_def,
     none_type_def,
+    sized_iter_type_def,
     tuple_type_def,
 )
 from guppylang.tys.ty import (
@@ -222,8 +222,8 @@ class Globals:
             int_type_def,
             float_type_def,
             list_type_def,
-            linst_type_def,
             array_type_def,
+            sized_iter_type_def,
         ]
         defs = {defn.id: defn for defn in builtins}
         names = {defn.name: defn.id for defn in builtins}
@@ -269,6 +269,11 @@ class Globals:
             if isinstance(defn, CallableDef):
                 return defn
         return None
+
+    def with_python_scope(self, python_scope: PyScope) -> "Globals":
+        return Globals(
+            self.defs, self.names, self.impls, self.python_scope | python_scope
+        )
 
     def __or__(self, other: "Globals") -> "Globals":
         impls = {

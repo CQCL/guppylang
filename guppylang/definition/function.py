@@ -9,6 +9,7 @@ import hugr.build.function as hf
 import hugr.tys as ht
 from hugr import Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
+from hugr.package import FuncDefnPointer
 
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
@@ -56,7 +57,7 @@ class RawFunctionDef(ParsableDef):
     def parse(self, globals: Globals) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func)
-        ty = check_signature(func_ast, globals)
+        ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
         if ty.parametrized:
             raise GuppyError(
                 "Generic function definitions are not supported yet", func_ast
@@ -64,6 +65,11 @@ class RawFunctionDef(ParsableDef):
         return ParsedFunctionDef(
             self.id, self.name, func_ast, ty, self.python_scope, docstring
         )
+
+    def compile(self) -> FuncDefnPointer:
+        from guppylang.decorator import guppy
+
+        return guppy.compile_function(self)
 
 
 @dataclass(frozen=True)
@@ -92,7 +98,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
     def check(self, globals: Globals) -> "CheckedFunctionDef":
         """Type checks the body of the function."""
         # Add python variable scope to the globals
-        globals = globals | Globals({}, {}, {}, self.python_scope)
+        globals = globals.with_python_scope(self.python_scope)
         cfg = check_global_func_def(self.defined_at, self.ty, globals)
         return CheckedFunctionDef(
             self.id,

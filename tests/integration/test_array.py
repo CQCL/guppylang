@@ -20,7 +20,25 @@ def test_len(validate):
     package = module.compile()
     validate(package)
 
-    hg = package.modules[0]
+    hg = package.module
+    [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
+    assert isinstance(val, ops.Const)
+    assert isinstance(val.val, IntVal)
+    assert val.val.v == 42
+
+
+def test_len_linear(validate):
+    module = GuppyModule("test")
+    module.load(qubit)
+
+    @guppy(module)
+    def main(qs: array[qubit, 42]) -> int:
+        return len(qs)
+
+    package = module.compile()
+    validate(package)
+
+    hg = package.module
     [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(val, ops.Const)
     assert isinstance(val.val, IntVal)
@@ -59,6 +77,18 @@ def test_new_array_infer_nested(validate):
         return xs
 
     validate(main)
+
+
+def test_return_linear_array(validate):
+    module = GuppyModule("test")
+    module.load(qubit)
+
+    @guppy(module)
+    def foo() -> array[qubit, 2]:
+        a = array(qubit(), qubit())
+        return a
+
+    validate(module.compile())
 
 
 def test_subscript_drop_rest(validate):

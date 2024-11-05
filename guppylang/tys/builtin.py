@@ -103,28 +103,7 @@ class _NumericTypeDef(TypeDef):
 class _ListTypeDef(OpaqueTypeDef):
     """Type definition associated with the builtin `list` type.
 
-    We have a custom definition to give a nicer error message if the user tries to put
-    linear data into a regular list.
-    """
-
-    def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
-    ) -> OpaqueType:
-        check_lists_enabled(loc)
-        if len(args) == 1:
-            [arg] = args
-            if isinstance(arg, TypeArg) and arg.ty.linear:
-                raise GuppyError(
-                    "Type `list` cannot store linear data, use `linst` instead", loc
-                )
-        return super().check_instantiate(args, globals, loc)
-
-
-@dataclass(frozen=True)
-class _LinstTypeDef(OpaqueTypeDef):
-    """Type definition associated with the builtin `linst` type.
-
-    We have a custom definition to disable usage of linsts unless experimental features
+    We have a custom definition to disable usage of lists unless experimental features
     are enabled.
     """
 
@@ -139,7 +118,10 @@ def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # Type checker ensures that we get a single arg of kind type
     [arg] = args
     assert isinstance(arg, TypeArg)
-    return hugr.std.collections.list_type(arg.ty.to_hugr())
+    # Linear elements are turned into an optional to enable unsafe indexing.
+    # See `ListGetitemCompiler` for details.
+    elem_ty = ht.Option(arg.ty.to_hugr()) if arg.ty.linear else arg.ty.to_hugr()
+    return hugr.std.collections.list_type(elem_ty)
 
 
 def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
@@ -150,14 +132,19 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
 
     # Linear elements are turned into an optional to enable unsafe indexing.
     # See `ArrayGetitemCompiler` for details.
-    elem_ty: ht.Type
-    if ty_arg.ty.linear:
-        elem_ty = ht.Sum([[ty_arg.ty.to_hugr()], []])
-    else:
-        elem_ty = ty_arg.ty.to_hugr()
+    elem_ty = (
+        ht.Option(ty_arg.ty.to_hugr()) if ty_arg.ty.linear else ty_arg.ty.to_hugr()
+    )
 
     array = hugr.std.PRELUDE.get_type("array")
     return array.instantiate([len_arg.to_hugr(), ht.TypeTypeArg(elem_ty)])
+
+
+def _sized_iter_to_hugr(args: Sequence[Argument]) -> ht.Type:
+    [ty_arg, len_arg] = args
+    assert isinstance(ty_arg, TypeArg)
+    assert isinstance(len_arg, ConstArg)
+    return ty_arg.ty.to_hugr()
 
 
 callable_type_def = CallableTypeDef(DefId.fresh(), None)
@@ -180,19 +167,11 @@ int_type_def = _NumericTypeDef(
 float_type_def = _NumericTypeDef(
     DefId.fresh(), "float", None, NumericType(NumericType.Kind.Float)
 )
-linst_type_def = _LinstTypeDef(
-    id=DefId.fresh(),
-    name="linst",
-    defined_at=None,
-    params=[TypeParam(0, "T", can_be_linear=True)],
-    always_linear=False,
-    to_hugr=_list_to_hugr,
-)
 list_type_def = _ListTypeDef(
     id=DefId.fresh(),
     name="list",
     defined_at=None,
-    params=[TypeParam(0, "T", can_be_linear=False)],
+    params=[TypeParam(0, "T", can_be_linear=True)],
     always_linear=False,
     to_hugr=_list_to_hugr,
 )
@@ -206,6 +185,17 @@ array_type_def = OpaqueTypeDef(
     ],
     always_linear=False,
     to_hugr=_array_to_hugr,
+)
+sized_iter_type_def = OpaqueTypeDef(
+    id=DefId.fresh(),
+    name="SizedIter",
+    defined_at=None,
+    params=[
+        TypeParam(0, "T", can_be_linear=True),
+        ConstParam(1, "n", NumericType(NumericType.Kind.Nat)),
+    ],
+    always_linear=False,
+    to_hugr=_sized_iter_to_hugr,
 )
 
 
@@ -221,14 +211,17 @@ def list_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], list_type_def)
 
 
-def linst_type(element_ty: Type) -> OpaqueType:
-    return OpaqueType([TypeArg(element_ty)], linst_type_def)
-
-
 def array_type(element_ty: Type, length: int) -> OpaqueType:
     nat_type = NumericType(NumericType.Kind.Nat)
     return OpaqueType(
         [TypeArg(element_ty), ConstArg(ConstValue(nat_type, length))], array_type_def
+    )
+
+
+def sized_iter_type(iter_type: Type, size: int) -> OpaqueType:
+    nat_type = NumericType(NumericType.Kind.Nat)
+    return OpaqueType(
+        [TypeArg(iter_type), ConstArg(ConstValue(nat_type, size))], sized_iter_type_def
     )
 
 
@@ -240,17 +233,27 @@ def is_list_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == list_type_def
 
 
-def is_linst_type(ty: Type) -> bool:
-    return isinstance(ty, OpaqueType) and ty.defn == linst_type_def
-
-
 def is_array_type(ty: Type) -> TypeGuard[OpaqueType]:
     return isinstance(ty, OpaqueType) and ty.defn == array_type_def
 
 
+def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
+    return isinstance(ty, OpaqueType) and ty.defn == sized_iter_type_def
+
+
 def get_element_type(ty: Type) -> Type:
     assert isinstance(ty, OpaqueType)
-    assert ty.defn in (list_type_def, linst_type_def)
+    assert ty.defn == list_type_def
     (arg,) = ty.args
     assert isinstance(arg, TypeArg)
     return arg.ty
+
+
+def get_iter_size(ty: Type) -> int:
+    assert isinstance(ty, OpaqueType)
+    assert ty.defn == sized_iter_type_def
+    match ty.args:
+        case [_, ConstArg(ConstValue(value=int(size)))]:
+            return size
+        case _:
+            raise InternalGuppyError("Unexpected type args")

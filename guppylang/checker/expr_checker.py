@@ -81,9 +81,7 @@ from guppylang.tys.builtin import (
     bool_type,
     get_element_type,
     is_bool_type,
-    is_linst_type,
     is_list_type,
-    linst_type,
     list_type,
 )
 from guppylang.tys.param import TypeParam
@@ -216,7 +214,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
     def visit_List(self, node: ast.List, ty: Type) -> tuple[ast.expr, Subst]:
         check_lists_enabled(node)
-        if not is_list_type(ty) and not is_linst_type(ty):
+        if not is_list_type(ty):
             return self._fail(ty, node)
         el_ty = get_element_type(ty)
         subst: Subst = {}
@@ -228,12 +226,12 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
     def visit_DesugaredListComp(
         self, node: DesugaredListComp, ty: Type
     ) -> tuple[ast.expr, Subst]:
-        if not is_list_type(ty) and not is_linst_type(ty):
+        if not is_list_type(ty):
             return self._fail(ty, node)
         node, elt_ty = synthesize_comprehension(node, node.generators, self.ctx)
         subst = unify(get_element_type(ty), elt_ty, {})
         if subst is None:
-            actual = linst_type(elt_ty) if elt_ty.linear else list_type(elt_ty)
+            actual = list_type(elt_ty)
             return self._fail(ty, actual, node)
         return node, subst
 
@@ -445,11 +443,11 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             )
         node.elts[0], el_ty = self.synthesize(node.elts[0])
         node.elts[1:] = [self._check(el, el_ty)[0] for el in node.elts[1:]]
-        return node, linst_type(el_ty) if el_ty.linear else list_type(el_ty)
+        return node, list_type(el_ty)
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> tuple[ast.expr, Type]:
         node, elt_ty = synthesize_comprehension(node, node.generators, self.ctx)
-        result_ty = linst_type(elt_ty) if elt_ty.linear else list_type(elt_ty)
+        result_ty = list_type(elt_ty)
         return node, result_ty
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> tuple[ast.expr, Type]:
@@ -1111,7 +1109,8 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
         case list():
             return _python_list_to_guppy_type(v, node, globals)
         case _:
-            # Pytket conversion is an optional feature
+            # Pytket conversion is an experimental feature
+            # if pytket and tket2 are installed
             try:
                 import pytket
 
@@ -1129,8 +1128,8 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
                         )
                     except ImportError:
                         raise GuppyError(
-                            "Pytket compatibility requires `tket2` to be installed. "
-                            "See https://github.com/CQCL/tket2/tree/main/tket2-py",
+                            "Experimental pytket compatibility requires `tket2` to be"
+                            " installed. See https://github.com/CQCL/tket2/tree/main/tket2-py",
                             node,
                         ) from None
             except ImportError:

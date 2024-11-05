@@ -3,13 +3,13 @@ import inspect
 from collections.abc import Callable, KeysView
 from dataclasses import dataclass, field
 from pathlib import Path
-from types import FrameType, ModuleType
-from typing import Any, TypeVar, overload
+from types import ModuleType
+from typing import Any, TypeVar, cast, overload
 
-import hugr.ext
 from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
+from hugr.package import FuncDefnPointer, ModulePointer
 
 import guppylang
 from guppylang.ast_util import annotate_location, has_empty_body
@@ -25,7 +25,11 @@ from guppylang.definition.custom import (
 )
 from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.extern import RawExternDef
-from guppylang.definition.function import RawFunctionDef, parse_py_func
+from guppylang.definition.function import (
+    CompiledFunctionDef,
+    RawFunctionDef,
+    parse_py_func,
+)
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
@@ -36,6 +40,8 @@ from guppylang.module import (
     PyClass,
     PyFunc,
     find_guppy_module_in_py_module,
+    get_calling_frame,
+    sphinx_running,
 )
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
@@ -233,8 +239,14 @@ class _Guppy:
         )
         implicit_module._instance_func_buffer = {}
 
+        # Extract Python scope from the frame that called `guppy.struct`
+        frame = get_calling_frame()
+        python_scope = frame.f_globals | frame.f_locals if frame else {}
+
         def dec(cls: type, module: GuppyModule) -> RawStructDef:
-            defn = RawStructDef(DefId.fresh(module), cls.__name__, None, cls)
+            defn = RawStructDef(
+                DefId.fresh(module), cls.__name__, None, cls, python_scope
+            )
             module.register_def(defn)
             module._register_buffered_instance_funcs(defn)
             # If we mistakenly initialised the method buffer of the implicit module
@@ -417,8 +429,8 @@ class _Guppy:
                 module.load(**defs)
         return module
 
-    def compile_module(self, id: ModuleIdentifier | None = None) -> hugr.ext.Package:
-        """Compiles the local module into a Hugr."""
+    def compile_module(self, id: ModuleIdentifier | None = None) -> ModulePointer:
+        """Compiles the xlocal module into a Hugr."""
         module = self.get_module(id)
         if not module:
             err = (
@@ -429,12 +441,77 @@ class _Guppy:
             raise MissingModuleError(err)
         return module.compile()
 
+    def compile_function(self, f_def: RawFunctionDef) -> FuncDefnPointer:
+        """Compiles a single function definition."""
+        module = f_def.id.module
+        if not module:
+            raise GuppyError("Function definition must belong to a module")
+        compiled_module = module.compile()
+        assert module._compiled is not None, "Module should be compiled"
+        globs = module._compiled.globs
+        assert globs is not None
+        compiled_def = globs.build_compiled_def(f_def.id)
+        assert isinstance(compiled_def, CompiledFunctionDef)
+        node = compiled_def.func_def.parent_node
+        return FuncDefnPointer(
+            compiled_module.package, compiled_module.module_index, node
+        )
+
     def registered_modules(self) -> KeysView[ModuleIdentifier]:
         """Returns a list of all currently registered modules for local contexts."""
         return self._modules.keys()
 
 
-guppy = _Guppy()
+class _GuppyDummy:
+    """A dummy class with the same interface as `@guppy` that is used during sphinx
+    builds to mock the decorator.
+    """
+
+    def __call__(self, arg: PyFunc | GuppyModule) -> Any:
+        if isinstance(arg, GuppyModule):
+            return lambda f: f
+        return arg
+
+    def init_module(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def extend_type(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def type(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def struct(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def type_var(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def nat_var(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def custom(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda f: f
+
+    def hugr_op(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda f: f
+
+    def declare(self, arg: PyFunc | GuppyModule) -> Any:
+        if isinstance(arg, GuppyModule):
+            return lambda f: f
+        return arg
+
+    def constant(self, *args: Any, **kwargs: Any) -> Any:
+        return None
+
+    def extern(self, *args: Any, **kwargs: Any) -> Any:
+        return None
+
+    def load(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+
+guppy = cast(_Guppy, _GuppyDummy()) if sphinx_running() else _Guppy()
 
 
 def _parse_expr_string(ty_str: str, parse_err: str) -> ast.expr:
@@ -450,7 +527,7 @@ def _parse_expr_string(ty_str: str, parse_err: str) -> ast.expr:
 
     # Try to annotate the type AST with source information. This requires us to
     # inspect the stack frame of the caller
-    if caller_frame := _get_calling_frame():
+    if caller_frame := get_calling_frame():
         info = inspect.getframeinfo(caller_frame)
         if caller_module := inspect.getmodule(caller_frame):
             source_lines, _ = inspect.getsourcelines(caller_module)
@@ -463,16 +540,3 @@ def _parse_expr_string(ty_str: str, parse_err: str) -> ast.expr:
                 node.lineno, node.col_offset = info.lineno, 0
                 node.end_col_offset = len(source_lines[info.lineno - 1])
     return expr_ast
-
-
-def _get_calling_frame() -> FrameType | None:
-    """Finds the first frame that called this function outside the current module."""
-    frame = inspect.currentframe()
-    while frame:
-        module = inspect.getmodule(frame)
-        if module is None:
-            break
-        if module.__file__ != __file__:
-            return frame
-        frame = frame.f_back
-    return None

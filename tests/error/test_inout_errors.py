@@ -15,5 +15,5 @@ files = [str(f) for f in files]
 
 
 @pytest.mark.parametrize("file", files)
-def test_inout_errors(file, capsys):
-    run_error_test(file, capsys)
+def test_inout_errors(file, capsys, snapshot):
+    run_error_test(file, capsys, snapshot)

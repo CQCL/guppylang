@@ -17,7 +17,7 @@ def test_basic(validate):
     def foo(q: qubit) -> None: ...
 
     @guppy(module)
-    def test(q: qubit @owned) -> qubit:
+    def test(q: qubit @ owned) -> qubit:
         foo(q)
         return q
 
@@ -29,10 +29,10 @@ def test_mixed(validate):
     module.load_all(quantum)
 
     @guppy.declare(module)
-    def foo(q1: qubit, q2: qubit @owned) -> qubit: ...
+    def foo(q1: qubit, q2: qubit @ owned) -> qubit: ...
 
     @guppy(module)
-    def test(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]:
+    def test(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]:
         q2 = foo(q1, q2)
         return q1, q2
 
@@ -47,7 +47,7 @@ def test_local(validate):
     def foo(q: qubit) -> None: ...
 
     @guppy(module)
-    def test(q: qubit @owned) -> qubit:
+    def test(q: qubit @ owned) -> qubit:
         f = foo
         f(q)
         return q
@@ -63,7 +63,7 @@ def test_nested_calls(validate):
     def foo(x: int, q: qubit) -> int: ...
 
     @guppy(module)
-    def test(q: qubit @owned) -> tuple[int, qubit]:
+    def test(q: qubit @ owned) -> tuple[int, qubit]:
         # This is legal since function arguments and tuples are evaluated left to right
         return foo(foo(foo(0, q), q), q), q
 
@@ -86,13 +86,13 @@ def test_struct(validate):
     def bar(a: MyStruct) -> None: ...
 
     @guppy(module)
-    def test1(a: MyStruct @owned) -> MyStruct:
+    def test1(a: MyStruct @ owned) -> MyStruct:
         foo(a.q1, a.q2)
         bar(a)
         return a
 
     @guppy(module)
-    def test2(a: MyStruct @owned) -> MyStruct:
+    def test2(a: MyStruct @ owned) -> MyStruct:
         bar(a)
         foo(a.q1, a.q2)
         bar(a)
@@ -112,7 +112,7 @@ def test_control_flow(validate):
     def bar(q: qubit) -> bool: ...
 
     @guppy(module)
-    def test(q1: qubit @owned, q2: qubit @owned, n: int) -> tuple[qubit, qubit]:
+    def test(q1: qubit @ owned, q2: qubit @ owned, n: int) -> tuple[qubit, qubit]:
         i = 0
         while i < n:
             foo(q1)
@@ -162,13 +162,15 @@ def test_tensor(validate):
     def foo(a: A, x: int) -> None: ...
 
     @guppy.declare(module)
-    def bar(y: float, b: B, c: C @owned) -> C: ...
+    def bar(y: float, b: B, c: C @ owned) -> C: ...
 
     @guppy.declare(module)
     def baz(c: C) -> None: ...
 
     @guppy(module)
-    def test(a: A @owned, b: B @owned, c1: C @owned, c2: C @owned, x: bool) -> tuple[A, B, C, C]:
+    def test(
+        a: A @ owned, b: B @ owned, c1: C @ owned, c2: C @ owned, x: bool
+    ) -> tuple[A, B, C, C]:
         c1 = (foo, bar, baz)(a, b.x, c1.x, b, c1, c2)
         if x:
             c1 = ((foo, bar), baz)(a, b.x, c1.x, b, c1, c2)
@@ -191,7 +193,7 @@ def test_basic_def(validate):
         h(q)
 
     @guppy(module)
-    def test(q: qubit @owned) -> qubit:
+    def test(q: qubit @ owned) -> qubit:
         foo(q)
         foo(q)
         return q
@@ -208,7 +210,7 @@ def test_empty_def(validate):
         pass
 
     @guppy(module)
-    def main(q: qubit @owned) -> qubit:
+    def main(q: qubit @ owned) -> qubit:
         test(q)
         return q
 
@@ -224,7 +226,7 @@ def test_mixed_def(validate):
 
     @guppy(module)
     def test(
-        b: int, c: qubit, d: float, a: tuple[qubit, qubit], e: qubit @owned
+        b: int, c: qubit, d: float, a: tuple[qubit, qubit], e: qubit @ owned
     ) -> tuple[qubit, float]:
         foo(c)
         return e, b + d
@@ -241,7 +243,7 @@ def test_move_back(validate):
         q: qubit
 
     @guppy.declare(module)
-    def use(q: qubit @owned) -> None: ...
+    def use(q: qubit @ owned) -> None: ...
 
     @guppy(module)
     def foo(s: MyStruct) -> None:
@@ -257,7 +259,7 @@ def test_move_back(validate):
         s.q, t.q = t.q, s.q
 
     @guppy(module)
-    def main(s: MyStruct @owned, t: MyStruct @owned) -> MyStruct:
+    def main(s: MyStruct @ owned, t: MyStruct @ owned) -> MyStruct:
         foo(s)
         swap(s, t)
         bar(t)
@@ -276,10 +278,12 @@ def test_move_back_branch(validate):
         q: qubit
 
     @guppy.declare(module)
-    def use(q: qubit @owned) -> None: ...
+    def use(q: qubit @ owned) -> None: ...
 
     @guppy(module)
-    def test(s: MyStruct, b: bool, n: int, q1: qubit @owned, q2: qubit @owned) -> None:
+    def test(
+        s: MyStruct, b: bool, n: int, q1: qubit @ owned, q2: qubit @ owned
+    ) -> None:
         use(s.q)
         if b:
             s.q = q1
@@ -299,7 +303,7 @@ def test_move_back_branch(validate):
         return
 
     @guppy(module)
-    def main(s: MyStruct @owned) -> MyStruct:
+    def main(s: MyStruct @ owned) -> MyStruct:
         test(s, False, 5, qubit(), qubit())
         return s
 
@@ -325,6 +329,7 @@ def test_self(validate):
 
     validate(module.compile())
 
+
 def test_subtype(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
@@ -340,6 +345,7 @@ def test_subtype(validate):
 
     validate(module.compile())
 
+
 def test_shadow_check(validate):
     module = GuppyModule("test")
 
@@ -352,5 +358,22 @@ def test_shadow_check(validate):
     def main(i: qubit) -> None:
         if True:
             foo(i)
+
+    validate(module.compile())
+
+
+def test_self_qubit(validate):
+    module = GuppyModule("test")
+    module.load(qubit)
+
+    @guppy(module)
+    def test() -> bool:
+        q0 = qubit()
+
+        result = q0.measure_reset()
+        q0.measure_return()
+        q0.measure()
+        qubit().discard()
+        return result
 
     validate(module.compile())

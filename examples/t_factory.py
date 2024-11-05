@@ -2,7 +2,7 @@ import numpy as np
 
 from guppylang.decorator import guppy
 from guppylang.prelude.angles import angle, pi
-from guppylang.prelude.builtins import linst, owned, py
+from guppylang.prelude.builtins import owned, py
 from guppylang.prelude.quantum import (
     discard,
     measure,
@@ -58,7 +58,7 @@ def distill(
 
 
 @guppy
-def t_state(timeout: int) -> tuple[linst[qubit], bool]:
+def t_state(timeout: int) -> tuple[list[qubit], bool]:
     """Create a T state using magic state distillation with `timeout` attempts.
 
     On success returns a singleton `linst` containing a qubit in a magic T state

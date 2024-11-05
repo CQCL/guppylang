@@ -1,6 +1,7 @@
 import ast
+from typing import cast
 
-from guppylang.ast_util import AstNode, with_loc
+from guppylang.ast_util import AstNode, with_loc, with_type
 from guppylang.checker.core import Context
 from guppylang.checker.expr_checker import (
     ExprChecker,
@@ -15,6 +16,7 @@ from guppylang.definition.custom import (
     CustomFunctionDef,
     DefaultCallChecker,
 )
+from guppylang.definition.struct import CheckedStructDef, RawStructDef
 from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import GlobalCall, ResultExpr
@@ -25,6 +27,7 @@ from guppylang.tys.builtin import (
     int_type,
     is_array_type,
     is_bool_type,
+    sized_iter_type,
 )
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.subst import Inst, Subst
@@ -32,6 +35,7 @@ from guppylang.tys.ty import (
     FunctionType,
     NoneType,
     NumericType,
+    StructType,
     Type,
     unify,
 )
@@ -233,6 +237,10 @@ class NewArrayChecker(CustomCallChecker):
                 raise InternalGuppyError(f"Invalid array type args: {type_args}")
 
 
+#: Maximum length of a tag in the `result` function.
+TAG_MAX_LEN = 200
+
+
 class ResultChecker(CustomCallChecker):
     """Call checker for the `result` function."""
 
@@ -241,6 +249,10 @@ class ResultChecker(CustomCallChecker):
         [tag, value] = args
         if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
             raise GuppyTypeError("Expected a string literal", tag)
+        if len(tag.value.encode("utf-8")) > TAG_MAX_LEN:
+            raise GuppyTypeError(
+                f"Tag is too long, limited to {TAG_MAX_LEN} bytes", tag
+            )
         value, ty = ExprSynthesizer(self.ctx).synthesize(value)
         # We only allow numeric values or vectors of numeric values
         err = (
@@ -271,3 +283,41 @@ class ResultChecker(CustomCallChecker):
     @staticmethod
     def _is_numeric_or_bool_type(ty: Type) -> bool:
         return isinstance(ty, NumericType) or is_bool_type(ty)
+
+
+class RangeChecker(CustomCallChecker):
+    """Call checker for the `range` function."""
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        check_num_args(1, len(args), self.node)
+        [stop] = args
+        stop, _ = ExprChecker(self.ctx).check(stop, int_type(), "argument")
+        range_iter, range_ty = self.make_range(stop)
+        if isinstance(stop, ast.Constant):
+            return to_sized_iter(range_iter, range_ty, stop.value, self.ctx)
+        return range_iter, range_ty
+
+    def range_ty(self) -> StructType:
+        from guppylang.prelude.builtins import Range
+
+        def_id = cast(RawStructDef, Range).id
+        range_type_def = self.ctx.globals.defs[def_id]
+        assert isinstance(range_type_def, CheckedStructDef)
+        return StructType([], range_type_def)
+
+    def make_range(self, stop: ast.expr) -> tuple[ast.expr, Type]:
+        make_range = self.ctx.globals.get_instance_func(self.range_ty(), "__new__")
+        assert make_range is not None
+        start = with_type(int_type(), with_loc(self.node, ast.Constant(value=0)))
+        return make_range.synthesize_call([start, stop], self.node, self.ctx)
+
+
+def to_sized_iter(
+    iterator: ast.expr, range_ty: Type, size: int, ctx: Context
+) -> tuple[ast.expr, Type]:
+    """Adds a static size annotation to an iterator."""
+    sized_iter_ty = sized_iter_type(range_ty, size)
+    make_sized_iter = ctx.globals.get_instance_func(sized_iter_ty, "__new__")
+    assert make_sized_iter is not None
+    sized_iter, _ = make_sized_iter.check_call([iterator], sized_iter_ty, iterator, ctx)
+    return sized_iter, sized_iter_ty

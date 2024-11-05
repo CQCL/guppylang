@@ -6,7 +6,7 @@ import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import py
+from guppylang.prelude.builtins import py, array
 from guppylang.prelude import quantum
 from guppylang.prelude.quantum import qubit
 from tests.util import compile_guppy
@@ -166,3 +166,23 @@ def test_pytket_measure(validate):
         return py(circ)(q)
 
     validate(module.compile())
+
+
+def test_func_type_arg(validate):
+    module = GuppyModule("test")
+    n = 10
+
+    @guppy(module)
+    def foo(xs: array[int, py(n)]) -> array[int, py(n)]:
+        return xs
+
+    @guppy.declare(module)
+    def bar(xs: array[int, py(n)]) -> array[int, py(n)]: ...
+
+    @guppy.struct(module)
+    class Baz:
+        xs: array[int, py(n)]
+
+    validate(module.compile())
+
+

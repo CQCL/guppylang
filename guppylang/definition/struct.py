@@ -8,7 +8,7 @@ from typing import Any
 from hugr import Wire, ops
 
 from guppylang.ast_util import AstNode, annotate_location
-from guppylang.checker.core import Globals
+from guppylang.checker.core import Globals, PyScope
 from guppylang.definition.common import (
     CheckableDef,
     CompiledDef,
@@ -52,6 +52,7 @@ class RawStructDef(TypeDef, ParsableDef):
     """A raw struct type definition that has not been parsed yet."""
 
     python_class: type
+    python_scope: PyScope
 
     def __getitem__(self, item: Any) -> "RawStructDef":
         """Dummy implementation to enable subscripting in the Python runtime.
@@ -131,7 +132,9 @@ class RawStructDef(TypeDef, ParsableDef):
                 used_func_names[x],
             )
 
-        return ParsedStructDef(self.id, self.name, cls_def, params, fields)
+        return ParsedStructDef(
+            self.id, self.name, cls_def, params, fields, self.python_scope
+        )
 
     def check_instantiate(
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
@@ -146,12 +149,14 @@ class ParsedStructDef(TypeDef, CheckableDef):
     defined_at: ast.ClassDef
     params: Sequence[Parameter]
     fields: Sequence[UncheckedStructField]
+    python_scope: PyScope
 
     def check(self, globals: Globals) -> "CheckedStructDef":
         """Checks that all struct fields have valid types."""
         # Before checking the fields, make sure that this definition is not recursive,
         # otherwise the code below would not terminate.
         # TODO: This is not ideal (see todo in `check_instantiate`)
+        globals = globals.with_python_scope(self.python_scope)
         check_not_recursive(self, globals)
 
         param_var_mapping = {p.name: p for p in self.params}
