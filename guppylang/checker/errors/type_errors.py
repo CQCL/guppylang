@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from guppylang.diagnostic import Error, Help, Note
-from guppylang.tys.const import Const
-from guppylang.tys.ty import FunctionType, Type
+
+if TYPE_CHECKING:
+    from guppylang.definition.struct import StructField
+    from guppylang.tys.const import Const
+    from guppylang.tys.ty import FunctionType, Type
 
 
 @dataclass(frozen=True)
@@ -31,6 +36,17 @@ class TypeMismatchError(Error):
         )
         param: str
         illegal_inst: Type | Const
+
+
+@dataclass(frozen=True)
+class AssignFieldTypeMismatchError(Error):
+    title: ClassVar[str] = "Type mismatch"
+    span_label: ClassVar[str] = (
+        "Cannot assign expression of type `{actual}` to field `{field.name}` of type "
+        "`{field.ty}`"
+    )
+    actual: Type
+    field: StructField
 
 
 @dataclass(frozen=True)
@@ -140,3 +156,32 @@ class WrongNumberOfArgsError(Error):
     class SignatureHint(Note):
         message: ClassVar[str] = "Function signature is `{sig}`"
         sig: FunctionType
+
+
+@dataclass(frozen=True)
+class WrongNumberOfUnpacksError(Error):
+    title: ClassVar[str] = "{prefix} values to unpack"
+    expected: int
+    actual: int
+
+    @property
+    def prefix(self) -> str:
+        return "Not enough" if self.expected > self.actual else "Too many"
+
+    @property
+    def rendered_span_label(self) -> str:
+        diff = self.expected - self.actual
+        if diff < 0:
+            msg = "Unexpected assignment " + ("targets" if diff < -1 else "target")
+        else:
+            msg = "Not enough assignment targets"
+        return f"{msg} (expected {self.expected}, got {self.actual})"
+
+
+@dataclass(frozen=True)
+class AssignNonPlaceHelp(Help):
+    message: ClassVar[str] = (
+        "Consider assigning this value to a local variable first before assigning the "
+        "field `{field.name}`"
+    )
+    field: StructField

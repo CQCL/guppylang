@@ -1,7 +1,8 @@
-Guppy compilation failed. Error in file $FILE:15
+Error: Attribute not found (at $FILE:15:6)
+   | 
+13 | @guppy(module)
+14 | def foo(s: MyStruct) -> None:
+15 |     s.z = 2
+   |       ^ Attribute `z` not found on type `int`
 
-13:    @guppy(module)
-14:    def foo(s: MyStruct) -> None:
-15:        s.z = 2
-           ^^^
-GuppyTypeError: Expression of type `MyStruct` has no attribute `z`
+Guppy compilation failed due to 1 previous error
