@@ -104,6 +104,11 @@ class GuppyModule:
 
         Keyword args may be used to specify alias names for the imports.
         """
+        # Note that we shouldn't evaluate imports during a sphinx build since the @guppy
+        # decorator is mocked in that case
+        if sphinx_running():
+            return
+
         modules: set[GuppyModule] = set()
         defs: dict[DefId, CheckedDef] = {}
         names: dict[str, DefId] = {}
@@ -158,6 +163,11 @@ class GuppyModule:
 
     def load_all(self, mod: GuppyModule | ModuleType) -> None:
         """Imports all public members of a module."""
+        # Note that we shouldn't evaluate imports during a sphinx build since the @guppy
+        # decorator is mocked in that case
+        if sphinx_running():
+            return
+
         if isinstance(mod, GuppyModule):
             mod.check()
             self.load(
@@ -422,3 +432,15 @@ def get_calling_frame() -> FrameType | None:
             return frame
         frame = frame.f_back
     return None
+
+
+def sphinx_running() -> bool:
+    """Checks if this module was imported during a sphinx build."""
+    # This is the most general solution available at the moment.
+    # See: https://github.com/sphinx-doc/sphinx/issues/9805
+    try:
+        import sphinx  # type: ignore[import-untyped, import-not-found, unused-ignore]
+
+        return hasattr(sphinx, "application")
+    except ImportError:
+        return False
