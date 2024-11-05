@@ -320,14 +320,9 @@ class GuppyModule:
         graph.metadata["name"] = self.name
 
         # Lower definitions to Hugr
-        required = set(self._checked_defs.keys())
         ctx = CompiledGlobals(checked_defs, graph)
-        # evil side effect - compilation happens on ctx[get_item] calls
-        _request_compilation = [ctx[def_id] for def_id in required]
-        while ctx.worklist:
-            next_id = ctx.worklist.pop()
-            next_def = ctx[next_id]
-            next_def.compile_inner(ctx)
+        for defn in self._checked_defs.values():
+            ctx.compile(defn)
 
         # TODO: Currently we just include a hardcoded list of extensions. We should
         # compute this dynamically from the imported dependencies instead.
