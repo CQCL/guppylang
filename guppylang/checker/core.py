@@ -54,8 +54,13 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class UnsupportedError(Error):
     title: ClassVar[str] = "Unsupported"
-    span_label: ClassVar[str] = "{things} are not supported"
     things: str
+    singular: bool = False
+
+    @property
+    def rendered_span_label(self) -> str:
+        is_are = "is" if self.singular else "are"
+        return f"{self.things} {is_are} not supported"
 
 
 #: A "place" is a description for a storage location of a local value that users

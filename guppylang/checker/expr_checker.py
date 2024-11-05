@@ -24,8 +24,8 @@ import ast
 import sys
 import traceback
 from contextlib import suppress
-from dataclasses import dataclass, replace
-from typing import Any, ClassVar, NoReturn, cast
+from dataclasses import replace
+from typing import Any, NoReturn, cast
 
 from guppylang.ast_util import (
     AstNode,
@@ -45,13 +45,33 @@ from guppylang.checker.core import (
     Locals,
     Place,
     SubscriptAccess,
+    UnsupportedError,
     Variable,
+)
+from guppylang.checker.errors.linearity import LinearForBreakError
+from guppylang.checker.errors.py_errors import (
+    IllegalPyExpressionError,
+    PyExprEvalError,
+    PyExprIncoherentListError,
+    PyExprNotCPythonError,
+    PyExprNotStaticError,
+    Tket2NotInstalled,
+)
+from guppylang.checker.errors.type_errors import (
+    AttributeNotFoundError,
+    BadProtocolError,
+    BinaryOperatorNotDefinedError,
+    IllegalConstant,
+    ModuleMemberNotFoundError,
+    TypeInferenceError,
+    TypeMismatchError,
+    UnaryOperatorNotDefinedError,
+    WrongNumberOfArgsError,
 )
 from guppylang.definition.common import Definition
 from guppylang.definition.module import ModuleDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef, ValueDef
-from guppylang.diagnostic import Error, Help, Note
 from guppylang.error import (
     GuppyError,
     GuppyTypeError,
@@ -86,7 +106,6 @@ from guppylang.tys.builtin import (
     is_list_type,
     list_type,
 )
-from guppylang.tys.const import Const
 from guppylang.tys.param import TypeParam
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -136,223 +155,6 @@ binary_table: dict[type[AstOp], tuple[str, str, str]] = {
     ast.Gt:       ("__gt__",       "__lt__",        ">"),
     ast.GtE:      ("__ge__",       "__le__",        ">="),
 }  # fmt: skip
-
-
-@dataclass(frozen=True)
-class TypeMismatchError(Error):
-    title: ClassVar[str] = "Type mismatch"
-    span_label: ClassVar[str] = "Expected {kind} of type `{expected}`, got `{actual}`"
-
-    expected: Type
-    actual: Type
-    kind: str = "expression"
-
-    @dataclass(frozen=True)
-    class CantInferParam(Note):
-        message: ClassVar[str] = (
-            "Couldn't infer an instantiation for type variable `?{type_var}` "
-            "(higher-rank polymorphic types are not supported)"
-        )
-        type_var: str
-
-    @dataclass(frozen=True)
-    class CantInstantiateFreeVars(Note):
-        message: ClassVar[str] = (
-            "Can't instantiate parameter `{param}` with type `{illegal_inst}` "
-            "containing free variables"
-        )
-        param: str
-        illegal_inst: Type | Const
-
-
-@dataclass(frozen=True)
-class TypeInferenceError(Error):
-    title: ClassVar[str] = "Cannot infer type"
-    span_label: ClassVar[str] = (
-        "Cannot infer type variables in expression of type `{unsolved_ty}`"
-    )
-    unsolved_ty: Type
-
-
-@dataclass(frozen=True)
-class UnsupportedError(Error):
-    title: ClassVar[str] = "Unsupported"
-    things: str
-    singular: bool = False
-
-    @property
-    def rendered_span_label(self) -> str:
-        is_are = "is" if self.singular else "are"
-        return f"{self.things} {is_are} not supported"
-
-
-@dataclass(frozen=True)
-class IllegalConstant(Error):
-    title: ClassVar[str] = "Unsupported constant"
-    span_label: ClassVar[str] = "Type `{ty}` is not supported"
-    python_ty: type
-
-
-@dataclass(frozen=True)
-class IllegalPyExpressionError(Error):
-    title: ClassVar[str] = "Unsupported Python expression"
-    span_label: ClassVar[str] = "Expression of type `{python_ty}` is not supported"
-    python_ty: type
-
-
-@dataclass(frozen=True)
-class PyExprNotCPythonError(Error):
-    title: ClassVar[str] = "Not running CPython"
-    span_label: ClassVar[str] = (
-        "Compile-time `py(...)` expressions are only supported in CPython"
-    )
-
-
-@dataclass(frozen=True)
-class PyExprNotStaticError(Error):
-    title: ClassVar[str] = "Not compile-time evaluatable"
-    span_label: ClassVar[str] = (
-        "Guppy variable `{guppy_var}` cannot be accessed in a compile-time `py(...)` "
-        "expression"
-    )
-    guppy_var: str
-
-
-@dataclass(frozen=True)
-class PyExprEvalError(Error):
-    title: ClassVar[str] = "Python error"
-    span_label: ClassVar[str] = "Error occurred while evaluating this expression"
-    message: ClassVar[str] = "Traceback printed below:\n\n{err}"
-    err: str
-
-
-@dataclass(frozen=True)
-class PyExprIncoherentListError(Error):
-    title: ClassVar[str] = "Unsupported list"
-    span_label: ClassVar[str] = "List contains elements with different types"
-
-
-@dataclass(frozen=True)
-class ModuleMemberNotFoundError(Error):
-    title: ClassVar[str] = "Not found in module"
-    span_label: ClassVar[str] = "Module `{module_name}` has no member `{member}`"
-    module_name: str
-    member: str
-
-
-@dataclass(frozen=True)
-class AttributeNotFoundError(Error):
-    title: ClassVar[str] = "Attribute not found"
-    span_label: ClassVar[str] = "Attribute `{attribute}` not found on type `{ty}`"
-    ty: Type
-    attribute: str
-
-
-@dataclass(frozen=True)
-class UnaryOperatorNotDefinedError(Error):
-    title: ClassVar[str] = "Operator not defined"
-    span_label: ClassVar[str] = "Unary operator `{op}` not defined for `{ty}`"
-    ty: Type
-    op: str
-
-
-@dataclass(frozen=True)
-class BinaryOperatorNotDefinedError(Error):
-    title: ClassVar[str] = "Operator not defined"
-    span_label: ClassVar[str] = (
-        "Binary operator `{op}` not defined for `{left_ty}` and `{right_ty}`"
-    )
-    left_ty: Type
-    right_ty: Type
-    op: str
-
-
-@dataclass(frozen=True)
-class BadProtocolError(Error):
-    title: ClassVar[str] = "Not {is_not}"
-    span_label: ClassVar[str] = "Expression of type `{ty}` is not {is_not}"
-    ty: Type
-    is_not: str
-
-    @dataclass(frozen=True)
-    class MethodMissing(Help):
-        message: ClassVar[str] = "Implement missing method: `{method}: {signature}`"
-        method: str
-        signature: FunctionType
-
-    @dataclass(frozen=True)
-    class BadSignature(Help):
-        message: ClassVar[str] = (
-            "Fix signature of method `{ty}.{method}`:  Expected `{exp_signature}`, got "
-            "`{act_signature}`"
-        )
-        ty: Type
-        method: str
-        exp_signature: FunctionType
-        act_signature: FunctionType
-
-
-@dataclass(frozen=True)
-class LinearForBreakError(Error):
-    title: ClassVar[str] = "Break in linear loop"
-    span_label: ClassVar[str] = "Early exit in linear loops is not allowed"
-
-    @dataclass(frozen=True)
-    class LinearIteratorType(Note):
-        span_label: ClassVar[str] = "Iterator has linear type `{ty}`"
-        ty: Type
-
-
-@dataclass(frozen=True)
-class WrongNumberOfArgsError(Error):
-    title: ClassVar[str] = ""  # Custom implementation in `rendered_title`
-    span_label: ClassVar[str] = "Expected {expected} function arguments, got `{actual}`"
-    expected: int
-    actual: int
-    detailed: bool = True
-
-    @property
-    def rendered_title(self) -> str:
-        return (
-            "Not enough arguments"
-            if self.expected > self.actual
-            else "Too many arguments"
-        )
-
-    @property
-    def rendered_span_label(self) -> str:
-        if not self.detailed:
-            return f"Expected {self.expected}, got {self.actual}"
-        diff = self.expected - self.actual
-        if diff < 0:
-            msg = "Unexpected arguments" if diff < -1 else "Unexpected argument"
-        else:
-            msg = "Missing arguments" if diff > 1 else "Missing argument"
-        return f"{msg} (expected {self.expected}, got {self.actual})"
-
-    @dataclass(frozen=True)
-    class SignatureHint(Note):
-        message: ClassVar[str] = "Function signature is `{sig}`"
-        sig: FunctionType
-
-
-@dataclass(frozen=True)
-class UnexpectedArgumentError(Error):
-    title: ClassVar[str] = "Unexpected argument"
-    span_label: ClassVar[str] = "Expected only {num_args} function arguments"
-    num_args: int
-
-
-@dataclass(frozen=True)
-class Tket2NotInstalled(Error):
-    title: ClassVar[str] = "Tket2 not installed"
-    span_label: ClassVar[str] = (
-        "Experimental pytket compatibility requires `tket2` to be installed"
-    )
-
-    @dataclass(frozen=True)
-    class InstallInstruction(Help):
-        message: ClassVar[str] = "Install tket2: `pip install tket2`"
 
 
 class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):

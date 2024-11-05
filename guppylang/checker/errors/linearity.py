@@ -257,3 +257,14 @@ class LinearPartialApplyError(Error):
             "This expression with linear type `{ty}` is implicitly captured"
         )
         ty: Type
+
+
+@dataclass(frozen=True)
+class LinearForBreakError(Error):
+    title: ClassVar[str] = "Break in linear loop"
+    span_label: ClassVar[str] = "Early exit in linear loops is not allowed"
+
+    @dataclass(frozen=True)
+    class LinearIteratorType(Note):
+        span_label: ClassVar[str] = "Iterator has linear type `{ty}`"
+        ty: Type
