@@ -563,7 +563,7 @@ class Array:
 
 @guppy.extend_type(sized_iter_type_def)
 class SizedIter:
-    """A wrapper around an iterator type `T` promising that the iterator will yield
+    """A wrapper around an iterator type `L` promising that the iterator will yield
     exactly `n` values.
 
     Annotating an iterator with an incorrect size is undefined behaviour.
