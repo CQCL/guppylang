@@ -17,10 +17,10 @@ class WrongNumberOfTypeArgsError(Error):
 
     @property
     def rendered_title(self) -> str:
-        if self.expected > self.actual:
-            return "Missing type arguments"
-        elif 0 == self.expected < self.actual:
+        if self.expected == 0:
             return "Non-parametric type"
+        elif self.expected > self.actual:
+            return "Missing type arguments"
         else:
             return "Too many type arguments"
 
