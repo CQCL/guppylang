@@ -473,9 +473,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         def build_update(elt_port: Wire) -> None:
             """Callback for pushing a comprehension element onto the list."""
             list_port = self.dfg[list_place]
-            (self.dfg[list_place],) = self._build_method_call(
+            [], [self.dfg[list_place]] = self._build_method_call(
                 list_ty, "append", node, [list_port, elt_port], list_ty.args
-            ).inout_returns
+            )
 
         self._compile_generators(node.elt, node.generators, [list_place], build_update)
         return self.dfg[list_place]
@@ -501,14 +501,14 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         def build_update(elt: Wire) -> None:
             """Callback for putting an element into the array."""
             array, count = self.dfg[array_var], self.dfg[count_var]
-            (self.dfg[array_var],) = self._build_method_call(
+            [], [self.dfg[array_var]] = self._build_method_call(
                 array_ty, "__setitem__", node, [array, count, elt], array_ty.args
-            ).inout_returns
+            )
             # Update `count += 1`
             one = self.builder.load(hugr.std.int.IntVal(1, width=NumericType.INT_WIDTH))
-            (self.dfg[count_var],) = self._build_method_call(
+            [self.dfg[count_var]], [] = self._build_method_call(
                 int_type(), "__add__", node, [count, one]
-            ).regular_returns
+            )
 
         self._compile_generators(
             node.elt, [node.generator], [array_var, count_var], build_update
