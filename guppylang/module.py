@@ -439,7 +439,7 @@ def sphinx_running() -> bool:
     # This is the most general solution available at the moment.
     # See: https://github.com/sphinx-doc/sphinx/issues/9805
     try:
-        import sphinx  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
+        import sphinx  # type: ignore[import-untyped, import-not-found, unused-ignore]
 
         return hasattr(sphinx, "application")
     except ImportError:
