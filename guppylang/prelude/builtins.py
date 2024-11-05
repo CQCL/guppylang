@@ -569,6 +569,11 @@ class SizedIter:
     Annotating an iterator with an incorrect size is undefined behaviour.
     """
 
+    def __class_getitem__(cls, item: Any) -> type:
+        # Dummy implementation to allow subscripting of the `SizedIter` type in
+        # positions that are evaluated by the Python interpreter
+        return cls
+
     @guppy.custom(NoopCompiler())
     def __new__(iterator: L @ owned) -> "SizedIter[L, n]":  # type: ignore[type-arg]
         """Casts an iterator into a `SizedIter`."""
