@@ -7,20 +7,20 @@ from __future__ import annotations
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.std.float import FLOAT_T
+from tket2_exts import futures, hseries, quantum, result, rotation
 
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
-from guppylang.prelude._internal.json_defs import load_extension
 
 # ----------------------------------------------
 # --------- tket2.* extensions -----------------
 # ----------------------------------------------
 
-FUTURES_EXTENSION = load_extension("tket2.futures")
-HSERIES_EXTENSION = load_extension("tket2.hseries")
-QUANTUM_EXTENSION = load_extension("tket2.quantum")
-RESULT_EXTENSION = load_extension("tket2.result")
-ROTATION_EXTENSION = load_extension("tket2.rotation")
+FUTURES_EXTENSION = futures()
+HSERIES_EXTENSION = hseries()
+QUANTUM_EXTENSION = quantum()
+RESULT_EXTENSION = result()
+ROTATION_EXTENSION = rotation()
 
 ROTATION_T_DEF = ROTATION_EXTENSION.get_type("rotation")
 ROTATION_T = ht.ExtType(ROTATION_T_DEF)
