@@ -86,11 +86,15 @@ class UnsupportedChecker(CustomCallChecker):
     """
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        err = UnsupportedError(self.node, f"Builtin method `{self.func.name}`")
+        err = UnsupportedError(
+            self.node, f"Builtin method `{self.func.name}`", singular=True
+        )
         raise GuppyError(err)
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        err = UnsupportedError(self.node, f"Builtin method `{self.func.name}`")
+        err = UnsupportedError(
+            self.node, f"Builtin method `{self.func.name}`", singular=True
+        )
         raise GuppyError(err)
 
 
