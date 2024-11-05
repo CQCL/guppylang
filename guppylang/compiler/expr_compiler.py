@@ -1,6 +1,7 @@
 import ast
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
+from functools import partial
 from typing import Any, TypeGuard, TypeVar
 
 import hugr
@@ -536,43 +537,30 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         """Helper function to generate nested TailLoop nodes for generators"""
         from guppylang.compiler.stmt_compiler import StmtCompiler
 
-        # If there are no more generators left, invoke the callback to build the list
-        # or array update
-        if not gens:
+        compiler = StmtCompiler(self.globals)
+        with ExitStack() as stack:
+            for gen in gens:
+                # Build the generator
+                compiler.compile_stmts([gen.iter_assign], self.dfg)
+                assert isinstance(gen.iter, PlaceNode)
+                assert isinstance(gen.hasnext, PlaceNode)
+                inputs = [gen.iter] + [PlaceNode(place=var) for var in loop_vars]
+                # Remember to finalize the iterator once we are done with it. Note that
+                # we need to use partial in the callback, so that we bind the *current*
+                # value of `gen` instead of only last
+                stack.callback(partial(lambda gen: self.visit(gen.iterend), gen))
+                # Enter a new tail loop
+                stack.enter_context(self._new_loop(inputs, gen.hasnext))
+                # Enter a conditional checking if we have a next element
+                compiler.compile_stmts([gen.hasnext_assign], self.dfg)
+                stack.enter_context(self._if_true(gen.hasnext, inputs))
+                compiler.compile_stmts([gen.next_assign], self.dfg)
+                # Enter nested conditionals for each if guard on the generator
+                for if_expr in gen.ifs:
+                    stack.enter_context(self._if_true(if_expr, inputs))
+            # Build the element update after we have entered all generator loops
             elt_port = self.visit(elt)
             build_update(elt_port)
-            return
-
-        # Otherwise, compile the first iterator and construct a TailLoop
-        gen, *gens = gens
-        compiler = StmtCompiler(self.globals)
-        compiler.compile_stmts([gen.iter_assign], self.dfg)
-        assert isinstance(gen.iter, PlaceNode)
-        assert isinstance(gen.hasnext, PlaceNode)
-        inputs = [gen.iter] + [PlaceNode(place=var) for var in loop_vars]
-        with self._new_loop(inputs, gen.hasnext):
-            # If there is a next element, compile it and continue with the next
-            # generator
-            compiler.compile_stmts([gen.hasnext_assign], self.dfg)
-            with self._if_true(gen.hasnext, inputs):
-
-                def compile_ifs(ifs: list[ast.expr]) -> None:
-                    """Helper function to compile a series of if-guards into nested
-                    Conditional nodes."""
-                    if ifs:
-                        if_expr, *ifs = ifs
-                        # If the condition is true, continue with the next one
-                        with self._if_true(if_expr, inputs):
-                            compile_ifs(ifs)
-                    else:
-                        # If there are no guards left, compile the next generator
-                        self._compile_generators(elt, gens, loop_vars, build_update)
-
-                compiler.compile_stmts([gen.next_assign], self.dfg)
-                compile_ifs(gen.ifs)
-
-        # After the loop is done, we have to finalize the iterator
-        self.visit(gen.iterend)
 
     def visit_BinOp(self, node: ast.BinOp) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
