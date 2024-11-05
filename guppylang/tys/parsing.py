@@ -1,6 +1,5 @@
 import ast
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
 
 from guppylang.ast_util import (
     AstNode,
@@ -41,9 +40,6 @@ from guppylang.tys.ty import (
     TupleType,
     Type,
 )
-
-if TYPE_CHECKING:
-    from guppylang.diagnostic import Error
 
 
 def arg_from_ast(
@@ -158,13 +154,9 @@ def _arg_from_instantiated_defn(
         case ParamDef() as defn:
             # We don't allow parametrised variables like `T[int]`
             if arg_nodes:
-                err: Error = HigherKindedTypeVarError(node, defn)
-                err.add_sub_diagnostic(HigherKindedTypeVarError.Explain(None))
-                raise GuppyError(err)
+                raise GuppyError(HigherKindedTypeVarError(node, defn))
             if param_var_mapping is None:
-                err = FreeTypeVarError(node, defn)
-                err.add_sub_diagnostic(FreeTypeVarError.Explain(None))
-                raise GuppyError(err)
+                raise GuppyError(FreeTypeVarError(node, defn))
             if defn.name not in param_var_mapping:
                 param_var_mapping[defn.name] = defn.to_param(len(param_var_mapping))
             return param_var_mapping[defn.name].to_bound()
@@ -199,7 +191,6 @@ def _parse_callable_type(
 ) -> FunctionType:
     """Helper function to parse a `Callable[[<arguments>], <return type>]` type."""
     err = InvalidCallableTypeError(loc)
-    err.add_sub_diagnostic(InvalidCallableTypeError.Explain(None))
     if len(args) != 2:
         raise GuppyError(err)
     [inputs, output] = args

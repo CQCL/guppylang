@@ -74,6 +74,9 @@ class HigherKindedTypeVarError(Error):
     class Explain(Note):
         message: ClassVar[str] = "Higher-kinded types are not supported"
 
+    def __post_init__(self) -> None:
+        self.add_sub_diagnostic(HigherKindedTypeVarError.Explain(None))
+
 
 @dataclass(frozen=True)
 class FreeTypeVarError(Error):
@@ -87,6 +90,9 @@ class FreeTypeVarError(Error):
             "Only struct and function definitions can be generic. Other generic values "
             "or nested types are not supported."
         )
+
+    def __post_init__(self) -> None:
+        self.add_sub_diagnostic(FreeTypeVarError.Explain(None))
 
 
 @dataclass(frozen=True)
@@ -106,6 +112,9 @@ class InvalidCallableTypeError(Error):
             "Function types are specified as follows: "
             "`Callable[[<arguments>], <return type>]`"
         )
+
+    def __post_init__(self) -> None:
+        self.add_sub_diagnostic(InvalidCallableTypeError.Explain(None))
 
 
 @dataclass(frozen=True)
