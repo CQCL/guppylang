@@ -36,7 +36,11 @@ class CompiledGlobals:
         self.worklist = set()
         self.compiled = {}
 
-    def __getitem__(self, def_id: DefId) -> CompiledDef:
+    def build_compiled_def(self, def_id: DefId) -> CompiledDef:
+        """Returns the compiled definitions corresponding to the given ID.
+
+        Might mutate the current Hugr if this definition has never been compiled before.
+        """
         if def_id not in self.compiled:
             defn = self.checked[def_id]
             self.compiled[def_id] = self._compile(defn)
@@ -58,7 +62,7 @@ class CompiledGlobals:
         self.worklist.add(defn.id)
         while self.worklist:
             next_id = self.worklist.pop()
-            next_def = self[next_id]
+            next_def = self.build_compiled_def(next_id)
             next_def.compile_inner(self)
 
 
