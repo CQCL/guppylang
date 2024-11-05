@@ -25,6 +25,7 @@ html_theme_options = {}
 
 html_static_path = ["../_static", "../quantinuum-sphinx/_static"]
 templates_path = ["_templates", "../quantinuum-sphinx/_templates"]
+html_favicon = "../quantinuum-sphinx/_static/assets/quantinuum_favicon.svg"
 
 autosummary_generate = True
 
