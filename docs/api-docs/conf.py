@@ -23,8 +23,8 @@ html_theme = "furo"
 html_title = "Guppy compiler development docs"
 html_theme_options = {}
 
-templates_path = ["_templates", "../quantinuum-sphinx/_templates"]
 html_static_path = ["../_static", "../quantinuum-sphinx/_static"]
+templates_path = ["_templates", "../quantinuum-sphinx/_templates"]
 
 autosummary_generate = True
 
