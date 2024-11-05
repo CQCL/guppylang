@@ -76,7 +76,7 @@ class ModuleMemberNotFoundError(Error):
 @dataclass(frozen=True)
 class AttributeNotFoundError(Error):
     title: ClassVar[str] = "Attribute not found"
-    span_label: ClassVar[str] = "Attribute `{attribute}` not found on type `{ty}`"
+    span_label: ClassVar[str] = "`{ty}` has no attribute `{attribute}`"
     ty: Type
     attribute: str
 

@@ -74,7 +74,9 @@ class StmtChecker(AstVisitor[BBStatement]):
                     not isinstance(struct_ty, StructType)
                     or attr not in struct_ty.field_dict
                 ):
-                    raise GuppyTypeError(AttributeNotFoundError(attr_span, ty, attr))
+                    raise GuppyTypeError(
+                        AttributeNotFoundError(attr_span, struct_ty, attr)
+                    )
                 field = struct_ty.field_dict[attr]
                 # TODO: In the future, we could infer some type args here
                 if field.ty != ty:
