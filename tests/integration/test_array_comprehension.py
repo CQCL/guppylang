@@ -31,8 +31,8 @@ def test_basic_linear(validate):
 
 def test_zero_length(validate):
     @compile_guppy
-    def test() -> array[int, 0]:
-        return array(i for i in range(0))
+    def test() -> array[float, 0]:
+        return array(i / 0 for i in range(0))
 
     validate(test)
 
