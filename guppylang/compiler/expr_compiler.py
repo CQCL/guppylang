@@ -1,5 +1,5 @@
 import ast
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager
 from functools import partial
 from typing import Any, TypeGuard, TypeVar
@@ -469,15 +469,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         elem_ty = get_element_type(list_ty)
         list_place = Variable(next(tmp_vars), list_ty, node)
         self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])
-
-        def build_update(elt_port: Wire) -> None:
-            """Callback for pushing a comprehension element onto the list."""
+        with self._build_generators(node.generators, [list_place]):
+            elt_port = self.visit(node.elt)
             list_port = self.dfg[list_place]
             [], [self.dfg[list_place]] = self._build_method_call(
                 list_ty, "append", node, [list_port, elt_port], list_ty.args
             )
-
-        self._compile_generators(node.elt, node.generators, [list_place], build_update)
         return self.dfg[list_place]
 
     def visit_DesugaredArrayComp(self, node: DesugaredArrayComp) -> Wire:
@@ -497,9 +494,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         self.dfg[count_var] = self.builder.load(
             hugr.std.int.IntVal(0, width=NumericType.INT_WIDTH)
         )
-
-        def build_update(elt: Wire) -> None:
-            """Callback for putting an element into the array."""
+        with self._build_generators([node.generator], [array_var, count_var]):
+            elt = self.visit(node.elt)
             array, count = self.dfg[array_var], self.dfg[count_var]
             [], [self.dfg[array_var]] = self._build_method_call(
                 array_ty, "__setitem__", node, [array, count, elt], array_ty.args
@@ -509,10 +505,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             [self.dfg[count_var]], [] = self._build_method_call(
                 int_type(), "__add__", node, [count, one]
             )
-
-        self._compile_generators(
-            node.elt, [node.generator], [array_var, count_var], build_update
-        )
         return self.dfg[array_var]
 
     def _build_method_call(
@@ -527,14 +519,15 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert func is not None
         return func.compile_call(args, type_args or [], self.dfg, self.globals, node)
 
-    def _compile_generators(
-        self,
-        elt: ast.expr,
-        gens: list[DesugaredGenerator],
-        loop_vars: list[Variable],
-        build_update: Callable[[Wire], None],
-    ) -> None:
-        """Helper function to generate nested TailLoop nodes for generators"""
+    @contextmanager
+    def _build_generators(
+        self, gens: list[DesugaredGenerator], loop_vars: list[Variable]
+    ) -> Iterator[None]:
+        """Context manager to build and enter the `TailLoop`s for a list of generators.
+
+        The provided `loop_vars` will be threaded through and will be available inside
+        the loops.
+        """
         from guppylang.compiler.stmt_compiler import StmtCompiler
 
         compiler = StmtCompiler(self.globals)
@@ -558,9 +551,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 # Enter nested conditionals for each if guard on the generator
                 for if_expr in gen.ifs:
                     stack.enter_context(self._if_true(if_expr, inputs))
-            # Build the element update after we have entered all generator loops
-            elt_port = self.visit(elt)
-            build_update(elt_port)
+            # Yield control to the caller to build inside the loop
+            yield
 
     def visit_BinOp(self, node: ast.BinOp) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
