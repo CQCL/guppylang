@@ -81,7 +81,7 @@ class ConstArg(ArgumentBase):
             case ConstValue(value=v, ty=NumericType(kind=NumericType.Kind.Nat)):
                 assert isinstance(v, int)
                 return ht.BoundedNatArg(n=v)
-            case BoundConstVar(idx=idx):
+            case BoundConstVar(idx=idx, ty=NumericType(kind=NumericType.Kind.Nat)):
                 param = ht.BoundedNatParam(upper_bound=None)
                 return ht.VariableArg(idx=idx, param=param)
             case ConstValue() | BoundConstVar():

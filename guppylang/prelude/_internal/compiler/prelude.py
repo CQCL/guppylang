@@ -123,3 +123,12 @@ def build_unwrap(
     result is an error.
     """
     return build_unwrap_right(builder, result, error_msg, error_signal)
+
+
+def build_expect_none(
+    builder: DfBase[ops.DfParentOp], result: Wire, error_msg: str, error_signal: int = 1
+) -> Node:
+    """Checks that `hugr.tys.Option` value is `None`, otherwise panics with the given
+    message.
+    """
+    return build_unwrap_left(builder, result, error_msg, error_signal)

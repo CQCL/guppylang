@@ -2,7 +2,7 @@
 
 # mypy: disable-error-code="empty-body, misc, override, valid-type, no-untyped-def"
 
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, no_type_check
 
 import hugr.std.int
 
@@ -31,6 +31,7 @@ from guppylang.prelude._internal.compiler.arithmetic import (
 )
 from guppylang.prelude._internal.compiler.array import (
     ArrayGetitemCompiler,
+    ArrayIterEndCompiler,
     ArraySetitemCompiler,
     NewArrayCompiler,
 )
@@ -559,6 +560,35 @@ class Array:
 
     @guppy.custom(NewArrayCompiler(), NewArrayChecker(), higher_order_value=False)
     def __new__(): ...
+
+    @guppy
+    @no_type_check
+    def __iter__(self: array[L, n] @ owned) -> "SizedIter[ArrayIter[L, n], n]":
+        return SizedIter(ArrayIter(self, 0))
+
+
+@guppy.struct
+class ArrayIter(Generic[L, n]):
+    xs: array[L, n]
+    i: int
+
+    @guppy
+    @no_type_check
+    def __hasnext__(self: "ArrayIter[L, n]" @ owned) -> tuple[bool, "ArrayIter[L, n]"]:
+        return self.i < int(n), self
+
+    @guppy
+    @no_type_check
+    def __next__(self: "ArrayIter[L, n]" @ owned) -> tuple[L, "ArrayIter[L, n]"]:
+        elem = _array_unsafe_getitem(self.xs, self.i)
+        return elem, ArrayIter(self.xs, self.i + 1)
+
+    @guppy.custom(ArrayIterEndCompiler())
+    def __end__(self: "ArrayIter[L, n]" @ owned) -> None: ...
+
+
+@guppy.custom(ArrayGetitemCompiler())
+def _array_unsafe_getitem(xs: array[L, n], idx: int) -> L: ...
 
 
 @guppy.extend_type(sized_iter_type_def)

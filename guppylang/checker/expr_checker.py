@@ -85,6 +85,7 @@ from guppylang.tys.builtin import (
     get_element_type,
     is_bool_type,
     is_list_type,
+    is_sized_iter_type,
     list_type,
 )
 from guppylang.tys.param import ConstParam, TypeParam
@@ -544,7 +545,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 f"expected `{exp_sig}`",
                 node,
             )
-        return func.synthesize_call([node, *args], node, self.ctx)
+        result, result_ty = func.synthesize_call([node, *args], node, self.ctx)
+        return with_type(result_ty, result), result_ty
 
     def visit_BinOp(self, node: ast.BinOp) -> tuple[ast.expr, Type]:
         return self._synthesize_binary(node.left, node.right, node.op, node)
@@ -647,6 +649,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         expr, ty = self.synthesize_instance_func(
             node.value, [], "__iter__", "not iterable", exp_sig
         )
+        # Unwrap the size hint if present
+        if is_sized_iter_type(ty):
+            expr, ty = self.synthesize_instance_func(expr, [], "unwrap_iter", "")
 
         # If the iterator was created by a `for` loop, we can add some extra checks to
         # produce nicer errors for linearity violations. Namely, `break` and `return`
