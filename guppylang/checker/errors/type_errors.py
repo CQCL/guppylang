@@ -8,6 +8,7 @@ from guppylang.diagnostic import Error, Help, Note
 if TYPE_CHECKING:
     from guppylang.definition.struct import StructField
     from guppylang.tys.const import Const
+    from guppylang.tys.param import Parameter
     from guppylang.tys.ty import FunctionType, Type
 
 
@@ -47,6 +48,18 @@ class AssignFieldTypeMismatchError(Error):
     )
     actual: Type
     field: StructField
+
+
+@dataclass(frozen=True)
+class NonLinearInstantiateError(Error):
+    title: ClassVar[str] = "Not defined for linear argument"
+    span_label: ClassVar[str] = (
+        "Cannot instantiate non-linear type parameter `{param.name}` in type "
+        "`{func_ty}` with linear type `{ty}`"
+    )
+    param: Parameter
+    func_ty: FunctionType
+    ty: Type
 
 
 @dataclass(frozen=True)
@@ -123,6 +136,20 @@ class BadProtocolError(Error):
         method: str
         exp_signature: FunctionType
         act_signature: FunctionType
+
+
+@dataclass(frozen=True)
+class MissingReturnValueError(Error):
+    title: ClassVar[str] = "Missing return value"
+    span_label: ClassVar[str] = "Expected return value of type `{ty}`"
+    ty: Type
+
+
+@dataclass(frozen=True)
+class NotCallableError(Error):
+    title: ClassVar[str] = "Not callable"
+    span_label: ClassVar[str] = "Expected a function, got expression of type `{actual}`"
+    actual: Type
 
 
 @dataclass(frozen=True)

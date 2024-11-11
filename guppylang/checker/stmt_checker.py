@@ -18,6 +18,7 @@ from guppylang.checker.errors.type_errors import (
     AssignFieldTypeMismatchError,
     AssignNonPlaceHelp,
     AttributeNotFoundError,
+    MissingReturnValueError,
     WrongNumberOfUnpacksError,
 )
 from guppylang.checker.expr_checker import ExprChecker, ExprSynthesizer
@@ -132,7 +133,7 @@ class StmtChecker(AstVisitor[BBStatement]):
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
         if len(node.targets) > 1:
             # This is the case for assignments like `a = b = 1`
-            raise GuppyError("Multi assignment not supported", node)
+            raise GuppyError(UnsupportedError(node, "Multi assignments"))
 
         [target] = node.targets
         node.value, ty = self._synth_expr(node.value)
@@ -171,9 +172,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             )
             assert len(subst) == 0  # `self.return_ty` is closed!
         elif not isinstance(self.return_ty, NoneType):
-            raise GuppyTypeError(
-                f"Expected return value of type `{self.return_ty}`", None
-            )
+            raise GuppyTypeError(MissingReturnValueError(node, self.return_ty))
         return node
 
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> ast.stmt:
