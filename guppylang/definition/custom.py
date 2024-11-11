@@ -53,6 +53,9 @@ class NoSignatureError(Error):
             "as a higher-order value: `@guppy.custom(..., higher_order_value=False)`"
         )
 
+    def __post_init__(self) -> None:
+        self.add_sub_diagnostic(NoSignatureError.Suggestion(None))
+
 
 @dataclass(frozen=True)
 class NotHigherOrderError(Error):
@@ -164,9 +167,7 @@ class RawCustomFunctionDef(ParsableDef):
         )
 
         if requires_type_annotation and not has_type_annotation:
-            err = NoSignatureError(node, self.name)
-            err.add_sub_diagnostic(NoSignatureError.Suggestion(None))
-            raise GuppyError(err)
+            raise GuppyError(NoSignatureError(node, self.name))
 
         if requires_type_annotation:
             return check_signature(node, globals)
