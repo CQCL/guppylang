@@ -1,6 +1,6 @@
 import ast
 from dataclasses import dataclass
-from typing import cast, ClassVar
+from typing import ClassVar, cast
 
 from guppylang.ast_util import AstNode, with_loc, with_type
 from guppylang.checker.core import Context
