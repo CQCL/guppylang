@@ -167,7 +167,7 @@ class NewArrayChecker(CustomCallChecker):
     @dataclass(frozen=True)
     class InferenceError(Error):
         title: ClassVar[str] = "Cannot infer type"
-        span_label: ClassVar[str] = "Cannot infer the the type of this array"
+        span_label: ClassVar[str] = "Cannot infer the type of this array"
 
         @dataclass(frozen=True)
         class Suggestion(Note):

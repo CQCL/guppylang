@@ -3,7 +3,7 @@ Error: Cannot infer type (at $FILE:13:9)
 11 | @guppy(module)
 12 | def main() -> None:
 13 |     xs = array()
-   |          ^^^^^^^ Cannot infer the the type of this array
+   |          ^^^^^^^ Cannot infer the type of this array
 
 Note: Consider adding a type annotation: `x: array[???] = ...`
 
