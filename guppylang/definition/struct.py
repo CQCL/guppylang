@@ -80,6 +80,9 @@ class NonGuppyMethodError(Error):
             "Add a `@guppy` annotation to turn `{method_name}` into a Guppy method"
         )
 
+    def __post_init__(self) -> None:
+        self.add_sub_diagnostic(NonGuppyMethodError.Suggestion(None))
+
 
 @dataclass(frozen=True)
 class RawStructDef(TypeDef, ParsableDef):
@@ -132,9 +135,7 @@ class RawStructDef(TypeDef, ParsableDef):
                 case _, ast.FunctionDef(name=name) as node:
                     v = getattr(self.python_class, name)
                     if not isinstance(v, Definition):
-                        err = NonGuppyMethodError(node, self.name, name)
-                        err.add_sub_diagnostic(NonGuppyMethodError.Suggestion(None))
-                        raise GuppyError(err)
+                        raise GuppyError(NonGuppyMethodError(node, self.name, name))
                     used_func_names[name] = node
                     if name in used_field_names:
                         raise GuppyError(DuplicateFieldError(node, self.name, name))

@@ -29,7 +29,7 @@ from guppylang.definition.module import ModuleDef
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.struct import CheckedStructDef
 from guppylang.definition.ty import TypeDef
-from guppylang.error import GuppyError, pretty_errors
+from guppylang.error import pretty_errors
 from guppylang.experimental import enable_experimental_features
 
 if TYPE_CHECKING:
@@ -143,7 +143,7 @@ class GuppyModule:
                 imports.append((alias, mod))
             else:
                 msg = f"Only Guppy definitions or modules can be imported. Got `{imp}`"
-                raise GuppyError(msg)
+                raise TypeError(msg)
 
         # Also include any impls that are defined by the imported modules
         impls: dict[DefId, dict[str, DefId]] = {}
@@ -180,7 +180,7 @@ class GuppyModule:
             self.load_all(find_guppy_module_in_py_module(mod))
         else:
             msg = f"Only Guppy definitions or modules can be imported. Got `{mod}`"
-            raise GuppyError(msg)
+            raise TypeError(msg)
 
     def register_def(self, defn: RawDef, instance: TypeDef | None = None) -> None:
         """Registers a definition with this module.
@@ -416,13 +416,13 @@ def find_guppy_module_in_py_module(module: ModuleType) -> GuppyModule:
 
     if not mods:
         msg = f"No Guppy modules found in `{module.__name__}`"
-        raise GuppyError(msg)
+        raise ValueError(msg)
     if len(mods) > 1:
         msg = (
             f"Python module `{module.__name__}` contains multiple Guppy modules. "
             "Cannot decide which one to import."
         )
-        raise GuppyError(msg)
+        raise ValueError(msg)
     return mods[0]
 
 

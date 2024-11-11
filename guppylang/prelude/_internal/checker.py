@@ -1,7 +1,10 @@
 import ast
+from dataclasses import dataclass
+from typing import ClassVar
 
 from guppylang.ast_util import AstNode, with_loc
 from guppylang.checker.core import Context
+from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.checker.expr_checker import (
     ExprChecker,
     ExprSynthesizer,
@@ -16,6 +19,7 @@ from guppylang.definition.custom import (
     DefaultCallChecker,
 )
 from guppylang.definition.value import CallableDef
+from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import GlobalCall, ResultExpr
 from guppylang.tys.arg import ConstArg, TypeArg
@@ -75,22 +79,6 @@ class ReversingChecker(CustomCallChecker):
         return expr, ty
 
 
-class FailingChecker(CustomCallChecker):
-    """Call checker for Python functions that are not available in Guppy.
-
-    Gives the uses a nicer error message when they try to use an unsupported feature.
-    """
-
-    def __init__(self, msg: str) -> None:
-        self.msg = msg
-
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        raise GuppyError(self.msg, self.node)
-
-    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        raise GuppyError(self.msg, self.node)
-
-
 class UnsupportedChecker(CustomCallChecker):
     """Call checker for Python builtin functions that are not available in Guppy.
 
@@ -98,14 +86,16 @@ class UnsupportedChecker(CustomCallChecker):
     """
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        raise GuppyError(
-            f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
+        err = UnsupportedError(
+            self.node, f"Builtin method `{self.func.name}`", singular=True
         )
+        raise GuppyError(err)
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        raise GuppyError(
-            f"Builtin method `{self.func.name}` is not supported by Guppy", self.node
+        err = UnsupportedError(
+            self.node, f"Builtin method `{self.func.name}`", singular=True
         )
+        raise GuppyError(err)
 
 
 class DunderChecker(CustomCallChecker):
@@ -236,6 +226,18 @@ class NewArrayChecker(CustomCallChecker):
 class ResultChecker(CustomCallChecker):
     """Call checker for the `result` function."""
 
+    @dataclass(frozen=True)
+    class InvalidError(Error):
+        title: ClassVar[str] = "Invalid Result"
+        span_label: ClassVar[str] = "Expression of type `{ty}` is not a valid result."
+        ty: Type
+
+        @dataclass(frozen=True)
+        class Explanation(Note):
+            message: ClassVar[str] = (
+                "Only numeric values or arrays thereof are allowed as results"
+            )
+
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(2, len(args), self.node)
         [tag, value] = args
@@ -243,10 +245,8 @@ class ResultChecker(CustomCallChecker):
             raise GuppyTypeError("Expected a string literal", tag)
         value, ty = ExprSynthesizer(self.ctx).synthesize(value)
         # We only allow numeric values or vectors of numeric values
-        err = (
-            f"Expression of type `{ty}` is not a valid result. Only numeric values or "
-            "arrays thereof are allowed."
-        )
+        err = ResultChecker.InvalidError(value, ty)
+        err.add_sub_diagnostic(ResultChecker.InvalidError.Explanation(None))
         if self._is_numeric_or_bool_type(ty):
             base_ty = ty
             array_len: Const | None = None
@@ -255,11 +255,11 @@ class ResultChecker(CustomCallChecker):
             assert isinstance(ty_arg, TypeArg)
             assert isinstance(len_arg, ConstArg)
             if not self._is_numeric_or_bool_type(ty_arg.ty):
-                raise GuppyError(err, value)
+                raise GuppyError(err)
             base_ty = ty_arg.ty
             array_len = len_arg.const
         else:
-            raise GuppyError(err, value)
+            raise GuppyError(err)
         node = ResultExpr(value, base_ty, array_len, tag.value)
         return with_loc(self.node, node), NoneType()
 

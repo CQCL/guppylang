@@ -1,7 +1,10 @@
 from ast import expr
+from dataclasses import dataclass
 from types import TracebackType
+from typing import ClassVar
 
 from guppylang.ast_util import AstNode
+from guppylang.diagnostic import Error, Help
 from guppylang.error import GuppyError
 
 EXPERIMENTAL_FEATURES_ENABLED = False
@@ -55,19 +58,29 @@ class disable_experimental_features:
         EXPERIMENTAL_FEATURES_ENABLED = self.original
 
 
+@dataclass(frozen=True)
+class ExperimentalFeatureError(Error):
+    title: ClassVar[str] = "Experimental feature"
+    span_label: ClassVar[str] = "{things} are an experimental feature"
+    things: str
+
+    @dataclass(frozen=True)
+    class Suggestion(Help):
+        message: ClassVar[str] = (
+            "Experimental features are currently disabled. You can enable them by "
+            "calling `guppylang.enable_experimental_features()`, however note that "
+            "these features are unstable and might break in the future."
+        )
+
+    def __post_init__(self) -> None:
+        self.add_sub_diagnostic(ExperimentalFeatureError.Suggestion(None))
+
+
 def check_function_tensors_enabled(node: expr | None = None) -> None:
     if not EXPERIMENTAL_FEATURES_ENABLED:
-        raise GuppyError(
-            "Function tensors are an experimental feature. Use "
-            "`guppylang.enable_experimental_features()` to enable them.",
-            node,
-        )
+        raise GuppyError(ExperimentalFeatureError(node, "Function tensors"))
 
 
 def check_lists_enabled(loc: AstNode | None = None) -> None:
     if not EXPERIMENTAL_FEATURES_ENABLED:
-        raise GuppyError(
-            "Lists are an experimental feature and not fully supported yet. Use "
-            "`guppylang.enable_experimental_features()` to enable them.",
-            loc,
-        )
+        raise GuppyError(ExperimentalFeatureError(loc, "Lists"))
