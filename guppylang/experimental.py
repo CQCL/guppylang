@@ -72,16 +72,15 @@ class ExperimentalFeatureError(Error):
             "these features are unstable and might break in the future."
         )
 
+    def __post_init__(self) -> None:
+        self.add_sub_diagnostic(ExperimentalFeatureError.Suggestion(None))
+
 
 def check_function_tensors_enabled(node: expr | None = None) -> None:
     if not EXPERIMENTAL_FEATURES_ENABLED:
-        err = ExperimentalFeatureError(node, "Function tensors")
-        err.add_sub_diagnostic(ExperimentalFeatureError.Suggestion(None))
-        raise GuppyError(err)
+        raise GuppyError(ExperimentalFeatureError(node, "Function tensors"))
 
 
 def check_lists_enabled(loc: AstNode | None = None) -> None:
     if not EXPERIMENTAL_FEATURES_ENABLED:
-        err = ExperimentalFeatureError(loc, "Lists")
-        err.add_sub_diagnostic(ExperimentalFeatureError.Suggestion(None))
-        raise GuppyError(err)
+        raise GuppyError(ExperimentalFeatureError(loc, "Lists"))
