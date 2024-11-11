@@ -6,6 +6,7 @@ import hugr.std
 from hugr import Wire, ops
 from hugr import tys as ht
 
+from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
@@ -65,6 +66,14 @@ def array_set(elem_ty: ht.Type, length: int) -> ops.ExtOp:
         [arr_ty, ht.USize(), elem_ty],
         [ht.Either([elem_ty, arr_ty], [elem_ty, arr_ty])],
     )
+
+
+def array_new_uninitialized(elem_ty: ht.Type, length: int) -> ops.ExtOp:
+    """Returns an array `uninitialized` operation."""
+    # TODO
+    return UnsupportedOp(
+        op_name="array.uninitialized", inputs=[], outputs=[array_type(elem_ty, length)]
+    ).ext_op
 
 
 # ------------------------------------------------------
