@@ -10,14 +10,14 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 from guppylang.ipython_inspect import is_running_ipython
 
 if TYPE_CHECKING:
-    from guppylang.diagnostic import Error
+    from guppylang.diagnostic import Error, Fatal
 
 
 @dataclass
 class GuppyError(Exception):
     """An error that occurs during compilation."""
 
-    error: "Error"
+    error: "Error | Fatal"
 
 
 class GuppyTypeError(GuppyError):
