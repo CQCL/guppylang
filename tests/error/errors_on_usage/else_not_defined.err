@@ -1,7 +1,11 @@
-Guppy compilation failed. Error in file $FILE:10
+Error: Variable not defined (at $FILE:10:11)
+   | 
+ 8 |     else:
+ 9 |         z = 2
+10 |     return z
+   |            ^ `z` might be undefined ...
+   | 
+ 6 |     if x:
+   |        - ... if this expression is `True`
 
-8:     else:
-9:         z = 2
-10:    return z
-              ^
-GuppyError: Variable `z` is not defined on all control-flow paths.
+Guppy compilation failed due to 1 previous error

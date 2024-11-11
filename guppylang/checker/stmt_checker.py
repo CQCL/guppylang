@@ -14,9 +14,18 @@ from collections.abc import Sequence
 from guppylang.ast_util import AstVisitor, with_loc, with_type
 from guppylang.cfg.bb import BB, BBStatement
 from guppylang.checker.core import Context, FieldAccess, Variable
+from guppylang.checker.errors.generic import UnsupportedError
+from guppylang.checker.errors.type_errors import (
+    AssignFieldTypeMismatchError,
+    AssignNonPlaceHelp,
+    AttributeNotFoundError,
+    MissingReturnValueError,
+    WrongNumberOfUnpacksError,
+)
 from guppylang.checker.expr_checker import ExprChecker, ExprSynthesizer
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import NestedFunctionDef, PlaceNode
+from guppylang.span import Span, to_span
 from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.subst import Subst
 from guppylang.tys.ty import NoneType, StructType, TupleType, Type
@@ -57,24 +66,26 @@ class StmtChecker(AstVisitor[BBStatement]):
 
             # The LHS could also be a field `expr.field`
             case ast.Attribute(value=value, attr=attr):
+                # Unfortunately, the `attr` is just a string,  not an AST node, so we
+                # have to compute its span by hand. This is fine since linebreaks are
+                # not allowed in the identifier following the `.`
+                span = to_span(lhs)
+                attr_span = Span(span.end.shift_left(len(attr)), span.end)
                 value, struct_ty = self._synth_expr(value)
                 if (
                     not isinstance(struct_ty, StructType)
                     or attr not in struct_ty.field_dict
                 ):
                     raise GuppyTypeError(
-                        f"Expression of type `{struct_ty}` has no attribute `{attr}`",
-                        # Unfortunately, `attr` doesn't contain source annotations, so
-                        # we have to use `lhs` as the error location
-                        lhs,
+                        AttributeNotFoundError(attr_span, struct_ty, attr)
                     )
                 field = struct_ty.field_dict[attr]
                 # TODO: In the future, we could infer some type args here
                 if field.ty != ty:
+                    # TODO: Get hold of a span for the RHS and use a regular
+                    #  `TypeMismatchError` instead (maybe with a custom hint).
                     raise GuppyTypeError(
-                        f"Cannot assign expression of type `{ty}` to field with type "
-                        f"`{field.ty}`",
-                        lhs,
+                        AssignFieldTypeMismatchError(attr_span, ty, field)
                     )
                 if not isinstance(value, PlaceNode):
                     # For now we complain if someone tries to assign to something that
@@ -82,15 +93,16 @@ class StmtChecker(AstVisitor[BBStatement]):
                     # there is another reference to the return value of `f`, otherwise
                     # the mutation cannot be observed. We can start supporting this once
                     # we have proper reference semantics.
-                    raise GuppyError(
-                        "Assigning to this expression is not supported yet. Consider "
-                        "binding the expression to variable and mutate that variable "
-                        "instead.",
-                        value,
+                    err = UnsupportedError(
+                        value, "Assigning to this expression", singular=True
                     )
+                    err.add_sub_diagnostic(AssignNonPlaceHelp(None, field))
+                    raise GuppyError(err)
                 if not field.ty.linear:
                     raise GuppyError(
-                        "Mutation of classical fields is not supported yet", lhs
+                        UnsupportedError(
+                            attr_span, "Mutation of classical fields", singular=True
+                        )
                     )
                 place = FieldAccess(value.place, struct_ty.field_dict[attr], lhs)
                 return with_loc(lhs, with_type(ty, PlaceNode(place=place)))
@@ -100,11 +112,11 @@ class StmtChecker(AstVisitor[BBStatement]):
                 tys = ty.element_types if isinstance(ty, TupleType) else [ty]
                 n, m = len(elts), len(tys)
                 if n != m:
-                    raise GuppyTypeError(
-                        f"{'Too many' if n < m else 'Not enough'} values to unpack "
-                        f"(expected {n}, got {m})",
-                        node,
-                    )
+                    if n > m:
+                        span = Span(to_span(elts[m]).start, to_span(elts[-1]).end)
+                    else:
+                        span = to_span(lhs)
+                    raise GuppyTypeError(WrongNumberOfUnpacksError(span, m, n))
                 lhs.elts = [
                     self._check_assign(pat, el_ty, node)
                     for pat, el_ty in zip(elts, tys, strict=True)
@@ -115,12 +127,14 @@ class StmtChecker(AstVisitor[BBStatement]):
             #  `a, *b = ...`. The former would require some runtime checks but
             #  the latter should be easier to do (unpack and repack the rest).
             case _:
-                raise GuppyError("Assignment pattern not supported", lhs)
+                raise GuppyError(
+                    UnsupportedError(lhs, "This assignment pattern", singular=True)
+                )
 
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
         if len(node.targets) > 1:
             # This is the case for assignments like `a = b = 1`
-            raise GuppyError("Multi assignment not supported", node)
+            raise GuppyError(UnsupportedError(node, "Multi assignments"))
 
         [target] = node.targets
         node.value, ty = self._synth_expr(node.value)
@@ -129,9 +143,7 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.stmt:
         if node.value is None:
-            raise GuppyError(
-                "Variable declaration is not supported. Assignment is required", node
-            )
+            raise GuppyError(UnsupportedError(node, "Variable declarations"))
         ty = type_from_ast(node.annotation, self.ctx.globals)
         node.value, subst = self._check_expr(node.value, ty)
         assert not ty.unsolved_vars  # `ty` must be closed!
@@ -148,9 +160,7 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def visit_Expr(self, node: ast.Expr) -> ast.stmt:
         # An expression statement where the return value is discarded
-        node.value, ty = self._synth_expr(node.value)
-        if ty.linear:
-            raise GuppyTypeError(f"Value with linear type `{ty}` is not used", node)
+        node.value, _ = self._synth_expr(node.value)
         return node
 
     def visit_Return(self, node: ast.Return) -> ast.stmt:
@@ -163,9 +173,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             )
             assert len(subst) == 0  # `self.return_ty` is closed!
         elif not isinstance(self.return_ty, NoneType):
-            raise GuppyTypeError(
-                f"Expected return value of type `{self.return_ty}`", None
-            )
+            raise GuppyTypeError(MissingReturnValueError(node, self.return_ty))
         return node
 
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> ast.stmt:

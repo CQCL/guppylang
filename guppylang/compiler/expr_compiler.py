@@ -18,6 +18,7 @@ from typing_extensions import assert_never
 from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import Variable
+from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import CompilerBase, DFContainer
 from guppylang.compiler.hugr_extension import PartialOp
@@ -188,11 +189,11 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         defn = self.globals.build_compiled_def(node.def_id)
         assert isinstance(defn, CompiledValueDef)
         if isinstance(defn, CompiledCallableDef) and defn.ty.parametrized:
-            raise GuppyError(
-                "Usage of polymorphic functions as dynamic higher-order values is not "
-                "supported yet",
-                node,
+            # TODO: This should be caught during checking
+            err = UnsupportedError(
+                node, "Polymorphic functions as dynamic higher-order values"
             )
+            raise GuppyError(err)
         return defn.load(self.dfg, self.globals, node)
 
     def visit_Name(self, node: ast.Name) -> Wire:
@@ -379,10 +380,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # TODO: We would need to do manual monomorphisation in that case to obtain a
         #  function that returns two ports as expected
         if instantiation_needs_unpacking(defn.ty, node.inst):
-            raise GuppyError(
-                "Generic function instantiations returning rows are not supported yet",
-                node,
+            err = UnsupportedError(
+                node, "Generic function instantiations returning rows"
             )
+            raise GuppyError(err)
 
         return defn.load_with_args(node.inst, self.dfg, self.globals, node)
 
