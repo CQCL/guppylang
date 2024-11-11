@@ -261,14 +261,16 @@ class DiagnosticsRenderer:
                         max_lineno,
                         is_primary=False,
                     )
-            if diag.message:
+            if diag.rendered_message:
                 self.buffer.append("")
                 self.buffer += textwrap.wrap(
-                    f"{diag.rendered_message}", self.MAX_MESSAGE_LINE_LEN
+                    diag.rendered_message,
+                    self.MAX_MESSAGE_LINE_LEN,
+                    replace_whitespace=False,  # Keep \n's in the message
                 )
         # Finally, render all sub-diagnostics that have a non-span message
         for sub_diag in diag.children:
-            if sub_diag.message:
+            if sub_diag.rendered_message:
                 self.buffer.append("")
                 self.buffer += textwrap.wrap(
                     f"{self.level_str(sub_diag.level)}: {sub_diag.rendered_message}",

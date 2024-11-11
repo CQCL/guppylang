@@ -1,7 +1,12 @@
-Guppy compilation failed. Error in file $FILE:24
+Error: Linearity violation (at $FILE:24:11)
+   | 
+22 | @guppy(module)
+23 | def bar() -> qubit:
+24 |     return foo().q1
+   |            ^^^^^ Linear field `q2` of expression with type `MyStruct` is
+   |                  leaked
 
-22:    @guppy(module)
-23:    def bar() -> qubit:
-24:        return foo().q1
-                  ^^^^^
-GuppyTypeError: Linear field `q2` of expression with type `MyStruct` is not used
+Help: Consider assigning this value to a local variable before accessing the
+field `q1`
+
+Guppy compilation failed due to 1 previous error

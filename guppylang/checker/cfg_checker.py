@@ -60,7 +60,7 @@ class CheckedCFG(BaseCFG[CheckedBB[V]], Generic[V]):
 
 
 def check_cfg(
-    cfg: CFG, inputs: Row[Variable], return_ty: Type, globals: Globals
+    cfg: CFG, inputs: Row[Variable], return_ty: Type, func_name: str, globals: Globals
 ) -> CheckedCFG[Place]:
     """Type checks a control-flow graph.
 
@@ -126,7 +126,7 @@ def check_cfg(
     # Finally, run the linearity check
     from guppylang.checker.linearity_checker import check_cfg_linearity
 
-    linearity_checked_cfg = check_cfg_linearity(checked_cfg, globals)
+    linearity_checked_cfg = check_cfg_linearity(checked_cfg, func_name, globals)
 
     return linearity_checked_cfg
 

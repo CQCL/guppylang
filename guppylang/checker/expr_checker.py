@@ -24,8 +24,8 @@ import ast
 import sys
 import traceback
 from contextlib import suppress
-from dataclasses import dataclass, replace
-from typing import Any, ClassVar, NoReturn, cast
+from dataclasses import replace
+from typing import Any, NoReturn, cast
 
 from guppylang.ast_util import (
     AstNode,
@@ -45,13 +45,33 @@ from guppylang.checker.core import (
     Locals,
     Place,
     SubscriptAccess,
+    UnsupportedError,
     Variable,
+)
+from guppylang.checker.errors.linearity import LinearForBreakError
+from guppylang.checker.errors.py_errors import (
+    IllegalPyExpressionError,
+    PyExprEvalError,
+    PyExprIncoherentListError,
+    PyExprNotCPythonError,
+    PyExprNotStaticError,
+    Tket2NotInstalled,
+)
+from guppylang.checker.errors.type_errors import (
+    AttributeNotFoundError,
+    BadProtocolError,
+    BinaryOperatorNotDefinedError,
+    IllegalConstant,
+    ModuleMemberNotFoundError,
+    TypeInferenceError,
+    TypeMismatchError,
+    UnaryOperatorNotDefinedError,
+    WrongNumberOfArgsError,
 )
 from guppylang.definition.common import Definition
 from guppylang.definition.module import ModuleDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef, ValueDef
-from guppylang.diagnostic import Error
 from guppylang.error import (
     GuppyError,
     GuppyTypeError,
@@ -77,6 +97,7 @@ from guppylang.nodes import (
     TensorCall,
     TypeApply,
 )
+from guppylang.span import Span, to_span
 from guppylang.tys.arg import TypeArg
 from guppylang.tys.builtin import (
     bool_type,
@@ -134,18 +155,6 @@ binary_table: dict[type[AstOp], tuple[str, str, str]] = {
     ast.Gt:       ("__gt__",       "__lt__",        ">"),
     ast.GtE:      ("__ge__",       "__le__",        ">="),
 }  # fmt: skip
-
-
-@dataclass(frozen=True)
-class TypeMismatchError(Error):
-    """Error diagnostic for expressions with the wrong type."""
-
-    expected: Type
-    actual: Type
-    kind: str = "expression"
-
-    title: ClassVar[str] = "Type mismatch"
-    span_label: ClassVar[str] = "Expected {kind} of type `{expected}`, got `{actual}`"
 
 
 class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
@@ -248,9 +257,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
     def visit_Call(self, node: ast.Call, ty: Type) -> tuple[ast.expr, Subst]:
         if len(node.keywords) > 0:
-            raise GuppyError(
-                "Argument passing by keyword is not supported", node.keywords[0]
-            )
+            raise GuppyError(UnsupportedError(node.keywords[0], "Keyword arguments"))
         node.func, func_ty = self._synthesize(node.func, allow_free_vars=False)
 
         # First handle direct calls of user-defined functions and extension functions
@@ -278,8 +285,8 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         ):
             check_function_tensors_enabled(node.func)
             if any(f.parametrized for f in function_elements):
-                raise GuppyTypeError(
-                    "Polymorphic functions in tuples are not supported", node.func
+                raise GuppyError(
+                    UnsupportedError(node.func, "Polymorphic function tensors")
                 )
 
             tensor_ty = function_tensor_signature(function_elements)
@@ -300,7 +307,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
     def visit_PyExpr(self, node: PyExpr, ty: Type) -> tuple[ast.expr, Subst]:
         python_val = eval_py_expr(node, self.ctx)
-        if act := python_value_to_guppy_type(python_val, node, self.ctx.globals):
+        if act := python_value_to_guppy_type(python_val, node.value, self.ctx.globals):
             subst = unify(ty, act, {})
             if subst is None:
                 self._fail(ty, act, node)
@@ -308,10 +315,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             subst = {x: s for x, s in subst.items() if x in ty.unsolved_vars}
             return with_type(act, with_loc(node, ast.Constant(value=python_val))), subst
 
-        raise GuppyError(
-            f"Python expression of type `{type(python_val)}` is not supported by Guppy",
-            node,
-        )
+        raise GuppyError(IllegalPyExpressionError(node.value, type(python_val)))
 
     def generic_visit(self, node: ast.expr, ty: Type) -> tuple[ast.expr, Subst]:
         # Try to synthesize and then check if we can unify it with the given type
@@ -342,9 +346,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             return node, ty
         node, ty = self.visit(node)
         if ty.unsolved_vars and not allow_free_vars:
-            raise GuppyTypeError(
-                f"Cannot infer type variable in expression of type `{ty}`", node
-            )
+            raise GuppyError(TypeInferenceError(node, ty))
         return with_type(ty, node), ty
 
     def _check(
@@ -356,7 +358,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
     def visit_Constant(self, node: ast.Constant) -> tuple[ast.expr, Type]:
         ty = python_value_to_guppy_type(node.value, node, self.ctx.globals)
         if ty is None:
-            raise GuppyError("Unsupported constant", node)
+            raise GuppyError(IllegalConstant(node, type(node.value)))
         return node, ty
 
     def visit_Name(self, node: ast.Name) -> tuple[ast.expr, Type]:
@@ -390,11 +392,15 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 )
 
     def visit_Attribute(self, node: ast.Attribute) -> tuple[ast.expr, Type]:
-        # A `value.attr` attribute access
+        # A `value.attr` attribute access. Unfortunately, the `attr` is just a string,
+        # not an AST node, so we have to compute its span by hand. This is fine since
+        # linebreaks are not allowed in the identifier following the `.`
+        span = to_span(node)
+        attr_span = Span(span.end.shift_left(len(node.attr)), span.end)
         if module_def := self._is_module_def(node.value):
             if node.attr not in module_def.globals:
                 raise GuppyError(
-                    f"Module `{module_def.name}` has no member `{node.attr}`", node
+                    ModuleMemberNotFoundError(attr_span, module_def.name, node.attr)
                 )
             defn = module_def.globals[node.attr]
             qual_name = f"{module_def.name}.{defn.name}"
@@ -425,12 +431,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 func.ty.params,
             )
             return with_loc(node, PartialApply(func=name, args=[node.value])), result_ty
-        raise GuppyTypeError(
-            f"Expression of type `{ty}` has no attribute `{node.attr}`",
-            # Unfortunately, `node.attr` doesn't contain source annotations, so we have
-            # to use `node` as the error location
-            node,
-        )
+        raise GuppyTypeError(AttributeNotFoundError(attr_span, ty, node.attr))
 
     def _is_module_def(self, node: ast.expr) -> ModuleDef | None:
         """Checks whether an AST node corresponds to a defined module."""
@@ -449,9 +450,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
     def visit_List(self, node: ast.List) -> tuple[ast.expr, Type]:
         check_lists_enabled(node)
         if len(node.elts) == 0:
-            raise GuppyTypeInferenceError(
-                "Cannot infer type variable in expression of type `list[?T]`", node
-            )
+            unsolved_ty = list_type(ExistentialTypeVar.fresh("T", False))
+            raise GuppyTypeInferenceError(TypeInferenceError(node, unsolved_ty))
         node.elts[0], el_ty = self.synthesize(node.elts[0])
         node.elts[1:] = [self._check(el, el_ty)[0] for el in node.elts[1:]]
         return node, list_type(el_ty)
@@ -476,9 +476,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         func = self.ctx.globals.get_instance_func(op_ty, op)
         if func is None:
             raise GuppyTypeError(
-                f"Unary operator `{display_name}` not defined for argument of type "
-                f" `{op_ty}`",
-                node.operand,
+                UnaryOperatorNotDefinedError(node.operand, op_ty, display_name)
             )
         return func.synthesize_call([node.operand], node, self.ctx)
 
@@ -491,7 +489,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         `__radd__` on the right operand.
         """
         if op.__class__ not in binary_table:
-            raise GuppyError("This binary operation is not supported by Guppy.", op)
+            raise GuppyTypeError(UnsupportedError(node, "Operator", singular=True))
         lop, rop, display_name = binary_table[op.__class__]
         left_expr, left_ty = self.synthesize(left_expr)
         right_expr, right_ty = self.synthesize(right_expr)
@@ -505,9 +503,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 return func.synthesize_call([right_expr, left_expr], node, self.ctx)
 
         raise GuppyTypeError(
-            f"Binary operator `{display_name}` not defined for arguments of type "
-            f"`{left_ty}` and `{right_ty}`",
-            node,
+            # TODO: Is there a way to get the span of the operator?
+            BinaryOperatorNotDefinedError(node, left_ty, right_ty, display_name)
         )
 
     def synthesize_instance_func(
@@ -515,7 +512,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         node: ast.expr,
         args: list[ast.expr],
         func_name: str,
-        err: str,
+        description: str,
         exp_sig: FunctionType | None = None,
         give_reason: bool = False,
     ) -> tuple[ast.expr, Type]:
@@ -531,17 +528,18 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         node, ty = self.synthesize(node)
         func = self.ctx.globals.get_instance_func(ty, func_name)
         if func is None:
-            reason = f" since it does not implement the `{func_name}` method"
-            raise GuppyTypeError(
-                f"Expression of type `{ty}` is {err}{reason if give_reason else ''}",
-                node,
-            )
+            err = BadProtocolError(node, ty, description)
+            if give_reason and exp_sig is not None:
+                err.add_sub_diagnostic(
+                    BadProtocolError.MethodMissing(None, func_name, exp_sig)
+                )
+            raise GuppyTypeError(err)
         if exp_sig and unify(exp_sig, func.ty.unquantified()[0], {}) is None:
-            raise GuppyError(
-                f"Method `{ty}.{func_name}` has signature `{func.ty}`, but "
-                f"expected `{exp_sig}`",
-                node,
+            err = BadProtocolError(node, ty, description)
+            err.add_sub_diagnostic(
+                BadProtocolError.BadSignature(None, ty, func_name, exp_sig, func.ty)
             )
+            raise GuppyError(err)
         return func.synthesize_call([node, *args], node, self.ctx)
 
     def visit_BinOp(self, node: ast.BinOp) -> tuple[ast.expr, Type]:
@@ -572,7 +570,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             ExistentialTypeVar.fresh("Val", False),
         )
         getitem_expr, result_ty = self.synthesize_instance_func(
-            node.value, [item_node], "__getitem__", "not subscriptable", exp_sig
+            node.value, [item_node], "__getitem__", "subscriptable", exp_sig
         )
         # Subscripting a place is itself a place
         expr: ast.expr
@@ -586,13 +584,16 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             # other indices after this one has been projected out (e.g. `f()[0]` makes
             # you loose access to all elements besides 0).
             expr = SubscriptAccessAndDrop(
-                item=item, item_expr=item_expr, getitem_expr=getitem_expr
+                item=item,
+                item_expr=item_expr,
+                getitem_expr=getitem_expr,
+                original_expr=node,
             )
         return with_loc(node, expr), result_ty
 
     def visit_Call(self, node: ast.Call) -> tuple[ast.expr, Type]:
         if len(node.keywords) > 0:
-            raise GuppyError("Keyword arguments are not supported", node.keywords[0])
+            raise GuppyError(UnsupportedError(node.keywords[0], "Keyword arguments"))
         node.func, ty = self.synthesize(node.func)
 
         # First handle direct calls of user-defined functions and extension functions
@@ -617,8 +618,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         ):
             check_function_tensors_enabled(node.func)
             if any(f.parametrized for f in function_elems):
-                raise GuppyTypeError(
-                    "Polymorphic functions in tuples are not supported", node.func
+                raise GuppyError(
+                    UnsupportedError(node.func, "Polymorphic function tensors")
                 )
 
             tensor_ty = function_tensor_signature(function_elems)
@@ -643,7 +644,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             [FuncInput(ty, flags)], ExistentialTypeVar.fresh("Iter", False)
         )
         expr, ty = self.synthesize_instance_func(
-            node.value, [], "__iter__", "not iterable", exp_sig
+            node.value, [], "__iter__", "iterable", exp_sig, True
         )
 
         # If the iterator was created by a `for` loop, we can add some extra checks to
@@ -654,11 +655,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 node.origin_node
             )
             if breaks:
-                raise GuppyTypeError(
-                    f"Loop over iterator with linear type `{ty}` cannot be terminated "
-                    f"prematurely",
-                    breaks[0],
-                )
+                err = LinearForBreakError(breaks[0])
+                err.add_sub_diagnostic(LinearForBreakError.LinearIteratorType(node, ty))
+                raise GuppyTypeError(err)
         return expr, ty
 
     def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, Type]:
@@ -666,7 +665,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
         exp_sig = FunctionType([FuncInput(ty, flags)], TupleType([bool_type(), ty]))
         return self.synthesize_instance_func(
-            node.value, [], "__hasnext__", "not an iterator", exp_sig, True
+            node.value, [], "__hasnext__", "an iterator", exp_sig, True
         )
 
     def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, Type]:
@@ -677,7 +676,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             TupleType([ExistentialTypeVar.fresh("T", False), ty]),
         )
         return self.synthesize_instance_func(
-            node.value, [], "__next__", "not an iterator", exp_sig, True
+            node.value, [], "__next__", "an iterator", exp_sig, True
         )
 
     def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, Type]:
@@ -685,7 +684,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
         exp_sig = FunctionType([FuncInput(ty, flags)], NoneType())
         return self.synthesize_instance_func(
-            node.value, [], "__end__", "not an iterator", exp_sig, True
+            node.value, [], "__end__", "an iterator", exp_sig, True
         )
 
     def visit_ListComp(self, node: ast.ListComp) -> tuple[ast.expr, Type]:
@@ -699,10 +698,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         if ty := python_value_to_guppy_type(python_val, node, self.ctx.globals):
             return with_loc(node, ast.Constant(value=python_val)), ty
 
-        raise GuppyError(
-            f"Python expression of type `{type(python_val)}` is not supported by Guppy",
-            node,
-        )
+        raise GuppyError(IllegalPyExpressionError(node.value, type(python_val)))
 
     def visit_NamedExpr(self, node: ast.NamedExpr) -> tuple[ast.expr, Type]:
         raise InternalGuppyError(
@@ -745,20 +741,17 @@ def check_type_against(
             raise GuppyTypeError(TypeMismatchError(node, exp, act, kind))
         # Check that we have found a valid instantiation for all params
         for i, v in enumerate(free_vars):
+            param = act.params[i].name
             if v not in subst:
-                raise GuppyTypeInferenceError(
-                    f"Expected {kind} of type `{exp}`, got `{act}`. Couldn't infer an "
-                    f"instantiation for parameter `{act.params[i].name}` (higher-rank "
-                    "polymorphic types are not supported)",
-                    node,
-                )
+                err = TypeMismatchError(node, exp, act, kind)
+                err.add_sub_diagnostic(TypeMismatchError.CantInferParam(None, param))
+                raise GuppyTypeInferenceError(err)
             if subst[v].unsolved_vars:
-                raise GuppyTypeError(
-                    f"Expected {kind} of type `{exp}`, got `{act}`. Can't instantiate "
-                    f"parameter `{act.params[i]}` with type `{subst[v]}` containing "
-                    "free variables",
-                    node,
+                err = TypeMismatchError(node, exp, act, kind)
+                err.add_sub_diagnostic(
+                    TypeMismatchError.CantInstantiateFreeVars(None, param, subst[v])
                 )
+                raise GuppyTypeError(err)
         inst = [subst[v].to_arg() for v in free_vars]
         subst = {v: t for v, t in subst.items() if v in exp.unsolved_vars}
 
@@ -775,18 +768,26 @@ def check_type_against(
     return subst, []
 
 
-def check_num_args(exp: int, act: int, node: AstNode) -> None:
+def check_num_args(
+    exp: int, act: int, node: AstNode, sig: FunctionType | None = None
+) -> None:
     """Checks that the correct number of arguments have been passed to a function."""
-    if act < exp:
-        raise GuppyTypeError(
-            f"Not enough arguments passed (expected {exp}, got {act})", node
-        )
-    if exp < act:
-        if isinstance(node, ast.Call):
-            raise GuppyTypeError("Unexpected argument", node.args[exp])
-        raise GuppyTypeError(
-            f"Too many arguments passed (expected {exp}, got {act})", node
-        )
+    if exp == act:
+        return
+    span, detailed = to_span(node), False
+    if isinstance(node, ast.Call):
+        # We can construct a nicer error span if we know it's a regular call
+        detailed = True
+        if exp < act:
+            span = Span(to_span(node.args[exp]).start, to_span(node.args[-1]).end)
+        elif act > 0:
+            span = Span(to_span(node.args[-1]).end, to_span(node).end)
+        else:
+            span = Span(to_span(node.func).end, to_span(node).end)
+    err = WrongNumberOfArgsError(span, exp, act, detailed)
+    if sig:
+        err.add_sub_diagnostic(WrongNumberOfArgsError.SignatureHint(None, sig))
+    raise GuppyTypeError(err)
 
 
 def type_check_args(
@@ -802,7 +803,7 @@ def type_check_args(
     Checks that all unification variables can be inferred.
     """
     assert not func_ty.parametrized
-    check_num_args(len(func_ty.inputs), len(inputs), node)
+    check_num_args(len(func_ty.inputs), len(inputs), node, func_ty)
 
     new_args: list[ast.expr] = []
     for inp, func_inp in zip(inputs, func_ty.inputs, strict=True):
@@ -821,9 +822,7 @@ def type_check_args(
     # We also have to check that we found instantiations for all vars in the return type
     if not set.issubset(func_ty.output.unsolved_vars, subst.keys()):
         raise GuppyTypeInferenceError(
-            f"Cannot infer type variable in expression of type "
-            f"`{func_ty.output.substitute(subst)}`",
-            node,
+            TypeInferenceError(node, func_ty.output.substitute(subst))
         )
 
     return new_args, subst
@@ -859,7 +858,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 setitem_args[0],
                 setitem_args[1:],
                 "__setitem__",
-                "unable to have subscripted elements borrowed",
+                "able to borrow subscripted elements",
                 exp_sig,
                 True,
             )
@@ -875,7 +874,7 @@ def synthesize_call(
     instantiation for the quantifiers in the function type.
     """
     assert not func_ty.unsolved_vars
-    check_num_args(len(func_ty.inputs), len(args), node)
+    check_num_args(len(func_ty.inputs), len(args), node, func_ty)
 
     # Replace quantified variables with free unification variables and try to infer an
     # instantiation by checking the arguments
@@ -906,7 +905,7 @@ def check_call(
     expected type, and an instantiation for the quantifiers in the function type.
     """
     assert not func_ty.unsolved_vars
-    check_num_args(len(func_ty.inputs), len(inputs), node)
+    check_num_args(len(func_ty.inputs), len(inputs), node, func_ty)
 
     # When checking, we can use the information from the expected return type to infer
     # some type arguments. However, this pushes errors inwards. For example, given a
@@ -954,11 +953,12 @@ def check_call(
     # Also make sure we found an instantiation for all free vars in the type we're
     # checking against
     if not set.issubset(ty.unsolved_vars, subst.keys()):
-        raise GuppyTypeInferenceError(
-            f"Expected expression of type `{ty}`, got "
-            f"`{func_ty.output.substitute(subst)}`. Couldn't infer type variables",
-            node,
+        unsolved = (subst.keys() - ty.unsolved_vars).pop()
+        err = TypeMismatchError(node, ty, func_ty.output.substitute(subst))
+        err.add_sub_diagnostic(
+            TypeMismatchError.CantInferParam(None, unsolved.display_name)
         )
+        raise GuppyTypeInferenceError(err)
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
@@ -1006,23 +1006,11 @@ def to_bool(node: ast.expr, node_ty: Type, ctx: Context) -> tuple[ast.expr, Type
     """Tries to turn a node into a bool"""
     if is_bool_type(node_ty):
         return node, node_ty
-
-    func = ctx.globals.get_instance_func(node_ty, "__bool__")
-    if func is None:
-        raise GuppyTypeError(
-            f"Expression of type `{node_ty}` cannot be interpreted as a `bool`",
-            node,
-        )
-
-    # We could check the return type against bool, but we can give a better error
-    # message if we synthesise and compare to bool by hand
-    call, return_ty = func.synthesize_call([node], node, ctx)
-    if not is_bool_type(return_ty):
-        raise GuppyTypeError(
-            f"`__bool__` on type `{node_ty}` returns `{return_ty}` instead of `bool`",
-            node,
-        )
-    return call, return_ty
+    synth = ExprSynthesizer(ctx)
+    exp_sig = FunctionType([FuncInput(node_ty, InputFlags.Inout)], bool_type())
+    return synth.synthesize_instance_func(
+        node, [node], "__bool__", "truthy", exp_sig, True
+    )
 
 
 def synthesize_comprehension(
@@ -1071,9 +1059,7 @@ def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
     # The method we used for obtaining the Python variables in scope only works in
     # CPython (see `get_py_scope()`).
     if sys.implementation.name != "cpython":
-        raise GuppyError(
-            "Compile-time `py(...)` expressions are only supported in CPython", node
-        )
+        raise GuppyError(PyExprNotCPythonError(node))
 
     try:
         python_val = eval(  # noqa: S307
@@ -1082,19 +1068,12 @@ def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
             DummyEvalDict(ctx, node.value),
         )
     except DummyEvalDict.GuppyVarUsedError as e:
-        raise GuppyError(
-            f"Guppy variable `{e.var}` cannot be accessed in a compile-time "
-            "`py(...)` expression",
-            e.node or node,
-        ) from None
+        raise GuppyError(PyExprNotStaticError(e.node or node, e.var)) from None
     except Exception as e:
         # Remove the top frame pointing to the `eval` call from the stack trace
         tb = e.__traceback__.tb_next if e.__traceback__ else None
-        raise GuppyError(
-            "Error occurred while evaluating Python expression:\n\n"
-            + "".join(traceback.format_exception(type(e), e, tb)),
-            node,
-        ) from e
+        tb_formatted = "".join(traceback.format_exception(type(e), e, tb))
+        raise GuppyError(PyExprEvalError(node.value, tb_formatted)) from e
     return python_val
 
 
@@ -1136,11 +1115,11 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
                             row_to_type([bool_type()] * v.n_bits),
                         )
                     except ImportError:
-                        raise GuppyError(
-                            "Experimental pytket compatibility requires `tket2` to be"
-                            " installed. See https://github.com/CQCL/tket2/tree/main/tket2-py",
-                            node,
-                        ) from None
+                        err = Tket2NotInstalled(node)
+                        err.add_sub_diagnostic(
+                            Tket2NotInstalled.InstallInstruction(None)
+                        )
+                        raise GuppyError(err) from None
             except ImportError:
                 pass
             return None
@@ -1167,6 +1146,6 @@ def _python_list_to_guppy_type(
         if ty is None:
             return None
         if (subst := unify(ty, el_ty, {})) is None:
-            raise GuppyError("Python list contains elements with different types", node)
+            raise GuppyError(PyExprIncoherentListError(node))
         el_ty = el_ty.substitute(subst)
     return list_type(el_ty)

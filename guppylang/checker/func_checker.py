@@ -6,14 +6,16 @@ node straight from the Python AST. We build a CFG, check it, and return a
 """
 
 import ast
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, ClassVar
 
 from guppylang.ast_util import return_nodes_in_ast, with_loc
 from guppylang.cfg.bb import BB
 from guppylang.cfg.builder import CFGBuilder
 from guppylang.checker.cfg_checker import CheckedCFG, check_cfg
-from guppylang.checker.core import Context, Globals, Place, Variable
+from guppylang.checker.core import Context, Globals, Place, UnsupportedError, Variable
 from guppylang.definition.common import DefId
+from guppylang.diagnostic import Error, Help, Note
 from guppylang.error import GuppyError
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
 from guppylang.tys.parsing import parse_function_io_types
@@ -21,6 +23,41 @@ from guppylang.tys.ty import FunctionType, InputFlags, NoneType
 
 if TYPE_CHECKING:
     from guppylang.tys.param import Parameter
+
+
+@dataclass(frozen=True)
+class IllegalAssignError(Error):
+    title: ClassVar[str] = "Illegal assignment"
+    span_label: ClassVar[str] = (
+        "Variable `{var}` may not be assigned to since `{var}` is captured from an "
+        "outer scope"
+    )
+    var: str
+
+    @dataclass(frozen=True)
+    class DefHint(Note):
+        span_label: ClassVar[str] = "`{var}` defined here"
+        var: str
+
+
+@dataclass(frozen=True)
+class MissingArgAnnotationError(Error):
+    title: ClassVar[str] = "Missing type annotation"
+    span_label: ClassVar[str] = "Argument requires a type annotation"
+
+
+@dataclass(frozen=True)
+class MissingReturnAnnotationError(Error):
+    title: ClassVar[str] = "Missing type annotation"
+    span_label: ClassVar[str] = "Return type must be annotated"
+
+    @dataclass(frozen=True)
+    class ReturnNone(Help):
+        message: ClassVar[str] = (
+            "Looks like `{func}` doesn't return anything. Consider annotating it with "
+            "`-> None`."
+        )
+        func: str
 
 
 def check_global_func_def(
@@ -36,7 +73,7 @@ def check_global_func_def(
         Variable(x, inp.ty, loc, inp.flags)
         for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
     ]
-    return check_cfg(cfg, inputs, ty.output, globals)
+    return check_cfg(cfg, inputs, ty.output, func_def.name, globals)
 
 
 def check_nested_func_def(
@@ -67,12 +104,9 @@ def check_nested_func_def(
         for v, _ in captured.values():
             x = v.name
             if x in bb.vars.assigned:
-                raise GuppyError(
-                    f"Variable `{x}` defined in an outer scope (at {{0}}) may not "
-                    f"be assigned to",
-                    bb.vars.assigned[x],
-                    [v.defined_at],
-                )
+                err = IllegalAssignError(bb.vars.assigned[x], x)
+                err.add_sub_diagnostic(IllegalAssignError.DefHint(v.defined_at, x))
+                raise GuppyError(err)
 
     # Construct inputs for checking the body CFG
     inputs = [v for v, _ in captured.values()] + [
@@ -102,7 +136,7 @@ def check_nested_func_def(
             # Otherwise, we treat it like a local name
             inputs.append(Variable(func_def.name, func_def.ty, func_def))
 
-    checked_cfg = check_cfg(cfg, inputs, func_ty.output, globals)
+    checked_cfg = check_cfg(cfg, inputs, func_ty.output, func_def.name, globals)
     checked_def = CheckedNestedFunctionDef(
         def_id,
         checked_cfg,
@@ -123,24 +157,24 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     Guppy type."""
     if len(func_def.args.posonlyargs) != 0:
         raise GuppyError(
-            "Positional-only parameters not supported", func_def.args.posonlyargs[0]
+            UnsupportedError(func_def.args.posonlyargs[0], "Positional-only parameters")
         )
     if len(func_def.args.kwonlyargs) != 0:
         raise GuppyError(
-            "Keyword-only parameters not supported", func_def.args.kwonlyargs[0]
+            UnsupportedError(func_def.args.kwonlyargs[0], "Keyword-only parameters")
         )
     if func_def.args.vararg is not None:
-        raise GuppyError("*args not supported", func_def.args.vararg)
+        raise GuppyError(UnsupportedError(func_def.args.vararg, "Variadic args"))
     if func_def.args.kwarg is not None:
-        raise GuppyError("**kwargs not supported", func_def.args.kwarg)
+        raise GuppyError(UnsupportedError(func_def.args.kwarg, "Keyword args"))
     if func_def.returns is None:
+        err = MissingReturnAnnotationError(func_def)
         # TODO: Error location is incorrect
         if all(r.value is None for r in return_nodes_in_ast(func_def)):
-            raise GuppyError(
-                "Return type must be annotated. Try adding a `-> None` annotation.",
-                func_def,
+            err.add_sub_diagnostic(
+                MissingReturnAnnotationError.ReturnNone(None, func_def.name)
             )
-        raise GuppyError("Return type must be annotated", func_def)
+        raise GuppyError(err)
 
     # TODO: Prepopulate mapping when using Python 3.12 style generic functions
     param_var_mapping: dict[str, Parameter] = {}
@@ -149,7 +183,7 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     for inp in func_def.args.args:
         ty_ast = inp.annotation
         if ty_ast is None:
-            raise GuppyError("Argument type must be annotated", inp)
+            raise GuppyError(MissingArgAnnotationError(inp))
         input_nodes.append(ty_ast)
         input_names.append(inp.arg)
     inputs, output = parse_function_io_types(

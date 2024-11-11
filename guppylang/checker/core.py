@@ -7,6 +7,7 @@ from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     NamedTuple,
     TypeAlias,
@@ -20,6 +21,7 @@ from guppylang.cfg.bb import VId
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
+from guppylang.diagnostic import Error
 from guppylang.tys.builtin import (
     array_type_def,
     bool_type_def,
@@ -47,6 +49,18 @@ from guppylang.tys.ty import (
 
 if TYPE_CHECKING:
     from guppylang.definition.struct import StructField
+
+
+@dataclass(frozen=True)
+class UnsupportedError(Error):
+    title: ClassVar[str] = "Unsupported"
+    things: str
+    singular: bool = False
+
+    @property
+    def rendered_span_label(self) -> str:
+        is_are = "is" if self.singular else "are"
+        return f"{self.things} {is_are} not supported"
 
 
 #: A "place" is a description for a storage location of a local value that users
@@ -85,6 +99,11 @@ class Variable:
         """The unique `PlaceId` identifier for this place."""
         return Variable.Id(self.name)
 
+    @cached_property
+    def root(self) -> "Variable":
+        """The root variable of this place."""
+        return self
+
     @property
     def describe(self) -> str:
         """A human-readable description of this place for error messages."""
@@ -122,6 +141,11 @@ class FieldAccess:
     def id(self) -> "FieldAccess.Id":
         """The unique `PlaceId` identifier for this place."""
         return FieldAccess.Id(self.parent.id, self.field.name)
+
+    @cached_property
+    def root(self) -> "Variable":
+        """The root variable of this place."""
+        return self.parent.root
 
     @property
     def ty(self) -> Type:
@@ -181,6 +205,11 @@ class SubscriptAccess:
     def defined_at(self) -> AstNode | None:
         """Optional location where this place was last assigned to."""
         return self.parent.defined_at
+
+    @cached_property
+    def root(self) -> "Variable":
+        """The root variable of this place."""
+        return self.parent.root
 
     @property
     def describe(self) -> str:
