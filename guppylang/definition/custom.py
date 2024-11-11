@@ -2,7 +2,7 @@ import ast
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from hugr import Wire, ops
 from hugr import tys as ht
@@ -29,6 +29,9 @@ from guppylang.tys.ty import (
     type_to_row,
 )
 
+if TYPE_CHECKING:
+    from guppylang.definition.function import PyFunc
+
 
 @dataclass(frozen=True)
 class BodyNotEmptyError(Error):
@@ -49,6 +52,9 @@ class NoSignatureError(Error):
             "Annotate the type signature of `{name}` or disallow the use of `{name}` "
             "as a higher-order value: `@guppy.custom(..., higher_order_value=False)`"
         )
+
+    def __post_init__(self) -> None:
+        self.add_sub_diagnostic(NoSignatureError.Suggestion(None))
 
 
 @dataclass(frozen=True)
@@ -79,7 +85,7 @@ class RawCustomFunctionDef(ParsableDef):
         higher_order_value: Whether the function may be used as a higher-order value.
     """
 
-    defined_at: ast.FunctionDef
+    python_func: "PyFunc"
     call_checker: "CustomCallChecker"
     call_compiler: "CustomInoutCallCompiler"
 
@@ -101,14 +107,17 @@ class RawCustomFunctionDef(ParsableDef):
         code. The only information we need to access is that it's a function type and
         that there are no unsolved existential vars.
         """
-        if not has_empty_body(self.defined_at):
-            raise GuppyError(BodyNotEmptyError(self.defined_at.body[0], self.name))
-        sig = self._get_signature(globals)
+        from guppylang.definition.function import parse_py_func
+
+        func_ast, docstring = parse_py_func(self.python_func, sources)
+        if not has_empty_body(func_ast):
+            raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
+        sig = self._get_signature(func_ast, globals)
         ty = sig or FunctionType([], NoneType())
         return CustomFunctionDef(
             self.id,
             self.name,
-            self.defined_at,
+            func_ast,
             ty,
             self.call_checker,
             self.call_compiler,
@@ -138,7 +147,9 @@ class RawCustomFunctionDef(ParsableDef):
         )
         return self.call_compiler.compile_with_inouts(args).regular_returns
 
-    def _get_signature(self, globals: Globals) -> FunctionType | None:
+    def _get_signature(
+        self, node: ast.FunctionDef, globals: Globals
+    ) -> FunctionType | None:
         """Returns the type of the function, if known.
 
         Type annotations are needed if we rely on the default call checker or
@@ -151,17 +162,15 @@ class RawCustomFunctionDef(ParsableDef):
         requires_type_annotation = (
             isinstance(self.call_checker, DefaultCallChecker) or self.higher_order_value
         )
-        has_type_annotation = self.defined_at.returns or any(
-            arg.annotation for arg in self.defined_at.args.args
+        has_type_annotation = node.returns or any(
+            arg.annotation for arg in node.args.args
         )
 
         if requires_type_annotation and not has_type_annotation:
-            err = NoSignatureError(self.defined_at, self.name)
-            err.add_sub_diagnostic(NoSignatureError.Suggestion(None))
-            raise GuppyError(err)
+            raise GuppyError(NoSignatureError(node, self.name))
 
         if requires_type_annotation:
-            return check_signature(self.defined_at, globals)
+            return check_signature(node, globals)
         else:
             return None
 

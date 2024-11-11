@@ -28,7 +28,6 @@ from guppylang.definition.extern import RawExternDef
 from guppylang.definition.function import (
     CompiledFunctionDef,
     RawFunctionDef,
-    parse_py_func,
 )
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.struct import RawStructDef
@@ -309,12 +308,12 @@ class _Guppy:
         mod = module or self.get_module()
 
         def dec(f: PyFunc) -> RawCustomFunctionDef:
-            func_ast, docstring = parse_py_func(f, self._sources)
             call_checker = checker or DefaultCallChecker()
             func = RawCustomFunctionDef(
                 DefId.fresh(mod),
-                name or func_ast.name,
-                func_ast,
+                name or f.__name__,
+                None,
+                f,
                 call_checker,
                 compiler or NotImplementedCallCompiler(),
                 higher_order_value,
