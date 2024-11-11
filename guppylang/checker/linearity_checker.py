@@ -310,10 +310,10 @@ class BBLinearityChecker(ast.NodeVisitor):
             raise GuppyTypeError(f"Value with linear type `{ty}` is not used", node)
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> None:
-        self._check_comprehension(node, node.generators, node.elt)
+        self._check_comprehension(node.generators, node.elt)
 
     def visit_DesugaredArrayComp(self, node: DesugaredArrayComp) -> None:
-        self._check_comprehension(node, [node.generator], node.elt)
+        self._check_comprehension([node.generator], node.elt)
 
     def visit_CheckedNestedFunctionDef(self, node: CheckedNestedFunctionDef) -> None:
         # Linearity of the nested function has already been checked. We just need to
@@ -360,7 +360,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                 self.scope.assign(tgt_place)
 
     def _check_comprehension(
-        self, node: ast.expr, gens: list[DesugaredGenerator], elt: ast.expr
+        self, gens: list[DesugaredGenerator], elt: ast.expr
     ) -> None:
         """Helper function to recursively check list comprehensions."""
         if not gens:
@@ -406,7 +406,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                     self.visit(expr)
 
             # Recursively check the remaining generators
-            self._check_comprehension(node, gens, elt)
+            self._check_comprehension(gens, elt)
 
             # Check the iter finalizer so we record a final use of the iterator
             self.visit(gen.iterend)
