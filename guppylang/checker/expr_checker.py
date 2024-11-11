@@ -45,10 +45,9 @@ from guppylang.checker.core import (
     Locals,
     Place,
     SubscriptAccess,
-    UnsupportedError,
     Variable,
 )
-from guppylang.checker.errors.generic import ExpectedError
+from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang.checker.errors.linearity import LinearForBreakError
 from guppylang.checker.errors.py_errors import (
     IllegalPyExpressionError,

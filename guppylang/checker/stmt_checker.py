@@ -13,7 +13,8 @@ from collections.abc import Sequence
 
 from guppylang.ast_util import AstVisitor, with_loc, with_type
 from guppylang.cfg.bb import BB, BBStatement
-from guppylang.checker.core import Context, FieldAccess, UnsupportedError, Variable
+from guppylang.checker.core import Context, FieldAccess, Variable
+from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.checker.errors.type_errors import (
     AssignFieldTypeMismatchError,
     AssignNonPlaceHelp,

@@ -13,7 +13,8 @@ from guppylang.ast_util import return_nodes_in_ast, with_loc
 from guppylang.cfg.bb import BB
 from guppylang.cfg.builder import CFGBuilder
 from guppylang.checker.cfg_checker import CheckedCFG, check_cfg
-from guppylang.checker.core import Context, Globals, Place, UnsupportedError, Variable
+from guppylang.checker.core import Context, Globals, Place, Variable
+from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.definition.common import DefId
 from guppylang.diagnostic import Error, Help, Note
 from guppylang.error import GuppyError
