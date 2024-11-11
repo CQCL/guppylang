@@ -92,7 +92,7 @@ _n = TypeVar("_n")
 class array(Generic[_T, _n]):
     """Class to import in order to use arrays."""
 
-    def __init__(self, *args: _T):
+    def __init__(self, *args: Any):
         pass
 
 

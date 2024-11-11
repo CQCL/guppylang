@@ -243,8 +243,8 @@ def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
 
 def get_element_type(ty: Type) -> Type:
     assert isinstance(ty, OpaqueType)
-    assert ty.defn == list_type_def
-    (arg,) = ty.args
+    assert ty.defn == list_type_def or ty.defn == array_type_def
+    (arg, *_) = ty.args
     assert isinstance(arg, TypeArg)
     return arg.ty
 
