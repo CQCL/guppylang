@@ -48,6 +48,7 @@ from guppylang.checker.core import (
     UnsupportedError,
     Variable,
 )
+from guppylang.checker.errors.generic import ExpectedError
 from guppylang.checker.errors.linearity import LinearForBreakError
 from guppylang.checker.errors.py_errors import (
     IllegalPyExpressionError,
@@ -63,6 +64,8 @@ from guppylang.checker.errors.type_errors import (
     BinaryOperatorNotDefinedError,
     IllegalConstant,
     ModuleMemberNotFoundError,
+    NonLinearInstantiateError,
+    NotCallableError,
     TypeInferenceError,
     TypeMismatchError,
     UnaryOperatorNotDefinedError,
@@ -303,7 +306,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         elif callee := self.ctx.globals.get_instance_func(func_ty, "__call__"):
             return callee.check_call(node.args, ty, node, self.ctx)
         else:
-            raise GuppyTypeError(f"Expected function type, got `{func_ty}`", node.func)
+            raise GuppyTypeError(NotCallableError(node.func, func_ty))
 
     def visit_PyExpr(self, node: PyExpr, ty: Type) -> tuple[ast.expr, Subst]:
         python_val = eval_py_expr(node, self.ctx)
@@ -388,7 +391,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 return with_loc(node, GlobalName(id=name, def_id=constr.id)), constr.ty
             case defn:
                 raise GuppyError(
-                    f"Expected a value, got {defn.description} `{name}`", node
+                    ExpectedError(node, "a value", got=f"{defn.description} `{name}`")
                 )
 
     def visit_Attribute(self, node: ast.Attribute) -> tuple[ast.expr, Type]:
@@ -635,7 +638,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         elif f := self.ctx.globals.get_instance_func(ty, "__call__"):
             return f.synthesize_call(node.args, node, self.ctx)
         else:
-            raise GuppyTypeError(f"Expected function type, got `{ty}`", node.func)
+            raise GuppyTypeError(NotCallableError(node.func, ty))
 
     def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
@@ -985,9 +988,7 @@ def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
             and not param.can_be_linear
         ):
             raise GuppyTypeError(
-                f"Cannot instantiate non-linear type variable `{param.name}` in type "
-                f"`{func_ty}` with linear type `{arg.ty}`",
-                node,
+                NonLinearInstantiateError(node, param, func_ty, arg.ty)
             )
         # For everything else, we fall back to the default checking implementation
         param.check_arg(arg, node)
