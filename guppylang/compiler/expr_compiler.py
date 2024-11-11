@@ -186,7 +186,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self.dfg[node.place]
 
     def visit_GlobalName(self, node: GlobalName) -> Wire:
-        defn = self.globals[node.def_id]
+        defn = self.globals.build_compiled_def(node.def_id)
         assert isinstance(defn, CompiledValueDef)
         if isinstance(defn, CompiledCallableDef) and defn.ty.parametrized:
             # TODO: This should be caught during checking
@@ -335,7 +335,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
     def visit_GlobalCall(self, node: GlobalCall) -> Wire:
-        func = self.globals[node.def_id]
+        func = self.globals.build_compiled_def(node.def_id)
         assert isinstance(func, CompiledCallableDef)
 
         args = [self.visit(arg) for arg in node.args]
@@ -369,7 +369,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # For now, we can only TypeApply global FunctionDefs/Decls.
         if not isinstance(node.value, GlobalName):
             raise InternalGuppyError("Dynamic TypeApply not supported yet!")
-        defn = self.globals[node.value.def_id]
+        defn = self.globals.build_compiled_def(node.value.def_id)
         assert isinstance(defn, CompiledCallableDef)
 
         # We have to be very careful here: If we instantiate `foo: forall T. T -> T`

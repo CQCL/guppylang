@@ -14,6 +14,7 @@ on:
 env:
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
+  UV_VERSION: "0.4.27"
 
 
 jobs:
@@ -35,13 +36,11 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          version: "0.4.18"
+          version: ${{ env.UV_VERSION }}
           enable-cache: true
-      - name: Install Python
-        run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install Guppy
-        run: uv sync
+        run: uv sync --frozen --python ${{ env.PYTHON_VERSION }} 
 
       - name: Type check with mypy
         run: uv run mypy guppylang
@@ -69,10 +68,10 @@ jobs:
         run: uv run pytest tests/integration/test_py.py tests/error/test_py_errors.py tests/integration/test_tket.py
 
   test-coverage:
-    name: Check Python (3.12) with coverage
+    name: Check Python (3.13) with coverage
     runs-on: ubuntu-latest
     env:
-      PYTHON_VERSION: '3.12'
+      PYTHON_VERSION: '3.13'
 
     steps:
       - uses: actions/checkout@v4
@@ -84,13 +83,11 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          version: "0.4.18"
+          version: ${{ env.UV_VERSION }}
           enable-cache: true
-      - name: Install Python
-        run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install Guppy with execution and pytket
-        run: uv sync --extra execution --extra pytket
+        run: uv sync --frozen --python ${{ env.PYTHON_VERSION }} --extra execution --extra pytket
 
       - name: Cargo build validator
         run: cargo build -p validator --release

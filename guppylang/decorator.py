@@ -4,7 +4,7 @@ from collections.abc import Callable, KeysView
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
-from typing import Any, TypeVar, overload
+from typing import Any, TypeVar, cast, overload
 
 from hugr import ops
 from hugr import tys as ht
@@ -40,6 +40,7 @@ from guppylang.module import (
     PyFunc,
     find_guppy_module_in_py_module,
     get_calling_frame,
+    sphinx_running,
 )
 from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst
@@ -432,7 +433,7 @@ class _Guppy:
         return module
 
     def compile_module(self, id: ModuleIdentifier | None = None) -> ModulePointer:
-        """Compiles the local module into a Hugr."""
+        """Compiles the xlocal module into a Hugr."""
         module = self.get_module(id)
         if not module:
             err = (
@@ -452,7 +453,7 @@ class _Guppy:
         assert module._compiled is not None, "Module should be compiled"
         globs = module._compiled.globs
         assert globs is not None
-        compiled_def = globs[f_def.id]
+        compiled_def = globs.build_compiled_def(f_def.id)
         assert isinstance(compiled_def, CompiledFunctionDef)
         node = compiled_def.func_def.parent_node
         return FuncDefnPointer(
@@ -464,7 +465,56 @@ class _Guppy:
         return self._modules.keys()
 
 
-guppy = _Guppy()
+class _GuppyDummy:
+    """A dummy class with the same interface as `@guppy` that is used during sphinx
+    builds to mock the decorator.
+    """
+
+    def __call__(self, arg: PyFunc | GuppyModule) -> Any:
+        if isinstance(arg, GuppyModule):
+            return lambda f: f
+        return arg
+
+    def init_module(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def extend_type(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def type(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def struct(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def type_var(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def nat_var(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def custom(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda f: f
+
+    def hugr_op(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda f: f
+
+    def declare(self, arg: PyFunc | GuppyModule) -> Any:
+        if isinstance(arg, GuppyModule):
+            return lambda f: f
+        return arg
+
+    def constant(self, *args: Any, **kwargs: Any) -> Any:
+        return None
+
+    def extern(self, *args: Any, **kwargs: Any) -> Any:
+        return None
+
+    def load(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+
+guppy = cast(_Guppy, _GuppyDummy()) if sphinx_running() else _Guppy()
 
 
 def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.expr:
