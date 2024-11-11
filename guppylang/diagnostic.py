@@ -153,6 +153,15 @@ class Diagnostic(SubDiagnostic, Protocol):
 
 @runtime_checkable
 @dataclass(frozen=True)
+class Fatal(Diagnostic, Protocol):
+    """Compiler diagnostic for errors that makes it impossible to proceed, causing an
+    immediate abort."""
+
+    level: ClassVar[Literal[DiagnosticLevel.FATAL]] = DiagnosticLevel.FATAL
+
+
+@runtime_checkable
+@dataclass(frozen=True)
 class Error(Diagnostic, Protocol):
     """Compiler diagnostic for regular errors that are encountered during
     compilation."""
