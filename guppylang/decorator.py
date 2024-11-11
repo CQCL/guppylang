@@ -12,7 +12,7 @@ from hugr import val as hv
 from hugr.package import FuncDefnPointer, ModulePointer
 
 import guppylang
-from guppylang.ast_util import annotate_location, has_empty_body
+from guppylang.ast_util import annotate_location
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
@@ -28,7 +28,6 @@ from guppylang.definition.extern import RawExternDef
 from guppylang.definition.function import (
     CompiledFunctionDef,
     RawFunctionDef,
-    parse_py_func,
 )
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.struct import RawStructDef
@@ -309,17 +308,12 @@ class _Guppy:
         mod = module or self.get_module()
 
         def dec(f: PyFunc) -> RawCustomFunctionDef:
-            func_ast, docstring = parse_py_func(f, self._sources)
-            if not has_empty_body(func_ast):
-                raise GuppyError(
-                    "Body of custom function declaration must be empty",
-                    func_ast.body[0],
-                )
             call_checker = checker or DefaultCallChecker()
             func = RawCustomFunctionDef(
                 DefId.fresh(mod),
-                name or func_ast.name,
-                func_ast,
+                name or f.__name__,
+                None,
+                f,
                 call_checker,
                 compiler or NotImplementedCallCompiler(),
                 higher_order_value,
