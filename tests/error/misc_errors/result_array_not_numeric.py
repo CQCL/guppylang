@@ -1,4 +1,4 @@
-from guppylang.prelude.builtins import result, array
+from guppylang.std.builtins import result, array
 from tests.util import compile_guppy
 
 

@@ -103,7 +103,7 @@ class NatTruedivCompiler(CustomCallCompiler):
     """Compiler for the `nat.__truediv__` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude.builtins import Float, Nat
+        from guppylang.std.builtins import Float, Nat
 
         # Compile `truediv` using float arithmetic
         [left, right] = args
@@ -138,7 +138,7 @@ class IntTruedivCompiler(CustomCallCompiler):
     """Compiler for the `int.__truediv__` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude.builtins import Float, Int
+        from guppylang.std.builtins import Float, Int
 
         # Compile `truediv` using float arithmetic
         [left, right] = args
@@ -173,7 +173,7 @@ class FloatBoolCompiler(CustomCallCompiler):
     """Compiler for the `float.__bool__` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude.builtins import Float
+        from guppylang.std.builtins import Float
 
         # We have: bool(x) = (x != 0.0)
         zero = self.builder.load(hugr.std.float.FloatVal(0.0))
@@ -192,7 +192,7 @@ class FloatFloordivCompiler(CustomCallCompiler):
     """Compiler for the `float.__floordiv__` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude.builtins import Float
+        from guppylang.std.builtins import Float
 
         # We have: floordiv(x, y) = floor(truediv(x, y))
         [div] = Float.__truediv__.compile_call(
@@ -218,7 +218,7 @@ class FloatModCompiler(CustomCallCompiler):
     """Compiler for the `float.__mod__` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude.builtins import Float
+        from guppylang.std.builtins import Float
 
         # We have: mod(x, y) = x - (x // y) * y
         [div] = Float.__floordiv__.compile_call(
@@ -252,7 +252,7 @@ class FloatDivmodCompiler(CustomCallCompiler):
     """Compiler for the `__divmod__` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        from guppylang.prelude.builtins import Float
+        from guppylang.std.builtins import Float
 
         # We have: divmod(x, y) = (div(x, y), mod(x, y))
         [div] = Float.__truediv__.compile_call(

@@ -1,5 +1,5 @@
 from guppylang.decorator import guppy
-from guppylang.prelude.builtins import nat, range, SizedIter, Range
+from guppylang.std.builtins import nat, range, SizedIter, Range
 from guppylang.module import GuppyModule
 from tests.util import compile_guppy
 
@@ -43,4 +43,3 @@ def test_static_size(validate):
         return range(10)
 
     validate(module.compile())
-

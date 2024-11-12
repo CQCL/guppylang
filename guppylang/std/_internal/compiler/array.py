@@ -9,8 +9,8 @@ from hugr import tys as ht
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
-from guppylang.prelude._internal.compiler.arithmetic import convert_itousize
-from guppylang.prelude._internal.compiler.prelude import (
+from guppylang.std._internal.compiler.arithmetic import convert_itousize
+from guppylang.std._internal.compiler.prelude import (
     build_unwrap,
     build_unwrap_left,
     build_unwrap_right,

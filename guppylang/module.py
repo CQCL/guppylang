@@ -98,7 +98,7 @@ class GuppyModule:
 
         # Import builtin module
         if import_builtins:
-            import guppylang.prelude.builtins as builtins
+            import guppylang.std.builtins as builtins
 
             # Std lib is allowed to use experimental features
             with enable_experimental_features():
@@ -348,7 +348,7 @@ class GuppyModule:
         # compute this dynamically from the imported dependencies instead.
         #
         # The hugr prelude and std_extensions are implicit.
-        from guppylang.prelude._internal.compiler.quantum import TKET2_EXTENSIONS
+        from guppylang.std._internal.compiler.quantum import TKET2_EXTENSIONS
 
         extensions = [*TKET2_EXTENSIONS, guppylang.compiler.hugr_extension.EXTENSION]
 
