@@ -1,7 +1,8 @@
-Guppy compilation failed. Error in file $FILE:13
+Error: Unsupported (at $FILE:13:16)
+   | 
+11 | @guppy(module)
+12 | def main() -> array[int, 50]:
+13 |     return array(0 for _ in range(10) for _ in range(5))
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Nested array comprehensions are not supported
 
-11:    @guppy(module)
-12:    def main() -> array[int, 50]:
-13:        return array(0 for _ in range(10) for _ in range(5))
-                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-GuppyError: Nested array comprehensions are not supported
+Guppy compilation failed due to 1 previous error

@@ -77,7 +77,7 @@ class CompiledGlobals:
         checked_func = self.checked_globals.get_instance_func(ty, name)
         if checked_func is None:
             return None
-        compiled_func = self[checked_func.id]
+        compiled_func = self.build_compiled_def(checked_func.id)
         assert isinstance(compiled_func, CompiledCallableDef)
         return compiled_func
 

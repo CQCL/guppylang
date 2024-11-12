@@ -7,7 +7,8 @@ from typing_extensions import assert_never
 from guppylang.ast_util import AstNode, with_loc, with_type
 from guppylang.checker.core import Context
 from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
-from guppylang.checker.errors.type_errors import TypeMismatchError
+from guppylang.checker.errors.type_errors import TypeMismatchError, \
+    ArrayComprUnknownSizeError
 from guppylang.checker.expr_checker import (
     ExprChecker,
     ExprSynthesizer,
@@ -259,13 +260,13 @@ class NewArrayChecker(CustomCallChecker):
         if len(compr.generators) > 1:
             # Individual generator objects unfortunately don't have a span in Python's
             # AST, so we have to use the whole expression span
-            raise GuppyError("Nested array comprehensions are not supported", compr)
+            raise GuppyError(UnsupportedError(compr, "Nested array comprehensions"))
         [gen] = compr.generators
         # Similarly, dynamic if guards are not allowed
         if gen.ifs:
-            raise GuppyError(
-                "If guards are not allowed in array comprehensions", gen.ifs[0]
-            )
+            err = ArrayComprUnknownSizeError(compr)
+            err.add_sub_diagnostic(ArrayComprUnknownSizeError.IfGuard(gen.ifs[0]))
+            raise GuppyError(err)
         # Extract the iterator size
         match gen.iter_assign:
             case ast.Assign(value=MakeIter() as make_iter):
@@ -274,11 +275,11 @@ class NewArrayChecker(CustomCallChecker):
                 )
                 # The iterator must have a static size hint
                 if not is_sized_iter_type(iter_ty):
-                    raise GuppyError(
-                        f"Iterator of type `{iter_ty}` doesn't have a static size "
-                        "require for array comprehensions",
-                        make_iter,
+                    err = ArrayComprUnknownSizeError(compr)
+                    err.add_sub_diagnostic(
+                        ArrayComprUnknownSizeError.DynamicIterator(make_iter)
                     )
+                    raise GuppyError(err)
                 size = get_iter_size(iter_ty)
             case _:
                 raise InternalGuppyError("Invalid iterator assign statement")

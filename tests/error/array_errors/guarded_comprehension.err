@@ -1,7 +1,11 @@
-Guppy compilation failed. Error in file $FILE:13
+Error: Array comprehension with nonstatic size (at $FILE:13:9)
+   | 
+11 | @guppy(module)
+12 | def main() -> None:
+13 |     array(i for i in range(100) if i % 2 == 0)
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot infer the size of this array comprehension ...
+   | 
+13 |     array(i for i in range(100) if i % 2 == 0)
+   |                                    ---------- since it depends on this condition
 
-11:    @guppy(module)
-12:    def main() -> None:
-13:        array(i for i in range(100) if i % 2 == 0)
-                                          ^^^^^^^^^^
-GuppyError: If guards are not allowed in array comprehensions
+Guppy compilation failed due to 1 previous error

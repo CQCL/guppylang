@@ -475,9 +475,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         # generators as first-class value yet, so we always error out here. Special
         # cases where generator are allowed need to explicitly check for them (e.g. see
         # the handling of array comprehensions in the compiler for the `array` function)
-        raise GuppyError(
-            "Generator expressions are not supported in this positions", node
-        )
+        raise GuppyError(UnsupportedError(node, "Generator expressions"))
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> tuple[ast.expr, Type]:
         # We need to synthesise the argument type, so we can look up dunder methods
