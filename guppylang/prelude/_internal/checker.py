@@ -7,8 +7,10 @@ from typing_extensions import assert_never
 from guppylang.ast_util import AstNode, with_loc, with_type
 from guppylang.checker.core import Context
 from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
-from guppylang.checker.errors.type_errors import TypeMismatchError, \
-    ArrayComprUnknownSizeError
+from guppylang.checker.errors.type_errors import (
+    ArrayComprUnknownSizeError,
+    TypeMismatchError,
+)
 from guppylang.checker.expr_checker import (
     ExprChecker,
     ExprSynthesizer,
