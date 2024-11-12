@@ -7,14 +7,14 @@ from typing import no_type_check
 from hugr import tys as ht
 
 from guppylang.decorator import guppy
-from guppylang.prelude._internal.compiler.quantum import (
+from guppylang.std._internal.compiler.quantum import (
     HSERIES_EXTENSION,
     MeasureReturnCompiler,
     RotationCompiler,
 )
-from guppylang.prelude._internal.util import quantum_op
-from guppylang.prelude.angles import angle
-from guppylang.prelude.builtins import owned
+from guppylang.std._internal.util import quantum_op
+from guppylang.std.angles import angle
+from guppylang.std.builtins import owned
 
 
 @guppy.type(ht.Qubit, linear=True)

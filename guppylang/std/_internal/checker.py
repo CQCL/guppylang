@@ -297,7 +297,7 @@ class RangeChecker(CustomCallChecker):
         return range_iter, range_ty
 
     def range_ty(self) -> StructType:
-        from guppylang.prelude.builtins import Range
+        from guppylang.std.builtins import Range
 
         def_id = cast(RawStructDef, Range).id
         range_type_def = self.ctx.globals.defs[def_id]

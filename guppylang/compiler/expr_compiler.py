@@ -40,7 +40,7 @@ from guppylang.nodes import (
     TensorCall,
     TypeApply,
 )
-from guppylang.prelude._internal.compiler.list import (
+from guppylang.std._internal.compiler.list import (
     list_new,
     list_push,
 )

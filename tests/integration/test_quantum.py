@@ -7,16 +7,16 @@ from hugr.package import ModulePointer
 import guppylang.decorator
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.angles import angle
+from guppylang.std.angles import angle
 
-from guppylang.prelude.builtins import owned, py
-from guppylang.prelude.quantum import (
+from guppylang.std.builtins import owned, py
+from guppylang.std.quantum import (
     dirty_qubit,
     discard,
     measure,
     qubit
 )
-from guppylang.prelude.quantum_functional import (
+from guppylang.std.quantum_functional import (
     cx,
     cy,
     cz,

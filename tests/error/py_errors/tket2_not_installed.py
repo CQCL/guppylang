@@ -2,7 +2,7 @@ from pytket import Circuit
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.quantum import qubit
+from guppylang.std.quantum import qubit
 
 circ = Circuit(1)
 circ.H(0)

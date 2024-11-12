@@ -2,15 +2,15 @@
 
 from typing import no_type_check
 
-import guppylang.prelude.angles as angles
-import guppylang.prelude.quantum as quantum
+import guppylang.std.angles as angles
+import guppylang.std.quantum as quantum
 from guppylang.decorator import guppy
 
 # mypy: disable-error-code="empty-body, misc, valid-type"
 from guppylang.module import GuppyModule
-from guppylang.prelude.angles import angle
-from guppylang.prelude.builtins import owned
-from guppylang.prelude.quantum import qubit
+from guppylang.std.angles import angle
+from guppylang.std.builtins import owned
+from guppylang.std.quantum import qubit
 
 quantum_functional = GuppyModule("quantum_functional")
 

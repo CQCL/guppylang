@@ -1,7 +1,7 @@
-import guppylang.prelude.quantum as quantum
+import guppylang.std.quantum as quantum
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.quantum import qubit, measure
+from guppylang.std.quantum import qubit, measure
 
 
 module = GuppyModule("test")
