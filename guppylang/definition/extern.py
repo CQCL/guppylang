@@ -9,6 +9,7 @@ from guppylang.checker.core import Globals
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.value import CompiledValueDef, ValueDef
+from guppylang.span import SourceMap
 from guppylang.tys.parsing import type_from_ast
 
 
@@ -22,7 +23,7 @@ class RawExternDef(ParsableDef):
 
     description: str = field(default="extern", init=False)
 
-    def parse(self, globals: Globals) -> "ExternDef":
+    def parse(self, globals: Globals, sources: SourceMap) -> "ExternDef":
         """Parses and checks the user-provided signature of the function."""
         return ExternDef(
             self.id,

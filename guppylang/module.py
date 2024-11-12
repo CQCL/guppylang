@@ -29,11 +29,13 @@ from guppylang.definition.module import ModuleDef
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.struct import CheckedStructDef
 from guppylang.definition.ty import TypeDef
-from guppylang.error import GuppyError, pretty_errors
+from guppylang.error import pretty_errors
 from guppylang.experimental import enable_experimental_features
 
 if TYPE_CHECKING:
     from hugr import Hugr, ops
+
+    from guppylang.span import SourceMap
 
 PyClass = type
 PyFunc = Callable[..., Any]
@@ -75,6 +77,9 @@ class GuppyModule:
     # `_register_buffered_instance_funcs` is called. This way, we can associate
     _instance_func_buffer: dict[str, RawDef] | None
 
+    # Storage for source code that has been read by the compiler
+    _sources: SourceMap
+
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
         self._globals = Globals({}, {}, {}, {})
@@ -86,6 +91,10 @@ class GuppyModule:
         self._raw_defs = {}
         self._raw_type_defs = {}
         self._checked_defs = {}
+
+        from guppylang.decorator import guppy
+
+        self._sources = guppy._sources
 
         # Import builtin module
         if import_builtins:
@@ -104,6 +113,11 @@ class GuppyModule:
 
         Keyword args may be used to specify alias names for the imports.
         """
+        # Note that we shouldn't evaluate imports during a sphinx build since the @guppy
+        # decorator is mocked in that case
+        if sphinx_running():
+            return
+
         modules: set[GuppyModule] = set()
         defs: dict[DefId, CheckedDef] = {}
         names: dict[str, DefId] = {}
@@ -134,7 +148,7 @@ class GuppyModule:
                 imports.append((alias, mod))
             else:
                 msg = f"Only Guppy definitions or modules can be imported. Got `{imp}`"
-                raise GuppyError(msg)
+                raise TypeError(msg)
 
         # Also include any impls that are defined by the imported modules
         impls: dict[DefId, dict[str, DefId]] = {}
@@ -158,6 +172,11 @@ class GuppyModule:
 
     def load_all(self, mod: GuppyModule | ModuleType) -> None:
         """Imports all public members of a module."""
+        # Note that we shouldn't evaluate imports during a sphinx build since the @guppy
+        # decorator is mocked in that case
+        if sphinx_running():
+            return
+
         if isinstance(mod, GuppyModule):
             mod.check()
             self.load(
@@ -171,7 +190,7 @@ class GuppyModule:
             self.load_all(find_guppy_module_in_py_module(mod))
         else:
             msg = f"Only Guppy definitions or modules can be imported. Got `{mod}`"
-            raise GuppyError(msg)
+            raise TypeError(msg)
 
     def register_def(self, defn: RawDef, instance: TypeDef | None = None) -> None:
         """Registers a definition with this module.
@@ -248,14 +267,15 @@ class GuppyModule:
     def compiled(self) -> bool:
         return self._compiled is not None
 
-    @staticmethod
     def _check_defs(
-        raw_defs: Mapping[DefId, RawDef], globals: Globals
+        self, raw_defs: Mapping[DefId, RawDef], globals: Globals
     ) -> dict[DefId, CheckedDef]:
         """Helper method to parse and check raw definitions."""
         raw_globals = globals | Globals(dict(raw_defs), {}, {}, {})
         parsed = {
-            def_id: defn.parse(raw_globals) if isinstance(defn, ParsableDef) else defn
+            def_id: defn.parse(raw_globals, self._sources)
+            if isinstance(defn, ParsableDef)
+            else defn
             for def_id, defn in raw_defs.items()
         }
         parsed_globals = globals | Globals(dict(parsed), {}, {}, {})
@@ -320,16 +340,11 @@ class GuppyModule:
         graph.metadata["name"] = self.name
 
         # Lower definitions to Hugr
-        required = set(self._checked_defs.keys())
         ctx = CompiledGlobals(
             checked_defs, graph, self._imported_globals | self._globals
         )
-        # evil side effect - compilation happens on ctx[get_item] calls
-        _request_compilation = [ctx[def_id] for def_id in required]
-        while ctx.worklist:
-            next_id = ctx.worklist.pop()
-            next_def = ctx[next_id]
-            next_def.compile_inner(ctx)
+        for defn in self._checked_defs.values():
+            ctx.compile(defn)
 
         # TODO: Currently we just include a hardcoded list of extensions. We should
         # compute this dynamically from the imported dependencies instead.
@@ -408,13 +423,13 @@ def find_guppy_module_in_py_module(module: ModuleType) -> GuppyModule:
 
     if not mods:
         msg = f"No Guppy modules found in `{module.__name__}`"
-        raise GuppyError(msg)
+        raise ValueError(msg)
     if len(mods) > 1:
         msg = (
             f"Python module `{module.__name__}` contains multiple Guppy modules. "
             "Cannot decide which one to import."
         )
-        raise GuppyError(msg)
+        raise ValueError(msg)
     return mods[0]
 
 
@@ -429,3 +444,15 @@ def get_calling_frame() -> FrameType | None:
             return frame
         frame = frame.f_back
     return None
+
+
+def sphinx_running() -> bool:
+    """Checks if this module was imported during a sphinx build."""
+    # This is the most general solution available at the moment.
+    # See: https://github.com/sphinx-doc/sphinx/issues/9805
+    try:
+        import sphinx  # type: ignore[import-untyped, import-not-found, unused-ignore]
+
+        return hasattr(sphinx, "application")
+    except ImportError:
+        return False

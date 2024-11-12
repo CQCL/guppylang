@@ -1,7 +1,8 @@
-Guppy compilation failed. Error in file $FILE:6
+Error: Too many values to unpack (at $FILE:6:10)
+  | 
+4 | @compile_guppy
+5 | def foo() -> int:
+6 |     a, b, c = 1, True
+  |           ^ Unexpected assignment target (expected 2, got 3)
 
-4:    @compile_guppy
-5:    def foo() -> int:
-6:        a, b, c = 1, True
-          ^^^^^^^^^^^^^^^^^
-GuppyTypeError: Not enough values to unpack (expected 3, got 2)
+Guppy compilation failed due to 1 previous error

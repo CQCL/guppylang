@@ -1,7 +1,8 @@
-Guppy compilation failed. Error in file $FILE:7
+Error: Unreachable (at $FILE:7:4)
+  | 
+5 | def foo() -> int:
+6 |     return 0
+7 |     x = 42
+  |     ^^^^^^ This code is not reachable
 
-5:    def foo() -> int:
-6:        return 0
-7:        x = 42
-          ^^^^^^
-GuppyError: Unreachable code
+Guppy compilation failed due to 1 previous error

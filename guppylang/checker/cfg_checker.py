@@ -4,10 +4,11 @@ Operates on CFGs produced by the `CFGBuilder`. Produces a `CheckedCFG` consistin
 `CheckedBB`s with inferred type signatures.
 """
 
+import ast
 import collections
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import Generic, TypeVar
+from typing import ClassVar, Generic, TypeVar
 
 from guppylang.ast_util import line_col
 from guppylang.cfg.bb import BB
@@ -15,6 +16,7 @@ from guppylang.cfg.cfg import CFG, BaseCFG
 from guppylang.checker.core import Context, Globals, Locals, Place, V, Variable
 from guppylang.checker.expr_checker import ExprSynthesizer, to_bool
 from guppylang.checker.stmt_checker import StmtChecker
+from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError
 from guppylang.tys.ty import InputFlags, Type
 
@@ -58,7 +60,7 @@ class CheckedCFG(BaseCFG[CheckedBB[V]], Generic[V]):
 
 
 def check_cfg(
-    cfg: CFG, inputs: Row[Variable], return_ty: Type, globals: Globals
+    cfg: CFG, inputs: Row[Variable], return_ty: Type, func_name: str, globals: Globals
 ) -> CheckedCFG[Place]:
     """Type checks a control-flow graph.
 
@@ -124,9 +126,47 @@ def check_cfg(
     # Finally, run the linearity check
     from guppylang.checker.linearity_checker import check_cfg_linearity
 
-    linearity_checked_cfg = check_cfg_linearity(checked_cfg, globals)
+    linearity_checked_cfg = check_cfg_linearity(checked_cfg, func_name, globals)
 
     return linearity_checked_cfg
+
+
+@dataclass(frozen=True)
+class VarNotDefinedError(Error):
+    title: ClassVar[str] = "Variable not defined"
+    span_label: ClassVar[str] = "`{var}` is not defined"
+    var: str
+
+
+@dataclass(frozen=True)
+class VarMaybeNotDefinedError(Error):
+    title: ClassVar[str] = "Variable not defined"
+    var: str
+
+    @dataclass(frozen=True)
+    class BadBranch(Note):
+        span_label: ClassVar[str] = "... if this expression is `{truth_value}`"
+        var: str
+        truth_value: bool
+
+    @property
+    def rendered_span_label(self) -> str:
+        s = f"`{self.var}` might be undefined"
+        if self.children:
+            s += " ..."
+        return s
+
+
+@dataclass(frozen=True)
+class BranchTypeError(Error):
+    title: ClassVar[str] = "Different types"
+    span_label: ClassVar[str] = "{ident} may refer to different types"
+    ident: str
+
+    @dataclass(frozen=True)
+    class TypeHint(Note):
+        span_label: ClassVar[str] = "This is of type `{ty}`"
+        ty: Type
 
 
 def check_bb(
@@ -144,7 +184,7 @@ def check_bb(
         assert len(bb.predecessors) == 0
         for x, use in bb.vars.used.items():
             if x not in cfg.ass_before[bb] and x not in globals:
-                raise GuppyError(f"Variable `{x}` is not defined", use)
+                raise GuppyError(VarNotDefinedError(use, x))
 
     # Check the basic block
     ctx = Context(globals, Locals({v.name: v for v in inputs}))
@@ -163,14 +203,15 @@ def check_bb(
                 # If the variable is defined on *some* paths, we can give a more
                 # informative error message
                 if x in cfg.maybe_ass_before[use_bb]:
-                    # TODO: This should be "Variable x is not defined when coming
-                    #  from {bb}". But for this we need a way to associate BBs with
-                    #  source locations.
-                    raise GuppyError(
-                        f"Variable `{x}` is not defined on all control-flow paths.",
-                        use_bb.vars.used[x],
-                    )
-                raise GuppyError(f"Variable `{x}` is not defined", use_bb.vars.used[x])
+                    err = VarMaybeNotDefinedError(use_bb.vars.used[x], x)
+                    if bad_branch := diagnose_maybe_undefined(use_bb, x, cfg):
+                        branch_expr, truth_value = bad_branch
+                        note = VarMaybeNotDefinedError.BadBranch(
+                            branch_expr, x, truth_value
+                        )
+                        err.add_sub_diagnostic(note)
+                    raise GuppyError(err)
+                raise GuppyError(VarNotDefinedError(use_bb.vars.used[x], x))
 
     # Finally, we need to compute the signature of the basic block
     outputs = [
@@ -209,12 +250,39 @@ def check_rows_match(row1: Row[Variable], row2: Row[Variable], bb: BB) -> None:
             # We shouldn't mention temporary variables (starting with `%`)
             # in error messages:
             ident = "Expression" if v1.name.startswith("%") else f"Variable `{v1.name}`"
-            raise GuppyError(
-                f"{ident} can refer to different types: "
-                f"`{v1.ty}` (at {{}}) vs `{v2.ty}` (at {{}})",
-                bb.containing_cfg.live_before[bb][v1.name].vars.used[v1.name],
-                [v1.defined_at, v2.defined_at],
-            )
+            use = bb.containing_cfg.live_before[bb][v1.name].vars.used[v1.name]
+            err = BranchTypeError(use, ident)
+            err.add_sub_diagnostic(BranchTypeError.TypeHint(v1.defined_at, v1.ty))
+            err.add_sub_diagnostic(BranchTypeError.TypeHint(v2.defined_at, v2.ty))
+            raise GuppyError(err)
+
+
+def diagnose_maybe_undefined(
+    bb: BB, x: str, cfg: BaseCFG[BB]
+) -> tuple[ast.expr, bool] | None:
+    """Given a BB and a variable `x`, tries to find a branch where one of the successors
+    leads to an assignment of `x` while the other one does not.
+
+    Returns the branch condition and a flag whether the value being `True` leads to the
+    undefined path. Returns `None` if no such branch can be found.
+    """
+    assert x in cfg.maybe_ass_before[bb]
+    # Find all BBs that can reach this BB and which ones of those assign `x`
+    ancestors = list(cfg.ancestors(bb))
+    assigns = [anc for anc in ancestors if x in anc.vars.assigned]
+    # Compute which ancestors can possibly reach an assignment
+    reaches_assignment = set(cfg.ancestors(*assigns))
+    # Try to find a branching BB where one of paths can reach an assignment, while the
+    # other one cannot
+    for anc in ancestors:
+        match anc.successors:
+            case [true_succ, false_succ]:
+                assert anc.branch_pred is not None
+                true_reaches_assignment = true_succ in reaches_assignment
+                false_reaches_assignment = false_succ in reaches_assignment
+                if true_reaches_assignment != false_reaches_assignment:
+                    return anc.branch_pred, true_reaches_assignment
+    return None
 
 
 T = TypeVar("T")

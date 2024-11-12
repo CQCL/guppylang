@@ -1,6 +1,11 @@
-Guppy compilation failed. Error in file $FILE:10
+Error: Invalid type (at $FILE:10:11)
+   | 
+ 8 | 
+ 9 | @guppy.declare(module)
+10 | def foo(f: Callable) -> None: ...
+   |            ^^^^^^^^ Invalid function type
 
-8:     @guppy.declare(module)
-9:     def foo(f: Callable) -> None: ...
-                  ^^^^^^^^
-GuppyError: Function types should be specified via `Callable[[<arguments>], <return type>]`
+Help: Function types are specified as follows: `Callable[[<arguments>], <return
+type>]`
+
+Guppy compilation failed due to 1 previous error

@@ -1,7 +1,12 @@
-Guppy compilation failed. Error in file $FILE:22
+Error: Linearity violation (at $FILE:22:11)
+   | 
+20 |     if b:
+21 |         measure(s.q2)
+22 |     return s
+   |            ^ Field `s.q2` with linear type `qubit` cannot be returned
+   |              ...
+   | 
+21 |         measure(s.q2)
+   |                 ---- since it was already consumed here
 
-20:    if b:
-21:        measure(s.q2)
-22:    return s
-              ^
-GuppyError: Field `s.q2` with linear type `qubit` was already used (at 21:16)
+Guppy compilation failed due to 1 previous error

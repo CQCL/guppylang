@@ -2,7 +2,8 @@ import ast
 import copy
 import itertools
 from collections.abc import Iterator
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar, NamedTuple
 
 from guppylang.ast_util import (
     AstVisitor,
@@ -15,6 +16,8 @@ from guppylang.ast_util import (
 from guppylang.cfg.bb import BB, BBStatement
 from guppylang.cfg.cfg import CFG
 from guppylang.checker.core import Globals
+from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
+from guppylang.diagnostic import Error
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
 from guppylang.nodes import (
@@ -48,6 +51,12 @@ class Jumps(NamedTuple):
     break_bb: BB | None
 
 
+@dataclass(frozen=True)
+class UnreachableError(Error):
+    title: ClassVar[str] = "Unreachable"
+    span_label: ClassVar[str] = "This code is not reachable"
+
+
 class CFGBuilder(AstVisitor[BB | None]):
     """Constructs a CFG from ast nodes."""
 
@@ -72,7 +81,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         # an implicit void return
         if final_bb is not None:
             if not returns_none:
-                raise GuppyError("Expected return statement", nodes[-1])
+                raise GuppyError(ExpectedError(nodes[-1], "return statement"))
             self.cfg.link(final_bb, self.cfg.exit_bb)
 
         return self.cfg
@@ -82,7 +91,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         next_functional = False
         for node in nodes:
             if bb_opt is None:
-                raise GuppyError("Unreachable code", node)
+                raise GuppyError(UnreachableError(node))
             if is_functional_annotation(node):
                 next_functional = True
                 continue
@@ -178,7 +187,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         b = make_var(next(tmp_vars), node.iter)
         new_nodes = template_replace(
             template,
-            node,
+            node.iter,
             it=it,
             b=b,
             x=node.target,
@@ -242,7 +251,7 @@ class CFGBuilder(AstVisitor[BB | None]):
     def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:
         # When adding support for new statements, we have to remember to use the
         # ExprBuilder to transform all included expressions!
-        raise GuppyError("Statement is not supported", node)
+        raise GuppyError(UnsupportedError(node, "This statement", singular=True))
 
 
 class ExprBuilder(ast.NodeTransformer):
@@ -320,16 +329,20 @@ class ExprBuilder(ast.NodeTransformer):
         # Check for illegal expressions
         illegals = find_nodes(is_illegal_in_list_comp, node)
         if illegals:
-            raise GuppyError(
-                "Expression is not supported inside a list comprehension", illegals[0]
+            err = UnsupportedError(
+                illegals[0],
+                "This expression",
+                singular=True,
+                unsupported_in="a list comprehension",
             )
+            raise GuppyError(err)
 
         # Desugar into statements that create the iterator, check for a next element,
         # get the next element, and finalise the iterator.
         gens = []
         for g in generators:
             if g.is_async:
-                raise GuppyError("Async generators are not supported", g)
+                raise GuppyError(UnsupportedError(g, "Async generators"))
             g.iter = self.visit(g.iter)
             it = make_var(next(tmp_vars), g.iter)
             hasnext = make_var(next(tmp_vars), g.iter)
@@ -490,6 +503,12 @@ def is_functional_annotation(stmt: ast.stmt) -> bool:
     return False
 
 
+@dataclass(frozen=True)
+class EmptyPyExprError(Error):
+    title: ClassVar[str] = "Invalid Python expression"
+    span_label: ClassVar[str] = "Compile-time `py(...)` expression requires an argument"
+
+
 def is_py_expression(node: ast.AST) -> PyExpr | None:
     """Checks if the given node is a compile-time `py(...)` expression and turns it into
     a `PyExpr` AST node.
@@ -503,10 +522,7 @@ def is_py_expression(node: ast.AST) -> PyExpr | None:
     ):
         match node.args:
             case []:
-                raise GuppyError(
-                    "Compile-time `py(...)` expression requires an argument",
-                    node,
-                )
+                raise GuppyError(EmptyPyExprError(node))
             case [arg]:
                 pass
             case args:

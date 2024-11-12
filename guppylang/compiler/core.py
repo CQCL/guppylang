@@ -42,7 +42,11 @@ class CompiledGlobals:
         self.compiled = {}
         self.checked_globals = checked_globals
 
-    def __getitem__(self, def_id: DefId) -> CompiledDef:
+    def build_compiled_def(self, def_id: DefId) -> CompiledDef:
+        """Returns the compiled definitions corresponding to the given ID.
+
+        Might mutate the current Hugr if this definition has never been compiled before.
+        """
         if def_id not in self.compiled:
             defn = self.checked[def_id]
             self.compiled[def_id] = self._compile(defn)
@@ -53,6 +57,19 @@ class CompiledGlobals:
         if isinstance(defn, CompilableDef):
             return defn.compile_outer(self.module)
         return defn
+
+    def compile(self, defn: CheckedDef) -> None:
+        """Compiles the given definition and all of its dependencies into the current
+        Hugr."""
+        if defn.id in self.compiled:
+            return
+
+        self.compiled[defn.id] = self._compile(defn)
+        self.worklist.add(defn.id)
+        while self.worklist:
+            next_id = self.worklist.pop()
+            next_def = self.build_compiled_def(next_id)
+            next_def.compile_inner(self)
 
     def get_instance_func(
         self, ty: Type | TypeDef, name: str

@@ -70,6 +70,9 @@ class TensorCall(ast.expr):
     )
 
 
+AnyCall = LocalCall | GlobalCall | TensorCall
+
+
 class TypeApply(ast.expr):
     value: ast.expr
     inst: Inst
@@ -116,12 +119,9 @@ class SubscriptAccessAndDrop(ast.expr):
     item: "Variable"
     item_expr: ast.expr
     getitem_expr: ast.expr
+    original_expr: ast.Subscript
 
-    _fields = (
-        "item",
-        "item_expr",
-        "getitem_expr",
-    )
+    _fields = ("item", "item_expr", "getitem_expr", "original_expr")
 
 
 class MakeIter(ast.expr):
