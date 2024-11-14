@@ -1,6 +1,8 @@
-Guppy compilation failed. Error in file $FILE:5
+Error: Variable not defined (at $FILE:5:10)
+  | 
+3 | 
+4 | @compile_guppy
+5 | def f(x: "foo.bar") -> None:
+  |           ^^^ `foo` is not defined
 
-3:    @compile_guppy
-4:    def f(x: "foo.bar") -> None:
-                ^^^
-GuppyError: Unknown identifier: `foo`
+Guppy compilation failed due to 1 previous error

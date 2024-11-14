@@ -1,7 +1,11 @@
-Guppy compilation failed. Error in file $FILE:9
+Error: Variable not defined (at $FILE:9:11)
+  | 
+7 |         def bar() -> int:
+8 |             return 0
+9 |     return bar()
+  |            ^^^ `bar` might be undefined ...
+  | 
+6 |     if b:
+  |        - ... if this expression is `False`
 
-7:        def bar() -> int:
-8:            return 0
-9:    return bar()
-             ^^^
-GuppyError: Variable `bar` is not defined on all control-flow paths.
+Guppy compilation failed due to 1 previous error

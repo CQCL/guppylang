@@ -1,7 +1,10 @@
-Guppy compilation failed. Error in file $FILE:13
+Error: Linearity violation (at $FILE:13:4)
+   | 
+11 | @guppy(module)
+12 | def foo(q: qubit @owned) -> None:
+13 |     h(q)
+   |     ^^^^ Expression with linear type `qubit` is leaked
 
-11:    @guppy(module)
-12:    def foo(q: qubit @owned) -> None:
-13:        h(q)
-           ^^^^
-GuppyTypeError: Value with linear type `qubit` is not used
+Help: Consider assigning this value to a local variable
+
+Guppy compilation failed due to 1 previous error

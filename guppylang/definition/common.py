@@ -7,6 +7,9 @@ from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
+from guppylang.diagnostic import Fatal
+from guppylang.span import SourceMap
+
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
     from guppylang.compiler.core import CompiledGlobals
@@ -87,7 +90,7 @@ class ParsableDef(Definition):
     """
 
     @abstractmethod
-    def parse(self, globals: "Globals") -> ParsedDef:
+    def parse(self, globals: "Globals", sources: SourceMap) -> ParsedDef:
         """Performs parsing and validation, returning a definition that can be checked.
 
         The provided globals contain all other raw definitions that have been defined.
@@ -155,3 +158,12 @@ class CompiledDef(Definition):
         Opposed to `CompilableDef.compile()`, we have access to all other compiled
         definitions here, which allows things like mutual recursion.
         """
+
+
+@dataclass(frozen=True)
+class UnknownSourceError(Fatal):
+    title: ClassVar[str] = "Cannot find source"
+    message: ClassVar[str] = (
+        "Unable to look up the source code for Python object `{obj}`"
+    )
+    obj: object

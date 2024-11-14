@@ -1,7 +1,14 @@
-Guppy compilation failed. Error in file $FILE:18
+Error: Linearity violation (at $FILE:18:11)
+   | 
+16 | @guppy(module)
+17 | def main() -> qubit:
+18 |     return foo()[0]
+   |            ^^^^^ Linear items of expression with type `array[qubit, 10]` are
+   |                  leaked ...
+   | 
+18 |     return foo()[0]
+   |                  - since only this subscript is used
 
-16:    @guppy(module)
-17:    def main() -> qubit:
-18:        return foo()[0]
-                  ^^^^^^^^
-GuppyTypeError: Remaining linear items with type `qubit` are not used
+Help: Consider assigning this value to a local variable before subscripting it
+
+Guppy compilation failed due to 1 previous error

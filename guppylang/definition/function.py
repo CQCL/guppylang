@@ -14,6 +14,7 @@ from hugr.package import FuncDefnPointer
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
 from guppylang.checker.core import Context, Globals, Place, PyScope
+from guppylang.checker.errors.generic import ExpectedError
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import (
     check_global_func_def,
@@ -22,11 +23,17 @@ from guppylang.checker.func_checker import (
 )
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.compiler.func_compiler import compile_global_func_def
-from guppylang.definition.common import CheckableDef, CompilableDef, ParsableDef
+from guppylang.definition.common import (
+    CheckableDef,
+    CompilableDef,
+    ParsableDef,
+    UnknownSourceError,
+)
 from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.nodes import GlobalCall
+from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type, type_to_row
 
@@ -54,9 +61,9 @@ class RawFunctionDef(ParsableDef):
 
     description: str = field(default="function", init=False)
 
-    def parse(self, globals: Globals) -> "ParsedFunctionDef":
+    def parse(self, globals: Globals, sources: SourceMap) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
-        func_ast, docstring = parse_py_func(self.python_func)
+        func_ast, docstring = parse_py_func(self.python_func, sources)
         ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
         return ParsedFunctionDef(
             self.id, self.name, func_ast, ty, self.python_scope, docstring
@@ -223,7 +230,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         compile_global_func_def(self, self.func_def, globals)
 
 
-def parse_py_func(f: PyFunc) -> tuple[ast.FunctionDef, str | None]:
+def parse_py_func(f: PyFunc, sources: SourceMap) -> tuple[ast.FunctionDef, str | None]:
     source_lines, line_offset = inspect.getsourcelines(f)
     source = "".join(source_lines)  # Lines already have trailing \n's
     source = textwrap.dedent(source)
@@ -237,11 +244,19 @@ def parse_py_func(f: PyFunc) -> tuple[ast.FunctionDef, str | None]:
             defn = find_ipython_def(func_ast.name)
             if defn is not None:
                 file = f"<{defn.cell_name}>"
+                sources.add_file(file, defn.cell_source)
+            else:
+                # If we couldn't find the defining cell, just use the source code we
+                # got from inspect. Line numbers will be wrong, but that's the best we
+                # can do.
+                sources.add_file(file, source)
+                line_offset = 1
     else:
         file = inspect.getsourcefile(f)
-    if file is None:
-        raise GuppyError("Couldn't determine source file for function")
+        if file is None:
+            raise GuppyError(UnknownSourceError(None, f))
+        sources.add_file(file)
     annotate_location(func_ast, source, file, line_offset)
     if not isinstance(func_ast, ast.FunctionDef):
-        raise GuppyError("Expected a function definition", func_ast)
+        raise GuppyError(ExpectedError(func_ast, "a function definition"))
     return parse_function_with_docstring(func_ast)

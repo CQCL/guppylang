@@ -1,14 +1,14 @@
 import numpy as np
 
 from guppylang.decorator import guppy
-from guppylang.prelude.angles import angle, pi
-from guppylang.prelude.builtins import owned, py
-from guppylang.prelude.quantum import (
+from guppylang.std.angles import angle, pi
+from guppylang.std.builtins import owned, py
+from guppylang.std.quantum import (
     discard,
     measure,
     qubit,
 )
-from guppylang.prelude.quantum_functional import (
+from guppylang.std.quantum_functional import (
     cz,
     h,
     rx,

@@ -1,7 +1,13 @@
-Guppy compilation failed. Error in file $FILE:18
+Error: Linearity violation (at $FILE:18:4)
+   | 
+16 | @guppy(module)
+17 | def foo(b: bool) -> bool:
+18 |     s = MyStruct(qubit())
+   |     ^ Field `s.q` with linear type `qubit` may be leaked ...
+   | 
+19 |     if b:
+   |        - if this expression is `False`
 
-16:    @guppy(module)
-17:    def foo(b: bool) -> bool:
-18:        s = MyStruct(qubit())
-           ^
-GuppyError: Field `s.q` with linear type `qubit` is not used on all control-flow paths
+Help: Make sure that `s.q` is consumed or returned to avoid the leak
+
+Guppy compilation failed due to 1 previous error

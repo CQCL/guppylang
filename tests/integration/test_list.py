@@ -1,10 +1,10 @@
 import pytest
 from guppylang import qubit, guppy, GuppyModule
-from guppylang.prelude import quantum
-from guppylang.prelude.angles import angle
-from guppylang.prelude.builtins import owned
-from guppylang.prelude.quantum import cx, rz
-from guppylang.prelude.quantum_functional import quantum_functional, h
+from guppylang.std import quantum
+from guppylang.std.angles import angle
+from guppylang.std.builtins import owned
+from guppylang.std.quantum import cx, rz
+from guppylang.std.quantum_functional import quantum_functional, h
 
 from tests.util import compile_guppy
 

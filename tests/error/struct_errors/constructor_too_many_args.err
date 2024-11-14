@@ -1,7 +1,10 @@
-Guppy compilation failed. Error in file $FILE:15
+Error: Too many arguments (at $FILE:15:16)
+   | 
+13 | @guppy(module)
+14 | def main() -> None:
+15 |     MyStruct(1, 2, 3)
+   |                 ^^^^ Unexpected arguments (expected 1, got 3)
 
-13:    @guppy(module)
-14:    def main() -> None:
-15:        MyStruct(1, 2, 3)
-                       ^
-GuppyTypeError: Unexpected argument
+Note: Function signature is `int -> MyStruct`
+
+Guppy compilation failed due to 1 previous error

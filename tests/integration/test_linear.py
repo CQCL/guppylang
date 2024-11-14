@@ -1,10 +1,10 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import owned
-from guppylang.prelude.quantum import qubit, measure
+from guppylang.std.builtins import owned
+from guppylang.std.quantum import qubit, measure
 
-import guppylang.prelude.quantum_functional as quantum_functional
-from guppylang.prelude.quantum_functional import cx, t, h, measure_return
+import guppylang.std.quantum_functional as quantum_functional
+from guppylang.std.quantum_functional import cx, t, h, measure_return
 from guppylang.tys.ty import NoneType
 
 import pytest

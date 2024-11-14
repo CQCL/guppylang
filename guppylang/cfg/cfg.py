@@ -1,3 +1,5 @@
+from collections import deque
+from collections.abc import Iterator
 from typing import Generic, TypeVar
 
 from guppylang.cfg.analysis import (
@@ -36,6 +38,18 @@ class BaseCFG(Generic[T]):
         self.live_before = {}
         self.ass_before = {}
         self.maybe_ass_before = {}
+
+    def ancestors(self, *bbs: T) -> Iterator[T]:
+        """Returns an iterator over all ancestors of the given BBs in BFS order."""
+        queue = deque(bbs)
+        visited = set()
+        while queue:
+            bb = queue.popleft()
+            if bb in visited:
+                continue
+            visited.add(bb)
+            yield bb
+            queue += bb.predecessors
 
 
 class CFG(BaseCFG[BB]):

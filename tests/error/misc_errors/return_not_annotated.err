@@ -1,6 +1,10 @@
-Guppy compilation failed. Error in file $FILE:5
+Error: Missing type annotation (at $FILE:5:0)
+  | 
+3 | 
+4 | @compile_guppy
+5 | def foo(x: bool):
+  | ^^^^^^^^^^^^^^^^^
+6 |     return x
+  | ^^^^^^^^^^^^ Return type must be annotated
 
-3:    @compile_guppy
-4:    def foo(x: bool):
-      ^^^^^^^^^^^^^^^^^
-GuppyError: Return type must be annotated
+Guppy compilation failed due to 1 previous error

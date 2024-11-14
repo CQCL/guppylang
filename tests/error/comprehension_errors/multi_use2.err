@@ -1,7 +1,11 @@
-Guppy compilation failed. Error in file $FILE:13
+Error: Linearity violation (at $FILE:13:35)
+   | 
+11 | @guppy(module)
+12 | def foo(qs: list[qubit] @owned, xs: list[int]) -> list[qubit]:
+13 |     return [q for x in xs for q in qs]
+   |                                    ^^ Variable `qs` with linear type `list[qubit]` would be
+   |                                       consumed multiple
+   |                                       times when evaluating
+   |                                       this comprehension
 
-11:    @guppy(module)
-12:    def foo(qs: list[qubit] @owned, xs: list[int]) -> list[qubit]:
-13:        return [q for x in xs for q in qs]
-                                          ^^
-GuppyTypeError: Variable `qs` with linear type `list[qubit]` would be used multiple times when evaluating this comprehension
+Guppy compilation failed due to 1 previous error

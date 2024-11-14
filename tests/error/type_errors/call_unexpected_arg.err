@@ -1,7 +1,10 @@
-Guppy compilation failed. Error in file $FILE:6
+Error: Too many arguments (at $FILE:6:18)
+  | 
+4 | @compile_guppy
+5 | def foo(x: int) -> int:
+6 |     return foo(x, x)
+  |                   ^ Unexpected argument (expected 1, got 2)
 
-4:    @compile_guppy
-5:    def foo(x: int) -> int:
-6:        return foo(x, x)
-                        ^
-GuppyTypeError: Unexpected argument
+Note: Function signature is `int -> int`
+
+Guppy compilation failed due to 1 previous error
