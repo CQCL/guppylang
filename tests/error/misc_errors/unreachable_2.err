@@ -1,7 +1,8 @@
-Guppy compilation failed. Error in file $FILE:10
+Error: Unreachable (at $FILE:10:4)
+   | 
+ 8 |     else:
+ 9 |         return 1
+10 |     x = 42
+   |     ^^^^^^ This code is not reachable
 
-8:     else:
-9:         return 1
-10:    x = 42
-       ^^^^^^
-GuppyError: Unreachable code
+Guppy compilation failed due to 1 previous error

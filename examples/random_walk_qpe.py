@@ -10,10 +10,10 @@ from collections.abc import Callable
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.angles import angle
-from guppylang.prelude.builtins import owned, py, result
-from guppylang.prelude.quantum import discard, measure, qubit
-from guppylang.prelude.quantum_functional import cx, h, rz, x
+from guppylang.std.angles import angle
+from guppylang.std.builtins import owned, py, result
+from guppylang.std.quantum import discard, measure, qubit
+from guppylang.std.quantum_functional import cx, h, rz, x
 
 
 sqrt_e = math.sqrt(math.e)

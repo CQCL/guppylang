@@ -1,6 +1,14 @@
-Guppy compilation failed. Error in file $FILE:20
+Error: Linearity violation (at $FILE:20:9)
+   | 
+18 | 
+19 | @guppy(module)
+20 | def test(s: MyStruct, b: bool) -> None:
+   |          ^^^^^^^^^^^ Borrowed argument s cannot be returned to the caller ...
+   | 
+22 |         use(s.q)
+   |             --- since `s.q` with linear type `qubit` was already consumed
+   |                 here
 
-18:    @guppy(module)
-19:    def test(s: MyStruct, b: bool) -> None:
-                ^^^^^^^^^^^
-GuppyError: Borrowed argument `s` cannot be returned to the caller since `s.q` is used at 22:12. Consider writing a value back into `s.q` before returning.
+Help: Consider writing a value back into `s.q` before returning
+
+Guppy compilation failed due to 1 previous error

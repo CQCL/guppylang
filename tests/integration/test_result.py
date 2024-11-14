@@ -1,6 +1,6 @@
 import pytest
 
-from guppylang.prelude.builtins import result, nat, array
+from guppylang.std.builtins import result, nat, array
 from tests.util import compile_guppy
 
 

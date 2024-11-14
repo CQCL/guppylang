@@ -8,6 +8,7 @@ from guppylang.ast_util import (
 )
 from guppylang.cfg.builder import is_py_expression
 from guppylang.checker.core import Context, Globals, Locals
+from guppylang.checker.errors.generic import ExpectedError
 from guppylang.checker.expr_checker import eval_py_expr
 from guppylang.definition.common import Definition
 from guppylang.definition.module import ModuleDef
@@ -17,6 +18,18 @@ from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.builtin import CallableTypeDef
 from guppylang.tys.const import ConstValue
+from guppylang.tys.errors import (
+    FlagNotAllowedError,
+    FreeTypeVarError,
+    HigherKindedTypeVarError,
+    IllegalPyTypeArgError,
+    InvalidCallableTypeError,
+    InvalidFlagError,
+    InvalidTypeArgError,
+    InvalidTypeError,
+    ModuleMemberNotFoundError,
+    NonLinearOwnedError,
+)
 from guppylang.tys.param import Parameter, TypeParam
 from guppylang.tys.ty import (
     FuncInput,
@@ -84,41 +97,38 @@ def arg_from_ast(
             nat_ty = NumericType(NumericType.Kind.Nat)
             return ConstArg(ConstValue(nat_ty, v))
         else:
-            raise GuppyError(
-                f"Compile-time `py(...)` expression with type `{type(v)}` is not a "
-                "valid type argument",
-                node,
-            )
+            raise GuppyError(IllegalPyTypeArgError(node, v))
 
     # Finally, we also support delayed annotations in strings
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         node = _parse_delayed_annotation(node.value, node)
         return arg_from_ast(node, globals, param_var_mapping, allow_free_vars)
 
-    raise GuppyError("Not a valid type argument", node)
+    raise GuppyError(InvalidTypeArgError(node))
 
 
 def _try_parse_defn(node: AstNode, globals: Globals) -> Definition | None:
     """Tries to parse a (possibly qualified) name into a global definition."""
+    from guppylang.checker.cfg_checker import VarNotDefinedError
+
     match node:
         case ast.Name(id=x):
             if x not in globals:
-                raise GuppyError(f"Unknown identifier: `{x}`", node)
+                raise GuppyError(VarNotDefinedError(node, x))
             return globals[x]
         case ast.Attribute(value=ast.Name(id=module_name) as value, attr=x):
             if module_name not in globals:
-                raise GuppyError(f"Unknown identifier: `{module_name}`", value)
+                raise GuppyError(VarNotDefinedError(value, module_name))
             module_def = globals[module_name]
             if not isinstance(module_def, ModuleDef):
-                raise GuppyError(
-                    f"Expected a module, got {module_def.description} "
-                    f"`{module_def.name}`",
+                err = ExpectedError(
                     value,
+                    "a module",
+                    got=f"{module_def.description} `{module_def.name}`",
                 )
+                raise GuppyError(err)
             if x not in module_def.globals:
-                raise GuppyError(
-                    f"Module `{module_def.name}` has no member `{x}`", node
-                )
+                raise GuppyError(ModuleMemberNotFoundError(node, module_def.name, x))
             return module_def.globals[x]
         case _:
             return None
@@ -153,23 +163,16 @@ def _arg_from_instantiated_defn(
         case ParamDef() as defn:
             # We don't allow parametrised variables like `T[int]`
             if arg_nodes:
-                raise GuppyError(
-                    f"Variable `{defn.name}` is not parameterized. Higher-kinded types "
-                    f"are not supported",
-                    node,
-                )
+                raise GuppyError(HigherKindedTypeVarError(node, defn))
             if defn.name not in param_var_mapping:
                 if allow_free_vars:
                     param_var_mapping[defn.name] = defn.to_param(len(param_var_mapping))
                 else:
-                    raise GuppyError(
-                        "Free type variable. Only function types can be generic", node
-                    )
+                    raise GuppyError(FreeTypeVarError(node, defn))
             return param_var_mapping[defn.name].to_bound()
         case defn:
-            raise GuppyError(
-                f"Expected a type, got {defn.description} `{defn.name}`", node
-            )
+            err = ExpectedError(node, "a type", got=f"{defn.description} `{defn.name}`")
+            raise GuppyError(err)
 
 
 def _parse_delayed_annotation(ast_str: str, node: ast.Constant) -> ast.expr:
@@ -177,7 +180,7 @@ def _parse_delayed_annotation(ast_str: str, node: ast.Constant) -> ast.expr:
     try:
         [stmt] = ast.parse(ast_str).body
         if not isinstance(stmt, ast.Expr):
-            raise GuppyError("Invalid Guppy type", node)
+            raise GuppyError(InvalidTypeError(node))
         set_location_from(stmt, loc=node)
         shift_loc(
             stmt,
@@ -185,7 +188,7 @@ def _parse_delayed_annotation(ast_str: str, node: ast.Constant) -> ast.expr:
             delta_col_offset=node.col_offset + 1,  # +1 to remove the `"`
         )
     except (SyntaxError, ValueError):
-        raise GuppyError("Invalid Guppy type", node) from None
+        raise GuppyError(InvalidTypeError(node)) from None
     else:
         return stmt.value
 
@@ -198,15 +201,12 @@ def _parse_callable_type(
     allow_free_vars: bool = False,
 ) -> FunctionType:
     """Helper function to parse a `Callable[[<arguments>], <return type>]` type."""
-    err = (
-        "Function types should be specified via "
-        "`Callable[[<arguments>], <return type>]`"
-    )
+    err = InvalidCallableTypeError(loc)
     if len(args) != 2:
-        raise GuppyError(err, loc)
+        raise GuppyError(err)
     [inputs, output] = args
     if not isinstance(inputs, ast.List):
-        raise GuppyError(err, loc)
+        raise GuppyError(err)
     inouts, output = parse_function_io_types(
         inputs.elts, output, loc, globals, param_var_mapping, allow_free_vars
     )
@@ -233,9 +233,7 @@ def parse_function_io_types(
             inp, globals, param_var_mapping, allow_free_vars
         )
         if InputFlags.Owned in flags and not ty.linear:
-            raise GuppyError(
-                f"Non-linear type `{ty}` cannot be annotated as `@owned`", loc
-            )
+            raise GuppyError(NonLinearOwnedError(loc, ty))
         if ty.linear and InputFlags.Owned not in flags:
             flags |= InputFlags.Inout
 
@@ -260,15 +258,10 @@ def type_with_flags_from_ast(
         match node.right:
             case ast.Name(id="owned"):
                 if not ty.linear:
-                    raise GuppyError(
-                        f"Non-linear type `{ty}` cannot be annotated as `@owned`",
-                        node.right,
-                    )
+                    raise GuppyError(NonLinearOwnedError(node.right, ty))
                 flags |= InputFlags.Owned
-            case ast.Name(name):
-                raise GuppyError(f"Invalid annotation: `{name}`", node.right)
             case _:
-                raise GuppyError("Invalid annotation", node.right)
+                raise GuppyError(InvalidFlagError(node.right))
         return ty, flags
     # We also need to handle the case that this could be a delayed string annotation
     elif isinstance(node, ast.Constant) and isinstance(node.value, str):
@@ -295,10 +288,7 @@ def type_from_ast(
     )
     if flags != InputFlags.NoFlags:
         assert InputFlags.Inout not in flags  # Users shouldn't be able to set this
-        raise GuppyError(
-            "`@` type annotations are not allowed in this position",
-            node,
-        )
+        raise GuppyError(FlagNotAllowedError(node))
     return ty
 
 

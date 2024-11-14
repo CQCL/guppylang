@@ -2,11 +2,11 @@ from hugr import tys
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import owned
-from guppylang.prelude.quantum import qubit
-from guppylang.prelude.quantum_functional import h, cx
+from guppylang.std.builtins import owned
+from guppylang.std.quantum import qubit
+from guppylang.std.quantum_functional import h, cx
 
-import guppylang.prelude.quantum_functional as quantum
+import guppylang.std.quantum_functional as quantum
 from guppylang.tys.ty import NoneType
 from tests.util import compile_guppy
 

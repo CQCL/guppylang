@@ -1,6 +1,8 @@
-Guppy compilation failed. Error in file $FILE:11
+Error: Invalid annotation (at $FILE:11:16)
+   | 
+ 9 | 
+10 | @guppy.declare(module)
+11 | def foo(x: int @owned) -> qubit: ...
+   |                 ^^^^^ Classical type `int` cannot be owned
 
-9:     @guppy.declare(module)
-10:    def foo(x: int @owned) -> qubit: ...
-                       ^^^^^
-GuppyError: Non-linear type `int` cannot be annotated as `@owned`
+Guppy compilation failed due to 1 previous error

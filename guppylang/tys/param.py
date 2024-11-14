@@ -7,10 +7,13 @@ from hugr import tys as ht
 from typing_extensions import Self
 
 from guppylang.ast_util import AstNode
+from guppylang.checker.errors.generic import ExpectedError
+from guppylang.checker.errors.type_errors import TypeMismatchError
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr
 from guppylang.tys.const import BoundConstVar, ExistentialConstVar
+from guppylang.tys.errors import WrongNumberOfTypeArgsError
 from guppylang.tys.var import ExistentialVar
 
 if TYPE_CHECKING:
@@ -89,14 +92,14 @@ class TypeParam(ParameterBase):
         """
         match arg:
             case ConstArg(const):
-                raise GuppyTypeError(
-                    f"Expected a type, got value of type {const.ty}", loc
-                )
+                err = ExpectedError(loc, "a type", got=f"value of type `{const.ty}`")
+                raise GuppyTypeError(err)
             case TypeArg(ty):
                 if not self.can_be_linear and ty.linear:
-                    raise GuppyTypeError(
-                        f"Expected a non-linear type, got value of type {ty}", loc
+                    err = ExpectedError(
+                        loc, "a non-linear type", got=f"value of type `{ty}`"
                     )
+                    raise GuppyTypeError(err)
                 return arg
 
     def to_existential(self) -> tuple[Argument, ExistentialVar]:
@@ -152,13 +155,14 @@ class ConstParam(ParameterBase):
             case ConstArg(const):
                 if const.ty != self.ty:
                     raise GuppyTypeError(
-                        f"Expected argument of type `{self.ty}`, got {const.ty}", loc
+                        TypeMismatchError(loc, self.ty, const.ty, kind="argument")
                     )
                 return arg
-            case TypeArg():
-                raise GuppyTypeError(
-                    f"Expected argument of type `{self.ty}`, got type", loc
+            case TypeArg(ty=ty):
+                err = ExpectedError(
+                    loc, f"expression of type `{self.ty}`", got=f"type `{ty}`"
                 )
+                raise GuppyTypeError(err)
 
     def to_existential(self) -> tuple[Argument, ExistentialVar]:
         """Creates a fresh existential variable that can be instantiated for this
@@ -201,12 +205,11 @@ def check_all_args(
     invalid.
     """
     exp, act = len(params), len(args)
-    if exp > act:
-        raise GuppyError(f"Missing parameter for type `{type_name}`", loc)
-    elif 0 == exp < act:
-        raise GuppyError(f"Type `{type_name}` is not parameterized", loc)
-    elif 0 < exp < act:
-        raise GuppyError(f"Too many parameters for type `{type_name}`", loc)
+    if exp != act:
+        # TODO: Adjust the error span to only point to the offending arguments (similar
+        #  to how we deal with call args in the expression checker). This requires
+        #  threading the type arg spans down to this point
+        raise GuppyError(WrongNumberOfTypeArgsError(loc, exp, act, type_name))
 
     # Now check that the kinds match up
     for param, arg in zip(params, args, strict=True):

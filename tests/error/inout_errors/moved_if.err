@@ -1,7 +1,13 @@
-Guppy compilation failed. Error in file $FILE:17
+Error: Not owned (at $FILE:17:12)
+   | 
+15 | def test(q: qubit, b: bool) -> None:
+16 |     if b:
+17 |         use(q)
+   |             ^ Function `use` wants to take ownership of this argument,
+   |               but `test` doesn't own `q`
+   | 
+15 | def test(q: qubit, b: bool) -> None:
+   |          -------- Argument `q` is only borrowed. Consider taking ownership:
+   |                   `q: qubit @owned`
 
-15:    def test(q: qubit, b: bool) -> None:
-16:        if b:
-17:            use(q)
-                   ^
-GuppyError: Variable `q` may not be used in an `@owned` position since it isn't owned. Consider adding a `@owned` annotation to get ownership of the value.
+Guppy compilation failed due to 1 previous error

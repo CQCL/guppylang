@@ -3,11 +3,11 @@ from hugr.std.int import IntVal
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import array, owned
+from guppylang.std.builtins import array, owned
 from tests.util import compile_guppy
 
-from guppylang.prelude.quantum import qubit, discard
-import guppylang.prelude.quantum as quantum
+from guppylang.std.quantum import qubit, discard
+import guppylang.std.quantum as quantum
 
 
 def test_len(validate):

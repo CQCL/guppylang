@@ -1,8 +1,8 @@
-import guppylang.prelude.quantum as quantum
+import guppylang.std.quantum as quantum
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.quantum import qubit
-from guppylang.prelude.builtins import owned
+from guppylang.std.quantum import qubit
+from guppylang.std.builtins import owned
 
 module = GuppyModule("test")
 module.load_all(quantum)
