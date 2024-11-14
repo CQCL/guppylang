@@ -231,12 +231,13 @@ class ArrayIterEndCompiler(ArrayCompiler):
     """Compiler for the `ArrayIter.__end__` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        # For linear array iterators, we need to make sure that all array elements have
-        # been taken out (i.e. replaced by `None`)
+        # For linear array iterators, map the array of optional elements to an
+        # `array[None, n]` that we can discard.
         if self.elem_ty.type_bound() == ht.TypeBound.Any:
             elem_opt_ty = ht.Option(self.elem_ty)
             none_ty = ht.UnitSum(1)
-            # Define `unwrap_none` function
+            # Define `unwrap_none` function. If any of the elements are not `None`,
+            # then the users must have called `__end__` prematurely and we panic.
             func = self.builder.define_function("unwrap_none", [elem_opt_ty], [none_ty])
             err_msg = "Linear array element has not been used in iterator"
             build_expect_none(
