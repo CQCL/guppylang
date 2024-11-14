@@ -558,8 +558,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 BadProtocolError.BadSignature(None, ty, func_name, exp_sig, func.ty)
             )
             raise GuppyError(err)
-        result, result_ty = func.synthesize_call([node, *args], node, self.ctx)
-        return with_type(result_ty, result), result_ty
+        return func.synthesize_call([node, *args], node, self.ctx)
 
     def visit_BinOp(self, node: ast.BinOp) -> tuple[ast.expr, Type]:
         return self._synthesize_binary(node.left, node.right, node.op, node)
