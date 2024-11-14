@@ -14,7 +14,7 @@ from hugr.package import FuncDefnPointer
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
 from guppylang.checker.core import Context, Globals, Place, PyScope
-from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
+from guppylang.checker.errors.generic import ExpectedError
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import (
     check_global_func_def,
@@ -65,8 +65,6 @@ class RawFunctionDef(ParsableDef):
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func, sources)
         ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
-        if ty.parametrized:
-            raise GuppyError(UnsupportedError(func_ast, "Generic function definitions"))
         return ParsedFunctionDef(
             self.id, self.name, func_ast, ty, self.python_scope, docstring
         )
@@ -160,9 +158,10 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        func_type = self.ty.to_hugr()
-        func_def = module.define_function(self.name, func_type.input)
-        func_def.declare_outputs(func_type.output)
+        func_type = self.ty.to_hugr_poly()
+        func_def = module.define_function(
+            self.name, func_type.body.input, func_type.body.output, func_type.params
+        )
         return CompiledFunctionDef(
             self.id,
             self.name,

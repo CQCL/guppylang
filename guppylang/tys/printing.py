@@ -62,7 +62,9 @@ class TypePrinter:
 
     @_visit.register
     def _visit_BoundVar(self, var: BoundVar, inside_row: bool) -> str:
-        return self.bound_names[var.idx]
+        if var.idx < len(self.bound_names):
+            return self.bound_names[var.idx]
+        return var.display_name
 
     @_visit.register
     def _visit_ExistentialVar(self, var: ExistentialVar, inside_row: bool) -> str:

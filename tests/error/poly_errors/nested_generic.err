@@ -1,0 +1,10 @@
+Error: Unsupported (at $FILE:12:4)
+   | 
+10 | @guppy(module)
+11 | def foo() -> None:
+12 |     def bar(x: T) -> T:
+   |     ^^^^^^^^^^^^^^^^^^^
+13 |         return x
+   | ^^^^^^^^^^^^^^^^ Nested generic function definitions are not supported
+
+Guppy compilation failed due to 1 previous error

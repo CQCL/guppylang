@@ -74,7 +74,10 @@ def check_global_func_def(
         Variable(x, inp.ty, loc, inp.flags)
         for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
     ]
-    return check_cfg(cfg, inputs, ty.output, func_def.name, globals)
+    generic_params = {
+        param.name: param.with_idx(i) for i, param in enumerate(ty.params)
+    }
+    return check_cfg(cfg, inputs, ty.output, generic_params, func_def.name, globals)
 
 
 def check_nested_func_def(
@@ -83,6 +86,11 @@ def check_nested_func_def(
     """Type checks a local (nested) function definition."""
     func_ty = check_signature(func_def, ctx.globals)
     assert func_ty.input_names is not None
+
+    if func_ty.parametrized:
+        raise GuppyError(
+            UnsupportedError(func_def, "Nested generic function definitions")
+        )
 
     # We've already built the CFG for this function while building the CFG of the
     # enclosing function
@@ -137,7 +145,7 @@ def check_nested_func_def(
             # Otherwise, we treat it like a local name
             inputs.append(Variable(func_def.name, func_def.ty, func_def))
 
-    checked_cfg = check_cfg(cfg, inputs, func_ty.output, func_def.name, globals)
+    checked_cfg = check_cfg(cfg, inputs, func_ty.output, {}, func_def.name, globals)
     checked_def = CheckedNestedFunctionDef(
         def_id,
         checked_cfg,
@@ -188,7 +196,7 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         input_nodes.append(ty_ast)
         input_names.append(inp.arg)
     inputs, output = parse_function_io_types(
-        input_nodes, func_def.returns, func_def, globals, param_var_mapping
+        input_nodes, func_def.returns, func_def, globals, param_var_mapping, True
     )
     return FunctionType(
         inputs,
