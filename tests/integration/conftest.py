@@ -97,6 +97,22 @@ def _run_fn(run_fn_name: str):
 def run_int_fn():
     return _run_fn("run_int_function")
 
+
 @pytest.fixture
-def run_float_fn():
-    return _run_fn("run_float_function")
+def run_float_fn_approx():
+    """Like run_int_fn, but takes optional additional parameters `rel`, `abs` and `nan_ok`
+    as per `pytest.approx`."""
+    run_fn = _run_fn("run_float_function")
+
+    def run_approx(
+        hugr: Package,
+        expected: float,
+        fn_name: str = "main",
+        *,
+        rel: float | None = None,
+        abs: float | None = None,
+        nan_ok: bool = False,
+    ):
+        return run_fn(hugr, pytest.approx(expected, rel=rel, abs=abs, nan_ok=nan_ok))
+
+    return run_approx
