@@ -106,7 +106,7 @@ class ArrayCompiler(CustomCallCompiler):
     def length(self) -> ht.TypeArg:
         """The length for the array op that is being compiled."""
         match self.type_args:
-            case [_, ConstArg(const=const)]:
+            case [_, ConstArg(const)]:
                 return const.to_arg().to_hugr()
             case _:
                 raise InternalGuppyError("Invalid array type args")
