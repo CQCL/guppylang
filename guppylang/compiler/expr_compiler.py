@@ -47,7 +47,7 @@ from guppylang.nodes import (
     TensorCall,
     TypeApply,
 )
-from guppylang.prelude._internal.compiler.array import (
+from guppylang.std._internal.compiler.array import (
     array_new_uninitialized,
 )
 from guppylang.std._internal.compiler.list import (

@@ -2,10 +2,10 @@ import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import array
-from guppylang.prelude.quantum import qubit
+from guppylang.std.builtins import array
+from guppylang.std.quantum import qubit
 
-import guppylang.prelude.quantum_functional as quantum
+import guppylang.std.quantum_functional as quantum
 from tests.util import compile_guppy
 
 
