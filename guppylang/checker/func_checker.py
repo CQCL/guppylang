@@ -89,7 +89,7 @@ def check_nested_func_def(
 
     if func_ty.parametrized:
         raise GuppyError(
-            "Nested generic function definitions are not supported", func_def
+            UnsupportedError(func_def, "Nested generic function definitions")
         )
 
     # We've already built the CFG for this function while building the CFG of the

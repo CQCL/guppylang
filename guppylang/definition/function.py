@@ -14,7 +14,7 @@ from hugr.package import FuncDefnPointer
 from guppylang.ast_util import AstNode, annotate_location, with_loc
 from guppylang.checker.cfg_checker import CheckedCFG
 from guppylang.checker.core import Context, Globals, Place, PyScope
-from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
+from guppylang.checker.errors.generic import ExpectedError
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import (
     check_global_func_def,

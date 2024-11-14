@@ -378,7 +378,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                     ast_node = with_loc(node, GenericParamValue(id=x, param=param))
                     return ast_node, param.ty
                 case TypeParam() as param:
-                    raise GuppyError(f"Expected a value, got type `{param.name}`", node)
+                    raise GuppyError(
+                        ExpectedError(node, "a value", got=f"type `{param.name}`")
+                    )
                 case _:
                     return assert_never(param)
         elif x in self.ctx.globals:
