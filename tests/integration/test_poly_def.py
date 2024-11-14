@@ -99,3 +99,30 @@ def test_nat_use(validate):
 
     validate(module.compile())
 
+
+def test_nat_call(validate):
+    module = GuppyModule("test")
+    T = guppy.type_var("T", module=module)
+    n = guppy.nat_var("n", module=module)
+
+    @guppy(module)
+    def foo() -> array[T, n]:
+        return foo()
+
+    @guppy(module)
+    def main() -> tuple[array[int, 10], array[float, 20]]:
+        return foo(), foo()
+
+    validate(module.compile())
+
+
+def test_nat_recurse(validate):
+    module = GuppyModule("test")
+    n = guppy.nat_var("n", module=module)
+
+    @guppy(module)
+    def empty() -> array[int, n]:
+        return empty()
+
+    validate(module.compile())
+
