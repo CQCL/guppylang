@@ -50,7 +50,7 @@ class MeasureReturnCompiler(CustomInoutCallCompiler):
     """Compiler for the `measure_return` function."""
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
-        from guppylang.prelude._internal.util import quantum_op
+        from guppylang.std._internal.util import quantum_op
 
         [q] = args
         [q, bit] = self.builder.add_op(
@@ -67,7 +67,7 @@ class RotationCompiler(CustomInoutCallCompiler):
         self.opname = opname
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
-        from guppylang.prelude._internal.util import quantum_op
+        from guppylang.std._internal.util import quantum_op
 
         [*qs, angle] = args
         [halfturns] = self.builder.add_op(ops.UnpackTuple([FLOAT_T]), angle)

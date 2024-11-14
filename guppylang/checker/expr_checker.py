@@ -27,6 +27,8 @@ from contextlib import suppress
 from dataclasses import replace
 from typing import Any, NoReturn, cast
 
+from typing_extensions import assert_never
+
 from guppylang.ast_util import (
     AstNode,
     AstVisitor,
@@ -86,6 +88,7 @@ from guppylang.nodes import (
     DesugaredGeneratorExpr,
     DesugaredListComp,
     FieldAccessAndDrop,
+    GenericParamValue,
     GlobalName,
     InoutReturnSentinel,
     IterEnd,
@@ -109,7 +112,7 @@ from guppylang.tys.builtin import (
     is_list_type,
     list_type,
 )
-from guppylang.tys.param import TypeParam
+from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
@@ -371,6 +374,18 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         if x in self.ctx.locals:
             var = self.ctx.locals[x]
             return with_loc(node, PlaceNode(place=var)), var.ty
+        elif x in self.ctx.generic_params:
+            param = self.ctx.generic_params[x]
+            match param:
+                case ConstParam() as param:
+                    ast_node = with_loc(node, GenericParamValue(id=x, param=param))
+                    return ast_node, param.ty
+                case TypeParam() as param:
+                    raise GuppyError(
+                        ExpectedError(node, "a value", got=f"type `{param.name}`")
+                    )
+                case _:
+                    return assert_never(param)
         elif x in self.ctx.globals:
             defn = self.ctx.globals[x]
             return self._check_global(defn, x, node)
@@ -1045,7 +1060,7 @@ def synthesize_comprehension(
     # The rest is checked in a new nested context to ensure that variables don't escape
     # their scope
     inner_locals: Locals[str, Variable] = Locals({}, parent_scope=ctx.locals)
-    inner_ctx = Context(ctx.globals, inner_locals)
+    inner_ctx = Context(ctx.globals, inner_locals, ctx.generic_params)
     expr_sth, stmt_chk = ExprSynthesizer(inner_ctx), StmtChecker(inner_ctx)
     gen.hasnext_assign = stmt_chk.visit_Assign(gen.hasnext_assign)
     gen.next_assign = stmt_chk.visit_Assign(gen.next_assign)

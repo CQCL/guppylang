@@ -470,6 +470,8 @@ class _GuppyDummy:
     builds to mock the decorator.
     """
 
+    _sources = SourceMap()
+
     def __call__(self, arg: PyFunc | GuppyModule) -> Any:
         if isinstance(arg, GuppyModule):
             return lambda f: f

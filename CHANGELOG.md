@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.13.0](https://github.com/CQCL/guppylang/compare/v0.12.2...v0.13.0) (2024-11-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* `prelude` module renamed to `std`
+
+### Features
+
+* add `qubit` discard/measure methods ([#580](https://github.com/CQCL/guppylang/issues/580)) ([242fa44](https://github.com/CQCL/guppylang/commit/242fa44f45e676e81efd5df48de9fc80fe0ea516))
+* Add `SizedIter` wrapper type ([#611](https://github.com/CQCL/guppylang/issues/611)) ([2e9da6b](https://github.com/CQCL/guppylang/commit/2e9da6be24de499f059c3cdb7553604cb9373ca0))
+* conventional results post processing ([#593](https://github.com/CQCL/guppylang/issues/593)) ([db96224](https://github.com/CQCL/guppylang/commit/db962243670fea4987ef842c67a59f560f08f72a))
+* Improve compiler diagnostics ([#547](https://github.com/CQCL/guppylang/issues/547)) ([90d465d](https://github.com/CQCL/guppylang/commit/90d465d87bdde777302381367598812e37c501e7)), closes [#551](https://github.com/CQCL/guppylang/issues/551) [#553](https://github.com/CQCL/guppylang/issues/553) [#586](https://github.com/CQCL/guppylang/issues/586) [#588](https://github.com/CQCL/guppylang/issues/588) [#587](https://github.com/CQCL/guppylang/issues/587) [#590](https://github.com/CQCL/guppylang/issues/590) [#600](https://github.com/CQCL/guppylang/issues/600) [#601](https://github.com/CQCL/guppylang/issues/601) [#606](https://github.com/CQCL/guppylang/issues/606)
+* restrict result tag sizes to 256 bytes ([#596](https://github.com/CQCL/guppylang/issues/596)) ([4e8e00f](https://github.com/CQCL/guppylang/commit/4e8e00ffe733b1b65055f2355d6a538334449e6d)), closes [#595](https://github.com/CQCL/guppylang/issues/595)
+
+
+### Bug Fixes
+
+* Mock guppy decorator during sphinx builds ([#622](https://github.com/CQCL/guppylang/issues/622)) ([1cccc04](https://github.com/CQCL/guppylang/commit/1cccc04c54c3c3f38e1e2c1ce828935091e07cad))
+
+
+### Documentation
+
+* Add DEVELOPMENT.md ([#584](https://github.com/CQCL/guppylang/issues/584)) ([1d29d39](https://github.com/CQCL/guppylang/commit/1d29d393206484324835764e89dff7a39c83b3f9))
+* Fix docs build ([#639](https://github.com/CQCL/guppylang/issues/639)) ([bd6011c](https://github.com/CQCL/guppylang/commit/bd6011cd0e7817fbac24a1b28a8d33ea93c92bef))
+
+
+### Miscellaneous Chores
+
+* Manually set last release commit ([#643](https://github.com/CQCL/guppylang/issues/643)) ([b2d569b](https://github.com/CQCL/guppylang/commit/b2d569b19ac0001841bdd2c326447dbeee40d20c))
+
+
+### Code Refactoring
+
+* rename prelude to std ([#642](https://github.com/CQCL/guppylang/issues/642)) ([1a68e8e](https://github.com/CQCL/guppylang/commit/1a68e8e7919487f1465cc587b9855cb43169f63d))
+
 ## [0.12.2](https://github.com/CQCL/guppylang/compare/v0.12.1...v0.12.2) (2024-10-21)
 
 

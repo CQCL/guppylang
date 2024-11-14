@@ -10,7 +10,7 @@ from hugr.std.float import FloatVal
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import py
+from guppylang.std.builtins import py
 
 angles = GuppyModule("angles")
 

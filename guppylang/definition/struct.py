@@ -185,9 +185,9 @@ class ParsedStructDef(TypeDef, CheckableDef):
         # otherwise the code below would not terminate.
         # TODO: This is not ideal (see todo in `check_instantiate`)
         globals = globals.with_python_scope(self.python_scope)
-        check_not_recursive(self, globals)
-
         param_var_mapping = {p.name: p for p in self.params}
+        check_not_recursive(self, globals, param_var_mapping)
+
         fields = [
             StructField(f.name, type_from_ast(f.type_ast, globals, param_var_mapping))
             for f in self.fields
@@ -330,7 +330,9 @@ def params_from_ast(nodes: Sequence[ast.expr], globals: Globals) -> list[Paramet
     return params
 
 
-def check_not_recursive(defn: ParsedStructDef, globals: Globals) -> None:
+def check_not_recursive(
+    defn: ParsedStructDef, globals: Globals, param_var_mapping: dict[str, Parameter]
+) -> None:
     """Throws a user error if the given struct definition is recursive."""
 
     # TODO: The implementation below hijacks the type parsing logic to detect recursive
@@ -359,4 +361,4 @@ def check_not_recursive(defn: ParsedStructDef, globals: Globals) -> None:
     }
     dummy_globals = replace(globals, defs=globals.defs | dummy_defs)
     for field in defn.fields:
-        type_from_ast(field.type_ast, dummy_globals, {})
+        type_from_ast(field.type_ast, dummy_globals, param_var_mapping)

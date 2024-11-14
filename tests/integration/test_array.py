@@ -3,11 +3,11 @@ from hugr.std.int import IntVal
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.builtins import array, owned
+from guppylang.std.builtins import array, owned
 from tests.util import compile_guppy
 
-from guppylang.prelude.quantum import qubit
-import guppylang.prelude.quantum as quantum
+from guppylang.std.quantum import qubit
+import guppylang.std.quantum as quantum
 
 
 def test_len(validate):
@@ -226,6 +226,26 @@ def test_struct_nested_subscript(validate):
         return a
 
     validate(module.compile())
+
+
+def test_generic_function(validate):
+    module = GuppyModule("test")
+    module.load(qubit)
+    T = guppy.type_var("T", linear=True, module=module)
+    n = guppy.nat_var("n", module=module)
+
+    @guppy(module)
+    def foo(xs: array[T, n] @owned) -> array[T, n]:
+        return xs
+
+    @guppy(module)
+    def main() -> tuple[array[int, 3], array[qubit, 2]]:
+        xs = array(1, 2, 3)
+        ys = array(qubit(), qubit())
+        return foo(xs), foo(ys)
+
+    validate(module.compile())
+
 
 def test_exec_array(validate, run_int_fn):
     module = GuppyModule("test")

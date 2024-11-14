@@ -10,8 +10,8 @@ from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
-from guppylang.prelude._internal.compiler.arithmetic import convert_itousize
-from guppylang.prelude._internal.compiler.prelude import (
+from guppylang.std._internal.compiler.arithmetic import convert_itousize
+from guppylang.std._internal.compiler.prelude import (
     build_unwrap,
     build_unwrap_left,
     build_unwrap_right,
@@ -108,7 +108,8 @@ class NewArrayCompiler(ArrayCompiler):
 
     def build_classical_array(self, elems: list[Wire]) -> Wire:
         """Lowers a call to `array.__new__` for classical arrays."""
-        return self.builder.add_op(array_new(self.elem_ty, len(elems)), *elems)
+        # See https://github.com/CQCL/guppylang/issues/629
+        return self.build_linear_array(elems)
 
     def build_linear_array(self, elems: list[Wire]) -> Wire:
         """Lowers a call to `array.__new__` for linear arrays."""
@@ -130,9 +131,12 @@ class ArrayGetitemCompiler(ArrayCompiler):
 
     def build_classical_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Lowers a call to `array.__getitem__` for classical arrays."""
+        # See https://github.com/CQCL/guppylang/issues/629
+        elem_opt_ty = ht.Option(self.elem_ty)
         idx = self.builder.add_op(convert_itousize(), idx)
-        result = self.builder.add_op(array_get(self.elem_ty, self.length), array, idx)
-        elem = build_unwrap(self.builder, result, "Array index out of bounds")
+        result = self.builder.add_op(array_get(elem_opt_ty, self.length), array, idx)
+        elem_opt = build_unwrap(self.builder, result, "Array index out of bounds")
+        elem = build_unwrap(self.builder, elem_opt, "array.__getitem__: Internal error")
         return CallReturnWires(regular_returns=[elem], inout_returns=[array])
 
     def build_linear_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
@@ -172,9 +176,12 @@ class ArraySetitemCompiler(ArrayCompiler):
         self, array: Wire, idx: Wire, elem: Wire
     ) -> CallReturnWires:
         """Lowers a call to `array.__setitem__` for classical arrays."""
+        # See https://github.com/CQCL/guppylang/issues/629
+        elem_opt_ty = ht.Option(self.elem_ty)
         idx = self.builder.add_op(convert_itousize(), idx)
+        elem_opt = self.builder.add_op(ops.Tag(1, elem_opt_ty), elem)
         result = self.builder.add_op(
-            array_set(self.elem_ty, self.length), array, idx, elem
+            array_set(elem_opt_ty, self.length), array, idx, elem_opt
         )
         # Unwrap the result, but we don't have to hold onto the returned old value
         _, array = build_unwrap_right(self.builder, result, "Array index out of bounds")

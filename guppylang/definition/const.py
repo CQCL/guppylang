@@ -29,7 +29,7 @@ class RawConstDef(ParsableDef):
             self.id,
             self.name,
             self.defined_at,
-            type_from_ast(self.type_ast, globals, None),
+            type_from_ast(self.type_ast, globals, {}),
             self.type_ast,
             self.value,
         )

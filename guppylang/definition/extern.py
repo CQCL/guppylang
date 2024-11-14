@@ -29,7 +29,7 @@ class RawExternDef(ParsableDef):
             self.id,
             self.name,
             self.defined_at,
-            type_from_ast(self.type_ast, globals, None),
+            type_from_ast(self.type_ast, globals, {}),
             self.symbol,
             self.constant,
             self.type_ast,

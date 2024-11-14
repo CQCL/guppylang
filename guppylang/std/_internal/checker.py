@@ -343,8 +343,10 @@ class ResultChecker(CustomCallChecker):
             assert isinstance(len_arg, ConstArg)
             if not self._is_numeric_or_bool_type(ty_arg.ty):
                 raise GuppyError(err)
-            base_ty = ty_arg.ty
-            array_len = len_arg.const
+            _base_ty = ty_arg.ty
+            _array_len = len_arg.const
+            # See https://github.com/CQCL/guppylang/issues/631
+            raise GuppyError(UnsupportedError(value, "Array results"))
         else:
             raise GuppyError(err)
         node = ResultExpr(value, base_ty, array_len, tag.value)
@@ -373,7 +375,7 @@ class RangeChecker(CustomCallChecker):
         return range_iter, range_ty
 
     def range_ty(self) -> StructType:
-        from guppylang.prelude.builtins import Range
+        from guppylang.std.builtins import Range
 
         def_id = cast(RawStructDef, Range).id
         range_type_def = self.ctx.globals.defs[def_id]

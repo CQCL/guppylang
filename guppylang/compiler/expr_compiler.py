@@ -22,7 +22,7 @@ from guppylang.checker.core import Variable
 from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import CompilerBase, DFContainer
-from guppylang.compiler.hugr_extension import PartialOp
+from guppylang.compiler.hugr_extension import PartialOp, UnsupportedOp
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import (
     CallReturnWires,
@@ -35,6 +35,7 @@ from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredListComp,
     FieldAccessAndDrop,
+    GenericParamValue,
     GlobalCall,
     GlobalName,
     InoutReturnSentinel,
@@ -49,7 +50,7 @@ from guppylang.nodes import (
 from guppylang.prelude._internal.compiler.array import (
     array_new_uninitialized,
 )
-from guppylang.prelude._internal.compiler.list import (
+from guppylang.std._internal.compiler.list import (
     list_new,
 )
 from guppylang.tys.arg import Argument
@@ -206,6 +207,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             raise GuppyError(err)
         return defn.load(self.dfg, self.globals, node)
+
+    def visit_GenericParamValue(self, node: GenericParamValue) -> Wire:
+        # TODO: We need a way to look up the concrete value of a generic type arg in
+        #  Hugr. For example, a new op that captures the value during monomorphisation
+        return self.builder.add_op(
+            UnsupportedOp("load_type_param", [], [node.param.ty.to_hugr()]).ext_op
+        )
 
     def visit_Name(self, node: ast.Name) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")

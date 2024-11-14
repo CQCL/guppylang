@@ -8,8 +8,9 @@ T = guppy.type_var("T", module=module)
 
 
 @guppy(module)
-def main(x: T) -> T:
-    return x
+def foo() -> None:
+    def bar(x: T) -> T:
+        return x
 
 
 module.compile()

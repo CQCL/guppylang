@@ -1,16 +1,15 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.quantum import qubit
+
 
 module = GuppyModule("test")
-module.load(qubit)
+
+T = guppy.type_var("T", module=module)
 
 
 @guppy(module)
-def test(q: qubit) -> qubit:
-    r = q
-    q = qubit()
-    return r
+def foo(x: T) -> None:
+    y = T
 
 
 module.compile()

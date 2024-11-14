@@ -1,11 +1,11 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.prelude.quantum import qubit
+from guppylang.std.quantum import qubit
 
-from guppylang.prelude.quantum import dirty_qubit, measure
-from guppylang.prelude.quantum_functional import cx
+from guppylang.std.quantum import dirty_qubit, measure
+from guppylang.std.quantum_functional import cx
 
-import guppylang.prelude.quantum_functional as quantum_functional
+import guppylang.std.quantum_functional as quantum_functional
 
 
 def test_dirty_qubit(validate):

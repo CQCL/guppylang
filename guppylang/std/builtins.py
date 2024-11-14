@@ -8,7 +8,7 @@ import hugr.std.int
 
 from guppylang.decorator import guppy
 from guppylang.definition.custom import DefaultCallChecker, NoopCompiler
-from guppylang.prelude._internal.checker import (
+from guppylang.std._internal.checker import (
     ArrayLenChecker,
     CallableChecker,
     CoercingChecker,
@@ -19,7 +19,7 @@ from guppylang.prelude._internal.checker import (
     ReversingChecker,
     UnsupportedChecker,
 )
-from guppylang.prelude._internal.compiler.arithmetic import (
+from guppylang.std._internal.compiler.arithmetic import (
     FloatBoolCompiler,
     FloatDivmodCompiler,
     FloatFloordivCompiler,
@@ -29,19 +29,19 @@ from guppylang.prelude._internal.compiler.arithmetic import (
     IToBoolCompiler,
     NatTruedivCompiler,
 )
-from guppylang.prelude._internal.compiler.array import (
+from guppylang.std._internal.compiler.array import (
     ArrayGetitemCompiler,
     ArraySetitemCompiler,
     NewArrayCompiler,
 )
-from guppylang.prelude._internal.compiler.list import (
+from guppylang.std._internal.compiler.list import (
     ListGetitemCompiler,
     ListLengthCompiler,
     ListPopCompiler,
     ListPushCompiler,
     ListSetitemCompiler,
 )
-from guppylang.prelude._internal.util import (
+from guppylang.std._internal.util import (
     float_op,
     int_op,
     logic_op,

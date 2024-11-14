@@ -18,6 +18,7 @@ from guppylang.checker.expr_checker import ExprSynthesizer, to_bool
 from guppylang.checker.stmt_checker import StmtChecker
 from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError
+from guppylang.tys.param import Parameter
 from guppylang.tys.ty import InputFlags, Type
 
 Row = Sequence[V]
@@ -60,7 +61,12 @@ class CheckedCFG(BaseCFG[CheckedBB[V]], Generic[V]):
 
 
 def check_cfg(
-    cfg: CFG, inputs: Row[Variable], return_ty: Type, func_name: str, globals: Globals
+    cfg: CFG,
+    inputs: Row[Variable],
+    return_ty: Type,
+    generic_params: dict[str, Parameter],
+    func_name: str,
+    globals: Globals,
 ) -> CheckedCFG[Place]:
     """Type checks a control-flow graph.
 
@@ -76,7 +82,7 @@ def check_cfg(
     # We start by compiling the entry BB
     checked_cfg: CheckedCFG[Variable] = CheckedCFG([v.ty for v in inputs], return_ty)
     checked_cfg.entry_bb = check_bb(
-        cfg.entry_bb, checked_cfg, inputs, return_ty, globals
+        cfg.entry_bb, checked_cfg, inputs, return_ty, generic_params, globals
     )
     compiled = {cfg.entry_bb: checked_cfg.entry_bb}
 
@@ -102,7 +108,9 @@ def check_cfg(
             check_rows_match(input_row, compiled[bb].sig.input_row, bb)
         else:
             # Otherwise, check the BB and enqueue its successors
-            checked_bb = check_bb(bb, checked_cfg, input_row, return_ty, globals)
+            checked_bb = check_bb(
+                bb, checked_cfg, input_row, return_ty, generic_params, globals
+            )
             queue += [
                 # We enumerate the successor starting from the back, so we start with
                 # the `True` branch. This way, we find errors in a more natural order
@@ -174,6 +182,7 @@ def check_bb(
     checked_cfg: CheckedCFG[Variable],
     inputs: Row[Variable],
     return_ty: Type,
+    generic_params: dict[str, Parameter],
     globals: Globals,
 ) -> CheckedBB[Variable]:
     cfg = bb.containing_cfg
@@ -187,7 +196,7 @@ def check_bb(
                 raise GuppyError(VarNotDefinedError(use, x))
 
     # Check the basic block
-    ctx = Context(globals, Locals({v.name: v for v in inputs}))
+    ctx = Context(globals, Locals({v.name: v for v in inputs}), generic_params)
     checked_stmts = StmtChecker(ctx, bb, return_ty).check_stmts(bb.statements)
 
     # If we branch, we also have to check the branch predicate

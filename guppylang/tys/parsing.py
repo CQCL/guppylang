@@ -45,12 +45,15 @@ from guppylang.tys.ty import (
 def arg_from_ast(
     node: AstNode,
     globals: Globals,
-    param_var_mapping: dict[str, Parameter] | None = None,
+    param_var_mapping: dict[str, Parameter],
+    allow_free_vars: bool = False,
 ) -> Argument:
     """Turns an AST expression into an argument."""
     # A single (possibly qualified) identifier
     if defn := _try_parse_defn(node, globals):
-        return _arg_from_instantiated_defn(defn, [], globals, node, param_var_mapping)
+        return _arg_from_instantiated_defn(
+            defn, [], globals, node, param_var_mapping, allow_free_vars
+        )
 
     # A parametrised type, e.g. `list[??]`
     if isinstance(node, ast.Subscript) and (
@@ -60,13 +63,16 @@ def arg_from_ast(
             node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
         )
         return _arg_from_instantiated_defn(
-            defn, arg_nodes, globals, node, param_var_mapping
+            defn, arg_nodes, globals, node, param_var_mapping, allow_free_vars
         )
 
     # We allow tuple types to be written as `(int, bool)`
     if isinstance(node, ast.Tuple):
         ty = TupleType(
-            [type_from_ast(el, globals, param_var_mapping) for el in node.elts]
+            [
+                type_from_ast(el, globals, param_var_mapping, allow_free_vars)
+                for el in node.elts
+            ]
         )
         return TypeArg(ty)
 
@@ -86,7 +92,7 @@ def arg_from_ast(
 
     # Py-expressions can also be used to specify static numbers
     if py_expr := is_py_expression(node):
-        v = eval_py_expr(py_expr, Context(globals, Locals({})))
+        v = eval_py_expr(py_expr, Context(globals, Locals({}), {}))
         if isinstance(v, int):
             nat_ty = NumericType(NumericType.Kind.Nat)
             return ConstArg(ConstValue(nat_ty, v))
@@ -96,7 +102,7 @@ def arg_from_ast(
     # Finally, we also support delayed annotations in strings
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         node = _parse_delayed_annotation(node.value, node)
-        return arg_from_ast(node, globals, param_var_mapping)
+        return arg_from_ast(node, globals, param_var_mapping, allow_free_vars)
 
     raise GuppyError(InvalidTypeArgError(node))
 
@@ -133,19 +139,22 @@ def _arg_from_instantiated_defn(
     arg_nodes: list[ast.expr],
     globals: Globals,
     node: AstNode,
-    param_var_mapping: dict[str, Parameter] | None = None,
+    param_var_mapping: dict[str, Parameter],
+    allow_free_vars: bool = False,
 ) -> Argument:
     """Parses a globals definition with type args into an argument."""
     match defn:
         # Special case for the `Callable` type
         case CallableTypeDef():
             return TypeArg(
-                _parse_callable_type(arg_nodes, node, globals, param_var_mapping)
+                _parse_callable_type(
+                    arg_nodes, node, globals, param_var_mapping, allow_free_vars
+                )
             )
         # Either a defined type (e.g. `int`, `bool`, ...)
         case TypeDef() as defn:
             args = [
-                arg_from_ast(arg_node, globals, param_var_mapping)
+                arg_from_ast(arg_node, globals, param_var_mapping, allow_free_vars)
                 for arg_node in arg_nodes
             ]
             ty = defn.check_instantiate(args, globals, node)
@@ -155,10 +164,11 @@ def _arg_from_instantiated_defn(
             # We don't allow parametrised variables like `T[int]`
             if arg_nodes:
                 raise GuppyError(HigherKindedTypeVarError(node, defn))
-            if param_var_mapping is None:
-                raise GuppyError(FreeTypeVarError(node, defn))
             if defn.name not in param_var_mapping:
-                param_var_mapping[defn.name] = defn.to_param(len(param_var_mapping))
+                if allow_free_vars:
+                    param_var_mapping[defn.name] = defn.to_param(len(param_var_mapping))
+                else:
+                    raise GuppyError(FreeTypeVarError(node, defn))
             return param_var_mapping[defn.name].to_bound()
         case defn:
             err = ExpectedError(node, "a type", got=f"{defn.description} `{defn.name}`")
@@ -187,7 +197,8 @@ def _parse_callable_type(
     args: list[ast.expr],
     loc: AstNode,
     globals: Globals,
-    param_var_mapping: dict[str, Parameter] | None,
+    param_var_mapping: dict[str, Parameter],
+    allow_free_vars: bool = False,
 ) -> FunctionType:
     """Helper function to parse a `Callable[[<arguments>], <return type>]` type."""
     err = InvalidCallableTypeError(loc)
@@ -197,7 +208,7 @@ def _parse_callable_type(
     if not isinstance(inputs, ast.List):
         raise GuppyError(err)
     inouts, output = parse_function_io_types(
-        inputs.elts, output, loc, globals, param_var_mapping
+        inputs.elts, output, loc, globals, param_var_mapping, allow_free_vars
     )
     return FunctionType(inouts, output)
 
@@ -207,7 +218,8 @@ def parse_function_io_types(
     output_node: ast.expr,
     loc: AstNode,
     globals: Globals,
-    param_var_mapping: dict[str, Parameter] | None,
+    param_var_mapping: dict[str, Parameter],
+    allow_free_vars: bool = False,
 ) -> tuple[list[FuncInput], Type]:
     """Parses the inputs and output types of a function type.
 
@@ -217,14 +229,16 @@ def parse_function_io_types(
     """
     inputs = []
     for inp in input_nodes:
-        ty, flags = type_with_flags_from_ast(inp, globals, param_var_mapping)
+        ty, flags = type_with_flags_from_ast(
+            inp, globals, param_var_mapping, allow_free_vars
+        )
         if InputFlags.Owned in flags and not ty.linear:
             raise GuppyError(NonLinearOwnedError(loc, ty))
         if ty.linear and InputFlags.Owned not in flags:
             flags |= InputFlags.Inout
 
         inputs.append(FuncInput(ty, flags))
-    output = type_from_ast(output_node, globals, param_var_mapping)
+    output = type_from_ast(output_node, globals, param_var_mapping, allow_free_vars)
     return inputs, output
 
 
@@ -234,10 +248,13 @@ _type_param = TypeParam(0, "T", True)
 def type_with_flags_from_ast(
     node: AstNode,
     globals: Globals,
-    param_var_mapping: dict[str, Parameter] | None = None,
+    param_var_mapping: dict[str, Parameter],
+    allow_free_vars: bool = False,
 ) -> tuple[Type, InputFlags]:
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.MatMult):
-        ty, flags = type_with_flags_from_ast(node.left, globals, param_var_mapping)
+        ty, flags = type_with_flags_from_ast(
+            node.left, globals, param_var_mapping, allow_free_vars
+        )
         match node.right:
             case ast.Name(id="owned"):
                 if not ty.linear:
@@ -249,10 +266,12 @@ def type_with_flags_from_ast(
     # We also need to handle the case that this could be a delayed string annotation
     elif isinstance(node, ast.Constant) and isinstance(node.value, str):
         node = _parse_delayed_annotation(node.value, node)
-        return type_with_flags_from_ast(node, globals, param_var_mapping)
+        return type_with_flags_from_ast(
+            node, globals, param_var_mapping, allow_free_vars
+        )
     else:
         # Parse an argument and check that it's valid for a `TypeParam`
-        arg = arg_from_ast(node, globals, param_var_mapping)
+        arg = arg_from_ast(node, globals, param_var_mapping, allow_free_vars)
         tyarg = _type_param.check_arg(arg, node)
         return tyarg.ty, InputFlags.NoFlags
 
@@ -260,17 +279,22 @@ def type_with_flags_from_ast(
 def type_from_ast(
     node: AstNode,
     globals: Globals,
-    param_var_mapping: dict[str, Parameter] | None = None,
+    param_var_mapping: dict[str, Parameter],
+    allow_free_vars: bool = False,
 ) -> Type:
     """Turns an AST expression into a Guppy type."""
-    ty, flags = type_with_flags_from_ast(node, globals, param_var_mapping)
+    ty, flags = type_with_flags_from_ast(
+        node, globals, param_var_mapping, allow_free_vars
+    )
     if flags != InputFlags.NoFlags:
         assert InputFlags.Inout not in flags  # Users shouldn't be able to set this
         raise GuppyError(FlagNotAllowedError(node))
     return ty
 
 
-def type_row_from_ast(node: ast.expr, globals: "Globals") -> Sequence[Type]:
+def type_row_from_ast(
+    node: ast.expr, globals: "Globals", allow_free_vars: bool = False
+) -> Sequence[Type]:
     """Turns an AST expression into a Guppy type row.
 
     This is needed to interpret the return type annotation of functions.
@@ -278,7 +302,7 @@ def type_row_from_ast(node: ast.expr, globals: "Globals") -> Sequence[Type]:
     # The return type `-> None` is represented in the ast as `ast.Constant(value=None)`
     if isinstance(node, ast.Constant) and node.value is None:
         return []
-    ty = type_from_ast(node, globals)
+    ty = type_from_ast(node, globals, {}, allow_free_vars)
     if isinstance(ty, TupleType):
         return ty.element_types
     else:

@@ -1,4 +1,6 @@
-from guppylang.prelude.builtins import result, nat, array
+import pytest
+
+from guppylang.std.builtins import result, nat, array
 from tests.util import compile_guppy
 
 
@@ -21,6 +23,7 @@ def test_multi(validate):
     validate(main)
 
 
+@pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/631")
 def test_array(validate):
     @compile_guppy
     def main(
