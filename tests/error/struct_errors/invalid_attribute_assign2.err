@@ -1,7 +1,9 @@
-Guppy compilation failed. Error in file $FILE:15
+Error: Type mismatch (at $FILE:15:6)
+   | 
+13 | @guppy(module)
+14 | def foo(s: MyStruct) -> None:
+15 |     s.x = (1, 2)
+   |       ^ Cannot assign expression of type `(int, int)` to field `x`
+   |         of type `int`
 
-13:    @guppy(module)
-14:    def foo(s: MyStruct) -> None:
-15:        s.x = (1, 2)
-           ^^^
-GuppyTypeError: Cannot assign expression of type `(int, int)` to field with type `int`
+Guppy compilation failed due to 1 previous error

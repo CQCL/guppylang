@@ -1,7 +1,8 @@
-Guppy compilation failed. Error in file $FILE:17
+Error: Type mismatch (at $FILE:17:14)
+   | 
+15 | @guppy(module)
+16 | def main() -> None:
+17 |     x: bool = foo()
+   |               ^^^^^ Expected expression of type `bool`, got `(?T, ?T)`
 
-15:    @guppy(module)
-16:    def main() -> None:
-17:        x: bool = foo()
-                     ^^^^^
-GuppyTypeError: Expected expression of type `bool`, got `(?T, ?T)`
+Guppy compilation failed due to 1 previous error

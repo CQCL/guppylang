@@ -4,7 +4,7 @@ from collections.abc import Callable, KeysView
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
-from typing import Any, TypeVar, overload
+from typing import Any, TypeVar, cast, overload
 
 from hugr import ops
 from hugr import tys as ht
@@ -12,7 +12,7 @@ from hugr import val as hv
 from hugr.package import FuncDefnPointer, ModulePointer
 
 import guppylang
-from guppylang.ast_util import annotate_location, has_empty_body
+from guppylang.ast_util import annotate_location
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
@@ -28,12 +28,11 @@ from guppylang.definition.extern import RawExternDef
 from guppylang.definition.function import (
     CompiledFunctionDef,
     RawFunctionDef,
-    parse_py_func,
 )
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
-from guppylang.error import GuppyError, MissingModuleError, pretty_errors
+from guppylang.error import MissingModuleError, pretty_errors
 from guppylang.ipython_inspect import get_ipython_globals, is_running_ipython
 from guppylang.module import (
     GuppyModule,
@@ -41,7 +40,9 @@ from guppylang.module import (
     PyFunc,
     find_guppy_module_in_py_module,
     get_calling_frame,
+    sphinx_running,
 )
+from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 
@@ -81,8 +82,12 @@ class _Guppy:
     # The currently-alive GuppyModules, associated with a Python file/module
     _modules: dict[ModuleIdentifier, GuppyModule]
 
+    # Storage for source code that has been read by the compiler
+    _sources: SourceMap
+
     def __init__(self) -> None:
         self._modules = {}
+        self._sources = SourceMap()
 
     @overload
     def __call__(self, arg: PyFunc) -> RawFunctionDef: ...
@@ -144,7 +149,7 @@ class _Guppy:
                         break
                 frame = frame.f_back
             else:
-                raise GuppyError("Could not find a caller for the `@guppy` decorator")
+                raise RuntimeError("Could not find a caller for the `@guppy` decorator")
 
             # Jupyter notebook cells all get different dummy filenames. However,
             # we want the whole notebook to correspond to a single implicit
@@ -168,7 +173,7 @@ class _Guppy:
         module_id = self._get_python_caller()
         if module_id in self._modules:
             msg = f"Module {module_id.name} is already initialised"
-            raise GuppyError(msg)
+            raise ValueError(msg)
         self._modules[module_id] = GuppyModule(module_id.name, import_builtins)
 
     @pretty_errors
@@ -304,17 +309,12 @@ class _Guppy:
         mod = module or self.get_module()
 
         def dec(f: PyFunc) -> RawCustomFunctionDef:
-            func_ast, docstring = parse_py_func(f)
-            if not has_empty_body(func_ast):
-                raise GuppyError(
-                    "Body of custom function declaration must be empty",
-                    func_ast.body[0],
-                )
             call_checker = checker or DefaultCallChecker()
             func = RawCustomFunctionDef(
                 DefId.fresh(mod),
-                name or func_ast.name,
-                func_ast,
+                name or f.__name__,
+                None,
+                f,
                 call_checker,
                 compiler or NotImplementedCallCompiler(),
                 higher_order_value,
@@ -364,7 +364,9 @@ class _Guppy:
     ) -> RawConstDef:
         """Adds a constant to a module, backed by a `hugr.val.Value`."""
         module = module or self.get_module()
-        type_ast = _parse_expr_string(ty, f"Not a valid Guppy type: `{ty}`")
+        type_ast = _parse_expr_string(
+            ty, f"Not a valid Guppy type: `{ty}`", self._sources
+        )
         defn = RawConstDef(DefId.fresh(module), name, None, type_ast, value)
         module.register_def(defn)
         return defn
@@ -379,7 +381,9 @@ class _Guppy:
     ) -> RawExternDef:
         """Adds an extern symbol to a module."""
         module = module or self.get_module()
-        type_ast = _parse_expr_string(ty, f"Not a valid Guppy type: `{ty}`")
+        type_ast = _parse_expr_string(
+            ty, f"Not a valid Guppy type: `{ty}`", self._sources
+        )
         defn = RawExternDef(
             DefId.fresh(module), name, None, symbol or name, constant, type_ast
         )
@@ -423,13 +427,13 @@ class _Guppy:
                             other_module = find_guppy_module_in_py_module(value)
                             if other_module and other_module != module:
                                 defs[x] = value
-                        except GuppyError:
+                        except ValueError:
                             pass
                 module.load(**defs)
         return module
 
     def compile_module(self, id: ModuleIdentifier | None = None) -> ModulePointer:
-        """Compiles the local module into a Hugr."""
+        """Compiles the xlocal module into a Hugr."""
         module = self.get_module(id)
         if not module:
             err = (
@@ -444,12 +448,12 @@ class _Guppy:
         """Compiles a single function definition."""
         module = f_def.id.module
         if not module:
-            raise GuppyError("Function definition must belong to a module")
+            raise ValueError("Function definition must belong to a module")
         compiled_module = module.compile()
         assert module._compiled is not None, "Module should be compiled"
         globs = module._compiled.globs
         assert globs is not None
-        compiled_def = globs[f_def.id]
+        compiled_def = globs.build_compiled_def(f_def.id)
         assert isinstance(compiled_def, CompiledFunctionDef)
         node = compiled_def.func_def.parent_node
         return FuncDefnPointer(
@@ -461,10 +465,61 @@ class _Guppy:
         return self._modules.keys()
 
 
-guppy = _Guppy()
+class _GuppyDummy:
+    """A dummy class with the same interface as `@guppy` that is used during sphinx
+    builds to mock the decorator.
+    """
+
+    _sources = SourceMap()
+
+    def __call__(self, arg: PyFunc | GuppyModule) -> Any:
+        if isinstance(arg, GuppyModule):
+            return lambda f: f
+        return arg
+
+    def init_module(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def extend_type(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def type(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def struct(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def type_var(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def nat_var(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def custom(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda f: f
+
+    def hugr_op(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda f: f
+
+    def declare(self, arg: PyFunc | GuppyModule) -> Any:
+        if isinstance(arg, GuppyModule):
+            return lambda f: f
+        return arg
+
+    def constant(self, *args: Any, **kwargs: Any) -> Any:
+        return None
+
+    def extern(self, *args: Any, **kwargs: Any) -> Any:
+        return None
+
+    def load(self, *args: Any, **kwargs: Any) -> None:
+        pass
 
 
-def _parse_expr_string(ty_str: str, parse_err: str) -> ast.expr:
+guppy = cast(_Guppy, _GuppyDummy()) if sphinx_running() else _Guppy()
+
+
+def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.expr:
     """Helper function to parse expressions that are provided as strings.
 
     Tries to infer the source location were the given string was defined by inspecting
@@ -473,20 +528,22 @@ def _parse_expr_string(ty_str: str, parse_err: str) -> ast.expr:
     try:
         expr_ast = ast.parse(ty_str, mode="eval").body
     except SyntaxError:
-        raise GuppyError(parse_err) from None
+        raise SyntaxError(parse_err) from None
 
     # Try to annotate the type AST with source information. This requires us to
     # inspect the stack frame of the caller
     if caller_frame := get_calling_frame():
         info = inspect.getframeinfo(caller_frame)
         if caller_module := inspect.getmodule(caller_frame):
+            sources.add_file(info.filename)
             source_lines, _ = inspect.getsourcelines(caller_module)
             source = "".join(source_lines)
-            annotate_location(expr_ast, source, info.filename, 0)
+            annotate_location(expr_ast, source, info.filename, 1)
             # Modify the AST so that all sub-nodes span the entire line. We
             # can't give a better location since we don't know the column
             # offset of the `ty` argument
             for node in [expr_ast, *ast.walk(expr_ast)]:
-                node.lineno, node.col_offset = info.lineno, 0
-                node.end_col_offset = len(source_lines[info.lineno - 1])
+                node.lineno = node.end_lineno = info.lineno
+                node.col_offset = 0
+                node.end_col_offset = len(source_lines[info.lineno - 1]) - 1
     return expr_ast

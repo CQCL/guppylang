@@ -1,7 +1,12 @@
-Guppy compilation failed. Error in file $FILE:18
+Error: Linearity violation (at $FILE:18:19)
+   | 
+16 | @guppy(module)
+17 | def main(qs: array[qubit, 42] @owned) -> array[qubit, 42]:
+18 |     return foo(qs, qs[0])
+   |                    ^^ Variable `qs` with linear type `array[qubit, 42]` cannot be
+   |                       borrowed ...
+   | 
+18 |     return foo(qs, qs[0])
+   |                -- since it was already consumed here
 
-16:    @guppy(module)
-17:    def main(qs: array[qubit, 42] @owned) -> array[qubit, 42]:
-18:        return foo(qs, qs[0])
-                          ^^
-GuppyError: Variable `qs` with linear type `array[qubit, 42]` was already used (at 18:15)
+Guppy compilation failed due to 1 previous error

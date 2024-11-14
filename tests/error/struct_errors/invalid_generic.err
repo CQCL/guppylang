@@ -1,6 +1,8 @@
-Guppy compilation failed. Error in file $FILE:14
+Error: Expected a type parameter (at $FILE:14:23)
+   | 
+12 | 
+13 | @guppy.struct(module)
+14 | class MyStruct(Generic[X]):
+   |                        ^ Expected a type parameter
 
-12:    @guppy.struct(module)
-13:    class MyStruct(Generic[X]):
-                              ^
-GuppyError: Not a parameter
+Guppy compilation failed due to 1 previous error

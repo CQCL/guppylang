@@ -1,7 +1,12 @@
-Guppy compilation failed. Error in file $FILE:12
+Error: Not a Guppy method (at $FILE:12:4)
+   | 
+10 |     x: int
+11 | 
+12 |     def f(self: "MyStruct") -> None:
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+13 |         pass
+   | ^^^^^^^^^^^^ Method `f` of struct `MyStruct` is not a Guppy function
 
-10:    x: int
-11:    
-12:    def f(self: "MyStruct") -> None:
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-GuppyError: Add a `@guppy` decorator to this function to add it to the struct `MyStruct`
+Help: Add a `@guppy` annotation to turn `f` into a Guppy method
+
+Guppy compilation failed due to 1 previous error

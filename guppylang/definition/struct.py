@@ -3,18 +3,24 @@ import inspect
 import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import Any, ClassVar
 
 from hugr import Wire, ops
 
 from guppylang.ast_util import AstNode, annotate_location
 from guppylang.checker.core import Globals, PyScope
+from guppylang.checker.errors.generic import (
+    ExpectedError,
+    UnexpectedError,
+    UnsupportedError,
+)
 from guppylang.definition.common import (
     CheckableDef,
     CompiledDef,
     DefId,
     Definition,
     ParsableDef,
+    UnknownSourceError,
 )
 from guppylang.definition.custom import (
     CustomCallCompiler,
@@ -23,8 +29,10 @@ from guppylang.definition.custom import (
 )
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
+from guppylang.diagnostic import Error, Help
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
+from guppylang.span import SourceMap
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.parsing import type_from_ast
@@ -48,6 +56,35 @@ class StructField:
 
 
 @dataclass(frozen=True)
+class DuplicateFieldError(Error):
+    title: ClassVar[str] = "Duplicate field"
+    span_label: ClassVar[str] = (
+        "Struct `{struct_name}` already contains a field named `{field_name}`"
+    )
+    struct_name: str
+    field_name: str
+
+
+@dataclass(frozen=True)
+class NonGuppyMethodError(Error):
+    title: ClassVar[str] = "Not a Guppy method"
+    span_label: ClassVar[str] = (
+        "Method `{method_name}` of struct `{struct_name}` is not a Guppy function"
+    )
+    struct_name: str
+    method_name: str
+
+    @dataclass(frozen=True)
+    class Suggestion(Help):
+        message: ClassVar[str] = (
+            "Add a `@guppy` annotation to turn `{method_name}` into a Guppy method"
+        )
+
+    def __post_init__(self) -> None:
+        self.add_sub_diagnostic(NonGuppyMethodError.Suggestion(None))
+
+
+@dataclass(frozen=True)
 class RawStructDef(TypeDef, ParsableDef):
     """A raw struct type definition that has not been parsed yet."""
 
@@ -63,11 +100,11 @@ class RawStructDef(TypeDef, ParsableDef):
         """
         return self
 
-    def parse(self, globals: Globals) -> "ParsedStructDef":
+    def parse(self, globals: Globals, sources: SourceMap) -> "ParsedStructDef":
         """Parses the raw class object into an AST and checks that it is well-formed."""
-        cls_def = parse_py_class(self.python_class)
+        cls_def = parse_py_class(self.python_class, sources)
         if cls_def.keywords:
-            raise GuppyError("Unexpected keyword", cls_def.keywords[0])
+            raise GuppyError(UnexpectedError(cls_def.keywords[0], "keyword"))
 
         # The only base we allow is `Generic[...]` to specify generic parameters
         # TODO: This will become obsolete once we have Python 3.12 style generic classes
@@ -78,7 +115,10 @@ class RawStructDef(TypeDef, ParsableDef):
             case [base] if elems := try_parse_generic_base(base):
                 params = params_from_ast(elems, globals)
             case bases:
-                raise GuppyError("Struct inheritance is not supported", bases[0])
+                err: Error = UnsupportedError(
+                    bases[0], "Struct inheritance", singular=True
+                )
+                raise GuppyError(err)
 
         fields: list[UncheckedStructField] = []
         used_field_names: set[str] = set()
@@ -95,42 +135,30 @@ class RawStructDef(TypeDef, ParsableDef):
                 case _, ast.FunctionDef(name=name) as node:
                     v = getattr(self.python_class, name)
                     if not isinstance(v, Definition):
-                        raise GuppyError(
-                            "Add a `@guppy` decorator to this function to add it to "
-                            f"the struct `{self.name}`",
-                            node,
-                        )
+                        raise GuppyError(NonGuppyMethodError(node, self.name, name))
                     used_func_names[name] = node
                     if name in used_field_names:
-                        raise GuppyError(
-                            f"Struct `{self.name}` already contains a field named "
-                            f"`{name}`",
-                            node,
-                        )
+                        raise GuppyError(DuplicateFieldError(node, self.name, name))
                 # Struct fields are declared via annotated assignments without value
                 case _, ast.AnnAssign(target=ast.Name(id=field_name)) as node:
                     if node.value:
-                        raise GuppyError(
-                            "Default struct values are not supported", node.value
-                        )
+                        err = UnsupportedError(node.value, "Default struct values")
+                        raise GuppyError(err)
                     if field_name in used_field_names:
-                        raise GuppyError(
-                            f"Struct `{self.name}` already contains a field named "
-                            f"`{field_name}`",
-                            node.target,
-                        )
+                        err = DuplicateFieldError(node.target, self.name, field_name)
+                        raise GuppyError(err)
                     fields.append(UncheckedStructField(field_name, node.annotation))
                     used_field_names.add(field_name)
                 case _, node:
-                    raise GuppyError("Unexpected statement in struct", node)
+                    err = UnexpectedError(
+                        node, "statement", unexpected_in="struct definition"
+                    )
+                    raise GuppyError(err)
 
         # Ensure that functions don't override struct fields
         if overridden := used_field_names.intersection(used_func_names.keys()):
             x = overridden.pop()
-            raise GuppyError(
-                f"Struct `{self.name}` already contains a field named `{x}`",
-                used_func_names[x],
-            )
+            raise GuppyError(DuplicateFieldError(used_func_names[x], self.name, x))
 
         return ParsedStructDef(
             self.id, self.name, cls_def, params, fields, self.python_scope
@@ -232,7 +260,7 @@ class CheckedStructDef(TypeDef, CompiledDef):
         return [constructor_def]
 
 
-def parse_py_class(cls: type) -> ast.ClassDef:
+def parse_py_class(cls: type, sources: SourceMap) -> ast.ClassDef:
     """Parses a Python class object into an AST."""
     # If we are running IPython, `inspect.getsourcelines` works only for builtins
     # (guppy stdlib), but not for most/user-defined classes - see:
@@ -244,7 +272,7 @@ def parse_py_class(cls: type) -> ast.ClassDef:
         if defn is not None:
             annotate_location(defn.node, defn.cell_source, f"<{defn.cell_name}>", 1)
             if not isinstance(defn.node, ast.ClassDef):
-                raise GuppyError("Expected a class definition", defn.node)
+                raise GuppyError(ExpectedError(defn.node, "a class definition"))
             return defn.node
         # else, fall through to handle builtins.
     source_lines, line_offset = inspect.getsourcelines(cls)
@@ -253,10 +281,12 @@ def parse_py_class(cls: type) -> ast.ClassDef:
     cls_ast = ast.parse(source).body[0]
     file = inspect.getsourcefile(cls)
     if file is None:
-        raise GuppyError("Couldn't determine source file for class")
+        raise GuppyError(UnknownSourceError(None, cls))
+    # Store the source file in our cache
+    sources.add_file(file)
     annotate_location(cls_ast, source, file, line_offset)
     if not isinstance(cls_ast, ast.ClassDef):
-        raise GuppyError("Expected a class definition", cls_ast)
+        raise GuppyError(ExpectedError(cls_ast, "a class definition"))
     return cls_ast
 
 
@@ -272,6 +302,13 @@ def try_parse_generic_base(node: ast.expr) -> list[ast.expr] | None:
             return None
 
 
+@dataclass(frozen=True)
+class RepeatedTypeParamError(Error):
+    title: ClassVar[str] = "Duplicate type parameter"
+    span_label: ClassVar[str] = "Type parameter `{name}` cannot be used multiple times"
+    name: str
+
+
 def params_from_ast(nodes: Sequence[ast.expr], globals: Globals) -> list[Parameter]:
     """Parses a list of AST nodes into unique type parameters.
 
@@ -285,13 +322,11 @@ def params_from_ast(nodes: Sequence[ast.expr], globals: Globals) -> list[Paramet
             defn = globals[node.id]
             if isinstance(defn, ParamDef):
                 if defn.id in params_set:
-                    raise GuppyError(
-                        f"Parameter `{node.id}` cannot be used multiple times", node
-                    )
+                    raise GuppyError(RepeatedTypeParamError(node, node.id))
                 params.append(defn.to_param(len(params)))
                 params_set.add(defn.id)
                 continue
-        raise GuppyError("Not a parameter", node)
+        raise GuppyError(ExpectedError(node, "a type parameter"))
     return params
 
 
@@ -318,7 +353,7 @@ def check_not_recursive(
             globals: "Globals",
             loc: AstNode | None = None,
         ) -> Type:
-            raise GuppyError("Recursive structs are not supported", loc)
+            raise GuppyError(UnsupportedError(loc, "Recursive structs"))
 
     dummy_defs = {
         **globals.defs,

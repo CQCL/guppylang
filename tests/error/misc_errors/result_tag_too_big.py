@@ -1,4 +1,4 @@
-from guppylang.prelude.builtins import result, py
+from guppylang.std.builtins import result, py
 from tests.util import compile_guppy
 
 # TODO use this once https://github.com/CQCL/guppylang/issues/599 lands

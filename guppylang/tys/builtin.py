@@ -13,6 +13,7 @@ from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import ConstValue
+from guppylang.tys.errors import WrongNumberOfTypeArgsError
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
     FunctionType,
@@ -78,7 +79,7 @@ class _NoneTypeDef(TypeDef):
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> NoneType:
         if args:
-            raise GuppyError("Type `None` is not parameterized", loc)
+            raise GuppyError(WrongNumberOfTypeArgsError(loc, 0, len(args), "None"))
         return NoneType()
 
 
@@ -95,7 +96,7 @@ class _NumericTypeDef(TypeDef):
         self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
     ) -> NumericType:
         if args:
-            raise GuppyError(f"Type `{self.name}` is not parameterized", loc)
+            raise GuppyError(WrongNumberOfTypeArgsError(loc, 0, len(args), self.name))
         return self.ty
 
 

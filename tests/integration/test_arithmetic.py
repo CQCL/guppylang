@@ -1,7 +1,7 @@
 import pytest
 from guppylang.decorator import guppy
-from guppylang.prelude.angles import angle, pi, angles
-from guppylang.prelude.builtins import nat
+from guppylang.std.angles import angle, pi, angles
+from guppylang.std.builtins import nat
 from guppylang.module import GuppyModule
 from tests.util import compile_guppy
 
