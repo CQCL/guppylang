@@ -194,14 +194,17 @@ class HShots:
             raise ImportError(
                 "Pytket is an optional dependency, install with the `pytket` extra"
             ) from e
-        counts = self.register_bitstrings(strict_lengths=True, strict_names=True)
+        reg_shots = self.register_bitstrings(strict_lengths=True, strict_names=True)
         reg_sizes: dict[str, int] = {
-            reg: len(next(iter(counts[reg]), "")) for reg in counts
+            reg: len(next(iter(reg_shots[reg]), "")) for reg in reg_shots
         }
-        registers = list(counts.keys())
+        registers = list(reg_shots.keys())
         bits = [Bit(reg, i) for reg in registers for i in range(reg_sizes[reg])]
+
         int_shots = [
-            [ord(bitval) - 48 for reg in registers for bitval in counts[reg][i]]
+            int("".join(reg_shots[reg][i] for reg in registers), 2)
             for i in range(len(self.results))
         ]
-        return BackendResult(shots=OutcomeArray.from_readouts(int_shots), c_bits=bits)
+        return BackendResult(
+            shots=OutcomeArray.from_ints(int_shots, width=len(bits)), c_bits=bits
+        )

@@ -97,17 +97,19 @@ def test_pytket():
     shot results."""
     pytest.importorskip("pytket", reason="pytket not installed")
 
-    hsim_shots = HShots(([("c", [1, 0]), ("d", [1, 0])], [("c", [0, 0]), ("d", [1, 0])]))
+    hsim_shots = HShots(
+        ([("c", [1, 0]), ("d", [1, 0, 0])], [("c", [0, 0]), ("d", [1, 0, 1])])
+    )
 
     pytket_result = hsim_shots.to_pytket()
-
     from pytket._tket.unit_id import Bit
     from pytket.backends.backendresult import BackendResult
     from pytket.utils.outcomearray import OutcomeArray
 
-    bits = [Bit("c", 0), Bit("c", 1), Bit("d", 0), Bit("d", 1)]
+    bits = [Bit("c", 0), Bit("c", 1), Bit("d", 0), Bit("d", 1), Bit("d", 2)]
     expected = BackendResult(
-        c_bits=bits, shots=OutcomeArray.from_readouts([[1, 0, 1, 0], [0, 0, 1, 0]])
+        c_bits=bits,
+        shots=OutcomeArray.from_readouts([[1, 0, 1, 0, 0], [0, 0, 1, 0, 1]]),
     )
 
     assert pytket_result == expected
