@@ -270,7 +270,7 @@ class ResultChecker(CustomCallChecker):
             _base_ty = ty_arg.ty
             _array_len = len_arg.const
             # See https://github.com/CQCL/guppylang/issues/631
-            raise GuppyError("Array results are currently disabled", value)
+            raise GuppyError(UnsupportedError(value, "Array results"))
         else:
             raise GuppyError(err)
         node = ResultExpr(value, base_ty, array_len, tag.value)
