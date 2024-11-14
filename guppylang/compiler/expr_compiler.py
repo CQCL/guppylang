@@ -492,11 +492,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert isinstance(array_ty, OpaqueType)
         array_var = Variable(next(tmp_vars), array_ty, node)
         count_var = Variable(next(tmp_vars), int_type(), node)
-        hugr_elt_ty = (
-            ht.Option(node.elt_ty.to_hugr())
-            if node.elt_ty.linear
-            else node.elt_ty.to_hugr()
-        )
+        # See https://github.com/CQCL/guppylang/issues/629
+        hugr_elt_ty = ht.Option(node.elt_ty.to_hugr())
         self.dfg[array_var] = self.builder.add_op(
             array_new_uninitialized(hugr_elt_ty, node.length)
         )
