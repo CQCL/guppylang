@@ -41,6 +41,7 @@ from guppylang.std._internal.compiler.list import (
     ListPushCompiler,
     ListSetitemCompiler,
 )
+from guppylang.std._internal.compiler.prelude import MemSwapCompiler
 from guppylang.std._internal.util import (
     float_op,
     int_op,
@@ -880,3 +881,8 @@ def zip(x): ...
 
 @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
 def __import__(x): ...
+
+
+@guppy.custom(MemSwapCompiler())
+def mem_swap(x: L, y: L) -> None:
+    """Swaps the values of two variables."""

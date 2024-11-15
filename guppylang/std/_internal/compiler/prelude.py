@@ -11,6 +11,10 @@ from hugr import Node, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
 
+from guppylang.definition.custom import CustomCallCompiler
+from guppylang.definition.value import CallReturnWires
+from guppylang.error import InternalGuppyError
+
 if TYPE_CHECKING:
     from hugr.build.dfg import DfBase
 
@@ -123,3 +127,14 @@ def build_unwrap(
     result is an error.
     """
     return build_unwrap_right(builder, result, error_msg, error_signal)
+
+
+class MemSwapCompiler(CustomCallCompiler):
+    """Compiler for the `mem_swap` function."""
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [x, y] = args
+        return CallReturnWires(regular_returns=[], inout_returns=[y, x])
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        raise InternalGuppyError("Call compile_with_inouts instead")
