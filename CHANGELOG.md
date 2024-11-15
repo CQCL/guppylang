@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.13.1](https://github.com/CQCL/guppylang/compare/v0.13.0...v0.13.1) (2024-11-15)
+
+
+### Features
+
+* Generic function definitions ([#618](https://github.com/CQCL/guppylang/issues/618)) ([7519b90](https://github.com/CQCL/guppylang/commit/7519b9096a02cf75672313bd0bc90c613e5230ee)), closes [#522](https://github.com/CQCL/guppylang/issues/522)
+* mem_swap function for swapping two inout values ([#653](https://github.com/CQCL/guppylang/issues/653)) ([89e10a5](https://github.com/CQCL/guppylang/commit/89e10a5e5c4344badcd0a0a16983c8a3a560ad09))
+
+
+### Bug Fixes
+
+* Fix generic array functions ([#630](https://github.com/CQCL/guppylang/issues/630)) ([f4e5655](https://github.com/CQCL/guppylang/commit/f4e5655e0a85d773ec21fc4a9f7a6c23263dae0a))
+
 ## [0.13.0](https://github.com/CQCL/guppylang/compare/v0.12.2...v0.13.0) (2024-11-12)
 
 
