@@ -3,6 +3,12 @@ Checking a Function
 
 This chapter walks through the various phases of type and linearity checking for function definitions.
 
+.. toctree::
+   :maxdepth: 1
+
+   checking/types
+
+
 Our starting point is a :class:`.CheckedFunctionDef` storing the parsed abstract syntax tree of our function in form of a :class:`ast.FunctionDef`.
 The top-level entry point for the checking logic is :meth:`.ParsedFunctionDef.check` and subsequent code in the :mod:`.func_checker` module.
 

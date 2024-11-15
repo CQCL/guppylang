@@ -189,6 +189,7 @@ class CheckedStructDef(TypeDef, CompiledDef):
     """A struct definition that has been fully checked."""
 
     defined_at: ast.ClassDef
+    #: Generic parameters of this struct
     params: Sequence[Parameter]
     fields: Sequence[StructField]
 
