@@ -68,11 +68,13 @@ def array_set(elem_ty: ht.Type, length: int) -> ops.ExtOp:
     )
 
 
-def array_new_uninitialized(elem_ty: ht.Type, length: int) -> ops.ExtOp:
-    """Returns an array `uninitialized` operation."""
+def array_repeat(elem_ty: ht.Type, length: int) -> ops.ExtOp:
+    """Returns an array `repeat` operation."""
     # TODO
     return UnsupportedOp(
-        op_name="array.uninitialized", inputs=[], outputs=[array_type(elem_ty, length)]
+        op_name="array.repeat",
+        inputs=[ht.FunctionType([], [elem_ty])],
+        outputs=[array_type(elem_ty, length)],
     ).ext_op
 
 

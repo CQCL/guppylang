@@ -47,9 +47,7 @@ from guppylang.nodes import (
     TensorCall,
     TypeApply,
 )
-from guppylang.std._internal.compiler.array import (
-    array_new_uninitialized,
-)
+from guppylang.std._internal.compiler.array import array_repeat
 from guppylang.std._internal.compiler.list import (
     list_new,
 )
@@ -494,8 +492,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         count_var = Variable(next(tmp_vars), int_type(), node)
         # See https://github.com/CQCL/guppylang/issues/629
         hugr_elt_ty = ht.Option(node.elt_ty.to_hugr())
+        # Initialise array with `None`s
+        make_none = self.builder.define_function("init_none", [], [hugr_elt_ty])
+        make_none.set_outputs(make_none.add_op(ops.Tag(0, hugr_elt_ty)))
+        make_none = self.builder.load_function(make_none)
         self.dfg[array_var] = self.builder.add_op(
-            array_new_uninitialized(hugr_elt_ty, node.length)
+            array_repeat(hugr_elt_ty, node.length), make_none
         )
         self.dfg[count_var] = self.builder.load(
             hugr.std.int.IntVal(0, width=NumericType.INT_WIDTH)
