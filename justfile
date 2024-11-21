@@ -14,6 +14,8 @@ setup-extras:
 
 # Run the pre-commit checks.
 check:
+    # Ensure that the uv version is supported
+    ./.github/check_uv.sh
     uv run pre-commit run --all-files
 
 # Compile integration test binaries.
