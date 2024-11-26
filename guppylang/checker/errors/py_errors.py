@@ -62,3 +62,10 @@ class PytketSignatureMismatch(Error):
         "Function signature {name} doesn't match provided pytket circuit"
     )
     name: str
+
+@dataclass(frozen=True)
+class PytketNotCircuit(Error):
+    title: ClassVar[str] = "Input not circuit"
+    span_label: ClassVar[str] = (
+        "Provided input is not a pytket circuit"
+    )
