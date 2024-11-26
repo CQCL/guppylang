@@ -237,7 +237,7 @@ class GuppyModule:
         decl = RawFunctionDecl(DefId.fresh(self), f.__name__, None, f, get_py_scope(f))
         self.register_def(decl, instance)
         return decl
-    
+
     def register_pytket_func(
         self, f: PyFunc, instance: TypeDef | None = None
     ) -> RawPytketDef:

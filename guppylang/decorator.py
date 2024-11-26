@@ -467,20 +467,18 @@ class _Guppy:
     def registered_modules(self) -> KeysView[ModuleIdentifier]:
         """Returns a list of all currently registered modules for local contexts."""
         return self._modules.keys()
-    
+
     # TODO: Circuit type and propagation
     @pretty_errors
     def pytket_circ(
-        self,
-        circuit: Any,
-        name: str = "",
-        module: GuppyModule | None = None
-                    
+        self, circuit: Any, name: str = "", module: GuppyModule | None = None
     ) -> PytketDecorator:
         """Adds a pytket circuit function definition."""
         module = module or self.get_module()
+
         def dec(f: PyFunc) -> RawPytketDef:
             return module.register_pytket_func(f, circuit)
+
         return dec
 
 

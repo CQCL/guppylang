@@ -1,14 +1,9 @@
-import ast
-import inspect
-import textwrap
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 import hugr.build.function as hf
-import hugr.tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
-
 
 from guppylang.checker.core import Globals, PyScope
 from guppylang.definition.common import (
@@ -17,10 +12,10 @@ from guppylang.definition.common import (
     ParsableDef,
 )
 from guppylang.definition.value import CompiledCallableDef
-from guppylang.error import GuppyError
 from guppylang.span import SourceMap
 
 PyFunc = Callable[..., Any]
+
 
 @dataclass(frozen=True)
 class RawPytketDef(ParsableDef):
@@ -40,8 +35,9 @@ class RawPytketDef(ParsableDef):
     description: str = field(default="pytket circuit", init=False)
 
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedPytketDef":
-        """Parses and checks the user-provided signature matches the user-provided circuit."""
-        pass
+        """Parses and checks the user-provided signature matches the
+        user-provided circuit.
+        """
 
 
 @dataclass(frozen=True)
@@ -60,7 +56,6 @@ class ParsedPytketDef(CheckableDef, CompilableDef):
 
     def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledPytketDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr."""
-        pass
 
 
 class CompiledPytketDef(CompiledCallableDef):
