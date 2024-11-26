@@ -30,7 +30,7 @@ from guppylang.definition.function import (
     RawFunctionDef,
 )
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
-from guppylang.definition.pytket_circ import RawPytketDef
+from guppylang.definition.pytket_circuits import RawPytketDef
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import MissingModuleError, pretty_errors
@@ -468,16 +468,15 @@ class _Guppy:
         """Returns a list of all currently registered modules for local contexts."""
         return self._modules.keys()
 
-    # TODO: Circuit type and propagation
     @pretty_errors
-    def pytket_circ(
-        self, circuit: Any, name: str = "", module: GuppyModule | None = None
+    def pytket(
+        self, input_circuit: Any, module: GuppyModule | None = None
     ) -> PytketDecorator:
         """Adds a pytket circuit function definition."""
         module = module or self.get_module()
 
         def dec(f: PyFunc) -> RawPytketDef:
-            return module.register_pytket_func(f, circuit)
+            return module.register_pytket_func(f, input_circuit)
 
         return dec
 
