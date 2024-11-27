@@ -199,9 +199,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
-        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
-        return dfg.builder.load_function(self.func_def, func_ty, type_args)
+        return load_with_args(type_args, dfg, self.ty, self.func_def)
 
     def compile_call(
         self,
@@ -212,22 +210,45 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
-        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
-        num_returns = len(type_to_row(self.ty.output))
-        call = dfg.builder.call(
-            self.func_def, *args, instantiation=func_ty, type_args=type_args
-        )
-        return CallReturnWires(
-            # TODO: Replace below with `list(call[:num_returns])` once
-            #  https://github.com/CQCL/hugr/issues/1454 is fixed.
-            regular_returns=[call[i] for i in range(num_returns)],
-            inout_returns=list(call[num_returns:]),
-        )
+        return compile_call(args, type_args, dfg, self.ty, self.func_def)
 
     def compile_inner(self, globals: CompiledGlobals) -> None:
         """Compiles the body of the function."""
         compile_global_func_def(self, self.func_def, globals)
+
+
+def load_with_args(
+    type_args: Inst,
+    dfg: DFContainer,
+    ty: FunctionType,
+    # TODO: Maybe change to ToNode so this can be used by declarations.
+    func: hf.Function,
+) -> Wire:
+    """Loads the function as a value into a local Hugr dataflow graph."""
+    func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr()
+    type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+    return dfg.builder.load_function(func, func_ty, type_args)
+
+
+def compile_call(
+    args: list[Wire],
+    type_args: Inst,
+    dfg: DFContainer,
+    ty: FunctionType,
+    # TODO: Maybe change to ToNode so this can be used by declarations.
+    func: hf.Function,
+) -> CallReturnWires:
+    """Compiles a call to the function."""
+    func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr()
+    type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+    num_returns = len(type_to_row(ty.output))
+    call = dfg.builder.call(func, *args, instantiation=func_ty, type_args=type_args)
+    return CallReturnWires(
+        # TODO: Replace below with `list(call[:num_returns])` once
+        #  https://github.com/CQCL/hugr/issues/1454 is fixed.
+        regular_returns=[call[i] for i in range(num_returns)],
+        inout_returns=list(call[num_returns:]),
+    )
 
 
 def parse_py_func(f: PyFunc, sources: SourceMap) -> tuple[ast.FunctionDef, str | None]:

@@ -1,46 +1,45 @@
 import ast
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, cast
 
-from hugr import Hugr, Wire, ops
 import hugr.build.function as hf
-import hugr.tys as ht
+from hugr import Hugr, Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
-from guppylang.ast_util import AstNode, with_loc
-from guppylang.checker.expr_checker import check_call, synthesize_call
-from guppylang.ast_util import has_empty_body
+from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals, PyScope
+from guppylang.checker.errors.py_errors import (
+    PytketNotCircuit,
+    PytketSignatureMismatch,
+    Tket2NotInstalled,
+)
+from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.definition.common import (
     CompilableDef,
     ParsableDef,
 )
-from guppylang.definition.value import CallReturnWires, CallableDef
 from guppylang.definition.declaration import BodyNotEmptyError
-from guppylang.definition.function import CheckedFunctionDef, CompiledFunctionDef, PyFunc, parse_py_func
-from guppylang.definition.ty import TypeDef
-from guppylang.definition.value import CompiledCallableDef
-from guppylang.span import SourceMap
-
-from guppylang.checker.errors.py_errors import (
-    PytketSignatureMismatch,
-    Tket2NotInstalled,
-    PytketNotCircuit
+from guppylang.definition.function import (
+    PyFunc,
+    compile_call,
+    load_with_args,
+    parse_py_func,
 )
+from guppylang.definition.ty import TypeDef
+from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
+from guppylang.span import SourceMap
 from guppylang.tys.builtin import bool_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     FuncInput,
     FunctionType,
-    Type,
     InputFlags,
+    Type,
     row_to_type,
-    type_to_row,
 )
 
 
@@ -97,9 +96,7 @@ class RawPytketDef(ParsableDef):
                         circuit_signature.inputs == stub_signature.inputs
                         and circuit_signature.output == stub_signature.output
                     ):
-                        raise GuppyError(
-                            PytketSignatureMismatch(func_ast, self.name)
-                        )
+                        raise GuppyError(PytketSignatureMismatch(func_ast, self.name))
                 except ImportError:
                     err = Tket2NotInstalled(func_ast)
                     err.add_sub_diagnostic(Tket2NotInstalled.InstallInstruction(None))
@@ -141,6 +138,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
     def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledPytketDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr."""
 
+        hugr_func = None
         try:
             import pytket
 
@@ -148,17 +146,25 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 from tket2.circuit import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
                     Tk2Circuit,
                 )
-                circ = Hugr.load_json(Tk2Circuit(self.input_circuit).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
-                print(circ)
+
+                hugr_func = Hugr.load_json(
+                    Tk2Circuit(self.input_circuit).to_hugr_json()
+                )  # type: ignore[attr-defined, unused-ignore]
             else:
                 raise GuppyError(PytketNotCircuit(self.defined_at))
         except ImportError:
             pass
 
-        hugr_func = None
-        return CompiledPytketDef(self.id, self.name, self.defined_at, self.ty, self.python_scope, None, None, hugr_func)
-    
-        
+        return CompiledPytketDef(
+            self.id,
+            self.name,
+            self.defined_at,
+            self.ty,
+            self.python_scope,
+            self.input_circuit,
+            hugr_func,
+        )
+
     def check_call(
         self, args: list[ast.expr], ty: Type, node: AstNode, ctx: Context
     ) -> tuple[ast.expr, Subst]:
@@ -179,7 +185,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
 
 @dataclass(frozen=True)
-class CompiledPytketDef(CompiledFunctionDef, CompiledCallableDef):
+class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
     """A function definition with a corresponding Hugr node.
 
     Args:
@@ -188,10 +194,34 @@ class CompiledPytketDef(CompiledFunctionDef, CompiledCallableDef):
         defined_at: The AST node where the function was defined.
         ty: The type of the function.
         python_scope: The Python scope where the function was defined.
+        input_circuit: The user-provided pytket circuit.
         func_df: The Hugr function definition.
     """
 
     func_def: hf.Function
+
+    def load_with_args(
+        self,
+        type_args: Inst,
+        dfg: DFContainer,
+        globals: CompiledGlobals,
+        node: AstNode,
+    ) -> Wire:
+        """Loads the function as a value into a local Hugr dataflow graph."""
+        # Use implementation from function definition.
+        return load_with_args(type_args, dfg, self.ty, self.func_def)
+
+    def compile_call(
+        self,
+        args: list[Wire],
+        type_args: Inst,
+        dfg: DFContainer,
+        globals: CompiledGlobals,
+        node: AstNode,
+    ) -> CallReturnWires:
+        """Compiles a call to the function."""
+        # Use implementation from function definition.
+        return compile_call(args, type_args, dfg, self.ty, self.func_def)
 
     def compile_inner(self, globals: CompiledGlobals) -> None:
         pass
