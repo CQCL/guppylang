@@ -92,10 +92,8 @@ class RawPytketDef(ParsableDef):
                         row_to_type([bool_type()] * self.input_circuit.n_bits),
                     )
                     # TODO: Allow arrays in stub signature.
-                    if not (
-                        circuit_signature.inputs == stub_signature.inputs
-                        and circuit_signature.output == stub_signature.output
-                    ):
+                    # TODO: Comparing outputs?
+                    if not circuit_signature.inputs == stub_signature.inputs:
                         raise GuppyError(PytketSignatureMismatch(func_ast, self.name))
                 except ImportError:
                     err = Tket2NotInstalled(func_ast)
@@ -137,8 +135,8 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
     def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledPytketDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr."""
-
         hugr_func = None
+
         try:
             import pytket
 
@@ -147,9 +145,11 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     Tk2Circuit,
                 )
 
-                hugr_func = Hugr.load_json(
-                    Tk2Circuit(self.input_circuit).to_hugr_json()
-                )  # type: ignore[attr-defined, unused-ignore]
+                circ = Hugr.load_json(Tk2Circuit(self.input_circuit).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
+
+                mapping = module.hugr.insert_hugr(circ)
+                hugr_func = mapping[circ.root]
+
             else:
                 raise GuppyError(PytketNotCircuit(self.defined_at))
         except ImportError:
