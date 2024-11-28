@@ -151,13 +151,9 @@ def project_z(q: qubit) -> bool: ...
 def discard(q: qubit @ owned) -> None: ...
 
 
-@guppy
+@guppy.hugr_op(quantum_op("MeasureFree"))
 @no_type_check
-def measure(q: qubit @ owned) -> bool:
-    res = project_z(q)
-    discard(q)
-    return res
-
+def measure(q: qubit @ owned) -> bool: ...
 
 @guppy.hugr_op(quantum_op("Reset"))
 @no_type_check
