@@ -31,6 +31,7 @@ def test_single_qubit_circuit(validate):
 
     validate(module.compile())
 
+
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
 def test_multi_qubit_circuit(validate):
     from pytket import Circuit
@@ -48,5 +49,70 @@ def test_multi_qubit_circuit(validate):
     @guppy(module)
     def foo(q1: qubit, q2: qubit) -> None:
         guppy_circ(q1, q2)
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skip("Classical bits lead to port error")
+def test_classic_bits(validate):
+    from pytket import Circuit
+
+    circ = Circuit(2, 2)
+    circ.H(0)
+    circ.CX(0, 1)
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    @guppy.pytket(circ, module)
+    def guppy_circ(q1: qubit, q2: qubit) -> None: ...
+
+    @guppy(module)
+    def foo(q1: qubit, q2: qubit) -> None:
+        guppy_circ(q1, q2)
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skip("Measuring leads to port error")
+def test_measure_circuit(validate):
+    from pytket import Circuit
+
+    circ = Circuit(2)
+    circ.H(0)
+    circ.CX(0, 1)
+    circ.measure_all()
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    @guppy.pytket(circ, module)
+    def guppy_circ(q1: qubit, q2: qubit) -> None: ...
+
+    @guppy(module)
+    def foo(q1: qubit, q2: qubit) -> None:
+        guppy_circ(q1, q2)
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skip("Not implemented")
+def test_load_circuit(validate):
+    from pytket import Circuit
+
+    circ = Circuit(1)
+    circ.H(0)
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    guppy_circ = guppy.load_pytket("guppy_circ", circ, module)
+
+    @guppy(module)
+    def foo(q: qubit) -> None:
+        guppy_circ(q)
 
     validate(module.compile())

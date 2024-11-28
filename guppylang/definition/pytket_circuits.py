@@ -2,8 +2,7 @@ import ast
 from dataclasses import dataclass, field
 from typing import Any, cast
 
-import hugr.build.function as hf
-from hugr import Hugr, Wire
+from hugr import Hugr, Node, Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
@@ -75,6 +74,7 @@ class RawPytketDef(ParsableDef):
             func_ast, globals.with_python_scope(self.python_scope)
         )
 
+        # TODO: Allow arrays as arguments.
         # Retrieve circuit signature and compare.
         try:
             import pytket
@@ -91,8 +91,9 @@ class RawPytketDef(ParsableDef):
                         * self.input_circuit.n_qubits,
                         row_to_type([bool_type()] * self.input_circuit.n_bits),
                     )
-                    # TODO: Allow arrays in stub signature.
-                    # TODO: Comparing outputs?
+                    # Note this doesn't set the output type.
+                    print(circuit_signature.inputs)
+                    print(stub_signature.inputs)
                     if not circuit_signature.inputs == stub_signature.inputs:
                         raise GuppyError(PytketSignatureMismatch(func_ast, self.name))
                 except ImportError:
@@ -103,6 +104,7 @@ class RawPytketDef(ParsableDef):
                 raise GuppyError(PytketNotCircuit(func_ast))
         except ImportError:
             pass
+
         return ParsedPytketDef(
             self.id,
             self.name,
@@ -149,6 +151,11 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
                 mapping = module.hugr.insert_hugr(circ)
                 hugr_func = mapping[circ.root]
+
+                # TODO: Check that node data op is FuncDefn.
+                node_data = module.hugr.get(hugr_func)
+                node_data.op.f_name = self.name
+                print(module.hugr.get(hugr_func))
 
             else:
                 raise GuppyError(PytketNotCircuit(self.defined_at))
@@ -198,7 +205,7 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
         func_df: The Hugr function definition.
     """
 
-    func_def: hf.Function
+    func_def: Node
 
     def load_with_args(
         self,

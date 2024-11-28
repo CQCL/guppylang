@@ -472,7 +472,7 @@ class _Guppy:
     def pytket(
         self, input_circuit: Any, module: GuppyModule | None = None
     ) -> PytketDecorator:
-        """Adds a pytket circuit function definition."""
+        """Adds a pytket circuit function definition with explicit signature."""
         module = module or self.get_module()
 
         def dec(f: PyFunc) -> RawPytketDef:
