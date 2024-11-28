@@ -242,11 +242,11 @@ class GuppyModule:
         self, f: PyFunc, input_value: Any, instance: TypeDef | None = None
     ) -> RawPytketDef:
         """Registers a pytket circuit function as belonging to this Guppy module."""
-        decl = RawPytketDef(
+        func = RawPytketDef(
             DefId.fresh(self), f.__name__, None, f, get_py_scope(f), input_value
         )
-        self.register_def(decl, instance)
-        return decl
+        self.register_def(func, instance)
+        return func
 
     def _register_buffered_instance_funcs(self, instance: TypeDef) -> None:
         assert self._instance_func_buffer is not None

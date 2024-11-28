@@ -473,12 +473,12 @@ class _Guppy:
         self, input_circuit: Any, module: GuppyModule | None = None
     ) -> PytketDecorator:
         """Adds a pytket circuit function definition with explicit signature."""
-        module = module or self.get_module()
+        mod = module or self.get_module()
 
-        def dec(f: PyFunc) -> RawPytketDef:
-            return module.register_pytket_func(f, input_circuit)
+        def func(f: PyFunc) -> RawPytketDef:
+            return mod.register_pytket_func(f, input_circuit)
 
-        return dec
+        return func
 
 
 class _GuppyDummy:

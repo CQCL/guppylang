@@ -9,6 +9,7 @@ import hugr.build.function as hf
 import hugr.tys as ht
 from hugr import Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
+from hugr.hugr.node_port import ToNode
 from hugr.package import FuncDefnPointer
 
 from guppylang.ast_util import AstNode, annotate_location, with_loc
@@ -222,7 +223,7 @@ def load_with_args(
     dfg: DFContainer,
     ty: FunctionType,
     # TODO: Maybe change to ToNode so this can be used by declarations.
-    func: hf.Function,
+    func: ToNode,
 ) -> Wire:
     """Loads the function as a value into a local Hugr dataflow graph."""
     func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr()
@@ -236,7 +237,7 @@ def compile_call(
     dfg: DFContainer,
     ty: FunctionType,
     # TODO: Maybe change to ToNode so this can be used by declarations.
-    func: hf.Function,
+    func: ToNode,
 ) -> CallReturnWires:
     """Compiles a call to the function."""
     func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr()

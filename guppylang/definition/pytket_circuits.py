@@ -4,6 +4,7 @@ from typing import Any, cast
 
 from hugr import Hugr, Node, Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
+from hugr.ops import FuncDefn
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals, PyScope
@@ -92,8 +93,6 @@ class RawPytketDef(ParsableDef):
                         row_to_type([bool_type()] * self.input_circuit.n_bits),
                     )
                     # Note this doesn't set the output type.
-                    print(circuit_signature.inputs)
-                    print(stub_signature.inputs)
                     if not circuit_signature.inputs == stub_signature.inputs:
                         raise GuppyError(PytketSignatureMismatch(func_ast, self.name))
                 except ImportError:
@@ -137,8 +136,6 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
     def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledPytketDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr."""
-        hugr_func = None
-
         try:
             import pytket
 
@@ -152,10 +149,10 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 mapping = module.hugr.insert_hugr(circ)
                 hugr_func = mapping[circ.root]
 
-                # TODO: Check that node data op is FuncDefn.
                 node_data = module.hugr.get(hugr_func)
-                node_data.op.f_name = self.name
-                print(module.hugr.get(hugr_func))
+                # TODO: Handle case if it isn't.
+                if isinstance(node_data, FuncDefn):
+                    node_data.op.f_name = self.name
 
             else:
                 raise GuppyError(PytketNotCircuit(self.defined_at))
@@ -229,6 +226,3 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
         """Compiles a call to the function."""
         # Use implementation from function definition.
         return compile_call(args, type_args, dfg, self.ty, self.func_def)
-
-    def compile_inner(self, globals: CompiledGlobals) -> None:
-        pass
