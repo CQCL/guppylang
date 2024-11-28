@@ -9,7 +9,7 @@ from hugr import tys as ht
 from guppylang.decorator import guppy
 from guppylang.std._internal.compiler.quantum import (
     QSYSTEM_EXTENSION,
-    ProjectiveMeasureCompiler,
+    InoutMeasureCompiler,
     RotationCompiler,
 )
 from guppylang.std._internal.util import quantum_op
@@ -141,7 +141,7 @@ def toffoli(control1: qubit, control2: qubit, target: qubit) -> None: ...
 def dirty_qubit() -> qubit: ...
 
 
-@guppy.custom(ProjectiveMeasureCompiler())
+@guppy.custom(InoutMeasureCompiler())
 @no_type_check
 def project_z(q: qubit) -> bool: ...
 
@@ -154,6 +154,7 @@ def discard(q: qubit @ owned) -> None: ...
 @guppy.hugr_op(quantum_op("MeasureFree"))
 @no_type_check
 def measure(q: qubit @ owned) -> bool: ...
+
 
 @guppy.hugr_op(quantum_op("Reset"))
 @no_type_check

@@ -25,3 +25,10 @@ def phased_x(q: qubit @ owned, angle1: angle, angle2: angle) -> qubit:
 def zz_phase(q1: qubit @ owned, q2: qubit @ owned, angle: angle) -> tuple[qubit, qubit]:
     qsystem.zz_phase(q1, q2, angle)
     return q1, q2
+
+
+@guppy(qsystem_functional)
+@no_type_check
+def measure_and_reset(q: qubit @ owned) -> tuple[qubit, bool]:
+    b = qsystem.measure_and_reset(q)
+    return q, b

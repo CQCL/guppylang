@@ -5,6 +5,7 @@ multiple nodes.
 from __future__ import annotations
 
 from hugr import Wire, ops
+from hugr import ext as he
 from hugr import tys as ht
 from hugr.std.float import FLOAT_T
 from tket2_exts import futures, qsystem, quantum, result, rotation
@@ -46,15 +47,25 @@ def from_halfturns_unchecked() -> ops.ExtOp:
 # ------------------------------------------------------
 
 
-class ProjectiveMeasureCompiler(CustomInoutCallCompiler):
-    """Compiler for the `measure_return` function."""
+class InoutMeasureCompiler(CustomInoutCallCompiler):
+    """Compiler for the measure functions with an inout qubit
+    such as the `project_z` function."""
+
+    opname: str
+    ext: he.Extension
+
+    def __init__(self, opname: str | None = None, ext: he.Extension | None = None):
+        self.opname = opname or "Measure"
+        self.ext = ext or QUANTUM_EXTENSION
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         from guppylang.std._internal.util import quantum_op
 
         [q] = args
         [q, bit] = self.builder.add_op(
-            quantum_op("Measure")(ht.FunctionType([ht.Qubit], [ht.Qubit, ht.Bool]), []),
+            quantum_op(self.opname, ext=self.ext)(
+                ht.FunctionType([ht.Qubit], [ht.Qubit, ht.Bool]), []
+            ),
             q,
         )
         return CallReturnWires(regular_returns=[bit], inout_returns=[q])

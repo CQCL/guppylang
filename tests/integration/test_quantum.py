@@ -10,13 +10,13 @@ from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
 from guppylang.std.builtins import owned, py
-from guppylang.std.qsystem.functional import phased_x, zz_phase, qsystem_functional
-from guppylang.std.quantum import (
-    dirty_qubit,
-    discard,
-    measure,
-    qubit
+from guppylang.std.qsystem.functional import (
+    phased_x,
+    zz_phase,
+    qsystem_functional,
+    measure_and_reset,
 )
+from guppylang.std.quantum import dirty_qubit, discard, measure, qubit
 from guppylang.std.quantum_functional import (
     cx,
     cy,
@@ -71,7 +71,7 @@ def test_dirty_qubit(validate):
 
 def test_1qb_op(validate):
     @compile_quantum_guppy
-    def test(q: qubit @owned) -> qubit:
+    def test(q: qubit @ owned) -> qubit:
         q = h(q)
         q = t(q)
         q = s(q)
@@ -87,7 +87,7 @@ def test_1qb_op(validate):
 
 def test_2qb_op(validate):
     @compile_quantum_guppy
-    def test(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]:
+    def test(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]:
         q1, q2 = cx(q1, q2)
         q1, q2 = cy(q1, q2)
         q1, q2 = cz(q1, q2)
@@ -99,7 +99,9 @@ def test_2qb_op(validate):
 
 def test_3qb_op(validate):
     @compile_quantum_guppy
-    def test(q1: qubit @owned, q2: qubit @owned, q3: qubit @owned) -> tuple[qubit, qubit, qubit]:
+    def test(
+        q1: qubit @ owned, q2: qubit @ owned, q3: qubit @ owned
+    ) -> tuple[qubit, qubit, qubit]:
         q1, q2, q3 = toffoli(q1, q2, q3)
         return (q1, q2, q3)
 
@@ -110,10 +112,11 @@ def test_measure_ops(validate):
     """Compile various measurement-related operations."""
 
     @compile_quantum_guppy
-    def test(q1: qubit @owned, q2: qubit @owned) -> tuple[bool, bool]:
+    def test(q1: qubit @ owned, q2: qubit @ owned) -> tuple[bool, bool]:
         q1, b1 = measure_return(q1)
         q1 = discard(q1)
         q2 = reset(q2)
+        q2, b2 = measure_and_reset(q2)
         b2 = measure(q2)
         return (b1, b2)
 
@@ -124,7 +127,9 @@ def test_parametric(validate):
     """Compile various parametric operations."""
 
     @compile_quantum_guppy
-    def test(q1: qubit @owned, q2: qubit @owned, a1: angle, a2: angle, a3: angle) -> tuple[qubit, qubit]:
+    def test(
+        q1: qubit @ owned, q2: qubit @ owned, a1: angle, a2: angle, a3: angle
+    ) -> tuple[qubit, qubit]:
         q1 = rx(q1, a1)
         q1 = ry(q1, a1)
         q2 = rz(q2, a3)
