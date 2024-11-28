@@ -46,7 +46,7 @@ def from_halfturns_unchecked() -> ops.ExtOp:
 # ------------------------------------------------------
 
 
-class MeasureReturnCompiler(CustomInoutCallCompiler):
+class ProjectiveMeasureCompiler(CustomInoutCallCompiler):
     """Compiler for the `measure_return` function."""
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
