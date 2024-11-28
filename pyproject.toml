@@ -65,7 +65,8 @@ execute-llvm = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
 #hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "4cbe890ab4e72090708ff83592c0771caf2335df" }
-#tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", rev = "e3f9da1abe28f31cb249de2e06be846ab48d9708" }
+tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", branch = "ss/rename" }
+
 
 [build-system]
 requires = ["hatchling"]

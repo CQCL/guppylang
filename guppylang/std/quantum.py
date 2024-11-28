@@ -8,7 +8,7 @@ from hugr import tys as ht
 
 from guppylang.decorator import guppy
 from guppylang.std._internal.compiler.quantum import (
-    HSERIES_EXTENSION,
+    QSYSTEM_EXTENSION,
     MeasureReturnCompiler,
     RotationCompiler,
 )
@@ -106,7 +106,7 @@ def tdg(q: qubit) -> None: ...
 def sdg(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum_op("ZZMax", ext=HSERIES_EXTENSION))
+@guppy.hugr_op(quantum_op("ZZMax", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def zz_max(q1: qubit, q2: qubit) -> None: ...
 
@@ -184,7 +184,7 @@ def reset(q: qubit) -> None: ...
 # ------------------------------------------------------
 
 
-@guppy.hugr_op(quantum_op("PhasedX", ext=HSERIES_EXTENSION))
+@guppy.hugr_op(quantum_op("PhasedX", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def _phased_x(q: qubit, angle1: float, angle2: float) -> None:
     """PhasedX operation from the hseries extension.
@@ -194,7 +194,7 @@ def _phased_x(q: qubit, angle1: float, angle2: float) -> None:
     """
 
 
-@guppy.hugr_op(quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
+@guppy.hugr_op(quantum_op("ZZPhase", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def _zz_phase(q1: qubit, q2: qubit, angle: float) -> None:
     """ZZPhase operation from the hseries extension.
