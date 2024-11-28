@@ -10,6 +10,7 @@ from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
 from guppylang.std.builtins import owned, py
+from guppylang.std.qsystem.functional import phased_x, zz_phase, qsystem_functional
 from guppylang.std.quantum import (
     dirty_qubit,
     discard,
@@ -29,13 +30,11 @@ from guppylang.std.quantum_functional import (
     tdg,
     sdg,
     zz_max,
-    phased_x,
     rx,
     ry,
     rz,
     crz,
     toffoli,
-    zz_phase,
     reset,
     quantum_functional,
     measure_return,
@@ -55,6 +54,7 @@ def compile_quantum_guppy(fn) -> ModulePointer:
     module = GuppyModule("module")
     module.load(angle, qubit, dirty_qubit, discard, measure)
     module.load_all(quantum_functional)
+    module.load_all(qsystem_functional)
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
 

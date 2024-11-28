@@ -143,20 +143,6 @@ def toffoli(
 
 @guppy(quantum_functional)
 @no_type_check
-def phased_x(q: qubit @ owned, angle1: angle, angle2: angle) -> qubit:
-    quantum.phased_x(q, angle1, angle2)
-    return q
-
-
-@guppy(quantum_functional)
-@no_type_check
-def zz_phase(q1: qubit @ owned, q2: qubit @ owned, angle: angle) -> tuple[qubit, qubit]:
-    quantum.zz_phase(q1, q2, angle)
-    return q1, q2
-
-
-@guppy(quantum_functional)
-@no_type_check
 def reset(q: qubit @ owned) -> qubit:
     quantum.reset(q)
     return q
