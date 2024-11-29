@@ -66,10 +66,10 @@ def test_measure_circuit(validate):
     module.load_all(quantum)
 
     @guppy.pytket(circ, module)
-    def guppy_circ(q: qubit) -> None: ...
+    def guppy_circ(q: qubit) -> bool: ...
 
     @guppy(module)
-    def foo(q: qubit) -> None:
+    def foo(q: qubit) -> bool:
         guppy_circ(q)
 
     validate(module.compile())
