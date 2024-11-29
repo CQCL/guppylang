@@ -150,9 +150,10 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 hugr_func = mapping[circ.root]
 
                 node_data = module.hugr.get(hugr_func)
-                # TODO: Handle case if it isn't.
-                if isinstance(node_data, FuncDefn):
-                    node_data.op.f_name = self.name
+
+                if node_data and isinstance(node_data.op, FuncDefn):
+                    func_def = node_data.op
+                    func_def.f_name = self.name
 
             else:
                 raise GuppyError(PytketNotCircuit(self.defined_at))
