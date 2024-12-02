@@ -679,7 +679,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             node.value, [], "__iter__", "iterable", exp_sig, True
         )
         # Unwrap the size hint if present
-        if is_sized_iter_type(ty):
+        if is_sized_iter_type(ty) and node.unwrap_size_hint:
             expr, ty = self.synthesize_instance_func(expr, [], "unwrap_iter", "")
 
         # If the iterator was created by a `for` loop, we can add some extra checks to

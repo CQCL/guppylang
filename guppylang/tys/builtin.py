@@ -12,7 +12,7 @@ from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
-from guppylang.tys.const import ConstValue
+from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
@@ -203,6 +203,10 @@ def bool_type() -> OpaqueType:
     return OpaqueType([], bool_type_def)
 
 
+def nat_type() -> NumericType:
+    return NumericType(NumericType.Kind.Nat)
+
+
 def int_type() -> NumericType:
     return NumericType(NumericType.Kind.Int)
 
@@ -211,18 +215,16 @@ def list_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], list_type_def)
 
 
-def array_type(element_ty: Type, length: int) -> OpaqueType:
-    nat_type = NumericType(NumericType.Kind.Nat)
-    return OpaqueType(
-        [TypeArg(element_ty), ConstArg(ConstValue(nat_type, length))], array_type_def
-    )
+def array_type(element_ty: Type, length: int | Const) -> OpaqueType:
+    if isinstance(length, int):
+        length = ConstValue(nat_type(), length)
+    return OpaqueType([TypeArg(element_ty), ConstArg(length)], array_type_def)
 
 
-def sized_iter_type(iter_type: Type, size: int) -> OpaqueType:
-    nat_type = NumericType(NumericType.Kind.Nat)
-    return OpaqueType(
-        [TypeArg(iter_type), ConstArg(ConstValue(nat_type, size))], sized_iter_type_def
-    )
+def sized_iter_type(iter_type: Type, size: int | Const) -> OpaqueType:
+    if isinstance(size, int):
+        size = ConstValue(nat_type(), size)
+    return OpaqueType([TypeArg(iter_type), ConstArg(size)], sized_iter_type_def)
 
 
 def is_bool_type(ty: Type) -> bool:
@@ -249,11 +251,11 @@ def get_element_type(ty: Type) -> Type:
     return arg.ty
 
 
-def get_iter_size(ty: Type) -> int:
+def get_iter_size(ty: Type) -> Const:
     assert isinstance(ty, OpaqueType)
     assert ty.defn == sized_iter_type_def
     match ty.args:
-        case [_, ConstArg(ConstValue(value=int(size)))]:
-            return size
+        case [_, ConstArg(const)]:
+            return const
         case _:
             raise InternalGuppyError("Unexpected type args")

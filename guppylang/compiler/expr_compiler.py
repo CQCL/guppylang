@@ -495,7 +495,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         make_none.set_outputs(make_none.add_op(ops.Tag(0, hugr_elt_ty)))
         make_none = self.builder.load_function(make_none)
         self.dfg[array_var] = self.builder.add_op(
-            array_repeat(hugr_elt_ty, node.length), make_none
+            array_repeat(hugr_elt_ty, node.length.to_arg().to_hugr()), make_none
         )
         self.dfg[count_var] = self.builder.load(
             hugr.std.int.IntVal(0, width=NumericType.INT_WIDTH)

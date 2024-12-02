@@ -45,6 +45,7 @@ from guppylang.tys.builtin import (
     is_array_type,
     is_bool_type,
     is_sized_iter_type,
+    nat_type,
     sized_iter_type,
 )
 from guppylang.tys.const import Const, ConstValue
@@ -55,6 +56,7 @@ from guppylang.tys.ty import (
     NumericType,
     StructType,
     Type,
+    unify,
 )
 
 
@@ -223,7 +225,7 @@ class NewArrayChecker(CustomCallChecker):
             raise GuppyTypeError(TypeMismatchError(self.node, ty, dummy_array_ty))
         subst: Subst = {}
         match ty.args:
-            case [TypeArg(ty=elem_ty), ConstArg(ConstValue(value=int(length)))]:
+            case [TypeArg(ty=elem_ty), ConstArg(length)]:
                 match args:
                     # Either an array comprehension
                     case [DesugaredGeneratorExpr() as compr]:
@@ -240,12 +242,14 @@ class NewArrayChecker(CustomCallChecker):
                                 args[i], elem_ty.substitute(subst)
                             )
                             subst |= s
-                        if len(args) != length:
+                        ls = unify(length, ConstValue(nat_type(), len(args)), {})
+                        if ls is None:
                             raise GuppyTypeError(
                                 TypeMismatchError(
                                     self.node, ty, array_type(elem_ty, len(args))
                                 )
                             )
+                        subst |= ls
                         call = GlobalCall(
                             def_id=self.func.id, args=args, type_args=ty.args
                         )
@@ -272,9 +276,10 @@ class NewArrayChecker(CustomCallChecker):
         # Extract the iterator size
         match gen.iter_assign:
             case ast.Assign(value=MakeIter() as make_iter):
-                make_iter.value, iter_ty = ExprSynthesizer(self.ctx).synthesize(
-                    make_iter.value
+                sized_make_iter = MakeIter(
+                    make_iter.value, make_iter.origin_node, unwrap_size_hint=False
                 )
+                _, iter_ty = ExprSynthesizer(self.ctx).synthesize(sized_make_iter)
                 # The iterator must have a static size hint
                 if not is_sized_iter_type(iter_ty):
                     err = ArrayComprUnknownSizeError(compr)

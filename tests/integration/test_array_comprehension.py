@@ -77,3 +77,14 @@ def test_nested_left(validate):
         return array(array(x + y for y in range(10)) for x in range(20))
 
     validate(test)
+
+
+def test_generic(validate):
+    module = GuppyModule("test")
+    n = guppy.nat_var("n", module)
+
+    @guppy(module)
+    def test(xs: array[int, n]) -> array[int, n]:
+        return array(x + 1 for x in xs)
+
+    validate(module.compile())

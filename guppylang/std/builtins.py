@@ -614,8 +614,8 @@ class SizedIter:
         """Extracts the actual iterator."""
 
     @guppy.custom(NoopCompiler())
-    def __iter__(self: "SizedIter[L, n]" @ owned) -> L:
-        """Extracts the actual iterator."""
+    def __iter__(self: "SizedIter[L, n]" @ owned) -> "SizedIter[L, n]":  # type: ignore[type-arg]
+        """Dummy implementation making sized iterators iterable themselves."""
 
 
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.
