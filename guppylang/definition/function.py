@@ -11,7 +11,7 @@ from hugr import Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.package import FuncDefnPointer
 
-from guppylang.ast_util import AstNode, annotate_location, with_loc
+from guppylang.ast_util import AstNode, annotate_location, with_loc, with_type
 from guppylang.checker.cfg_checker import CheckedCFG
 from guppylang.checker.core import Context, Globals, Place, PyScope
 from guppylang.checker.errors.generic import ExpectedError
@@ -129,7 +129,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.ty, args, node, ctx)
         node = with_loc(node, GlobalCall(def_id=self.id, args=args, type_args=inst))
-        return node, ty
+        return with_type(ty, node), ty
 
 
 @dataclass(frozen=True)

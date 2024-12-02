@@ -284,14 +284,16 @@ class _Guppy:
         return TypeVar(name)
 
     @pretty_errors
-    def nat_var(self, name: str, module: GuppyModule | None = None) -> ConstVarDef:
+    def nat_var(self, name: str, module: GuppyModule | None = None) -> TypeVar:
         """Creates a new const nat variable in a module."""
         module = module or self.get_module()
         defn = ConstVarDef(
             DefId.fresh(module), name, None, NumericType(NumericType.Kind.Nat)
         )
         module.register_def(defn)
-        return defn
+        # Return an actual Python `TypeVar` so it can be used as an actual type in code
+        # that is executed by interpreter before handing it to Guppy.
+        return TypeVar(name)
 
     @pretty_errors
     def custom(

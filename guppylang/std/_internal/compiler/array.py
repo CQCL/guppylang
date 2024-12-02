@@ -6,17 +6,18 @@ import hugr.std
 from hugr import Wire, ops
 from hugr import tys as ht
 
+from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
 from guppylang.std._internal.compiler.arithmetic import convert_itousize
 from guppylang.std._internal.compiler.prelude import (
+    build_expect_none,
     build_unwrap,
     build_unwrap_left,
     build_unwrap_right,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
-from guppylang.tys.const import ConstValue
 
 # ------------------------------------------------------
 # --------------- std.array operations -----------------
@@ -24,29 +25,33 @@ from guppylang.tys.const import ConstValue
 
 
 def _instantiate_array_op(
-    name: str, elem_ty: ht.Type, length: int, inp: list[ht.Type], out: list[ht.Type]
+    name: str,
+    elem_ty: ht.Type,
+    length: ht.TypeArg,
+    inp: list[ht.Type],
+    out: list[ht.Type],
 ) -> ops.ExtOp:
     return hugr.std.PRELUDE.get_op(name).instantiate(
-        [ht.BoundedNatArg(length), ht.TypeTypeArg(elem_ty)], ht.FunctionType(inp, out)
+        [length, ht.TypeTypeArg(elem_ty)], ht.FunctionType(inp, out)
     )
 
 
-def array_type(elem_ty: ht.Type, length: int) -> ht.ExtType:
+def array_type(elem_ty: ht.Type, length: ht.TypeArg) -> ht.ExtType:
     """Returns the hugr type of a fixed length array."""
-    length_arg = ht.BoundedNatArg(length)
     elem_arg = ht.TypeTypeArg(elem_ty)
-    return hugr.std.PRELUDE.types["array"].instantiate([length_arg, elem_arg])
+    return hugr.std.PRELUDE.types["array"].instantiate([length, elem_arg])
 
 
 def array_new(elem_ty: ht.Type, length: int) -> ops.ExtOp:
     """Returns an operation that creates a new fixed length array."""
-    arr_ty = array_type(elem_ty, length)
+    length_arg = ht.BoundedNatArg(length)
+    arr_ty = array_type(elem_ty, length_arg)
     return _instantiate_array_op(
-        "new_array", elem_ty, length, [elem_ty] * length, [arr_ty]
+        "new_array", elem_ty, length_arg, [elem_ty] * length, [arr_ty]
     )
 
 
-def array_get(elem_ty: ht.Type, length: int) -> ops.ExtOp:
+def array_get(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array `get` operation."""
     assert elem_ty.type_bound() == ht.TypeBound.Copyable
     arr_ty = array_type(elem_ty, length)
@@ -55,7 +60,7 @@ def array_get(elem_ty: ht.Type, length: int) -> ops.ExtOp:
     )
 
 
-def array_set(elem_ty: ht.Type, length: int) -> ops.ExtOp:
+def array_set(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array `set` operation."""
     arr_ty = array_type(elem_ty, length)
     return _instantiate_array_op(
@@ -65,6 +70,16 @@ def array_set(elem_ty: ht.Type, length: int) -> ops.ExtOp:
         [arr_ty, ht.USize(), elem_ty],
         [ht.Either([elem_ty, arr_ty], [elem_ty, arr_ty])],
     )
+
+
+def array_map(elem_ty: ht.Type, length: ht.TypeArg, new_elem_ty: ht.Type) -> ops.ExtOp:
+    """Returns an operation that maps a function across an array."""
+    # TODO
+    return UnsupportedOp(
+        op_name="array_map",
+        inputs=[array_type(elem_ty, length), ht.FunctionType([elem_ty], [new_elem_ty])],
+        outputs=[array_type(new_elem_ty, length)],
+    ).ext_op
 
 
 # ------------------------------------------------------
@@ -85,11 +100,11 @@ class ArrayCompiler(CustomCallCompiler):
                 raise InternalGuppyError("Invalid array type args")
 
     @property
-    def length(self) -> int:
+    def length(self) -> ht.TypeArg:
         """The length for the array op that is being compiled."""
         match self.type_args:
-            case [_, ConstArg(ConstValue(value=int(length)))]:
-                return length
+            case [_, ConstArg(const)]:  # Const includes both literals and variables
+                return const.to_arg().to_hugr()
             case _:
                 raise InternalGuppyError("Invalid array type args")
 
@@ -207,3 +222,29 @@ class ArraySetitemCompiler(ArrayCompiler):
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
+
+
+class ArrayIterEndCompiler(ArrayCompiler):
+    """Compiler for the `ArrayIter.__end__` method."""
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        # For linear array iterators, map the array of optional elements to an
+        # `array[None, n]` that we can discard.
+        if self.elem_ty.type_bound() == ht.TypeBound.Any:
+            elem_opt_ty = ht.Option(self.elem_ty)
+            none_ty = ht.UnitSum(1)
+            # Define `unwrap_none` function. If any of the elements are not `None`,
+            # then the users must have called `__end__` prematurely and we panic.
+            func = self.builder.define_function("unwrap_none", [elem_opt_ty], [none_ty])
+            err_msg = "Linear array element has not been used in iterator"
+            build_expect_none(func, func.inputs()[0], err_msg)
+            func.set_outputs(func.add_op(ops.Tag(0, none_ty)))
+            func = self.builder.load_function(func)
+            # Map it over the array so that the resulting array is no longer linear and
+            # can be discarded
+            [array_iter] = args
+            array, _ = self.builder.add_op(ops.UnpackTuple(), array_iter)
+            self.builder.add_op(
+                array_map(elem_opt_ty, self.length, none_ty), array, func
+            )
+        return []

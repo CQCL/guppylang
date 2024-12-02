@@ -109,6 +109,7 @@ from guppylang.tys.builtin import (
     get_element_type,
     is_bool_type,
     is_list_type,
+    is_sized_iter_type,
     list_type,
 )
 from guppylang.tys.param import ConstParam, TypeParam
@@ -663,6 +664,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         expr, ty = self.synthesize_instance_func(
             node.value, [], "__iter__", "iterable", exp_sig, True
         )
+        # Unwrap the size hint if present
+        if is_sized_iter_type(ty):
+            expr, ty = self.synthesize_instance_func(expr, [], "unwrap_iter", "")
 
         # If the iterator was created by a `for` loop, we can add some extra checks to
         # produce nicer errors for linearity violations. Namely, `break` and `return`
