@@ -222,7 +222,6 @@ def load_with_args(
     type_args: Inst,
     dfg: DFContainer,
     ty: FunctionType,
-    # TODO: Maybe change to ToNode so this can be used by declarations.
     func: ToNode,
 ) -> Wire:
     """Loads the function as a value into a local Hugr dataflow graph."""
@@ -236,7 +235,6 @@ def compile_call(
     type_args: Inst,
     dfg: DFContainer,
     ty: FunctionType,
-    # TODO: Maybe change to ToNode so this can be used by declarations.
     func: ToNode,
 ) -> CallReturnWires:
     """Compiles a call to the function."""

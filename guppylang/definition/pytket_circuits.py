@@ -2,9 +2,11 @@ import ast
 from dataclasses import dataclass, field
 from typing import Any, cast
 
+import hugr.tys as ht
 from hugr import Hugr, Node, Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.ops import FuncDefn
+from hugr.tys import Bool
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals, PyScope
@@ -23,7 +25,6 @@ from guppylang.definition.common import (
 from guppylang.definition.declaration import BodyNotEmptyError
 from guppylang.definition.function import (
     PyFunc,
-    compile_call,
     load_with_args,
     parse_py_func,
 )
@@ -40,6 +41,7 @@ from guppylang.tys.ty import (
     InputFlags,
     Type,
     row_to_type,
+    type_to_row,
 )
 
 
@@ -87,13 +89,17 @@ class RawPytketDef(ParsableDef):
                     qubit = cast(TypeDef, globals["qubit"]).check_instantiate(
                         [], globals
                     )
+
                     circuit_signature = FunctionType(
                         [FuncInput(qubit, InputFlags.Inout)]
                         * self.input_circuit.n_qubits,
                         row_to_type([bool_type()] * self.input_circuit.n_bits),
                     )
-                    # Note this doesn't set the output type.
-                    if not circuit_signature.inputs == stub_signature.inputs:
+
+                    if not (
+                        circuit_signature.inputs == stub_signature.inputs
+                        and circuit_signature.output == stub_signature.output
+                    ):
                         raise GuppyError(PytketSignatureMismatch(func_ast, self.name))
                 except ImportError:
                     err = Tket2NotInstalled(func_ast)
@@ -151,9 +157,14 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
                 node_data = module.hugr.get(hugr_func)
 
+                # TODO: Error if hugr isn't FuncDefn?
                 if node_data and isinstance(node_data.op, FuncDefn):
-                    func_def = node_data.op
-                    func_def.f_name = self.name
+                    func_defn = node_data.op
+                    func_defn.f_name = self.name
+
+                    num_bools = func_defn.inputs.count(Bool)
+                    for _ in range(num_bools):
+                        func_defn.inputs.remove(Bool)
 
             else:
                 raise GuppyError(PytketNotCircuit(self.defined_at))
@@ -225,5 +236,21 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
-        # Use implementation from function definition.
-        return compile_call(args, type_args, dfg, self.ty, self.func_def)
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
+        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        num_returns = len(type_to_row(self.ty.output))
+        call = dfg.builder.call(
+            self.func_def, *args, instantiation=func_ty, type_args=type_args
+        )
+        # Negative index slicing doesn't work when num_returns is 0.
+        if num_returns == 0:
+            return CallReturnWires(
+                regular_returns=[],
+                inout_returns=list(call[0:]),
+            )
+        else:
+            # Circuit function returns are the other way round to Guppy returns.
+            return CallReturnWires(
+                regular_returns=list(call[-num_returns:]),
+                inout_returns=list(call[:-num_returns]),
+            )

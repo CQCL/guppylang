@@ -54,11 +54,10 @@ def test_multi_qubit_circuit(validate):
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
-@pytest.mark.skip("Not implemented")
-def test_measure_circuit(validate):
+def test_measure(validate):
     from pytket import Circuit
 
-    circ = Circuit(1, 1) 
+    circ = Circuit(1) 
     circ.H(0)             
     circ.measure_all() 
 
@@ -69,8 +68,78 @@ def test_measure_circuit(validate):
     def guppy_circ(q: qubit) -> bool: ...
 
     @guppy(module)
-    def foo(q: qubit) -> bool:
-        guppy_circ(q)
+    def foo(q: qubit) -> None:
+        result = guppy_circ(q)
+
+    print(module.compile_hugr().to_json())
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skip("Not implemented")
+def test_measure_multiple(validate):
+    from pytket import Circuit
+
+    circ = Circuit(2, 2) 
+    circ.H(0)             
+    circ.measure_all() 
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    @guppy.pytket(circ, module)
+    def guppy_circ(q1: qubit, q2: qubit) -> tuple[bool, bool]: ...
+
+    @guppy(module)
+    def foo(q1: qubit, q2: qubit) -> None:
+        result = guppy_circ(q1, q2)
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skip("Not implemented")
+def test_measure_not_last(validate):
+    from pytket import Circuit
+
+    circ = Circuit(1, 1) 
+    circ.H(0)             
+    circ.measure_all() 
+    circ.X(0)
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    @guppy.pytket(circ, module)
+    def guppy_circ(q: qubit) -> bool: ...
+
+    @guppy(module)
+    def foo(q: qubit) -> None:
+        result = guppy_circ(q)
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skip("Not implemented")
+def test_measure_some(validate):
+    from pytket import Circuit
+
+    circ = Circuit(2, 2) 
+    circ.H(0)           
+    circ.Rz(0.25, 0)    
+    circ.CX(1, 0)  
+    circ.measure_register(0)      
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    @guppy.pytket(circ, module)
+    def guppy_circ(q1: qubit, q2: qubit) -> bool: ...
+
+    @guppy(module)
+    def foo(q1: qubit, q2: qubit) -> None:
+        result = guppy_circ(q1, q2)
 
     validate(module.compile())
 
