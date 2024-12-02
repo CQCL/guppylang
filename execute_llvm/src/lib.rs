@@ -1,8 +1,10 @@
 //! This module provides a Python interface to compile and execute a Hugr program to LLVM IR.
-use hugr::{extension::ExtensionRegistry, ops, HugrView};
-use hugr_llvm::hugr::{self, ops::custom::resolve_extension_ops, std_extensions};
-use hugr_llvm::inkwell::{context::Context, module::Module, values::GenericValue};
+use hugr::{
+    self, extension::ExtensionRegistry, ops, ops::custom::resolve_extension_ops, std_extensions,
+    HugrView,
+};
 use hugr_llvm::utils::fat::FatExt;
+use inkwell::{context::Context, module::Module, values::GenericValue};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -64,7 +66,7 @@ fn compile_module<'a>(
         .add_default_prelude_extensions()
         .add_float_extensions()
         .add_conversion_extensions()
-        .add_rotation_extensions();
+        .add_default_rotation_extensions();
 
     let emitter =
         hugr_llvm::emit::EmitHugr::new(ctx, llvm_module, namer.into(), extensions.finish().into());
