@@ -20,14 +20,17 @@
   );
 
   enterShell = ''
-    just setup-extras
-    source .devenv/state/venv/activate
+    export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
   '';
 
   languages.python = {
     enable = true;
     uv = {
       enable = true;
+      sync = {
+        enable = true;
+        allExtras = true;
+      };
     };
   };
 
