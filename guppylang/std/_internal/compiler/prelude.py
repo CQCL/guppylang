@@ -100,6 +100,7 @@ def build_unwrap_right(
 
 P = TypeVar("P", bound=ops.DfParentOp)
 
+
 def build_unwrap_left(
     builder: DfBase[P], either: Wire, error_msg: str, error_signal: int = 1
 ) -> Node:
@@ -125,6 +126,7 @@ def build_unwrap(
     result is an error.
     """
     return build_unwrap_right(builder, option, error_msg, error_signal)
+
 
 def build_expect_none(
     builder: DfBase[P], option: Wire, error_msg: str, error_signal: int = 1

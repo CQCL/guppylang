@@ -240,9 +240,7 @@ class ArrayIterEndCompiler(ArrayCompiler):
             # then the users must have called `__end__` prematurely and we panic.
             func = self.builder.define_function("unwrap_none", [elem_opt_ty], [none_ty])
             err_msg = "Linear array element has not been used in iterator"
-            build_expect_none(
-                func, func.inputs()[0], err_msg
-            )
+            build_expect_none(func, func.inputs()[0], err_msg)
             func.set_outputs(func.add_op(ops.Tag(0, none_ty)))
             func = self.builder.load_function(func)
             # Map it over the array so that the resulting array is no longer linear and
