@@ -142,12 +142,20 @@ class MakeIter(ast.expr):
     """
 
     value: ast.expr
+    unwrap_size_hint: bool
 
     # Node that triggered the creation of this iterator. For example, a for loop stmt.
     # It is not mentioned in `_fields` so that it is not visible to AST visitors
     origin_node: ast.AST
 
     _fields = ("value",)
+
+    def __init__(
+        self, value: ast.expr, origin_node: ast.AST, unwrap_size_hint: bool = True
+    ) -> None:
+        super().__init__(value)
+        self.origin_node = origin_node
+        self.unwrap_size_hint = unwrap_size_hint
 
 
 class IterHasNext(ast.expr):
@@ -210,6 +218,18 @@ class DesugaredGenerator(ast.expr):
     )
 
 
+class DesugaredGeneratorExpr(ast.expr):
+    """A desugared generator expression."""
+
+    elt: ast.expr
+    generators: list[DesugaredGenerator]
+
+    _fields = (
+        "elt",
+        "generators",
+    )
+
+
 class DesugaredListComp(ast.expr):
     """A desugared list comprehension."""
 
@@ -219,6 +239,22 @@ class DesugaredListComp(ast.expr):
     _fields = (
         "elt",
         "generators",
+    )
+
+
+class DesugaredArrayComp(ast.expr):
+    """A desugared array comprehension."""
+
+    elt: ast.expr
+    generator: DesugaredGenerator
+    length: Const
+    elt_ty: Type
+
+    _fields = (
+        "elt",
+        "generator",
+        "length",
+        "elt_ty",
     )
 
 

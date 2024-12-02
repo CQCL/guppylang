@@ -94,7 +94,7 @@ _n = TypeVar("_n")
 class array(Generic[_T, _n]):
     """Class to import in order to use arrays."""
 
-    def __init__(self, *args: _T):
+    def __init__(self, *args: Any):
         pass
 
 
@@ -594,7 +594,7 @@ def _array_unsafe_getitem(xs: array[L, n], idx: int) -> L: ...
 
 @guppy.extend_type(sized_iter_type_def)
 class SizedIter:
-    """A wrapper around an iterator type `T` promising that the iterator will yield
+    """A wrapper around an iterator type `L` promising that the iterator will yield
     exactly `n` values.
 
     Annotating an iterator with an incorrect size is undefined behaviour.
@@ -614,8 +614,8 @@ class SizedIter:
         """Extracts the actual iterator."""
 
     @guppy.custom(NoopCompiler())
-    def __iter__(self: "SizedIter[L, n]" @ owned) -> L:
-        """Extracts the actual iterator."""
+    def __iter__(self: "SizedIter[L, n]" @ owned) -> "SizedIter[L, n]":  # type: ignore[type-arg]
+        """Dummy implementation making sized iterators iterable themselves."""
 
 
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.

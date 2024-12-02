@@ -82,6 +82,16 @@ def array_map(elem_ty: ht.Type, length: ht.TypeArg, new_elem_ty: ht.Type) -> ops
     ).ext_op
 
 
+def array_repeat(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array `repeat` operation."""
+    # TODO
+    return UnsupportedOp(
+        op_name="array.repeat",
+        inputs=[ht.FunctionType([], [elem_ty])],
+        outputs=[array_type(elem_ty, length)],
+    ).ext_op
+
+
 # ------------------------------------------------------
 # --------- Custom compilers for non-native ops --------
 # ------------------------------------------------------

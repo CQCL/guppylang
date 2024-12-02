@@ -85,6 +85,7 @@ from guppylang.error import (
 from guppylang.experimental import check_function_tensors_enabled, check_lists_enabled
 from guppylang.nodes import (
     DesugaredGenerator,
+    DesugaredGeneratorExpr,
     DesugaredListComp,
     FieldAccessAndDrop,
     GenericParamValue,
@@ -254,7 +255,9 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
     ) -> tuple[ast.expr, Subst]:
         if not is_list_type(ty):
             return self._fail(ty, node)
-        node, elt_ty = synthesize_comprehension(node, node.generators, self.ctx)
+        node.generators, node.elt, elt_ty = synthesize_comprehension(
+            node, node.generators, node.elt, self.ctx
+        )
         subst = unify(get_element_type(ty), elt_ty, {})
         if subst is None:
             actual = list_type(elt_ty)
@@ -475,9 +478,20 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         return node, list_type(el_ty)
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> tuple[ast.expr, Type]:
-        node, elt_ty = synthesize_comprehension(node, node.generators, self.ctx)
+        node.generators, node.elt, elt_ty = synthesize_comprehension(
+            node, node.generators, node.elt, self.ctx
+        )
         result_ty = list_type(elt_ty)
         return node, result_ty
+
+    def visit_DesugaredGeneratorExpr(
+        self, node: DesugaredGeneratorExpr
+    ) -> tuple[ast.expr, Type]:
+        # This is a generator in an arbitrary expression position. We don't support
+        # generators as first-class value yet, so we always error out here. Special
+        # cases where generator are allowed need to explicitly check for them (e.g. see
+        # the handling of array comprehensions in the compiler for the `array` function)
+        raise GuppyError(UnsupportedError(node, "Generator expressions"))
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> tuple[ast.expr, Type]:
         # We need to synthesise the argument type, so we can look up dunder methods
@@ -665,7 +679,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             node.value, [], "__iter__", "iterable", exp_sig, True
         )
         # Unwrap the size hint if present
-        if is_sized_iter_type(ty):
+        if is_sized_iter_type(ty) and node.unwrap_size_hint:
             expr, ty = self.synthesize_instance_func(expr, [], "unwrap_iter", "")
 
         # If the iterator was created by a `for` loop, we can add some extra checks to
@@ -1033,15 +1047,15 @@ def to_bool(node: ast.expr, node_ty: Type, ctx: Context) -> tuple[ast.expr, Type
 
 
 def synthesize_comprehension(
-    node: DesugaredListComp, gens: list[DesugaredGenerator], ctx: Context
-) -> tuple[DesugaredListComp, Type]:
+    node: AstNode, gens: list[DesugaredGenerator], elt: ast.expr, ctx: Context
+) -> tuple[list[DesugaredGenerator], ast.expr, Type]:
     """Helper function to synthesise the element type of a list comprehension."""
     from guppylang.checker.stmt_checker import StmtChecker
 
     # If there are no more generators left, we can check the list element
     if not gens:
-        node.elt, elt_ty = ExprSynthesizer(ctx).synthesize(node.elt)
-        return node, elt_ty
+        elt, elt_ty = ExprSynthesizer(ctx).synthesize(elt)
+        return gens, elt, elt_ty
 
     # Check the iterator in the outer context
     gen, *gens = gens
@@ -1065,12 +1079,12 @@ def synthesize_comprehension(
         gen.ifs[i], _ = to_bool(gen.ifs[i], if_ty, inner_ctx)
 
     # Check remaining generators
-    node, elt_ty = synthesize_comprehension(node, gens, inner_ctx)
+    gens, elt, elt_ty = synthesize_comprehension(node, gens, elt, inner_ctx)
 
     # The iter finalizer is again checked in the outer context
     gen.iterend, iterend_ty = ExprSynthesizer(ctx).synthesize(gen.iterend)
     gen.iterend = with_type(iterend_ty, gen.iterend)
-    return node, elt_ty
+    return [gen, *gens], elt, elt_ty
 
 
 def eval_py_expr(node: PyExpr, ctx: Context) -> Any:

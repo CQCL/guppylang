@@ -43,6 +43,7 @@ from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
     AnyCall,
     CheckedNestedFunctionDef,
+    DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
     FieldAccessAndDrop,
@@ -417,7 +418,10 @@ class BBLinearityChecker(ast.NodeVisitor):
             raise GuppyTypeError(err)
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> None:
-        self._check_comprehension(node, node.generators)
+        self._check_comprehension(node.generators, node.elt)
+
+    def visit_DesugaredArrayComp(self, node: DesugaredArrayComp) -> None:
+        self._check_comprehension([node.generator], node.elt)
 
     def visit_CheckedNestedFunctionDef(self, node: CheckedNestedFunctionDef) -> None:
         # Linearity of the nested function has already been checked. We just need to
@@ -457,11 +461,11 @@ class BBLinearityChecker(ast.NodeVisitor):
                 self.scope.assign(tgt_place)
 
     def _check_comprehension(
-        self, node: DesugaredListComp, gens: list[DesugaredGenerator]
+        self, gens: list[DesugaredGenerator], elt: ast.expr
     ) -> None:
         """Helper function to recursively check list comprehensions."""
         if not gens:
-            self.visit(node.elt)
+            self.visit(elt)
             return
 
         # Check the iterator expression in the current scope
@@ -502,7 +506,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                     self.visit(expr)
 
             # Recursively check the remaining generators
-            self._check_comprehension(node, gens)
+            self._check_comprehension(gens, elt)
 
             # Check the iter finalizer so we record a final use of the iterator
             self.visit(gen.iterend)

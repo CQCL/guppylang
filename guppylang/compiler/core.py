@@ -5,10 +5,12 @@ from typing import cast
 from hugr import Wire, ops
 from hugr.build.dfg import DP, DefinitionBuilder, DfBase
 
-from guppylang.checker.core import FieldAccess, Place, PlaceId, Variable
+from guppylang.checker.core import FieldAccess, Globals, Place, PlaceId, Variable
 from guppylang.definition.common import CheckedDef, CompilableDef, CompiledDef, DefId
+from guppylang.definition.ty import TypeDef
+from guppylang.definition.value import CompiledCallableDef
 from guppylang.error import InternalGuppyError
-from guppylang.tys.ty import StructType
+from guppylang.tys.ty import StructType, Type
 
 CompiledLocals = dict[PlaceId, Wire]
 
@@ -26,15 +28,19 @@ class CompiledGlobals:
     compiled: dict[DefId, CompiledDef]
     worklist: set[DefId]
 
+    checked_globals: Globals
+
     def __init__(
         self,
         checked: dict[DefId, CheckedDef],
         module: DefinitionBuilder[ops.Module],
+        checked_globals: Globals,
     ) -> None:
         self.module = module
         self.checked = checked
         self.worklist = set()
         self.compiled = {}
+        self.checked_globals = checked_globals
 
     def build_compiled_def(self, def_id: DefId) -> CompiledDef:
         """Returns the compiled definitions corresponding to the given ID.
@@ -64,6 +70,16 @@ class CompiledGlobals:
             next_id = self.worklist.pop()
             next_def = self.build_compiled_def(next_id)
             next_def.compile_inner(self)
+
+    def get_instance_func(
+        self, ty: Type | TypeDef, name: str
+    ) -> CompiledCallableDef | None:
+        checked_func = self.checked_globals.get_instance_func(ty, name)
+        if checked_func is None:
+            return None
+        compiled_func = self.build_compiled_def(checked_func.id)
+        assert isinstance(compiled_func, CompiledCallableDef)
+        return compiled_func
 
 
 @dataclass
