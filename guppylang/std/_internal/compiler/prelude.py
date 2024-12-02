@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import hugr.std.collections
 import hugr.std.int
@@ -81,7 +81,7 @@ def build_error(builder: DfBase[ops.Case], signal: int, msg: str) -> Wire:
 
 
 def build_unwrap_right(
-    builder: DfBase[ops.DfParentOp], either: Wire, error_msg: str, error_signal: int = 1
+    builder: DfBase[P], either: Wire, error_msg: str, error_signal: int = 1
 ) -> Node:
     """Unwraps the right value from a `hugr.tys.Either` value, panicking with the given
     message if the result is left.
@@ -98,8 +98,10 @@ def build_unwrap_right(
     return conditional.to_node()
 
 
+P = TypeVar("P", bound=ops.DfParentOp)
+
 def build_unwrap_left(
-    builder: DfBase[ops.DfParentOp], either: Wire, error_msg: str, error_signal: int = 1
+    builder: DfBase[P], either: Wire, error_msg: str, error_signal: int = 1
 ) -> Node:
     """Unwraps the left value from a `hugr.tys.Either` value, panicking with the given
     message if the result is right.
@@ -124,9 +126,8 @@ def build_unwrap(
     """
     return build_unwrap_right(builder, option, error_msg, error_signal)
 
-
 def build_expect_none(
-    builder: DfBase[ops.DfParentOp], option: Wire, error_msg: str, error_signal: int = 1
+    builder: DfBase[P], option: Wire, error_msg: str, error_signal: int = 1
 ) -> Node:
     """Checks that `hugr.tys.Option` value is `None`, otherwise panics with the given
     message.
