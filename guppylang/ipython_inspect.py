@@ -12,6 +12,18 @@ def is_running_ipython() -> bool:
         return False
 
 
+def is_ipython_dummy_file(filename: str) -> bool:
+    """Checks whether a given filename is a dummy name generated for an IPython cell."""
+    # TODO: The approach below is false-positive prone. Figure out if there is a better
+    #  way to do this.
+    return (
+        # IPython cells have filenames like "<ipython-input-3-3e9b5833de21>"
+        filename.startswith("<ipython-input-")
+        # Jupyter cells have filenames like "/var/{...}/ipykernel_82076/61218616.py"
+        or "ipykernel_" in filename
+    )
+
+
 def get_ipython_cell_sources() -> list[str]:
     """Returns the source code of all cells in the running IPython session.
 

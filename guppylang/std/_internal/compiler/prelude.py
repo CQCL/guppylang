@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import hugr.std.collections
 import hugr.std.int
 from hugr import Node, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
+
+from guppylang.definition.custom import CustomCallCompiler
+from guppylang.definition.value import CallReturnWires
+from guppylang.error import InternalGuppyError
 
 if TYPE_CHECKING:
     from hugr.build.dfg import DfBase
@@ -81,7 +85,7 @@ def build_error(builder: DfBase[ops.Case], signal: int, msg: str) -> Wire:
 
 
 def build_unwrap_right(
-    builder: DfBase[ops.DfParentOp], either: Wire, error_msg: str, error_signal: int = 1
+    builder: DfBase[P], either: Wire, error_msg: str, error_signal: int = 1
 ) -> Node:
     """Unwraps the right value from a `hugr.tys.Either` value, panicking with the given
     message if the result is left.
@@ -98,8 +102,11 @@ def build_unwrap_right(
     return conditional.to_node()
 
 
+P = TypeVar("P", bound=ops.DfParentOp)
+
+
 def build_unwrap_left(
-    builder: DfBase[ops.DfParentOp], either: Wire, error_msg: str, error_signal: int = 1
+    builder: DfBase[P], either: Wire, error_msg: str, error_signal: int = 1
 ) -> Node:
     """Unwraps the left value from a `hugr.tys.Either` value, panicking with the given
     message if the result is right.
@@ -117,9 +124,29 @@ def build_unwrap_left(
 
 
 def build_unwrap(
-    builder: DfBase[ops.DfParentOp], result: Wire, error_msg: str, error_signal: int = 1
+    builder: DfBase[ops.DfParentOp], option: Wire, error_msg: str, error_signal: int = 1
 ) -> Node:
     """Unwraps an `hugr.tys.Option` value, panicking with the given message if the
     result is an error.
     """
-    return build_unwrap_right(builder, result, error_msg, error_signal)
+    return build_unwrap_right(builder, option, error_msg, error_signal)
+
+
+def build_expect_none(
+    builder: DfBase[P], option: Wire, error_msg: str, error_signal: int = 1
+) -> Node:
+    """Checks that `hugr.tys.Option` value is `None`, otherwise panics with the given
+    message.
+    """
+    return build_unwrap_left(builder, option, error_msg, error_signal)
+
+
+class MemSwapCompiler(CustomCallCompiler):
+    """Compiler for the `mem_swap` function."""
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [x, y] = args
+        return CallReturnWires(regular_returns=[], inout_returns=[y, x])
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        raise InternalGuppyError("Call compile_with_inouts instead")

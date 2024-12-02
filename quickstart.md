@@ -4,22 +4,26 @@ flow and mid-circuit measurements using Pythonic syntax:
 
 ```python
 from guppylang import guppy
-from guppylang.prelude.quantum import cx, h, measure, qubit, x, z
+from guppylang.std.builtins import owned
+from guppylang.std.quantum import cx, h, measure, qubit, x, z
+
 
 @guppy
-def teleport(src: qubit, tgt: qubit) -> qubit:
+def teleport(src: qubit @ owned, tgt: qubit) -> None:
     """Teleports the state in `src` to `tgt`."""
     # Create ancilla and entangle it with src and tgt
     tmp = qubit()
-    tmp, tgt = cx(h(tmp), tgt)
-    src, tmp = cx(src, tmp)
+    h(tmp)
+    cx(tmp, tgt)
+    cx(src, tmp)
 
     # Apply classical corrections
-    if measure(h(src)):
-        tgt = z(tgt)
+    h(src)
+    if measure(src):
+        z(tgt)
     if measure(tmp):
-        tgt = x(tgt)
-    return tgt
+        x(tgt)
+
 
 guppy.compile_module()
 ```

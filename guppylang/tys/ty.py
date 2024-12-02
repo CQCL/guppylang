@@ -573,7 +573,7 @@ class StructType(ParametrizedTypeBase):
     @cached_property
     def intrinsically_linear(self) -> bool:
         """Whether this type is linear, independent of the arguments."""
-        return any(f.ty.linear for f in self.defn.fields)
+        return any(f.ty.linear for f in self.fields)
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""

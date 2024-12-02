@@ -7,7 +7,7 @@ from hugr import tys as ht
 from hugr.build import function as hf
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
-from guppylang.ast_util import AstNode, has_empty_body, with_loc
+from guppylang.ast_util import AstNode, has_empty_body, with_loc, with_type
 from guppylang.checker.core import Context, Globals, PyScope
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
@@ -85,7 +85,7 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.ty, args, node, ctx)
         node = with_loc(node, GlobalCall(def_id=self.id, args=args, type_args=inst))
-        return node, ty
+        return with_type(ty, node), ty
 
     def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledFunctionDecl":
         """Adds a Hugr `FuncDecl` node for this function to the Hugr."""
@@ -141,8 +141,6 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
             self.declaration, *args, instantiation=func_ty, type_args=type_args
         )
         return CallReturnWires(
-            # TODO: Replace below with `list(call[:num_returns])` once
-            #  https://github.com/CQCL/hugr/issues/1454 is fixed.
-            regular_returns=[call[i] for i in range(num_returns)],
+            regular_returns=list(call[:num_returns]),
             inout_returns=list(call[num_returns:]),
         )
