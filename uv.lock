@@ -618,7 +618,7 @@ requires-dist = [
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7.2.6,<9" },
     { name = "sphinx-book-theme", marker = "extra == 'docs'", specifier = ">=1.1.2,<2" },
-    { name = "tket2-exts", specifier = ">=0.1.0,<0.2" },
+    { name = "tket2-exts", specifier = ">=0.2.0,<0.3" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
 
@@ -2243,14 +2243,14 @@ wheels = [
 
 [[package]]
 name = "tket2-exts"
-version = "0.1.0"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "hugr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/bf/4f3bc7dd20df43189eb228e446f8e5094dbf3120604707487dc4fe2194b2/tket2_exts-0.1.0.tar.gz", hash = "sha256:6ab2117ec776d61efab3e7dd5ccfa5e619ad8c2b971f954e930a89ced3381cd0", size = 8727 }
+sdist = { url = "https://files.pythonhosted.org/packages/0e/56/d9435d4f4fc56af1193b50195e0fe9ff8192919caff0c978ce915d41ecae/tket2_exts-0.2.0.tar.gz", hash = "sha256:bbff2b27ab795fa045efb4c58d4fcdf0e9c94137d1aa5c49677cc8315b5ecfb8", size = 9306 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/81/4c76678510a3168fe036e33a1d4e8a6f72b56421de10bf40851485f9ed4d/tket2_exts-0.1.0-py3-none-any.whl", hash = "sha256:2ab0253c7f8bfea908578a2ae800b7468f093217c3fb998c3a4e1c109e673163", size = 14317 },
+    { url = "https://files.pythonhosted.org/packages/98/82/4865a9d308b039f89c85020b6537b940d84ab6160d6c7520b911123dd459/tket2_exts-0.2.0-py3-none-any.whl", hash = "sha256:e9c207c90ff03e60faa1e4a1950f5bdf3ddfea8775e5f6f4bf80840d38a807a2", size = 14575 },
 ]
 
 [[package]]

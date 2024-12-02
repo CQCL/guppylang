@@ -8,8 +8,7 @@ from hugr import tys as ht
 
 from guppylang.decorator import guppy
 from guppylang.std._internal.compiler.quantum import (
-    HSERIES_EXTENSION,
-    MeasureReturnCompiler,
+    InoutMeasureCompiler,
     RotationCompiler,
 )
 from guppylang.std._internal.util import quantum_op
@@ -33,17 +32,8 @@ class qubit:
 
     @guppy
     @no_type_check
-    def measure_return(self: "qubit") -> bool:
-        return measure_return(self)
-
-    @guppy
-    @no_type_check
-    def measure_reset(self: "qubit") -> bool:
-        """Projective measure and reset without discarding the qubit."""
-        res = self.measure_return()
-        if res:
-            x(self)
-        return res
+    def project_z(self: "qubit") -> bool:
+        return project_z(self)
 
     @guppy
     @no_type_check
@@ -106,11 +96,6 @@ def tdg(q: qubit) -> None: ...
 def sdg(q: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum_op("ZZMax", ext=HSERIES_EXTENSION))
-@no_type_check
-def zz_max(q1: qubit, q2: qubit) -> None: ...
-
-
 @guppy.custom(RotationCompiler("Rz"))
 @no_type_check
 def rz(q: qubit, angle: angle) -> None: ...
@@ -141,9 +126,9 @@ def toffoli(control1: qubit, control2: qubit, target: qubit) -> None: ...
 def dirty_qubit() -> qubit: ...
 
 
-@guppy.custom(MeasureReturnCompiler())
+@guppy.custom(InoutMeasureCompiler())
 @no_type_check
-def measure_return(q: qubit) -> bool: ...
+def project_z(q: qubit) -> bool: ...
 
 
 @guppy.hugr_op(quantum_op("QFree"))
@@ -151,54 +136,11 @@ def measure_return(q: qubit) -> bool: ...
 def discard(q: qubit @ owned) -> None: ...
 
 
-@guppy
+@guppy.hugr_op(quantum_op("MeasureFree"))
 @no_type_check
-def measure(q: qubit @ owned) -> bool:
-    res = measure_return(q)
-    discard(q)
-    return res
-
-
-@guppy
-@no_type_check
-def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
-    f1 = float(angle1)
-    f2 = float(angle2)
-    _phased_x(q, f1, f2)
-
-
-@guppy
-@no_type_check
-def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
-    f = float(angle)
-    _zz_phase(q1, q2, f)
+def measure(q: qubit @ owned) -> bool: ...
 
 
 @guppy.hugr_op(quantum_op("Reset"))
 @no_type_check
 def reset(q: qubit) -> None: ...
-
-
-# ------------------------------------------------------
-# --------- Internal definitions -----------------------
-# ------------------------------------------------------
-
-
-@guppy.hugr_op(quantum_op("PhasedX", ext=HSERIES_EXTENSION))
-@no_type_check
-def _phased_x(q: qubit, angle1: float, angle2: float) -> None:
-    """PhasedX operation from the hseries extension.
-
-    See `guppylang.prelude.quantum.phased_x` for a public definition that
-    accepts angle parameters.
-    """
-
-
-@guppy.hugr_op(quantum_op("ZZPhase", ext=HSERIES_EXTENSION))
-@no_type_check
-def _zz_phase(q1: qubit, q2: qubit, angle: float) -> None:
-    """ZZPhase operation from the hseries extension.
-
-    See `guppylang.prelude.quantum.phased_x` for a public definition that
-    accepts angle parameters.
-    """

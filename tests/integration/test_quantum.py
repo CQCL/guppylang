@@ -1,21 +1,14 @@
 """Various tests for the functions defined in `guppylang.prelude.quantum`."""
 
-import pytest
-
 from hugr.package import ModulePointer
 
 import guppylang.decorator
-from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
-from guppylang.std.builtins import owned, py
-from guppylang.std.quantum import (
-    dirty_qubit,
-    discard,
-    measure,
-    qubit
-)
+from guppylang.std.builtins import owned
+
+from guppylang.std.quantum import dirty_qubit, discard, measure, qubit
 from guppylang.std.quantum_functional import (
     cx,
     cy,
@@ -28,17 +21,14 @@ from guppylang.std.quantum_functional import (
     z,
     tdg,
     sdg,
-    zz_max,
-    phased_x,
     rx,
     ry,
     rz,
     crz,
     toffoli,
-    zz_phase,
     reset,
     quantum_functional,
-    measure_return,
+    project_z,
 )
 
 
@@ -71,7 +61,7 @@ def test_dirty_qubit(validate):
 
 def test_1qb_op(validate):
     @compile_quantum_guppy
-    def test(q: qubit @owned) -> qubit:
+    def test(q: qubit @ owned) -> qubit:
         q = h(q)
         q = t(q)
         q = s(q)
@@ -87,11 +77,10 @@ def test_1qb_op(validate):
 
 def test_2qb_op(validate):
     @compile_quantum_guppy
-    def test(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]:
+    def test(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]:
         q1, q2 = cx(q1, q2)
         q1, q2 = cy(q1, q2)
         q1, q2 = cz(q1, q2)
-        q1, q2 = zz_max(q1, q2)
         return (q1, q2)
 
     validate(test)
@@ -99,7 +88,9 @@ def test_2qb_op(validate):
 
 def test_3qb_op(validate):
     @compile_quantum_guppy
-    def test(q1: qubit @owned, q2: qubit @owned, q3: qubit @owned) -> tuple[qubit, qubit, qubit]:
+    def test(
+        q1: qubit @ owned, q2: qubit @ owned, q3: qubit @ owned
+    ) -> tuple[qubit, qubit, qubit]:
         q1, q2, q3 = toffoli(q1, q2, q3)
         return (q1, q2, q3)
 
@@ -110,8 +101,8 @@ def test_measure_ops(validate):
     """Compile various measurement-related operations."""
 
     @compile_quantum_guppy
-    def test(q1: qubit @owned, q2: qubit @owned) -> tuple[bool, bool]:
-        q1, b1 = measure_return(q1)
+    def test(q1: qubit @ owned, q2: qubit @ owned) -> tuple[bool, bool]:
+        q1, b1 = project_z(q1)
         q1 = discard(q1)
         q2 = reset(q2)
         b2 = measure(q2)
@@ -124,11 +115,11 @@ def test_parametric(validate):
     """Compile various parametric operations."""
 
     @compile_quantum_guppy
-    def test(q1: qubit @owned, q2: qubit @owned, a1: angle, a2: angle, a3: angle) -> tuple[qubit, qubit]:
+    def test(
+        q1: qubit @ owned, q2: qubit @ owned, a1: angle, a2: angle, a3: angle
+    ) -> tuple[qubit, qubit]:
         q1 = rx(q1, a1)
         q1 = ry(q1, a1)
         q2 = rz(q2, a3)
-        q1 = phased_x(q1, a1, a2)
-        q1, q2 = zz_phase(q1, q2, a1)
         q1, q2 = crz(q1, q2, a3)
         return (q1, q2)
