@@ -176,6 +176,10 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         raise GuppyError(UnsupportedError(func_def.args.vararg, "Variadic args"))
     if func_def.args.kwarg is not None:
         raise GuppyError(UnsupportedError(func_def.args.kwarg, "Keyword args"))
+    if func_def.args.defaults:
+        raise GuppyError(
+            UnsupportedError(func_def.args.defaults[0], "Default arguments")
+        )
     if func_def.returns is None:
         err = MissingReturnAnnotationError(func_def)
         # TODO: Error location is incorrect

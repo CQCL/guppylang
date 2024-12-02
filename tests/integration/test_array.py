@@ -3,7 +3,7 @@ from hugr.std.int import IntVal
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import array, owned
+from guppylang.std.builtins import array, owned, mem_swap
 from tests.util import compile_guppy
 
 from guppylang.std.quantum import qubit, discard
@@ -293,3 +293,21 @@ def test_exec_array_loop(validate, run_int_fn):
 
     # TODO: Enable execution once lowering for missing ops is implemented
     # run_int_fn(package, expected=9)
+
+
+def test_mem_swap(validate):
+    module = GuppyModule("test")
+
+    module.load(qubit)
+    @guppy(module)
+    def foo(x: qubit, y: qubit) -> None:
+        mem_swap(x, y)
+
+    @guppy(module)
+    def main() -> array[qubit, 2]:
+        a = array(qubit(), qubit())
+        foo(a[0], a[1])
+        return a
+
+    package = module.compile()
+    validate(package)

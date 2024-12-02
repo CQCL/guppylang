@@ -333,9 +333,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             call = self.builder.add_op(
                 ops.CallIndirect(func_ty.to_hugr()), func, *consumed_wires
             )
-            # TODO: Replace below with `list(call[:num_returns])` once
-            #  https://github.com/CQCL/hugr/issues/1454 is fixed.
-            regular_returns: list[Wire] = [call[i] for i in range(num_returns)]
+            regular_returns: list[Wire] = list(call[:num_returns])
             inout_returns = call[num_returns:]
             self._update_inout_ports(consumed_args, inout_returns, func_ty)
             return regular_returns, other_args
