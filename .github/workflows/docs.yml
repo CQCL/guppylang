@@ -53,7 +53,7 @@ jobs:
     secrets:
         GITHUB_PAT: ${{ secrets.HUGRBOT_PAT }}
     with:
-        title: "💥 Docs building is fails on main"
+        title: "💥 Doc builds fail on main"
         body: |
             The doc building workflow has failed on the main branch.
 
