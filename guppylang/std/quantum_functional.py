@@ -97,13 +97,6 @@ def sdg(q: qubit @ owned) -> qubit:
 
 @guppy(quantum_functional)
 @no_type_check
-def zz_max(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]:
-    quantum.zz_max(q1, q2)
-    return q1, q2
-
-
-@guppy(quantum_functional)
-@no_type_check
 def rz(q: qubit @ owned, angle: angle) -> qubit:
     quantum.rz(q, angle)
     return q

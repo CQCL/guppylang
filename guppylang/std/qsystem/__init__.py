@@ -9,6 +9,7 @@ from guppylang.std._internal.compiler.quantum import (
 )
 from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle
+from guppylang.std.builtins import owned
 from guppylang.std.quantum import qubit
 
 qsystem = GuppyModule("qsystem")
@@ -25,6 +26,11 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
     _phased_x(q, f1, f2)
 
 
+@guppy.hugr_op(quantum_op("ZZMax", ext=QSYSTEM_EXTENSION), module=qsystem)
+@no_type_check
+def zz_max(q1: qubit, q2: qubit) -> None: ...
+
+
 @guppy(qsystem)
 @no_type_check
 def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
@@ -32,10 +38,39 @@ def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
     _zz_phase(q1, q2, f)
 
 
+@guppy(qsystem)
+@no_type_check
+def rz(q: qubit, angle: angle) -> None:
+    f1 = float(angle)
+    _rz(q, f1)
+
+
+@guppy.hugr_op(quantum_op("Measure", ext=QSYSTEM_EXTENSION), module=qsystem)
+@no_type_check
+def measure(q: qubit @ owned) -> bool: ...
+
+
 @guppy.custom(InoutMeasureCompiler("MeasureReset", QSYSTEM_EXTENSION), module=qsystem)
 @no_type_check
 def measure_and_reset(q: qubit) -> bool:
     """MeasureReset operation from the qsystem extension."""
+
+
+@guppy.hugr_op(quantum_op("Reset", ext=QSYSTEM_EXTENSION), module=qsystem)
+@no_type_check
+def reset(q: qubit) -> None: ...
+
+
+# TODO
+# @guppy.hugr_op(quantum_op("TryQAlloc", ext=QSYSTEM_EXTENSION), module=qsystem)
+# @no_type_check
+# def _try_qalloc() -> Option[qubit]:
+#     ..
+
+
+@guppy.hugr_op(quantum_op("QFree", ext=QSYSTEM_EXTENSION), module=qsystem)
+@no_type_check
+def qfree(q: qubit @ owned) -> None: ...
 
 
 # ------------------------------------------------------
@@ -59,5 +94,15 @@ def _zz_phase(q1: qubit, q2: qubit, angle: float) -> None:
     """ZZPhase operation from the qsystem extension.
 
     See `guppylang.std.qsystem.phased_x` for a public definition that
+    accepts angle parameters.
+    """
+
+
+@guppy.hugr_op(quantum_op("Rz", ext=QSYSTEM_EXTENSION), module=qsystem)
+@no_type_check
+def _rz(q: qubit, angle: float) -> None:
+    """Rz operation from the qsystem extension.
+
+    See `guppylang.std.qsystem.rz` for a public definition that
     accepts angle parameters.
     """

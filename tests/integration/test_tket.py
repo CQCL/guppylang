@@ -12,17 +12,17 @@ https://github.com/CQCL/tket2/issues/new
 
 from importlib.util import find_spec
 
-import math
 import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std.angles import pi
-from guppylang.std.builtins import owned, py
+from guppylang.std.builtins import owned
 from guppylang.std import quantum
 from guppylang.std.qsystem.functional import phased_x
 from guppylang.std.quantum import measure, qubit
-from guppylang.std.quantum_functional import rz, zz_max
+from guppylang.std.quantum_functional import rz
+from guppylang.std.qsystem.functional import zz_max
 from tests.util import guppy_to_circuit
 
 tket2_installed = find_spec("tket2") is not None

@@ -8,7 +8,6 @@ from hugr import tys as ht
 
 from guppylang.decorator import guppy
 from guppylang.std._internal.compiler.quantum import (
-    QSYSTEM_EXTENSION,
     InoutMeasureCompiler,
     RotationCompiler,
 )
@@ -104,11 +103,6 @@ def tdg(q: qubit) -> None: ...
 @guppy.hugr_op(quantum_op("Sdg"))
 @no_type_check
 def sdg(q: qubit) -> None: ...
-
-
-@guppy.hugr_op(quantum_op("ZZMax", ext=QSYSTEM_EXTENSION))
-@no_type_check
-def zz_max(q1: qubit, q2: qubit) -> None: ...
 
 
 @guppy.custom(RotationCompiler("Rz"))
