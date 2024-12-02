@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 import hugr.std
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr.build.dfg import DfBase
 
 from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import CustomCallCompiler
