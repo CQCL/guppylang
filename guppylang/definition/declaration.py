@@ -141,8 +141,6 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
             self.declaration, *args, instantiation=func_ty, type_args=type_args
         )
         return CallReturnWires(
-            # TODO: Replace below with `list(call[:num_returns])` once
-            #  https://github.com/CQCL/hugr/issues/1454 is fixed.
-            regular_returns=[call[i] for i in range(num_returns)],
+            regular_returns=list(call[:num_returns]),
             inout_returns=list(call[num_returns:]),
         )
