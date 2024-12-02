@@ -28,7 +28,7 @@ from guppylang.std.quantum_functional import (
     toffoli,
     reset,
     quantum_functional,
-    measure_return,
+    project_z,
 )
 
 
@@ -102,7 +102,7 @@ def test_measure_ops(validate):
 
     @compile_quantum_guppy
     def test(q1: qubit @ owned, q2: qubit @ owned) -> tuple[bool, bool]:
-        q1, b1 = measure_return(q1)
+        q1, b1 = project_z(q1)
         q1 = discard(q1)
         q2 = reset(q2)
         b2 = measure(q2)

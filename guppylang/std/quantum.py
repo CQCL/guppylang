@@ -32,17 +32,8 @@ class qubit:
 
     @guppy
     @no_type_check
-    def measure_return(self: "qubit") -> bool:
+    def project_z(self: "qubit") -> bool:
         return project_z(self)
-
-    @guppy
-    @no_type_check
-    def measure_reset(self: "qubit") -> bool:
-        """Projective measure and reset without discarding the qubit."""
-        res = self.measure_return()
-        if res:
-            x(self)
-        return res
 
     @guppy
     @no_type_check

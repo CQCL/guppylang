@@ -4,7 +4,7 @@ from guppylang.std.builtins import owned
 from guppylang.std.quantum import qubit, measure
 
 import guppylang.std.quantum_functional as quantum_functional
-from guppylang.std.quantum_functional import cx, t, h, measure_return
+from guppylang.std.quantum_functional import cx, t, h, project_z
 from guppylang.tys.ty import NoneType
 
 import pytest
@@ -44,7 +44,7 @@ def test_linear_return_order(validate):
 
     @guppy(module)
     def test(q: qubit @owned) -> tuple[qubit, bool]:
-        return measure_return(q)
+        return project_z(q)
 
     validate(module.compile())
 

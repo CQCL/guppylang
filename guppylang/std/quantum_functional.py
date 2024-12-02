@@ -143,6 +143,6 @@ def reset(q: qubit @ owned) -> qubit:
 
 @guppy(quantum_functional)
 @no_type_check
-def measure_return(q: qubit @ owned) -> tuple[qubit, bool]:
+def project_z(q: qubit @ owned) -> tuple[qubit, bool]:
     b = quantum.project_z(q)
     return q, b
