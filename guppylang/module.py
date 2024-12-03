@@ -351,7 +351,9 @@ class GuppyModule:
         graph.metadata["name"] = self.name
 
         # Lower definitions to Hugr
-        ctx = CompiledGlobals(checked_defs, graph)
+        ctx = CompiledGlobals(
+            checked_defs, graph, self._imported_globals | self._globals
+        )
         for defn in self._checked_defs.values():
             ctx.compile(defn)
 

@@ -370,8 +370,7 @@ def test_self_qubit(validate):
     def test() -> bool:
         q0 = qubit()
 
-        result = q0.measure_reset()
-        q0.measure_return()
+        result = q0.project_z()
         q0.measure()
         qubit().discard()
         return result

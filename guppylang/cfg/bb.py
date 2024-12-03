@@ -7,7 +7,14 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 from typing_extensions import Self
 
 from guppylang.ast_util import AstNode, name_nodes_in_ast
-from guppylang.nodes import DesugaredListComp, NestedFunctionDef, PyExpr
+from guppylang.nodes import (
+    DesugaredArrayComp,
+    DesugaredGenerator,
+    DesugaredGeneratorExpr,
+    DesugaredListComp,
+    NestedFunctionDef,
+    PyExpr,
+)
 
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import BaseCFG
@@ -144,19 +151,30 @@ class VariableVisitor(ast.NodeVisitor):
                 self.visit(value)
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> None:
+        self._handle_comprehension(node.generators, node.elt)
+
+    def visit_DesugaredArrayComp(self, node: DesugaredArrayComp) -> None:
+        self._handle_comprehension([node.generator], node.elt)
+
+    def visit_DesugaredGeneratorExpr(self, node: DesugaredGeneratorExpr) -> None:
+        self._handle_comprehension(node.generators, node.elt)
+
+    def _handle_comprehension(
+        self, generators: list[DesugaredGenerator], elt: ast.expr
+    ) -> None:
         # Names bound in the comprehension are only available inside, so we shouldn't
         # update `self.stats` with assignments
         inner_visitor = VariableVisitor(self.bb)
         inner_stats = inner_visitor.stats
 
         # The generators are evaluated left to right
-        for gen in node.generators:
+        for gen in generators:
             inner_visitor.visit(gen.iter_assign)
             inner_visitor.visit(gen.hasnext_assign)
             inner_visitor.visit(gen.next_assign)
             for cond in gen.ifs:
                 inner_visitor.visit(cond)
-        inner_visitor.visit(node.elt)
+        inner_visitor.visit(elt)
 
         self.stats.used |= {
             x: n for x, n in inner_stats.used.items() if x not in self.stats.assigned

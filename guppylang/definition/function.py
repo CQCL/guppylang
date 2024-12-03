@@ -12,7 +12,7 @@ from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.hugr.node_port import ToNode
 from hugr.package import FuncDefnPointer
 
-from guppylang.ast_util import AstNode, annotate_location, with_loc
+from guppylang.ast_util import AstNode, annotate_location, with_loc, with_type
 from guppylang.checker.cfg_checker import CheckedCFG
 from guppylang.checker.core import Context, Globals, Place, PyScope
 from guppylang.checker.errors.generic import ExpectedError
@@ -130,7 +130,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.ty, args, node, ctx)
         node = with_loc(node, GlobalCall(def_id=self.id, args=args, type_args=inst))
-        return node, ty
+        return with_type(ty, node), ty
 
 
 @dataclass(frozen=True)
@@ -243,9 +243,7 @@ def compile_call(
     num_returns = len(type_to_row(ty.output))
     call = dfg.builder.call(func, *args, instantiation=func_ty, type_args=type_args)
     return CallReturnWires(
-        # TODO: Replace below with `list(call[:num_returns])` once
-        #  https://github.com/CQCL/hugr/issues/1454 is fixed.
-        regular_returns=[call[i] for i in range(num_returns)],
+        regular_returns=list(call[:num_returns]),
         inout_returns=list(call[num_returns:]),
     )
 

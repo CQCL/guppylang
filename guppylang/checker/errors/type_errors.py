@@ -212,3 +212,20 @@ class AssignNonPlaceHelp(Help):
         "field `{field.name}`"
     )
     field: StructField
+
+
+@dataclass(frozen=True)
+class ArrayComprUnknownSizeError(Error):
+    title: ClassVar[str] = "Array comprehension with nonstatic size"
+    span_label: ClassVar[str] = "Cannot infer the size of this array comprehension ..."
+
+    @dataclass(frozen=True)
+    class IfGuard(Note):
+        span_label: ClassVar[str] = "since it depends on this condition"
+
+    @dataclass(frozen=True)
+    class DynamicIterator(Note):
+        span_label: ClassVar[str] = (
+            "since the number of elements yielded by this iterator is not statically "
+            "known"
+        )

@@ -22,6 +22,7 @@ from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
 from guppylang.nodes import (
     DesugaredGenerator,
+    DesugaredGeneratorExpr,
     DesugaredListComp,
     IterEnd,
     IterHasNext,
@@ -313,8 +314,18 @@ class ExprBuilder(ast.NodeTransformer):
         # The final value is stored in the temporary variable
         return make_var(tmp, node)
 
-    def visit_ListComp(self, node: ast.ListComp) -> ast.AST:
+    def visit_ListComp(self, node: ast.ListComp) -> DesugaredListComp:
         check_lists_enabled(node)
+        generators, elt = self._build_comprehension(node.generators, node.elt, node)
+        return with_loc(node, DesugaredListComp(elt=elt, generators=generators))
+
+    def visit_GeneratorExp(self, node: ast.GeneratorExp) -> DesugaredGeneratorExpr:
+        generators, elt = self._build_comprehension(node.generators, node.elt, node)
+        return with_loc(node, DesugaredGeneratorExpr(elt=elt, generators=generators))
+
+    def _build_comprehension(
+        self, generators: list[ast.comprehension], elt: ast.expr, node: ast.AST
+    ) -> tuple[list[DesugaredGenerator], ast.expr]:
         # Check for illegal expressions
         illegals = find_nodes(is_illegal_in_list_comp, node)
         if illegals:
@@ -329,7 +340,7 @@ class ExprBuilder(ast.NodeTransformer):
         # Desugar into statements that create the iterator, check for a next element,
         # get the next element, and finalise the iterator.
         gens = []
-        for g in node.generators:
+        for g in generators:
             if g.is_async:
                 raise GuppyError(UnsupportedError(g, "Async generators"))
             g.iter = self.visit(g.iter)
@@ -352,8 +363,8 @@ class ExprBuilder(ast.NodeTransformer):
             )
             gens.append(desugared)
 
-        node.elt = self.visit(node.elt)
-        return with_loc(node, DesugaredListComp(elt=node.elt, generators=gens))
+        elt = self.visit(elt)
+        return gens, elt
 
     def visit_Call(self, node: ast.Call) -> ast.AST:
         return is_py_expression(node) or self.generic_visit(node)

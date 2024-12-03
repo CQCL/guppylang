@@ -1,6 +1,7 @@
 import ast
 from collections.abc import Iterable, Iterator, Sequence
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
+from functools import partial
 from typing import Any, TypeGuard, TypeVar
 
 import hugr
@@ -15,7 +16,7 @@ from hugr.build.dfg import DP, DfBase
 from hugr.std.collections import ListVal
 from typing_extensions import assert_never
 
-from guppylang.ast_util import AstVisitor, get_type, with_loc, with_type
+from guppylang.ast_util import AstNode, AstVisitor, get_type
 from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import Variable
 from guppylang.checker.errors.generic import UnsupportedError
@@ -23,9 +24,14 @@ from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import CompilerBase, DFContainer
 from guppylang.compiler.hugr_extension import PartialOp, UnsupportedOp
 from guppylang.definition.custom import CustomFunctionDef
-from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
+from guppylang.definition.value import (
+    CallReturnWires,
+    CompiledCallableDef,
+    CompiledValueDef,
+)
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
+    DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
     FieldAccessAndDrop,
@@ -41,12 +47,14 @@ from guppylang.nodes import (
     TensorCall,
     TypeApply,
 )
+from guppylang.std._internal.compiler.array import array_repeat
 from guppylang.std._internal.compiler.list import (
     list_new,
-    list_push,
 )
+from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     get_element_type,
+    int_type,
     is_bool_type,
     is_list_type,
 )
@@ -59,6 +67,7 @@ from guppylang.tys.ty import (
     InputFlags,
     NoneType,
     NumericType,
+    OpaqueType,
     TupleType,
     Type,
     type_to_row,
@@ -333,9 +342,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             call = self.builder.add_op(
                 ops.CallIndirect(func_ty.to_hugr()), func, *consumed_wires
             )
-            # TODO: Replace below with `list(call[:num_returns])` once
-            #  https://github.com/CQCL/hugr/issues/1454 is fixed.
-            regular_returns: list[Wire] = [call[i] for i in range(num_returns)]
+            regular_returns: list[Wire] = list(call[:num_returns])
             inout_returns = call[num_returns:]
             self._update_inout_ports(consumed_args, inout_returns, func_ty)
             return regular_returns, other_args
@@ -461,68 +468,97 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._pack_returns([], NoneType())
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> Wire:
+        # Make up a name for the list under construction and bind it to an empty list
+        list_ty = get_type(node)
+        assert isinstance(list_ty, OpaqueType)
+        elem_ty = get_element_type(list_ty)
+        list_place = Variable(next(tmp_vars), list_ty, node)
+        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])
+        with self._build_generators(node.generators, [list_place]):
+            elt_port = self.visit(node.elt)
+            list_port = self.dfg[list_place]
+            [], [self.dfg[list_place]] = self._build_method_call(
+                list_ty, "append", node, [list_port, elt_port], list_ty.args
+            )
+        return self.dfg[list_place]
+
+    def visit_DesugaredArrayComp(self, node: DesugaredArrayComp) -> Wire:
+        # Allocate an uninitialised array of the desired size and a counter variable
+        array_ty = get_type(node)
+        assert isinstance(array_ty, OpaqueType)
+        array_var = Variable(next(tmp_vars), array_ty, node)
+        count_var = Variable(next(tmp_vars), int_type(), node)
+        # See https://github.com/CQCL/guppylang/issues/629
+        hugr_elt_ty = ht.Option(node.elt_ty.to_hugr())
+        # Initialise array with `None`s
+        make_none = self.builder.define_function("init_none", [], [hugr_elt_ty])
+        make_none.set_outputs(make_none.add_op(ops.Tag(0, hugr_elt_ty)))
+        make_none = self.builder.load_function(make_none)
+        self.dfg[array_var] = self.builder.add_op(
+            array_repeat(hugr_elt_ty, node.length.to_arg().to_hugr()), make_none
+        )
+        self.dfg[count_var] = self.builder.load(
+            hugr.std.int.IntVal(0, width=NumericType.INT_WIDTH)
+        )
+        with self._build_generators([node.generator], [array_var, count_var]):
+            elt = self.visit(node.elt)
+            array, count = self.dfg[array_var], self.dfg[count_var]
+            [], [self.dfg[array_var]] = self._build_method_call(
+                array_ty, "__setitem__", node, [array, count, elt], array_ty.args
+            )
+            # Update `count += 1`
+            one = self.builder.load(hugr.std.int.IntVal(1, width=NumericType.INT_WIDTH))
+            [self.dfg[count_var]], [] = self._build_method_call(
+                int_type(), "__add__", node, [count, one]
+            )
+        return self.dfg[array_var]
+
+    def _build_method_call(
+        self,
+        ty: Type,
+        method: str,
+        node: AstNode,
+        args: list[Wire],
+        type_args: Sequence[Argument] | None = None,
+    ) -> CallReturnWires:
+        func = self.globals.get_instance_func(ty, method)
+        assert func is not None
+        return func.compile_call(args, type_args or [], self.dfg, self.globals, node)
+
+    @contextmanager
+    def _build_generators(
+        self, gens: list[DesugaredGenerator], loop_vars: list[Variable]
+    ) -> Iterator[None]:
+        """Context manager to build and enter the `TailLoop`s for a list of generators.
+
+        The provided `loop_vars` will be threaded through and will be available inside
+        the loops.
+        """
         from guppylang.compiler.stmt_compiler import StmtCompiler
 
         compiler = StmtCompiler(self.globals)
-
-        # Make up a name for the list under construction and bind it to an empty list
-        list_ty = get_type(node)
-        elem_ty = get_element_type(list_ty)
-        list_place = Variable(next(tmp_vars), list_ty, node)
-        list_name = with_type(list_ty, with_loc(node, PlaceNode(place=list_place)))
-        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])
-
-        def compile_generators(elt: ast.expr, gens: list[DesugaredGenerator]) -> None:
-            """Helper function to generate nested TailLoop nodes for generators"""
-            # If there are no more generators left, just append the element to the list
-            if not gens:
-                list_port, elt_port = self.visit(list_name), self.visit(elt)
-                elt_ty = get_type(elt)
-                if elt_ty.linear:
-                    elt_ty_opt = ht.Option(elt_ty.to_hugr())
-                    elt_opt_port = self.builder.add_op(ops.Tag(1, elt_ty_opt), elt_port)
-                    push = self.builder.add_op(
-                        list_push(elt_ty_opt), list_port, elt_opt_port
-                    )
-                else:
-                    push = self.builder.add_op(
-                        list_push(elt_ty.to_hugr()), list_port, elt_port
-                    )
-                self.dfg[list_place] = push
-                return
-
-            # Otherwise, compile the first iterator and construct a TailLoop
-            gen, *gens = gens
-            compiler.compile_stmts([gen.iter_assign], self.dfg)
-            assert isinstance(gen.iter, PlaceNode)
-            assert isinstance(gen.hasnext, PlaceNode)
-            inputs = [gen.iter, list_name]
-            with self._new_loop(inputs, gen.hasnext):
-                # If there is a next element, compile it and continue with the next
-                # generator
+        with ExitStack() as stack:
+            for gen in gens:
+                # Build the generator
+                compiler.compile_stmts([gen.iter_assign], self.dfg)
+                assert isinstance(gen.iter, PlaceNode)
+                assert isinstance(gen.hasnext, PlaceNode)
+                inputs = [gen.iter] + [PlaceNode(place=var) for var in loop_vars]
+                # Remember to finalize the iterator once we are done with it. Note that
+                # we need to use partial in the callback, so that we bind the *current*
+                # value of `gen` instead of only last
+                stack.callback(partial(lambda gen: self.visit(gen.iterend), gen))
+                # Enter a new tail loop
+                stack.enter_context(self._new_loop(inputs, gen.hasnext))
+                # Enter a conditional checking if we have a next element
                 compiler.compile_stmts([gen.hasnext_assign], self.dfg)
-                with self._if_true(gen.hasnext, inputs):
-
-                    def compile_ifs(ifs: list[ast.expr]) -> None:
-                        """Helper function to compile a series of if-guards into nested
-                        Conditional nodes."""
-                        if ifs:
-                            if_expr, *ifs = ifs
-                            # If the condition is true, continue with the next one
-                            with self._if_true(if_expr, inputs):
-                                compile_ifs(ifs)
-                        else:
-                            # If there are no guards left, compile the next generator
-                            compile_generators(elt, gens)
-
-                    compiler.compile_stmts([gen.next_assign], self.dfg)
-                    compile_ifs(gen.ifs)
-
-            # After the loop is done, we have to finalize the iterator
-            self.visit(gen.iterend)
-
-        compile_generators(node.elt, node.generators)
-        return self.visit(list_name)
+                stack.enter_context(self._if_true(gen.hasnext, inputs))
+                compiler.compile_stmts([gen.next_assign], self.dfg)
+                # Enter nested conditionals for each if guard on the generator
+                for if_expr in gen.ifs:
+                    stack.enter_context(self._if_true(if_expr, inputs))
+            # Yield control to the caller to build inside the loop
+            yield
 
     def visit_BinOp(self, node: ast.BinOp) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")

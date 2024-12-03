@@ -6,7 +6,7 @@ from guppylang.module import GuppyModule
 from guppylang.std.builtins import array, owned, mem_swap
 from tests.util import compile_guppy
 
-from guppylang.std.quantum import qubit
+from guppylang.std.quantum import qubit, discard
 import guppylang.std.quantum as quantum
 
 
@@ -247,6 +247,19 @@ def test_generic_function(validate):
     validate(module.compile())
 
 
+def test_linear_for_loop(validate):
+    module = GuppyModule("test")
+    module.load(qubit, discard)
+
+    @guppy(module)
+    def main() -> None:
+        qs = array(qubit(), qubit(), qubit())
+        for q in qs:
+            discard(q)
+
+    validate(module.compile())
+
+
 def test_exec_array(validate, run_int_fn):
     module = GuppyModule("test")
 
@@ -258,6 +271,28 @@ def test_exec_array(validate, run_int_fn):
     package = module.compile()
     validate(package)
     run_int_fn(package, expected=6)
+
+
+def test_exec_array_loop(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2, 3, 4, 5, 6, 7)
+        s = 0
+        for x in xs:
+            if x % 2 == 0:
+                continue
+            if x > 5:
+                break
+            s += x
+        return s
+
+    package = module.compile()
+    validate(package)
+
+    # TODO: Enable execution once lowering for missing ops is implemented
+    # run_int_fn(package, expected=9)
 
 
 def test_mem_swap(validate):
