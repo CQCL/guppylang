@@ -57,7 +57,7 @@ jobs:
         body: |
             The doc building workflow has failed on the main branch.
 
-            [https://github.com/CQCL/guppylang/actions/runs/${{ github.run_id }}](Please investigate).
+            [Please investigate](https://github.com/CQCL/guppylang/actions/runs/${{ github.run_id }}).
         unique-label: "docs-fail"
         other-labels: "bug"
 
