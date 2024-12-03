@@ -5,7 +5,7 @@ from typing import Any, cast
 import hugr.tys as ht
 from hugr import Hugr, Node, Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
-from hugr.ops import FuncDefn
+from hugr.ops import FuncDefn, Input
 from hugr.tys import Bool
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
@@ -151,20 +151,26 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 )
 
                 circ = Hugr.load_json(Tk2Circuit(self.input_circuit).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
-
                 mapping = module.hugr.insert_hugr(circ)
                 hugr_func = mapping[circ.root]
 
+                # We need to remove input bits from both signature and input node.
                 node_data = module.hugr.get(hugr_func)
-
                 # TODO: Error if hugr isn't FuncDefn?
                 if node_data and isinstance(node_data.op, FuncDefn):
                     func_defn = node_data.op
                     func_defn.f_name = self.name
-
                     num_bools = func_defn.inputs.count(Bool)
                     for _ in range(num_bools):
                         func_defn.inputs.remove(Bool)
+
+                for child in module.hugr.children(hugr_func):
+                    node_data = module.hugr.get(child)
+                    if node_data and isinstance(node_data.op, Input):
+                        input_types = node_data.op.types
+                        num_bools = input_types.count(Bool)
+                        for _ in range(num_bools):
+                            input_types.remove(Bool)
 
             else:
                 raise GuppyError(PytketNotCircuit(self.defined_at))
