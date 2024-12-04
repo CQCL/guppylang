@@ -150,9 +150,24 @@ class StmtChecker(AstVisitor[BBStatement]):
         return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 
     @_check_assign.register
+    def _check_tuple_assign(
+        self, lhs: ast.Tuple, rhs: ast.expr, rhs_ty: Type
+    ) -> AnyUnpack:
+        return self._check_unpack_assign(lhs, rhs, rhs_ty)
+
+    @_check_assign.register
+    def _check_list_assign(
+        self, lhs: ast.List, rhs: ast.expr, rhs_ty: Type
+    ) -> AnyUnpack:
+        return self._check_unpack_assign(lhs, rhs, rhs_ty)
+
     def _check_unpack_assign(
         self, lhs: ast.Tuple | ast.List, rhs: ast.expr, rhs_ty: Type
-    ) -> ast.expr:
+    ) -> AnyUnpack:
+        """Helper function to check unpacking assignments.
+
+        These are the ones where the LHS is either a tuple or a list.
+        """
         # Parse LHS into `left, *starred, right`
         pattern = parse_unpack_pattern(lhs)
         left, starred, right = pattern.left, pattern.starred, pattern.right
