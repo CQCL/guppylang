@@ -201,9 +201,11 @@ class WrongNumberOfUnpacksError(Error):
         diff = self.expected - self.actual
         if diff < 0:
             msg = "Unexpected assignment " + ("targets" if diff < -1 else "target")
+            at_least = "at least " if self.at_least else ""
         else:
             msg = "Not enough assignment targets"
-        at_least = "at least " if self.at_least else ""
+            assert not self.at_least
+            at_least = ""
         return f"{msg} (expected {self.expected}, got {at_least}{self.actual})"
 
 
