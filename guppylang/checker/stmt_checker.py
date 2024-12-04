@@ -241,7 +241,8 @@ class StmtChecker(AstVisitor[BBStatement]):
                     else ty.element_types[len(left) :]
                 )
                 if not all_equal(starred_tys):
-                    raise GuppyError(StarredTupleUnpackError(starred, ty))
+                    tuple_ty = TupleType(starred_tys)
+                    raise GuppyError(StarredTupleUnpackError(starred, tuple_ty))
             tys = ty.element_types
             elts = expr.elts if isinstance(expr, ast.Tuple) else [expr] * len(tys)
             return TupleUnpack(pattern), elts, tys
