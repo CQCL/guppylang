@@ -190,6 +190,7 @@ class WrongNumberOfUnpacksError(Error):
     title: ClassVar[str] = "{prefix} values to unpack"
     expected: int
     actual: int
+    at_least: bool
 
     @property
     def prefix(self) -> str:
@@ -202,7 +203,43 @@ class WrongNumberOfUnpacksError(Error):
             msg = "Unexpected assignment " + ("targets" if diff < -1 else "target")
         else:
             msg = "Not enough assignment targets"
-        return f"{msg} (expected {self.expected}, got {self.actual})"
+        at_least = "at least " if self.at_least else ""
+        return f"{msg} (expected {self.expected}, got {at_least}{self.actual})"
+
+
+@dataclass(frozen=True)
+class UnpackableError(Error):
+    title: ClassVar[str] = "Unpackable"
+    span_label: ClassVar[str] = "Expression of type `{ty}` cannot be unpacked"
+    ty: Type
+
+    @dataclass(frozen=True)
+    class NonStaticIter(Note):
+        message: ClassVar[str] = (
+            "Unpacking of iterable types like `{ty}` is only allowed if the number of "
+            "items yielded by the iterator is statically known. This is not the case "
+            "for `{ty}`."
+        )
+
+    @dataclass(frozen=True)
+    class GenericSize(Note):
+        message: ClassVar[str] = (
+            "Unpacking of iterable types like `{ty}` is only allowed if the number of "
+            "items yielded by the iterator is statically known. Here, the number of "
+            "items `{num}` is generic and can change between different function "
+            "invocations."
+        )
+        num: Const
+
+
+@dataclass(frozen=True)
+class StarredTupleUnpackError(Error):
+    title: ClassVar[str] = "Invalid starred unpacking"
+    span_label: ClassVar[str] = (
+        "Expression of type `{ty}` cannot be collected into a starred assignment since "
+        "the yielded items have different types"
+    )
+    ty: Type
 
 
 @dataclass(frozen=True)
