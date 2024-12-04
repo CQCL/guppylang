@@ -1,11 +1,5 @@
-Guppy Compiler API Documentation
-================================
-
-This is the API documentation for the Guppy compiler.
-
-.. note::
-   This page is designed for contributors to the Guppy compiler, not users of the language.
-   See TODO for the language documentation.
+Compiler API Docs
+=================
 
 .. autosummary::
    :toctree: generated
