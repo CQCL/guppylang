@@ -14,8 +14,7 @@ def test_unpack_array(validate):
         q1, q2, q3 = qs
         return q1, q2, q3
 
-    # validate(module.compile())
-    module.check()
+    validate(module.compile())
 
 
 def test_unpack_starred(validate):
@@ -32,8 +31,7 @@ def test_unpack_starred(validate):
         [*qs] = qs
         return q1, q2, q3, q4, q5, q6, qs
 
-    # validate(module.compile())
-    module.check()
+    validate(module.compile())
 
 
 def test_unpack_starred_empty(validate):
@@ -45,8 +43,7 @@ def test_unpack_starred_empty(validate):
         q1, *empty, q2 = qs
         return q1, empty, q2
 
-    # validate(module.compile())
-    module.check()
+    validate(module.compile())
 
 
 def test_unpack_big_iterable(validate):
@@ -59,8 +56,7 @@ def test_unpack_big_iterable(validate):
         q1, *qs, q2 = qs
         return q1, qs, q2
 
-    # validate(module.compile())
-    module.check()
+    validate(module.compile())
 
 
 def test_unpack_range(validate, run_int_fn):
@@ -71,9 +67,8 @@ def test_unpack_range(validate, run_int_fn):
         [_, x, *_, y, _] = range(10)
         return x + y
 
-    module.check()
-    # compiled = module.compile()
-    # validate(compiled)
+    compiled = module.compile()
+    validate(compiled)
     # TODO: Enable execution test once array lowering is fully supported
     # run_int_fn(compiled, expected=9)
 
@@ -86,8 +81,7 @@ def test_unpack_tuple_starred(validate, run_int_fn):
         x, *ys, z = 1, 2, 3, 4
         return ys
 
-    # validate(module.compile())
-    module.check()
+    validate(module.compile())
 
 
 def test_unpack_nested(validate, run_int_fn):
@@ -107,5 +101,4 @@ def test_unpack_nested(validate, run_int_fn):
         (x, [y, *z, _], *a), *b, c = xs
         return x, y, z, a, b, c
 
-    # validate(module.compile())
-    module.check()
+    validate(module.compile())
