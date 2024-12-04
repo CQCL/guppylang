@@ -1,0 +1,8 @@
+Error: Unsupported (at $FILE:7:14)
+  | 
+5 | @compile_guppy
+6 | def foo(xs: array[int, 1]) -> tuple[int, int]:
+7 |     return 0, *xs
+  |               ^^^ This expression is not supported
+
+Guppy compilation failed due to 1 previous error

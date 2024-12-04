@@ -753,6 +753,10 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             f"`{ast.unparse(node)}`"
         )
 
+    def generic_visit(self, node: ast.expr) -> NoReturn:
+        """Called if no explicit visitor function exists for a node."""
+        raise GuppyError(UnsupportedError(node, "This expression", singular=True))
+
 
 def check_type_against(
     act: Type, exp: Type, node: AstNode, kind: str = "expression"
