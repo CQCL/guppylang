@@ -39,6 +39,11 @@ class ConstBase(Transformable["Const"], ABC):
         """The existential type variables contained in this constant."""
         return set()
 
+    def __str__(self) -> str:
+        from guppylang.tys.printing import TypePrinter
+
+        return TypePrinter().visit(self.cast())
+
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this constant."""
         visitor.visit(self)
