@@ -65,7 +65,7 @@ jobs:
         run: uv sync --extra pytket
 
       - name: Rerun `py(...)` expression tests and pytket lowering with tket2 installed
-        run: uv run pytest tests/integration/test_py.py tests/error/test_py_errors.py tests/integration/test_tket.py
+        run: uv run pytest tests/integration/test_py.py tests/error/test_py_errors.py tests/integration/test_tket.py /tests/integration/test_pytket_circuits.py
 
   test-coverage:
     name: Check Python (3.13) with coverage

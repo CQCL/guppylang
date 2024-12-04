@@ -475,6 +475,16 @@ class _Guppy:
         self, input_circuit: Any, module: GuppyModule | None = None
     ) -> PytketDecorator:
         """Adds a pytket circuit function definition with explicit signature."""
+        err_msg = "Only pytket circuits can be passed to guppy.pytket"
+        try:
+            import pytket
+
+            if not isinstance(input_circuit, pytket.circuit.Circuit):
+                raise TypeError(err_msg) from None
+
+        except ImportError:
+            raise TypeError(err_msg) from None
+
         mod = module or self.get_module()
 
         def func(f: PyFunc) -> RawPytketDef:

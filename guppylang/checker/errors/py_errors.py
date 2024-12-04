@@ -58,13 +58,5 @@ class Tket2NotInstalled(Error):
 @dataclass(frozen=True)
 class PytketSignatureMismatch(Error):
     title: ClassVar[str] = "Signature mismatch"
-    span_label: ClassVar[str] = (
-        "Function signature {name} doesn't match provided pytket circuit"
-    )
+    span_label: ClassVar[str] = "Signature {name} doesn't match provided pytket circuit"
     name: str
-
-
-@dataclass(frozen=True)
-class PytketNotCircuit(Error):
-    title: ClassVar[str] = "Input not circuit"
-    span_label: ClassVar[str] = "Provided input is not a pytket circuit"

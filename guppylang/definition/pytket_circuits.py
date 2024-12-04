@@ -2,16 +2,13 @@ import ast
 from dataclasses import dataclass, field
 from typing import Any, cast
 
-import hugr.tys as ht
-from hugr import Hugr, Node, Wire
+import hugr.build.function as hf
+from hugr import Hugr, OutPort, Wire, ops, tys, val
 from hugr.build.dfg import DefinitionBuilder, OpVar
-from hugr.ops import FuncDefn, Input
-from hugr.tys import Bool
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals, PyScope
 from guppylang.checker.errors.py_errors import (
-    PytketNotCircuit,
     PytketSignatureMismatch,
     Tket2NotInstalled,
 )
@@ -25,6 +22,7 @@ from guppylang.definition.common import (
 from guppylang.definition.declaration import BodyNotEmptyError
 from guppylang.definition.function import (
     PyFunc,
+    compile_call,
     load_with_args,
     parse_py_func,
 )
@@ -41,7 +39,6 @@ from guppylang.tys.ty import (
     InputFlags,
     Type,
     row_to_type,
-    type_to_row,
 )
 
 
@@ -100,13 +97,13 @@ class RawPytketDef(ParsableDef):
                         circuit_signature.inputs == stub_signature.inputs
                         and circuit_signature.output == stub_signature.output
                     ):
+                        # TODO: Implement pretty-printing for signatures in order to add
+                        # a note for expected vs. actual types.
                         raise GuppyError(PytketSignatureMismatch(func_ast, self.name))
                 except ImportError:
                     err = Tket2NotInstalled(func_ast)
                     err.add_sub_diagnostic(Tket2NotInstalled.InstallInstruction(None))
                     raise GuppyError(err) from None
-            else:
-                raise GuppyError(PytketNotCircuit(func_ast))
         except ImportError:
             pass
 
@@ -154,26 +151,29 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 mapping = module.hugr.insert_hugr(circ)
                 hugr_func = mapping[circ.root]
 
-                # We need to remove input bits from both signature and input node.
-                node_data = module.hugr.get(hugr_func)
-                # TODO: Error if hugr isn't FuncDefn?
-                if node_data and isinstance(node_data.op, FuncDefn):
-                    func_defn = node_data.op
-                    func_defn.f_name = self.name
-                    num_bools = func_defn.inputs.count(Bool)
-                    for _ in range(num_bools):
-                        func_defn.inputs.remove(Bool)
+                func_type = self.ty.to_hugr_poly()
+                outer_func = module.define_function(
+                    self.name, func_type.body.input, func_type.body.output
+                )
 
+                # Initialise every input bit in the circuit as false.
+                # TODO: Provide the option for the user to pass this input as well.
+                bool_wires: list[OutPort] = []
                 for child in module.hugr.children(hugr_func):
                     node_data = module.hugr.get(child)
-                    if node_data and isinstance(node_data.op, Input):
+                    if node_data and isinstance(node_data.op, ops.Input):
                         input_types = node_data.op.types
-                        num_bools = input_types.count(Bool)
+                        num_bools = input_types.count(tys.Bool)
                         for _ in range(num_bools):
-                            input_types.remove(Bool)
+                            bool_node = outer_func.load(val.FALSE)
+                            bool_wires.append(*bool_node.outputs())
 
-            else:
-                raise GuppyError(PytketNotCircuit(self.defined_at))
+                call_node = outer_func.call(
+                    hugr_func, *(list(outer_func.inputs()) + bool_wires)
+                )
+                # Pytket circuit hugr has qubit and bool wires in the opposite order.
+                outer_func.set_outputs(*reversed(list(call_node.outputs())))
+
         except ImportError:
             pass
 
@@ -184,7 +184,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
             self.ty,
             self.python_scope,
             self.input_circuit,
-            hugr_func,
+            outer_func,
         )
 
     def check_call(
@@ -220,7 +220,7 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
         func_df: The Hugr function definition.
     """
 
-    func_def: Node
+    func_def: hf.Function
 
     def load_with_args(
         self,
@@ -242,21 +242,5 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
-        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
-        num_returns = len(type_to_row(self.ty.output))
-        call = dfg.builder.call(
-            self.func_def, *args, instantiation=func_ty, type_args=type_args
-        )
-        # Negative index slicing doesn't work when num_returns is 0.
-        if num_returns == 0:
-            return CallReturnWires(
-                regular_returns=[],
-                inout_returns=list(call[0:]),
-            )
-        else:
-            # Circuit function returns are the other way round to Guppy returns.
-            return CallReturnWires(
-                regular_returns=list(call[-num_returns:]),
-                inout_returns=list(call[:-num_returns]),
-            )
+        # Use implementation from function definition.
+        return compile_call(args, type_args, dfg, self.ty, self.func_def)
