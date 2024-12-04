@@ -33,7 +33,6 @@ def test_single_qubit_circuit(validate):
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
-@pytest.mark.skip("remove this")
 def test_multi_qubit_circuit(validate):
     from pytket import Circuit
 
@@ -76,7 +75,6 @@ def test_measure(validate):
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
-@pytest.mark.skip("remove this")
 def test_measure_multiple(validate):
     from pytket import Circuit
 
@@ -98,7 +96,6 @@ def test_measure_multiple(validate):
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
-@pytest.mark.skip("remove this")
 def test_measure_not_last(validate):
     from pytket import Circuit
 
