@@ -27,6 +27,7 @@ from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.function import RawFunctionDef
 from guppylang.definition.module import ModuleDef
 from guppylang.definition.parameter import ParamDef
+from guppylang.definition.pytket_circuits import RawPytketDef
 from guppylang.definition.struct import CheckedStructDef
 from guppylang.definition.ty import TypeDef
 from guppylang.error import pretty_errors
@@ -236,6 +237,16 @@ class GuppyModule:
         decl = RawFunctionDecl(DefId.fresh(self), f.__name__, None, f, get_py_scope(f))
         self.register_def(decl, instance)
         return decl
+
+    def register_pytket_func(
+        self, f: PyFunc, input_value: Any, instance: TypeDef | None = None
+    ) -> RawPytketDef:
+        """Registers a pytket circuit function as belonging to this Guppy module."""
+        func = RawPytketDef(
+            DefId.fresh(self), f.__name__, None, f, get_py_scope(f), input_value
+        )
+        self.register_def(func, instance)
+        return func
 
     def _register_buffered_instance_funcs(self, instance: TypeDef) -> None:
         assert self._instance_func_buffer is not None

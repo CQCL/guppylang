@@ -23,6 +23,7 @@ files = [str(f) for f in files]
 
 
 @pytest.mark.parametrize("file", files)
+@pytest.mark.skipif(not tket2_installed, reason="tket2 is not installed")
 def test_py_errors(file, capsys, snapshot):
     run_error_test(file, capsys, snapshot)
 

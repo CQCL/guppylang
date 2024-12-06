@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from hugr import Node, Wire
-from hugr import tys as ht
 from hugr.build import function as hf
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
@@ -13,14 +12,19 @@ from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompiledGlobals, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
-from guppylang.definition.function import PyFunc, parse_py_func
+from guppylang.definition.function import (
+    PyFunc,
+    compile_call,
+    load_with_args,
+    parse_py_func,
+)
 from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
 from guppylang.diagnostic import Error
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import Type, type_to_row
+from guppylang.tys.ty import Type
 
 
 @dataclass(frozen=True)
@@ -121,9 +125,8 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
-        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
-        return dfg.builder.load_function(self.declaration, func_ty, type_args)
+        # Use implementation from function definition.
+        return load_with_args(type_args, dfg, self.ty, self.declaration)
 
     def compile_call(
         self,
@@ -134,13 +137,5 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
-        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
-        num_returns = len(type_to_row(self.ty.output))
-        call = dfg.builder.call(
-            self.declaration, *args, instantiation=func_ty, type_args=type_args
-        )
-        return CallReturnWires(
-            regular_returns=list(call[:num_returns]),
-            inout_returns=list(call[num_returns:]),
-        )
+        # Use implementation from function definition.
+        return compile_call(args, type_args, dfg, self.ty, self.declaration)
