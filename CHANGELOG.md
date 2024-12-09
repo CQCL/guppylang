@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.14.0](https://github.com/CQCL/guppylang/compare/v0.13.1...v0.14.0) (2024-12-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* `dirty_qubit` function removed
+* measure_return renamed to `project_z`
+
+### Features
+
+* Array comprehension ([#613](https://github.com/CQCL/guppylang/issues/613)) ([fdc0526](https://github.com/CQCL/guppylang/commit/fdc052656c6b62a95d42e0757ea50bd1d0226571)), closes [#614](https://github.com/CQCL/guppylang/issues/614) [#616](https://github.com/CQCL/guppylang/issues/616) [#612](https://github.com/CQCL/guppylang/issues/612)
+* Load `pytket` circuit as a function definition ([#672](https://github.com/CQCL/guppylang/issues/672)) ([b21b7e1](https://github.com/CQCL/guppylang/commit/b21b7e132a22363b9c2d69485a3f1f4d127b8129))
+* Make arrays iterable ([#632](https://github.com/CQCL/guppylang/issues/632)) ([07b9871](https://github.com/CQCL/guppylang/commit/07b987129409bf22d09b80661163f206ffc68f48))
+* qsystem std functions with updated primitives ([#679](https://github.com/CQCL/guppylang/issues/679)) ([b0f041f](https://github.com/CQCL/guppylang/commit/b0f041f262c4757b5f519d3a28f0c2b2d038f623))
+* remove dirty_qubit ([#698](https://github.com/CQCL/guppylang/issues/698)) ([78e366b](https://github.com/CQCL/guppylang/commit/78e366b1032afefcdedc6f4b78b30999f0e67d2d))
+
+
+### Bug Fixes
+
+* Detect unsupported default arguments ([#659](https://github.com/CQCL/guppylang/issues/659)) ([94ac7e3](https://github.com/CQCL/guppylang/commit/94ac7e38c773e4aac8b809ae27cf7e18342a87cb)), closes [#658](https://github.com/CQCL/guppylang/issues/658)
+* Fix implicit modules in IPython shells ([#662](https://github.com/CQCL/guppylang/issues/662)) ([4ecb5f2](https://github.com/CQCL/guppylang/commit/4ecb5f2fb2dd5b4b9baa5546869c46d42c709017)), closes [#661](https://github.com/CQCL/guppylang/issues/661)
+* Properly report errors for unsupported expressions ([#692](https://github.com/CQCL/guppylang/issues/692)) ([7f24264](https://github.com/CQCL/guppylang/commit/7f24264a56b0b620847a189eeec565f80adbdc3a)), closes [#691](https://github.com/CQCL/guppylang/issues/691)
+
+
+### Documentation
+
+* fix README.md and quickstart.md ([#654](https://github.com/CQCL/guppylang/issues/654)) ([abb0221](https://github.com/CQCL/guppylang/commit/abb0221a46c3dcb069c6e0f08242319d7bb16bad))
+
 ## [0.13.1](https://github.com/CQCL/guppylang/compare/v0.13.0...v0.13.1) (2024-11-15)
 
 
