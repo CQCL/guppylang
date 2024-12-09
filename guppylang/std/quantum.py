@@ -18,12 +18,9 @@ from guppylang.std.builtins import owned
 
 @guppy.type(ht.Qubit, linear=True)
 class qubit:
-    @guppy
+    @guppy.hugr_op(quantum_op("QAlloc"))
     @no_type_check
-    def __new__() -> "qubit":
-        q = dirty_qubit()
-        reset(q)
-        return q
+    def __new__() -> "qubit": ...
 
     @guppy
     @no_type_check
@@ -119,11 +116,6 @@ def crz(control: qubit, target: qubit, angle: angle) -> None: ...
 @guppy.hugr_op(quantum_op("Toffoli"))
 @no_type_check
 def toffoli(control1: qubit, control2: qubit, target: qubit) -> None: ...
-
-
-@guppy.hugr_op(quantum_op("QAlloc"))
-@no_type_check
-def dirty_qubit() -> qubit: ...
 
 
 @guppy.custom(InoutMeasureCompiler())
