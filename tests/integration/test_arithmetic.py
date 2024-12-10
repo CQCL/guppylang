@@ -42,6 +42,14 @@ def test_constant(validate):
     validate(const)
 
 
+def test_nat_literal(validate):
+    @compile_guppy
+    def const() -> nat:
+        return 42
+
+    validate(const)
+
+
 def test_aug_assign(validate, run_int_fn):
     module = GuppyModule("test_aug_assign")
 
