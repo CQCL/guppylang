@@ -526,11 +526,13 @@ class _GuppyDummy:
     def struct(self, *args: Any, **kwargs: Any) -> Any:
         return lambda cls: cls
 
-    def type_var(self, *args: Any, **kwargs: Any) -> Any:
-        return lambda cls: cls
+    def type_var(self, name: str, *args: Any, **kwargs: Any) -> Any:
+        # Return an actual type variable so it can be used in `Generic[...]`
+        return TypeVar(name)
 
-    def nat_var(self, *args: Any, **kwargs: Any) -> Any:
-        return lambda cls: cls
+    def nat_var(self, name: str, *args: Any, **kwargs: Any) -> Any:
+        # Return an actual type variable so it can be used in `Generic[...]`
+        return TypeVar(name)
 
     def custom(self, *args: Any, **kwargs: Any) -> Any:
         return lambda f: f
