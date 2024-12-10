@@ -8,7 +8,7 @@ from guppylang.std.angles import angle
 
 from guppylang.std.builtins import owned
 
-from guppylang.std.quantum import discard, measure, qubit
+from guppylang.std.quantum import discard, measure, qubit, maybe_qubit
 from guppylang.std.quantum_functional import (
     cx,
     cy,
@@ -43,7 +43,7 @@ def compile_quantum_guppy(fn) -> ModulePointer:
     ), "`@compile_quantum_guppy` does not support extra arguments."
 
     module = GuppyModule("module")
-    module.load(angle, qubit, discard, measure)
+    module.load(angle, qubit, discard, measure, maybe_qubit)
     module.load_all(quantum_functional)
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
@@ -52,7 +52,7 @@ def compile_quantum_guppy(fn) -> ModulePointer:
 def test_alloc(validate):
     @compile_quantum_guppy
     def test() -> tuple[bool, bool]:
-        q1, q2 = qubit(), qubit()
+        q1, q2 = qubit(), maybe_qubit().unwrap()
         q1, q2 = cx(q1, q2)
         return (measure(q1), measure(q2))
 

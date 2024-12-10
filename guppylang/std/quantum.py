@@ -14,6 +14,7 @@ from guppylang.std._internal.compiler.quantum import (
 from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle
 from guppylang.std.builtins import owned
+from guppylang.std.option import Option
 
 
 @guppy.type(ht.Qubit, linear=True)
@@ -36,6 +37,13 @@ class qubit:
     @no_type_check
     def discard(self: "qubit" @ owned) -> None:
         discard(self)
+
+
+@guppy.hugr_op(quantum_op("TryQAlloc"))
+@no_type_check
+def maybe_qubit() -> Option[qubit]:
+    """Try to allocate a qubit, returning `some(qubit)`
+    if allocation succeeds or `nothing` if it fails."""
 
 
 @guppy.hugr_op(quantum_op("H"))
