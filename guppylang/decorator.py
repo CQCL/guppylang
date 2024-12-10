@@ -527,10 +527,12 @@ class _GuppyDummy:
         return lambda cls: cls
 
     def type_var(self, *args: Any, **kwargs: Any) -> Any:
-        return lambda cls: cls
+        # Return an actual type variable so it can be used in `Generic[...]`
+        return TypeVar("T")
 
     def nat_var(self, *args: Any, **kwargs: Any) -> Any:
-        return lambda cls: cls
+        # Return an actual type variable so it can be used in `Generic[...]`
+        return TypeVar("n")
 
     def custom(self, *args: Any, **kwargs: Any) -> Any:
         return lambda f: f
