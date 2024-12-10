@@ -211,6 +211,10 @@ class _Guppy:
         Requires the static Hugr translation of the type. Additionally, the type can be
         marked as linear. All `@guppy` annotated functions on the class are turned into
         instance functions.
+
+        For non-generic types, the Hugr representation can be passed as a static value.
+        For generic types, a callable may be passed that takes the type arguments of a
+        concrete instantiation.
         """
         mod = module or self.get_module()
         mod._instance_func_buffer = {}
