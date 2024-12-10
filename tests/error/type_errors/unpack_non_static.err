@@ -1,0 +1,12 @@
+Error: Unpackable (at $FILE:6:13)
+  | 
+4 | @compile_guppy
+5 | def foo(xs: list[int]) -> int:
+6 |     a, *bs = xs
+  |              ^^ Expression of type `list[int]` cannot be unpacked
+
+Note: Unpacking of iterable types like `list[int]` is only allowed if the number
+of items yielded by the iterator is statically known. This is not the case for
+`list[int]`.
+
+Guppy compilation failed due to 1 previous error

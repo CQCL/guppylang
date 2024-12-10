@@ -14,7 +14,7 @@ from guppylang.compiler.core import (
 )
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.error import InternalGuppyError
-from guppylang.nodes import CheckedNestedFunctionDef, PlaceNode
+from guppylang.nodes import CheckedNestedFunctionDef, PlaceNode, TupleUnpack
 from guppylang.tys.ty import TupleType, Type
 
 
@@ -53,10 +53,10 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         """Updates the local DFG with assignments."""
         if isinstance(lhs, PlaceNode):
             self.dfg[lhs.place] = port
-        elif isinstance(lhs, ast.Tuple):
-            types = [get_type(e).to_hugr() for e in lhs.elts]
+        elif isinstance(lhs, TupleUnpack):
+            types = [get_type(e).to_hugr() for e in lhs.pattern.left]
             unpack = self.builder.add_op(ops.UnpackTuple(types), port)
-            for pat, wire in zip(lhs.elts, unpack, strict=True):
+            for pat, wire in zip(lhs.pattern.left, unpack, strict=True):
                 self._unpack_assign(pat, wire, node)
         else:
             raise InternalGuppyError("Invalid assign pattern in compiler")
