@@ -43,3 +43,15 @@ def test_static_size(validate):
         return range(10)
 
     validate(module.compile())
+
+
+def test_static_generic_size(validate):
+    module = GuppyModule("test")
+    n = guppy.nat_var("n", module=module)
+
+    @guppy(module)
+    def negative() -> SizedIter[Range, n]:
+        return range(n)
+
+    validate(module.compile())
+
