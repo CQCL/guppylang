@@ -232,7 +232,10 @@ class NewArrayChecker(CustomCallChecker):
                         # TODO: We could use the type information to infer some stuff
                         #  in the comprehension
                         arr_compr, res_ty = self.synthesize_array_comprehension(compr)
-                        subst, _ = check_type_against(res_ty, ty, self.node)
+                        arr_compr = with_loc(self.node, arr_compr)
+                        arr_compr, subst, _ = check_type_against(
+                            res_ty, ty, arr_compr, self.ctx
+                        )
                         return arr_compr, subst
                     # Or a list of array elements
                     case args:
@@ -359,7 +362,7 @@ class ResultChecker(CustomCallChecker):
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         expr, res_ty = self.synthesize(args)
-        subst, _ = check_type_against(res_ty, ty, self.node)
+        expr, subst, _ = check_type_against(res_ty, ty, expr, self.ctx)
         return expr, subst
 
     @staticmethod

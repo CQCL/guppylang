@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum, Flag, auto
-from functools import cached_property
+from functools import cached_property, total_ordering
 from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
 import hugr.std.float
@@ -259,12 +259,16 @@ class NumericType(TypeBase):
 
     kind: "Kind"
 
+    @total_ordering
     class Kind(Enum):
         """The different kinds of numeric types."""
 
-        Nat = "nat"
-        Int = "int"
-        Float = "float"
+        Nat = auto()
+        Int = auto()
+        Float = auto()
+
+        def __lt__(self, other: "NumericType.Kind") -> bool:
+            return self.value < other.value
 
     INT_WIDTH: ClassVar[int] = 6
 

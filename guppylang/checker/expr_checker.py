@@ -121,6 +121,7 @@ from guppylang.tys.ty import (
     FunctionType,
     InputFlags,
     NoneType,
+    NumericType,
     OpaqueType,
     StructType,
     TupleType,
@@ -207,7 +208,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         # If we already have a type for the expression, we just have to match it against
         # the target
         if actual := get_type_opt(expr):
-            subst, inst = check_type_against(actual, ty, expr, kind)
+            expr, subst, inst = check_type_against(actual, ty, expr, self.ctx, kind)
             if inst:
                 expr = with_loc(expr, TypeApply(value=expr, tys=inst))
             return with_type(ty.substitute(subst), expr), subst
@@ -329,7 +330,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
     def generic_visit(self, node: ast.expr, ty: Type) -> tuple[ast.expr, Subst]:
         # Try to synthesize and then check if we can unify it with the given type
         node, synth = self._synthesize(node, allow_free_vars=False)
-        subst, inst = check_type_against(synth, ty, node, self._kind)
+        node, subst, inst = check_type_against(synth, ty, node, self.ctx, self._kind)
 
         # Apply instantiation of quantified type variables
         if inst:
@@ -759,8 +760,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
 
 def check_type_against(
-    act: Type, exp: Type, node: AstNode, kind: str = "expression"
-) -> tuple[Subst, Inst]:
+    act: Type, exp: Type, node: ast.expr, ctx: Context, kind: str = "expression"
+) -> tuple[ast.expr, Subst, Inst]:
     """Checks a type against another type.
 
     Returns a substitution for the free variables the expected type and an instantiation
@@ -797,14 +798,37 @@ def check_type_against(
         # Finally, check that the instantiation respects the linearity requirements
         check_inst(act, inst, node)
 
-        return subst, inst
+        return node, subst, inst
 
     # Otherwise, we know that `act` has no unsolved type vars, so unification is trivial
     assert not act.unsolved_vars
     subst = unify(exp, act, {})
     if subst is None:
+        # Maybe we can implicitly coerce `act` to `exp`
+        if coerced := try_coerce_to(act, exp, node, ctx):
+            return coerced, {}, []
         raise GuppyTypeError(TypeMismatchError(node, exp, act, kind))
-    return subst, []
+    return node, subst, []
+
+
+def try_coerce_to(
+    act: Type, exp: Type, node: ast.expr, ctx: Context
+) -> ast.expr | None:
+    """Tries to implicitly coerce an expression to a different type.
+
+    Returns the coerced expression or `None` if the type cannot be implicitly coerced.
+    """
+    # Currently, we only support implicit coercions of numeric types
+    if not isinstance(act, NumericType) or not isinstance(exp, NumericType):
+        return None
+    # Ordering on `NumericType.Kind` defines the coercion relation
+    if act.kind < exp.kind:
+        f = ctx.globals.get_instance_func(act, f"__{exp.kind.name.lower()}__")
+        assert f is not None
+        node, subst = f.check_call([node], exp, node, ctx)
+        assert len(subst) == 0, "Coercion methods are not generic"
+        return node
+    return None
 
 
 def check_num_args(

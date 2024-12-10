@@ -117,6 +117,17 @@ def test_angle_arith(validate):
     validate(module.compile())
 
 
+def test_implicit_coercion(validate):
+    @compile_guppy
+    def coerce(x: nat) -> float:
+        y: int = x
+        z: float = y
+        a: float = 1
+        return z + a
+
+    validate(coerce)
+
+
 def test_angle_float_coercion(validate):
     module = GuppyModule("test")
     module.load(angle)
