@@ -1,6 +1,6 @@
 import ast
 import inspect
-from collections.abc import Callable, KeysView
+from collections.abc import Callable, KeysView, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -48,6 +48,8 @@ from guppylang.module import (
     sphinx_running,
 )
 from guppylang.span import SourceMap
+from guppylang.tys.arg import Argument
+from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import NumericType
 
@@ -197,10 +199,11 @@ class _Guppy:
     @pretty_errors
     def type(
         self,
-        hugr_ty: ht.Type,
+        hugr_ty: ht.Type | Callable[[Sequence[Argument]], ht.Type],
         name: str = "",
         linear: bool = False,
         bound: ht.TypeBound | None = None,
+        params: Sequence[Parameter] | None = None,
         module: GuppyModule | None = None,
     ) -> OpaqueTypeDecorator:
         """Decorator to annotate a class definitions as Guppy types.
@@ -208,18 +211,24 @@ class _Guppy:
         Requires the static Hugr translation of the type. Additionally, the type can be
         marked as linear. All `@guppy` annotated functions on the class are turned into
         instance functions.
+
+        For non-generic types, the Hugr representation can be passed as a static value.
+        For generic types, a callable may be passed that takes the type arguments of a
+        concrete instantiation.
         """
         mod = module or self.get_module()
         mod._instance_func_buffer = {}
+
+        mk_hugr_ty = (lambda _: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
 
         def dec(c: type) -> OpaqueTypeDef:
             defn = OpaqueTypeDef(
                 DefId.fresh(mod),
                 name or c.__name__,
                 None,
-                [],
+                params or [],
                 linear,
-                lambda _: hugr_ty,
+                mk_hugr_ty,
                 bound,
             )
             mod.register_def(defn)
