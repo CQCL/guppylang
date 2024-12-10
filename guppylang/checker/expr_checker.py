@@ -107,11 +107,14 @@ from guppylang.span import Span, to_span
 from guppylang.tys.arg import TypeArg
 from guppylang.tys.builtin import (
     bool_type,
+    float_type,
     get_element_type,
+    int_type,
     is_bool_type,
     is_list_type,
     is_sized_iter_type,
     list_type,
+    nat_type,
 )
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.subst import Inst, Subst
@@ -231,6 +234,14 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         """Invokes the type synthesiser"""
         return ExprSynthesizer(self.ctx).synthesize(node, allow_free_vars)
 
+    def visit_Constant(self, node: ast.Constant, ty: Type) -> tuple[ast.expr, Subst]:
+        act = python_value_to_guppy_type(node.value, node, self.ctx.globals, ty)
+        if act is None:
+            raise GuppyError(IllegalConstant(node, type(node.value)))
+        node, subst, inst = check_type_against(act, ty, node, self.ctx, self._kind)
+        assert inst == [], "Const values are not generic"
+        return node, subst
+
     def visit_Tuple(self, node: ast.Tuple, ty: Type) -> tuple[ast.expr, Subst]:
         if not isinstance(ty, TupleType) or len(ty.element_types) != len(node.elts):
             return self._fail(ty, node)
@@ -317,7 +328,9 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
 
     def visit_PyExpr(self, node: PyExpr, ty: Type) -> tuple[ast.expr, Subst]:
         python_val = eval_py_expr(node, self.ctx)
-        if act := python_value_to_guppy_type(python_val, node.value, self.ctx.globals):
+        if act := python_value_to_guppy_type(
+            python_val, node.value, self.ctx.globals, ty
+        ):
             subst = unify(ty, act, {})
             if subst is None:
                 self._fail(ty, act, node)
@@ -1138,25 +1151,43 @@ def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
     return python_val
 
 
-def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type | None:
+def python_value_to_guppy_type(
+    v: Any, node: ast.expr, globals: Globals, type_hint: Type | None = None
+) -> Type | None:
     """Turns a primitive Python value into a Guppy type.
+
+    Accepts an optional `type_hint` for the expected expression type that is used to
+    infer a more precise type (e.g. distinguishing between `int` and `nat`). Note that
+    invalid hints are ignored, i.e. no user error are emitted.
 
     Returns `None` if the Python value cannot be represented in Guppy.
     """
     match v:
         case bool():
             return bool_type()
+        # Only resolve `int` to `nat` if the user specifically asked for it
+        case int(n) if type_hint == nat_type() and n >= 0:
+            return nat_type()
+        # Otherwise, default to `int` for consistency with Python
         case int():
-            return cast(TypeDef, globals["int"]).check_instantiate([], globals)
+            return int_type()
         case float():
-            return cast(TypeDef, globals["float"]).check_instantiate([], globals)
+            return float_type()
         case tuple(elts):
-            tys = [python_value_to_guppy_type(elt, node, globals) for elt in elts]
+            hints = (
+                type_hint.element_types
+                if isinstance(type_hint, TupleType)
+                else len(elts) * [None]
+            )
+            tys = [
+                python_value_to_guppy_type(elt, node, globals, hint)
+                for elt, hint in zip(elts, hints, strict=False)
+            ]
             if any(ty is None for ty in tys):
                 return None
             return TupleType(cast(list[Type], tys))
         case list():
-            return _python_list_to_guppy_type(v, node, globals)
+            return _python_list_to_guppy_type(v, node, globals, type_hint)
         case _:
             # Pytket conversion is an experimental feature
             # if pytket and tket2 are installed
@@ -1187,7 +1218,7 @@ def python_value_to_guppy_type(v: Any, node: ast.expr, globals: Globals) -> Type
 
 
 def _python_list_to_guppy_type(
-    vs: list[Any], node: ast.expr, globals: Globals
+    vs: list[Any], node: ast.expr, globals: Globals, type_hint: Type | None
 ) -> OpaqueType | None:
     """Turns a Python list into a Guppy type.
 
@@ -1199,11 +1230,14 @@ def _python_list_to_guppy_type(
 
     # All the list elements must have a unifiable types
     v, *rest = vs
-    el_ty = python_value_to_guppy_type(v, node, globals)
+    elt_hint = (
+        get_element_type(type_hint) if type_hint and is_list_type(type_hint) else None
+    )
+    el_ty = python_value_to_guppy_type(v, node, globals, elt_hint)
     if el_ty is None:
         return None
     for v in rest:
-        ty = python_value_to_guppy_type(v, node, globals)
+        ty = python_value_to_guppy_type(v, node, globals, elt_hint)
         if ty is None:
             return None
         if (subst := unify(ty, el_ty, {})) is None:

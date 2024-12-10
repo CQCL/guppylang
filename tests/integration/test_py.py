@@ -6,7 +6,7 @@ import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import py, array
+from guppylang.std.builtins import py, array, nat
 from guppylang.std import quantum
 from guppylang.std.quantum import qubit
 from tests.util import compile_guppy
@@ -103,6 +103,16 @@ def test_list_empty_multiple(validate):
     @compile_guppy
     def foo() -> None:
         xs: tuple[list[int], list[bool]] = py([], [])
+
+    validate(foo)
+
+
+def test_nats_from_ints(validate):
+    @compile_guppy
+    def foo() -> None:
+        x: nat = py(1)
+        y: tuple[nat, nat] = py(2, 3)
+        z: list[nat] = py([4, 5, 6])
 
     validate(foo)
 

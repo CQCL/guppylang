@@ -211,6 +211,10 @@ def int_type() -> NumericType:
     return NumericType(NumericType.Kind.Int)
 
 
+def float_type() -> NumericType:
+    return NumericType(NumericType.Kind.Float)
+
+
 def list_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], list_type_def)
 
