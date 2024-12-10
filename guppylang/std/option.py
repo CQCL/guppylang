@@ -32,8 +32,8 @@ class Option(Generic[T]):  # type: ignore[misc]
 
     @guppy.custom(OptionTestCompiler(0))
     @no_type_check
-    def is_none(self: "Option[T]") -> bool:
-        """Returns `True` if the option is a `none` value."""
+    def is_nothing(self: "Option[T]") -> bool:
+        """Returns `True` if the option is a `nothing` value."""
 
     @guppy.custom(OptionTestCompiler(1))
     @no_type_check
@@ -45,14 +45,14 @@ class Option(Generic[T]):  # type: ignore[misc]
     def unwrap(self: "Option[T]" @ owned) -> T:
         """Returns the contained `some` value, consuming `self`.
 
-        Panics if the option is a `none` value.
+        Panics if the option is a `nothing` value.
         """
 
 
 @guppy.custom(OptionConstructor(0))
 @no_type_check
-def none() -> Option[T]:
-    """Constructs a `none` optional value."""
+def nothing() -> Option[T]:
+    """Constructs a `nothing` optional value."""
 
 
 @guppy.custom(OptionConstructor(1))

@@ -24,7 +24,7 @@ class OptionCompiler(CustomInoutCallCompiler, ABC):
 
 
 class OptionConstructor(OptionCompiler, CustomCallCompiler):
-    """Compiler for the `Option` constructors `none` and `some`."""
+    """Compiler for the `Option` constructors `nothing` and `some`."""
 
     def __init__(self, tag: int):
         self.tag = tag
@@ -34,7 +34,7 @@ class OptionConstructor(OptionCompiler, CustomCallCompiler):
 
 
 class OptionTestCompiler(OptionCompiler):
-    """Compiler for the `Option.is_none` and `Option.is_none` methods."""
+    """Compiler for the `Option.is_nothing` and `Option.is_some` methods."""
 
     def __init__(self, tag: int):
         self.tag = tag
@@ -56,6 +56,5 @@ class OptionUnwrapCompiler(OptionCompiler, CustomCallCompiler):
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         [opt] = args
-        return list(
-            build_unwrap(self.builder, opt, "Option.unwrap: value is `None`").outputs()
-        )
+        err = "Option.unwrap: value is `Nothing`"
+        return list(build_unwrap(self.builder, opt, err).outputs())
