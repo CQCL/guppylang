@@ -4,7 +4,7 @@ from typing import ClassVar, cast
 
 from typing_extensions import assert_never
 
-from guppylang.ast_util import AstNode, with_loc, with_type
+from guppylang.ast_util import with_loc, with_type
 from guppylang.checker.core import Context
 from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang.checker.errors.type_errors import (
@@ -22,8 +22,6 @@ from guppylang.checker.expr_checker import (
 )
 from guppylang.definition.custom import (
     CustomCallChecker,
-    CustomFunctionDef,
-    DefaultCallChecker,
 )
 from guppylang.definition.struct import CheckedStructDef, RawStructDef
 from guppylang.diagnostic import Error, Note
@@ -60,42 +58,28 @@ from guppylang.tys.ty import (
 )
 
 
-class CoercingChecker(DefaultCallChecker):
-    """Function call type checker that automatically coerces arguments to float."""
-
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        for i in range(len(args)):
-            args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
-            if isinstance(ty, NumericType) and ty.kind != NumericType.Kind.Float:
-                to_float = self.ctx.globals.get_instance_func(ty, "__float__")
-                assert to_float is not None
-                args[i], _ = to_float.synthesize_call([args[i]], self.node, self.ctx)
-        return super().synthesize(args)
-
-
 class ReversingChecker(CustomCallChecker):
-    """Call checker that reverses the arguments after checking."""
+    """Call checker for reverse arithmetic methods.
 
-    base_checker: CustomCallChecker
+    For examples, turns a call to `__radd__` into a call to `__add__` with reversed
+    arguments.
+    """
 
-    def __init__(self, base_checker: CustomCallChecker | None = None):
-        self.base_checker = base_checker or DefaultCallChecker()
-
-    def _setup(self, ctx: Context, node: AstNode, func: CustomFunctionDef) -> None:
-        super()._setup(ctx, node, func)
-        self.base_checker._setup(ctx, node, func)
-
-    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        expr, subst = self.base_checker.check(args, ty)
-        if isinstance(expr, GlobalCall):
-            expr.args = list(reversed(expr.args))
-        return expr, subst
+    def parse_name(self) -> str:
+        # Must be a dunder method
+        assert self.func.name.startswith("__")
+        assert self.func.name.endswith("__")
+        name = self.func.name[2:-2]
+        # Remove the `r`
+        assert name.startswith("r")
+        return f"__{name[1:]}__"
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        expr, ty = self.base_checker.synthesize(args)
-        if isinstance(expr, GlobalCall):
-            expr.args = list(reversed(expr.args))
-        return expr, ty
+        [self_arg, other_arg] = args
+        self_arg, self_ty = ExprSynthesizer(self.ctx).synthesize(self_arg)
+        f = self.ctx.globals.get_instance_func(self_ty, self.parse_name())
+        assert f is not None
+        return f.synthesize_call([other_arg, self_arg], self.node, self.ctx)
 
 
 class UnsupportedChecker(CustomCallChecker):
