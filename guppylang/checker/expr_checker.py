@@ -1069,9 +1069,7 @@ def to_bool(node: ast.expr, node_ty: Type, ctx: Context) -> tuple[ast.expr, Type
         return node, node_ty
     synth = ExprSynthesizer(ctx)
     exp_sig = FunctionType([FuncInput(node_ty, InputFlags.Inout)], bool_type())
-    return synth.synthesize_instance_func(
-        node, [node], "__bool__", "truthy", exp_sig, True
-    )
+    return synth.synthesize_instance_func(node, [], "__bool__", "truthy", exp_sig, True)
 
 
 def synthesize_comprehension(
