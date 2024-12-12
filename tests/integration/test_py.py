@@ -76,7 +76,7 @@ def test_tuple_implicit(validate):
 
 def test_list_basic(validate):
     @compile_guppy
-    def foo() -> list[int]:
+    def foo() -> array[int, 3]:
         xs = py([1, 2, 3])
         return xs
 
@@ -85,7 +85,7 @@ def test_list_basic(validate):
 
 def test_list_empty(validate):
     @compile_guppy
-    def foo() -> list[int]:
+    def foo() -> array[int, 0]:
         return py([])
 
     validate(foo)
@@ -94,7 +94,7 @@ def test_list_empty(validate):
 def test_list_empty_nested(validate):
     @compile_guppy
     def foo() -> None:
-        xs: list[tuple[int, list[bool]]] = py([(42, [])])
+        xs: array[tuple[int, array[bool, 0]], 1] = py([(42, [])])
 
     validate(foo)
 
@@ -102,7 +102,7 @@ def test_list_empty_nested(validate):
 def test_list_empty_multiple(validate):
     @compile_guppy
     def foo() -> None:
-        xs: tuple[list[int], list[bool]] = py([], [])
+        xs: tuple[array[int, 0], array[bool, 0]] = py([], [])
 
     validate(foo)
 
