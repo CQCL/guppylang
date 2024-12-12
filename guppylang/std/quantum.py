@@ -13,7 +13,7 @@ from guppylang.std._internal.compiler.quantum import (
 )
 from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle
-from guppylang.std.builtins import owned
+from guppylang.std.builtins import array, owned
 from guppylang.std.option import Option
 
 
@@ -144,3 +144,21 @@ def measure(q: qubit @ owned) -> bool: ...
 @guppy.hugr_op(quantum_op("Reset"))
 @no_type_check
 def reset(q: qubit) -> None: ...
+
+
+N = guppy.nat_var("N")
+
+
+@guppy
+@no_type_check
+def measure_array(qubits: array[qubit, N] @ owned) -> array[bool, N]:
+    """Measure an array of qubits, returning an array of bools."""
+    return array(measure(q) for q in qubits)
+
+
+@guppy
+@no_type_check
+def discard_array(qubits: array[qubit, N] @ owned) -> None:
+    """Discard an array of qubits."""
+    for q in qubits:
+        discard(q)
