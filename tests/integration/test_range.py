@@ -1,5 +1,5 @@
 from guppylang.decorator import guppy
-from guppylang.std.builtins import nat, range, SizedIter, Range
+from guppylang.std.builtins import nat, range, SizedIter, Range, py
 from guppylang.module import GuppyModule
 from tests.util import compile_guppy
 
@@ -41,5 +41,16 @@ def test_static_size(validate):
     @guppy(module)
     def negative() -> SizedIter[Range, 10]:
         return range(10)
+
+    validate(module.compile())
+
+
+def test_py_size(validate):
+    module = GuppyModule("test")
+    n = 10
+
+    @guppy(module)
+    def negative() -> SizedIter[Range, 10]:
+        return range(py(n))
 
     validate(module.compile())
