@@ -118,7 +118,6 @@ def test_measure_not_last(validate):
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
-@pytest.mark.skip("Not implemented")
 def test_load_circuit(validate):
     from pytket import Circuit
 
@@ -133,5 +132,30 @@ def test_load_circuit(validate):
     @guppy(module)
     def foo(q: qubit) -> None:
         guppy_circ(q)
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_load_circuits(validate):
+    from pytket import Circuit
+
+    circ1 = Circuit(1)
+    circ1.H(0)
+
+    circ2 = Circuit(2)
+    circ2.CX(0, 1)
+    circ2.measure_all()
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    guppy.load_pytket("guppy_circ1", circ1, module)
+    guppy.load_pytket("guppy_circ2", circ2, module)
+
+    @guppy(module)
+    def foo(q1: qubit, q2: qubit, q3: qubit) -> tuple[bool, bool]:
+        guppy_circ1(q1)
+        return  guppy_circ2(q2, q3)
 
     validate(module.compile())
