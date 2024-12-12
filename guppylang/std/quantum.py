@@ -155,8 +155,10 @@ def measure_array(qubits: array[qubit, N] @ owned) -> array[bool, N]:
     """Measure an array of qubits, returning an array of bools."""
     return array(measure(q) for q in qubits)
 
+
 @guppy
 @no_type_check
 def discard_array(qubits: array[qubit, N] @ owned) -> None:
     """Discard an array of qubits."""
-    _ = array(discard(q) for q in qubits)
+    for q in qubits:
+        discard(q)
