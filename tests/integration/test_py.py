@@ -112,7 +112,7 @@ def test_nats_from_ints(validate):
     def foo() -> None:
         x: nat = py(1)
         y: tuple[nat, nat] = py(2, 3)
-        z: list[nat] = py([4, 5, 6])
+        z: array[nat, 3] = py([4, 5, 6])
 
     validate(foo)
 

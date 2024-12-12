@@ -111,6 +111,7 @@ from guppylang.tys.builtin import (
     float_type,
     get_element_type,
     int_type,
+    is_array_type,
     is_bool_type,
     is_list_type,
     is_sized_iter_type,
@@ -1230,7 +1231,7 @@ def _python_list_to_guppy_type(
     # All the list elements must have a unifiable types
     v, *rest = vs
     elt_hint = (
-        get_element_type(type_hint) if type_hint and is_list_type(type_hint) else None
+        get_element_type(type_hint) if type_hint and is_array_type(type_hint) else None
     )
     el_ty = python_value_to_guppy_type(v, node, globals, elt_hint)
     if el_ty is None:
