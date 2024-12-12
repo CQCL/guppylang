@@ -106,6 +106,7 @@ from guppylang.nodes import (
 from guppylang.span import Span, to_span
 from guppylang.tys.arg import TypeArg
 from guppylang.tys.builtin import (
+    array_type,
     bool_type,
     float_type,
     get_element_type,
@@ -1082,9 +1083,7 @@ def to_bool(node: ast.expr, node_ty: Type, ctx: Context) -> tuple[ast.expr, Type
         return node, node_ty
     synth = ExprSynthesizer(ctx)
     exp_sig = FunctionType([FuncInput(node_ty, InputFlags.Inout)], bool_type())
-    return synth.synthesize_instance_func(
-        node, [node], "__bool__", "truthy", exp_sig, True
-    )
+    return synth.synthesize_instance_func(node, [], "__bool__", "truthy", exp_sig, True)
 
 
 def synthesize_comprehension(
@@ -1226,7 +1225,7 @@ def _python_list_to_guppy_type(
     representable in Guppy.
     """
     if len(vs) == 0:
-        return list_type(ExistentialTypeVar.fresh("T", False))
+        return array_type(ExistentialTypeVar.fresh("T", False), 0)
 
     # All the list elements must have a unifiable types
     v, *rest = vs
@@ -1243,4 +1242,4 @@ def _python_list_to_guppy_type(
         if (subst := unify(ty, el_ty, {})) is None:
             raise GuppyError(PyExprIncoherentListError(node))
         el_ty = el_ty.substitute(subst)
-    return list_type(el_ty)
+    return array_type(el_ty, len(vs))
