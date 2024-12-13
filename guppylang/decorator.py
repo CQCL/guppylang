@@ -622,22 +622,17 @@ def _find_load_call(sources: SourceMap) -> Span | None:
     # Go back as first frame outside of compiler modules is 'pretty_errors_wrapped'.
     if (caller_frame := get_calling_frame()) and (load_frame := caller_frame.f_back):
         info = inspect.getframeinfo(load_frame)
+        filename = info.filename
+        lineno = info.lineno
         sources.add_file(info.filename)
+        # If we don't support python <= 3.10, this can be done better with
+        # info.positions which gives you exact offsets.
+        # For now over approximate and make the span cover the entire line.
+        if load_module := inspect.getmodule(load_frame):
+            source_lines, _ = inspect.getsourcelines(load_module)
+            max_offset = len(source_lines[lineno - 1]) - 1
 
-        filename = load_frame.f_code.co_filename
-        # Need to check that none of the information is None.
-        if (
-            (positions := info.positions)
-            and (lineno := positions.lineno)
-            and (col_offset := positions.col_offset)
-            and (end_lineno := positions.end_lineno)
-            and (end_col_offset := positions.end_col_offset)
-        ):
-            start = Loc(filename, lineno, col_offset)
-            end = Loc(
-                filename,
-                end_lineno,
-                end_col_offset,
-            )
+            start = Loc(filename, lineno, 0)
+            end = Loc(filename, lineno, max_offset)
             return Span(start, end)
     return None
