@@ -54,9 +54,7 @@ from guppylang.span import Loc, SourceMap, Span
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import (
-    NumericType,
-)
+from guppylang.tys.ty import NumericType
 
 S = TypeVar("S")
 T = TypeVar("T")
@@ -624,7 +622,7 @@ def _find_load_call(sources: SourceMap) -> Span | None:
         info = inspect.getframeinfo(load_frame)
         filename = info.filename
         lineno = info.lineno
-        sources.add_file(info.filename)
+        sources.add_file(filename)
         # If we don't support python <= 3.10, this can be done better with
         # info.positions which gives you exact offsets.
         # For now over approximate and make the span cover the entire line.
