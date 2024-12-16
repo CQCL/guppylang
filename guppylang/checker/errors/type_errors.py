@@ -74,7 +74,7 @@ class TypeInferenceError(Error):
 @dataclass(frozen=True)
 class IllegalConstant(Error):
     title: ClassVar[str] = "Unsupported constant"
-    span_label: ClassVar[str] = "Type `{ty}` is not supported"
+    span_label: ClassVar[str] = "Type `{python_ty.__name__}` is not supported"
     python_ty: type
 
 
