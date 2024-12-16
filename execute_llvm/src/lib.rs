@@ -1,7 +1,7 @@
 //! This module provides a Python interface to compile and execute a Hugr program to LLVM IR.
 use hugr::llvm::utils::fat::FatExt;
 use hugr::Hugr;
-use hugr::{self, extension::ExtensionRegistry, ops, std_extensions, HugrView};
+use hugr::{self, ops, std_extensions, HugrView};
 use inkwell::{context::Context, module::Module, values::GenericValue};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -11,22 +11,8 @@ macro_rules! pyerr {
 }
 
 fn parse_hugr(hugr_json: &str) -> PyResult<hugr::Hugr> {
-    // Deserializing should be a given if we validate before running
-    let mut hugr: Hugr =
-        serde_json::from_str(hugr_json).map_err(|e| pyerr!("Couldn't deserialize hugr: {}", e))?;
-
-    let reg = ExtensionRegistry::new([
-        hugr::extension::PRELUDE.to_owned(),
-        std_extensions::arithmetic::int_ops::EXTENSION.to_owned(),
-        std_extensions::arithmetic::int_types::EXTENSION.to_owned(),
-        std_extensions::arithmetic::float_ops::EXTENSION.to_owned(),
-        std_extensions::arithmetic::float_types::EXTENSION.to_owned(),
-        std_extensions::arithmetic::conversions::EXTENSION.to_owned(),
-        std_extensions::collections::list::EXTENSION.to_owned(),
-        std_extensions::logic::EXTENSION.to_owned(),
-    ]);
-    hugr.resolve_extension_defs(&reg)
-        .map_err(|e| pyerr!("Resolving extension defs: {}", e))?;
+    let hugr = Hugr::load_json(hugr_json.as_bytes(), &std_extensions::std_reg())
+        .map_err(|e| pyerr!("Couldn't deserialize hugr: {}", e))?;
     Ok(hugr)
 }
 
