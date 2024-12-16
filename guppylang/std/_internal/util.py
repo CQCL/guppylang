@@ -80,11 +80,6 @@ def external_op(
     def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
         concrete_args = [make_concrete_arg(arg, inst, variable_remap) for arg in args]
         return op_def.instantiate(concrete_args, ty)
-        return ops.ExtOp(
-            op_def,
-            ty,
-            concrete_args,
-        )
 
     return op
 

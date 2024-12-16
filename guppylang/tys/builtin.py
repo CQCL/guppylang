@@ -136,9 +136,10 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # See `ArrayGetitemCompiler` for details.
     # Same also for classical arrays, see https://github.com/CQCL/guppylang/issues/629
     elem_ty = ht.Option(ty_arg.ty.to_hugr())
+    hugr_arg = len_arg.to_hugr()
 
-    array = hugr.std.collections.array.EXTENSION.get_type("array")
-    return array.instantiate([len_arg.to_hugr(), ht.TypeTypeArg(elem_ty)])
+    # TODO remove type ignore after Array type annotation fixed to include VariableArg
+    return hugr.std.collections.array.Array(elem_ty, hugr_arg)  # type:ignore[arg-type]
 
 
 def _sized_iter_to_hugr(args: Sequence[Argument]) -> ht.Type:
