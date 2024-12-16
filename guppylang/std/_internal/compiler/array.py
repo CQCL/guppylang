@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import hugr.std
 from hugr import Wire, ops
 from hugr import tys as ht
+from hugr.std.collections.array import EXTENSION
 
 from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import CustomCallCompiler
@@ -31,7 +31,7 @@ def _instantiate_array_op(
     inp: list[ht.Type],
     out: list[ht.Type],
 ) -> ops.ExtOp:
-    return hugr.std.PRELUDE.get_op(name).instantiate(
+    return EXTENSION.get_op(name).instantiate(
         [length, ht.TypeTypeArg(elem_ty)], ht.FunctionType(inp, out)
     )
 
@@ -39,7 +39,7 @@ def _instantiate_array_op(
 def array_type(elem_ty: ht.Type, length: ht.TypeArg) -> ht.ExtType:
     """Returns the hugr type of a fixed length array."""
     elem_arg = ht.TypeTypeArg(elem_ty)
-    return hugr.std.PRELUDE.types["array"].instantiate([length, elem_arg])
+    return EXTENSION.types["array"].instantiate([length, elem_arg])
 
 
 def array_new(elem_ty: ht.Type, length: int) -> ops.ExtOp:

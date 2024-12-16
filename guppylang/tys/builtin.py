@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, TypeGuard
 
 import hugr.std
+import hugr.std.collections.array
 import hugr.std.collections.list
 from hugr import tys as ht
 
@@ -136,7 +137,7 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # Same also for classical arrays, see https://github.com/CQCL/guppylang/issues/629
     elem_ty = ht.Option(ty_arg.ty.to_hugr())
 
-    array = hugr.std.PRELUDE.get_type("array")
+    array = hugr.std.collections.array.EXTENSION.get_type("array")
     return array.instantiate([len_arg.to_hugr(), ht.TypeTypeArg(elem_ty)])
 
 

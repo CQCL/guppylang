@@ -525,7 +525,7 @@ dependencies = [
 [[package]]
 name = "hugr"
 version = "0.13.3"
-source = "git+https://github.com/CQCL/hugr?rev=1091755#109175506e30f84934f85252c05603774f8697ff"
+source = "git+https://github.com/CQCL/hugr?rev=861183e#861183eb0acc8891b3f4f7748c81c4f91217f921"
 dependencies = [
  "hugr-core",
  "hugr-llvm",
@@ -535,7 +535,7 @@ dependencies = [
 [[package]]
 name = "hugr-cli"
 version = "0.13.3"
-source = "git+https://github.com/CQCL/hugr?rev=1091755#109175506e30f84934f85252c05603774f8697ff"
+source = "git+https://github.com/CQCL/hugr?rev=861183e#861183eb0acc8891b3f4f7748c81c4f91217f921"
 dependencies = [
  "clap",
  "clap-verbosity-flag",
@@ -550,7 +550,7 @@ dependencies = [
 [[package]]
 name = "hugr-core"
 version = "0.13.3"
-source = "git+https://github.com/CQCL/hugr?rev=1091755#109175506e30f84934f85252c05603774f8697ff"
+source = "git+https://github.com/CQCL/hugr?rev=861183e#861183eb0acc8891b3f4f7748c81c4f91217f921"
 dependencies = [
  "bitvec",
  "bumpalo",
@@ -582,7 +582,7 @@ dependencies = [
 [[package]]
 name = "hugr-llvm"
 version = "0.13.3"
-source = "git+https://github.com/CQCL/hugr?rev=1091755#109175506e30f84934f85252c05603774f8697ff"
+source = "git+https://github.com/CQCL/hugr?rev=861183e#861183eb0acc8891b3f4f7748c81c4f91217f921"
 dependencies = [
  "anyhow",
  "delegate",
@@ -598,7 +598,7 @@ dependencies = [
 [[package]]
 name = "hugr-passes"
 version = "0.13.3"
-source = "git+https://github.com/CQCL/hugr?rev=1091755#109175506e30f84934f85252c05603774f8697ff"
+source = "git+https://github.com/CQCL/hugr?rev=861183e#861183eb0acc8891b3f4f7748c81c4f91217f921"
 dependencies = [
  "ascent",
  "hugr-core",
