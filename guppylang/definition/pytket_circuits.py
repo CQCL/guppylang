@@ -28,9 +28,9 @@ from guppylang.definition.function import (
 )
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
-from guppylang.error import GuppyError
+from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
-from guppylang.span import SourceMap
+from guppylang.span import SourceMap, Span, ToSpan
 from guppylang.tys.builtin import bool_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -74,65 +74,73 @@ class RawPytketDef(ParsableDef):
             func_ast, globals.with_python_scope(self.python_scope)
         )
 
+        # Compare signatures.
         # TODO: Allow arrays as arguments.
-        # Retrieve circuit signature and compare.
-        try:
-            import pytket
-
-            if isinstance(self.input_circuit, pytket.circuit.Circuit):
-                try:
-                    import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
-
-                    qubit = cast(TypeDef, globals["qubit"]).check_instantiate(
-                        [], globals
-                    )
-
-                    circuit_signature = FunctionType(
-                        [FuncInput(qubit, InputFlags.Inout)]
-                        * self.input_circuit.n_qubits,
-                        row_to_type([bool_type()] * self.input_circuit.n_bits),
-                    )
-
-                    if not (
-                        circuit_signature.inputs == stub_signature.inputs
-                        and circuit_signature.output == stub_signature.output
-                    ):
-                        # TODO: Implement pretty-printing for signatures in order to add
-                        # a note for expected vs. actual types.
-                        raise GuppyError(PytketSignatureMismatch(func_ast, self.name))
-                except ImportError:
-                    err = Tket2NotInstalled(func_ast)
-                    err.add_sub_diagnostic(Tket2NotInstalled.InstallInstruction(None))
-                    raise GuppyError(err) from None
-        except ImportError:
-            pass
+        circuit_signature = _signature_from_circuit(
+            self.input_circuit, globals, self.defined_at
+        )
+        if not (
+            circuit_signature.inputs == stub_signature.inputs
+            and circuit_signature.output == stub_signature.output
+        ):
+            # TODO: Implement pretty-printing for signatures in order to add
+            # a note for expected vs. actual types.
+            raise GuppyError(PytketSignatureMismatch(func_ast, self.name))
 
         return ParsedPytketDef(
             self.id,
             self.name,
             func_ast,
             stub_signature,
-            self.python_scope,
+            self.input_circuit,
+        )
+
+
+@dataclass(frozen=True)
+class RawLoadPytketDef(ParsableDef):
+    """A raw definition for loading pytket circuits without explicit function stub.
+
+    Args:
+        id: The unique definition identifier.
+        name: The name of the circuit function.
+        defined_at: The AST node of the definition (here always None).
+        source_span: The source span where the circuit was loaded.
+        input_circuit: The user-provided pytket circuit.
+    """
+
+    source_span: Span | None
+    input_circuit: Any
+
+    description: str = field(default="pytket circuit", init=False)
+
+    def parse(self, globals: Globals, sources: SourceMap) -> "ParsedPytketDef":
+        """Creates a function signature based on the user-provided circuit."""
+        circuit_signature = _signature_from_circuit(
+            self.input_circuit, globals, self.source_span
+        )
+
+        return ParsedPytketDef(
+            self.id,
+            self.name,
+            self.defined_at,
+            circuit_signature,
             self.input_circuit,
         )
 
 
 @dataclass(frozen=True)
 class ParsedPytketDef(CallableDef, CompilableDef):
-    """A circuit definition with parsed and checked signature.
+    """A circuit definition with signature.
 
     Args:
         id: The unique definition identifier.
         name: The name of the function.
-        defined_at: The AST node where the function was defined.
+        defined_at: The AST node of the function stub, if there is one.
         ty: The type of the function.
-        python_scope: The Python scope where the function was defined.
         input_circuit: The user-provided pytket circuit.
     """
 
-    defined_at: ast.FunctionDef
     ty: FunctionType
-    python_scope: PyScope
     input_circuit: Any
 
     description: str = field(default="pytket circuit", init=False)
@@ -181,7 +189,6 @@ class ParsedPytketDef(CallableDef, CompilableDef):
             self.name,
             self.defined_at,
             self.ty,
-            self.python_scope,
             self.input_circuit,
             outer_func,
         )
@@ -214,7 +221,6 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
         name: The name of the function.
         defined_at: The AST node where the function was defined.
         ty: The type of the function.
-        python_scope: The Python scope where the function was defined.
         input_circuit: The user-provided pytket circuit.
         func_df: The Hugr function definition.
     """
@@ -243,3 +249,34 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
         """Compiles a call to the function."""
         # Use implementation from function definition.
         return compile_call(args, type_args, dfg, self.ty, self.func_def)
+
+
+def _signature_from_circuit(
+    input_circuit: Any, globals: Globals, defined_at: ToSpan | None
+) -> FunctionType:
+    """Helper function for inferring a function signature from a pytket circuit."""
+    try:
+        import pytket
+
+        if isinstance(input_circuit, pytket.circuit.Circuit):
+            try:
+                import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
+
+                qubit = cast(TypeDef, globals["qubit"]).check_instantiate([], globals)
+
+                circuit_signature = FunctionType(
+                    [FuncInput(qubit, InputFlags.Inout)] * input_circuit.n_qubits,
+                    row_to_type([bool_type()] * input_circuit.n_bits),
+                )
+            except ImportError:
+                err = Tket2NotInstalled(defined_at)
+                err.add_sub_diagnostic(Tket2NotInstalled.InstallInstruction(None))
+                raise GuppyError(err) from None
+        else:
+            pass
+    except ImportError:
+        raise InternalGuppyError(
+            "Pytket error should have been caught earlier"
+        ) from None
+    else:
+        return circuit_signature

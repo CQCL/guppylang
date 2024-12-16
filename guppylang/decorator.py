@@ -30,7 +30,10 @@ from guppylang.definition.function import (
     RawFunctionDef,
 )
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
-from guppylang.definition.pytket_circuits import RawPytketDef
+from guppylang.definition.pytket_circuits import (
+    RawLoadPytketDef,
+    RawPytketDef,
+)
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import MissingModuleError, pretty_errors
@@ -47,7 +50,7 @@ from guppylang.module import (
     get_calling_frame,
     sphinx_running,
 )
-from guppylang.span import SourceMap
+from guppylang.span import Loc, SourceMap, Span
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Inst
@@ -501,6 +504,27 @@ class _Guppy:
 
         return func
 
+    @pretty_errors
+    def load_pytket(
+        self, name: str, input_circuit: Any, module: GuppyModule | None = None
+    ) -> RawLoadPytketDef:
+        """Adds a pytket circuit function definition with implicit signature."""
+        err_msg = "Only pytket circuits can be passed to guppy.load_pytket"
+        try:
+            import pytket
+
+            if not isinstance(input_circuit, pytket.circuit.Circuit):
+                raise TypeError(err_msg) from None
+
+        except ImportError:
+            raise TypeError(err_msg) from None
+
+        mod = module or self.get_module()
+        span = _find_load_call(self._sources)
+        defn = RawLoadPytketDef(DefId.fresh(module), name, None, span, input_circuit)
+        mod.register_def(defn)
+        return defn
+
 
 class _GuppyDummy:
     """A dummy class with the same interface as `@guppy` that is used during sphinx
@@ -586,3 +610,27 @@ def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.e
                 node.col_offset = 0
                 node.end_col_offset = len(source_lines[info.lineno - 1]) - 1
     return expr_ast
+
+
+def _find_load_call(sources: SourceMap) -> Span | None:
+    """Helper function to find location where pytket circuit was loaded.
+
+    Tries to define a source code span by inspecting the call stack.
+    """
+    # Go back as first frame outside of compiler modules is 'pretty_errors_wrapped'.
+    if (caller_frame := get_calling_frame()) and (load_frame := caller_frame.f_back):
+        info = inspect.getframeinfo(load_frame)
+        filename = info.filename
+        lineno = info.lineno
+        sources.add_file(filename)
+        # If we don't support python <= 3.10, this can be done better with
+        # info.positions which gives you exact offsets.
+        # For now over approximate and make the span cover the entire line.
+        if load_module := inspect.getmodule(load_frame):
+            source_lines, _ = inspect.getsourcelines(load_module)
+            max_offset = len(source_lines[lineno - 1]) - 1
+
+            start = Loc(filename, lineno, 0)
+            end = Loc(filename, lineno, max_offset)
+            return Span(start, end)
+    return None
