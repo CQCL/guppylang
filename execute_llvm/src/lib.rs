@@ -27,9 +27,6 @@ fn parse_hugr(hugr_json: &str) -> PyResult<hugr::Hugr> {
     ]);
     hugr.resolve_extension_defs(&reg)
         .map_err(|e| pyerr!("Resolving extension defs: {}", e))?;
-    // .map_err(|e| pyerr!("Making extension registry: {}", e))?;
-    // resolve_extension_ops(&mut hugr, &reg)
-    //     .map_err(|e| pyerr!("Instantiating extension ops: {}", e))?;
     Ok(hugr)
 }
 
@@ -67,7 +64,6 @@ fn compile_module<'a>(
         .add_default_prelude_extensions()
         .add_float_extensions()
         .add_conversion_extensions();
-    // .add_default_rotation_extensions();
 
     let emitter =
         hugr::llvm::emit::EmitHugr::new(ctx, llvm_module, namer.into(), extensions.finish().into());
