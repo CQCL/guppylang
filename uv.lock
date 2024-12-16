@@ -577,6 +577,7 @@ dev = [
     { name = "pytest-snapshot" },
     { name = "pytket" },
     { name = "ruff" },
+    { name = "tket2" },
 ]
 lint = [
     { name = "mypy" },
@@ -591,6 +592,7 @@ llvm-integration = [
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
+    { name = "tket2" },
 ]
 pytket-integration = [
     { name = "ipykernel" },
@@ -599,6 +601,7 @@ pytket-integration = [
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
     { name = "pytket" },
+    { name = "tket2" },
 ]
 test = [
     { name = "ipykernel" },
@@ -606,19 +609,20 @@ test = [
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
+    { name = "tket2" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "execute-llvm", marker = "extra == 'execution'", editable = "execute_llvm" },
     { name = "graphviz", specifier = ">=0.20.1,<0.21" },
-    { name = "hugr", git = "https://github.com/CQCL/hugr?subdirectory=hugr-py&rev=861183e" },
+    { name = "hugr", specifier = ">=0.10.0,<0.11" },
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7.2.6,<9" },
     { name = "sphinx-book-theme", marker = "extra == 'docs'", specifier = ">=1.1.2,<2" },
-    { name = "tket2-exts", directory = "../tket2proto/tket2-exts" },
+    { name = "tket2-exts", specifier = ">=0.2.0,<0.3" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
 
@@ -635,6 +639,7 @@ dev = [
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0,<2" },
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
+    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&rev=eb7cc63" },
 ]
 lint = [
     { name = "mypy", specifier = "==1.10.0" },
@@ -649,6 +654,7 @@ llvm-integration = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
+    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&rev=eb7cc63" },
 ]
 pytket-integration = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
@@ -657,6 +663,7 @@ pytket-integration = [
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0,<2" },
+    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&rev=eb7cc63" },
 ]
 test = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
@@ -664,17 +671,22 @@ test = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
+    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&rev=eb7cc63" },
 ]
 
 [[package]]
 name = "hugr"
-version = "0.9.0"
-source = { git = "https://github.com/CQCL/hugr?subdirectory=hugr-py&rev=861183e#861183eb0acc8891b3f4f7748c81c4f91217f921" }
+version = "0.10.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "graphviz" },
     { name = "pydantic" },
     { name = "pydantic-extra-types" },
     { name = "semver" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a6/ef/9cd410ff0e3a92c5e88da2ef3c0e051dd971f4f6c5577873c7901ed31dd5/hugr-0.10.0.tar.gz", hash = "sha256:11e5a80ebd4e31cad0cb04d408cdd93a094e6fb817dd81481eedac5a58f86ff7", size = 129441 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f2/71/83556457cfe27f4a1613cd49041cfe4c6e9e087a53b5beec48a8d709c36d/hugr-0.10.0-py3-none-any.whl", hash = "sha256:591e252ef3e4182fd0de99274ebb4999ddd9572a0ec823519de154e4bd9f14ec", size = 83000 },
 ]
 
 [[package]]
@@ -2238,15 +2250,31 @@ wheels = [
 ]
 
 [[package]]
+name = "tket2"
+version = "0.5.1"
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&rev=eb7cc63#eb7cc63aa14325111790fa31eb78eed6b44a998c" }
+dependencies = [
+    { name = "hugr" },
+    { name = "pytket" },
+    { name = "tket2-eccs" },
+    { name = "tket2-exts" },
+]
+
+[[package]]
+name = "tket2-eccs"
+version = "0.2.0"
+source = { editable = "../../.cache/uv/git-v0/checkouts/016348ee4ba584f3/eb7cc63/tket2-eccs" }
+
+[[package]]
 name = "tket2-exts"
 version = "0.2.0"
-source = { directory = "../tket2proto/tket2-exts" }
+source = { editable = "../../.cache/uv/git-v0/checkouts/016348ee4ba584f3/eb7cc63/tket2-exts" }
 dependencies = [
     { name = "hugr" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "hugr", specifier = ">=0.9.0" }]
+requires-dist = [{ name = "hugr", specifier = ">=0.10.0,<0.11" }]
 
 [[package]]
 name = "tomli"
