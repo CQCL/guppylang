@@ -7,7 +7,7 @@ definitions from the hugr library.
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-import hugr.std.collections
+import hugr.std.collections.list
 import hugr.std.float
 import hugr.std.int
 import hugr.std.logic
@@ -79,6 +79,7 @@ def external_op(
 
     def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
         concrete_args = [make_concrete_arg(arg, inst, variable_remap) for arg in args]
+        return op_def.instantiate(concrete_args, ty)
         return ops.ExtOp(
             op_def,
             ty,
@@ -171,7 +172,7 @@ def logic_op(
 
 def list_op(
     op_name: str,
-    ext: he.Extension = hugr.std.collections.EXTENSION,
+    ext: he.Extension = hugr.std.collections.list.EXTENSION,
 ) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
     """Utility method to create Hugr list ops.
 

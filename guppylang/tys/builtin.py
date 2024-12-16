@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, TypeGuard
 
 import hugr.std
-import hugr.std.collections
+import hugr.std.collections.list
 from hugr import tys as ht
 
 from guppylang.ast_util import AstNode
@@ -122,7 +122,7 @@ def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # Linear elements are turned into an optional to enable unsafe indexing.
     # See `ListGetitemCompiler` for details.
     elem_ty = ht.Option(arg.ty.to_hugr()) if arg.ty.linear else arg.ty.to_hugr()
-    return hugr.std.collections.list_type(elem_ty)
+    return hugr.std.collections.list.List(elem_ty)
 
 
 def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:

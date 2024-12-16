@@ -6,10 +6,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import hugr.std.collections
+import hugr.std.collections.list
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr.std.collections import ListVal
+from hugr.std.collections.list import List, ListVal
 
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 def _instantiate_list_op(
     name: str, elem_type: ht.Type, inp: list[ht.Type], out: list[ht.Type]
 ) -> ops.ExtOp:
-    op_def = hugr.std.collections.EXTENSION.get_op(name)
+    op_def = hugr.std.collections.list.EXTENSION.get_op(name)
     return ops.ExtOp(
         op_def,
         ht.FunctionType(inp, out),
@@ -47,7 +47,7 @@ def _instantiate_list_op(
 
 def list_pop(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `pop` operation."""
-    list_type = hugr.std.collections.list_type(elem_type)
+    list_type = List(elem_type)
     return _instantiate_list_op(
         "pop", elem_type, [list_type], [list_type, ht.Option(elem_type)]
     )
@@ -55,13 +55,13 @@ def list_pop(elem_type: ht.Type) -> ops.ExtOp:
 
 def list_push(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `push` operation."""
-    list_type = hugr.std.collections.list_type(elem_type)
+    list_type = List(elem_type)
     return _instantiate_list_op("push", elem_type, [list_type, elem_type], [list_type])
 
 
 def list_get(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `get` operation."""
-    list_type = hugr.std.collections.list_type(elem_type)
+    list_type = List(elem_type)
     return _instantiate_list_op(
         "get", elem_type, [list_type, ht.USize()], [ht.Option(elem_type)]
     )
@@ -69,7 +69,7 @@ def list_get(elem_type: ht.Type) -> ops.ExtOp:
 
 def list_set(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `set` operation."""
-    list_type = hugr.std.collections.list_type(elem_type)
+    list_type = List(elem_type)
     return _instantiate_list_op(
         "set",
         elem_type,
@@ -80,7 +80,7 @@ def list_set(elem_type: ht.Type) -> ops.ExtOp:
 
 def list_insert(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `insert` operation."""
-    list_type = hugr.std.collections.list_type(elem_type)
+    list_type = List(elem_type)
     return _instantiate_list_op(
         "insert",
         elem_type,
@@ -91,7 +91,7 @@ def list_insert(elem_type: ht.Type) -> ops.ExtOp:
 
 def list_length(elem_type: ht.Type) -> ops.ExtOp:
     """Returns a list `length` operation."""
-    list_type = hugr.std.collections.list_type(elem_type)
+    list_type = List(elem_type)
     return _instantiate_list_op(
         "length", elem_type, [list_type], [list_type, ht.USize()]
     )
