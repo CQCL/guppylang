@@ -2,7 +2,7 @@ import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import array
+from guppylang.std.builtins import array, owned
 from guppylang.std.quantum import qubit
 
 import guppylang.std.quantum_functional as quantum
@@ -88,3 +88,76 @@ def test_generic(validate):
         return array(x + 1 for x in xs)
 
     validate(module.compile())
+
+
+def test_borrow(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+    n = guppy.nat_var("n", module)
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> int: ...
+
+    @guppy(module)
+    def test(q: qubit) -> array[int, n]:
+        return array(foo(q) for _ in range(n))
+
+    validate(module.compile())
+
+
+def test_borrow_twice(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+    n = guppy.nat_var("n", module)
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> int: ...
+
+    @guppy(module)
+    def test(q: qubit) -> array[int, n]:
+        return array(foo(q) + foo(q) for _ in range(n))
+
+    validate(module.compile())
+
+
+def test_borrow_struct(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+    n = guppy.nat_var("n", module)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q1: qubit
+        q2: qubit
+
+    @guppy.declare(module)
+    def foo(s: MyStruct) -> int: ...
+
+    @guppy(module)
+    def test(s: MyStruct) -> array[int, n]:
+        return array(foo(s) for _ in range(n))
+
+    validate(module.compile())
+
+
+def test_borrow_and_consume(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+    n = guppy.nat_var("n", module)
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> int: ...
+
+    @guppy.declare(module)
+    def bar(q: qubit @ owned) -> int: ...
+
+    @guppy(module)
+    def test(qs: array[qubit, n] @ owned) -> array[int, n]:
+        return array(foo(q) + bar(q) for q in qs)
+
+    validate(module.compile())
+

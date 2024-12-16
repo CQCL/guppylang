@@ -207,6 +207,8 @@ class DesugaredGenerator(ast.expr):
     hasnext: ast.expr
     ifs: list[ast.expr]
 
+    borrowed_outer_places: "list[Place]"
+
     _fields = (
         "iter_assign",
         "hasnext_assign",
@@ -215,6 +217,7 @@ class DesugaredGenerator(ast.expr):
         "iter",
         "hasnext",
         "ifs",
+        "borrowed_outer_places",
     )
 
 

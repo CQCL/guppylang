@@ -543,6 +543,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 assert isinstance(gen.iter, PlaceNode)
                 assert isinstance(gen.hasnext, PlaceNode)
                 inputs = [gen.iter] + [PlaceNode(place=var) for var in loop_vars]
+                inputs += [
+                    PlaceNode(place=place) for place in gen.borrowed_outer_places
+                ]
                 # Remember to finalize the iterator once we are done with it. Note that
                 # we need to use partial in the callback, so that we bind the *current*
                 # value of `gen` instead of only last
