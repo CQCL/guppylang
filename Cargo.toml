@@ -25,14 +25,14 @@ debug_assert_with_mut_call = "warn"
 pyo3 = "0.19.0"
 serde_json = "1.0.111"
 cargo_toml = "0.20.4"
-thiserror = "1.0.37"
-hugr-llvm = "0.6.1"
+thiserror = "2.0.6"
+# hugr-llvm = "0.6.1"
 hugr = "0.13.1"
-inkwell = "0.4.0"
+inkwell = "0.5.0"
 
 [patch.crates-io]
 
 # Uncomment these to test the latest dependency version during development
-#hugr = { git = "https://github.com/CQCL/hugr", rev = "6bf6c82c9ec9d801ab43e311e5f815a3eea7d9c1" }
-#hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "6bf6c82c9ec9d801ab43e311e5f815a3eea7d9c1" }
-#hugr-llvm = { git = "https://github.com/CQCL/hugr-llvm", rev = "c1e6407" }
+hugr = { git = "https://github.com/CQCL/hugr", rev = "1091755" }
+hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "1091755" }
+# hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "1091755" }
