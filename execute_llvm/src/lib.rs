@@ -2,6 +2,7 @@
 use hugr::llvm::utils::fat::FatExt;
 use hugr::Hugr;
 use hugr::{self, ops, std_extensions, HugrView};
+use hugr_passes;
 use inkwell::{context::Context, module::Module, values::GenericValue};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -36,6 +37,10 @@ fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node>
             fn_name
         )),
     }
+}
+
+fn guppy_pass(hugr: Hugr) -> Hugr {
+    hugr_passes::monomorphize(hugr)
 }
 
 fn compile_module<'a>(
@@ -77,7 +82,8 @@ fn run_function<T>(
     fn_name: &str,
     parse_result: impl FnOnce(&Context, GenericValue) -> PyResult<T>,
 ) -> PyResult<T> {
-    let hugr = parse_hugr(hugr_json)?;
+    let mut hugr = parse_hugr(hugr_json)?;
+    hugr = guppy_pass(hugr);
     let ctx = Context::create();
 
     let namer = hugr::llvm::emit::Namer::default();
