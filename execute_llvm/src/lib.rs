@@ -2,7 +2,6 @@
 use hugr::llvm::utils::fat::FatExt;
 use hugr::Hugr;
 use hugr::{self, ops, std_extensions, HugrView};
-use hugr_passes;
 use inkwell::{context::Context, module::Module, values::GenericValue};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -40,7 +39,7 @@ fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node>
 }
 
 fn guppy_pass(hugr: Hugr) -> Hugr {
-    hugr_passes::monomorphize(hugr)
+    hugr::algorithms::monomorphize(hugr)
 }
 
 fn compile_module<'a>(
