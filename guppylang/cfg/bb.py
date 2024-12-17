@@ -37,6 +37,7 @@ class VariableStats(Generic[VId]):
     used: dict[VId, AstNode] = field(default_factory=dict)
 
 
+#: AST statements that are valid inside a basic block
 BBStatement = (
     ast.Assign
     | ast.AugAssign

@@ -86,6 +86,7 @@ class ParametrizedTypeBase(TypeBase, ABC):
     Note that all subclasses are expected to be immutable.
     """
 
+    #: The generic arguments of this type
     args: Sequence[Argument]
 
     def __post_init__(self) -> None:
@@ -328,6 +329,7 @@ class FunctionType(ParametrizedTypeBase):
 
     inputs: Sequence[FuncInput]
     output: "Type"
+    #: Generic parameters of the function.
     params: Sequence[Parameter]
     input_names: Sequence[str] | None
 

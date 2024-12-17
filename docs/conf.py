@@ -33,7 +33,7 @@ html_theme_options = {
     },
 }
 
-html_static_path = ["../_static"]
+html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 
 autosummary_generate = True
@@ -104,4 +104,5 @@ def resolve_type_aliases(app, env, node, contnode):
 
 
 def setup(app):
-    app.connect("missing-reference", resolve_type_aliases)
+    pass
+    # app.connect("missing-reference", resolve_type_aliases)

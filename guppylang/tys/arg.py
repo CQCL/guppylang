@@ -13,12 +13,12 @@ if TYPE_CHECKING:
     from guppylang.tys.ty import Type
 
 
-# We define the `Argument` type as a union of all `ArgumentBase` subclasses defined
-# below. This models an algebraic data type and enables exhaustiveness checking in
-# pattern matches etc.
-# Note that this might become obsolete in case the `@sealed` decorator is added:
-#  * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
-#  * https://github.com/johnthagen/sealed-typing-pep
+#: We define the `Argument` type as a union of all `ArgumentBase` subclasses defined
+#: below. This models an algebraic data type and enables exhaustiveness checking in
+#: pattern matches etc.
+#: Note that this might become obsolete in case the `@sealed` decorator is added:
+#:  * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
+#:  * https://github.com/johnthagen/sealed-typing-pep
 Argument: TypeAlias = "TypeArg | ConstArg"
 
 
