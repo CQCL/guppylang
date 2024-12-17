@@ -553,19 +553,13 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-docs = [
-    { name = "sphinx" },
-    { name = "sphinx-book-theme" },
-]
-execution = [
-    { name = "execute-llvm" },
-]
 pytket = [
     { name = "pytket" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "execute-llvm" },
     { name = "ipykernel" },
     { name = "maturin" },
     { name = "mypy" },
@@ -579,12 +573,12 @@ dev = [
     { name = "ruff" },
     { name = "tket2" },
 ]
-lint = [
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "ruff" },
+docs = [
+    { name = "sphinx" },
+    { name = "sphinx-book-theme" },
 ]
-llvm-integration = [
+execution = [
+    { name = "execute-llvm" },
     { name = "ipykernel" },
     { name = "maturin" },
     { name = "pip" },
@@ -593,6 +587,11 @@ llvm-integration = [
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
     { name = "tket2" },
+]
+lint = [
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "ruff" },
 ]
 pytket-integration = [
     { name = "ipykernel" },
@@ -614,20 +613,18 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "execute-llvm", marker = "extra == 'execution'", editable = "execute_llvm" },
     { name = "graphviz", specifier = ">=0.20.1,<0.21" },
     { name = "hugr", specifier = ">=0.10.0,<0.11" },
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7.2.6,<9" },
-    { name = "sphinx-book-theme", marker = "extra == 'docs'", specifier = ">=1.1.2,<2" },
     { name = "tket2-exts", specifier = ">=0.3.0,<0.4" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "execute-llvm", editable = "execute_llvm" },
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "maturin", specifier = ">=1.4.0,<2" },
     { name = "mypy", specifier = "==1.10.0" },
@@ -641,12 +638,12 @@ dev = [
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
     { name = "tket2", specifier = ">=0.6.0" },
 ]
-lint = [
-    { name = "mypy", specifier = "==1.10.0" },
-    { name = "pre-commit", specifier = ">=3.6.0,<4" },
-    { name = "ruff", specifier = ">=0.6.2,<0.7" },
+docs = [
+    { name = "sphinx", specifier = ">=7.2.6,<9" },
+    { name = "sphinx-book-theme", specifier = ">=1.1.2,<2" },
 ]
-llvm-integration = [
+execution = [
+    { name = "execute-llvm", editable = "execute_llvm" },
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "maturin", specifier = ">=1.4.0,<2" },
     { name = "pip", specifier = ">=24" },
@@ -655,6 +652,11 @@ llvm-integration = [
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "tket2", specifier = ">=0.6.0" },
+]
+lint = [
+    { name = "mypy", specifier = "==1.10.0" },
+    { name = "pre-commit", specifier = ">=3.6.0,<4" },
+    { name = "ruff", specifier = ">=0.6.2,<0.7" },
 ]
 pytket-integration = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },

@@ -44,8 +44,6 @@ dependencies = [
 
 [project.optional-dependencies]
 # pytket = ["pytket >=1.30.0,<2", "tket2 >=0.4.1,<0.5"]
-docs = ["sphinx >=7.2.6,<9", "sphinx-book-theme >=1.1.2,<2"]
-execution = ["execute-llvm"]
 pytket = ["pytket>=1.34"]
 
 [project.urls]
@@ -53,10 +51,11 @@ homepage = "https://github.com/CQCL/guppylang"
 repository = "https://github.com/CQCL/guppylang"
 
 [dependency-groups]
+docs = ["sphinx >=7.2.6,<9", "sphinx-book-theme >=1.1.2,<2"]
 dev = [
     { include-group = "lint" },
     { include-group = "test" },
-    { include-group = "llvm_integration" },
+    { include-group = "execution" },
     { include-group = "pytket_integration" },
 ]
 lint = ["pre-commit >=3.6.0,<4", "ruff >=0.6.2,<0.7", "mypy ==1.10.0"]
@@ -68,11 +67,12 @@ test = [
     "ipykernel >=6.29.5,<7",
     "tket2>=0.6.0",
 ]
-llvm_integration = [
+execution = [
     { include-group = "test" },
     # Required to run the llvm integration tests
     "maturin >=1.4.0,<2",
     "pip >=24",
+    "execute-llvm",
 ]
 pytket_integration = [{ include-group = "test" }, "pytket >=1.34.0,<2"]
 
