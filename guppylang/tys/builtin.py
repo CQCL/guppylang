@@ -138,8 +138,7 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     elem_ty = ht.Option(ty_arg.ty.to_hugr())
     hugr_arg = len_arg.to_hugr()
 
-    # TODO remove type ignore after Array type annotation fixed to include VariableArg
-    return hugr.std.collections.array.Array(elem_ty, hugr_arg)  # type:ignore[arg-type]
+    return hugr.std.collections.array.Array(elem_ty, hugr_arg)
 
 
 def _sized_iter_to_hugr(args: Sequence[Argument]) -> ht.Type:
