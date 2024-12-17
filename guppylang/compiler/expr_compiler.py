@@ -13,6 +13,7 @@ from hugr import tys as ht
 from hugr import val as hv
 from hugr.build.cond_loop import Conditional
 from hugr.build.dfg import DP, DfBase
+import hugr.std.collections.array
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, AstVisitor, get_type
@@ -610,17 +611,12 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
                 return hv.Tuple(*vs)
         case list(elts):
             assert is_array_type(exp_ty)
-            vs = [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
+            elem_ty = get_element_type(exp_ty)
+            vs = [python_value_to_hugr(elt, elem_ty) for elt in elts]
             if doesnt_contain_none(vs):
-                # TODO: Use proper array value: https://github.com/CQCL/hugr/issues/1771
-                return hv.Extension(
-                    name="ArrayValue",
-                    typ=exp_ty.to_hugr(),
-                    # The value list must be serialized at this point, otherwise the
-                    # `Extension` value would not be serializable.
-                    val=[v._to_serial_root() for v in vs],
-                    extensions=["unsupported"],
-                )
+                opt_ty = ht.Option(elem_ty.to_hugr())
+                opt_vs = [hv.Sum(1, opt_ty, [v]) for v in vs]
+                return hugr.std.collections.array.ArrayVal(opt_vs, opt_ty)
         case _:
             # TODO replace with hugr protocol handling: https://github.com/CQCL/guppylang/issues/563
             # Pytket conversion is an experimental feature
