@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, TypeVar
+
 import hugr.std
 from hugr import Wire, ops
 from hugr import tys as ht
@@ -18,6 +20,10 @@ from guppylang.std._internal.compiler.prelude import (
     build_unwrap_right,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
+
+if TYPE_CHECKING:
+    from hugr.build.dfg import DfBase
+
 
 # ------------------------------------------------------
 # --------------- std.array operations -----------------
@@ -72,6 +78,26 @@ def array_set(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     )
 
 
+def array_pop(elem_ty: ht.Type, length: int, from_left: bool) -> ops.ExtOp:
+    """Returns an operation that pops an element from the left of an array."""
+    assert length > 0
+    length_arg = ht.BoundedNatArg(length)
+    arr_ty = array_type(elem_ty, length_arg)
+    popped_arr_ty = array_type(elem_ty, ht.BoundedNatArg(length - 1))
+    op = "pop_left" if from_left else "pop_right"
+    return _instantiate_array_op(
+        op, elem_ty, length_arg, [arr_ty], [ht.Option(elem_ty, popped_arr_ty)]
+    )
+
+
+def array_discard_empty(elem_ty: ht.Type) -> ops.ExtOp:
+    """Returns an operation that discards an array of length zero."""
+    arr_ty = array_type(elem_ty, ht.BoundedNatArg(0))
+    return hugr.std.PRELUDE.get_op("discard_empty").instantiate(
+        [ht.TypeTypeArg(elem_ty)], ht.FunctionType([arr_ty], [])
+    )
+
+
 def array_map(elem_ty: ht.Type, length: ht.TypeArg, new_elem_ty: ht.Type) -> ops.ExtOp:
     """Returns an operation that maps a function across an array."""
     # TODO
@@ -95,6 +121,30 @@ def array_repeat(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
 # ------------------------------------------------------
 # --------- Custom compilers for non-native ops --------
 # ------------------------------------------------------
+
+
+P = TypeVar("P", bound=ops.DfParentOp)
+
+
+def unpack_array(builder: DfBase[P], array: Wire) -> list[Wire]:
+    """ """
+    # TODO: This should be an op
+    array_ty = builder.hugr.port_type(array.out_port())
+    assert isinstance(array_ty, ht.ExtType)
+    err = "Internal error: array unpacking failed"
+    match array_ty.args:
+        case [ht.BoundedNatArg(length), ht.TypeTypeArg(elem_ty)]:
+            elems = []
+            for i in range(length):
+                res = builder.add_op(
+                    array_pop(elem_ty, length - i, from_left=True), array
+                )
+                elem, array = build_unwrap(builder, res, err)
+                elems.append(elem)
+            builder.add_op(array_discard_empty(elem_ty), array)
+            return elems
+        case _:
+            raise InternalGuppyError("Invalid array type args")
 
 
 class ArrayCompiler(CustomCallCompiler):
