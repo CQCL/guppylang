@@ -251,7 +251,7 @@ def test_supported_ops(validate, run_int_fn):
     run_int_fn(hugr, expected=2, fn_name="run_rem")
 
 
-def test_angle_exec(validate, run_float_fn):
+def test_angle_exec(validate, run_float_fn_approx):
     module = GuppyModule("test_angle_exec")
     module.load_all(angles)
 
@@ -266,4 +266,4 @@ def test_angle_exec(validate, run_float_fn):
     hugr = module.compile()
     validate(hugr)
     import math
-    run_float_fn(hugr, expected=pytest.approx(-6 * math.pi))
+    run_float_fn_approx(hugr, expected=-6 * math.pi)
