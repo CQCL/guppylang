@@ -39,7 +39,8 @@ fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node>
 }
 
 fn guppy_pass(hugr: Hugr) -> Hugr {
-    hugr::algorithms::monomorphize(hugr)
+    let hugr = hugr::algorithms::monomorphize(hugr);
+    hugr::algorithms::remove_polyfuncs(hugr)
 }
 
 fn compile_module<'a>(
