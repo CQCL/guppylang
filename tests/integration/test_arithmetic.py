@@ -42,6 +42,14 @@ def test_constant(validate):
     validate(const)
 
 
+def test_nat_literal(validate):
+    @compile_guppy
+    def const() -> nat:
+        return 42
+
+    validate(const)
+
+
 def test_aug_assign(validate, run_int_fn):
     module = GuppyModule("test_aug_assign")
 
@@ -115,6 +123,17 @@ def test_angle_arith(validate):
         return a3 / 3 == -a2
 
     validate(module.compile())
+
+
+def test_implicit_coercion(validate):
+    @compile_guppy
+    def coerce(x: nat) -> float:
+        y: int = x
+        z: float = y
+        a: float = 1
+        return z + a
+
+    validate(coerce)
 
 
 def test_angle_float_coercion(validate):
@@ -232,7 +251,7 @@ def test_supported_ops(validate, run_int_fn):
     run_int_fn(hugr, expected=2, fn_name="run_rem")
 
 
-def test_angle_exec(validate, run_float_fn):
+def test_angle_exec(validate, run_float_fn_approx):
     module = GuppyModule("test_angle_exec")
     module.load_all(angles)
 
@@ -247,4 +266,4 @@ def test_angle_exec(validate, run_float_fn):
     hugr = module.compile()
     validate(hugr)
     import math
-    run_float_fn(hugr, expected=pytest.approx(-6 * math.pi))
+    run_float_fn_approx(hugr, expected=-6 * math.pi)

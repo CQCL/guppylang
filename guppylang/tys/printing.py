@@ -125,7 +125,7 @@ class TypePrinter:
 
     @_visit.register
     def _visit_NumericType(self, ty: NumericType, inside_row: bool) -> str:
-        return ty.kind.value
+        return ty.kind.name.lower()
 
     @_visit.register
     def _visit_TypeParam(self, param: TypeParam, inside_row: bool) -> str:

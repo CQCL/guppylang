@@ -553,19 +553,13 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-docs = [
-    { name = "sphinx" },
-    { name = "sphinx-book-theme" },
-]
-execution = [
-    { name = "execute-llvm" },
-]
 pytket = [
     { name = "pytket" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "execute-llvm" },
     { name = "ipykernel" },
     { name = "maturin" },
     { name = "mypy" },
@@ -577,13 +571,14 @@ dev = [
     { name = "pytest-snapshot" },
     { name = "pytket" },
     { name = "ruff" },
+    { name = "tket2" },
 ]
-lint = [
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "ruff" },
+docs = [
+    { name = "sphinx" },
+    { name = "sphinx-book-theme" },
 ]
-llvm-integration = [
+execution = [
+    { name = "execute-llvm" },
     { name = "ipykernel" },
     { name = "maturin" },
     { name = "pip" },
@@ -591,6 +586,12 @@ llvm-integration = [
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
+    { name = "tket2" },
+]
+lint = [
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "ruff" },
 ]
 pytket-integration = [
     { name = "ipykernel" },
@@ -599,6 +600,7 @@ pytket-integration = [
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
     { name = "pytket" },
+    { name = "tket2" },
 ]
 test = [
     { name = "ipykernel" },
@@ -606,24 +608,23 @@ test = [
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
+    { name = "tket2" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "execute-llvm", marker = "extra == 'execution'", editable = "execute_llvm" },
     { name = "graphviz", specifier = ">=0.20.1,<0.21" },
-    { name = "hugr", specifier = ">=0.9.0,<0.10" },
+    { name = "hugr", specifier = ">=0.10.0,<0.11" },
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7.2.6,<9" },
-    { name = "sphinx-book-theme", marker = "extra == 'docs'", specifier = ">=1.1.2,<2" },
-    { name = "tket2-exts", specifier = ">=0.2.0,<0.3" },
+    { name = "tket2-exts", specifier = ">=0.3.0,<0.4" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "execute-llvm", editable = "execute_llvm" },
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "maturin", specifier = ">=1.4.0,<2" },
     { name = "mypy", specifier = "==1.10.0" },
@@ -635,13 +636,14 @@ dev = [
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0,<2" },
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
+    { name = "tket2", specifier = ">=0.6.0" },
 ]
-lint = [
-    { name = "mypy", specifier = "==1.10.0" },
-    { name = "pre-commit", specifier = ">=3.6.0,<4" },
-    { name = "ruff", specifier = ">=0.6.2,<0.7" },
+docs = [
+    { name = "sphinx", specifier = ">=7.2.6,<9" },
+    { name = "sphinx-book-theme", specifier = ">=1.1.2,<2" },
 ]
-llvm-integration = [
+execution = [
+    { name = "execute-llvm", editable = "execute_llvm" },
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "maturin", specifier = ">=1.4.0,<2" },
     { name = "pip", specifier = ">=24" },
@@ -649,6 +651,12 @@ llvm-integration = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
+    { name = "tket2", specifier = ">=0.6.0" },
+]
+lint = [
+    { name = "mypy", specifier = "==1.10.0" },
+    { name = "pre-commit", specifier = ">=3.6.0,<4" },
+    { name = "ruff", specifier = ">=0.6.2,<0.7" },
 ]
 pytket-integration = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
@@ -657,6 +665,7 @@ pytket-integration = [
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0,<2" },
+    { name = "tket2", specifier = ">=0.6.0" },
 ]
 test = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
@@ -664,11 +673,12 @@ test = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
+    { name = "tket2", specifier = ">=0.6.0" },
 ]
 
 [[package]]
 name = "hugr"
-version = "0.9.0"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "graphviz" },
@@ -676,9 +686,9 @@ dependencies = [
     { name = "pydantic-extra-types" },
     { name = "semver" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7a/ea/faf7545e3d3ffd4bc725bfcd622c60303e8cde0e33d847b0c7bcf1a3bb7c/hugr-0.9.0.tar.gz", hash = "sha256:ddb5adc674192520499e624e8f4650f465e059ab3f9048550c9c147fc9bf239a", size = 126531 }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/ef/9cd410ff0e3a92c5e88da2ef3c0e051dd971f4f6c5577873c7901ed31dd5/hugr-0.10.0.tar.gz", hash = "sha256:11e5a80ebd4e31cad0cb04d408cdd93a094e6fb817dd81481eedac5a58f86ff7", size = 129441 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/08/ad/b82f6cb95452699c29582cef3daaa2c281f86efd91d1d8d88895c47bb5b8/hugr-0.9.0-py3-none-any.whl", hash = "sha256:703da84a1b2fdb192f4ddce6daf9446dac24fb2377b3b259cced6899733530a5", size = 80011 },
+    { url = "https://files.pythonhosted.org/packages/f2/71/83556457cfe27f4a1613cd49041cfe4c6e9e087a53b5beec48a8d709c36d/hugr-0.10.0-py3-none-any.whl", hash = "sha256:591e252ef3e4182fd0de99274ebb4999ddd9572a0ec823519de154e4bd9f14ec", size = 83000 },
 ]
 
 [[package]]
@@ -2242,15 +2252,52 @@ wheels = [
 ]
 
 [[package]]
+name = "tket2"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "hugr" },
+    { name = "pytket" },
+    { name = "tket2-eccs" },
+    { name = "tket2-exts" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/22/27/285392537150ee0472cd6f0bf615ed512823497b2d5b9e51726e3cdd922a/tket2-0.6.0.tar.gz", hash = "sha256:530eae3a26bec2aac718553d8fb372add69f7082cde952b8e7746ade00333702", size = 224593 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/fc/8fbcc8c98a9243231c6380bcccdfef28c8461a675c6f758309746f316691/tket2-0.6.0-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:e618e8a99b1ddd62b8f09061f83e8206dc877643426844157eb2414f1eefd601", size = 3718551 },
+    { url = "https://files.pythonhosted.org/packages/66/cd/79c10b82415ee04a12b333511c133eddbea081c0f195ee133391b182d385/tket2-0.6.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:5a49e63c64588190c197ef9dc3ec12c82eb538347f5d3019f26783e3ec61c018", size = 3463405 },
+    { url = "https://files.pythonhosted.org/packages/2a/ea/143b95c373a4d104f5f2cab3b361e29083c9a746b047fe4ff7a62fbc6559/tket2-0.6.0-cp310-abi3-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:27fa940f30333ca004ce487b3398bd5166312551fb6ed62b5545a4d7d4b822d6", size = 4096055 },
+    { url = "https://files.pythonhosted.org/packages/be/44/dd35eb58f23e0844cfc4b1c26f7842cf9725f5373ac9a86dabc8aa00214c/tket2-0.6.0-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c5065b42d2e4efe9f308a6e4715c2aeb58be8a7b050e4545724d3e20564e9d6f", size = 3547117 },
+    { url = "https://files.pythonhosted.org/packages/4d/d1/5c026c9acd5f26c33cf837fee30abcfe0776bbf66e0c78b1b66a76321682/tket2-0.6.0-cp310-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:cbe6bece4e07e08cc92da4083505c02771bc7e91e3c256fbab3bd47bd02d4af2", size = 3546947 },
+    { url = "https://files.pythonhosted.org/packages/fe/0c/32a8e929a0e1154fbc3456c5d6fec2ee3dfdd192e8306b9e1027ef5f7bc8/tket2-0.6.0-cp310-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:6cb2d7ac3aa2863cbd76389bedf9c3018d58a88e34948776a0ea6c46f4d48c2d", size = 4089364 },
+    { url = "https://files.pythonhosted.org/packages/fe/06/a6bec50a1aa155a8f29dc4771956f33307e6799475bd10e84bd8d9f11b96/tket2-0.6.0-cp310-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:06b05957afc0bb816c585ebde367655dfa822087f69699b89d6a8be889af9e64", size = 5021661 },
+    { url = "https://files.pythonhosted.org/packages/94/4d/7e4120d4df554a0cc2649fe8911703577af51b7abe770f7258ea8057793d/tket2-0.6.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1454eee61c8c264adaf9f0370966373ba796484efe94cd1377bc3e67ae8f8867", size = 3905811 },
+    { url = "https://files.pythonhosted.org/packages/58/bc/3e20b2398f72721962c5319ffb2c0b803e4df0b719b173133e79667f0d4a/tket2-0.6.0-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:15721b5904673aeba0b53901de3977d83a7c5b4bb21d042f48ee4f15f2fad995", size = 3759781 },
+    { url = "https://files.pythonhosted.org/packages/f4/39/e22d159182c6054801387ab06d3303eadd4ec013696b674cc7ef11a76ebe/tket2-0.6.0-cp310-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:2db38472d4988f8ae4b1e0711b1b65b636b9a3faa7aa4c255c8258515d88e5d5", size = 3836709 },
+    { url = "https://files.pythonhosted.org/packages/26/9d/d23b0e657d8e7295b33439d1846a858a1b5e7cacaf2477cbe05beed0b9cb/tket2-0.6.0-cp310-abi3-musllinux_1_2_i686.whl", hash = "sha256:1255831d7f0fc65291cb50abc96041529679c3abbe7431eee4e3e6ecfbb41fad", size = 4074652 },
+    { url = "https://files.pythonhosted.org/packages/b1/0f/f4562bf397365cff2cf13e2c745f66a5275e10992a8d8b07e45e622e7ada/tket2-0.6.0-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:a56af6cfa1f4e8ae4ea5be60477b8bf0501972885d985dcd85c7c498b494bdc7", size = 4079034 },
+    { url = "https://files.pythonhosted.org/packages/0b/c1/60ff719894882db83220e2e99d54e2c50ec3e274aac60b741a67dee1a0c9/tket2-0.6.0-cp310-abi3-win32.whl", hash = "sha256:80f59a9242d7e05af13564bd872b3a90476089a5fe6b1da95b5538019f9b2639", size = 3393638 },
+    { url = "https://files.pythonhosted.org/packages/0f/9f/d0db7192534bbdae6eb07f567421c4672e290391ba603f10a96c9e53b462/tket2-0.6.0-cp310-abi3-win_amd64.whl", hash = "sha256:c2750f0da30efab3b8a0ab68d55b7dc810b9c585c0d83ab86a5734c2ce0b6320", size = 3825783 },
+]
+
+[[package]]
+name = "tket2-eccs"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/66/c235509596f8b719635d38143fdd4ca2aaaaf484c6c3865314e58ea1a0f5/tket2_eccs-0.3.0.tar.gz", hash = "sha256:56c5b350b2f2ab709a33f8b0147a9ac118a501a6c9d6eb95e463e76ba33d3e4f", size = 4425732 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/57/dd/10738d78e3af2c0d8b477f73073586363140b60634f44487917f98f423c0/tket2_eccs-0.3.0-py3-none-any.whl", hash = "sha256:3c84ede88cc70b9bd15956ce79f07b0905dc9f8947140c785ef617962a129f89", size = 4427993 },
+]
+
+[[package]]
 name = "tket2-exts"
-version = "0.2.0"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "hugr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0e/56/d9435d4f4fc56af1193b50195e0fe9ff8192919caff0c978ce915d41ecae/tket2_exts-0.2.0.tar.gz", hash = "sha256:bbff2b27ab795fa045efb4c58d4fcdf0e9c94137d1aa5c49677cc8315b5ecfb8", size = 9306 }
+sdist = { url = "https://files.pythonhosted.org/packages/26/b4/fb7a861794ba9a3cce6ea94be74627fc83dac946029e67e31ab918e21a57/tket2_exts-0.3.0.tar.gz", hash = "sha256:ddfe1a410059675fad960f8ff6fc3110914a46edf1d29ef59403f242d50551f0", size = 9562 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/82/4865a9d308b039f89c85020b6537b940d84ab6160d6c7520b911123dd459/tket2_exts-0.2.0-py3-none-any.whl", hash = "sha256:e9c207c90ff03e60faa1e4a1950f5bdf3ddfea8775e5f6f4bf80840d38a807a2", size = 14575 },
+    { url = "https://files.pythonhosted.org/packages/af/de/8dce94965f71bf33aac68c69e9c383307d57e1f955fa6e1b1ae67e059aba/tket2_exts-0.3.0-py3-none-any.whl", hash = "sha256:5bc144fcc18aacfa26f3ae68c81aa154db5479097c38a75cde12bccc03d6a8cd", size = 14691 },
 ]
 
 [[package]]

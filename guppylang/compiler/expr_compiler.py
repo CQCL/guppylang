@@ -13,7 +13,6 @@ from hugr import tys as ht
 from hugr import val as hv
 from hugr.build.cond_loop import Conditional
 from hugr.build.dfg import DP, DfBase
-from hugr.std.collections import ListVal
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, AstVisitor, get_type
@@ -55,8 +54,8 @@ from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     get_element_type,
     int_type,
+    is_array_type,
     is_bool_type,
-    is_list_type,
 )
 from guppylang.tys.const import BoundConstVar, ConstValue, ExistentialConstVar
 from guppylang.tys.subst import Inst
@@ -544,6 +543,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 assert isinstance(gen.iter, PlaceNode)
                 assert isinstance(gen.hasnext, PlaceNode)
                 inputs = [gen.iter] + [PlaceNode(place=var) for var in loop_vars]
+                inputs += [
+                    PlaceNode(place=place) for place in gen.borrowed_outer_places
+                ]
                 # Remember to finalize the iterator once we are done with it. Note that
                 # we need to use partial in the callback, so that we bind the *current*
                 # value of `gen` instead of only last
@@ -601,10 +603,18 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
             if doesnt_contain_none(vs):
                 return hv.Tuple(*vs)
         case list(elts):
-            assert is_list_type(exp_ty)
+            assert is_array_type(exp_ty)
             vs = [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
             if doesnt_contain_none(vs):
-                return ListVal(vs, get_element_type(exp_ty).to_hugr())
+                # TODO: Use proper array value: https://github.com/CQCL/hugr/issues/1497
+                return hv.Extension(
+                    name="ArrayValue",
+                    typ=exp_ty.to_hugr(),
+                    # The value list must be serialized at this point, otherwise the
+                    # `Extension` value would not be serializable.
+                    val=[v._to_serial_root() for v in vs],
+                    extensions=["unsupported"],
+                )
         case _:
             # TODO replace with hugr protocol handling: https://github.com/CQCL/guppylang/issues/563
             # Pytket conversion is an experimental feature

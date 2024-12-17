@@ -4,7 +4,7 @@ from typing import ClassVar, cast
 
 from typing_extensions import assert_never
 
-from guppylang.ast_util import AstNode, with_loc, with_type
+from guppylang.ast_util import with_loc, with_type
 from guppylang.checker.core import Context
 from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang.checker.errors.type_errors import (
@@ -22,8 +22,6 @@ from guppylang.checker.expr_checker import (
 )
 from guppylang.definition.custom import (
     CustomCallChecker,
-    CustomFunctionDef,
-    DefaultCallChecker,
 )
 from guppylang.definition.struct import CheckedStructDef, RawStructDef
 from guppylang.diagnostic import Error, Note
@@ -31,6 +29,7 @@ from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import (
     DesugaredArrayComp,
     DesugaredGeneratorExpr,
+    GenericParamValue,
     GlobalCall,
     MakeIter,
     ResultExpr,
@@ -60,42 +59,28 @@ from guppylang.tys.ty import (
 )
 
 
-class CoercingChecker(DefaultCallChecker):
-    """Function call type checker that automatically coerces arguments to float."""
-
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        for i in range(len(args)):
-            args[i], ty = ExprSynthesizer(self.ctx).synthesize(args[i])
-            if isinstance(ty, NumericType) and ty.kind != NumericType.Kind.Float:
-                to_float = self.ctx.globals.get_instance_func(ty, "__float__")
-                assert to_float is not None
-                args[i], _ = to_float.synthesize_call([args[i]], self.node, self.ctx)
-        return super().synthesize(args)
-
-
 class ReversingChecker(CustomCallChecker):
-    """Call checker that reverses the arguments after checking."""
+    """Call checker for reverse arithmetic methods.
 
-    base_checker: CustomCallChecker
+    For examples, turns a call to `__radd__` into a call to `__add__` with reversed
+    arguments.
+    """
 
-    def __init__(self, base_checker: CustomCallChecker | None = None):
-        self.base_checker = base_checker or DefaultCallChecker()
-
-    def _setup(self, ctx: Context, node: AstNode, func: CustomFunctionDef) -> None:
-        super()._setup(ctx, node, func)
-        self.base_checker._setup(ctx, node, func)
-
-    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        expr, subst = self.base_checker.check(args, ty)
-        if isinstance(expr, GlobalCall):
-            expr.args = list(reversed(expr.args))
-        return expr, subst
+    def parse_name(self) -> str:
+        # Must be a dunder method
+        assert self.func.name.startswith("__")
+        assert self.func.name.endswith("__")
+        name = self.func.name[2:-2]
+        # Remove the `r`
+        assert name.startswith("r")
+        return f"__{name[1:]}__"
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        expr, ty = self.base_checker.synthesize(args)
-        if isinstance(expr, GlobalCall):
-            expr.args = list(reversed(expr.args))
-        return expr, ty
+        [self_arg, other_arg] = args
+        self_arg, self_ty = ExprSynthesizer(self.ctx).synthesize(self_arg)
+        f = self.ctx.globals.get_instance_func(self_ty, self.parse_name())
+        assert f is not None
+        return f.synthesize_call([other_arg, self_arg], self.node, self.ctx)
 
 
 class UnsupportedChecker(CustomCallChecker):
@@ -232,7 +217,10 @@ class NewArrayChecker(CustomCallChecker):
                         # TODO: We could use the type information to infer some stuff
                         #  in the comprehension
                         arr_compr, res_ty = self.synthesize_array_comprehension(compr)
-                        subst, _ = check_type_against(res_ty, ty, self.node)
+                        arr_compr = with_loc(self.node, arr_compr)
+                        arr_compr, subst, _ = check_type_against(
+                            res_ty, ty, arr_compr, self.ctx
+                        )
                         return arr_compr, subst
                     # Or a list of array elements
                     case args:
@@ -359,7 +347,7 @@ class ResultChecker(CustomCallChecker):
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         expr, res_ty = self.synthesize(args)
-        subst, _ = check_type_against(res_ty, ty, self.node)
+        expr, subst, _ = check_type_against(res_ty, ty, expr, self.ctx)
         return expr, subst
 
     @staticmethod
@@ -373,11 +361,22 @@ class RangeChecker(CustomCallChecker):
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(1, len(args), self.node)
         [stop] = args
-        stop, _ = ExprChecker(self.ctx).check(stop, int_type(), "argument")
-        range_iter, range_ty = self.make_range(stop)
-        if isinstance(stop, ast.Constant):
-            return to_sized_iter(range_iter, range_ty, stop.value, self.ctx)
+        stop_checked, _ = ExprChecker(self.ctx).check(stop, int_type(), "argument")
+        range_iter, range_ty = self.make_range(stop_checked)
+        # Check if `stop` is a statically known value. Note that we need to do this on
+        # the original `stop` instead of `stop_checked` to avoid any previously inserted
+        # `int` coercions.
+        if (static_stop := self.check_static(stop)) is not None:
+            return to_sized_iter(range_iter, range_ty, static_stop, self.ctx)
         return range_iter, range_ty
+
+    def check_static(self, stop: ast.expr) -> "int | Const | None":
+        stop, _ = ExprSynthesizer(self.ctx).synthesize(stop, allow_free_vars=True)
+        if isinstance(stop, ast.Constant) and isinstance(stop.value, int):
+            return stop.value
+        if isinstance(stop, GenericParamValue) and stop.param.ty == nat_type():
+            return stop.param.to_bound().const
+        return None
 
     def range_ty(self) -> StructType:
         from guppylang.std.builtins import Range
@@ -395,7 +394,7 @@ class RangeChecker(CustomCallChecker):
 
 
 def to_sized_iter(
-    iterator: ast.expr, range_ty: Type, size: int, ctx: Context
+    iterator: ast.expr, range_ty: Type, size: "int | Const", ctx: Context
 ) -> tuple[ast.expr, Type]:
     """Adds a static size annotation to an iterator."""
     sized_iter_ty = sized_iter_type(range_ty, size)

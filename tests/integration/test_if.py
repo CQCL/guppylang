@@ -274,3 +274,27 @@ def test_eq(validate):
         return x == y
 
     validate(foo)
+
+
+def test_zero_as_bool(validate):
+
+    @compile_guppy
+    def foo() -> bool:
+        if 0:
+            return False
+        else:
+            return True
+
+    validate(foo)
+
+
+def test_one_as_bool(validate):
+
+    @compile_guppy
+    def foo() -> bool:
+        if 1:
+            return True
+        else:
+            return False
+
+    validate(foo)

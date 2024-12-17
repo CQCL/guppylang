@@ -7,27 +7,16 @@ from typing import Any, Generic, TypeVar, no_type_check
 import hugr.std.int
 
 from guppylang.decorator import guppy
-from guppylang.definition.custom import DefaultCallChecker, NoopCompiler
+from guppylang.definition.custom import NoopCompiler
 from guppylang.std._internal.checker import (
     ArrayLenChecker,
     CallableChecker,
-    CoercingChecker,
     DunderChecker,
     NewArrayChecker,
     RangeChecker,
     ResultChecker,
     ReversingChecker,
     UnsupportedChecker,
-)
-from guppylang.std._internal.compiler.arithmetic import (
-    FloatBoolCompiler,
-    FloatDivmodCompiler,
-    FloatFloordivCompiler,
-    FloatModCompiler,
-    IFromBoolCompiler,
-    IntTruedivCompiler,
-    IToBoolCompiler,
-    NatTruedivCompiler,
 )
 from guppylang.std._internal.compiler.array import (
     ArrayGetitemCompiler,
@@ -109,11 +98,18 @@ class Bool:
     @guppy.hugr_op(logic_op("Eq"))
     def __eq__(self: bool, other: bool) -> bool: ...
 
-    @guppy.custom(IFromBoolCompiler())
-    def __int__(self: bool) -> int: ...
+    @guppy
+    @no_type_check
+    def __int__(self: bool) -> int:
+        return 1 if self else 0
 
-    @guppy.custom(IFromBoolCompiler())
-    def __nat__(self: bool) -> nat: ...
+    @guppy
+    @no_type_check
+    def __nat__(self: bool) -> nat:
+        # TODO: Type information doesn't flow through the `if` expression, so we
+        #  have to insert the `nat` coercions by hand.
+        #  See https://github.com/CQCL/guppylang/issues/707
+        return nat(1) if self else nat(0)
 
     @guppy.custom(checker=DunderChecker("__bool__"), higher_order_value=False)
     def __new__(x): ...
@@ -136,8 +132,10 @@ class Nat:
     @guppy.hugr_op(int_op("iand"))
     def __and__(self: nat, other: nat) -> nat: ...
 
-    @guppy.custom(IToBoolCompiler())
-    def __bool__(self: nat) -> bool: ...
+    @guppy
+    @no_type_check
+    def __bool__(self: nat) -> bool:
+        return self != 0
 
     @guppy.custom(NoopCompiler())
     def __ceil__(self: nat) -> nat: ...
@@ -202,56 +200,58 @@ class Nat:
     @guppy.hugr_op(int_op("ipow"))
     def __pow__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("iadd"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __radd__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("iand"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rand__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("idivmod_u"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rdivmod__(self: nat, other: nat) -> tuple[nat, nat]: ...
 
-    @guppy.hugr_op(int_op("idiv_u"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rfloordiv__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("ishl"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rlshift__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("imod_u"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rmod__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("imul"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rmul__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("ior"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __ror__(self: nat, other: nat) -> nat: ...
 
     @guppy.custom(NoopCompiler())
     def __round__(self: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("ipow"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rpow__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("ishr"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rrshift__(self: nat, other: nat) -> nat: ...
 
     @guppy.hugr_op(int_op("ishr"))
     def __rshift__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("isub"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rsub__(self: nat, other: nat) -> nat: ...
 
-    @guppy.custom(NatTruedivCompiler(), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rtruediv__(self: nat, other: nat) -> float: ...
 
-    @guppy.hugr_op(int_op("ixor"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rxor__(self: nat, other: nat) -> nat: ...
 
     @guppy.hugr_op(int_op("isub"))
     def __sub__(self: nat, other: nat) -> nat: ...
 
-    @guppy.custom(NatTruedivCompiler())
-    def __truediv__(self: nat, other: nat) -> float: ...
+    @guppy
+    @no_type_check
+    def __truediv__(self: nat, other: nat) -> float:
+        return float(self) / float(other)
 
     @guppy.custom(NoopCompiler())
     def __trunc__(self: nat) -> nat: ...
@@ -271,8 +271,10 @@ class Int:
     @guppy.hugr_op(int_op("iand"))
     def __and__(self: int, other: int) -> int: ...
 
-    @guppy.custom(IToBoolCompiler())
-    def __bool__(self: int) -> bool: ...
+    @guppy
+    @no_type_check
+    def __bool__(self: int) -> bool:
+        return self != 0
 
     @guppy.custom(NoopCompiler())
     def __ceil__(self: int) -> int: ...
@@ -340,56 +342,58 @@ class Int:
     @guppy.hugr_op(int_op("ipow"))
     def __pow__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("iadd"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __radd__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("iand"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rand__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("idivmod_s"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rdivmod__(self: int, other: int) -> tuple[int, int]: ...
 
-    @guppy.hugr_op(int_op("idiv_s"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rfloordiv__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("ishl"), ReversingChecker())  # TODO: RHS is unsigned
+    @guppy.custom(checker=ReversingChecker())  # TODO: RHS is unsigned
     def __rlshift__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("imod_s"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rmod__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("imul"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rmul__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("ior"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __ror__(self: int, other: int) -> int: ...
 
     @guppy.custom(NoopCompiler())
     def __round__(self: int) -> int: ...
 
-    @guppy.hugr_op(int_op("ipow"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rpow__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("ishr"), ReversingChecker())  # TODO: RHS is unsigned
+    @guppy.custom(checker=ReversingChecker())  # TODO: RHS is unsigned
     def __rrshift__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("ishr"))  # TODO: RHS is unsigned
+    @guppy.custom(checker=ReversingChecker())  # TODO: RHS is unsigned
     def __rshift__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("isub"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rsub__(self: int, other: int) -> int: ...
 
-    @guppy.custom(IntTruedivCompiler(), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rtruediv__(self: int, other: int) -> float: ...
 
-    @guppy.hugr_op(int_op("ixor"), ReversingChecker())
+    @guppy.custom(checker=ReversingChecker())
     def __rxor__(self: int, other: int) -> int: ...
 
     @guppy.hugr_op(int_op("isub"))
     def __sub__(self: int, other: int) -> int: ...
 
-    @guppy.custom(IntTruedivCompiler())
-    def __truediv__(self: int, other: int) -> float: ...
+    @guppy
+    @no_type_check
+    def __truediv__(self: int, other: int) -> float:
+        return float(self) / float(other)
 
     @guppy.custom(NoopCompiler())
     def __trunc__(self: int) -> int: ...
@@ -400,115 +404,114 @@ class Int:
 
 @guppy.extend_type(float_type_def)
 class Float:
-    @guppy.hugr_op(float_op("fabs"), CoercingChecker())
+    @guppy.hugr_op(float_op("fabs"))
     def __abs__(self: float) -> float: ...
 
-    @guppy.hugr_op(float_op("fadd"), CoercingChecker())
+    @guppy.hugr_op(float_op("fadd"))
     def __add__(self: float, other: float) -> float: ...
 
-    @guppy.custom(FloatBoolCompiler(), CoercingChecker())
-    def __bool__(self: float) -> bool: ...
+    @guppy
+    @no_type_check
+    def __bool__(self: float) -> bool:
+        return self != 0.0
 
-    @guppy.hugr_op(float_op("fceil"), CoercingChecker())
+    @guppy.hugr_op(float_op("fceil"))
     def __ceil__(self: float) -> float: ...
 
-    @guppy.custom(FloatDivmodCompiler(), CoercingChecker())
-    def __divmod__(self: float, other: float) -> tuple[float, float]: ...
+    @guppy
+    @no_type_check
+    def __divmod__(self: float, other: float) -> tuple[float, float]:
+        return self // other, self.__mod__(other)
 
-    @guppy.hugr_op(float_op("feq"), CoercingChecker())
+    @guppy.hugr_op(float_op("feq"))
     def __eq__(self: float, other: float) -> bool: ...
 
-    @guppy.custom(NoopCompiler(), CoercingChecker())
+    @guppy.custom(NoopCompiler())
     def __float__(self: float) -> float: ...
 
-    @guppy.hugr_op(float_op("ffloor"), CoercingChecker())
+    @guppy.hugr_op(float_op("ffloor"))
     def __floor__(self: float) -> float: ...
 
-    @guppy.custom(FloatFloordivCompiler(), CoercingChecker())
-    def __floordiv__(self: float, other: float) -> float: ...
+    @guppy
+    @no_type_check
+    def __floordiv__(self: float, other: float) -> float:
+        return (self / other).__floor__()
 
-    @guppy.hugr_op(float_op("fge"), CoercingChecker())
+    @guppy.hugr_op(float_op("fge"))
     def __ge__(self: float, other: float) -> bool: ...
 
-    @guppy.hugr_op(float_op("fgt"), CoercingChecker())
+    @guppy.hugr_op(float_op("fgt"))
     def __gt__(self: float, other: float) -> bool: ...
 
-    @guppy.hugr_op(
-        unsupported_op("trunc_s"), CoercingChecker()
-    )  # TODO `trunc_s` returns an option
+    @guppy.hugr_op(unsupported_op("trunc_s"))  # TODO `trunc_s` returns an option
     def __int__(self: float) -> int: ...
 
-    @guppy.hugr_op(float_op("fle"), CoercingChecker())
+    @guppy.hugr_op(float_op("fle"))
     def __le__(self: float, other: float) -> bool: ...
 
-    @guppy.hugr_op(float_op("flt"), CoercingChecker())
+    @guppy.hugr_op(float_op("flt"))
     def __lt__(self: float, other: float) -> bool: ...
 
-    @guppy.custom(FloatModCompiler(), CoercingChecker())
-    def __mod__(self: float, other: float) -> float: ...
+    @guppy
+    @no_type_check
+    def __mod__(self: float, other: float) -> float:
+        return self - (self // other) * other
 
-    @guppy.hugr_op(float_op("fmul"), CoercingChecker())
+    @guppy.hugr_op(float_op("fmul"))
     def __mul__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(
-        unsupported_op("trunc_u"), CoercingChecker()
-    )  # TODO `trunc_u` returns an option
+    @guppy.hugr_op(unsupported_op("trunc_u"))  # TODO `trunc_u` returns an option
     def __nat__(self: float) -> nat: ...
 
-    @guppy.hugr_op(float_op("fne"), CoercingChecker())
+    @guppy.hugr_op(float_op("fne"))
     def __ne__(self: float, other: float) -> bool: ...
 
-    @guppy.hugr_op(float_op("fneg"), CoercingChecker())
+    @guppy.hugr_op(float_op("fneg"))
     def __neg__(self: float) -> float: ...
 
     @guppy.custom(checker=DunderChecker("__float__"), higher_order_value=False)
     def __new__(x): ...
 
-    @guppy.custom(NoopCompiler(), CoercingChecker())
+    @guppy.custom(NoopCompiler())
     def __pos__(self: float) -> float: ...
 
     @guppy.hugr_op(float_op("fpow"))  # TODO
     def __pow__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(float_op("fadd"), ReversingChecker(CoercingChecker()))
+    @guppy.custom(checker=ReversingChecker())
     def __radd__(self: float, other: float) -> float: ...
 
-    @guppy.custom(FloatDivmodCompiler(), ReversingChecker(CoercingChecker()))
+    @guppy.custom(checker=ReversingChecker())
     def __rdivmod__(self: float, other: float) -> tuple[float, float]: ...
 
-    @guppy.custom(FloatFloordivCompiler(), ReversingChecker(CoercingChecker()))
+    @guppy.custom(checker=ReversingChecker())
     def __rfloordiv__(self: float, other: float) -> float: ...
 
-    @guppy.custom(FloatModCompiler(), ReversingChecker(CoercingChecker()))
+    @guppy.custom(checker=ReversingChecker())
     def __rmod__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(float_op("fmul"), ReversingChecker(CoercingChecker()))
+    @guppy.custom(checker=ReversingChecker())
     def __rmul__(self: float, other: float) -> float: ...
 
     @guppy.hugr_op(float_op("fround"))  # TODO
     def __round__(self: float) -> float: ...
 
-    @guppy.hugr_op(
-        float_op("fpow"),
-        ReversingChecker(DefaultCallChecker()),
-    )  # TODO
+    @guppy.custom(checker=ReversingChecker())
     def __rpow__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(float_op("fsub"), ReversingChecker(CoercingChecker()))
+    @guppy.custom(checker=ReversingChecker())
     def __rsub__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(float_op("fdiv"), ReversingChecker(CoercingChecker()))
+    @guppy.custom(checker=ReversingChecker())
     def __rtruediv__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(float_op("fsub"), CoercingChecker())
+    @guppy.hugr_op(float_op("fsub"))
     def __sub__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(float_op("fdiv"), CoercingChecker())
+    @guppy.hugr_op(float_op("fdiv"))
     def __truediv__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(
-        unsupported_op("trunc_s"), CoercingChecker()
-    )  # TODO `trunc_s` returns an option
+    @guppy.hugr_op(unsupported_op("trunc_s"))  # TODO `trunc_s` returns an option
     def __trunc__(self: float) -> float: ...
 
 

@@ -13,17 +13,15 @@ from guppylang.std._internal.compiler.quantum import (
 )
 from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle
-from guppylang.std.builtins import owned
+from guppylang.std.builtins import array, owned
+from guppylang.std.option import Option
 
 
 @guppy.type(ht.Qubit, linear=True)
 class qubit:
-    @guppy
+    @guppy.hugr_op(quantum_op("QAlloc"))
     @no_type_check
-    def __new__() -> "qubit":
-        q = dirty_qubit()
-        reset(q)
-        return q
+    def __new__() -> "qubit": ...
 
     @guppy
     @no_type_check
@@ -39,6 +37,13 @@ class qubit:
     @no_type_check
     def discard(self: "qubit" @ owned) -> None:
         discard(self)
+
+
+@guppy.hugr_op(quantum_op("TryQAlloc"))
+@no_type_check
+def maybe_qubit() -> Option[qubit]:
+    """Try to allocate a qubit, returning `some(qubit)`
+    if allocation succeeds or `nothing` if it fails."""
 
 
 @guppy.hugr_op(quantum_op("H"))
@@ -121,11 +126,6 @@ def crz(control: qubit, target: qubit, angle: angle) -> None: ...
 def toffoli(control1: qubit, control2: qubit, target: qubit) -> None: ...
 
 
-@guppy.hugr_op(quantum_op("QAlloc"))
-@no_type_check
-def dirty_qubit() -> qubit: ...
-
-
 @guppy.custom(InoutMeasureCompiler())
 @no_type_check
 def project_z(q: qubit) -> bool: ...
@@ -144,3 +144,21 @@ def measure(q: qubit @ owned) -> bool: ...
 @guppy.hugr_op(quantum_op("Reset"))
 @no_type_check
 def reset(q: qubit) -> None: ...
+
+
+N = guppy.nat_var("N")
+
+
+@guppy
+@no_type_check
+def measure_array(qubits: array[qubit, N] @ owned) -> array[bool, N]:
+    """Measure an array of qubits, returning an array of bools."""
+    return array(measure(q) for q in qubits)
+
+
+@guppy
+@no_type_check
+def discard_array(qubits: array[qubit, N] @ owned) -> None:
+    """Discard an array of qubits."""
+    for q in qubits:
+        discard(q)

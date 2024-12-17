@@ -310,3 +310,136 @@ def test_nonlinear_next_linear_iter(validate):
         return [(x, x + y) for x in mt for y in xs]
 
     validate(module.compile())
+
+
+def test_borrow(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> int: ...
+
+    @guppy(module)
+    def test(q: qubit, n: int) -> list[int]:
+        return [foo(q) for _ in range(n)]
+
+    validate(module.compile())
+
+
+def test_borrow_nested(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> int: ...
+
+    @guppy(module)
+    def test(q: qubit, n: int, m: int) -> list[int]:
+        return [foo(q) for _ in range(n) for _ in range(m)]
+
+    validate(module.compile())
+
+
+def test_borrow_guarded(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> int: ...
+
+    @guppy(module)
+    def test(q: qubit, n: int) -> list[int]:
+        return [foo(q) for i in range(n) if i % 2 == 0]
+
+    validate(module.compile())
+
+
+def test_borrow_twice(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> int: ...
+
+    @guppy(module)
+    def test(q: qubit, n: int) -> list[int]:
+        return [foo(q) + foo(q) for _ in range(n)]
+
+    validate(module.compile())
+
+
+def test_borrow_in_guard(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> int: ...
+
+    @guppy.declare(module)
+    def bar(q: qubit) -> bool: ...
+
+    @guppy(module)
+    def test(q: qubit, n: int) -> list[int]:
+        return [foo(q) for _ in range(n) if bar(q)]
+
+    validate(module.compile())
+
+
+def test_borrow_in_iter(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> int: ...
+
+    @guppy(module)
+    def test(q: qubit @ owned) -> tuple[list[int], qubit]:
+        return [foo(q) for _ in range(foo(q))], q
+
+    validate(module.compile())
+
+
+def test_borrow_struct(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q1: qubit
+        q2: qubit
+
+    @guppy.declare(module)
+    def foo(s: MyStruct) -> int: ...
+
+    @guppy(module)
+    def test(s: MyStruct, n: int) -> list[int]:
+        return [foo(s) for _ in range(n)]
+
+    validate(module.compile())
+
+
+def test_borrow_and_consume(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+    module.load(qubit)
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> int: ...
+
+    @guppy.declare(module)
+    def bar(q: qubit @ owned) -> int: ...
+
+    @guppy(module)
+    def test(qs: list[qubit] @ owned) -> list[int]:
+        return [foo(q) + bar(q) for q in qs]
+
+    validate(module.compile())
+
+

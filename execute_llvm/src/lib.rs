@@ -1,9 +1,7 @@
 //! This module provides a Python interface to compile and execute a Hugr program to LLVM IR.
-use hugr::{
-    self, extension::ExtensionRegistry, ops, ops::custom::resolve_extension_ops, std_extensions,
-    HugrView,
-};
-use hugr_llvm::utils::fat::FatExt;
+use hugr::llvm::utils::fat::FatExt;
+use hugr::Hugr;
+use hugr::{self, ops, std_extensions, HugrView};
 use inkwell::{context::Context, module::Module, values::GenericValue};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -13,22 +11,8 @@ macro_rules! pyerr {
 }
 
 fn parse_hugr(hugr_json: &str) -> PyResult<hugr::Hugr> {
-    // Deserializing should be a given if we validate before running
-    let mut hugr =
-        serde_json::from_str(hugr_json).map_err(|e| pyerr!("Couldn't deserialize hugr: {}", e))?;
-    let reg = ExtensionRegistry::try_new([
-        hugr::extension::PRELUDE.to_owned(),
-        std_extensions::arithmetic::int_ops::EXTENSION.to_owned(),
-        std_extensions::arithmetic::int_types::EXTENSION.to_owned(),
-        std_extensions::arithmetic::float_ops::EXTENSION.to_owned(),
-        std_extensions::arithmetic::float_types::EXTENSION.to_owned(),
-        std_extensions::arithmetic::conversions::EXTENSION.to_owned(),
-        std_extensions::collections::EXTENSION.to_owned(),
-        std_extensions::logic::EXTENSION.to_owned(),
-    ])
-    .map_err(|e| pyerr!("Making extension registry: {}", e))?;
-    resolve_extension_ops(&mut hugr, &reg)
-        .map_err(|e| pyerr!("Instantiating extension ops: {}", e))?;
+    let hugr = Hugr::load_json(hugr_json.as_bytes(), &std_extensions::std_reg())
+        .map_err(|e| pyerr!("Couldn't deserialize hugr: {}", e))?;
     Ok(hugr)
 }
 
@@ -57,19 +41,19 @@ fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node>
 fn compile_module<'a>(
     hugr: &'a hugr::Hugr,
     ctx: &'a Context,
-    namer: hugr_llvm::emit::Namer,
+    namer: hugr::llvm::emit::Namer,
 ) -> PyResult<Module<'a>> {
     let llvm_module = ctx.create_module("guppy_llvm");
     // TODO: Handle tket2 codegen extension
-    let extensions = hugr_llvm::custom::CodegenExtsBuilder::default()
+    let extensions = hugr::llvm::custom::CodegenExtsBuilder::default()
         .add_int_extensions()
         .add_default_prelude_extensions()
+        .add_default_array_extensions()
         .add_float_extensions()
-        .add_conversion_extensions()
-        .add_default_rotation_extensions();
+        .add_conversion_extensions();
 
     let emitter =
-        hugr_llvm::emit::EmitHugr::new(ctx, llvm_module, namer.into(), extensions.finish().into());
+        hugr::llvm::emit::EmitHugr::new(ctx, llvm_module, namer.into(), extensions.finish().into());
     let hugr_module = hugr.fat_root().unwrap();
     let emitter = emitter
         .emit_module(hugr_module)
@@ -96,7 +80,7 @@ fn run_function<T>(
     let hugr = parse_hugr(hugr_json)?;
     let ctx = Context::create();
 
-    let namer = hugr_llvm::emit::Namer::default();
+    let namer = hugr::llvm::emit::Namer::default();
     let funcdefn_node = find_funcdef_node(&hugr, fn_name)?;
     let mangled_name = namer.name_func(fn_name, funcdefn_node);
 

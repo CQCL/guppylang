@@ -6,9 +6,16 @@ import guppylang.decorator
 from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
-from guppylang.std.builtins import owned
+from guppylang.std.builtins import owned, array
 
-from guppylang.std.quantum import dirty_qubit, discard, measure, qubit
+from guppylang.std.quantum import (
+    discard,
+    measure,
+    qubit,
+    maybe_qubit,
+    measure_array,
+    discard_array,
+)
 from guppylang.std.quantum_functional import (
     cx,
     cy,
@@ -43,16 +50,18 @@ def compile_quantum_guppy(fn) -> ModulePointer:
     ), "`@compile_quantum_guppy` does not support extra arguments."
 
     module = GuppyModule("module")
-    module.load(angle, qubit, dirty_qubit, discard, measure)
+    module.load(
+        angle, qubit, discard, measure, measure_array, maybe_qubit, discard_array
+    )
     module.load_all(quantum_functional)
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
 
 
-def test_dirty_qubit(validate):
+def test_alloc(validate):
     @compile_quantum_guppy
     def test() -> tuple[bool, bool]:
-        q1, q2 = qubit(), dirty_qubit()
+        q1, q2 = qubit(), maybe_qubit().unwrap()
         q1, q2 = cx(q1, q2)
         return (measure(q1), measure(q2))
 
@@ -123,3 +132,25 @@ def test_parametric(validate):
         q2 = rz(q2, a3)
         q1, q2 = crz(q1, q2, a3)
         return (q1, q2)
+
+
+def test_measure_array(validate):
+    """Build and measure array."""
+
+    @compile_quantum_guppy
+    def test() -> array[bool, 10]:
+        qs = array(qubit() for _ in range(10))
+        return measure_array(qs)
+
+    validate(test)
+
+
+def test_discard_array(validate):
+    """Build and discard array."""
+
+    @compile_quantum_guppy
+    def test() -> None:
+        qs = array(qubit() for _ in range(10))
+        discard_array(qs)
+
+    validate(test)

@@ -308,7 +308,7 @@ class CustomCallChecker(ABC):
         from guppylang.checker.expr_checker import check_type_against
 
         expr, res_ty = self.synthesize(args)
-        subst, _ = check_type_against(res_ty, ty, self.node)
+        expr, subst, _ = check_type_against(res_ty, ty, expr, self.ctx)
         return expr, subst
 
     @abstractmethod
