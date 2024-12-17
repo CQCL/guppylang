@@ -87,7 +87,7 @@ def array_pop(elem_ty: ht.Type, length: int, from_left: bool) -> ops.ExtOp:
 def array_discard_empty(elem_ty: ht.Type) -> ops.ExtOp:
     """Returns an operation that discards an array of length zero."""
     arr_ty = array_type(elem_ty, ht.BoundedNatArg(0))
-    return hugr.std.PRELUDE.get_op("discard_empty").instantiate(
+    return EXTENSION.get_op("discard_empty").instantiate(
         [ht.TypeTypeArg(elem_ty)], ht.FunctionType([arr_ty], [])
     )
 
