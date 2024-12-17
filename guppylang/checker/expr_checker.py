@@ -1091,15 +1091,35 @@ def synthesize_comprehension(
     node: AstNode, gens: list[DesugaredGenerator], elt: ast.expr, ctx: Context
 ) -> tuple[list[DesugaredGenerator], ast.expr, Type]:
     """Helper function to synthesise the element type of a list comprehension."""
-    from guppylang.checker.stmt_checker import StmtChecker
-
     # If there are no more generators left, we can check the list element
     if not gens:
         elt, elt_ty = ExprSynthesizer(ctx).synthesize(elt)
         return gens, elt, elt_ty
 
-    # Check the iterator in the outer context
+    # Check the first generator
     gen, *gens = gens
+    gen, inner_ctx = check_generator(gen, ctx)
+
+    # Check remaining generators in inner context
+    gens, elt, elt_ty = synthesize_comprehension(node, gens, elt, inner_ctx)
+
+    # The iter finalizer is again checked in the outer context
+    gen.iterend, iterend_ty = ExprSynthesizer(ctx).synthesize(gen.iterend)
+    gen.iterend = with_type(iterend_ty, gen.iterend)
+    return [gen, *gens], elt, elt_ty
+
+
+def check_generator(
+    gen: DesugaredGenerator, ctx: Context
+) -> tuple[DesugaredGenerator, Context]:
+    """Helper function to check a single generator.
+
+    Returns the type annotated generator together with a new nested context in which the
+    generator variables are bound.
+    """
+    from guppylang.checker.stmt_checker import StmtChecker
+
+    # Check the iterator in the outer context
     gen.iter_assign = StmtChecker(ctx).visit_Assign(gen.iter_assign)
 
     # The rest is checked in a new nested context to ensure that variables don't escape
@@ -1119,13 +1139,7 @@ def synthesize_comprehension(
         gen.ifs[i], if_ty = expr_sth.synthesize(gen.ifs[i])
         gen.ifs[i], _ = to_bool(gen.ifs[i], if_ty, inner_ctx)
 
-    # Check remaining generators
-    gens, elt, elt_ty = synthesize_comprehension(node, gens, elt, inner_ctx)
-
-    # The iter finalizer is again checked in the outer context
-    gen.iterend, iterend_ty = ExprSynthesizer(ctx).synthesize(gen.iterend)
-    gen.iterend = with_type(iterend_ty, gen.iterend)
-    return [gen, *gens], elt, elt_ty
+    return gen, inner_ctx
 
 
 def eval_py_expr(node: PyExpr, ctx: Context) -> Any:

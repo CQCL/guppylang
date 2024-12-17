@@ -316,55 +316,12 @@ class ExprBuilder(ast.NodeTransformer):
 
     def visit_ListComp(self, node: ast.ListComp) -> DesugaredListComp:
         check_lists_enabled(node)
-        generators, elt = self._build_comprehension(node.generators, node.elt, node)
+        generators, elt = desugar_comprehension(node.generators, node.elt, node)
         return with_loc(node, DesugaredListComp(elt=elt, generators=generators))
 
     def visit_GeneratorExp(self, node: ast.GeneratorExp) -> DesugaredGeneratorExpr:
-        generators, elt = self._build_comprehension(node.generators, node.elt, node)
+        generators, elt = desugar_comprehension(node.generators, node.elt, node)
         return with_loc(node, DesugaredGeneratorExpr(elt=elt, generators=generators))
-
-    def _build_comprehension(
-        self, generators: list[ast.comprehension], elt: ast.expr, node: ast.AST
-    ) -> tuple[list[DesugaredGenerator], ast.expr]:
-        # Check for illegal expressions
-        illegals = find_nodes(is_illegal_in_list_comp, node)
-        if illegals:
-            err = UnsupportedError(
-                illegals[0],
-                "This expression",
-                singular=True,
-                unsupported_in="a list comprehension",
-            )
-            raise GuppyError(err)
-
-        # Desugar into statements that create the iterator, check for a next element,
-        # get the next element, and finalise the iterator.
-        gens = []
-        for g in generators:
-            if g.is_async:
-                raise GuppyError(UnsupportedError(g, "Async generators"))
-            g.iter = self.visit(g.iter)
-            it = make_var(next(tmp_vars), g.iter)
-            hasnext = make_var(next(tmp_vars), g.iter)
-            desugared = DesugaredGenerator(
-                iter=it,
-                hasnext=hasnext,
-                iter_assign=make_assign(
-                    [it], with_loc(it, MakeIter(value=g.iter, origin_node=node))
-                ),
-                hasnext_assign=make_assign(
-                    [hasnext, it], with_loc(it, IterHasNext(value=it))
-                ),
-                next_assign=make_assign(
-                    [g.target, it], with_loc(it, IterNext(value=it))
-                ),
-                iterend=with_loc(it, IterEnd(value=it)),
-                ifs=g.ifs,
-            )
-            gens.append(desugared)
-
-        elt = self.visit(elt)
-        return gens, elt
 
     def visit_Call(self, node: ast.Call) -> ast.AST:
         return is_py_expression(node) or self.generic_visit(node)
@@ -485,6 +442,56 @@ class BranchBuilder(AstVisitor[None]):
         bb.branch_pred = pred
         self.cfg.link(bb, false_bb)
         self.cfg.link(bb, true_bb)
+
+
+def desugar_comprehension(
+    generators: list[ast.comprehension], elt: ast.expr, node: ast.AST
+) -> tuple[list[DesugaredGenerator], ast.expr]:
+    """Helper function to desugar a comprehension node."""
+    # Check for illegal expressions
+    illegals = find_nodes(is_illegal_in_list_comp, node)
+    if illegals:
+        err = UnsupportedError(
+            illegals[0],
+            "This expression",
+            singular=True,
+            unsupported_in="a list comprehension",
+        )
+        raise GuppyError(err)
+
+    # The check above ensures that the comprehension doesn't contain any control-flow
+    # expressions. Thus, we can use a dummy `ExprBuilder` to desugar the insides.
+    # TODO: Refactor so that desugaring is separate from control-flow building
+    dummy_cfg = CFG()
+    builder = ExprBuilder(dummy_cfg, dummy_cfg.entry_bb)
+
+    # Desugar into statements that create the iterator, check for a next element,
+    # get the next element, and finalise the iterator.
+    gens = []
+    for g in generators:
+        if g.is_async:
+            raise GuppyError(UnsupportedError(g, "Async generators"))
+        g.iter = builder.visit(g.iter)
+        it = make_var(next(tmp_vars), g.iter)
+        hasnext = make_var(next(tmp_vars), g.iter)
+        desugared = DesugaredGenerator(
+            iter=it,
+            hasnext=hasnext,
+            iter_assign=make_assign(
+                [it], with_loc(it, MakeIter(value=g.iter, origin_node=node))
+            ),
+            hasnext_assign=make_assign(
+                [hasnext, it], with_loc(it, IterHasNext(value=it))
+            ),
+            next_assign=make_assign([g.target, it], with_loc(it, IterNext(value=it))),
+            iterend=with_loc(it, IterEnd(value=it)),
+            ifs=g.ifs,
+            borrowed_outer_places=[],
+        )
+        gens.append(desugared)
+
+    elt = builder.visit(elt)
+    return gens, elt
 
 
 def is_functional_annotation(stmt: ast.stmt) -> bool:

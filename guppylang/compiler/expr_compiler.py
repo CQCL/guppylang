@@ -5,6 +5,7 @@ from functools import partial
 from typing import Any, TypeGuard, TypeVar
 
 import hugr
+import hugr.std.collections.array
 import hugr.std.float
 import hugr.std.int
 import hugr.std.logic
@@ -13,7 +14,6 @@ from hugr import tys as ht
 from hugr import val as hv
 from hugr.build.cond_loop import Conditional
 from hugr.build.dfg import DP, DfBase
-import hugr.std.collections.array
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, AstVisitor, get_type
