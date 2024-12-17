@@ -72,6 +72,26 @@ def array_set(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     )
 
 
+def array_pop(elem_ty: ht.Type, length: int, from_left: bool) -> ops.ExtOp:
+    """Returns an operation that pops an element from the left of an array."""
+    assert length > 0
+    length_arg = ht.BoundedNatArg(length)
+    arr_ty = array_type(elem_ty, length_arg)
+    popped_arr_ty = array_type(elem_ty, ht.BoundedNatArg(length - 1))
+    op = "pop_left" if from_left else "pop_right"
+    return _instantiate_array_op(
+        op, elem_ty, length_arg, [arr_ty], [ht.Option(elem_ty, popped_arr_ty)]
+    )
+
+
+def array_discard_empty(elem_ty: ht.Type) -> ops.ExtOp:
+    """Returns an operation that discards an array of length zero."""
+    arr_ty = array_type(elem_ty, ht.BoundedNatArg(0))
+    return EXTENSION.get_op("discard_empty").instantiate(
+        [ht.TypeTypeArg(elem_ty)], ht.FunctionType([arr_ty], [])
+    )
+
+
 def array_map(elem_ty: ht.Type, length: ht.TypeArg, new_elem_ty: ht.Type) -> ops.ExtOp:
     """Returns an operation that maps a function across an array."""
     # TODO

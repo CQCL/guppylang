@@ -142,13 +142,15 @@ class VariableVisitor(ast.NodeVisitor):
         match lhs:
             case ast.Name(id=name):
                 self.stats.assigned[name] = node
-            case ast.Tuple(elts=elts):
+            case ast.Tuple(elts=elts) | ast.List(elts=elts):
                 for elt in elts:
                     self._handle_assign_target(elt, node)
             case ast.Attribute(value=value):
                 # Setting attributes counts as a use of the value, so we do a regular
                 # visit instead of treating it like a LHS
                 self.visit(value)
+            case ast.Starred(value=value):
+                self._handle_assign_target(value, node)
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> None:
         self._handle_comprehension(node.generators, node.elt)
