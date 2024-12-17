@@ -15,8 +15,7 @@ name = "execute_llvm"
 crate-type = ["cdylib"]
 
 [dependencies]
-hugr-llvm.workspace = true
-hugr.workspace = true
+hugr = {workspace = true, features = ["llvm"]}
 inkwell.workspace = true
 pyo3.workspace = true
 serde_json.workspace = true
