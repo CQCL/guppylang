@@ -48,6 +48,7 @@ fn compile_module<'a>(
     let extensions = hugr::llvm::custom::CodegenExtsBuilder::default()
         .add_int_extensions()
         .add_default_prelude_extensions()
+        .add_default_array_extensions()
         .add_float_extensions()
         .add_conversion_extensions();
 
