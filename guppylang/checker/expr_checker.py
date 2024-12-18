@@ -117,6 +117,7 @@ from guppylang.tys.builtin import (
     is_sized_iter_type,
     list_type,
     nat_type,
+    string_type,
 )
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.subst import Inst, Subst
@@ -1165,6 +1166,8 @@ def python_value_to_guppy_type(
     match v:
         case bool():
             return bool_type()
+        case str():
+            return string_type()
         # Only resolve `int` to `nat` if the user specifically asked for it
         case int(n) if type_hint == nat_type() and n >= 0:
             return nat_type()
