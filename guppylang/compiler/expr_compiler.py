@@ -614,7 +614,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
             vs = [python_value_to_hugr(elt, elem_ty) for elt in elts]
             if doesnt_contain_none(vs):
                 opt_ty = ht.Option(elem_ty.to_hugr())
-                opt_vs: list[hv.Value] = [hv.Sum(1, opt_ty, [v]) for v in vs]
+                opt_vs: list[hv.Value] = [hv.Some(v) for v in vs]
                 return hugr.std.collections.array.ArrayVal(opt_vs, opt_ty)
         case _:
             # TODO replace with hugr protocol handling: https://github.com/CQCL/guppylang/issues/563
