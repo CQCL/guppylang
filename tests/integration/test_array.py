@@ -291,8 +291,7 @@ def test_exec_array_loop(validate, run_int_fn):
     package = module.compile()
     validate(package)
 
-    # TODO: Enable execution once lowering for missing ops is implemented
-    # run_int_fn(package, expected=9)
+    run_int_fn(package, expected=9)
 
 
 def test_mem_swap(validate):

@@ -614,7 +614,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "graphviz", specifier = ">=0.20.1,<0.21" },
-    { name = "hugr", specifier = ">=0.10.0,<0.11" },
+    { name = "hugr", git = "https://github.com/CQCL/hugr?subdirectory=hugr-py&rev=e40b6c7" },
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
@@ -679,16 +679,12 @@ test = [
 [[package]]
 name = "hugr"
 version = "0.10.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/CQCL/hugr?subdirectory=hugr-py&rev=e40b6c7#e40b6c7057a15ead78bb18aa837e5b84e12a3722" }
 dependencies = [
     { name = "graphviz" },
     { name = "pydantic" },
     { name = "pydantic-extra-types" },
     { name = "semver" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/ef/9cd410ff0e3a92c5e88da2ef3c0e051dd971f4f6c5577873c7901ed31dd5/hugr-0.10.0.tar.gz", hash = "sha256:11e5a80ebd4e31cad0cb04d408cdd93a094e6fb817dd81481eedac5a58f86ff7", size = 129441 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f2/71/83556457cfe27f4a1613cd49041cfe4c6e9e087a53b5beec48a8d709c36d/hugr-0.10.0-py3-none-any.whl", hash = "sha256:591e252ef3e4182fd0de99274ebb4999ddd9572a0ec823519de154e4bd9f14ec", size = 83000 },
 ]
 
 [[package]]

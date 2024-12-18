@@ -525,8 +525,7 @@ dependencies = [
 [[package]]
 name = "hugr"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f209c7cd671de29be8bdf0725e09b2e9d386387f439b13975e158f095e5a0fe"
+source = "git+https://github.com/CQCL/hugr?rev=ab94518#ab94518ed2812abca615bfbfb5a822f67c115be8"
 dependencies = [
  "hugr-core",
  "hugr-llvm",
@@ -536,24 +535,20 @@ dependencies = [
 [[package]]
 name = "hugr-cli"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab6a94a980d47788908d7f93165846164f8b623b7f382cd3813bd0c0d1188e65"
+source = "git+https://github.com/CQCL/hugr?rev=ab94518#ab94518ed2812abca615bfbfb5a822f67c115be8"
 dependencies = [
  "clap",
  "clap-verbosity-flag",
  "clio",
  "derive_more",
  "hugr",
- "serde",
  "serde_json",
- "thiserror 2.0.7",
 ]
 
 [[package]]
 name = "hugr-core"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60c3d5422f76dbec1d6948e68544b134562ec9ec087e8e6a599555b716f555dc"
+source = "git+https://github.com/CQCL/hugr?rev=ab94518#ab94518ed2812abca615bfbfb5a822f67c115be8"
 dependencies = [
  "bitvec",
  "bumpalo",
@@ -585,12 +580,10 @@ dependencies = [
 [[package]]
 name = "hugr-llvm"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce4117f4f934b1033b82d8cb672b3c33c3a7f8f541c50f7cc7ff53cebb5816d1"
+source = "git+https://github.com/CQCL/hugr?rev=ab94518#ab94518ed2812abca615bfbfb5a822f67c115be8"
 dependencies = [
  "anyhow",
  "delegate",
- "downcast-rs",
  "hugr-core",
  "inkwell",
  "itertools 0.13.0",
@@ -602,8 +595,7 @@ dependencies = [
 [[package]]
 name = "hugr-passes"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec2591767b6fe03074d38de7c4e61d52b37cb2e73b7340bf4ff957ad4554022a"
+source = "git+https://github.com/CQCL/hugr?rev=ab94518#ab94518ed2812abca615bfbfb5a822f67c115be8"
 dependencies = [
  "ascent",
  "hugr-core",

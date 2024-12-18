@@ -38,6 +38,11 @@ fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node>
     }
 }
 
+fn guppy_pass(hugr: Hugr) -> Hugr {
+    let hugr = hugr::algorithms::monomorphize(hugr);
+    hugr::algorithms::remove_polyfuncs(hugr)
+}
+
 fn compile_module<'a>(
     hugr: &'a hugr::Hugr,
     ctx: &'a Context,
@@ -47,6 +52,7 @@ fn compile_module<'a>(
     // TODO: Handle tket2 codegen extension
     let extensions = hugr::llvm::custom::CodegenExtsBuilder::default()
         .add_int_extensions()
+        .add_logic_extensions()
         .add_default_prelude_extensions()
         .add_default_array_extensions()
         .add_float_extensions()
@@ -64,9 +70,10 @@ fn compile_module<'a>(
 
 #[pyfunction]
 fn compile_module_to_string(hugr_json: &str) -> PyResult<String> {
-    let hugr = parse_hugr(hugr_json)?;
+    let mut hugr = parse_hugr(hugr_json)?;
     let ctx = Context::create();
 
+    hugr = guppy_pass(hugr);
     let module = compile_module(&hugr, &ctx, Default::default())?;
 
     Ok(module.print_to_string().to_str().unwrap().to_string())
@@ -77,7 +84,8 @@ fn run_function<T>(
     fn_name: &str,
     parse_result: impl FnOnce(&Context, GenericValue) -> PyResult<T>,
 ) -> PyResult<T> {
-    let hugr = parse_hugr(hugr_json)?;
+    let mut hugr = parse_hugr(hugr_json)?;
+    hugr = guppy_pass(hugr);
     let ctx = Context::create();
 
     let namer = hugr::llvm::emit::Namer::default();
