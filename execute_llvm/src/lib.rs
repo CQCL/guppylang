@@ -52,6 +52,7 @@ fn compile_module<'a>(
     // TODO: Handle tket2 codegen extension
     let extensions = hugr::llvm::custom::CodegenExtsBuilder::default()
         .add_int_extensions()
+        .add_logic_extensions()
         .add_default_prelude_extensions()
         .add_default_array_extensions()
         .add_float_extensions()
