@@ -69,7 +69,7 @@ def test_unpack_range(validate, run_int_fn):
 
     compiled = module.compile()
     validate(compiled)
-    run_int_fn(compiled, expected=10)
+    run_int_fn(compiled, expected=9)
 
 
 def test_unpack_tuple_starred(validate, run_int_fn):
@@ -101,3 +101,22 @@ def test_unpack_nested(validate, run_int_fn):
         return x, y, z, a, b, c
 
     validate(module.compile())
+
+
+def test_left_to_right(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def left() -> int:
+        [x, x, *_] = range(10)
+        return x
+
+    @guppy(module)
+    def right() -> int:
+        [*_, x, x] = range(10)
+        return x
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, fn_name="left", expected=1)
+    run_int_fn(compiled, fn_name="right", expected=9)

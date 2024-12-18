@@ -115,15 +115,26 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             array: Wire, length: int, pats: list[ast.expr], from_left: bool
         ) -> tuple[Wire, int]:
             err = "Internal error: unpacking of iterable failed"
-            for pat in pats:
+            num_pats = len(pats)
+            # Pop the number of requested elements from the array
+            elts = []
+            for i in range(num_pats):
                 res = self.builder.add_op(
-                    array_pop(opt_elt_ty, length, from_left), array
+                    array_pop(opt_elt_ty, length - i, from_left), array
                 )
                 [elt_opt, array] = build_unwrap(self.builder, res, err)
                 [elt] = build_unwrap(self.builder, elt_opt, err)
+                elts.append(elt)
+            # Assign elements to the given patterns
+            for pat, elt in zip(
+                pats,
+                # Assignments are evaluated from left to right, so we need to assign in
+                # reverse order if we popped from the right
+                elts if from_left else reversed(elts),
+                strict=True,
+            ):
                 self._assign(pat, elt)
-                length -= 1
-            return array, length
+            return array, length - num_pats
 
         self.dfg[lhs.rhs_var.place] = port
         array = self.expr_compiler.visit_DesugaredArrayComp(lhs.compr)
