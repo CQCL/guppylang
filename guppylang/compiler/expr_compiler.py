@@ -125,7 +125,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def _new_loop(
         self,
         loop_vars: list[PlaceNode],
-        branch: PlaceNode,
+        continue_predicate: PlaceNode,
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `TailLoop` node.
 
@@ -136,13 +136,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         loop = self.builder.add_tail_loop([], loop_inputs)
         with self._new_dfcontainer(loop_vars, loop):
             yield
-            # Output the branch predicate and the inputs for the next iteration
-            loop.set_loop_outputs(
-                # Note that we have to do fresh calls to `self.visit` here since we're
-                # in a new context
-                self.visit(branch),
-                *(self.visit(name) for name in loop_vars),
-            )
+            # Output the branch predicate and the inputs for the next iteration. Note
+            # that we have to do fresh calls to `self.visit` here since we're in a new
+            # context
+            do_continue = self.visit(continue_predicate)
+            do_break = loop.add_op(hugr.std.logic.Not, do_continue)
+            loop.set_loop_outputs(do_break, *(self.visit(name) for name in loop_vars))
         # Update the DFG with the outputs from the loop
         for node, wire in zip(loop_vars, loop, strict=True):
             self.dfg[node.place] = wire
@@ -174,12 +173,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         conditional = self.builder.add_conditional(
             self.visit(cond), *(self.visit(inp) for inp in inputs)
         )
-        # If the condition is true, we enter the `with` block
-        with self._new_case(inputs, inputs, conditional, 0):
-            yield
         # If the condition is false, output the inputs as is
-        with self._new_case(inputs, inputs, conditional, 1):
+        with self._new_case(inputs, inputs, conditional, 0):
             pass
+        # If the condition is true, we enter the `with` block
+        with self._new_case(inputs, inputs, conditional, 1):
+            yield
         # Update the DFG with the outputs from the Conditional node
         for node, wire in zip(inputs, conditional, strict=True):
             self.dfg[node.place] = wire
