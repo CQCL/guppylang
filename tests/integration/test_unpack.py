@@ -69,8 +69,7 @@ def test_unpack_range(validate, run_int_fn):
 
     compiled = module.compile()
     validate(compiled)
-    # TODO: Enable execution test once array lowering is fully supported
-    # run_int_fn(compiled, expected=9)
+    run_int_fn(compiled, expected=10)
 
 
 def test_unpack_tuple_starred(validate, run_int_fn):
