@@ -73,7 +73,7 @@ def test_capture(validate, run_int_fn):
 
     package = module.compile()
     validate(package)
-    run_int_fn(package, expected=0)
+    run_int_fn(package, expected=sum(i + 3 for i in range(42)))
 
 
 def test_capture_struct(validate):
