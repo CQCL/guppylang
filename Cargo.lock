@@ -202,9 +202,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.4"
+version = "1.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9157bbaa6b165880c27a4293a474c91cdcf265cc68cc829bf10be0964a391caf"
+checksum = "c31a0499c1dc64f458ad13872de75c0eb7e3fdb0e67964610c914b034fc5956e"
 dependencies = [
  "shlex",
 ]
@@ -244,9 +244,9 @@ dependencies = [
 
 [[package]]
 name = "clap-verbosity-flag"
-version = "3.0.1"
+version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54381ae56ad222eea3f529c692879e9c65e07945ae48d3dc4d1cb18dbec8cf44"
+checksum = "2678fade3b77aa3a8ff3aae87e9c008d3fb00473a41c71fbf74e91c8c7b37e84"
 dependencies = [
  "clap",
  "log",
@@ -449,7 +449,7 @@ dependencies = [
 
 [[package]]
 name = "execute_llvm"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "hugr",
  "inkwell",
@@ -524,8 +524,9 @@ dependencies = [
 
 [[package]]
 name = "hugr"
-version = "0.14.0"
-source = "git+https://github.com/CQCL/hugr?rev=ab94518#ab94518ed2812abca615bfbfb5a822f67c115be8"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1c8f4a7f778b70a6528fb620f9df31931d9eaad518287d7d25faabba8714f3f"
 dependencies = [
  "hugr-core",
  "hugr-llvm",
@@ -534,8 +535,9 @@ dependencies = [
 
 [[package]]
 name = "hugr-cli"
-version = "0.14.0"
-source = "git+https://github.com/CQCL/hugr?rev=ab94518#ab94518ed2812abca615bfbfb5a822f67c115be8"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5906f571c65f74ec9f7aac92d1d52bf1a1837d736d4bd131d3d81b13c057068"
 dependencies = [
  "clap",
  "clap-verbosity-flag",
@@ -547,8 +549,9 @@ dependencies = [
 
 [[package]]
 name = "hugr-core"
-version = "0.14.0"
-source = "git+https://github.com/CQCL/hugr?rev=ab94518#ab94518ed2812abca615bfbfb5a822f67c115be8"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "967ce11e97050617c536d37c5b12d2b0eecb2f9f6da24e4bc5d19faf5cf1fafa"
 dependencies = [
  "bitvec",
  "bumpalo",
@@ -573,14 +576,15 @@ dependencies = [
  "smol_str",
  "strum",
  "strum_macros",
- "thiserror 2.0.7",
+ "thiserror 2.0.8",
  "typetag",
 ]
 
 [[package]]
 name = "hugr-llvm"
-version = "0.14.0"
-source = "git+https://github.com/CQCL/hugr?rev=ab94518#ab94518ed2812abca615bfbfb5a822f67c115be8"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "152a4914fb30b6284321848dbcedb47dc8f2a9ac4d0b3af01092b85e73f409b8"
 dependencies = [
  "anyhow",
  "delegate",
@@ -594,8 +598,9 @@ dependencies = [
 
 [[package]]
 name = "hugr-passes"
-version = "0.14.0"
-source = "git+https://github.com/CQCL/hugr?rev=ab94518#ab94518ed2812abca615bfbfb5a822f67c115be8"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a12944d441477c4f086c106891fa22e5a29ac2fd011c0caf898e4d28aeb2a05"
 dependencies = [
  "ascent",
  "hugr-core",
@@ -604,7 +609,7 @@ dependencies = [
  "paste",
  "petgraph",
  "portgraph",
- "thiserror 2.0.7",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -712,9 +717,9 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libc"
-version = "0.2.168"
+version = "0.2.169"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aaeb2981e0606ca11d79718f8bb01164f1d6ed75080182d3abf017e6d244b6d"
+checksum = "b5aba8db14291edd000dfcc4d620c7ebfb122c613afb886ca8803fa4e128a20a"
 
 [[package]]
 name = "linux-raw-sys"
@@ -863,7 +868,7 @@ dependencies = [
  "itertools 0.13.0",
  "petgraph",
  "serde",
- "thiserror 2.0.7",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
@@ -1209,11 +1214,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.7"
+version = "2.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93605438cbd668185516ab499d589afb7ee1859ea3d5fc8f6b0755e1c7443767"
+checksum = "08f5383f3e0071702bf93ab5ee99b52d26936be9dedd9413067cbdcddcb6141a"
 dependencies = [
- "thiserror-impl 2.0.7",
+ "thiserror-impl 2.0.8",
 ]
 
 [[package]]
@@ -1229,9 +1234,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.7"
+version = "2.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1d8749b4531af2117677a5fcd12b1348a3fe2b81e36e61ffeac5c4aa3273e36"
+checksum = "f2f357fcec90b3caef6623a099691be676d033b40a058ac95d2a6ade6fa0c943"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1338,7 +1343,7 @@ version = "0.2.0"
 dependencies = [
  "cargo_toml",
  "hugr-cli",
- "thiserror 2.0.7",
+ "thiserror 2.0.8",
 ]
 
 [[package]]
