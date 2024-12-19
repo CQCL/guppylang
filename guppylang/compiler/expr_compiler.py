@@ -9,6 +9,7 @@ import hugr.std.collections.array
 import hugr.std.float
 import hugr.std.int
 import hugr.std.logic
+import hugr.std.prelude
 from hugr import Hugr, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
@@ -596,6 +597,8 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
     match v:
         case bool():
             return hv.bool_value(v)
+        case str():
+            return hugr.std.prelude.StringVal(v)
         case int():
             return hugr.std.int.IntVal(v, width=NumericType.INT_WIDTH)
         case float():

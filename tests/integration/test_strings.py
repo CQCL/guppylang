@@ -12,7 +12,6 @@ def test_basic_type(validate):
     validate(foo)
 
 
-@pytest.mark.skip("Unsupported, see https://github.com/CQCL/hugr/issues/1817")
 def test_basic_value(validate):
     @compile_guppy
     def foo() -> str:
@@ -22,7 +21,6 @@ def test_basic_value(validate):
     validate(foo)
 
 
-@pytest.mark.skip("Unsupported, see https://github.com/CQCL/hugr/issues/1817")
 def test_struct(validate):
     module = GuppyModule("module")
 
