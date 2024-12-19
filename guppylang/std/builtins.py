@@ -168,7 +168,9 @@ class Nat:
     @guppy.hugr_op(int_op("igt_u"))
     def __gt__(self: nat, other: nat) -> bool: ...
 
-    @guppy.hugr_op(int_op("iu_to_s"))
+    # TODO: Use "iu_to_s" once we have lowering:
+    #  https://github.com/CQCL/hugr/issues/1806
+    @guppy.custom(NoopCompiler())
     def __int__(self: nat) -> int: ...
 
     @guppy.hugr_op(int_op("inot"))

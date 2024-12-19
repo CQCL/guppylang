@@ -317,13 +317,13 @@ class BBLinearityChecker(ast.NodeVisitor):
             if InputFlags.Inout in inp.flags:
                 match arg:
                     case PlaceNode(place=place):
-                        self._reassign_single_inout_arg(place, arg)
+                        self._reassign_single_inout_arg(place, place.defined_at or arg)
                     case arg if inp.ty.linear:
                         err = DropAfterCallError(arg, inp.ty, self._call_name(call))
                         err.add_sub_diagnostic(DropAfterCallError.Assign(None))
                         raise GuppyError(err)
 
-    def _reassign_single_inout_arg(self, place: Place, node: ast.expr) -> None:
+    def _reassign_single_inout_arg(self, place: Place, node: AstNode) -> None:
         """Helper function to reassign a single borrowed argument after a function
         call."""
         # Places involving subscripts are given back by visiting the `__setitem__` call
@@ -496,6 +496,11 @@ class BBLinearityChecker(ast.NodeVisitor):
                         continue
                     for leaf in leaf_places(place):
                         x = leaf.id
+                        # Also ignore borrowed variables
+                        if x in inner_scope.used_parent and (
+                            inner_scope.used_parent[x].kind == UseKind.BORROW
+                        ):
+                            continue
                         if not self.scope.used(x) and place.ty.linear:
                             err = PlaceNotUsedError(place.defined_at, place)
                             err.add_sub_diagnostic(
@@ -508,6 +513,22 @@ class BBLinearityChecker(ast.NodeVisitor):
             # Recursively check the remaining generators
             self._check_comprehension(gens, elt)
 
+            # Look for any linear variables that were borrowed from the outer scope
+            gen.borrowed_outer_places = []
+            for x, use in inner_scope.used_parent.items():
+                if use.kind == UseKind.BORROW:
+                    # Since `x` was borrowed, we know that is now also assigned in the
+                    # inner scope since it gets reassigned in the local scope after the
+                    # borrow expires
+                    place = inner_scope[x]
+                    gen.borrowed_outer_places.append(place)
+                    # Also mark this place as implicitly used so we don't complain about
+                    # it later.
+                    for leaf in leaf_places(place):
+                        inner_scope.use(
+                            leaf.id, InoutReturnSentinel(leaf), UseKind.RETURN
+                        )
+
             # Check the iter finalizer so we record a final use of the iterator
             self.visit(gen.iterend)
 
@@ -519,15 +540,17 @@ class BBLinearityChecker(ast.NodeVisitor):
                     if leaf.ty.linear and not inner_scope.used(x):
                         raise GuppyTypeError(PlaceNotUsedError(leaf.defined_at, leaf))
 
-            # On the other hand, we have to ensure that no linear places from the
-            # outer scope have been used inside the comprehension (they would be used
-            # multiple times since the comprehension body is executed repeatedly)
-            for x, use in inner_scope.used_parent.items():
-                place = inner_scope[x]
-                if place.ty.linear:
-                    raise GuppyTypeError(
-                        ComprAlreadyUsedError(use.node, place, use.kind)
-                    )
+        # On the other hand, we have to ensure that no linear places from the
+        # outer scope have been used inside the comprehension (they would be used
+        # multiple times since the comprehension body is executed repeatedly)
+        for x, use in inner_scope.used_parent.items():
+            place = inner_scope[x]
+            # The only exception are values that are only borrowed from the outer
+            # scope. These can be safely reassigned.
+            if use.kind == UseKind.BORROW:
+                self._reassign_single_inout_arg(place, use.node)
+            elif place.ty.linear:
+                raise GuppyTypeError(ComprAlreadyUsedError(use.node, place, use.kind))
 
 
 def leaf_places(place: Place) -> Iterator[Place]:

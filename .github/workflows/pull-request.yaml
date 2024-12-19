@@ -27,14 +27,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.6
+        uses: mozilla-actions/sccache-action@v0.0.7
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: install-llvm
         run: "sudo apt-get update && sudo apt-get install -y llvm-14"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v4
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -76,12 +76,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.6
+        uses: mozilla-actions/sccache-action@v0.0.7
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v4
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true

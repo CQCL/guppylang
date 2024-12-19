@@ -3,7 +3,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, TypeGuard
 
 import hugr.std
-import hugr.std.collections
+import hugr.std.collections.array
+import hugr.std.collections.list
 from hugr import tys as ht
 
 from guppylang.ast_util import AstNode
@@ -122,7 +123,7 @@ def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # Linear elements are turned into an optional to enable unsafe indexing.
     # See `ListGetitemCompiler` for details.
     elem_ty = ht.Option(arg.ty.to_hugr()) if arg.ty.linear else arg.ty.to_hugr()
-    return hugr.std.collections.list_type(elem_ty)
+    return hugr.std.collections.list.List(elem_ty)
 
 
 def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
@@ -135,9 +136,9 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # See `ArrayGetitemCompiler` for details.
     # Same also for classical arrays, see https://github.com/CQCL/guppylang/issues/629
     elem_ty = ht.Option(ty_arg.ty.to_hugr())
+    hugr_arg = len_arg.to_hugr()
 
-    array = hugr.std.PRELUDE.get_type("array")
-    return array.instantiate([len_arg.to_hugr(), ht.TypeTypeArg(elem_ty)])
+    return hugr.std.collections.array.Array(elem_ty, hugr_arg)
 
 
 def _sized_iter_to_hugr(args: Sequence[Argument]) -> ht.Type:
