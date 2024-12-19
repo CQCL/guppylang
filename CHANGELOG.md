@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.14.0](https://github.com/CQCL/guppylang/compare/v0.13.1...v0.14.0) (2024-12-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* Lists in `py(...)` expressions are now turned into Guppy arrays instead of lists.
+* `dirty_qubit` function removed
+* measure_return renamed to `project_z`
+
+### Features
+
+* add `maybe_qubit` stdlib function ([#705](https://github.com/CQCL/guppylang/issues/705)) ([a49f70e](https://github.com/CQCL/guppylang/commit/a49f70e15048efc5a30ef34625086b341b278db6)), closes [#627](https://github.com/CQCL/guppylang/issues/627)
+* add measure_array and discard_array quantum function ([#710](https://github.com/CQCL/guppylang/issues/710)) ([3ad49ff](https://github.com/CQCL/guppylang/commit/3ad49ff43ceb8f08001bba3edd9e43d32912747a))
+* Add method to load pytket circuit without function stub ([#712](https://github.com/CQCL/guppylang/issues/712)) ([ee1e3de](https://github.com/CQCL/guppylang/commit/ee1e3defb941e9da29f462afc4c16f3e97147828))
+* Add Option type to standard library ([#696](https://github.com/CQCL/guppylang/issues/696)) ([45ea6b7](https://github.com/CQCL/guppylang/commit/45ea6b7086f75f017eb4830f55dca9c87d9f599b))
+* Allow generic nat args in statically sized ranges ([#706](https://github.com/CQCL/guppylang/issues/706)) ([f441bb8](https://github.com/CQCL/guppylang/commit/f441bb8e56e1006acd1fa37c6f3edada5a8fc537)), closes [#663](https://github.com/CQCL/guppylang/issues/663)
+* Array comprehension ([#613](https://github.com/CQCL/guppylang/issues/613)) ([fdc0526](https://github.com/CQCL/guppylang/commit/fdc052656c6b62a95d42e0757ea50bd1d0226571)), closes [#614](https://github.com/CQCL/guppylang/issues/614) [#616](https://github.com/CQCL/guppylang/issues/616) [#612](https://github.com/CQCL/guppylang/issues/612)
+* Implicit coercion of numeric types ([#702](https://github.com/CQCL/guppylang/issues/702)) ([df4745b](https://github.com/CQCL/guppylang/commit/df4745bd9343be777ddb78373db5217f63744e61)), closes [#701](https://github.com/CQCL/guppylang/issues/701)
+* Load `pytket` circuit as a function definition ([#672](https://github.com/CQCL/guppylang/issues/672)) ([b21b7e1](https://github.com/CQCL/guppylang/commit/b21b7e132a22363b9c2d69485a3f1f4d127b8129))
+* Make arrays iterable ([#632](https://github.com/CQCL/guppylang/issues/632)) ([07b9871](https://github.com/CQCL/guppylang/commit/07b987129409bf22d09b80661163f206ffc68f48))
+* qsystem std functions with updated primitives ([#679](https://github.com/CQCL/guppylang/issues/679)) ([b0f041f](https://github.com/CQCL/guppylang/commit/b0f041f262c4757b5f519d3a28f0c2b2d038f623))
+* remove dirty_qubit ([#698](https://github.com/CQCL/guppylang/issues/698)) ([78e366b](https://github.com/CQCL/guppylang/commit/78e366b1032afefcdedc6f4b78b30999f0e67d2d))
+* Turn py expression lists into arrays ([#697](https://github.com/CQCL/guppylang/issues/697)) ([d52a00a](https://github.com/CQCL/guppylang/commit/d52a00ae6f9c33d9fe65ddd46bcf94e39f53172f))
+* Unpacking assignment of iterable types with static size ([#688](https://github.com/CQCL/guppylang/issues/688)) ([602e243](https://github.com/CQCL/guppylang/commit/602e2434acb07ca5906d867affe9d4fd1a06d59d))
+* update to hugr 0.10 and tket2 0.6 ([#725](https://github.com/CQCL/guppylang/issues/725)) ([63ea7a7](https://github.com/CQCL/guppylang/commit/63ea7a726edc2512e63b89076db5b4c82bec58af))
+
+
+### Bug Fixes
+
+* Accept non-negative int literals and py expressions as nats ([#708](https://github.com/CQCL/guppylang/issues/708)) ([a93d4fe](https://github.com/CQCL/guppylang/commit/a93d4fe0b07e99bd0537f51a21f9cbf3c0502360)), closes [#704](https://github.com/CQCL/guppylang/issues/704)
+* Allow borrowing inside comprehensions ([#723](https://github.com/CQCL/guppylang/issues/723)) ([02b6ab0](https://github.com/CQCL/guppylang/commit/02b6ab00f96a7801199d0ec2d3c017d7d81cdf59)), closes [#719](https://github.com/CQCL/guppylang/issues/719)
+* Detect unsupported default arguments ([#659](https://github.com/CQCL/guppylang/issues/659)) ([94ac7e3](https://github.com/CQCL/guppylang/commit/94ac7e38c773e4aac8b809ae27cf7e18342a87cb)), closes [#658](https://github.com/CQCL/guppylang/issues/658)
+* docs build command ([#729](https://github.com/CQCL/guppylang/issues/729)) ([471b74c](https://github.com/CQCL/guppylang/commit/471b74c2bf5ca6144d6a5dec71b8a0e4aec57a95))
+* Ensure `int`s can be treated as booleans ([#709](https://github.com/CQCL/guppylang/issues/709)) ([6ef6d60](https://github.com/CQCL/guppylang/commit/6ef6d608dc8c92c7045575fe579637ca482f3516)), closes [#681](https://github.com/CQCL/guppylang/issues/681)
+* Fix array execution bugs ([#731](https://github.com/CQCL/guppylang/issues/731)) ([0f6ceaa](https://github.com/CQCL/guppylang/commit/0f6ceaa58648f105e601298081170eaec5a0e026))
+* Fix implicit modules in IPython shells ([#662](https://github.com/CQCL/guppylang/issues/662)) ([4ecb5f2](https://github.com/CQCL/guppylang/commit/4ecb5f2fb2dd5b4b9baa5546869c46d42c709017)), closes [#661](https://github.com/CQCL/guppylang/issues/661)
+* Properly report error for unsupported constants ([#724](https://github.com/CQCL/guppylang/issues/724)) ([d0c2da4](https://github.com/CQCL/guppylang/commit/d0c2da40cdf1fe4e770123d4174bf710dd44e1a6)), closes [#721](https://github.com/CQCL/guppylang/issues/721)
+* Properly report errors for unsupported expressions ([#692](https://github.com/CQCL/guppylang/issues/692)) ([7f24264](https://github.com/CQCL/guppylang/commit/7f24264a56b0b620847a189eeec565f80adbdc3a)), closes [#691](https://github.com/CQCL/guppylang/issues/691)
+* remove use of deprecated Ellipsis ([#699](https://github.com/CQCL/guppylang/issues/699)) ([b819a84](https://github.com/CQCL/guppylang/commit/b819a844286cfb17ede045a7cb4f52325a36c63f))
+
+
+### Documentation
+
+* Fix docs build ([#700](https://github.com/CQCL/guppylang/issues/700)) ([684f485](https://github.com/CQCL/guppylang/commit/684f485f98ea4cc4f61040af00fbde0b0c908e45)), closes [#680](https://github.com/CQCL/guppylang/issues/680)
+* fix README.md and quickstart.md ([#654](https://github.com/CQCL/guppylang/issues/654)) ([abb0221](https://github.com/CQCL/guppylang/commit/abb0221a46c3dcb069c6e0f08242319d7bb16bad))
+
 ## [0.13.1](https://github.com/CQCL/guppylang/compare/v0.13.0...v0.13.1) (2024-11-15)
 
 
