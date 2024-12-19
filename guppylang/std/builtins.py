@@ -46,6 +46,7 @@ from guppylang.tys.builtin import (
     list_type_def,
     nat_type_def,
     sized_iter_type_def,
+    string_type_def,
 )
 
 guppy.init_module(import_builtins=False)
@@ -119,6 +120,12 @@ class Bool:
 
     @guppy.hugr_op(unsupported_op("Xor"))  # TODO: Missing op
     def __xor__(self: bool, other: bool) -> bool: ...
+
+
+@guppy.extend_type(string_type_def)
+class String:
+    @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
+    def __new__(x): ...
 
 
 @guppy.extend_type(nat_type_def)
@@ -888,10 +895,6 @@ def sorted(x): ...
 
 @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
 def staticmethod(x): ...
-
-
-@guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
-def str(x): ...
 
 
 @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)

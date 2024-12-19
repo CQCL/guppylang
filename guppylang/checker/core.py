@@ -30,6 +30,7 @@ from guppylang.tys.builtin import (
     nat_type_def,
     none_type_def,
     sized_iter_type_def,
+    string_type_def,
     tuple_type_def,
 )
 from guppylang.tys.param import Parameter
@@ -237,6 +238,7 @@ class Globals:
             nat_type_def,
             int_type_def,
             float_type_def,
+            string_type_def,
             list_type_def,
             array_type_def,
             sized_iter_type_def,
