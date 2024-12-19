@@ -467,7 +467,7 @@ wheels = [
 
 [[package]]
 name = "execute-llvm"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "execute_llvm" }
 
 [[package]]
@@ -541,7 +541,7 @@ wheels = [
 
 [[package]]
 name = "guppylang"
-version = "0.13.1"
+version = "0.14.0"
 source = { editable = "." }
 dependencies = [
     { name = "graphviz" },
