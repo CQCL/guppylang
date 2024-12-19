@@ -79,8 +79,8 @@ def _run_fn(run_fn_name: str):
             if not fn:
                 pytest.skip("Skipping llvm execution")
 
-            hugr_json: str = module.module.to_json()
-            res = fn(hugr_json, fn_name)
+            package_json: str = module.package.to_json()
+            res = fn(package_json, fn_name)
             if res != expected:
                 raise LLVMException(
                     f"Expected value ({expected}) doesn't match actual value ({res})"
