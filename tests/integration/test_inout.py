@@ -373,3 +373,42 @@ def test_self_qubit(validate):
         return result
 
     validate(module.compile())
+
+
+def test_non_terminating(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    @guppy.struct(module)
+    class MyStruct:
+        q1: qubit
+        q2: qubit
+        x: int
+
+    @guppy.declare(module)
+    def foo(q: qubit) -> None: ...
+
+    @guppy.declare(module)
+    def bar(s: MyStruct) -> None: ...
+
+    @guppy(module)
+    def test1(b: bool) -> None:
+        q = qubit()
+        s = MyStruct(qubit(), qubit(), 0)
+        while True:
+            foo(q)
+            bar(s)
+
+    @guppy(module)
+    def test2(q: qubit, s: MyStruct, b: bool) -> None:
+        while True:
+            foo(q)
+            if b:
+                bar(s)
+
+    @guppy(module)
+    def test3(q: qubit, s: MyStruct) -> None:
+        while True:
+            pass
+
+    validate(module.compile())

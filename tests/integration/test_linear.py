@@ -502,3 +502,17 @@ def test_list_iter(validate):
         return qs
 
     validate(module.compile())
+
+
+def test_non_terminating(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum_functional)
+    module.load(qubit)
+
+    @guppy(module)
+    def test() -> None:
+        q = qubit()
+        while True:
+            q = h(q)
+
+    validate(module.compile())
