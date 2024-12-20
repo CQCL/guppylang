@@ -51,6 +51,18 @@ class BaseCFG(Generic[T]):
             yield bb
             queue += bb.predecessors
 
+    def reachable_from(self, bb: T) -> set[T]:
+        """Returns the set of all BBs reachable from some given BB."""
+        queue = {bb}
+        reachable = set()
+        while queue:
+            bb = queue.pop()
+            if bb not in reachable:
+                reachable.add(bb)
+                for succ in bb.successors:
+                    queue.add(succ)
+        return reachable
+
 
 class CFG(BaseCFG[BB]):
     """A control-flow graph of unchecked basic blocks."""
