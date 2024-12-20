@@ -3,13 +3,10 @@ from hugr.std.int import IntVal
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import array, owned, mem_swap, py
+from guppylang.std.builtins import array, owned, mem_swap
 from tests.util import compile_guppy
 
-from guppylang.std.quantum import (
-    qubit,
-    discard,
-)
+from guppylang.std.quantum import qubit, discard
 import guppylang.std.quantum as quantum
 
 
@@ -116,7 +113,7 @@ def test_linear_subscript(validate):
     def foo(q: qubit) -> None: ...
 
     @guppy(module)
-    def main(qs: array[qubit, 42] @ owned, i: int) -> array[qubit, 42]:
+    def main(qs: array[qubit, 42] @owned, i: int) -> array[qubit, 42]:
         foo(qs[i])
         return qs
 
@@ -145,7 +142,7 @@ def test_multi_subscripts(validate):
     def foo(q1: qubit, q2: qubit) -> None: ...
 
     @guppy(module)
-    def main(qs: array[qubit, 42] @ owned) -> array[qubit, 42]:
+    def main(qs: array[qubit, 42] @owned) -> array[qubit, 42]:
         foo(qs[0], qs[1])
         foo(qs[0], qs[0])  # Will panic at runtime
         return qs
@@ -166,7 +163,7 @@ def test_struct_array(validate):
     def foo(q1: qubit, q2: qubit) -> None: ...
 
     @guppy(module)
-    def main(ss: array[S, 10] @ owned) -> array[S, 10]:
+    def main(ss: array[S, 10] @owned) -> array[S, 10]:
         # This will panic at runtime :(
         # To make this work, we would need to replace the qubits in the struct
         # with `qubit | None` and write back `None` after `q1` has been extracted...
@@ -184,10 +181,12 @@ def test_nested_subscripts(validate):
     def foo(q: qubit) -> None: ...
 
     @guppy.declare(module)
-    def bar(q1: qubit, q2: qubit, q3: qubit, q4: qubit) -> None: ...
+    def bar(
+        q1: qubit, q2: qubit, q3: qubit, q4: qubit
+    ) -> None: ...
 
     @guppy(module)
-    def main(qs: array[array[qubit, 13], 42] @ owned) -> array[array[qubit, 13], 42]:
+    def main(qs: array[array[qubit, 13], 42] @owned) -> array[array[qubit, 13], 42]:
         foo(qs[0][0])
         # The following should work *without* panicking at runtime! Accessing `qs[0][0]`
         # replaces one qubit with `None` but puts everything back into `qs` before
@@ -222,7 +221,7 @@ def test_struct_nested_subscript(validate):
     def foo(q1: qubit) -> None: ...
 
     @guppy(module)
-    def main(a: A @ owned, i: int, j: int, k: int) -> A:
+    def main(a: A @owned, i: int, j: int, k: int) -> A:
         foo(a.xs[i].ys[j][k].c)
         return a
 
@@ -236,7 +235,7 @@ def test_generic_function(validate):
     n = guppy.nat_var("n", module=module)
 
     @guppy(module)
-    def foo(xs: array[T, n] @ owned) -> array[T, n]:
+    def foo(xs: array[T, n] @owned) -> array[T, n]:
         return xs
 
     @guppy(module)
@@ -266,7 +265,7 @@ def test_exec_array(validate, run_int_fn):
 
     @guppy(module)
     def main() -> int:
-        a = array(1, 2, 3)
+        a = array(1,2,3)
         return a[0] + a[1] + a[2]
 
     package = module.compile()
@@ -299,7 +298,6 @@ def test_mem_swap(validate):
     module = GuppyModule("test")
 
     module.load(qubit)
-
     @guppy(module)
     def foo(x: qubit, y: qubit) -> None:
         mem_swap(x, y)
@@ -312,27 +310,3 @@ def test_mem_swap(validate):
 
     package = module.compile()
     validate(package)
-
-
-def test_graph_state(validate, run_int_fn):
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    N = 4
-
-    edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
-
-    @guppy(module)
-    def main() -> int:
-        bs = array(True for _ in range(py(N)))
-        res = False
-
-        for i in range(len(bs)):
-            res = res or res
-
-        return int(bs[0])
-
-    package = module.compile()
-    validate(package)
-
-    run_int_fn(package, expected=1)

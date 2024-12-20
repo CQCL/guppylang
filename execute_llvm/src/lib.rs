@@ -129,7 +129,6 @@ mod execute_llvm {
             // GenericVal is 64 bits wide
             let int_with_sign = llvm_val.as_int(true);
             let signed_int = int_with_sign as i64;
-            panic!("test 6");
             Ok(signed_int)
         })
     }
