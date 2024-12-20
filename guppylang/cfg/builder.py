@@ -368,6 +368,15 @@ class BranchBuilder(AstVisitor[None]):
         builder = BranchBuilder(cfg)
         builder.visit(node, bb, true_bb, false_bb)
 
+    def visit_Constant(
+        self, node: ast.Constant, bb: BB, true_bb: BB, false_bb: BB
+    ) -> None:
+        # Branching on `True` or `False` constant should be unconditional
+        if isinstance(node.value, bool):
+            self.cfg.link(bb, true_bb if node.value else false_bb)
+        else:
+            self.generic_visit(node, bb, true_bb, false_bb)
+
     def visit_BoolOp(self, node: ast.BoolOp, bb: BB, true_bb: BB, false_bb: BB) -> None:
         # Add short-circuit evaluation of boolean expression. If there are more than 2
         # operators, we turn the flat operator list into a right-nested tree to allow

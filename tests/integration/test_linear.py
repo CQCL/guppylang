@@ -371,9 +371,6 @@ def test_while_move_back(validate):
         while True:
             s.q = qubit()
             return s
-        # Guppy is not yet smart enough to detect that this code is unreachable
-        s.q = qubit()
-        return s
 
     validate(module.compile())
 

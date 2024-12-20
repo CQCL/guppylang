@@ -298,9 +298,6 @@ def test_move_back_branch(validate):
                 s.q = qubit()
                 return
             i += 1
-        # Guppy is not yet smart enough to detect that this code is unreachable
-        s.q = qubit()
-        return
 
     @guppy(module)
     def main(s: MyStruct @ owned) -> MyStruct:
