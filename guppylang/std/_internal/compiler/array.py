@@ -166,11 +166,12 @@ class NewArrayCompiler(ArrayCompiler):
 
     def build_linear_array(self, elems: list[Wire]) -> Wire:
         """Lowers a call to `array.__new__` for linear arrays."""
-        elem_opt_ty = ht.Option(self.elem_ty)
         elem_opts = [
-            self.builder.add_op(ops.Tag(1, elem_opt_ty), elem) for elem in elems
+            self.builder.add_op(ops.Some(self.elem_ty), elem) for elem in elems
         ]
-        return self.builder.add_op(array_new(elem_opt_ty, len(elems)), *elem_opts)
+        return self.builder.add_op(
+            array_new(ht.Option(self.elem_ty), len(elems)), *elem_opts
+        )
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         if self.elem_ty.type_bound() == ht.TypeBound.Any:
@@ -232,7 +233,7 @@ class ArraySetitemCompiler(ArrayCompiler):
         # See https://github.com/CQCL/guppylang/issues/629
         elem_opt_ty = ht.Option(self.elem_ty)
         idx = self.builder.add_op(convert_itousize(), idx)
-        elem_opt = self.builder.add_op(ops.Tag(1, elem_opt_ty), elem)
+        elem_opt = self.builder.add_op(ops.Some(self.elem_ty), elem)
         result = self.builder.add_op(
             array_set(elem_opt_ty, self.length), array, idx, elem_opt
         )
@@ -246,7 +247,7 @@ class ArraySetitemCompiler(ArrayCompiler):
         """Lowers a call to `array.__setitem__` for linear arrays."""
         # Embed the element into an optional
         elem_opt_ty = ht.Option(self.elem_ty)
-        elem = self.builder.add_op(ops.Tag(1, elem_opt_ty), elem)
+        elem = self.builder.add_op(ops.Some(self.elem_ty), elem)
         idx = self.builder.add_op(convert_itousize(), idx)
         result = self.builder.add_op(
             array_set(elem_opt_ty, self.length), array, idx, elem

@@ -22,17 +22,17 @@ missing_docs = "warn"
 debug_assert_with_mut_call = "warn"
 
 [workspace.dependencies]
-pyo3 = "0.19.0"
+pyo3 = "0.23.3"
 serde_json = "1.0.111"
 cargo_toml = "0.20.4"
 thiserror = "2.0.6"
-hugr = "0.14.0"
-hugr-cli = "0.14.0"
+hugr = "0.14.1"
+hugr-cli = "0.14.1"
 inkwell = "0.5.0"
 
 [patch.crates-io]
 
 # Uncomment these to test the latest dependency version during development
- hugr = { git = "https://github.com/CQCL/hugr", rev = "ab94518" }
- hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "ab94518" }
- hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "ab94518" }
+#  hugr = { git = "https://github.com/CQCL/hugr", rev = "ab94518" }
+#  hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "ab94518" }
+#  hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "ab94518" }

@@ -95,9 +95,9 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             starred_ports = (
                 ports[len(left) : -len(right)] if right else ports[len(left) :]
             )
-            opt_ty = ht.Option(get_element_type(array_ty).to_hugr())
-            opts = [self.builder.add_op(ops.Tag(1, opt_ty), p) for p in starred_ports]
-            array = self.builder.add_op(array_new(opt_ty, len(opts)), *opts)
+            elt = get_element_type(array_ty).to_hugr()
+            opts = [self.builder.add_op(ops.Some(elt), p) for p in starred_ports]
+            array = self.builder.add_op(array_new(ht.Option(elt), len(opts)), *opts)
             self._assign(starred, array)
 
     @_assign.register
