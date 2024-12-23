@@ -113,3 +113,39 @@ def test_pytket():
     )
 
     assert pytket_result == expected
+
+
+def test_collate_tag():
+    # test use of same tag for all entries of array
+
+    shotlist = []
+    for _ in range(10):
+        shot = HResult()
+        _ = [
+            shot.append(reg, 1)
+            for reg, size in (("c", 3), ("d", 5))
+            for _ in range(size)
+        ]
+        shotlist.append(shot)
+
+    weird_shot = HResult((("c", 1), ("d", 1), ("d", 0), ("e", 1)))
+    assert weird_shot.collate_tags() == {"c": [1], "d": [1, 0], "e": [1]}
+
+    lst_shot = HResult([("lst", [1, 0, 1]), ("lst", [1, 0, 1])])
+    shots = HShots([*shotlist, weird_shot, lst_shot])
+
+    counter = shots.collated_counts()
+    assert counter == Counter({
+        (("c", "111"), ("d", "11111")): 10,
+        (("c", "1"), ("d", "10"), ("e", "1")): 1,
+        (("lst", "101101"),): 1,
+    })
+
+    float_shots = HShots(
+        [HResult([("f", 1.0), ("f", 0.1)]), HResult([("f", [2.0]), ("g", 2.0)])]
+    )
+
+    assert float_shots.collated_shots() == [
+        {"f": [1.0, 0.1]},
+        {"f": [[2.0]], "g": [2.0]},
+    ]
