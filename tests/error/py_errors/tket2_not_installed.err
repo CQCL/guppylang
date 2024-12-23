@@ -1,10 +1,10 @@
-Error: Tket2 not installed (at $FILE:16:8)
+Error: Tket2 not installed (at $FILE:14:0)
    | 
-14 | @guppy(module)
-15 | def foo(q: qubit) -> qubit:
-16 |     f = py(circ)
-   |         ^^^^^^^^ Experimental pytket compatibility requires `tket2` to be
-   |                  installed
+12 | module.load(qubit)
+13 | 
+14 | guppy.load_pytket("guppy_circ", circ, module)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Experimental pytket compatibility requires `tket2` to be
+   |                                               installed
 
 Help: Install tket2: `pip install tket2`
 

@@ -10,7 +10,7 @@ import hugr.std.float
 import hugr.std.int
 import hugr.std.logic
 import hugr.std.prelude
-from hugr import Hugr, Wire, ops
+from hugr import Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
 from hugr.build.cond_loop import Conditional
@@ -620,21 +620,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
                 opt_vs: list[hv.Value] = [hv.Some(v) for v in vs]
                 return hugr.std.collections.array.ArrayVal(opt_vs, opt_ty)
         case _:
-            # TODO replace with hugr protocol handling: https://github.com/CQCL/guppylang/issues/563
-            # Pytket conversion is an experimental feature
-            # if pytket and tket2 are installed
-            try:
-                import pytket
-
-                if isinstance(v, pytket.circuit.Circuit):
-                    from tket2.circuit import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
-                        Tk2Circuit,
-                    )
-
-                    circ = Hugr.load_json(Tk2Circuit(v).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
-                    return hv.Function(circ)
-            except ImportError:
-                pass
+            return None
     return None
 
 
