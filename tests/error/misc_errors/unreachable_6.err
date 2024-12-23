@@ -1,0 +1,8 @@
+Error: Unreachable (at $FILE:7:8)
+  | 
+5 | def foo(x: int) -> int:
+6 |     if False:
+7 |         x += 1
+  |         ^^^^^^ This code is not reachable
+
+Guppy compilation failed due to 1 previous error

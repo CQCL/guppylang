@@ -97,8 +97,13 @@ class LivenessAnalysis(Generic[VId], BackwardAnalysis[LivenessDomain[VId]]):
 
     stats: dict[BB, VariableStats[VId]]
 
-    def __init__(self, stats: dict[BB, VariableStats[VId]]) -> None:
+    def __init__(
+        self,
+        stats: dict[BB, VariableStats[VId]],
+        initial: LivenessDomain[VId] | None = None,
+    ) -> None:
         self.stats = stats
+        self._initial = initial or {}
 
     def eq(self, live1: LivenessDomain[VId], live2: LivenessDomain[VId]) -> bool:
         # Only check that both contain the same variables. We don't care about the BB
@@ -106,7 +111,7 @@ class LivenessAnalysis(Generic[VId], BackwardAnalysis[LivenessDomain[VId]]):
         return live1.keys() == live2.keys()
 
     def initial(self) -> LivenessDomain[VId]:
-        return {}
+        return self._initial
 
     def join(self, *ts: LivenessDomain[VId]) -> LivenessDomain[VId]:
         res: LivenessDomain[VId] = {}
@@ -183,6 +188,9 @@ class AssignmentAnalysis(Generic[VId], ForwardAnalysis[AssignmentDomain[VId]]):
     def apply_bb(
         self, val_before: AssignmentDomain[VId], bb: BB
     ) -> AssignmentDomain[VId]:
+        # For unreachable BBs, we can assume that everything is assigned
+        if not bb.predecessors and bb != bb.containing_cfg.entry_bb:
+            return self.all_vars, self.all_vars
         stats = self.stats[bb]
         def_ass_before, maybe_ass_before = val_before
         return (

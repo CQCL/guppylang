@@ -77,13 +77,34 @@ class CFGBuilder(AstVisitor[BB | None]):
             nodes, self.cfg.entry_bb, Jumps(self.cfg.exit_bb, None, None)
         )
 
+        # Compute reachable BBs
+        reachable = self.cfg.reachable_from(self.cfg.entry_bb)
+
         # If we're still in a basic block after compiling the whole body, we have to add
         # an implicit void return
-        if final_bb is not None:
+        if final_bb is not None and final_bb in reachable:
             if not returns_none:
                 raise GuppyError(ExpectedError(nodes[-1], "return statement"))
             self.cfg.link(final_bb, self.cfg.exit_bb)
+            reachable.add(self.cfg.exit_bb)
 
+        # Complain about unreachable code
+        unreachable = set(self.cfg.bbs) - reachable
+        for bb in unreachable:
+            if bb.statements:
+                raise GuppyError(UnreachableError(bb.statements[0]))
+            if bb.branch_pred:
+                raise GuppyError(UnreachableError(bb.branch_pred))
+            # Empty unreachable BBs are fine, we just prune them
+            if bb.successors:
+                # Since there is no branch expression, there can be at most a single
+                # successor
+                [succ] = bb.successors
+                succ.predecessors.remove(bb)
+
+        # If we made it till here, there are only the reachable BBs left. The only
+        # exception is the exit BB which should never be dropped, even if unreachable.
+        self.cfg.bbs = list(reachable | {self.cfg.exit_bb})
         return self.cfg
 
     def visit_stmts(self, nodes: list[ast.stmt], bb: BB, jumps: Jumps) -> BB | None:
@@ -367,6 +388,15 @@ class BranchBuilder(AstVisitor[None]):
         the truth value of the expression."""
         builder = BranchBuilder(cfg)
         builder.visit(node, bb, true_bb, false_bb)
+
+    def visit_Constant(
+        self, node: ast.Constant, bb: BB, true_bb: BB, false_bb: BB
+    ) -> None:
+        # Branching on `True` or `False` constant should be unconditional
+        if isinstance(node.value, bool):
+            self.cfg.link(bb, true_bb if node.value else false_bb)
+        else:
+            self.generic_visit(node, bb, true_bb, false_bb)
 
     def visit_BoolOp(self, node: ast.BoolOp, bb: BB, true_bb: BB, false_bb: BB) -> None:
         # Add short-circuit evaluation of boolean expression. If there are more than 2

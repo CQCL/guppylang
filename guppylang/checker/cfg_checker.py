@@ -76,8 +76,8 @@ def check_cfg(
     """
     # First, we need to run program analysis
     ass_before = {v.name for v in inputs}
-    inout_vars = [v.name for v in inputs if InputFlags.Inout in v.flags]
-    cfg.analyze(ass_before, ass_before, inout_vars)
+    inout_vars = [v for v in inputs if InputFlags.Inout in v.flags]
+    cfg.analyze(ass_before, ass_before, [v.name for v in inout_vars])
 
     # We start by compiling the entry BB
     checked_cfg: CheckedCFG[Variable] = CheckedCFG([v.ty for v in inputs], return_ty)
@@ -122,6 +122,17 @@ def check_cfg(
         # Link up BBs in the checked CFG
         compiled[bb].predecessors.append(pred)
         pred.successors[num_output] = compiled[bb]
+
+    # The exit BB might be unreachable. In that case it won't be visited above and we
+    # have to handle it here
+    if cfg.exit_bb not in compiled:
+        assert len(cfg.exit_bb.predecessors) == 0
+        assert len(cfg.exit_bb.successors) == 0
+        assert len(cfg.exit_bb.statements) == 0
+        assert cfg.exit_bb.branch_pred is None
+        compiled[cfg.exit_bb] = CheckedBB(
+            cfg.exit_bb.idx, checked_cfg, sig=Signature(inout_vars, [])
+        )
 
     checked_cfg.bbs = list(compiled.values())
     checked_cfg.exit_bb = compiled[cfg.exit_bb]  # TODO: Fails if exit is unreachable

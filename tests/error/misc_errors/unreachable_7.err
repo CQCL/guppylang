@@ -1,0 +1,8 @@
+Error: Unreachable (at $FILE:8:4)
+  | 
+6 |     if True:
+7 |         return 1
+8 |     return 0
+  |     ^^^^^^^^ This code is not reachable
+
+Guppy compilation failed due to 1 previous error
