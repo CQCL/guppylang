@@ -135,13 +135,11 @@ def test_collate_tag():
     shots = HShots([*shotlist, weird_shot, lst_shot])
 
     counter = shots.collated_counts()
-
-    assert counter == {
-        "c": Counter({"111": 10, "1": 1}),
-        "d": Counter({"11111": 10, "10": 1}),
-        "e": Counter({"1": 1}),
-        "lst": Counter({"101101": 1}),
-    }
+    assert counter == Counter({
+        (("c", "111"), ("d", "11111")): 10,
+        (("c", "1"), ("d", "10"), ("e", "1")): 1,
+        (("lst", "101101"),): 1,
+    })
 
     float_shots = HShots(
         [HResult([("f", 1.0), ("f", 0.1)]), HResult([("f", [2.0]), ("g", 2.0)])]

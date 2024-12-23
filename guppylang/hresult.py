@@ -226,7 +226,7 @@ class HShots:
         """For each shot generate a dictionary of tags to collated data."""
         return list(self._collated_shots_iter())
 
-    def collated_counts(self) -> dict[str, Counter[str]]:
+    def collated_counts(self) -> Counter[tuple[tuple[str, str], ...]]:
         """Calculate counts of bit strings for each tag by collating across shots using
         `HShots.tag_collated_shots`. Each `result` entry per shot is seen to be
         appending to the bitstring for that tag.
@@ -235,23 +235,20 @@ class HShots:
 
         Example:
             >>> res = HShots([HResult([("a", 1), ("a", 0)]), HResult([("a", [0, 1])])])
-            >>> res.tag_collated_counts()
-            {'a': Counter({'10': 1, '01': 1})}
+            >>> res.collated_counts()
+            Counter({(("a", "10"),): 1, (("a", "01"),): 1})
 
         Raises:
             ValueError: If any value is a float.
         """
-        counts: dict[str, Counter[str]] = defaultdict(Counter)
+        return Counter(
+            tuple((tag, _flat_bitstring(data)) for tag, data in d.items())
+            for d in self._collated_shots_iter()
+        )
 
-        for d in self._collated_shots_iter():
-            bit_chars = {
-                tag: "".join(_cast_primitive_bit(prim) for prim in _flatten(data))
-                for tag, data in d.items()
-            }
-            for tag, bit_st in bit_chars.items():
-                counts[tag][bit_st] += 1
 
-        return dict(counts)
+def _flat_bitstring(data: Iterable[DataValue]) -> str:
+    return "".join(_cast_primitive_bit(prim) for prim in _flatten(data))
 
 
 def _flatten(itr: Iterable[DataValue]) -> Iterable[DataPrimitive]:
