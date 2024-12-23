@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0](https://github.com/CQCL/guppylang/compare/v0.14.0...v0.15.0) (2024-12-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* `pytket` circuits no longer supported by `py` expressions (use `@pytket` or `load_pytket` instead)
+
+### Features
+
+* Add string type ([#733](https://github.com/CQCL/guppylang/issues/733)) ([aa9341b](https://github.com/CQCL/guppylang/commit/aa9341b13c9277756296dd98a86989e23c40e3a8))
+* Remove circuits from `py` expressions ([#746](https://github.com/CQCL/guppylang/issues/746)) ([ee8926b](https://github.com/CQCL/guppylang/commit/ee8926bb5f3a6b43aea105f702c0e4ff3202b79b))
+
 ## [0.14.0](https://github.com/CQCL/guppylang/compare/v0.13.1...v0.14.0) (2024-12-19)
 
 
