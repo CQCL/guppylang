@@ -118,8 +118,10 @@ class Bool:
     @guppy.hugr_op(logic_op("Or"))
     def __or__(self: bool, other: bool) -> bool: ...
 
-    @guppy.hugr_op(unsupported_op("Xor"))  # TODO: Missing op
-    def __xor__(self: bool, other: bool) -> bool: ...
+    # TODO: Use hugr op once implemented: https://github.com/CQCL/hugr/issues/1418
+    @guppy
+    def __xor__(self: bool, other: bool) -> bool:
+        return not (self == other)  # noqa: SIM201
 
 
 @guppy.extend_type(string_type_def)
