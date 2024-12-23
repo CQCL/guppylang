@@ -125,67 +125,6 @@ def test_strings(validate):
     validate(foo)
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
-@pytest.mark.skip("Fails because of extensions in types #343")
-def test_pytket_single_qubit(validate):
-    from pytket import Circuit
-
-    circ = Circuit(1)
-    circ.H(0)
-
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    @guppy(module)
-    def foo(q: qubit) -> qubit:
-        f = py(circ)
-        return f(q)
-
-    validate(module.compile())
-
-
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
-@pytest.mark.skip("Fails because of extensions in types #343")
-def test_pytket_multi_qubit(validate):
-    from pytket import Circuit
-
-    circ = Circuit(3)
-    circ.CX(0, 1)
-    circ.H(2)
-    circ.T(0)
-    circ.CZ(2, 0)
-
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    @guppy(module)
-    def foo(q1: qubit, q2: qubit, q3: qubit) -> tuple[qubit, qubit, qubit]:
-        return py(circ)(q1, q2, q3)
-
-    validate(module.compile())
-
-
-@pytest.mark.skip(
-    "Now requires a conversion pass to turn TKET1 measurements into TKET2 measurements"
-)
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
-def test_pytket_measure(validate):
-    from pytket import Circuit
-
-    circ = Circuit(1)
-    circ.H(0)
-    circ.measure_all()
-
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    @guppy(module)
-    def foo(q: qubit) -> tuple[qubit, bool]:
-        return py(circ)(q)
-
-    validate(module.compile())
-
-
 def test_func_type_arg(validate):
     module = GuppyModule("test")
     n = 10

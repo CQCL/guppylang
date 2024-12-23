@@ -57,7 +57,6 @@ from guppylang.checker.errors.py_errors import (
     PyExprIncoherentListError,
     PyExprNotCPythonError,
     PyExprNotStaticError,
-    Tket2NotInstalled,
 )
 from guppylang.checker.errors.type_errors import (
     AttributeNotFoundError,
@@ -135,7 +134,6 @@ from guppylang.tys.ty import (
     TypeBase,
     function_tensor_signature,
     parse_function_tensor,
-    row_to_type,
     unify,
 )
 
@@ -1206,31 +1204,6 @@ def python_value_to_guppy_type(
         case list():
             return _python_list_to_guppy_type(v, node, globals, type_hint)
         case _:
-            # Pytket conversion is an experimental feature
-            # if pytket and tket2 are installed
-            try:
-                import pytket
-
-                if isinstance(v, pytket.circuit.Circuit):
-                    # We also need tket2 installed
-                    try:
-                        import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
-
-                        qubit = cast(TypeDef, globals["qubit"]).check_instantiate(
-                            [], globals
-                        )
-                        return FunctionType(
-                            [FuncInput(qubit, InputFlags.Inout)] * v.n_qubits,
-                            row_to_type([bool_type()] * v.n_bits),
-                        )
-                    except ImportError:
-                        err = Tket2NotInstalled(node)
-                        err.add_sub_diagnostic(
-                            Tket2NotInstalled.InstallInstruction(None)
-                        )
-                        raise GuppyError(err) from None
-            except ImportError:
-                pass
             return None
 
 
