@@ -168,6 +168,14 @@ int_type_def = _NumericTypeDef(
 float_type_def = _NumericTypeDef(
     DefId.fresh(), "float", None, NumericType(NumericType.Kind.Float)
 )
+string_type_def = OpaqueTypeDef(
+    id=DefId.fresh(),
+    name="str",
+    defined_at=None,
+    params=[],
+    always_linear=False,
+    to_hugr=lambda _: hugr.std.PRELUDE.get_type("string").instantiate([]),
+)
 list_type_def = _ListTypeDef(
     id=DefId.fresh(),
     name="list",
@@ -216,6 +224,10 @@ def float_type() -> NumericType:
     return NumericType(NumericType.Kind.Float)
 
 
+def string_type() -> OpaqueType:
+    return OpaqueType([], string_type_def)
+
+
 def list_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], list_type_def)
 
@@ -234,6 +246,10 @@ def sized_iter_type(iter_type: Type, size: int | Const) -> OpaqueType:
 
 def is_bool_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == bool_type_def
+
+
+def is_string_type(ty: Type) -> bool:
+    return isinstance(ty, OpaqueType) and ty.defn == string_type_def
 
 
 def is_list_type(ty: Type) -> bool:

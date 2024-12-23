@@ -117,6 +117,14 @@ def test_nats_from_ints(validate):
     validate(foo)
 
 
+def test_strings(validate):
+    @compile_guppy
+    def foo() -> None:
+        x: str = py("a" + "b")
+
+    validate(foo)
+
+
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
 @pytest.mark.skip("Fails because of extensions in types #343")
 def test_pytket_single_qubit(validate):
