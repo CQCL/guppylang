@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeVar
 
-import hugr.std
 from hugr import Wire, ops
 from hugr import tys as ht
+from hugr.std.collections.array import EXTENSION
 
-from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
@@ -37,7 +36,7 @@ def _instantiate_array_op(
     inp: list[ht.Type],
     out: list[ht.Type],
 ) -> ops.ExtOp:
-    return hugr.std.PRELUDE.get_op(name).instantiate(
+    return EXTENSION.get_op(name).instantiate(
         [length, ht.TypeTypeArg(elem_ty)], ht.FunctionType(inp, out)
     )
 
@@ -45,7 +44,7 @@ def _instantiate_array_op(
 def array_type(elem_ty: ht.Type, length: ht.TypeArg) -> ht.ExtType:
     """Returns the hugr type of a fixed length array."""
     elem_arg = ht.TypeTypeArg(elem_ty)
-    return hugr.std.PRELUDE.types["array"].instantiate([length, elem_arg])
+    return EXTENSION.types["array"].instantiate([length, elem_arg])
 
 
 def array_new(elem_ty: ht.Type, length: int) -> ops.ExtOp:
@@ -93,29 +92,47 @@ def array_pop(elem_ty: ht.Type, length: int, from_left: bool) -> ops.ExtOp:
 def array_discard_empty(elem_ty: ht.Type) -> ops.ExtOp:
     """Returns an operation that discards an array of length zero."""
     arr_ty = array_type(elem_ty, ht.BoundedNatArg(0))
-    return hugr.std.PRELUDE.get_op("discard_empty").instantiate(
+    return EXTENSION.get_op("discard_empty").instantiate(
         [ht.TypeTypeArg(elem_ty)], ht.FunctionType([arr_ty], [])
     )
 
 
+def array_scan(
+    elem_ty: ht.Type,
+    length: ht.TypeArg,
+    new_elem_ty: ht.Type,
+    accumulators: list[ht.Type],
+) -> ops.ExtOp:
+    """Returns an operation that maps and folds a function across an array."""
+    ty_args = [
+        length,
+        ht.TypeTypeArg(elem_ty),
+        ht.TypeTypeArg(new_elem_ty),
+        ht.SequenceArg([ht.TypeTypeArg(acc) for acc in accumulators]),
+        ht.ExtensionsArg([]),
+    ]
+    ins = [
+        array_type(elem_ty, length),
+        ht.FunctionType([elem_ty, *accumulators], [new_elem_ty, *accumulators]),
+        *accumulators,
+    ]
+    outs = [array_type(new_elem_ty, length), *accumulators]
+    return EXTENSION.get_op("scan").instantiate(ty_args, ht.FunctionType(ins, outs))
+
+
 def array_map(elem_ty: ht.Type, length: ht.TypeArg, new_elem_ty: ht.Type) -> ops.ExtOp:
     """Returns an operation that maps a function across an array."""
-    # TODO
-    return UnsupportedOp(
-        op_name="array_map",
-        inputs=[array_type(elem_ty, length), ht.FunctionType([elem_ty], [new_elem_ty])],
-        outputs=[array_type(new_elem_ty, length)],
-    ).ext_op
+    return array_scan(elem_ty, length, new_elem_ty, accumulators=[])
 
 
 def array_repeat(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array `repeat` operation."""
-    # TODO
-    return UnsupportedOp(
-        op_name="array.repeat",
-        inputs=[ht.FunctionType([], [elem_ty])],
-        outputs=[array_type(elem_ty, length)],
-    ).ext_op
+    return EXTENSION.get_op("repeat").instantiate(
+        [length, ht.TypeTypeArg(elem_ty), ht.ExtensionsArg([])],
+        ht.FunctionType(
+            [ht.FunctionType([], [elem_ty])], [array_type(elem_ty, length)]
+        ),
+    )
 
 
 # ------------------------------------------------------
@@ -179,11 +196,12 @@ class NewArrayCompiler(ArrayCompiler):
 
     def build_linear_array(self, elems: list[Wire]) -> Wire:
         """Lowers a call to `array.__new__` for linear arrays."""
-        elem_opt_ty = ht.Option(self.elem_ty)
         elem_opts = [
-            self.builder.add_op(ops.Tag(1, elem_opt_ty), elem) for elem in elems
+            self.builder.add_op(ops.Some(self.elem_ty), elem) for elem in elems
         ]
-        return self.builder.add_op(array_new(elem_opt_ty, len(elems)), *elem_opts)
+        return self.builder.add_op(
+            array_new(ht.Option(self.elem_ty), len(elems)), *elem_opts
+        )
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         if self.elem_ty.type_bound() == ht.TypeBound.Any:
@@ -245,7 +263,7 @@ class ArraySetitemCompiler(ArrayCompiler):
         # See https://github.com/CQCL/guppylang/issues/629
         elem_opt_ty = ht.Option(self.elem_ty)
         idx = self.builder.add_op(convert_itousize(), idx)
-        elem_opt = self.builder.add_op(ops.Tag(1, elem_opt_ty), elem)
+        elem_opt = self.builder.add_op(ops.Some(self.elem_ty), elem)
         result = self.builder.add_op(
             array_set(elem_opt_ty, self.length), array, idx, elem_opt
         )
@@ -259,7 +277,7 @@ class ArraySetitemCompiler(ArrayCompiler):
         """Lowers a call to `array.__setitem__` for linear arrays."""
         # Embed the element into an optional
         elem_opt_ty = ht.Option(self.elem_ty)
-        elem = self.builder.add_op(ops.Tag(1, elem_opt_ty), elem)
+        elem = self.builder.add_op(ops.Some(self.elem_ty), elem)
         idx = self.builder.add_op(convert_itousize(), idx)
         result = self.builder.add_op(
             array_set(elem_opt_ty, self.length), array, idx, elem

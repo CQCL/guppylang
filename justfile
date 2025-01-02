@@ -21,7 +21,7 @@ _prepare-test:
     # Build the validator binary if rust is installed. Otherwise, skip it.
     cargo build --release -p validator || true
     # Build the execution binary if rust is installed. Otherwise, skip it.
-    uv run maturin build -m execute_llvm/Cargo.toml --release || true
+    uv run maturin develop -m execute_llvm/Cargo.toml --release || true
 
 # Run the tests.
 test *PYTEST_FLAGS: _prepare-test

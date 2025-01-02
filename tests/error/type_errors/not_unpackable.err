@@ -1,0 +1,8 @@
+Error: Unpackable (at $FILE:6:9)
+  | 
+4 | @compile_guppy
+5 | def foo() -> int:
+6 |     a, = 1
+  |          ^ Expression of type `int` cannot be unpacked
+
+Guppy compilation failed due to 1 previous error

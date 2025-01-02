@@ -57,7 +57,6 @@ from guppylang.checker.errors.py_errors import (
     PyExprIncoherentListError,
     PyExprNotCPythonError,
     PyExprNotStaticError,
-    Tket2NotInstalled,
 )
 from guppylang.checker.errors.type_errors import (
     AttributeNotFoundError,
@@ -117,6 +116,7 @@ from guppylang.tys.builtin import (
     is_sized_iter_type,
     list_type,
     nat_type,
+    string_type,
 )
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.subst import Inst, Subst
@@ -134,7 +134,6 @@ from guppylang.tys.ty import (
     TypeBase,
     function_tensor_signature,
     parse_function_tensor,
-    row_to_type,
     unify,
 )
 
@@ -1091,15 +1090,35 @@ def synthesize_comprehension(
     node: AstNode, gens: list[DesugaredGenerator], elt: ast.expr, ctx: Context
 ) -> tuple[list[DesugaredGenerator], ast.expr, Type]:
     """Helper function to synthesise the element type of a list comprehension."""
-    from guppylang.checker.stmt_checker import StmtChecker
-
     # If there are no more generators left, we can check the list element
     if not gens:
         elt, elt_ty = ExprSynthesizer(ctx).synthesize(elt)
         return gens, elt, elt_ty
 
-    # Check the iterator in the outer context
+    # Check the first generator
     gen, *gens = gens
+    gen, inner_ctx = check_generator(gen, ctx)
+
+    # Check remaining generators in inner context
+    gens, elt, elt_ty = synthesize_comprehension(node, gens, elt, inner_ctx)
+
+    # The iter finalizer is again checked in the outer context
+    gen.iterend, iterend_ty = ExprSynthesizer(ctx).synthesize(gen.iterend)
+    gen.iterend = with_type(iterend_ty, gen.iterend)
+    return [gen, *gens], elt, elt_ty
+
+
+def check_generator(
+    gen: DesugaredGenerator, ctx: Context
+) -> tuple[DesugaredGenerator, Context]:
+    """Helper function to check a single generator.
+
+    Returns the type annotated generator together with a new nested context in which the
+    generator variables are bound.
+    """
+    from guppylang.checker.stmt_checker import StmtChecker
+
+    # Check the iterator in the outer context
     gen.iter_assign = StmtChecker(ctx).visit_Assign(gen.iter_assign)
 
     # The rest is checked in a new nested context to ensure that variables don't escape
@@ -1119,13 +1138,7 @@ def synthesize_comprehension(
         gen.ifs[i], if_ty = expr_sth.synthesize(gen.ifs[i])
         gen.ifs[i], _ = to_bool(gen.ifs[i], if_ty, inner_ctx)
 
-    # Check remaining generators
-    gens, elt, elt_ty = synthesize_comprehension(node, gens, elt, inner_ctx)
-
-    # The iter finalizer is again checked in the outer context
-    gen.iterend, iterend_ty = ExprSynthesizer(ctx).synthesize(gen.iterend)
-    gen.iterend = with_type(iterend_ty, gen.iterend)
-    return [gen, *gens], elt, elt_ty
+    return gen, inner_ctx
 
 
 def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
@@ -1165,6 +1178,8 @@ def python_value_to_guppy_type(
     match v:
         case bool():
             return bool_type()
+        case str():
+            return string_type()
         # Only resolve `int` to `nat` if the user specifically asked for it
         case int(n) if type_hint == nat_type() and n >= 0:
             return nat_type()
@@ -1189,31 +1204,6 @@ def python_value_to_guppy_type(
         case list():
             return _python_list_to_guppy_type(v, node, globals, type_hint)
         case _:
-            # Pytket conversion is an experimental feature
-            # if pytket and tket2 are installed
-            try:
-                import pytket
-
-                if isinstance(v, pytket.circuit.Circuit):
-                    # We also need tket2 installed
-                    try:
-                        import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
-
-                        qubit = cast(TypeDef, globals["qubit"]).check_instantiate(
-                            [], globals
-                        )
-                        return FunctionType(
-                            [FuncInput(qubit, InputFlags.Inout)] * v.n_qubits,
-                            row_to_type([bool_type()] * v.n_bits),
-                        )
-                    except ImportError:
-                        err = Tket2NotInstalled(node)
-                        err.add_sub_diagnostic(
-                            Tket2NotInstalled.InstallInstruction(None)
-                        )
-                        raise GuppyError(err) from None
-            except ImportError:
-                pass
             return None
 
 

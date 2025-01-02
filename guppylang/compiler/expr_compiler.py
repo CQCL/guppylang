@@ -5,10 +5,12 @@ from functools import partial
 from typing import Any, TypeGuard, TypeVar
 
 import hugr
+import hugr.std.collections.array
 import hugr.std.float
 import hugr.std.int
 import hugr.std.logic
-from hugr import Hugr, Wire, ops
+import hugr.std.prelude
+from hugr import Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
 from hugr.build.cond_loop import Conditional
@@ -21,7 +23,7 @@ from guppylang.checker.core import Variable
 from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import CompilerBase, DFContainer
-from guppylang.compiler.hugr_extension import PartialOp, UnsupportedOp
+from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import (
     CallReturnWires,
@@ -46,6 +48,7 @@ from guppylang.nodes import (
     TensorCall,
     TypeApply,
 )
+from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
 from guppylang.std._internal.compiler.array import array_repeat
 from guppylang.std._internal.compiler.list import (
     list_new,
@@ -123,7 +126,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def _new_loop(
         self,
         loop_vars: list[PlaceNode],
-        branch: PlaceNode,
+        continue_predicate: PlaceNode,
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `TailLoop` node.
 
@@ -134,13 +137,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         loop = self.builder.add_tail_loop([], loop_inputs)
         with self._new_dfcontainer(loop_vars, loop):
             yield
-            # Output the branch predicate and the inputs for the next iteration
-            loop.set_loop_outputs(
-                # Note that we have to do fresh calls to `self.visit` here since we're
-                # in a new context
-                self.visit(branch),
-                *(self.visit(name) for name in loop_vars),
-            )
+            # Output the branch predicate and the inputs for the next iteration. Note
+            # that we have to do fresh calls to `self.visit` here since we're in a new
+            # context
+            do_continue = self.visit(continue_predicate)
+            do_break = loop.add_op(hugr.std.logic.Not, do_continue)
+            loop.set_loop_outputs(do_break, *(self.visit(name) for name in loop_vars))
         # Update the DFG with the outputs from the loop
         for node, wire in zip(loop_vars, loop, strict=True):
             self.dfg[node.place] = wire
@@ -172,12 +174,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         conditional = self.builder.add_conditional(
             self.visit(cond), *(self.visit(inp) for inp in inputs)
         )
-        # If the condition is true, we enter the `with` block
-        with self._new_case(inputs, inputs, conditional, 0):
-            yield
         # If the condition is false, output the inputs as is
-        with self._new_case(inputs, inputs, conditional, 1):
+        with self._new_case(inputs, inputs, conditional, 0):
             pass
+        # If the condition is true, we enter the `with` block
+        with self._new_case(inputs, inputs, conditional, 1):
+            yield
         # Update the DFG with the outputs from the Conditional node
         for node, wire in zip(inputs, conditional, strict=True):
             self.dfg[node.place] = wire
@@ -206,11 +208,16 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return defn.load(self.dfg, self.globals, node)
 
     def visit_GenericParamValue(self, node: GenericParamValue) -> Wire:
-        # TODO: We need a way to look up the concrete value of a generic type arg in
-        #  Hugr. For example, a new op that captures the value during monomorphisation
-        return self.builder.add_op(
-            UnsupportedOp("load_type_param", [], [node.param.ty.to_hugr()]).ext_op
-        )
+        match node.param.ty:
+            case NumericType(NumericType.Kind.Nat):
+                arg = node.param.to_bound().to_hugr()
+                load_nat = hugr.std.PRELUDE.get_op("load_nat").instantiate(
+                    [arg], ht.FunctionType([], [ht.USize()])
+                )
+                usize = self.builder.add_op(load_nat)
+                return self.builder.add_op(convert_ifromusize(), usize)
+            case _:
+                raise NotImplementedError
 
     def visit_Name(self, node: ast.Name) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
@@ -590,6 +597,8 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
     match v:
         case bool():
             return hv.bool_value(v)
+        case str():
+            return hugr.std.prelude.StringVal(v)
         case int():
             return hugr.std.int.IntVal(v, width=NumericType.INT_WIDTH)
         case float():
@@ -604,33 +613,14 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
                 return hv.Tuple(*vs)
         case list(elts):
             assert is_array_type(exp_ty)
-            vs = [python_value_to_hugr(elt, get_element_type(exp_ty)) for elt in elts]
+            elem_ty = get_element_type(exp_ty)
+            vs = [python_value_to_hugr(elt, elem_ty) for elt in elts]
             if doesnt_contain_none(vs):
-                # TODO: Use proper array value: https://github.com/CQCL/hugr/issues/1497
-                return hv.Extension(
-                    name="ArrayValue",
-                    typ=exp_ty.to_hugr(),
-                    # The value list must be serialized at this point, otherwise the
-                    # `Extension` value would not be serializable.
-                    val=[v._to_serial_root() for v in vs],
-                    extensions=["unsupported"],
-                )
+                opt_ty = ht.Option(elem_ty.to_hugr())
+                opt_vs: list[hv.Value] = [hv.Some(v) for v in vs]
+                return hugr.std.collections.array.ArrayVal(opt_vs, opt_ty)
         case _:
-            # TODO replace with hugr protocol handling: https://github.com/CQCL/guppylang/issues/563
-            # Pytket conversion is an experimental feature
-            # if pytket and tket2 are installed
-            try:
-                import pytket
-
-                if isinstance(v, pytket.circuit.Circuit):
-                    from tket2.circuit import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
-                        Tk2Circuit,
-                    )
-
-                    circ = Hugr.load_json(Tk2Circuit(v).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
-                    return hv.Function(circ)
-            except ImportError:
-                pass
+            return None
     return None
 
 

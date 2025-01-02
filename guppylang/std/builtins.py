@@ -46,6 +46,7 @@ from guppylang.tys.builtin import (
     list_type_def,
     nat_type_def,
     sized_iter_type_def,
+    string_type_def,
 )
 
 guppy.init_module(import_builtins=False)
@@ -121,6 +122,12 @@ class Bool:
     def __xor__(self: bool, other: bool) -> bool: ...
 
 
+@guppy.extend_type(string_type_def)
+class String:
+    @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
+    def __new__(x): ...
+
+
 @guppy.extend_type(nat_type_def)
 class Nat:
     @guppy.custom(NoopCompiler())
@@ -161,7 +168,9 @@ class Nat:
     @guppy.hugr_op(int_op("igt_u"))
     def __gt__(self: nat, other: nat) -> bool: ...
 
-    @guppy.hugr_op(int_op("iu_to_s"))
+    # TODO: Use "iu_to_s" once we have lowering:
+    #  https://github.com/CQCL/hugr/issues/1806
+    @guppy.custom(NoopCompiler())
     def __int__(self: nat) -> int: ...
 
     @guppy.hugr_op(int_op("inot"))
@@ -886,10 +895,6 @@ def sorted(x): ...
 
 @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
 def staticmethod(x): ...
-
-
-@guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
-def str(x): ...
 
 
 @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)

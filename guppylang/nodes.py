@@ -290,6 +290,60 @@ class InoutReturnSentinel(ast.expr):
     _fields = ("var",)
 
 
+class UnpackPattern(ast.expr):
+    """The LHS of an unpacking assignment like `a, *bs, c = ...` or
+    `[a, *bs, c] = ...`."""
+
+    #: Patterns occurring on the left of the starred target
+    left: list[ast.expr]
+
+    #: The starred target or `None` if there is none
+    starred: ast.expr | None
+
+    #: Patterns occurring on the right of the starred target. This will be an empty list
+    #: if there is no starred target
+    right: list[ast.expr]
+
+    _fields = ("left", "starred", "right")
+
+
+class TupleUnpack(ast.expr):
+    """The LHS of an unpacking assignment of a tuple."""
+
+    #: The (possibly starred) unpacking pattern
+    pattern: UnpackPattern
+
+    _fields = ("pattern",)
+
+
+class IterableUnpack(ast.expr):
+    """The LHS of an unpacking assignment of an iterable type."""
+
+    #: The (possibly starred) unpacking pattern
+    pattern: UnpackPattern
+
+    #: Comprehension that collects the RHS iterable into an array
+    compr: DesugaredArrayComp
+
+    #: Dummy variable that the RHS should be bound to. This variable is referenced in
+    #: `compr`
+    rhs_var: PlaceNode
+
+    # Don't mention the comprehension in _fields to avoid visitors recursing it
+    _fields = ("pattern",)
+
+    def __init__(
+        self, pattern: UnpackPattern, compr: DesugaredArrayComp, rhs_var: PlaceNode
+    ) -> None:
+        super().__init__(pattern)
+        self.compr = compr
+        self.rhs_var = rhs_var
+
+
+#: Any unpacking operation.
+AnyUnpack = TupleUnpack | IterableUnpack
+
+
 class NestedFunctionDef(ast.FunctionDef):
     cfg: "CFG"
     ty: FunctionType
