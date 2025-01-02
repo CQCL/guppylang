@@ -150,6 +150,12 @@ class StmtChecker(AstVisitor[BBStatement]):
         return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 
     @_check_assign.register
+    def _check_subscript_assign(
+        self, lhs: ast.Subscript, rhs: ast.expr, rhs_ty: Type
+    ) -> AnyUnpack:
+        raise GuppyError(UnsupportedError(lhs, "Subscript assignments"))
+
+    @_check_assign.register
     def _check_tuple_assign(
         self, lhs: ast.Tuple, rhs: ast.expr, rhs_ty: Type
     ) -> AnyUnpack:
