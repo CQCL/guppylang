@@ -1,8 +1,0 @@
-Error: Unreachable (at $FILE:9:8)
-  | 
-7 |         if True:
-8 |             break
-9 |         x += 1
-  |         ^^^^^^ This code is not reachable
-
-Guppy compilation failed due to 1 previous error

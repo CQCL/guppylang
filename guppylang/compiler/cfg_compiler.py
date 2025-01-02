@@ -73,9 +73,12 @@ def compile_bb(
     If the basic block is the output block, returns `None`.
     """
     # The exit BB is completely empty
-    if len(bb.successors) == 0:
+    if bb.is_exit:
         assert len(bb.statements) == 0
         return builder.exit
+
+    # Unreachable BBs (besides the exit) should have been removed by now
+    assert bb.reachable
 
     # Otherwise, we use a regular `Block` node
     block: hc.Block

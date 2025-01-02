@@ -625,13 +625,15 @@ def check_cfg_linearity(
             if InputFlags.Inout in var.flags
             for leaf in leaf_places(var)
         }
-        if not cfg.exit_bb.predecessors
+        if not cfg.exit_bb.reachable
         else {}
     )
 
     # Run liveness analysis with this initial value
     stats = {bb: scope.stats() for bb, scope in scopes.items()}
-    live_before = LivenessAnalysis(stats, initial=live_default).run(cfg.bbs)
+    live_before = LivenessAnalysis(
+        stats, initial=live_default, include_unreachable=False
+    ).run(cfg.bbs)
 
     # Construct a CFG that tracks places instead of just variables
     result_cfg: CheckedCFG[Place] = CheckedCFG(cfg.input_tys, cfg.output_ty)
@@ -719,7 +721,12 @@ def check_cfg_linearity(
             ],
         )
         checked[bb] = CheckedBB(
-            bb.idx, result_cfg, bb.statements, branch_pred=bb.branch_pred, sig=sig
+            bb.idx,
+            result_cfg,
+            bb.statements,
+            branch_pred=bb.branch_pred,
+            reachable=bb.reachable,
+            sig=sig,
         )
 
     # Fill in missing fields of the result CFG

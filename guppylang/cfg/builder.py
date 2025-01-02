@@ -78,41 +78,47 @@ class CFGBuilder(AstVisitor[BB | None]):
         )
 
         # Compute reachable BBs
-        reachable = self.cfg.reachable_from(self.cfg.entry_bb)
+        self.cfg.update_reachable()
 
         # If we're still in a basic block after compiling the whole body, we have to add
         # an implicit void return
-        if final_bb is not None and final_bb in reachable:
-            if not returns_none:
-                raise GuppyError(ExpectedError(nodes[-1], "return statement"))
+        if final_bb is not None:
             self.cfg.link(final_bb, self.cfg.exit_bb)
-            reachable.add(self.cfg.exit_bb)
+            if final_bb.reachable:
+                self.cfg.exit_bb.reachable = True
+                if not returns_none:
+                    raise GuppyError(ExpectedError(nodes[-1], "return statement"))
 
-        # Complain about unreachable code
-        unreachable = set(self.cfg.bbs) - reachable
-        for bb in unreachable:
-            if bb.statements:
-                raise GuppyError(UnreachableError(bb.statements[0]))
-            if bb.branch_pred:
-                raise GuppyError(UnreachableError(bb.branch_pred))
-            # Empty unreachable BBs are fine, we just prune them
-            if bb.successors:
-                # Since there is no branch expression, there can be at most a single
-                # successor
-                [succ] = bb.successors
-                succ.predecessors.remove(bb)
+        # Prune the CFG such that there are no jumps from unreachable code back into
+        # reachable code. Otherwise, unreachable code could lead to unnecessary type
+        # checking errors, e.g. if unreachable code changes the type of a variable.
+        for bb in self.cfg.bbs:
+            if not bb.reachable:
+                for succ in list(bb.successors):
+                    if succ.reachable:
+                        bb.successors.remove(succ)
+                        succ.predecessors.remove(bb)
+            # Similarly, if a BB is reachable, then there is no need to hold on to dummy
+            # jumps into it. Dummy jumps are only needed to propagate type information
+            # into and between unreachable BBs
+            else:
+                for pred in bb.dummy_predecessors:
+                    pred.dummy_successors.remove(bb)
+                bb.dummy_predecessors = []
 
-        # If we made it till here, there are only the reachable BBs left. The only
-        # exception is the exit BB which should never be dropped, even if unreachable.
-        self.cfg.bbs = list(reachable | {self.cfg.exit_bb})
         return self.cfg
 
     def visit_stmts(self, nodes: list[ast.stmt], bb: BB, jumps: Jumps) -> BB | None:
+        prev_bb = bb
         bb_opt: BB | None = bb
         next_functional = False
         for node in nodes:
+            # If the previous statement jumped, then all following statements are
+            # unreachable. Just create a new dummy BB and keep going so we can still
+            # check the unreachable code.
             if bb_opt is None:
-                raise GuppyError(UnreachableError(node))
+                bb_opt = self.cfg.new_bb()
+                self.cfg.dummy_link(prev_bb, bb_opt)
             if is_functional_annotation(node):
                 next_functional = True
                 continue
@@ -122,7 +128,7 @@ class CFGBuilder(AstVisitor[BB | None]):
                 raise NotImplementedError
                 next_functional = False
             else:
-                bb_opt = self.visit(node, bb_opt, jumps)
+                prev_bb, bb_opt = bb_opt, self.visit(node, bb_opt, jumps)
         return bb_opt
 
     def _build_node_value(self, node: BBStatement, bb: BB) -> BB:
@@ -395,6 +401,7 @@ class BranchBuilder(AstVisitor[None]):
         # Branching on `True` or `False` constant should be unconditional
         if isinstance(node.value, bool):
             self.cfg.link(bb, true_bb if node.value else false_bb)
+            self.cfg.dummy_link(bb, false_bb if node.value else true_bb)
         else:
             self.generic_visit(node, bb, true_bb, false_bb)
 
