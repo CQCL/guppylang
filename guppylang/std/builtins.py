@@ -101,6 +101,11 @@ class Bool:
 
     @guppy
     @no_type_check
+    def __ne__(self: bool, other: bool) -> bool:
+        return not self == other
+
+    @guppy
+    @no_type_check
     def __int__(self: bool) -> int:
         return 1 if self else 0
 
@@ -121,7 +126,7 @@ class Bool:
     # TODO: Use hugr op once implemented: https://github.com/CQCL/hugr/issues/1418
     @guppy
     def __xor__(self: bool, other: bool) -> bool:
-        return not (self == other)  # noqa: SIM201
+        return self != other
 
 
 @guppy.extend_type(string_type_def)
