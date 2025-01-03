@@ -108,6 +108,15 @@ class HResult:
 
         return {reg: "".join(bits) for reg, bits in reg_bits.items()}
 
+    def collate_tags(self) -> dict[str, list[DataValue]]:
+        """Collate all the entries with the same tag in to a dictionary with a list
+        containing all the data for that tag."""
+
+        tags: dict[str, list[DataValue]] = defaultdict(list)
+        for tag, data in self.entries:
+            tags[tag].append(data)
+        return dict(tags)
+
 
 def _cast_primitive_bit(data: DataValue) -> BitChar:
     if isinstance(data, int) and data in {0, 1}:
@@ -173,7 +182,7 @@ class HShots:
                 shot_dct[reg].append(bitstr)
             if strict_names and not bitstrs.keys() == shot_dct.keys():
                 raise ValueError("All shots must have the same registers.")
-        return shot_dct
+        return dict(shot_dct)
 
     def to_pytket(self) -> BackendResult:
         """Convert results to a pytket BackendResult.
@@ -208,3 +217,43 @@ class HShots:
         return BackendResult(
             shots=OutcomeArray.from_ints(int_shots, width=len(bits)), c_bits=bits
         )
+
+    def _collated_shots_iter(self) -> Iterable[dict[str, list[DataValue]]]:
+        for shot in self.results:
+            yield shot.collate_tags()
+
+    def collated_shots(self) -> list[dict[str, list[DataValue]]]:
+        """For each shot generate a dictionary of tags to collated data."""
+        return list(self._collated_shots_iter())
+
+    def collated_counts(self) -> Counter[tuple[tuple[str, str], ...]]:
+        """Calculate counts of bit strings for each tag by collating across shots using
+        `HShots.tag_collated_shots`. Each `result` entry per shot is seen to be
+        appending to the bitstring for that tag.
+
+        If the result value is a list, it is flattened and appended to the bitstring.
+
+        Example:
+            >>> res = HShots([HResult([("a", 1), ("a", 0)]), HResult([("a", [0, 1])])])
+            >>> res.collated_counts()
+            Counter({(("a", "10"),): 1, (("a", "01"),): 1})
+
+        Raises:
+            ValueError: If any value is a float.
+        """
+        return Counter(
+            tuple((tag, _flat_bitstring(data)) for tag, data in d.items())
+            for d in self._collated_shots_iter()
+        )
+
+
+def _flat_bitstring(data: Iterable[DataValue]) -> str:
+    return "".join(_cast_primitive_bit(prim) for prim in _flatten(data))
+
+
+def _flatten(itr: Iterable[DataValue]) -> Iterable[DataPrimitive]:
+    for i in itr:
+        if isinstance(i, list):
+            yield from _flatten(i)
+        else:
+            yield i
