@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.15.0](https://github.com/CQCL/guppylang/compare/v0.14.0...v0.15.0) (2025-01-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* `pytket` circuits no longer supported by `py` expressions (use `@pytket` or `load_pytket` instead)
+
+### Features
+
+* add boolean xor support ([#747](https://github.com/CQCL/guppylang/issues/747)) ([7fa4c8d](https://github.com/CQCL/guppylang/commit/7fa4c8d6cf94bf19faa618d4d48d023da1484514)), closes [#750](https://github.com/CQCL/guppylang/issues/750)
+* Add string type ([#733](https://github.com/CQCL/guppylang/issues/733)) ([aa9341b](https://github.com/CQCL/guppylang/commit/aa9341b13c9277756296dd98a86989e23c40e3a8))
+* Remove circuits from `py` expressions ([#746](https://github.com/CQCL/guppylang/issues/746)) ([ee8926b](https://github.com/CQCL/guppylang/commit/ee8926bb5f3a6b43aea105f702c0e4ff3202b79b))
+
+
+### Bug Fixes
+
+* Properly report errors for unsupported subscript assignments ([#738](https://github.com/CQCL/guppylang/issues/738)) ([8afa2a9](https://github.com/CQCL/guppylang/commit/8afa2a93ae224c57932eb6042464f5722668f742)), closes [#736](https://github.com/CQCL/guppylang/issues/736)
+
 ## [0.14.0](https://github.com/CQCL/guppylang/compare/v0.13.1...v0.14.0) (2024-12-19)
 
 
