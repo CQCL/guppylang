@@ -2,7 +2,7 @@ import ast
 import copy
 import itertools
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
@@ -225,7 +225,7 @@ class Globals:
 
     names: dict[str, DefId]
     impls: dict[DefId, dict[str, DefId]]
-    python_scope: PyScope
+    python_scope: PyScope = field(repr=False)
 
     @staticmethod
     def default() -> "Globals":
