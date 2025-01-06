@@ -8,7 +8,6 @@ from hugr import Wire, ops
 
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.function import RawFunctionDef
-from guppylang.definition.traced import CompiledTracedFunctionDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
