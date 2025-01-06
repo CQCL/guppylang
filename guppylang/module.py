@@ -108,8 +108,8 @@ class GuppyModule:
 
     def load(
         self,
-        *args: Definition | GuppyModule | ModuleType,
-        **kwargs: Definition | GuppyModule | ModuleType,
+        *args: GuppyDefinition | GuppyModule | ModuleType,
+        **kwargs: GuppyDefinition | GuppyModule | ModuleType,
     ) -> None:
         """Imports another Guppy module or selected definitions from a module.
 
@@ -125,7 +125,7 @@ class GuppyModule:
         names: dict[str, DefId] = {}
 
         # Collect imports in reverse since we'll use it as a stack to push and pop from
-        imports: list[tuple[str, Definition | GuppyModule | ModuleType]] = [
+        imports: list[tuple[str, GuppyDefinition | GuppyModule | ModuleType]] = [
             *reversed(kwargs.items()),
             *(("", arg) for arg in reversed(args)),
         ]

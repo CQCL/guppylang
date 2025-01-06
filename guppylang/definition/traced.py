@@ -58,6 +58,7 @@ class RawTracedFunctionDef(ParsableDef):
 class TracedFunctionDef(RawTracedFunctionDef, CallableDef, CompilableDef):
     python_func: PyFunc
     ty: FunctionType
+    defined_at: ast.FunctionDef
 
     def check_call(
         self, args: list[ast.expr], ty: Type, node: AstNode, ctx: Context

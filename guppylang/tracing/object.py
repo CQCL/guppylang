@@ -12,7 +12,6 @@ from guppylang.definition.traced import CompiledTracedFunctionDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
-from guppylang.span import Span
 from guppylang.tracing.state import get_tracing_globals, get_tracing_state
 from guppylang.tracing.util import get_calling_frame, hide_trace
 from guppylang.tys.ty import TupleType, Type
@@ -20,90 +19,90 @@ from guppylang.tys.ty import TupleType, Type
 
 class GetAttrDunders(ABC):
     @abstractmethod
-    def __getattr__(self, item): ...
+    def __getattr__(self, item: Any) -> Any: ...
 
-    def __abs__(self, other):
+    def __abs__(self, other: Any) -> Any:
         return self.__getattr__("__abs__")(other)
 
-    def __add__(self, other):
+    def __add__(self, other: Any) -> Any:
         return self.__getattr__("__add__")(other)
 
-    def __and__(self, other):
+    def __and__(self, other: Any) -> Any:
         return self.__getattr__("__and__")(other)
 
-    def __bool__(self):
+    def __bool__(self: Any) -> Any:
         return self.__getattr__("__bool__")()
 
-    def __ceil__(self):
+    def __ceil__(self: Any) -> Any:
         return self.__getattr__("__bool__")()
 
-    def __divmod__(self, other):
+    def __divmod__(self, other: Any) -> Any:
         return self.__getattr__("__divmod__")(other)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> Any:
         return self.__getattr__("__eq__")(other)
 
-    def __float__(self):
+    def __float__(self) -> Any:
         return self.__getattr__("__bool__")()
 
-    def __floor__(self):
+    def __floor__(self) -> Any:
         return self.__getattr__("__floor__")()
 
-    def __floordiv__(self, other):
+    def __floordiv__(self, other: Any) -> Any:
         return self.__getattr__("__floordiv__")(other)
 
-    def __ge__(self, other):
+    def __ge__(self, other: Any) -> Any:
         return self.__getattr__("__ge__")(other)
 
-    def __gt__(self, other):
+    def __gt__(self, other: Any) -> Any:
         return self.__getattr__("__gt__")(other)
 
-    def __int__(self):
+    def __int__(self) -> Any:
         return self.__getattr__("__int__")()
 
-    def __invert__(self):
+    def __invert__(self) -> Any:
         return self.__getattr__("__invert__")()
 
-    def __le__(self, other):
+    def __le__(self, other: Any) -> Any:
         return self.__getattr__("__le__")(other)
 
-    def __lshift__(self, other):
+    def __lshift__(self, other: Any) -> Any:
         return self.__getattr__("__lshift__")(other)
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> Any:
         return self.__getattr__("__lt__")(other)
 
-    def __mod__(self, other):
+    def __mod__(self, other: Any) -> Any:
         return self.__getattr__("__mod__")(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: Any) -> Any:
         return self.__getattr__("__mul__")(other)
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> Any:
         return self.__getattr__("__ne__")(other)
 
-    def __neg__(self):
+    def __neg__(self) -> Any:
         return self.__getattr__("__neg__")()
 
-    def __or__(self, other):
+    def __or__(self, other: Any) -> Any:
         return self.__getattr__("__or__")(other)
 
-    def __pos__(self):
+    def __pos__(self) -> Any:
         return self.__getattr__("__pos__")()
 
-    def __pow__(self, other):
+    def __pow__(self, other: Any) -> Any:
         return self.__getattr__("__pow__")(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: Any) -> Any:
         return self.__getattr__("__sub__")(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: Any) -> Any:
         return self.__getattr__("__truediv__")(other)
 
-    def __trunc__(self):
+    def __trunc__(self) -> Any:
         return self.__getattr__("__trunc__")()
 
-    def __xor__(self, other):
+    def __xor__(self, other: Any) -> Any:
         return self.__getattr__("__xor__")(other)
 
 
@@ -128,7 +127,7 @@ class GuppyObject(GetAttrDunders):
     _used: ObjectUse | None
     _id: ObjectId
 
-    def __init__(self, ty: Type, wire: Wire, used: Span | None = None) -> None:
+    def __init__(self, ty: Type, wire: Wire, used: ObjectUse | None = None) -> None:
         self._ty = ty
         self._wire = wire
         self._used = used
@@ -139,17 +138,17 @@ class GuppyObject(GetAttrDunders):
             state.unused_objs.add(self._id)
 
     @hide_trace
-    def __getattr__(self, name: str):
+    def __getattr__(self, key: str) -> Any:  # type: ignore[misc]
         globals = get_tracing_globals()
-        func = globals.get_instance_func(self._ty, name)
+        func = globals.get_instance_func(self._ty, key)
         if func is None:
             raise AttributeError(
-                f"Expression of type `{self._ty}` has no attribute `{name}`"
+                f"Expression of type `{self._ty}` has no attribute `{key}`"
             )
         return lambda *xs: GuppyDefinition(func)(self, *xs)
 
     @hide_trace
-    def __bool__(self):
+    def __bool__(self) -> Any:
         err = (
             "Branching on a dynamic value is not allowed during tracing. Try using "
             "a regular guppy function"
@@ -157,7 +156,7 @@ class GuppyObject(GetAttrDunders):
         raise ValueError(err)
 
     @hide_trace
-    def __iter__(self):
+    def __iter__(self) -> Any:
         state = get_tracing_state()
         builder = state.dfg.builder
         if isinstance(self._ty, TupleType):
@@ -191,7 +190,7 @@ class GuppyObject(GetAttrDunders):
                     module_name = f"<{defn.cell_name}>"
             else:
                 module = inspect.getmodule(frame)
-                module_name = module.__file__ if module else "???"
+                module_name = module.__file__ if module and module.__file__ else "???"
             self._used = ObjectUse(module_name, frame.f_lineno, called_func)
             if self._ty.linear:
                 state = get_tracing_state()

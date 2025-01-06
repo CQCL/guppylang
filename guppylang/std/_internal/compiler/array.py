@@ -151,7 +151,7 @@ def unpack_array(builder: DfBase[P], array: Wire) -> list[Wire]:
     err = "Internal error: array unpacking failed"
     match array_ty.args:
         case [ht.BoundedNatArg(length), ht.TypeTypeArg(elem_ty)]:
-            elems = []
+            elems: list[Wire] = []
             for i in range(length):
                 res = builder.add_op(
                     array_pop(elem_ty, length - i, from_left=True), array

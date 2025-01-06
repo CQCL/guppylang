@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from hugr import ops
 from hugr.build.dfg import DfBase
@@ -31,6 +31,11 @@ from guppylang.tracing.unpacking import (
 )
 from guppylang.tracing.util import tracing_except_hook
 from guppylang.tys.ty import FunctionType, InputFlags, type_to_row
+
+if TYPE_CHECKING:
+    import ast
+
+    from hugr import Wire
 
 
 @dataclass(frozen=True)
@@ -68,13 +73,14 @@ def trace_function(
 
         # Check that the output type is correct
         if out_obj._ty != ty.output:
-            err = TypeMismatchError(node, ty.output, out_obj._ty, "return value")
-            raise GuppyError(err)
+            raise GuppyError(
+                TypeMismatchError(node, ty.output, out_obj._ty, "return value")
+            )
 
         # Unpack regular returns
         out_tys = type_to_row(out_obj._ty)
         if len(out_tys) > 1:
-            regular_returns = list(
+            regular_returns: list[Wire] = list(
                 builder.add_op(ops.UnpackTuple(), out_obj._use_wire(None)).outputs()
             )
         elif len(out_tys) > 0:
@@ -97,8 +103,8 @@ def trace_function(
     # Check that all allocated linear objects have been used
     if state.unused_objs:
         unused = state.allocated_objs[state.unused_objs.pop()]
-        err = f"Value with linear type `{unused._ty}` is leaked by this function"
-        raise GuppyError(TracingReturnLinearityViolationError(node, err)) from None
+        msg = f"Value with linear type `{unused._ty}` is leaked by this function"
+        raise GuppyError(TracingReturnLinearityViolationError(node, msg)) from None
 
     builder.set_outputs(*regular_returns, *inout_returns)
 
@@ -106,6 +112,7 @@ def trace_function(
 def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     state = get_tracing_state()
     globals = get_tracing_globals()
+    assert func.defined_at is not None
 
     # Try to turn args into `GuppyObjects`
     args_objs = [
@@ -114,12 +121,12 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
 
     # Create dummy variables and bind the objects to them
     arg_vars = [Variable(next(tmp_vars), obj._ty, None) for obj in args_objs]
-    locals = Locals({var.name: var.ty for var in arg_vars})
+    locals = Locals({var.name: var for var in arg_vars})
     for obj, var in zip(args_objs, arg_vars, strict=False):
         state.dfg[var] = obj._use_wire(func)
 
     # Check call
-    arg_exprs = [
+    arg_exprs: list[ast.expr] = [
         with_loc(func.defined_at, with_type(var.ty, PlaceNode(var))) for var in arg_vars
     ]
     call_node, ret_ty = func.synthesize_call(

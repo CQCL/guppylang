@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -37,7 +38,7 @@ def get_tracing_globals() -> Globals:
 
 
 @contextmanager
-def set_tracing_state(state: TracingState) -> None:
+def set_tracing_state(state: TracingState) -> Iterator[None]:
     global _STATE
     old_state = _STATE
     _STATE = state
@@ -46,7 +47,7 @@ def set_tracing_state(state: TracingState) -> None:
 
 
 @contextmanager
-def set_tracing_globals(globals: Globals) -> None:
+def set_tracing_globals(globals: Globals) -> Iterator[None]:
     global _GLOBALS
     old_globals = _GLOBALS
     _GLOBALS = globals

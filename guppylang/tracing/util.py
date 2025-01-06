@@ -1,17 +1,22 @@
 import functools
 import inspect
 import sys
+from collections.abc import Callable
 from types import FrameType, TracebackType
+from typing import ParamSpec, TypeVar
 
 from guppylang.error import GuppyError, exception_hook
 
+P = ParamSpec("P")
+T = TypeVar("T")
 
-def hide_trace(f):
+
+def hide_trace(f: Callable[P, T]) -> Callable[P, T]:
     """Function decorator that hides compiler-internal frames from the traceback of any
     exception thrown by the decorated function."""
 
     @functools.wraps(f)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
         with exception_hook(tracing_except_hook):
             return f(*args, **kwargs)
 
@@ -20,7 +25,7 @@ def hide_trace(f):
 
 def tracing_except_hook(
     excty: type[BaseException], err: BaseException, traceback: TracebackType | None
-):
+) -> None:
     """Except hook that removes all compiler-internal frames from the traceback."""
     if isinstance(err, GuppyError):
         diagnostic = err.error

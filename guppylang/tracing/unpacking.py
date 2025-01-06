@@ -123,7 +123,7 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
             opt_wires = unpack_array(builder, obj._use_wire(None))
             err = "Linear array element has already been used"
             for v, opt_wire in zip(vs, opt_wires, strict=True):
-                wire = build_unwrap(builder, opt_wire, err)
+                (wire,) = build_unwrap(builder, opt_wire, err).outputs()
                 update_packed_value(v, GuppyObject(elem_ty, wire), builder)
         case _:
             pass

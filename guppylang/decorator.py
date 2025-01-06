@@ -466,7 +466,9 @@ class _Guppy:
             raise MissingModuleError(err)
         return module.compile()
 
-    def compile_function(self, f_def: RawFunctionDef) -> FuncDefnPointer:
+    def compile_function(
+        self, f_def: RawFunctionDef | RawTracedFunctionDef
+    ) -> FuncDefnPointer:
         """Compiles a single function definition."""
         module = f_def.id.module
         if not module:
