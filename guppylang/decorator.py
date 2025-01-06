@@ -168,7 +168,7 @@ class _Guppy:
         )
 
     @pretty_errors
-    def traced(self, arg: PyFunc | GuppyModule) -> FuncDecorator | GuppyDefinition:
+    def comptime(self, arg: PyFunc | GuppyModule) -> FuncDecorator | GuppyDefinition:
         def dec(f: Callable[..., Any], module: GuppyModule) -> GuppyDefinition:
             defn = RawTracedFunctionDef(DefId.fresh(module), f.__name__, None, f, {})
             module.register_def(defn)
