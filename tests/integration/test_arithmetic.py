@@ -290,3 +290,15 @@ def test_xor(validate, run_int_fn):
 
     compiled = module.compile()
     run_int_fn(compiled, 0)
+
+
+def test_pow(validate, run_int_fn) -> None:
+    module = GuppyModule("test_pow")
+
+    @guppy(module)
+    def main() -> int:
+        return -(3**3) + 4**2
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, -11)
