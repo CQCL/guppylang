@@ -56,7 +56,7 @@ class RawPytketDef(ParsableDef):
     """
 
     python_func: PyFunc
-    python_scope: PyScope
+    python_scope: PyScope = field(repr=False)
     input_circuit: Any
 
     description: str = field(default="pytket circuit", init=False)
