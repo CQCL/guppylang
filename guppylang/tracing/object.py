@@ -219,9 +219,7 @@ class GuppyDefinition:
 
         state = get_tracing_state()
         defn = state.globals.build_compiled_def(self.wrapped.id)
-        if isinstance(defn, CompiledTracedFunctionDef):
-            return defn.python_func(*args)
-        elif isinstance(defn, CompiledCallableDef):
+        if isinstance(defn, CompiledCallableDef):
             return trace_call(defn, *args)
         elif isinstance(defn, TypeDef):
             globals = get_tracing_globals()
