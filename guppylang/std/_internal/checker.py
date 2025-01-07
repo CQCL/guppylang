@@ -32,6 +32,7 @@ from guppylang.nodes import (
     GenericParamValue,
     GlobalCall,
     MakeIter,
+    PanicExpr,
     ResultExpr,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
@@ -353,6 +354,35 @@ class ResultChecker(CustomCallChecker):
     @staticmethod
     def _is_numeric_or_bool_type(ty: Type) -> bool:
         return isinstance(ty, NumericType) or is_bool_type(ty)
+
+
+class PanicChecker(CustomCallChecker):
+    """Call checker for the `panic` function."""
+
+    @dataclass(frozen=True)
+    class NoMessageError(Error):
+        title: ClassVar[str] = "No panic message."
+        span_label: ClassVar[str] = "Missing message argument to panic call."
+
+        @dataclass(frozen=True)
+        class Suggestion(Note):
+            message: ClassVar[str] = 'add a message: `panic("message")`'
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        match args:
+            case []:
+                err = PanicChecker.NoMessageError(self.node)
+                err.add_sub_diagnostic(PanicChecker.NoMessageError.Suggestion(None))
+                raise GuppyTypeError(err)
+            case [msg, *rest]:
+                if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
+                    raise GuppyTypeError(ExpectedError(msg, "a string literal"))
+
+                vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
+                node = PanicExpr(msg.value, vals)
+                return with_loc(self.node, node), NoneType()
+            case args:
+                return assert_never(args)  # type: ignore[arg-type]
 
 
 class RangeChecker(CustomCallChecker):

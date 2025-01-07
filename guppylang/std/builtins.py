@@ -13,6 +13,7 @@ from guppylang.std._internal.checker import (
     CallableChecker,
     DunderChecker,
     NewArrayChecker,
+    PanicChecker,
     RangeChecker,
     ResultChecker,
     ReversingChecker,
@@ -640,6 +641,10 @@ class SizedIter:
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.
 @guppy.custom(checker=ResultChecker(), higher_order_value=False)
 def result(tag, value): ...
+
+
+@guppy.custom(checker=PanicChecker(), higher_order_value=False)
+def panic(msg, *args): ...
 
 
 @guppy.custom(checker=DunderChecker("__abs__"), higher_order_value=False)

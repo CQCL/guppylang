@@ -41,6 +41,7 @@ from guppylang.nodes import (
     GlobalName,
     InoutReturnSentinel,
     LocalCall,
+    PanicExpr,
     PartialApply,
     PlaceNode,
     ResultExpr,
@@ -53,6 +54,7 @@ from guppylang.std._internal.compiler.array import array_repeat
 from guppylang.std._internal.compiler.list import (
     list_new,
 )
+from guppylang.std._internal.compiler.prelude import build_error, build_panic
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     get_element_type,
@@ -471,6 +473,18 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             extra_args=extra_args,
         )
         self.builder.add_op(op, self.visit(node.value))
+        return self._pack_returns([], NoneType())
+
+    def visit_PanicExpr(self, node: PanicExpr) -> Wire:
+        err = build_error(self.builder, 1, node.msg)
+        in_tys = [get_type(e).to_hugr() for e in node.values]
+        build_panic(
+            self.builder,
+            in_tys,
+            [],
+            err,
+            *(self.visit(e) for e in node.values),
+        )
         return self._pack_returns([], NoneType())
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> Wire:

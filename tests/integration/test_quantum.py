@@ -1,5 +1,6 @@
 """Various tests for the functions defined in `guppylang.prelude.quantum`."""
 
+from typing import no_type_check
 from hugr.package import ModulePointer
 
 import guppylang.decorator
@@ -152,5 +153,17 @@ def test_discard_array(validate):
     def test() -> None:
         qs = array(qubit() for _ in range(10))
         discard_array(qs)
+
+    validate(test)
+
+
+def test_panic_discard(validate):
+    """Panic while discarding qubit."""
+
+    @compile_quantum_guppy
+    @no_type_check
+    def test() -> None:
+        q = qubit()
+        panic("I panicked!", q)
 
     validate(test)
