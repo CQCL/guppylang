@@ -1,3 +1,5 @@
+import pytest
+
 from hugr import ops
 from hugr.std.int import IntVal
 
@@ -310,3 +312,33 @@ def test_mem_swap(validate):
 
     package = module.compile()
     validate(package)
+
+
+def test_subscript_assign(validate):
+    @compile_guppy
+    def main() -> array[int, 3]:
+        xs = array(0, 2, 3)
+        xs[0] = 1
+        return xs
+
+    validate(main)
+
+
+@pytest.mark.skip("Not supported yet")
+def test_subscript_assign_struct(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    @guppy.struct(module)
+    class B:
+        b: int
+
+    @guppy.struct(module)
+    class A:
+        arr_b: array[B, 24]
+
+    @guppy(module)
+    def main(struct_a: A) -> None:
+       struct_a.arr_b[0].b = 0
+
+    validate(module.compile())

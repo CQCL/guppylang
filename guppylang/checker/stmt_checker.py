@@ -27,11 +27,12 @@ from guppylang.cfg.builder import (
     make_var,
     tmp_vars,
 )
-from guppylang.checker.core import Context, FieldAccess, Variable
+from guppylang.checker.core import Context, FieldAccess, SubscriptAccess, Variable
 from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.checker.errors.type_errors import (
     AssignFieldTypeMismatchError,
     AssignNonPlaceHelp,
+    AssignSubscriptTypeMismatchError,
     AttributeNotFoundError,
     MissingReturnValueError,
     StarredTupleUnpackError,
@@ -58,7 +59,9 @@ from guppylang.nodes import (
 from guppylang.span import Span, to_span
 from guppylang.tys.builtin import (
     array_type,
+    get_element_type,
     get_iter_size,
+    is_array_type,
     is_sized_iter_type,
     nat_type,
 )
@@ -67,6 +70,9 @@ from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.subst import Subst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
+    FuncInput,
+    FunctionType,
+    InputFlags,
     NoneType,
     StructType,
     TupleType,
@@ -92,6 +98,18 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def _synth_expr(self, node: ast.expr) -> tuple[ast.expr, Type]:
         return ExprSynthesizer(self.ctx).synthesize(node)
+
+    def _synth_instance_fun(
+        self,
+        node: ast.expr,
+        args: list[ast.expr],
+        func_name: str,
+        description: str,
+        exp_sig: FunctionType | None = None,
+    ) -> tuple[ast.expr, Type]:
+        return ExprSynthesizer(self.ctx).synthesize_instance_func(
+            node, args, func_name, description, exp_sig
+        )
 
     def _check_expr(
         self, node: ast.expr, ty: Type, kind: str = "expression"
@@ -152,8 +170,45 @@ class StmtChecker(AstVisitor[BBStatement]):
     @_check_assign.register
     def _check_subscript_assign(
         self, lhs: ast.Subscript, rhs: ast.expr, rhs_ty: Type
-    ) -> AnyUnpack:
-        raise GuppyError(UnsupportedError(lhs, "Subscript assignments"))
+    ) -> PlaceNode:
+        # Check subscript is array subscript.
+        value, container_ty = self._synth_expr(lhs.value)
+        if not is_array_type(container_ty):
+            raise GuppyError(
+                UnsupportedError(lhs, "Subscript assignments to non-arrays")
+            )
+
+        # Check array element type matches type of RHS.
+        element_ty = get_element_type(container_ty)
+        if element_ty != rhs_ty:
+            raise GuppyTypeError(
+                AssignSubscriptTypeMismatchError(to_span(lhs), rhs_ty, element_ty)
+            )
+
+        # As with field assignment, only allow place assignments for now.
+        if not isinstance(value, PlaceNode):
+            raise GuppyError(
+                UnsupportedError(value, "Assigning to this expression", singular=True)
+            )
+
+        # Synthesize __getitem__call.
+        item_expr, item_ty = self._synth_expr(lhs.slice)
+        item = Variable(next(tmp_vars), item_ty, item_expr)
+        item_node = with_type(item_ty, with_loc(item_expr, PlaceNode(place=item)))
+
+        exp_get_sig = FunctionType(
+            [
+                FuncInput(container_ty, InputFlags.Inout),
+                FuncInput(ExistentialTypeVar.fresh("Key", False), InputFlags.NoFlags),
+            ],
+            ExistentialTypeVar.fresh("Val", False),
+        )
+        getitem_expr, result_ty = self._synth_instance_fun(
+            value, [item_node], "__getitem__", "subscriptable", exp_get_sig
+        )
+
+        place = SubscriptAccess(value.place, item, result_ty, item_expr, getitem_expr)
+        return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 
     @_check_assign.register
     def _check_tuple_assign(
