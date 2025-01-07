@@ -361,12 +361,12 @@ class PanicChecker(CustomCallChecker):
 
     @dataclass(frozen=True)
     class NoMessageError(Error):
-        title: ClassVar[str] = "No panic message."
-        span_label: ClassVar[str] = "Missing message argument to panic call."
+        title: ClassVar[str] = "No panic message"
+        span_label: ClassVar[str] = "Missing message argument to panic call"
 
         @dataclass(frozen=True)
         class Suggestion(Note):
-            message: ClassVar[str] = 'add a message: `panic("message")`'
+            message: ClassVar[str] = 'Add a message: `panic("message")`'
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         match args:
