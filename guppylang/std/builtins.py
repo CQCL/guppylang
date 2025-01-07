@@ -355,8 +355,17 @@ class Int:
     @guppy.custom(NoopCompiler())
     def __pos__(self: int) -> int: ...
 
-    @guppy.hugr_op(int_op("ipow"))
-    def __pow__(self: int, other: int) -> int: ...
+    # TODO replace with @guppy.hugr_op(int_op("ipow"))
+    # once lowering available
+    @guppy
+    @no_type_check
+    def __pow__(self: int, other: int) -> int:
+        # only positive exponents are supported
+        # TODO add panic for negative exponents once #756 is resolved
+        res = 1
+        for _ in range(other):
+            res *= self
+        return res
 
     @guppy.custom(checker=ReversingChecker())
     def __radd__(self: int, other: int) -> int: ...
