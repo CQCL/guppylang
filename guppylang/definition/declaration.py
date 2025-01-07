@@ -43,7 +43,7 @@ class RawFunctionDecl(ParsableDef):
     """
 
     python_func: PyFunc
-    python_scope: PyScope
+    python_scope: PyScope = field(repr=False)
     description: str = field(default="function", init=False)
 
     def parse(self, globals: Globals, sources: SourceMap) -> "CheckedFunctionDecl":
