@@ -384,6 +384,13 @@ class PanicChecker(CustomCallChecker):
             case args:
                 return assert_never(args)  # type: ignore[arg-type]
 
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        # Panic may return any type, so we don't have to check anything. Consequently
+        # we also can't infer anything in the expected type, so we always return an
+        # empty substitution
+        expr, _ = self.synthesize(args)
+        return expr, {}
+
 
 class RangeChecker(CustomCallChecker):
     """Call checker for the `range` function."""

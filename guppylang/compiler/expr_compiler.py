@@ -478,14 +478,15 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
         err = build_error(self.builder, 1, node.msg)
         in_tys = [get_type(e).to_hugr() for e in node.values]
-        build_panic(
+        out_tys = [ty.to_hugr() for ty in type_to_row(get_type(node))]
+        outs = build_panic(
             self.builder,
             in_tys,
-            [],
+            out_tys,
             err,
             *(self.visit(e) for e in node.values),
-        )
-        return self._pack_returns([], NoneType())
+        ).outputs()
+        return self._pack_returns(list(outs), get_type(node))
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> Wire:
         # Make up a name for the list under construction and bind it to an empty list
