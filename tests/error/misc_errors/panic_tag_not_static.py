@@ -4,4 +4,4 @@ from tests.util import compile_guppy
 
 @compile_guppy
 def foo(y: bool) -> None:
-    panic("foo" + "bar", y)
+    panic("foo" if y else "bar", y)
