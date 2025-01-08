@@ -356,16 +356,18 @@ class Int:
     @guppy.custom(NoopCompiler())
     def __pos__(self: int) -> int: ...
 
-    # TODO replace with @guppy.hugr_op(int_op("ipow"))
+    # TODO use hugr int op "ipow"
     # once lowering available
     @guppy
     @no_type_check
-    def __pow__(self: int, other: int) -> int:
-        # only positive exponents are supported
-        if other < 0:
-            panic("Negative exponent not supported in __pow__.")
+    def __pow__(self: int, exponent: int) -> int:
+        if exponent < 0:
+            panic(
+                "Negative exponent not supported in"
+                "__pow__ with int type base. Try casting the base to float."
+            )
         res = 1
-        for _ in range(other):
+        for _ in range(exponent):
             res *= self
         return res
 
