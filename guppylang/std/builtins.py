@@ -362,7 +362,8 @@ class Int:
     @no_type_check
     def __pow__(self: int, other: int) -> int:
         # only positive exponents are supported
-        # TODO add panic for negative exponents once #756 is resolved
+        if other < 0:
+            panic("Negative exponent not supported in __pow__.")
         res = 1
         for _ in range(other):
             res *= self
