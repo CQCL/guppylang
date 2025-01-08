@@ -377,6 +377,7 @@ class PanicChecker(CustomCallChecker):
                 err.add_sub_diagnostic(PanicChecker.NoMessageError.Suggestion(None))
                 raise GuppyTypeError(err)
             case [msg, *rest]:
+                msg, _ = ExprChecker(self.ctx).check(msg, string_type())
                 if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
                     raise GuppyTypeError(ExpectedError(msg, "a string literal"))
 
