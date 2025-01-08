@@ -47,6 +47,7 @@ from guppylang.tys.builtin import (
     is_sized_iter_type,
     nat_type,
     sized_iter_type,
+    string_type,
 )
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.subst import Inst, Subst
@@ -318,6 +319,7 @@ class ResultChecker(CustomCallChecker):
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(2, len(args), self.node)
         [tag, value] = args
+        tag, _ = ExprChecker(self.ctx).check(tag, string_type())
         if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
             raise GuppyTypeError(ExpectedError(tag, "a string literal"))
         if len(tag.value.encode("utf-8")) > TAG_MAX_LEN:
@@ -375,6 +377,7 @@ class PanicChecker(CustomCallChecker):
                 err.add_sub_diagnostic(PanicChecker.NoMessageError.Suggestion(None))
                 raise GuppyTypeError(err)
             case [msg, *rest]:
+                msg, _ = ExprChecker(self.ctx).check(msg, string_type())
                 if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
                     raise GuppyTypeError(ExpectedError(msg, "a string literal"))
 

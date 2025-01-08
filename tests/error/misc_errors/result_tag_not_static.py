@@ -3,5 +3,5 @@ from tests.util import compile_guppy
 
 
 @compile_guppy
-def foo(y: bool) -> None:
-    result("foo" + "bar", y)
+def foo(y: bool, x: int) -> None:
+    result("foo" if y else "bar", x)
