@@ -13,6 +13,7 @@ from guppylang.std._internal.checker import (
     CallableChecker,
     DunderChecker,
     NewArrayChecker,
+    PanicChecker,
     RangeChecker,
     ResultChecker,
     ReversingChecker,
@@ -649,6 +650,20 @@ class SizedIter:
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.
 @guppy.custom(checker=ResultChecker(), higher_order_value=False)
 def result(tag, value): ...
+
+
+@guppy.custom(checker=PanicChecker(), higher_order_value=False)
+def panic(msg, *args):
+    """Panic, throwing an error with the given message, and immediately exit the
+    program.
+
+    Return type is arbitrary, as this function never returns.
+
+    Args:
+        msg: The message to display. Must be a string literal.
+        args: Arbitrary extra inputs, will not affect the message. Only useful for
+        consuming linear values.
+    """
 
 
 @guppy.custom(checker=DunderChecker("__abs__"), higher_order_value=False)
