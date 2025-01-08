@@ -36,3 +36,10 @@ def test_value(validate):
         return panic("I panicked!")
 
     validate(module.compile())
+
+def test_py_message(validate):
+    @compile_guppy
+    def main(x: int) -> None:
+        panic(py("I" + "panicked" + "!"))
+
+    validate(main)
