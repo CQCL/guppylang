@@ -486,7 +486,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
     def visit_List(self, node: ast.List) -> tuple[ast.expr, Type]:
         check_lists_enabled(node)
         if len(node.elts) == 0:
-            unsolved_ty = list_type(ExistentialTypeVar.fresh("T", False))
+            unsolved_ty = list_type(ExistentialTypeVar.fresh("T", True, True))
             raise GuppyTypeInferenceError(TypeInferenceError(node, unsolved_ty))
         node.elts[0], el_ty = self.synthesize(node.elts[0])
         node.elts[1:] = [self._check(el, el_ty)[0] for el in node.elts[1:]]
@@ -612,9 +612,11 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         exp_sig = FunctionType(
             [
                 FuncInput(ty, InputFlags.Inout),
-                FuncInput(ExistentialTypeVar.fresh("Key", False), InputFlags.NoFlags),
+                FuncInput(
+                    ExistentialTypeVar.fresh("Key", True, True), InputFlags.NoFlags
+                ),
             ],
-            ExistentialTypeVar.fresh("Val", False),
+            ExistentialTypeVar.fresh("Val", True, True),
         )
         getitem_expr, result_ty = self.synthesize_instance_func(
             node.value, [item_node], "__getitem__", "subscriptable", exp_sig
@@ -688,7 +690,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         node.value, ty = self.synthesize(node.value)
         flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
         exp_sig = FunctionType(
-            [FuncInput(ty, flags)], ExistentialTypeVar.fresh("Iter", False)
+            [FuncInput(ty, flags)], ExistentialTypeVar.fresh("Iter", True, True)
         )
         expr, ty = self.synthesize_instance_func(
             node.value, [], "__iter__", "iterable", exp_sig, True
@@ -723,7 +725,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
         exp_sig = FunctionType(
             [FuncInput(ty, flags)],
-            TupleType([ExistentialTypeVar.fresh("T", False), ty]),
+            TupleType([ExistentialTypeVar.fresh("T", True, True), ty]),
         )
         return self.synthesize_instance_func(
             node.value, [], "__next__", "an iterator", exp_sig, True
@@ -1216,7 +1218,7 @@ def _python_list_to_guppy_type(
     representable in Guppy.
     """
     if len(vs) == 0:
-        return array_type(ExistentialTypeVar.fresh("T", False), 0)
+        return array_type(ExistentialTypeVar.fresh("T", True, True), 0)
 
     # All the list elements must have a unifiable types
     v, *rest = vs

@@ -232,7 +232,7 @@ def test_pass_poly_cross(validate):
 def test_linear(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
-    T = guppy.type_var("T", linear=True, module=module)
+    T = guppy.type_var("T", copyable=False, droppable=False, module=module)
 
     @guppy.declare(module)
     def foo(x: T) -> T: ...
@@ -247,7 +247,7 @@ def test_linear(validate):
 def test_pass_nonlinear(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
-    T = guppy.type_var("T", linear=True, module=module)
+    T = guppy.type_var("T", copyable=False, droppable=False, module=module)
 
     @guppy.declare(module)
     def foo(x: T) -> T: ...
@@ -262,7 +262,7 @@ def test_pass_nonlinear(validate):
 def test_pass_linear(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
-    T = guppy.type_var("T", linear=True, module=module)
+    T = guppy.type_var("T", copyable=False, droppable=False, module=module)
 
     @guppy.declare(module)
     def foo(f: Callable[[T], T]) -> None: ...

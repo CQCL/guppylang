@@ -216,7 +216,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             # For tuple unpacks, there is no way to infer a type for the empty starred
             # part
             else:
-                unsolved = array_type(ExistentialTypeVar.fresh("T", False), 0)
+                unsolved = array_type(ExistentialTypeVar.fresh("T", True, True), 0)
                 raise GuppyError(TypeInferenceError(starred, unsolved))
             array_ty = array_type(starred_ty, len(starred_tys))
             unpack.pattern.starred = self._check_assign(starred, rhs_elts[0], array_ty)

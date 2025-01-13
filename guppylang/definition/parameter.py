@@ -18,13 +18,14 @@ class ParamDef(Definition):
 class TypeVarDef(ParamDef, CompiledDef):
     """A type variable definition."""
 
-    can_be_linear: bool
+    must_be_copyable: bool
+    must_be_droppable: bool
 
     description: str = field(default="type variable", init=False)
 
     def to_param(self, idx: int) -> TypeParam:
         """Creates a parameter from this definition."""
-        return TypeParam(idx, self.name, self.can_be_linear)
+        return TypeParam(idx, self.name, self.must_be_copyable, self.must_be_droppable)
 
 
 @dataclass(frozen=True)

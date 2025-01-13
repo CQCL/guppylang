@@ -242,7 +242,7 @@ def parse_function_io_types(
     return inputs, output
 
 
-_type_param = TypeParam(0, "T", True)
+_type_param = TypeParam(0, "T", False, False)
 
 
 def type_with_flags_from_ast(

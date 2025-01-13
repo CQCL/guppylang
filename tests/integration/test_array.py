@@ -231,7 +231,7 @@ def test_struct_nested_subscript(validate):
 def test_generic_function(validate):
     module = GuppyModule("test")
     module.load(qubit)
-    T = guppy.type_var("T", linear=True, module=module)
+    T = guppy.type_var("T", copyable=False, droppable=False, module=module)
     n = guppy.nat_var("n", module=module)
 
     @guppy(module)

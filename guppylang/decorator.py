@@ -204,7 +204,8 @@ class _Guppy:
         self,
         hugr_ty: ht.Type | Callable[[Sequence[Argument]], ht.Type],
         name: str = "",
-        linear: bool = False,
+        copyable: bool = True,
+        droppable: bool = True,
         bound: ht.TypeBound | None = None,
         params: Sequence[Parameter] | None = None,
         module: GuppyModule | None = None,
@@ -230,7 +231,8 @@ class _Guppy:
                 name or c.__name__,
                 None,
                 params or [],
-                linear,
+                not copyable,
+                not droppable,
                 mk_hugr_ty,
                 bound,
             )
@@ -287,11 +289,15 @@ class _Guppy:
 
     @pretty_errors
     def type_var(
-        self, name: str, linear: bool = False, module: GuppyModule | None = None
+        self,
+        name: str,
+        copyable: bool = True,
+        droppable: bool = True,
+        module: GuppyModule | None = None,
     ) -> TypeVar:
         """Creates a new type variable in a module."""
         module = module or self.get_module()
-        defn = TypeVarDef(DefId.fresh(module), name, None, linear)
+        defn = TypeVarDef(DefId.fresh(module), name, None, copyable, droppable)
         module.register_def(defn)
         # Return an actual Python `TypeVar` so it can be used as an actual type in code
         # that is executed by interpreter before handing it to Guppy.
