@@ -621,7 +621,7 @@ def check_cfg_linearity(
     for bb, scope in scopes.items():
         live_before_bb = live_before[bb]
 
-        # We have to check that used linear variables are not being outputted
+        # We have to check that used not copyable variables are not being outputted
         for succ in bb.successors:
             live = live_before[succ]
             for x, use_bb in live.items():
@@ -650,7 +650,7 @@ def check_cfg_linearity(
                     )
                     raise GuppyError(err)
 
-        # On the other hand, unused linear variables *must* be outputted
+        # On the other hand, unused variables that are not droppable *must* be outputted
         for place in scope.values():
             for leaf in leaf_places(place):
                 x = leaf.id
