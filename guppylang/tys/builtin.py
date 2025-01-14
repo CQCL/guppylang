@@ -197,7 +197,7 @@ array_type_def = OpaqueTypeDef(
         TypeParam(0, "T", must_be_copyable=False, must_be_droppable=False),
         ConstParam(1, "n", NumericType(NumericType.Kind.Nat)),
     ],
-    never_copyable=False,
+    never_copyable=True,
     never_droppable=False,
     to_hugr=_array_to_hugr,
 )

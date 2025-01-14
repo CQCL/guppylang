@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 class AlreadyUsedError(Error):
     title: ClassVar[str] = "Linearity violation"
     span_label: ClassVar[str] = (
-        "{place.describe} with linear type `{place.ty}` cannot be {kind.subjunctive} "
-        "..."
+        "{place.describe} with {place.ty.ownership_kind} type `{place.ty}` "
+        "cannot be {kind.subjunctive} ..."
     )
     place: Place
     kind: UseKind
@@ -40,8 +40,8 @@ class AlreadyUsedError(Error):
 class ComprAlreadyUsedError(Error):
     title: ClassVar[str] = "Linearity violation"
     span_label: ClassVar[str] = (
-        "{place.describe} with linear type `{place.ty}` would be {kind.subjunctive} "
-        "multiple times when evaluating this comprehension"
+        "{place.describe} with {place.ty.ownership_kind} type `{place.ty}` would be "
+        "{kind.subjunctive} multiple times when evaluating this comprehension"
     )
     place: Place
     kind: UseKind

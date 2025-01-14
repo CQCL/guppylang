@@ -232,9 +232,9 @@ def parse_function_io_types(
         ty, flags = type_with_flags_from_ast(
             inp, globals, param_var_mapping, allow_free_vars
         )
-        if InputFlags.Owned in flags and not ty.linear:
+        if InputFlags.Owned in flags and ty.copyable:
             raise GuppyError(NonLinearOwnedError(loc, ty))
-        if ty.linear and InputFlags.Owned not in flags:
+        if not ty.copyable and InputFlags.Owned not in flags:
             flags |= InputFlags.Inout
 
         inputs.append(FuncInput(ty, flags))
@@ -257,7 +257,7 @@ def type_with_flags_from_ast(
         )
         match node.right:
             case ast.Name(id="owned"):
-                if not ty.linear:
+                if ty.copyable:
                     raise GuppyError(NonLinearOwnedError(node.right, ty))
                 flags |= InputFlags.Owned
             case _:

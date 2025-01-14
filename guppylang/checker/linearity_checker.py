@@ -258,7 +258,7 @@ class BBLinearityChecker(ast.NodeVisitor):
         else:
             for place in leaf_places(node.place):
                 x = place.id
-                if (prev_use := self.scope.used(x)) and place.ty.linear:
+                if (prev_use := self.scope.used(x)) and not place.ty.copyable:
                     err = AlreadyUsedError(node, place, use_kind)
                     err.add_sub_diagnostic(
                         AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
@@ -627,7 +627,7 @@ def check_cfg_linearity(
             for x, use_bb in live.items():
                 use_scope = scopes[use_bb]
                 place = use_scope[x]
-                if place.ty.linear and (prev_use := scope.used(x)):
+                if not place.ty.copyable and (prev_use := scope.used(x)):
                     use = use_scope.used_parent[x]
                     # Special case if this is a use arising from the implicit returning
                     # of a borrowed argument
@@ -661,7 +661,7 @@ def check_cfg_linearity(
                 if x not in live_before_bb and x not in scope.vars:
                     continue
                 used_later = all(x in live_before[succ] for succ in bb.successors)
-                if leaf.ty.linear and not scope.used(x) and not used_later:
+                if not leaf.ty.droppable and not scope.used(x) and not used_later:
                     err = PlaceNotUsedError(scope[x].defined_at, leaf)
                     # If there are some paths that lead to a consumption, we can give
                     # a nicer error message by highlighting the branch that leads to

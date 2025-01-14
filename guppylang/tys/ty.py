@@ -44,6 +44,19 @@ class TypeBase(ToHugr[ht.Type], Transformable["Type"], ABC):
         """Whether this type should be treated linearly."""
         return not self.copyable and not self.droppable
 
+    @property
+    def affine(self) -> bool:
+        """Whether this type should be treated linearly."""
+        return not self.copyable and self.droppable
+
+    @property
+    def ownership_kind(self) -> str:
+        if self.linear:
+            return "linear"
+        if self.affine:
+            return "affine"
+        return "classical"
+
     @cached_property
     @abstractmethod
     def hugr_bound(self) -> ht.TypeBound:
