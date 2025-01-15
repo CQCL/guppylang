@@ -18,7 +18,7 @@ from guppylang.tracing.state import get_tracing_globals, get_tracing_state
 from guppylang.tracing.util import get_calling_frame, hide_trace
 from guppylang.tys.ty import TupleType, Type
 
-DunderMethod: TypeAlias = Callable[["GetAttrDunders", Any], Any]
+DunderMethod: TypeAlias = Callable[["DunderMixin", Any], Any]
 
 
 def also_try_reversed(method_name: str) -> Callable[[DunderMethod], DunderMethod]:
@@ -28,7 +28,7 @@ def also_try_reversed(method_name: str) -> Callable[[DunderMethod], DunderMethod
 
     def decorator(f: DunderMethod) -> DunderMethod:
         @functools.wraps(f)
-        def wrapped(self: "GetAttrDunders", other: Any) -> Any:
+        def wrapped(self: "DunderMixin", other: Any) -> Any:
             try:
                 return f(self, other)
             except GuppyError:
@@ -44,7 +44,7 @@ def also_try_reversed(method_name: str) -> Callable[[DunderMethod], DunderMethod
     return decorator
 
 
-class GetAttrDunders(ABC):
+class DunderMixin(ABC):
     """Mixin class to allow `GuppyObject`s to be used in arithmetic expressions etc.
     via providing the corresponding dunder methods delegating to the objects impls.
     """
@@ -52,8 +52,8 @@ class GetAttrDunders(ABC):
     @abstractmethod
     def __getattr__(self, item: Any) -> Any: ...
 
-    def __abs__(self, other: Any) -> Any:
-        return self.__getattr__("__abs__")(other)
+    def __abs__(self) -> Any:
+        return self.__getattr__("__abs__")()
 
     @also_try_reversed("__radd__")
     def __add__(self, other: Any) -> Any:
@@ -67,7 +67,7 @@ class GetAttrDunders(ABC):
         return self.__getattr__("__bool__")()
 
     def __ceil__(self: Any) -> Any:
-        return self.__getattr__("__bool__")()
+        return self.__getattr__("__ceil__")()
 
     def __divmod__(self, other: Any) -> Any:
         return self.__getattr__("__divmod__")(other)
@@ -77,7 +77,7 @@ class GetAttrDunders(ABC):
         return self.__getattr__("__eq__")(other)
 
     def __float__(self) -> Any:
-        return self.__getattr__("__bool__")()
+        return self.__getattr__("__float__")()
 
     def __floor__(self) -> Any:
         return self.__getattr__("__floor__")()
@@ -207,7 +207,7 @@ ObjectId = int
 fresh_id = itertools.count()
 
 
-class GuppyObject(GetAttrDunders):
+class GuppyObject(DunderMixin):
     """The runtime representation of abstract Guppy objects during tracing."""
 
     _ty: Type
