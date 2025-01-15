@@ -92,6 +92,45 @@ class GetAttrDunders(ABC):
     def __pow__(self, other: Any) -> Any:
         return self.__getattr__("__pow__")(other)
 
+    def __radd__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rand__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rfloordiv__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rlshift__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rmod__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rmul__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __ror__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rpow__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rrshift__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rshift__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rsub__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rtruediv__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
+    def __rxor__(self, other: Any) -> Any:
+        return self.__getattr__("__pow__")(other)
+
     def __sub__(self, other: Any) -> Any:
         return self.__getattr__("__sub__")(other)
 
