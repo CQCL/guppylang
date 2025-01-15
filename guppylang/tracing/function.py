@@ -64,7 +64,7 @@ def trace_function(
             py_out = python_func(*inputs)
 
         try:
-            out_obj = repack_guppy_object(py_out, builder)
+            out_obj = guppy_object_from_py(py_out, builder, node)
         except ValueError as err:
             # Linearity violation in the return statement
             raise GuppyError(
