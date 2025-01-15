@@ -688,7 +688,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_MakeIter(self, node: MakeIter) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
+        flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
         exp_sig = FunctionType(
             [FuncInput(ty, flags)], ExistentialTypeVar.fresh("Iter", True, True)
         )
@@ -702,7 +702,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         # If the iterator was created by a `for` loop, we can add some extra checks to
         # produce nicer errors for linearity violations. Namely, `break` and `return`
         # are not allowed when looping over a linear iterator (`continue` is allowed)
-        if ty.linear and isinstance(node.origin_node, ast.For):
+        if not ty.droppable and isinstance(node.origin_node, ast.For):
             breaks = breaks_in_loop(node.origin_node) or return_nodes_in_ast(
                 node.origin_node
             )
@@ -714,7 +714,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
+        flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
         exp_sig = FunctionType([FuncInput(ty, flags)], TupleType([bool_type(), ty]))
         return self.synthesize_instance_func(
             node.value, [], "__hasnext__", "an iterator", exp_sig, True
@@ -722,7 +722,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
+        flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
         exp_sig = FunctionType(
             [FuncInput(ty, flags)],
             TupleType([ExistentialTypeVar.fresh("T", True, True), ty]),
@@ -733,7 +733,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        flags = InputFlags.Owned if ty.linear else InputFlags.NoFlags
+        flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
         exp_sig = FunctionType([FuncInput(ty, flags)], NoneType())
         return self.synthesize_instance_func(
             node.value, [], "__end__", "an iterator", exp_sig, True

@@ -160,8 +160,8 @@ class NotOwnedError(Error):
 class MoveOutOfSubscriptError(Error):
     title: ClassVar[str] = "Subscript {kind.subjunctive}"
     span_label: ClassVar[str] = (
-        "Cannot {kind.indicative} a subscript of `{parent}` with linear type "
-        "`{parent.ty}`"
+        "Cannot {kind.indicative} a subscript of `{parent}` with "
+        "{parent.ty.ownership_kind} type `{parent.ty}`"
     )
     kind: UseKind
     parent: Place
@@ -169,8 +169,8 @@ class MoveOutOfSubscriptError(Error):
     @dataclass(frozen=True)
     class Explanation(Note):
         message: ClassVar[str] = (
-            "Subscripts on linear types are only allowed to be borrowed, not "
-            "{kind.subjunctive}"
+            "Subscripts on {parent.ty.ownership_kind} types are only allowed to be "
+            "borrowed, not {kind.subjunctive}"
         )
 
 
