@@ -140,7 +140,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             err = UnsupportedError(value, "Assigning to this expression", singular=True)
             err.add_sub_diagnostic(AssignNonPlaceHelp(None, field))
             raise GuppyError(err)
-        if not field.ty.linear:
+        if field.ty.copyable:
             raise GuppyError(
                 UnsupportedError(
                     attr_span, "Mutation of classical fields", singular=True
