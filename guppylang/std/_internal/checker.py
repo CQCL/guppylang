@@ -32,6 +32,7 @@ from guppylang.nodes import (
     GenericParamValue,
     GlobalCall,
     MakeIter,
+    PanicExpr,
     ResultExpr,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
@@ -46,6 +47,7 @@ from guppylang.tys.builtin import (
     is_sized_iter_type,
     nat_type,
     sized_iter_type,
+    string_type,
 )
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.subst import Inst, Subst
@@ -317,6 +319,7 @@ class ResultChecker(CustomCallChecker):
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(2, len(args), self.node)
         [tag, value] = args
+        tag, _ = ExprChecker(self.ctx).check(tag, string_type())
         if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
             raise GuppyTypeError(ExpectedError(tag, "a string literal"))
         if len(tag.value.encode("utf-8")) > TAG_MAX_LEN:
@@ -353,6 +356,43 @@ class ResultChecker(CustomCallChecker):
     @staticmethod
     def _is_numeric_or_bool_type(ty: Type) -> bool:
         return isinstance(ty, NumericType) or is_bool_type(ty)
+
+
+class PanicChecker(CustomCallChecker):
+    """Call checker for the `panic` function."""
+
+    @dataclass(frozen=True)
+    class NoMessageError(Error):
+        title: ClassVar[str] = "No panic message"
+        span_label: ClassVar[str] = "Missing message argument to panic call"
+
+        @dataclass(frozen=True)
+        class Suggestion(Note):
+            message: ClassVar[str] = 'Add a message: `panic("message")`'
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        match args:
+            case []:
+                err = PanicChecker.NoMessageError(self.node)
+                err.add_sub_diagnostic(PanicChecker.NoMessageError.Suggestion(None))
+                raise GuppyTypeError(err)
+            case [msg, *rest]:
+                msg, _ = ExprChecker(self.ctx).check(msg, string_type())
+                if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
+                    raise GuppyTypeError(ExpectedError(msg, "a string literal"))
+
+                vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
+                node = PanicExpr(msg.value, vals)
+                return with_loc(self.node, node), NoneType()
+            case args:
+                return assert_never(args)  # type: ignore[arg-type]
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        # Panic may return any type, so we don't have to check anything. Consequently
+        # we also can't infer anything in the expected type, so we always return an
+        # empty substitution
+        expr, _ = self.synthesize(args)
+        return expr, {}
 
 
 class RangeChecker(CustomCallChecker):

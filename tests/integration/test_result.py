@@ -45,3 +45,10 @@ def test_same_tag(validate):
         result("foo", z)
 
     validate(main)
+
+def test_py_tag(validate):
+    @compile_guppy
+    def main(x: int) -> None:
+        result(py("a" + "b"), x)
+
+    validate(main)
