@@ -316,29 +316,30 @@ def test_mem_swap(validate):
 
 def test_subscript_assign(validate):
     @compile_guppy
-    def main() -> array[int, 3]:
-        xs = array(0, 2, 3)
+    def main(xs: array[int, 3]) -> array[int, 3]:
         xs[0] = 1
         return xs
 
     validate(main)
 
 
-@pytest.mark.skip("Not supported yet")
 def test_subscript_assign_struct(validate):
     module = GuppyModule("test")
-    module.load_all(quantum)
 
     @guppy.struct(module)
-    class B:
-        b: int
-
-    @guppy.struct(module)
-    class A:
-        arr_b: array[B, 24]
+    class S:
+        a: array[int, 2]
 
     @guppy(module)
-    def main(struct_a: A) -> None:
-       struct_a.arr_b[0].b = 0
+    def main(s: S) -> None:
+       s.a[0] = 1
 
     validate(module.compile())
+
+
+def test_subscript_assign_nested(validate):
+    @compile_guppy
+    def main(xs: array[array[int, 2], 2]) -> None:
+        xs[0][1] = 222
+
+    validate(main)

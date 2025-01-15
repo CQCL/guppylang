@@ -49,6 +49,7 @@ from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import (
     AnyUnpack,
     DesugaredArrayComp,
+    InoutReturnSentinel,
     IterableUnpack,
     MakeIter,
     NestedFunctionDef,
@@ -106,9 +107,10 @@ class StmtChecker(AstVisitor[BBStatement]):
         func_name: str,
         description: str,
         exp_sig: FunctionType | None = None,
+        give_reason: bool = False,
     ) -> tuple[ast.expr, Type]:
         return ExprSynthesizer(self.ctx).synthesize_instance_func(
-            node, args, func_name, description, exp_sig
+            node, args, func_name, description, exp_sig, give_reason
         )
 
     def _check_expr(
@@ -191,7 +193,7 @@ class StmtChecker(AstVisitor[BBStatement]):
                 UnsupportedError(value, "Assigning to this expression", singular=True)
             )
 
-        # Synthesize __getitem__call.
+        # Synthesize __getitem__ call.
         item_expr, item_ty = self._synth_expr(lhs.slice)
         item = Variable(next(tmp_vars), item_ty, item_expr)
         item_node = with_type(item_ty, with_loc(item_expr, PlaceNode(place=item)))
@@ -338,6 +340,33 @@ class StmtChecker(AstVisitor[BBStatement]):
         [target] = node.targets
         node.value, ty = self._synth_expr(node.value)
         node.targets = [self._check_assign(target, node.value, ty)]
+
+        [target] = node.targets
+        if isinstance(target, SubscriptAccess):
+            # Synthesize __setitem__ call.
+            exp_sig = FunctionType(
+                [
+                    FuncInput(target.parent.ty, InputFlags.Inout),
+                    FuncInput(target.item.ty, InputFlags.NoFlags),
+                    FuncInput(target.ty, InputFlags.Owned),
+                ],
+                NoneType(),
+            )
+            setitem_args = [
+                with_type(target.parent.ty, with_loc(node, PlaceNode(target.parent))),
+                with_type(target.item.ty, with_loc(node, PlaceNode(target.item))),
+                with_type(target.ty, with_loc(node, InoutReturnSentinel(var=target))),
+            ]
+            setitem_expr, _ = self._synth_instance_fun(
+                setitem_args[0],
+                setitem_args[1:],
+                "__setitem__",
+                "able to borrow subscripted elements",
+                exp_sig,
+                True,
+            )
+            replace(target, setitem_call=setitem_expr)
+
         return node
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.stmt:
