@@ -34,8 +34,8 @@ def tracing_except_hook(
             msg += f": {diagnostic.rendered_span_label}"
         if diagnostic.message:
             msg += f"\n{diagnostic.rendered_message}"
-        err = RuntimeError(msg)
-        excty = RuntimeError
+        err = TypeError(msg)
+        excty = TypeError
 
     traceback = remove_internal_frames(traceback)
     try:
