@@ -15,6 +15,7 @@ from guppylang.definition.value import CompiledCallableDef
 from guppylang.diagnostic import Error
 from guppylang.error import GuppyError, exception_hook
 from guppylang.nodes import PlaceNode
+from guppylang.tracing.builtins_mock import mock_builtins
 from guppylang.tracing.object import GuppyObject
 from guppylang.tracing.state import (
     TracingState,
@@ -61,6 +62,7 @@ def trace_function(
         ]
 
         with exception_hook(tracing_except_hook):
+            mock_builtins(python_func)
             py_out = python_func(*inputs)
 
         try:
