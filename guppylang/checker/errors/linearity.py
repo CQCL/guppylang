@@ -231,7 +231,7 @@ class DropAfterCallError(Error):
 
 
 @dataclass(frozen=True)
-class LinearCaptureError(Error):
+class NonCopyableCaptureError(Error):
     title: ClassVar[str] = "Linearity violation"
     span_label: ClassVar[str] = (
         "{var.describe} with linear type {var.ty} cannot be used here since `{var}` is "
@@ -245,7 +245,7 @@ class LinearCaptureError(Error):
 
 
 @dataclass(frozen=True)
-class LinearPartialApplyError(Error):
+class NonCopyablePartialApplyError(Error):
     title: ClassVar[str] = "Linearity violation"
     span_label: ClassVar[str] = (
         "This expression implicitly constructs a closure that captures a linear value"
@@ -260,11 +260,11 @@ class LinearPartialApplyError(Error):
 
 
 @dataclass(frozen=True)
-class LinearForBreakError(Error):
+class NonDroppableForBreakError(Error):
     title: ClassVar[str] = "Break in linear loop"
     span_label: ClassVar[str] = "Early exit in linear loops is not allowed"
 
     @dataclass(frozen=True)
-    class LinearIteratorType(Note):
+    class NonDroppableIteratorType(Note):
         span_label: ClassVar[str] = "Iterator has linear type `{ty}`"
         ty: Type

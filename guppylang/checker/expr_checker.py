@@ -50,7 +50,7 @@ from guppylang.checker.core import (
     Variable,
 )
 from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
-from guppylang.checker.errors.linearity import LinearForBreakError
+from guppylang.checker.errors.linearity import NonDroppableForBreakError
 from guppylang.checker.errors.py_errors import (
     IllegalPyExpressionError,
     PyExprEvalError,
@@ -708,8 +708,10 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 node.origin_node
             )
             if breaks:
-                err = LinearForBreakError(breaks[0])
-                err.add_sub_diagnostic(LinearForBreakError.LinearIteratorType(node, ty))
+                err = NonDroppableForBreakError(breaks[0])
+                err.add_sub_diagnostic(
+                    NonDroppableForBreakError.NonDroppableIteratorType(node, ty)
+                )
                 raise GuppyTypeError(err)
         return expr, ty
 

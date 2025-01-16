@@ -28,9 +28,9 @@ from guppylang.checker.errors.linearity import (
     BorrowSubPlaceUsedError,
     ComprAlreadyUsedError,
     DropAfterCallError,
-    LinearCaptureError,
-    LinearPartialApplyError,
     MoveOutOfSubscriptError,
+    NonCopyableCaptureError,
+    NonCopyablePartialApplyError,
     NotOwnedError,
     PlaceNotUsedError,
     UnnamedExprNotUsedError,
@@ -376,9 +376,9 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.visit(node.func)
         for arg in node.args:
             ty = get_type(arg)
-            if ty.linear:
-                err = LinearPartialApplyError(node)
-                err.add_sub_diagnostic(LinearPartialApplyError.Captured(arg, ty))
+            if not ty.copyable:
+                err = NonCopyablePartialApplyError(node)
+                err.add_sub_diagnostic(NonCopyablePartialApplyError.Captured(arg, ty))
                 raise GuppyError(err)
             self.visit(arg)
 
@@ -431,8 +431,10 @@ class BBLinearityChecker(ast.NodeVisitor):
         # TODO: In the future, we could support capturing of non-linear subplaces
         for var, use in node.captured.values():
             if not var.ty.copyable:
-                err = LinearCaptureError(use, var)
-                err.add_sub_diagnostic(LinearCaptureError.DefinedHere(var.defined_at))
+                err = NonCopyableCaptureError(use, var)
+                err.add_sub_diagnostic(
+                    NonCopyableCaptureError.DefinedHere(var.defined_at)
+                )
                 raise GuppyError(err)
             for place in leaf_places(var):
                 self.scope.use(place.id, use, UseKind.COPY)
