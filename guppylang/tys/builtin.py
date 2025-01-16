@@ -61,7 +61,9 @@ class _TupleTypeDef(TypeDef):
         # the empty tuple type. We just have to make sure that the args are of kind type
         args = [
             # TODO: Better error location
-            TypeParam(0, f"T{i}", can_be_linear=True).check_arg(arg, loc).ty
+            TypeParam(0, f"T{i}", must_be_copyable=False, must_be_droppable=False)
+            .check_arg(arg, loc)
+            .ty
             for i, arg in enumerate(args)
         ]
         return TupleType(args)
@@ -156,7 +158,8 @@ bool_type_def = OpaqueTypeDef(
     name="bool",
     defined_at=None,
     params=[],
-    always_linear=False,
+    never_copyable=False,
+    never_droppable=False,
     to_hugr=lambda _: ht.Bool,
 )
 nat_type_def = _NumericTypeDef(
@@ -173,15 +176,17 @@ string_type_def = OpaqueTypeDef(
     name="str",
     defined_at=None,
     params=[],
-    always_linear=False,
+    never_copyable=False,
+    never_droppable=False,
     to_hugr=lambda _: hugr.std.PRELUDE.get_type("string").instantiate([]),
 )
 list_type_def = _ListTypeDef(
     id=DefId.fresh(),
     name="list",
     defined_at=None,
-    params=[TypeParam(0, "T", can_be_linear=True)],
-    always_linear=False,
+    params=[TypeParam(0, "T", must_be_copyable=False, must_be_droppable=False)],
+    never_copyable=False,
+    never_droppable=False,
     to_hugr=_list_to_hugr,
 )
 array_type_def = OpaqueTypeDef(
@@ -189,10 +194,11 @@ array_type_def = OpaqueTypeDef(
     name="array",
     defined_at=None,
     params=[
-        TypeParam(0, "T", can_be_linear=True),
+        TypeParam(0, "T", must_be_copyable=False, must_be_droppable=False),
         ConstParam(1, "n", NumericType(NumericType.Kind.Nat)),
     ],
-    always_linear=False,
+    never_copyable=True,
+    never_droppable=False,
     to_hugr=_array_to_hugr,
 )
 sized_iter_type_def = OpaqueTypeDef(
@@ -200,10 +206,11 @@ sized_iter_type_def = OpaqueTypeDef(
     name="SizedIter",
     defined_at=None,
     params=[
-        TypeParam(0, "T", can_be_linear=True),
+        TypeParam(0, "T", must_be_copyable=False, must_be_droppable=False),
         ConstParam(1, "n", NumericType(NumericType.Kind.Nat)),
     ],
-    always_linear=False,
+    never_copyable=False,
+    never_droppable=False,
     to_hugr=_sized_iter_to_hugr,
 )
 

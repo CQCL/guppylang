@@ -17,7 +17,7 @@ from guppylang.std.builtins import array, owned
 from guppylang.std.option import Option
 
 
-@guppy.type(ht.Qubit, linear=True)
+@guppy.type(ht.Qubit, copyable=False, droppable=False)
 class qubit:
     @guppy.hugr_op(quantum_op("QAlloc"))
     @no_type_check

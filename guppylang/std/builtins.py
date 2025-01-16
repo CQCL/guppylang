@@ -53,7 +53,7 @@ from guppylang.tys.builtin import (
 guppy.init_module(import_builtins=False)
 
 T = guppy.type_var("T")
-L = guppy.type_var("L", linear=True)
+L = guppy.type_var("L", copyable=False, droppable=False)
 
 
 def py(*args: Any) -> Any:

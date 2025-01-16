@@ -79,11 +79,17 @@ class ParameterBase(ToHugr[ht.TypeParam], ABC):
 class TypeParam(ParameterBase):
     """A parameter of kind type. Used to define generic functions and types."""
 
-    can_be_linear: bool
+    must_be_copyable: bool
+    must_be_droppable: bool
+
+    @property
+    def can_be_linear(self) -> bool:
+        """Whether this type should be treated linearly."""
+        return not self.must_be_copyable and not self.must_be_droppable
 
     def with_idx(self, idx: int) -> "TypeParam":
         """Returns a copy of the parameter with a new index."""
-        return TypeParam(idx, self.name, self.can_be_linear)
+        return TypeParam(idx, self.name, self.must_be_copyable, self.must_be_droppable)
 
     def check_arg(self, arg: Argument, loc: AstNode | None = None) -> TypeArg:
         """Checks that this parameter can be instantiated with a given argument.
@@ -110,7 +116,9 @@ class TypeParam(ParameterBase):
         """
         from guppylang.tys.ty import ExistentialTypeVar
 
-        var = ExistentialTypeVar.fresh(self.name, self.can_be_linear)
+        var = ExistentialTypeVar.fresh(
+            self.name, self.must_be_copyable, self.must_be_droppable
+        )
         return TypeArg(var), var
 
     def to_bound(self, idx: int | None = None) -> TypeArg:
@@ -121,7 +129,9 @@ class TypeParam(ParameterBase):
 
         if idx is None:
             idx = self.idx
-        return TypeArg(BoundTypeVar(self.name, idx, self.can_be_linear))
+        return TypeArg(
+            BoundTypeVar(self.name, idx, self.must_be_copyable, self.must_be_droppable)
+        )
 
     def to_hugr(self) -> ht.TypeParam:
         """Computes the Hugr representation of the parameter."""

@@ -10,7 +10,7 @@ from guppylang.tys.ty import (
 
 
 def test_generic_function_type():
-    ty_param = TypeParam(0, "T", can_be_linear=True)
+    ty_param = TypeParam(0, "T", must_be_copyable=False, must_be_droppable=False)
     len_param = ConstParam(1, "n", NumericType(NumericType.Kind.Nat))
     array_ty = OpaqueType([ty_param.to_bound(0), len_param.to_bound(1)], array_type_def)
     ty = FunctionType(

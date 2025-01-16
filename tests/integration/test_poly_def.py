@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import array
+from guppylang.std.builtins import array, owned
 
 
 def test_id(validate):
@@ -83,7 +83,7 @@ def test_nat(validate):
     n = guppy.nat_var("n", module=module)
 
     @guppy(module)
-    def foo(xs: array[T, n]) -> array[T, n]:
+    def foo(xs: array[T, n] @ owned) -> array[T, n]:
         return xs
 
     validate(module.compile())
