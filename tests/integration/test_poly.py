@@ -2,6 +2,8 @@ from collections.abc import Callable
 
 import pytest
 
+from hugr import tys as ht
+
 from hugr import Wire
 
 from guppylang.decorator import guppy
@@ -240,6 +242,38 @@ def test_linear(validate):
     @guppy(module)
     def main(q: qubit) -> qubit:
         return foo(q)
+
+    validate(module.compile())
+
+
+def test_affine(validate):
+    module = GuppyModule("test")
+    T = guppy.type_var("T", copyable=False, droppable=True, module=module)
+
+    @guppy.declare(module)
+    def foo(x: T) -> T: ...
+
+    @guppy(module)
+    def main(a: array[int, 7]) -> None:
+        foo(a)
+
+    validate(module.compile())
+
+
+def test_relevant(validate):
+    module = GuppyModule("test")
+    T = guppy.type_var("T", copyable=True, droppable=False, module=module)
+
+    @guppy.type(ht.Bool, copyable=True, droppable=False, module=module)
+    class R: ...
+
+    @guppy.declare(module)
+    def foo(x: T) -> T: ...
+
+    @guppy(module)
+    def main(r: R) -> R:
+        r_copy = r
+        return foo(r_copy)
 
     validate(module.compile())
 

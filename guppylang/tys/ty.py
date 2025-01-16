@@ -32,7 +32,7 @@ class TypeBase(ToHugr[ht.Type], Transformable["Type"], ABC):
     @cached_property
     @abstractmethod
     def copyable(self) -> bool:
-        """Whether objects of this type can be copied."""
+        """Whether objects of this type can be implicitly copied."""
 
     @cached_property
     @abstractmethod
@@ -46,7 +46,7 @@ class TypeBase(ToHugr[ht.Type], Transformable["Type"], ABC):
 
     @property
     def affine(self) -> bool:
-        """Whether this type should be treated linearly."""
+        """Whether this type should be treated in an affine way."""
         return not self.copyable and self.droppable
 
     @property
@@ -322,7 +322,7 @@ class NumericType(TypeBase):
 
     @property
     def copyable(self) -> bool:
-        """Whether objects of this type can be copied."""
+        """Whether objects of this type can be implicitly copied."""
         return True
 
     @property
@@ -514,7 +514,7 @@ class TupleType(ParametrizedTypeBase):
 
     @property
     def intrinsically_copyable(self) -> bool:
-        """Whether objects of this type can be copied."""
+        """Whether objects of this type can be implicitly copied."""
         return True
 
     @property
@@ -555,7 +555,7 @@ class SumType(ParametrizedTypeBase):
 
     @property
     def intrinsically_copyable(self) -> bool:
-        """Whether objects of this type can be copied."""
+        """Whether objects of this type can be implicitly copied."""
         return True
 
     @property
@@ -596,7 +596,7 @@ class OpaqueType(ParametrizedTypeBase):
 
     @property
     def intrinsically_copyable(self) -> bool:
-        """Whether objects of this type can be copied."""
+        """Whether objects of this type can be implicitly copied."""
         return not self.defn.never_copyable
 
     @property
@@ -648,7 +648,7 @@ class StructType(ParametrizedTypeBase):
 
     @cached_property
     def intrinsically_copyable(self) -> bool:
-        """Whether objects of this type can be copied."""
+        """Whether objects of this type can be  implicitly copied."""
         return all(f.ty.copyable for f in self.fields)
 
     @cached_property

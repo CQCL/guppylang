@@ -701,7 +701,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
         # If the iterator was created by a `for` loop, we can add some extra checks to
         # produce nicer errors for linearity violations. Namely, `break` and `return`
-        # are not allowed when looping over a linear iterator (`continue` is allowed)
+        # are not allowed when looping over a non-copyable iterator (`continue` is
+        # allowed)
         if not ty.droppable and isinstance(node.origin_node, ast.For):
             breaks = breaks_in_loop(node.origin_node) or return_nodes_in_ast(
                 node.origin_node
