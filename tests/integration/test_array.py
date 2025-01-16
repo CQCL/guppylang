@@ -72,7 +72,7 @@ def test_new_array_infer_empty(validate):
 
 def test_new_array_infer_nested(validate):
     @compile_guppy
-    def main(ys: array[int, 0]) -> array[array[int, 0], 2]:
+    def main(ys: array[int, 0] @ owned) -> array[array[int, 0], 2]:
         xs = array(ys, array())
         return xs
 
@@ -231,7 +231,7 @@ def test_struct_nested_subscript(validate):
 def test_generic_function(validate):
     module = GuppyModule("test")
     module.load(qubit)
-    T = guppy.type_var("T", linear=True, module=module)
+    T = guppy.type_var("T", copyable=False, droppable=False, module=module)
     n = guppy.nat_var("n", module=module)
 
     @guppy(module)
@@ -310,3 +310,11 @@ def test_mem_swap(validate):
 
     package = module.compile()
     validate(package)
+
+
+def test_drop(validate):
+    @compile_guppy
+    def main(xs: array[int, 2] @ owned) -> None:
+        ys = xs
+
+    validate(main)

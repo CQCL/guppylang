@@ -28,9 +28,9 @@ from guppylang.checker.errors.linearity import (
     BorrowSubPlaceUsedError,
     ComprAlreadyUsedError,
     DropAfterCallError,
-    LinearCaptureError,
-    LinearPartialApplyError,
     MoveOutOfSubscriptError,
+    NonCopyableCaptureError,
+    NonCopyablePartialApplyError,
     NotOwnedError,
     PlaceNotUsedError,
     UnnamedExprNotUsedError,
@@ -243,9 +243,11 @@ class BBLinearityChecker(ast.NodeVisitor):
             err.add_sub_diagnostic(NotOwnedError.MakeOwned(arg_span))
             raise GuppyError(err)
         # Places involving subscripts are handled differently since we ignore everything
-        # after the subscript for the purposes of linearity checking
+        # after the subscript for the purposes of linearity checking.
         if subscript := contains_subscript(node.place):
-            if not is_inout_arg and subscript.parent.ty.linear:
+            # We have to check the item type to determine if we can move out of the
+            # subscript.
+            if not is_inout_arg and not subscript.ty.copyable:
                 err = MoveOutOfSubscriptError(node, use_kind, subscript.parent)
                 err.add_sub_diagnostic(MoveOutOfSubscriptError.Explanation(None))
                 raise GuppyError(err)
@@ -258,7 +260,7 @@ class BBLinearityChecker(ast.NodeVisitor):
         else:
             for place in leaf_places(node.place):
                 x = place.id
-                if (prev_use := self.scope.used(x)) and place.ty.linear:
+                if (prev_use := self.scope.used(x)) and not place.ty.copyable:
                     err = AlreadyUsedError(node, place, use_kind)
                     err.add_sub_diagnostic(
                         AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
@@ -318,7 +320,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                 match arg:
                     case PlaceNode(place=place):
                         self._reassign_single_inout_arg(place, place.defined_at or arg)
-                    case arg if inp.ty.linear:
+                    case arg if not inp.ty.droppable:
                         err = DropAfterCallError(arg, inp.ty, self._call_name(call))
                         err.add_sub_diagnostic(DropAfterCallError.Assign(None))
                         raise GuppyError(err)
@@ -374,9 +376,9 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.visit(node.func)
         for arg in node.args:
             ty = get_type(arg)
-            if ty.linear:
-                err = LinearPartialApplyError(node)
-                err.add_sub_diagnostic(LinearPartialApplyError.Captured(arg, ty))
+            if not ty.copyable:
+                err = NonCopyablePartialApplyError(node)
+                err.add_sub_diagnostic(NonCopyablePartialApplyError.Captured(arg, ty))
                 raise GuppyError(err)
             self.visit(arg)
 
@@ -386,7 +388,7 @@ class BBLinearityChecker(ast.NodeVisitor):
         # legal if there are no remaining linear fields on the value
         self.visit(node.value)
         for field in node.struct_ty.fields:
-            if field.name != node.field.name and field.ty.linear:
+            if field.name != node.field.name and not field.ty.droppable:
                 err = UnnamedFieldNotUsedError(node.value, field, node.struct_ty)
                 err.add_sub_diagnostic(UnnamedFieldNotUsedError.Fix(None, node.field))
                 raise GuppyError(err)
@@ -396,7 +398,7 @@ class BBLinearityChecker(ast.NodeVisitor):
         # longer be accessed after the item has been projected out. Thus, this is only
         # legal if the items in the container are not linear
         elem_ty = get_type(node.getitem_expr)
-        if elem_ty.linear:
+        if not elem_ty.droppable:
             value = node.original_expr.value
             err = UnnamedSubscriptNotUsedError(value, get_type(value))
             err.add_sub_diagnostic(
@@ -412,7 +414,7 @@ class BBLinearityChecker(ast.NodeVisitor):
         # An expression statement where the return value is discarded
         self.visit(node.value)
         ty = get_type(node.value)
-        if ty.linear:
+        if not ty.droppable:
             err = UnnamedExprNotUsedError(node, ty)
             err.add_sub_diagnostic(UnnamedExprNotUsedError.Fix(None))
             raise GuppyTypeError(err)
@@ -428,9 +430,11 @@ class BBLinearityChecker(ast.NodeVisitor):
         # verify that no linear variables are captured
         # TODO: In the future, we could support capturing of non-linear subplaces
         for var, use in node.captured.values():
-            if var.ty.linear:
-                err = LinearCaptureError(use, var)
-                err.add_sub_diagnostic(LinearCaptureError.DefinedHere(var.defined_at))
+            if not var.ty.copyable:
+                err = NonCopyableCaptureError(use, var)
+                err.add_sub_diagnostic(
+                    NonCopyableCaptureError.DefinedHere(var.defined_at)
+                )
                 raise GuppyError(err)
             for place in leaf_places(var):
                 self.scope.use(place.id, use, UseKind.COPY)
@@ -454,7 +458,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                 # checks are handled by dataflow analysis.
                 if x in self.scope.vars and x not in self.scope.used_local:
                     place = self.scope[x]
-                    if place.ty.linear:
+                    if not place.ty.droppable:
                         err = PlaceNotUsedError(place.defined_at, place)
                         err.add_sub_diagnostic(PlaceNotUsedError.Fix(None))
                         raise GuppyError(err)
@@ -501,7 +505,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                             inner_scope.used_parent[x].kind == UseKind.BORROW
                         ):
                             continue
-                        if not self.scope.used(x) and place.ty.linear:
+                        if not self.scope.used(x) and not place.ty.droppable:
                             err = PlaceNotUsedError(place.defined_at, place)
                             err.add_sub_diagnostic(
                                 PlaceNotUsedError.Branch(first_if, False)
@@ -537,7 +541,7 @@ class BBLinearityChecker(ast.NodeVisitor):
             for place in inner_scope.vars.values():
                 for leaf in leaf_places(place):
                     x = leaf.id
-                    if leaf.ty.linear and not inner_scope.used(x):
+                    if not leaf.ty.droppable and not inner_scope.used(x):
                         raise GuppyTypeError(PlaceNotUsedError(leaf.defined_at, leaf))
 
         # On the other hand, we have to ensure that no linear places from the
@@ -549,7 +553,7 @@ class BBLinearityChecker(ast.NodeVisitor):
             # scope. These can be safely reassigned.
             if use.kind == UseKind.BORROW:
                 self._reassign_single_inout_arg(place, use.node)
-            elif place.ty.linear:
+            elif not place.ty.copyable:
                 raise GuppyTypeError(ComprAlreadyUsedError(use.node, place, use.kind))
 
 
@@ -642,13 +646,13 @@ def check_cfg_linearity(
     for bb, scope in scopes.items():
         live_before_bb = live_before[bb]
 
-        # We have to check that used linear variables are not being outputted
+        # We have to check that used not copyable variables are not being outputted
         for succ in bb.successors:
             live = live_before[succ]
             for x, use_bb in live.items():
                 use_scope = scopes[use_bb]
                 place = use_scope[x]
-                if place.ty.linear and (prev_use := scope.used(x)):
+                if not place.ty.copyable and (prev_use := scope.used(x)):
                     use = use_scope.used_parent[x]
                     # Special case if this is a use arising from the implicit returning
                     # of a borrowed argument
@@ -671,7 +675,7 @@ def check_cfg_linearity(
                     )
                     raise GuppyError(err)
 
-        # On the other hand, unused linear variables *must* be outputted
+        # On the other hand, unused variables that are not droppable *must* be outputted
         for place in scope.values():
             for leaf in leaf_places(place):
                 x = leaf.id
@@ -682,7 +686,7 @@ def check_cfg_linearity(
                 if x not in live_before_bb and x not in scope.vars:
                     continue
                 used_later = all(x in live_before[succ] for succ in bb.successors)
-                if leaf.ty.linear and not scope.used(x) and not used_later:
+                if not leaf.ty.droppable and not scope.used(x) and not used_later:
                     err = PlaceNotUsedError(scope[x].defined_at, leaf)
                     # If there are some paths that lead to a consumption, we can give
                     # a nicer error message by highlighting the branch that leads to

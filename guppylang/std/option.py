@@ -23,10 +23,13 @@ def _option_to_hugr(args: Sequence[Argument]) -> ht.Type:
             raise InternalGuppyError("Invalid type args for Option")
 
 
-T = guppy.type_var("T", linear=True)
+T = guppy.type_var("T", copyable=False, droppable=False)
 
 
-@guppy.type(_option_to_hugr, params=[TypeParam(0, "T", can_be_linear=True)])
+@guppy.type(
+    _option_to_hugr,
+    params=[TypeParam(0, "T", must_be_copyable=False, must_be_droppable=False)],
+)
 class Option(Generic[T]):  # type: ignore[misc]
     """Represents an optional value."""
 

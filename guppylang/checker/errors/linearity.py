@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 class AlreadyUsedError(Error):
     title: ClassVar[str] = "Linearity violation"
     span_label: ClassVar[str] = (
-        "{place.describe} with linear type `{place.ty}` cannot be {kind.subjunctive} "
-        "..."
+        "{place.describe} with {place.ty.ownership_kind} type `{place.ty}` "
+        "cannot be {kind.subjunctive} ..."
     )
     place: Place
     kind: UseKind
@@ -40,8 +40,8 @@ class AlreadyUsedError(Error):
 class ComprAlreadyUsedError(Error):
     title: ClassVar[str] = "Linearity violation"
     span_label: ClassVar[str] = (
-        "{place.describe} with linear type `{place.ty}` would be {kind.subjunctive} "
-        "multiple times when evaluating this comprehension"
+        "{place.describe} with {place.ty.ownership_kind} type `{place.ty}` would be "
+        "{kind.subjunctive} multiple times when evaluating this comprehension"
     )
     place: Place
     kind: UseKind
@@ -160,8 +160,8 @@ class NotOwnedError(Error):
 class MoveOutOfSubscriptError(Error):
     title: ClassVar[str] = "Subscript {kind.subjunctive}"
     span_label: ClassVar[str] = (
-        "Cannot {kind.indicative} a subscript of `{parent}` with linear type "
-        "`{parent.ty}`"
+        "Cannot {kind.indicative} a subscript of `{parent}` with "
+        "{parent.ty.ownership_kind} type `{parent.ty}`"
     )
     kind: UseKind
     parent: Place
@@ -169,8 +169,8 @@ class MoveOutOfSubscriptError(Error):
     @dataclass(frozen=True)
     class Explanation(Note):
         message: ClassVar[str] = (
-            "Subscripts on linear types are only allowed to be borrowed, not "
-            "{kind.subjunctive}"
+            "Subscripts on {parent.ty.ownership_kind} types are only allowed to be "
+            "borrowed, not {kind.subjunctive}"
         )
 
 
@@ -231,7 +231,7 @@ class DropAfterCallError(Error):
 
 
 @dataclass(frozen=True)
-class LinearCaptureError(Error):
+class NonCopyableCaptureError(Error):
     title: ClassVar[str] = "Linearity violation"
     span_label: ClassVar[str] = (
         "{var.describe} with linear type {var.ty} cannot be used here since `{var}` is "
@@ -245,7 +245,7 @@ class LinearCaptureError(Error):
 
 
 @dataclass(frozen=True)
-class LinearPartialApplyError(Error):
+class NonCopyablePartialApplyError(Error):
     title: ClassVar[str] = "Linearity violation"
     span_label: ClassVar[str] = (
         "This expression implicitly constructs a closure that captures a linear value"
@@ -260,11 +260,11 @@ class LinearPartialApplyError(Error):
 
 
 @dataclass(frozen=True)
-class LinearForBreakError(Error):
+class NonDroppableForBreakError(Error):
     title: ClassVar[str] = "Break in linear loop"
     span_label: ClassVar[str] = "Early exit in linear loops is not allowed"
 
     @dataclass(frozen=True)
-    class LinearIteratorType(Note):
+    class NonDroppableIteratorType(Note):
         span_label: ClassVar[str] = "Iterator has linear type `{ty}`"
         ty: Type
