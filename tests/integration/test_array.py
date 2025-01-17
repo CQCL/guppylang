@@ -332,7 +332,7 @@ def test_drop(validate):
 
 def test_subscript_assign(validate):
     @compile_guppy
-    def main(xs: array[int, 3]) -> array[int, 3]:
+    def main(xs: array[int, 3] @ owned) -> array[int, 3]:
         xs[0] = 1
         return xs
 

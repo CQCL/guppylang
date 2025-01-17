@@ -198,18 +198,18 @@ class StmtChecker(AstVisitor[BBStatement]):
         item = Variable(next(tmp_vars), item_ty, item_expr)
         item_node = with_type(item_ty, with_loc(item_expr, PlaceNode(place=item)))
 
-        exp_get_sig = FunctionType(
+        exp_sig = FunctionType(
             [
                 FuncInput(container_ty, InputFlags.Inout),
-                FuncInput(ExistentialTypeVar.fresh("Key", False), InputFlags.NoFlags),
+                FuncInput(ExistentialTypeVar.fresh("Key", True, True), InputFlags.NoFlags),
             ],
-            ExistentialTypeVar.fresh("Val", False),
+            ExistentialTypeVar.fresh("Val", True, True),
         )
-        getitem_expr, result_ty = self._synth_instance_fun(
-            value, [item_node], "__getitem__", "subscriptable", exp_get_sig
+        getitem_call, result_ty = self._synth_instance_fun(
+            value, [item_node], "__getitem__", "subscriptable", exp_sig
         )
 
-        place = SubscriptAccess(value.place, item, result_ty, item_expr, getitem_expr)
+        place = SubscriptAccess(value.place, item, result_ty, item_expr, getitem_call)
         return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 
     @_check_assign.register
@@ -342,22 +342,25 @@ class StmtChecker(AstVisitor[BBStatement]):
         node.targets = [self._check_assign(target, node.value, ty)]
 
         [target] = node.targets
-        if isinstance(target, SubscriptAccess):
+        if isinstance(target, PlaceNode) and isinstance(target.place, SubscriptAccess):
+            place = target.place
+            parent = place.parent
+            item = place.item
             # Synthesize __setitem__ call.
             exp_sig = FunctionType(
                 [
-                    FuncInput(target.parent.ty, InputFlags.Inout),
-                    FuncInput(target.item.ty, InputFlags.NoFlags),
-                    FuncInput(target.ty, InputFlags.Owned),
+                    FuncInput(parent.ty, InputFlags.Inout),
+                    FuncInput(item.ty, InputFlags.NoFlags),
+                    FuncInput(place.ty, InputFlags.Owned),
                 ],
                 NoneType(),
             )
             setitem_args = [
-                with_type(target.parent.ty, with_loc(node, PlaceNode(target.parent))),
-                with_type(target.item.ty, with_loc(node, PlaceNode(target.item))),
-                with_type(target.ty, with_loc(node, InoutReturnSentinel(var=target))),
+                with_type(parent.ty, with_loc(node, PlaceNode(parent))),
+                with_type(item.ty, with_loc(node, PlaceNode(item))),
+                with_type(place.ty, with_loc(node, PlaceNode(node.value))),
             ]
-            setitem_expr, _ = self._synth_instance_fun(
+            setitem_call, _ = self._synth_instance_fun(
                 setitem_args[0],
                 setitem_args[1:],
                 "__setitem__",
@@ -365,7 +368,7 @@ class StmtChecker(AstVisitor[BBStatement]):
                 exp_sig,
                 True,
             )
-            replace(target, setitem_call=setitem_expr)
+            node.targets[0].place = replace(place, setitem_call=setitem_call)
 
         return node
 

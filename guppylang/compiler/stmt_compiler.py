@@ -8,6 +8,7 @@ from hugr.build.dfg import DfBase
 
 from guppylang.ast_util import AstVisitor, get_type
 from guppylang.checker.core import Variable
+from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import (
     CompiledGlobals,
     CompilerBase,
@@ -72,6 +73,11 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
     @_assign.register
     def _assign_place(self, lhs: PlaceNode, port: Wire) -> None:
         self.dfg[lhs.place] = port
+        print(self.dfg.locals)
+        if subscript := contains_subscript(lhs.place):
+            assert subscript.setitem_call is not None
+            self.expr_compiler.visit(subscript.setitem_call)
+
 
     @_assign.register
     def _assign_tuple(self, lhs: TupleUnpack, port: Wire) -> None:
@@ -149,6 +155,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
     def visit_Assign(self, node: ast.Assign) -> None:
         [target] = node.targets
         port = self.expr_compiler.compile(node.value, self.dfg)
+        print(self.dfg.locals)
         self._assign(target, port)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
