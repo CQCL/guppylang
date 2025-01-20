@@ -170,7 +170,7 @@ class MoveOutOfSubscriptError(Error):
     @dataclass(frozen=True)
     class Explanation(Note):
         message: ClassVar[str] = (
-            "Subscripts on non-copyable types are only allowed to be borrowed not "
+            "Subscripts on non-copyable types are only allowed to be borrowed, not "
             "{kind.subjunctive}"
         )
 

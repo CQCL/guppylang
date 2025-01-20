@@ -6,6 +6,7 @@ Error: Subscript moved (at $FILE:14:8)
    |         ^^^^^ Cannot move a subscript of `qs` with non-copyable type
    |               `array[qubit, 42]`
 
-Note: Subscripts on non-copyable types are only allowed to be borrowed not moved
+Note: Subscripts on non-copyable types are only allowed to be borrowed, not
+moved
 
 Guppy compilation failed due to 1 previous error
