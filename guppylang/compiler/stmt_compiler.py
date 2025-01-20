@@ -76,6 +76,9 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         print(self.dfg.locals)
         if subscript := contains_subscript(lhs.place):
             assert subscript.setitem_call is not None
+            self.dfg[subscript.item] = self.expr_compiler.compile(
+                subscript.item_expr, self.dfg
+            )
             self.expr_compiler.visit(subscript.setitem_call)
 
 

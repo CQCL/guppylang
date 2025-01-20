@@ -358,7 +358,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             setitem_args = [
                 with_type(parent.ty, with_loc(node, PlaceNode(parent))),
                 with_type(item.ty, with_loc(node, PlaceNode(item))),
-                with_type(place.ty, with_loc(node, PlaceNode(node.value))),
+                node.value,
             ]
             setitem_call, _ = self._synth_instance_fun(
                 setitem_args[0],
