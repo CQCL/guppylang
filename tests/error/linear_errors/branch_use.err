@@ -1,9 +1,10 @@
-Error: Linearity violation (at $FILE:24:4)
+Error: Drop violation (at $FILE:24:4)
    | 
 22 | @guppy(module)
 23 | def foo(b: bool) -> bool:
 24 |     q = new_qubit()
-   |     ^ Variable `q` with linear type `qubit` may be leaked ...
+   |     ^ Variable `q` with non-droppable type `qubit` may be leaked
+   |       ...
    | 
 25 |     if b:
    |        - if this expression is `False`

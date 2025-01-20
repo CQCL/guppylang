@@ -1,9 +1,9 @@
-Error: Linearity violation (at $FILE:13:12)
+Error: Copy violation (at $FILE:13:12)
    | 
 11 | @guppy(module)
 12 | def foo(qs: list[qubit] @owned, xs: list[int]) -> list[qubit]:
 13 |     return [q for q in qs for x in xs]
-   |             ^ Variable `q` with linear type `qubit` would be moved
+   |             ^ Variable `q` with non-copyable type `qubit` would be moved
    |               multiple times when evaluating this
    |               comprehension
 

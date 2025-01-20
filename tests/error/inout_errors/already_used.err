@@ -1,10 +1,10 @@
-Error: Linearity violation (at $FILE:21:8)
+Error: Copy violation (at $FILE:21:8)
    | 
 19 | def test(q: qubit @owned) -> None:
 20 |     use(q)
 21 |     foo(q)
-   |         ^ Variable `q` with linear type `qubit` cannot be borrowed
-   |           ...
+   |         ^ Variable `q` with non-copyable type `qubit` cannot be
+   |           borrowed ...
    | 
 20 |     use(q)
    |         - since it was already consumed here

@@ -1,10 +1,10 @@
-Error: Linearity violation (at $FILE:27:11)
+Error: Copy violation (at $FILE:27:11)
    | 
 25 |     measure(s.q)
 26 |     s.q = s.x.q
 27 |     return s
-   |            ^ Field `s.x.q` with linear type `qubit` cannot be returned
-   |              ...
+   |            ^ Field `s.x.q` with non-copyable type `qubit` cannot be
+   |              returned ...
    | 
 26 |     s.q = s.x.q
    |           ----- since it was already moved here

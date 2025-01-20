@@ -1,10 +1,10 @@
-Error: Linearity violation (at $FILE:21:16)
+Error: Copy violation (at $FILE:21:16)
    | 
 19 | @guppy(module)
 20 | def foo(qs: list[qubit] @owned) -> list[int]:
 21 |     return [baz(q) for q in qs if bar(q)]
-   |                 ^ Variable `q` with linear type `qubit` cannot be borrowed
-   |                   ...
+   |                 ^ Variable `q` with non-copyable type `qubit` cannot be
+   |                   borrowed ...
    | 
 21 |     return [baz(q) for q in qs if bar(q)]
    |                                       - since it was already consumed here
