@@ -192,25 +192,37 @@ class StmtChecker(AstVisitor[BBStatement]):
                 UnsupportedError(value, "Assigning to this expression", singular=True)
             )
 
-        # Synthesize __getitem__ call.
+        # Synthesize __setitem__ call.
         item_expr, item_ty = self._synth_expr(lhs.slice)
         item = Variable(next(tmp_vars), item_ty, item_expr)
-        item_node = with_type(item_ty, with_loc(item_expr, PlaceNode(place=item)))
 
-        exp_sig = FunctionType(
+        parent = value.place
+
+        exp_set_sig = FunctionType(
             [
-                FuncInput(container_ty, InputFlags.Inout),
-                FuncInput(
-                    ExistentialTypeVar.fresh("Key", True, True), InputFlags.NoFlags
-                ),
+                FuncInput(parent.ty, InputFlags.Inout),
+                FuncInput(item.ty, InputFlags.NoFlags),
+                FuncInput(rhs_ty, InputFlags.Owned),
             ],
-            ExistentialTypeVar.fresh("Val", True, True),
+            NoneType(),
         )
-        getitem_call, result_ty = self._synth_instance_fun(
-            value, [item_node], "__getitem__", "subscriptable", exp_sig
+        setitem_args = [
+            with_type(parent.ty, with_loc(lhs, PlaceNode(parent))),
+            with_type(item.ty, with_loc(lhs, PlaceNode(item))),
+            rhs,
+        ]
+        setitem_call, _ = self._synth_instance_fun(
+            setitem_args[0],
+            setitem_args[1:],
+            "__setitem__",
+            "allowed to be assigned to",
+            exp_set_sig,
+            True,
         )
 
-        place = SubscriptAccess(value.place, item, result_ty, item_expr, getitem_call)
+        place = SubscriptAccess(
+            parent, item, rhs_ty, item_expr, setitem_call=setitem_call
+        )
         return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 
     @_check_assign.register
@@ -341,36 +353,6 @@ class StmtChecker(AstVisitor[BBStatement]):
         [target] = node.targets
         node.value, ty = self._synth_expr(node.value)
         node.targets = [self._check_assign(target, node.value, ty)]
-
-        [target] = node.targets
-        if isinstance(target, PlaceNode) and isinstance(target.place, SubscriptAccess):
-            parent = target.place.parent
-            item = target.place.item
-            # Synthesize __setitem__ call.
-            exp_sig = FunctionType(
-                [
-                    FuncInput(parent.ty, InputFlags.Inout),
-                    FuncInput(item.ty, InputFlags.NoFlags),
-                    FuncInput(target.place.ty, InputFlags.Owned),
-                ],
-                NoneType(),
-            )
-            setitem_args = [
-                with_type(parent.ty, with_loc(node, PlaceNode(parent))),
-                with_type(item.ty, with_loc(node, PlaceNode(item))),
-                node.value,
-            ]
-            setitem_call, _ = self._synth_instance_fun(
-                setitem_args[0],
-                setitem_args[1:],
-                "__setitem__",
-                "able to borrow subscripted elements",
-                exp_sig,
-                True,
-            )
-            target.place = replace(target.place, setitem_call=setitem_call)
-            node.targets = [target]
-
         return node
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.stmt:

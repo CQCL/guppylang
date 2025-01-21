@@ -255,6 +255,7 @@ class BBLinearityChecker(ast.NodeVisitor):
             self.scope.assign(subscript.item)
             # Visiting the `__getitem__(place.parent, place.item)` call ensures that we
             # linearity-check the parent and element.
+            assert subscript.getitem_call is not None
             self.visit(subscript.getitem_call)
         # For all other places, we record uses of all leaves
         else:

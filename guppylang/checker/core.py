@@ -174,8 +174,7 @@ class SubscriptAccess:
     item: Variable
     ty: Type
     item_expr: ast.expr
-    getitem_call: ast.expr
-    #: Only populated if this place occurs in an inout position
+    getitem_call: ast.expr | None = None
     setitem_call: ast.expr | None = None
 
     @dataclass(frozen=True)

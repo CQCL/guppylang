@@ -1,0 +1,11 @@
+Error: Drop violation (at $FILE:13:4)
+   | 
+11 | @guppy(module)
+12 | def main() -> None:
+13 |     qs = array(qubit() for _ in range(10))
+   |     ^^ Variable `qs` with non-droppable type `array[qubit, 10]` is
+   |        leaked
+
+Help: Make sure that `qs` is consumed or returned to avoid the leak
+
+Guppy compilation failed due to 1 previous error
