@@ -1,9 +1,9 @@
-Error: Linearity violation (at $FILE:13:8)
+Error: Drop violation (at $FILE:13:8)
    | 
 11 | 
 12 | @guppy(module)
 13 | def foo(q: qubit @owned) -> None:
-   |         ^^^^^^^^^^^^^^^ Variable `q` with linear type `qubit` is leaked
+   |         ^^^^^^^^^^^^^^^ Variable `q` with non-droppable type `qubit` is leaked
 
 Help: Make sure that `q` is consumed or returned to avoid the leak
 

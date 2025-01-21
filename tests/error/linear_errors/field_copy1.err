@@ -1,9 +1,10 @@
-Error: Linearity violation (at $FILE:20:11)
+Error: Copy violation (at $FILE:20:11)
    | 
 18 | def foo(s: MyStruct @owned) -> tuple[qubit, qubit]:
 19 |     t = s
 20 |     return s.q, t.q
-   |            ^^^ Field `s.q` with linear type `qubit` cannot be returned ...
+   |            ^^^ Field `s.q` with non-copyable type `qubit` cannot be
+   |                returned ...
    | 
 19 |     t = s
    |         - since it was already moved here

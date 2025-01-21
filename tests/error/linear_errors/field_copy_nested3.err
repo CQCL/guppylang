@@ -1,10 +1,10 @@
-Error: Linearity violation (at $FILE:29:11)
+Error: Copy violation (at $FILE:29:11)
    | 
 27 | def foo(s: MyStruct1 @owned) -> qubit:
 28 |     use(s.x)
 29 |     return s.x.q
-   |            ^^^^^ Field `s.x.q` with linear type `qubit` cannot be returned
-   |                  ...
+   |            ^^^^^ Field `s.x.q` with non-copyable type `qubit` cannot be
+   |                  returned ...
    | 
 28 |     use(s.x)
    |         --- since it was already consumed here
