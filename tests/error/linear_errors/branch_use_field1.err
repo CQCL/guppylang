@@ -1,9 +1,10 @@
-Error: Linearity violation (at $FILE:18:4)
+Error: Drop violation (at $FILE:18:4)
    | 
 16 | @guppy(module)
 17 | def foo(b: bool) -> bool:
 18 |     s = MyStruct(qubit())
-   |     ^ Field `s.q` with linear type `qubit` may be leaked ...
+   |     ^ Field `s.q` with non-droppable type `qubit` may be leaked
+   |       ...
    | 
 19 |     if b:
    |        - if this expression is `False`
