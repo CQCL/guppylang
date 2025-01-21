@@ -322,14 +322,6 @@ def test_drop(validate):
     validate(main)
 
 
-def test_drop(validate):
-    @compile_guppy
-    def main(xs: array[int, 2] @ owned) -> None:
-        ys = xs
-
-    validate(main)
-
-
 def test_subscript_assign(validate):
     @compile_guppy
     def main(xs: array[int, 3] @ owned) -> array[int, 3]:

@@ -49,7 +49,6 @@ from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import (
     AnyUnpack,
     DesugaredArrayComp,
-    InoutReturnSentinel,
     IterableUnpack,
     MakeIter,
     NestedFunctionDef,
@@ -201,7 +200,9 @@ class StmtChecker(AstVisitor[BBStatement]):
         exp_sig = FunctionType(
             [
                 FuncInput(container_ty, InputFlags.Inout),
-                FuncInput(ExistentialTypeVar.fresh("Key", True, True), InputFlags.NoFlags),
+                FuncInput(
+                    ExistentialTypeVar.fresh("Key", True, True), InputFlags.NoFlags
+                ),
             ],
             ExistentialTypeVar.fresh("Val", True, True),
         )
@@ -343,15 +344,14 @@ class StmtChecker(AstVisitor[BBStatement]):
 
         [target] = node.targets
         if isinstance(target, PlaceNode) and isinstance(target.place, SubscriptAccess):
-            place = target.place
-            parent = place.parent
-            item = place.item
+            parent = target.place.parent
+            item = target.place.item
             # Synthesize __setitem__ call.
             exp_sig = FunctionType(
                 [
                     FuncInput(parent.ty, InputFlags.Inout),
                     FuncInput(item.ty, InputFlags.NoFlags),
-                    FuncInput(place.ty, InputFlags.Owned),
+                    FuncInput(target.place.ty, InputFlags.Owned),
                 ],
                 NoneType(),
             )
@@ -368,7 +368,8 @@ class StmtChecker(AstVisitor[BBStatement]):
                 exp_sig,
                 True,
             )
-            node.targets[0].place = replace(place, setitem_call=setitem_call)
+            target.place = replace(target.place, setitem_call=setitem_call)
+            node.targets = [target]
 
         return node
 
