@@ -318,3 +318,48 @@ def test_drop(validate):
         ys = xs
 
     validate(main)
+
+
+def test_copy1(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2, 3)
+        ys = xs.copy()
+        xs = array(4, 5, 6) 
+        return ys[0] # Check copy isn't modified
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
+
+def test_copy2(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2, 3)
+        ys = copy(xs)
+        xs = array(4, 5, 6) 
+        return ys[0] # Check copy isn't modified
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
+
+def test_copy3(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2, 3)
+        ys = copy(xs)
+        return xs[0] # Check original can keep being used
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=4)
+

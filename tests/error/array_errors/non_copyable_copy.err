@@ -1,0 +1,10 @@
+Error: Non-copyable elements (at $FILE:13:8)
+   | 
+11 | @guppy(module)
+12 | def main(xs: array[qubit, 2] @ owned) -> array[int, 2]:
+13 |    ys = copy(xs)
+   |         ^^^^^^^^ Elements of type `qubit` cannot be copied.
+
+Note: Only arrays with copyable elements can be copied
+
+Guppy compilation failed due to 1 previous error
