@@ -328,11 +328,11 @@ def test_copy1(validate, run_int_fn):
         xs = array(1, 2, 3)
         ys = xs.copy()
         xs = array(4, 5, 6) 
-        return ys[0] # Check copy isn't modified
+        return xs[0] + ys[0] # Check copy isn't modified
 
     compiled = module.compile()
     validate(compiled)
-    run_int_fn(compiled, expected=1)
+    run_int_fn(compiled, expected=5)
 
 
 def test_copy2(validate, run_int_fn):
@@ -343,11 +343,11 @@ def test_copy2(validate, run_int_fn):
         xs = array(1, 2, 3)
         ys = copy(xs)
         xs = array(4, 5, 6) 
-        return ys[0] # Check copy isn't modified
+        return xs[0] + ys[0] # Check copy isn't modified
 
     compiled = module.compile()
     validate(compiled)
-    run_int_fn(compiled, expected=1)
+    run_int_fn(compiled, expected=5)
 
 
 def test_copy3(validate, run_int_fn):
