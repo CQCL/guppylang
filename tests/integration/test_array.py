@@ -469,7 +469,7 @@ def test_subscript_assign_nested_struct3(validate, run_int_fn):
     run_int_fn(compiled, expected=2)
 
 
-def test_subscript_assign_unpacking1(validate, run_int_fn):
+def test_subscript_assign_unpacking(validate, run_int_fn):
     module = GuppyModule("test")
 
     @guppy(module)
@@ -483,8 +483,66 @@ def test_subscript_assign_unpacking1(validate, run_int_fn):
     run_int_fn(compiled, expected=44)
 
 
+def test_subscript_subscript_assign(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0)
+        ys = array(1)
+        xs[0] = ys[0]
+        return xs[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
+
+def test_subscript_assign_unpacking_tuple(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0, 0, 0)
+        a, *b, xs[1] = (1, 2, 3, 4)
+        return xs[1]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=4)
+
+
+def test_subscript_assign_unpacking_complicated(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0, 0, 0)
+        (a1, a2), *b, (c1, c2) = array((0, 1), (2, 3), (4, 5), (5, 6))
+        return a1 + c1
+    
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=5)
+
+
 @pytest.mark.skip("TODO: Fix this")
-def test_subscript_assign_unpacking2(validate, run_int_fn):
+def test_subscript_assign_unpacking_range(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0, 0, 0)
+        a, *b, xs[1] = range(10)
+        return xs[1]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=4)
+
+
+@pytest.mark.skip("TODO: Fix this")
+def test_subscript_assign_unpacking_array(validate, run_int_fn):
     module = GuppyModule("test")
 
     @guppy(module)
