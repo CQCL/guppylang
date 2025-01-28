@@ -173,7 +173,7 @@ def test_registers(validate):
     module.load_all(quantum)
 
     @guppy.pytket(circ, module)
-    def guppy_circ(q1: qubit, qs: array[qubit, 2]) -> None: ...
+    def guppy_circ(q1: qubit, reg: array[qubit, 2]) -> None: ...
 
     @guppy(module)
     def foo(q1: qubit, reg: array[qubit, 2]) -> None:
@@ -187,18 +187,21 @@ def test_registers_measure(validate):
     from pytket import Circuit
 
     circ = Circuit(1, 1)
-    q_reg = circ.add_q_register("qubits", 2)
-    circ.measure_register(q_reg, "bits")
+    q_reg1 = circ.add_q_register("qubits1", 2)
+    q_reg2 = circ.add_q_register("qubits2", 3)
+    circ.measure_register(q_reg1, "bits")
     circ.Measure(0, 0)
 
     module = GuppyModule("test")
     module.load_all(quantum)
 
     @guppy.pytket(circ, module)
-    def guppy_circ(q1: qubit, qs: array[qubit, 2]) -> tuple[bool, array[bool, 2]]: ...
+    def guppy_circ(q1: qubit, 
+                   reg1: array[qubit, 2], 
+                   reg2: array[qubit, 3]) -> tuple[bool, array[bool, 2]]: ...
 
     @guppy(module)
-    def foo(q1: qubit, reg: array[qubit, 2]) -> None:
-        guppy_circ(q1, reg)
+    def foo(q1: qubit, reg1: array[qubit, 2], reg2: array[qubit, 3]) -> None:
+        guppy_circ(q1, reg1, reg2)
 
     validate(module.compile())
