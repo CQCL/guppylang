@@ -8,6 +8,7 @@ from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std import quantum
 from guppylang.std.quantum import qubit
+from guppylang.std.builtins import array
 
 tket2_installed = find_spec("tket2") is not None
 
@@ -157,5 +158,47 @@ def test_load_circuits(validate):
     def foo(q1: qubit, q2: qubit, q3: qubit) -> tuple[bool, bool]:
         guppy_circ1(q1)
         return  guppy_circ2(q2, q3)
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_registers(validate):
+    from pytket import Circuit
+
+    circ = Circuit(1)
+    q_reg = circ.add_q_register("qubits", 2)
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    @guppy.pytket(circ, module)
+    def guppy_circ(q1: qubit, qs: array[qubit, 2]) -> None: ...
+
+    @guppy(module)
+    def foo(q1: qubit, reg: array[qubit, 2]) -> None:
+        guppy_circ(q1, reg)
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_registers_measure(validate):
+    from pytket import Circuit
+
+    circ = Circuit(1, 1)
+    q_reg = circ.add_q_register("qubits", 2)
+    circ.measure_register(q_reg, "bits")
+    circ.Measure(0, 0)
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    @guppy.pytket(circ, module)
+    def guppy_circ(q1: qubit, qs: array[qubit, 2]) -> tuple[bool, array[bool, 2]]: ...
+
+    @guppy(module)
+    def foo(q1: qubit, reg: array[qubit, 2]) -> None:
+        guppy_circ(q1, reg)
 
     validate(module.compile())
