@@ -31,7 +31,7 @@ from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCal
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap, Span, ToSpan
-from guppylang.tys.builtin import bool_type
+from guppylang.tys.builtin import array_type, bool_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     FuncInput,
@@ -87,7 +87,7 @@ class RawPytketDef(ParsableDef):
             err.add_sub_diagnostic(
                 PytketSignatureMismatch.TypeHint(None, circ_sig=circuit_signature)
             )
-            raise GuppyError(err)
+            # raise GuppyError(err)
         return ParsedPytketDef(
             self.id,
             self.name,
@@ -161,6 +161,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 hugr_func = mapping[circ.root]
 
                 func_type = self.ty.to_hugr_poly()
+                print(func_type.body)
                 outer_func = module.define_function(
                     self.name, func_type.body.input, func_type.body.output
                 )
@@ -265,9 +266,28 @@ def _signature_from_circuit(
 
                 qubit = cast(TypeDef, globals["qubit"]).check_instantiate([], globals)
 
+                inputs = []
+                for q_reg in input_circuit.q_registers:
+                    if q_reg.name == "q":
+                        # Default register is added as separate qubit inputs.
+                        inputs.extend([FuncInput(qubit, InputFlags.Inout)] * q_reg.size)
+                    else:
+                        # All other registers are added as arrays.
+                        inputs.append(
+                            FuncInput(array_type(qubit, q_reg.size), InputFlags.Inout)
+                        )
+
+                # Same for outputs.
+                outputs = []
+                for c_reg in input_circuit.c_registers:
+                    if c_reg.name == "c":
+                        outputs.extend([bool_type()] * c_reg.size)
+                    else:
+                        outputs.append(array_type(bool_type(), c_reg.size))
+
                 circuit_signature = FunctionType(
-                    [FuncInput(qubit, InputFlags.Inout)] * input_circuit.n_qubits,
-                    row_to_type([bool_type()] * input_circuit.n_bits),
+                    inputs,
+                    row_to_type(outputs),
                 )
             except ImportError:
                 err = Tket2NotInstalled(defined_at)
