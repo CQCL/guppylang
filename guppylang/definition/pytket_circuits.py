@@ -83,10 +83,11 @@ class RawPytketDef(ParsableDef):
             circuit_signature.inputs == stub_signature.inputs
             and circuit_signature.output == stub_signature.output
         ):
-            # TODO: Implement pretty-printing for signatures in order to add
-            # a note for expected vs. actual types.
-            raise GuppyError(PytketSignatureMismatch(func_ast, self.name))
-
+            err = PytketSignatureMismatch(func_ast, self.name)
+            err.add_sub_diagnostic(
+                PytketSignatureMismatch.TypeHint(None, circ_sig=circuit_signature)
+            )
+            raise GuppyError(err)
         return ParsedPytketDef(
             self.id,
             self.name,
