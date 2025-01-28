@@ -32,6 +32,7 @@ from guppylang.definition.value import (
 )
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
+    CopyNode,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
@@ -185,6 +186,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # Update the DFG with the outputs from the Conditional node
         for node, wire in zip(inputs, conditional, strict=True):
             self.dfg[node.place] = wire
+
+    def visit_CopyNode(self, node: CopyNode) -> Wire:
+        if node.value.place not in self.dfg:
+            return self.visit(node.value)
+        else:
+            return self.dfg[node.value.place]
 
     def visit_Constant(self, node: ast.Constant) -> Wire:
         if value := python_value_to_hugr(node.value, get_type(node)):

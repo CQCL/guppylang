@@ -7,7 +7,7 @@ from typing import Any, Generic, TypeVar, no_type_check
 import hugr.std.int
 
 from guppylang.decorator import guppy
-from guppylang.definition.custom import NoopCompiler, NoopInoutCompiler
+from guppylang.definition.custom import CopyInoutCompiler, NoopCompiler
 from guppylang.std._internal.checker import (
     ArrayCopyChecker,
     ArrayLenChecker,
@@ -600,7 +600,7 @@ class Array:
     def __iter__(self: array[L, n] @ owned) -> "SizedIter[ArrayIter[L, n], n]":
         return SizedIter(ArrayIter(self, 0))
 
-    @guppy.custom(NoopInoutCompiler(), ArrayCopyChecker())
+    @guppy.custom(CopyInoutCompiler(), ArrayCopyChecker())
     def copy(self: array[L, n]) -> array[L, n]: ...
 
 
