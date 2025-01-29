@@ -7,7 +7,6 @@ import guppylang.std.quantum_functional as quantum_functional
 from guppylang.std.quantum_functional import cx, t, h, project_z
 from guppylang.tys.ty import NoneType
 
-import pytest
 
 
 def test_id(validate):

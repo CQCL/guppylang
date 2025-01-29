@@ -57,9 +57,9 @@ def test_multi_qubit_circuit(validate):
 def test_measure(validate):
     from pytket import Circuit
 
-    circ = Circuit(1) 
-    circ.H(0)             
-    circ.measure_all() 
+    circ = Circuit(1)
+    circ.H(0)
+    circ.measure_all()
 
     module = GuppyModule("test")
     module.load_all(quantum)
@@ -78,9 +78,9 @@ def test_measure(validate):
 def test_measure_multiple(validate):
     from pytket import Circuit
 
-    circ = Circuit(2, 2) 
-    circ.H(0)             
-    circ.measure_all() 
+    circ = Circuit(2, 2)
+    circ.H(0)
+    circ.measure_all()
 
     module = GuppyModule("test")
     module.load_all(quantum)
@@ -99,9 +99,9 @@ def test_measure_multiple(validate):
 def test_measure_not_last(validate):
     from pytket import Circuit
 
-    circ = Circuit(1, 1) 
-    circ.H(0)             
-    circ.measure_all() 
+    circ = Circuit(1, 1)
+    circ.H(0)
+    circ.measure_all()
     circ.X(0)
 
     module = GuppyModule("test")

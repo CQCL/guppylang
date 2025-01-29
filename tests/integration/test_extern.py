@@ -1,4 +1,3 @@
-import pytest
 from hugr import ops, val
 
 from guppylang.decorator import guppy

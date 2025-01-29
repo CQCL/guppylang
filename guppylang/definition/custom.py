@@ -439,8 +439,8 @@ class NoopCompiler(CustomCallCompiler):
         return args
 
 
-class NoopInoutCompiler(CustomInoutCallCompiler):
+class CopyInoutCompiler(CustomInoutCallCompiler):
     """Call compiler for functions that are noops but only want to borrow arguments."""
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
-        return CallReturnWires(regular_returns=[], inout_returns=args)
+        return CallReturnWires(regular_returns=args, inout_returns=args)

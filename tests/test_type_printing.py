@@ -1,11 +1,11 @@
 from guppylang.tys.builtin import array_type_def
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
-    FunctionType,
     FuncInput,
+    FunctionType,
+    InputFlags,
     NumericType,
     OpaqueType,
-    InputFlags,
 )
 
 
