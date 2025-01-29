@@ -188,10 +188,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             self.dfg[node.place] = wire
 
     def visit_CopyNode(self, node: CopyNode) -> Wire:
-        if node.value.place not in self.dfg:
-            return self.visit(node.value)
-        else:
-            return self.dfg[node.value.place]
+        return self.visit(node.value)
 
     def visit_Constant(self, node: ast.Constant) -> Wire:
         if value := python_value_to_hugr(node.value, get_type(node)):
