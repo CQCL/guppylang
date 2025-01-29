@@ -362,3 +362,33 @@ def test_copy3(validate, run_int_fn):
     compiled = module.compile()
     validate(compiled)
     run_int_fn(compiled, expected=1)
+
+
+def test_copy_struct(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class S:
+        a: array[int, 1]
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(S(array(1)), S(array(2)))
+        ys = copy(xs[0].a)
+        return ys[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
+def test_copy_const(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = copy(array(1, 2, 3))
+        return xs[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
