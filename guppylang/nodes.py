@@ -387,3 +387,12 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
         self.cfg = cfg
         self.ty = ty
         self.captured = captured
+
+
+class CopyNode(ast.expr):
+    value: "PlaceNode"
+
+    def __init__(self, val: "PlaceNode"):
+        self.value = val
+
+    fields = ("value",)

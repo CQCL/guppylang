@@ -2,7 +2,6 @@ from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from tests.util import compile_guppy
 
-import pytest
 
 def test_basic_type(validate):
     @compile_guppy
