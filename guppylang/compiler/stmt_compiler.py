@@ -72,7 +72,6 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
     @_assign.register
     def _assign_place(self, lhs: PlaceNode, port: Wire) -> None:
-        self.dfg[lhs.place] = port
         if (subscript := contains_subscript(lhs.place)) and isinstance(
             lhs.place, SubscriptAccess
         ):
@@ -81,7 +80,10 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
                 self.dfg[subscript.item] = self.expr_compiler.compile(
                     subscript.item_expr, self.dfg
                 )
-            self.expr_compiler.visit(subscript.setitem_call)
+            self._assign(subscript.setitem_call[1], port)
+            self.expr_compiler.visit(subscript.setitem_call[0])
+        else:
+            self.dfg[lhs.place] = port
 
     @_assign.register
     def _assign_tuple(self, lhs: TupleUnpack, port: Wire) -> None:

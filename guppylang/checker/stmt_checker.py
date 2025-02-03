@@ -196,6 +196,9 @@ class StmtChecker(AstVisitor[BBStatement]):
         item_expr, item_ty = self._synth_expr(lhs.slice)
         item = Variable(next(tmp_vars), item_ty, item_expr)
 
+        # Create and store a temp variable to ensure RHS has a wire during compilation.
+        tmp_rhs = self._check_assign(make_var(next(tmp_vars), rhs), rhs, rhs_ty)
+
         parent = value.place
 
         exp_set_sig = FunctionType(
@@ -209,7 +212,7 @@ class StmtChecker(AstVisitor[BBStatement]):
         setitem_args = [
             with_type(parent.ty, with_loc(lhs, PlaceNode(parent))),
             with_type(item.ty, with_loc(lhs, PlaceNode(item))),
-            rhs,
+            tmp_rhs,
         ]
         setitem_call, _ = self._synth_instance_fun(
             setitem_args[0],
@@ -221,7 +224,7 @@ class StmtChecker(AstVisitor[BBStatement]):
         )
 
         place = SubscriptAccess(
-            parent, item, rhs_ty, item_expr, setitem_call=setitem_call
+            parent, item, rhs_ty, item_expr, setitem_call=(setitem_call, tmp_rhs)
         )
         return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 

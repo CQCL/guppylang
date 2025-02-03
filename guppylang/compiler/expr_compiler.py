@@ -282,7 +282,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 # `arg.place.parent` occurs as an arg of this call, so will also
                 # be recursively reassigned.
                 if subscript := contains_subscript(arg.place):
-                    self.visit(subscript.setitem_call)
+                    assert subscript.setitem_call is not None
+                    self.visit(subscript.setitem_call[0])
         assert next(inout_ports, None) is None, "Too many inout return ports"
 
     def visit_LocalCall(self, node: LocalCall) -> Wire:

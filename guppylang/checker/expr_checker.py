@@ -923,6 +923,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
             return replace(place, parent=check_inout_arg_place(parent, ctx, node))
         case SubscriptAccess(parent=parent, item=item, ty=ty):
             # Check a call to the `__setitem__` instance function
+            rhs = with_type(ty, with_loc(node, InoutReturnSentinel(var=place)))
             exp_sig = FunctionType(
                 [
                     FuncInput(parent.ty, InputFlags.Inout),
@@ -934,7 +935,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
             setitem_args = [
                 with_type(parent.ty, with_loc(node, PlaceNode(parent))),
                 with_type(item.ty, with_loc(node, PlaceNode(item))),
-                with_type(ty, with_loc(node, InoutReturnSentinel(var=place))),
+                rhs,
             ]
             setitem_call, _ = ExprSynthesizer(ctx).synthesize_instance_func(
                 setitem_args[0],
@@ -944,7 +945,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 exp_sig,
                 True,
             )
-            return replace(place, setitem_call=setitem_call)
+            return replace(place, setitem_call=(setitem_call, rhs))
 
 
 def synthesize_call(

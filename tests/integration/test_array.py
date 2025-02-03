@@ -526,7 +526,6 @@ def test_subscript_assign_unpacking_complicated(validate, run_int_fn):
     run_int_fn(compiled, expected=5)
 
 
-@pytest.mark.skip("TODO: Fix this")
 def test_subscript_assign_unpacking_range(validate, run_int_fn):
     module = GuppyModule("test")
 
@@ -538,10 +537,9 @@ def test_subscript_assign_unpacking_range(validate, run_int_fn):
 
     compiled = module.compile()
     validate(compiled)
-    run_int_fn(compiled, expected=4)
+    run_int_fn(compiled, expected=9)
 
 
-@pytest.mark.skip("TODO: Fix this")
 def test_subscript_assign_unpacking_array(validate, run_int_fn):
     module = GuppyModule("test")
 

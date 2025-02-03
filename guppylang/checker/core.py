@@ -175,7 +175,8 @@ class SubscriptAccess:
     ty: Type
     item_expr: ast.expr
     getitem_call: ast.expr | None = None
-    setitem_call: ast.expr | None = None
+    # Store a temp variable for the RHS of an assignment so it can be assigned a port.
+    setitem_call: tuple[ast.expr, ast.expr] | None = None
 
     @dataclass(frozen=True)
     class Id:
