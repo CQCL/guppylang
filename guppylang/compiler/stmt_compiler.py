@@ -72,16 +72,23 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
     @_assign.register
     def _assign_place(self, lhs: PlaceNode, port: Wire) -> None:
-        self.dfg[lhs.place] = port
         if (subscript := contains_subscript(lhs.place)) and isinstance(
             lhs.place, SubscriptAccess
         ):
+            from guppylang.nodes import GlobalCall
+
             assert subscript.setitem_call is not None
+            assert isinstance(subscript.setitem_call, GlobalCall)
             if subscript.item not in self.dfg:
                 self.dfg[subscript.item] = self.expr_compiler.compile(
                     subscript.item_expr, self.dfg
                 )
+            tmp = subscript.setitem_call.args[2]
+            assert isinstance(tmp, PlaceNode)
+            self._assign(tmp, port)
             self.expr_compiler.visit(subscript.setitem_call)
+        else:
+            self.dfg[lhs.place] = port
 
     @_assign.register
     def _assign_tuple(self, lhs: TupleUnpack, port: Wire) -> None:

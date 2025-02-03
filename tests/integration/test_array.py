@@ -483,7 +483,6 @@ def test_subscript_assign_unpacking1(validate, run_int_fn):
     run_int_fn(compiled, expected=44)
 
 
-@pytest.mark.skip("TODO: Fix this")
 def test_subscript_assign_unpacking2(validate, run_int_fn):
     module = GuppyModule("test")
 

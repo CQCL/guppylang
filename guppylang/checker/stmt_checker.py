@@ -206,20 +206,22 @@ class StmtChecker(AstVisitor[BBStatement]):
             ],
             NoneType(),
         )
-        setitem_args = [
-            with_type(parent.ty, with_loc(lhs, PlaceNode(parent))),
-            with_type(item.ty, with_loc(lhs, PlaceNode(item))),
-            rhs,
-        ]
+        assert parent.ty == container_ty
+
+        item2 = with_type(item.ty, with_loc(lhs, PlaceNode(item)))
+        tmp = self._check_assign(make_var(next(tmp_vars), rhs), rhs, rhs_ty)
         setitem_call, _ = self._synth_instance_fun(
-            setitem_args[0],
-            setitem_args[1:],
+            with_type(parent.ty, with_loc(lhs, PlaceNode(parent))),
+            [item2, tmp],
             "__setitem__",
             "allowed to be assigned to",
             exp_set_sig,
             True,
         )
+        from guppylang.nodes import GlobalCall
 
+        assert isinstance(setitem_call, GlobalCall)
+        # setitem_call.args[2] = self._check_assign(make_var(next(tmp_vars), rhs), rhs, rhs_ty)
         place = SubscriptAccess(
             parent, item, rhs_ty, item_expr, setitem_call=setitem_call
         )
