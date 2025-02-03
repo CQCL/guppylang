@@ -50,3 +50,7 @@ build-docs:
 # Package the code and store the wheels in the dist/ directory.
 build-wheels:
     uvx --from build pyproject-build --installer uv
+
+
+bench *PYTEST_FLAGS:
+    uv run pytest --benchmark-only {{PYTEST_FLAGS}}
