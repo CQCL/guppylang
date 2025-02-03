@@ -322,6 +322,80 @@ def test_drop(validate):
     validate(main)
 
 
+def test_copy1(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2, 3)
+        ys = xs.copy()
+        xs = array(4, 5, 6)
+        return xs[0] + ys[0] # Check copy isn't modified
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=5)
+
+
+def test_copy2(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2, 3)
+        ys = copy(xs)
+        xs = array(4, 5, 6)
+        return xs[0] + ys[0] # Check copy isn't modified
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=5)
+
+
+def test_copy3(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2, 3)
+        ys = copy(xs)
+        return xs[0] # Check original can keep being used
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
+
+def test_copy_struct(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class S:
+        a: array[int, 1]
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(S(array(1)), S(array(2)))
+        ys = copy(xs[0].a)
+        return ys[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
+def test_copy_const(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = copy(array(1, 2, 3))
+        return xs[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
+
 def test_subscript_assign(validate, run_int_fn):
     module = GuppyModule("test")
 

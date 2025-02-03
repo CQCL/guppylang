@@ -15,7 +15,6 @@ from guppylang.std.quantum_functional import (
     rz,
 )
 
-
 phi = np.arccos(1 / 3)
 
 
