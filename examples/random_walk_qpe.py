@@ -9,12 +9,10 @@ import math
 from collections.abc import Callable
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 from guppylang.std.builtins import owned, py, result
 from guppylang.std.quantum import discard, measure, qubit
 from guppylang.std.quantum_functional import cx, h, rz, x
-
 
 sqrt_e = math.sqrt(math.e)
 sqrt_e_div = math.sqrt((math.e - 1) / math.e)

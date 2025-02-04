@@ -58,7 +58,7 @@ class RawFunctionDef(ParsableDef):
     """
 
     python_func: PyFunc
-    python_scope: PyScope
+    python_scope: PyScope = field(repr=False)
 
     description: str = field(default="function", init=False)
 
@@ -92,7 +92,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
         docstring: The docstring of the function.
     """
 
-    python_scope: PyScope
+    python_scope: PyScope = field(repr=False)
     defined_at: ast.FunctionDef
     ty: FunctionType
     docstring: str | None

@@ -32,6 +32,7 @@ from guppylang.definition.value import (
 )
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
+    CopyNode,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
@@ -41,6 +42,7 @@ from guppylang.nodes import (
     GlobalName,
     InoutReturnSentinel,
     LocalCall,
+    PanicExpr,
     PartialApply,
     PlaceNode,
     ResultExpr,
@@ -53,6 +55,7 @@ from guppylang.std._internal.compiler.array import array_repeat
 from guppylang.std._internal.compiler.list import (
     list_new,
 )
+from guppylang.std._internal.compiler.prelude import build_error, build_panic
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     get_element_type,
@@ -183,6 +186,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # Update the DFG with the outputs from the Conditional node
         for node, wire in zip(inputs, conditional, strict=True):
             self.dfg[node.place] = wire
+
+    def visit_CopyNode(self, node: CopyNode) -> Wire:
+        return self.visit(node.value)
 
     def visit_Constant(self, node: ast.Constant) -> Wire:
         if value := python_value_to_hugr(node.value, get_type(node)):
@@ -472,6 +478,19 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         )
         self.builder.add_op(op, self.visit(node.value))
         return self._pack_returns([], NoneType())
+
+    def visit_PanicExpr(self, node: PanicExpr) -> Wire:
+        err = build_error(self.builder, 1, node.msg)
+        in_tys = [get_type(e).to_hugr() for e in node.values]
+        out_tys = [ty.to_hugr() for ty in type_to_row(get_type(node))]
+        outs = build_panic(
+            self.builder,
+            in_tys,
+            out_tys,
+            err,
+            *(self.visit(e) for e in node.values),
+        ).outputs()
+        return self._pack_returns(list(outs), get_type(node))
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> Wire:
         # Make up a name for the list under construction and bind it to an empty list

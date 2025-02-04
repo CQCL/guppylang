@@ -1,4 +1,3 @@
-import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
@@ -126,7 +125,7 @@ def test_generic(validate):
     n = guppy.nat_var("n", module)
 
     @guppy(module)
-    def test(xs: array[int, n]) -> array[int, n]:
+    def test(xs: array[int, n] @ owned) -> array[int, n]:
         return array(x + 1 for x in xs)
 
     validate(module.compile())

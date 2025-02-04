@@ -2,13 +2,10 @@
 
 from importlib.util import find_spec
 
-import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import py, array, nat
-from guppylang.std import quantum
-from guppylang.std.quantum import qubit
+from guppylang.std.builtins import py, array, nat, owned
 from tests.util import compile_guppy
 
 tket2_installed = find_spec("tket2") is not None
@@ -130,7 +127,7 @@ def test_func_type_arg(validate):
     n = 10
 
     @guppy(module)
-    def foo(xs: array[int, py(n)]) -> array[int, py(n)]:
+    def foo(xs: array[int, py(n)] @ owned) -> array[int, py(n)]:
         return xs
 
     @guppy.declare(module)

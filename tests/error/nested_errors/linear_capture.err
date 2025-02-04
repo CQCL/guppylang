@@ -1,10 +1,11 @@
-Error: Linearity violation (at $FILE:15:15)
+Error: Copy violation (at $FILE:15:15)
    | 
 13 | def foo(q: qubit @owned) -> qubit:
 14 |     def bar() -> qubit:
 15 |         return q
-   |                ^ Variable `q` with linear type qubit cannot be used here
-   |                  since `q` is captured from an outer scope
+   |                ^ Variable `q` with non-copyable type qubit cannot be used
+   |                  here since `q` is captured from an outer
+   |                  scope
    | 
 13 | def foo(q: qubit @owned) -> qubit:
    |         --------------- `q` defined here

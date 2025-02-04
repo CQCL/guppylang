@@ -282,7 +282,8 @@ def test_nonlinear_next_linear_iter(validate):
 
     @guppy.type(
         tys.Opaque(extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Any),
-        linear=True,
+        copyable=False,
+        droppable=False,
         module=module,
     )
     class MyIter:

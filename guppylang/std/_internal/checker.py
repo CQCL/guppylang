@@ -27,11 +27,14 @@ from guppylang.definition.struct import CheckedStructDef, RawStructDef
 from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import (
+    CopyNode,
     DesugaredArrayComp,
     DesugaredGeneratorExpr,
     GenericParamValue,
     GlobalCall,
     MakeIter,
+    PanicExpr,
+    PlaceNode,
     ResultExpr,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
@@ -46,6 +49,7 @@ from guppylang.tys.builtin import (
     is_sized_iter_type,
     nat_type,
     sized_iter_type,
+    string_type,
 )
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.subst import Inst, Subst
@@ -160,6 +164,49 @@ class ArrayLenChecker(CustomCallChecker):
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         _, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
         return self._get_const_len(inst), subst
+
+
+class ArrayCopyChecker(CustomCallChecker):
+    """Function call checker for the `array.copy` function."""
+
+    @dataclass(frozen=True)
+    class NonCopyableElementsError(Error):
+        title: ClassVar[str] = "Non-copyable elements"
+        span_label: ClassVar[str] = "Elements of type `{ty}` cannot be copied."
+        ty: Type
+
+        @dataclass(frozen=True)
+        class Explanation(Note):
+            message: ClassVar[str] = "Only arrays with copyable elements can be copied"
+
+    @dataclass(frozen=True)
+    class ExpectedArrayError(Error):
+        title: ClassVar[str] = "Non-array copy"
+        span_label: ClassVar[str] = (
+            "Expected array expression, got expression of type {ty}"
+        )
+        ty: Type
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        check_num_args(1, len(args), self.node)
+        [array_arg] = args
+        array_arg, array_ty = ExprSynthesizer(self.ctx).synthesize(array_arg)
+        if not is_array_type(array_ty):
+            raise GuppyTypeError(
+                ArrayCopyChecker.ExpectedArrayError(self.node, array_ty)
+            )
+        if isinstance(array_ty.args[0], TypeArg) and not array_ty.args[0].ty.copyable:
+            err = ArrayCopyChecker.NonCopyableElementsError(
+                self.node, array_ty.args[0].ty
+            )
+            err.add_sub_diagnostic(
+                ArrayCopyChecker.NonCopyableElementsError.Explanation(None)
+            )
+            raise GuppyTypeError(err)
+        if isinstance(array_arg, PlaceNode):
+            return CopyNode(array_arg), array_ty
+        else:
+            return array_arg, array_ty
 
 
 class NewArrayChecker(CustomCallChecker):
@@ -317,6 +364,7 @@ class ResultChecker(CustomCallChecker):
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(2, len(args), self.node)
         [tag, value] = args
+        tag, _ = ExprChecker(self.ctx).check(tag, string_type())
         if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
             raise GuppyTypeError(ExpectedError(tag, "a string literal"))
         if len(tag.value.encode("utf-8")) > TAG_MAX_LEN:
@@ -353,6 +401,43 @@ class ResultChecker(CustomCallChecker):
     @staticmethod
     def _is_numeric_or_bool_type(ty: Type) -> bool:
         return isinstance(ty, NumericType) or is_bool_type(ty)
+
+
+class PanicChecker(CustomCallChecker):
+    """Call checker for the `panic` function."""
+
+    @dataclass(frozen=True)
+    class NoMessageError(Error):
+        title: ClassVar[str] = "No panic message"
+        span_label: ClassVar[str] = "Missing message argument to panic call"
+
+        @dataclass(frozen=True)
+        class Suggestion(Note):
+            message: ClassVar[str] = 'Add a message: `panic("message")`'
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        match args:
+            case []:
+                err = PanicChecker.NoMessageError(self.node)
+                err.add_sub_diagnostic(PanicChecker.NoMessageError.Suggestion(None))
+                raise GuppyTypeError(err)
+            case [msg, *rest]:
+                msg, _ = ExprChecker(self.ctx).check(msg, string_type())
+                if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
+                    raise GuppyTypeError(ExpectedError(msg, "a string literal"))
+
+                vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
+                node = PanicExpr(msg.value, vals)
+                return with_loc(self.node, node), NoneType()
+            case args:
+                return assert_never(args)  # type: ignore[arg-type]
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        # Panic may return any type, so we don't have to check anything. Consequently
+        # we also can't infer anything in the expected type, so we always return an
+        # empty substitution
+        expr, _ = self.synthesize(args)
+        return expr, {}
 
 
 class RangeChecker(CustomCallChecker):

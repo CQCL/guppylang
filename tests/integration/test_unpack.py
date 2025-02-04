@@ -88,7 +88,7 @@ def test_unpack_nested(validate, run_int_fn):
 
     @guppy(module)
     def main(
-        xs: array[array[array[int, 5], 10], 20],
+        xs: array[array[array[int, 5], 10], 20] @ owned,
     ) -> tuple[
         array[int, 5],  # x
         int,  # y

@@ -37,7 +37,8 @@ class OpaqueTypeDef(TypeDef, CompiledDef):
     """An opaque type definition that is backed by some Hugr type."""
 
     params: Sequence[Parameter]
-    always_linear: bool
+    never_copyable: bool
+    never_droppable: bool
     to_hugr: Callable[[Sequence[Argument]], tys.Type]
     bound: tys.TypeBound | None = None
 

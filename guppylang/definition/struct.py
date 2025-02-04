@@ -2,7 +2,7 @@ import ast
 import inspect
 import textwrap
 from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import Any, ClassVar
 
 from hugr import Wire, ops
@@ -89,7 +89,7 @@ class RawStructDef(TypeDef, ParsableDef):
     """A raw struct type definition that has not been parsed yet."""
 
     python_class: type
-    python_scope: PyScope
+    python_scope: PyScope = field(repr=False)
 
     def __getitem__(self, item: Any) -> "RawStructDef":
         """Dummy implementation to enable subscripting in the Python runtime.
@@ -177,7 +177,7 @@ class ParsedStructDef(TypeDef, CheckableDef):
     defined_at: ast.ClassDef
     params: Sequence[Parameter]
     fields: Sequence[UncheckedStructField]
-    python_scope: PyScope
+    python_scope: PyScope = field(repr=False)
 
     def check(self, globals: Globals) -> "CheckedStructDef":
         """Checks that all struct fields have valid types."""
@@ -360,5 +360,5 @@ def check_not_recursive(
         defn.id: DummyStructDef(defn.id, defn.name, defn.defined_at),
     }
     dummy_globals = replace(globals, defs=globals.defs | dummy_defs)
-    for field in defn.fields:
-        type_from_ast(field.type_ast, dummy_globals, param_var_mapping)
+    for fld in defn.fields:
+        type_from_ast(fld.type_ast, dummy_globals, param_var_mapping)

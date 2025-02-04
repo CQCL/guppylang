@@ -1,9 +1,10 @@
-Error: Linearity violation (at $FILE:13:16)
+Error: Copy violation (at $FILE:13:16)
    | 
 11 | @guppy(module)
 12 | def foo(qs: list[qubit] @owned) -> list[tuple[qubit, qubit]]:
 13 |     return [(q, q) for q in qs]
-   |                 ^ Variable `q` with linear type `qubit` cannot be moved ...
+   |                 ^ Variable `q` with non-copyable type `qubit` cannot be moved
+   |                   ...
    | 
 13 |     return [(q, q) for q in qs]
    |              - since it was already moved here

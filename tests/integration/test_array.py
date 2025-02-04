@@ -72,7 +72,7 @@ def test_new_array_infer_empty(validate):
 
 def test_new_array_infer_nested(validate):
     @compile_guppy
-    def main(ys: array[int, 0]) -> array[array[int, 0], 2]:
+    def main(ys: array[int, 0] @ owned) -> array[array[int, 0], 2]:
         xs = array(ys, array())
         return xs
 
@@ -231,7 +231,7 @@ def test_struct_nested_subscript(validate):
 def test_generic_function(validate):
     module = GuppyModule("test")
     module.load(qubit)
-    T = guppy.type_var("T", linear=True, module=module)
+    T = guppy.type_var("T", copyable=False, droppable=False, module=module)
     n = guppy.nat_var("n", module=module)
 
     @guppy(module)
@@ -310,3 +310,85 @@ def test_mem_swap(validate):
 
     package = module.compile()
     validate(package)
+
+
+def test_drop(validate):
+    @compile_guppy
+    def main(xs: array[int, 2] @ owned) -> None:
+        ys = xs
+
+    validate(main)
+
+
+def test_copy1(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2, 3)
+        ys = xs.copy()
+        xs = array(4, 5, 6)
+        return xs[0] + ys[0] # Check copy isn't modified
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=5)
+
+
+def test_copy2(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2, 3)
+        ys = copy(xs)
+        xs = array(4, 5, 6)
+        return xs[0] + ys[0] # Check copy isn't modified
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=5)
+
+
+def test_copy3(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2, 3)
+        ys = copy(xs)
+        return xs[0] # Check original can keep being used
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
+
+def test_copy_struct(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class S:
+        a: array[int, 1]
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(S(array(1)), S(array(2)))
+        ys = copy(xs[0].a)
+        return ys[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
+def test_copy_const(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = copy(array(1, 2, 3))
+        return xs[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)

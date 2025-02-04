@@ -1,4 +1,3 @@
-import pytest
 from guppylang.decorator import guppy
 from guppylang.std.angles import angle, pi, angles
 from guppylang.std.builtins import nat
@@ -263,7 +262,42 @@ def test_angle_exec(validate, run_float_fn_approx):
         a3 -= a1
         a3 += 2 * a1
         return float(a3)
+
     hugr = module.compile()
     validate(hugr)
     import math
+
     run_float_fn_approx(hugr, expected=-6 * math.pi)
+
+
+def test_xor(validate, run_int_fn):
+    module = GuppyModule("test_xor")
+
+    @guppy(module)
+    def main() -> int:
+        return int(True ^ False ^ False)
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, 1)
+
+    module = GuppyModule("test_xor")
+
+    @guppy(module)
+    def main() -> int:
+        return int(True ^ False ^ False ^ True)
+
+    compiled = module.compile()
+    run_int_fn(compiled, 0)
+
+
+def test_pow(validate, run_int_fn) -> None:
+    module = GuppyModule("test_pow")
+
+    @guppy(module)
+    def main() -> int:
+        return -(3**3) + 4**2
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, -11)

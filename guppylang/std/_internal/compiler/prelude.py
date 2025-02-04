@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 import hugr.std.collections
 import hugr.std.int
+import hugr.std.prelude
 from hugr import Node, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
@@ -63,7 +64,7 @@ def panic(inputs: list[ht.Type], outputs: list[ht.Type]) -> ops.ExtOp:
 
 
 def build_panic(
-    builder: DfBase[ops.Case],
+    builder: DfBase[P],
     in_tys: ht.TypeRow,
     out_tys: ht.TypeRow,
     err: Wire,
@@ -74,7 +75,7 @@ def build_panic(
     return builder.add_op(op, err, *args)
 
 
-def build_error(builder: DfBase[ops.Case], signal: int, msg: str) -> Wire:
+def build_error(builder: DfBase[P], signal: int, msg: str) -> Wire:
     """Constructs and loads a static error value."""
     val = ErrorVal(signal, msg)
     return builder.load(builder.add_const(val))

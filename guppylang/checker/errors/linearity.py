@@ -22,10 +22,10 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class AlreadyUsedError(Error):
-    title: ClassVar[str] = "Linearity violation"
+    title: ClassVar[str] = "Copy violation"
     span_label: ClassVar[str] = (
-        "{place.describe} with linear type `{place.ty}` cannot be {kind.subjunctive} "
-        "..."
+        "{place.describe} with non-copyable type `{place.ty}` cannot be "
+        "{kind.subjunctive} ..."
     )
     place: Place
     kind: UseKind
@@ -38,10 +38,10 @@ class AlreadyUsedError(Error):
 
 @dataclass(frozen=True)
 class ComprAlreadyUsedError(Error):
-    title: ClassVar[str] = "Linearity violation"
+    title: ClassVar[str] = "Copy violation"
     span_label: ClassVar[str] = (
-        "{place.describe} with linear type `{place.ty}` would be {kind.subjunctive} "
-        "multiple times when evaluating this comprehension"
+        "{place.describe} with non-copyable type `{place.ty}` would be "
+        "{kind.subjunctive} multiple times when evaluating this comprehension"
     )
     place: Place
     kind: UseKind
@@ -54,12 +54,12 @@ class ComprAlreadyUsedError(Error):
 
 @dataclass(frozen=True)
 class PlaceNotUsedError(Error):
-    title: ClassVar[str] = "Linearity violation"
+    title: ClassVar[str] = "Drop violation"
     place: Place
 
     @property
     def rendered_span_label(self) -> str:
-        s = f"{self.place.describe} with linear type `{self.place.ty}` "
+        s = f"{self.place.describe} with non-droppable type `{self.place.ty}` "
         match self.children:
             case [PlaceNotUsedError.Branch(), *_]:
                 return s + "may be leaked ..."
@@ -80,8 +80,8 @@ class PlaceNotUsedError(Error):
 
 @dataclass(frozen=True)
 class UnnamedExprNotUsedError(Error):
-    title: ClassVar[str] = "Linearity violation"
-    span_label: ClassVar[str] = "Expression with linear type `{ty}` is leaked"
+    title: ClassVar[str] = "Drop violation"
+    span_label: ClassVar[str] = "Expression with non-droppable type `{ty}` is leaked"
     ty: Type
 
     @dataclass(frozen=True)
@@ -91,9 +91,10 @@ class UnnamedExprNotUsedError(Error):
 
 @dataclass(frozen=True)
 class UnnamedFieldNotUsedError(Error):
-    title: ClassVar[str] = "Linearity violation"
+    title: ClassVar[str] = "Drop violation"
     span_label: ClassVar[str] = (
-        "Linear field `{field.name}` of expression with type `{struct_ty}` is leaked"
+        "Non-droppable field `{field.name}` of expression with type `{struct_ty}` is "
+        "leaked"
     )
     field: StructField
     struct_ty: StructType
@@ -109,9 +110,9 @@ class UnnamedFieldNotUsedError(Error):
 
 @dataclass(frozen=True)
 class UnnamedSubscriptNotUsedError(Error):
-    title: ClassVar[str] = "Linearity violation"
+    title: ClassVar[str] = "Drop violation"
     span_label: ClassVar[str] = (
-        "Linear items of expression with type `{container_ty}` are leaked ..."
+        "Non-droppable items of expression with type `{container_ty}` are leaked ..."
     )
     container_ty: Type
 
@@ -160,7 +161,7 @@ class NotOwnedError(Error):
 class MoveOutOfSubscriptError(Error):
     title: ClassVar[str] = "Subscript {kind.subjunctive}"
     span_label: ClassVar[str] = (
-        "Cannot {kind.indicative} a subscript of `{parent}` with linear type "
+        "Cannot {kind.indicative} a subscript of `{parent}` with non-copyable type "
         "`{parent.ty}`"
     )
     kind: UseKind
@@ -169,7 +170,7 @@ class MoveOutOfSubscriptError(Error):
     @dataclass(frozen=True)
     class Explanation(Note):
         message: ClassVar[str] = (
-            "Subscripts on linear types are only allowed to be borrowed, not "
+            "Subscripts on non-copyable types are only allowed to be borrowed, not "
             "{kind.subjunctive}"
         )
 
@@ -187,7 +188,7 @@ class BorrowShadowedError(Error):
 
 @dataclass(frozen=True)
 class BorrowSubPlaceUsedError(Error):
-    title: ClassVar[str] = "Linearity violation"
+    title: ClassVar[str] = "Copy violation"
     span_label: ClassVar[str] = (
         "Borrowed argument {borrowed_var} cannot be returned to the caller ..."
     )
@@ -197,7 +198,7 @@ class BorrowSubPlaceUsedError(Error):
     @dataclass(frozen=True)
     class PrevUse(Note):
         span_label: ClassVar[str] = (
-            "since `{sub_place}` with linear type `{sub_place.ty}` was already "
+            "since `{sub_place}` with non-copyable type `{sub_place.ty}` was already "
             "{kind.subjunctive} here"
         )
         kind: UseKind
@@ -211,9 +212,9 @@ class BorrowSubPlaceUsedError(Error):
 
 @dataclass(frozen=True)
 class DropAfterCallError(Error):
-    title: ClassVar[str] = "Linearity violation"
+    title: ClassVar[str] = "Drop violation"
     span_label: ClassVar[str] = (
-        "Value with linear type `{ty}` would be leaked after {func} returns"
+        "Value with non-droppable type `{ty}` would be leaked after {func} returns"
     )
     ty: Type
     func_name: str | None
@@ -231,11 +232,11 @@ class DropAfterCallError(Error):
 
 
 @dataclass(frozen=True)
-class LinearCaptureError(Error):
-    title: ClassVar[str] = "Linearity violation"
+class NonCopyableCaptureError(Error):
+    title: ClassVar[str] = "Copy violation"
     span_label: ClassVar[str] = (
-        "{var.describe} with linear type {var.ty} cannot be used here since `{var}` is "
-        "captured from an outer scope"
+        "{var.describe} with non-copyable type {var.ty} cannot be used here since "
+        "`{var}` is captured from an outer scope"
     )
     var: Variable
 
@@ -245,26 +246,27 @@ class LinearCaptureError(Error):
 
 
 @dataclass(frozen=True)
-class LinearPartialApplyError(Error):
-    title: ClassVar[str] = "Linearity violation"
+class NonCopyablePartialApplyError(Error):
+    title: ClassVar[str] = "Copy violation"
     span_label: ClassVar[str] = (
-        "This expression implicitly constructs a closure that captures a linear value"
+        "This expression implicitly constructs a closure that captures a non-copyable "
+        "value"
     )
 
     @dataclass(frozen=True)
     class Captured(Note):
         span_label: ClassVar[str] = (
-            "This expression with linear type `{ty}` is implicitly captured"
+            "This expression with non-copyable type `{ty}` is implicitly captured"
         )
         ty: Type
 
 
 @dataclass(frozen=True)
-class LinearForBreakError(Error):
-    title: ClassVar[str] = "Break in linear loop"
-    span_label: ClassVar[str] = "Early exit in linear loops is not allowed"
+class NonDroppableForBreakError(Error):
+    title: ClassVar[str] = "Break in non-droppable loop"
+    span_label: ClassVar[str] = "Early exit in non-droppable loops is not allowed"
 
     @dataclass(frozen=True)
-    class LinearIteratorType(Note):
-        span_label: ClassVar[str] = "Iterator has linear type `{ty}`"
+    class NonDroppableIteratorType(Note):
+        span_label: ClassVar[str] = "Iterator has non-droppable type `{ty}`"
         ty: Type

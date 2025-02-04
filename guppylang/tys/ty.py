@@ -31,8 +31,23 @@ class TypeBase(ToHugr[ht.Type], Transformable["Type"], ABC):
 
     @cached_property
     @abstractmethod
+    def copyable(self) -> bool:
+        """Whether objects of this type can be implicitly copied."""
+
+    @cached_property
+    @abstractmethod
+    def droppable(self) -> bool:
+        """Whether objects of this type can be dropped."""
+
+    @property
     def linear(self) -> bool:
         """Whether this type should be treated linearly."""
+        return not self.copyable and not self.droppable
+
+    @property
+    def affine(self) -> bool:
+        """Whether this type should be treated in an affine way."""
+        return not self.copyable and self.droppable
 
     @cached_property
     @abstractmethod
@@ -99,18 +114,36 @@ class ParametrizedTypeBase(TypeBase, ABC):
 
     @property
     @abstractmethod
-    def intrinsically_linear(self) -> bool:
-        """Whether this type is linear, independent of the arguments.
+    def intrinsically_copyable(self) -> bool:
+        """Whether this type is copyable, independent of the arguments.
 
-        For example, a parametrized struct containing a qubit is linear, no matter what
-        the arguments are.
+        For example, a parametrized struct containing a qubit is never copyable, even if
+        all its arguments are.
         """
 
     @cached_property
-    def linear(self) -> bool:
-        """Whether this type should be treated linearly."""
-        return self.intrinsically_linear or any(
-            isinstance(arg, TypeArg) and arg.ty.linear for arg in self.args
+    def copyable(self) -> bool:
+        """Whether this type should be treated as copyable."""
+        # Either an argument isn't a type argument, or it must be copyable.
+        return self.intrinsically_copyable and all(
+            not isinstance(arg, TypeArg) or arg.ty.copyable for arg in self.args
+        )
+
+    @property
+    @abstractmethod
+    def intrinsically_droppable(self) -> bool:
+        """Whether this type is droppable, independent of the arguments.
+
+        For example, a parametrized struct containing a qubit is never droppable, even
+        if all its arguments are.
+        """
+
+    @cached_property
+    def droppable(self) -> bool:
+        """Whether this type should be treated as copyable."""
+        # Either an argument isn't a type argument, or it must be droppable.
+        return self.intrinsically_droppable and all(
+            not isinstance(arg, TypeArg) or arg.ty.droppable for arg in self.args
         )
 
     @cached_property
@@ -144,7 +177,8 @@ class BoundTypeVar(TypeBase, BoundVar):
     A bound type variables can be instantiated with a `TypeArg` argument.
     """
 
-    linear: bool
+    copyable: bool
+    droppable: bool
 
     @cached_property
     def hugr_bound(self) -> ht.TypeBound:
@@ -187,11 +221,16 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
     them with concrete types.
     """
 
-    linear: bool
+    copyable: bool
+    droppable: bool
 
     @classmethod
-    def fresh(cls, display_name: str, linear: bool) -> "ExistentialTypeVar":
-        return ExistentialTypeVar(display_name, next(cls._fresh_id), linear)
+    def fresh(
+        cls, display_name: str, copyable: bool, droppable: bool
+    ) -> "ExistentialTypeVar":
+        return ExistentialTypeVar(
+            display_name, next(cls._fresh_id), copyable, droppable
+        )
 
     @cached_property
     def unsolved_vars(self) -> set[ExistentialVar]:
@@ -228,7 +267,8 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
 class NoneType(TypeBase):
     """Type of `None`."""
 
-    linear: bool = field(default=False, init=False)
+    copyable: bool = field(default=True, init=True)
+    droppable: bool = field(default=True, init=True)
     hugr_bound: ht.TypeBound = field(default=ht.TypeBound.Copyable, init=False)
 
     # Flag to avoid turning the type into a row when calling `type_to_row()`. This is
@@ -273,9 +313,14 @@ class NumericType(TypeBase):
     INT_WIDTH: ClassVar[int] = 6
 
     @property
-    def linear(self) -> bool:
-        """Whether this type should be treated linearly."""
-        return False
+    def copyable(self) -> bool:
+        """Whether objects of this type can be implicitly copied."""
+        return True
+
+    @property
+    def droppable(self) -> bool:
+        """Whether objects of this type can be dropped."""
+        return True
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
@@ -332,8 +377,10 @@ class FunctionType(ParametrizedTypeBase):
     input_names: Sequence[str] | None
 
     args: Sequence[Argument] = field(init=False)
-    linear: bool = field(default=False, init=False)
-    intrinsically_linear: bool = field(default=False, init=False)
+    copyable: bool = field(default=True, init=True)
+    droppable: bool = field(default=True, init=True)
+    intrinsically_copyable: bool = field(default=True, init=True)
+    intrinsically_droppable: bool = field(default=True, init=True)
     hugr_bound: ht.TypeBound = field(default=ht.TypeBound.Copyable, init=False)
 
     def __init__(
@@ -458,8 +505,14 @@ class TupleType(ParametrizedTypeBase):
         object.__setattr__(self, "preserve", preserve)
 
     @property
-    def intrinsically_linear(self) -> bool:
-        return False
+    def intrinsically_copyable(self) -> bool:
+        """Whether objects of this type can be implicitly copied."""
+        return True
+
+    @property
+    def intrinsically_droppable(self) -> bool:
+        """Whether objects of this type can be dropped."""
+        return True
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
@@ -493,8 +546,14 @@ class SumType(ParametrizedTypeBase):
         object.__setattr__(self, "element_types", element_types)
 
     @property
-    def intrinsically_linear(self) -> bool:
-        return False
+    def intrinsically_copyable(self) -> bool:
+        """Whether objects of this type can be implicitly copied."""
+        return True
+
+    @property
+    def intrinsically_droppable(self) -> bool:
+        """Whether objects of this type can be dropped."""
+        return True
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
@@ -528,9 +587,14 @@ class OpaqueType(ParametrizedTypeBase):
     defn: "OpaqueTypeDef"
 
     @property
-    def intrinsically_linear(self) -> bool:
-        """Whether this type is linear, independent of the arguments."""
-        return self.defn.always_linear
+    def intrinsically_copyable(self) -> bool:
+        """Whether objects of this type can be implicitly copied."""
+        return not self.defn.never_copyable
+
+    @property
+    def intrinsically_droppable(self) -> bool:
+        """Whether objects of this type can be dropped."""
+        return not self.defn.never_droppable
 
     @property
     def hugr_bound(self) -> ht.TypeBound:
@@ -575,9 +639,14 @@ class StructType(ParametrizedTypeBase):
         return {field.name: field for field in self.fields}
 
     @cached_property
-    def intrinsically_linear(self) -> bool:
-        """Whether this type is linear, independent of the arguments."""
-        return any(f.ty.linear for f in self.fields)
+    def intrinsically_copyable(self) -> bool:
+        """Whether objects of this type can be  implicitly copied."""
+        return all(f.ty.copyable for f in self.fields)
+
+    @cached_property
+    def intrinsically_droppable(self) -> bool:
+        """Whether objects of this type can be dropped."""
+        return all(f.ty.droppable for f in self.fields)
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""

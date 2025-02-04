@@ -1,6 +1,5 @@
 """Tests validating the files in the `examples` directory."""
 
-import pytest
 
 
 def test_demo_notebook(nb_regression):

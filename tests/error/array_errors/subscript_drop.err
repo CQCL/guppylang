@@ -1,10 +1,10 @@
-Error: Linearity violation (at $FILE:18:11)
+Error: Drop violation (at $FILE:18:11)
    | 
 16 | @guppy(module)
 17 | def main() -> qubit:
 18 |     return foo()[0]
-   |            ^^^^^ Linear items of expression with type `array[qubit, 10]` are
-   |                  leaked ...
+   |            ^^^^^ Non-droppable items of expression with type `array[qubit,
+   |                  10]` are leaked ...
    | 
 18 |     return foo()[0]
    |                  - since only this subscript is used

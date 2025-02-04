@@ -48,9 +48,9 @@ PARTIAL_OP_DEF: he.OpDef = EXTENSION.add_op_def(
                 ),
             )
         ),
-        description="A partial application of a function.\n"
-        "Given arguments [*a],[*b],[*c], represents an operation with type\n"
-        "`(*c, *a -> *b), *c -> (*a -> *b)`",
+        description="A partial application of a function."
+        " Given arguments [*a],[*b],[*c], represents an operation with type"
+        " `(*c, *a -> *b), *c -> (*a -> *b)`",
     )
 )
 

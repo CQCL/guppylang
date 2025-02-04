@@ -7,12 +7,14 @@ from typing import Any, Generic, TypeVar, no_type_check
 import hugr.std.int
 
 from guppylang.decorator import guppy
-from guppylang.definition.custom import NoopCompiler
+from guppylang.definition.custom import CopyInoutCompiler, NoopCompiler
 from guppylang.std._internal.checker import (
+    ArrayCopyChecker,
     ArrayLenChecker,
     CallableChecker,
     DunderChecker,
     NewArrayChecker,
+    PanicChecker,
     RangeChecker,
     ResultChecker,
     ReversingChecker,
@@ -52,7 +54,7 @@ from guppylang.tys.builtin import (
 guppy.init_module(import_builtins=False)
 
 T = guppy.type_var("T")
-L = guppy.type_var("L", linear=True)
+L = guppy.type_var("L", copyable=False, droppable=False)
 
 
 def py(*args: Any) -> Any:
@@ -101,6 +103,11 @@ class Bool:
 
     @guppy
     @no_type_check
+    def __ne__(self: bool, other: bool) -> bool:
+        return not self == other
+
+    @guppy
+    @no_type_check
     def __int__(self: bool) -> int:
         return 1 if self else 0
 
@@ -118,8 +125,10 @@ class Bool:
     @guppy.hugr_op(logic_op("Or"))
     def __or__(self: bool, other: bool) -> bool: ...
 
-    @guppy.hugr_op(unsupported_op("Xor"))  # TODO: Missing op
-    def __xor__(self: bool, other: bool) -> bool: ...
+    # TODO: Use hugr op once implemented: https://github.com/CQCL/hugr/issues/1418
+    @guppy
+    def __xor__(self: bool, other: bool) -> bool:
+        return self != other
 
 
 @guppy.extend_type(string_type_def)
@@ -348,8 +357,20 @@ class Int:
     @guppy.custom(NoopCompiler())
     def __pos__(self: int) -> int: ...
 
-    @guppy.hugr_op(int_op("ipow"))
-    def __pow__(self: int, other: int) -> int: ...
+    # TODO use hugr int op "ipow"
+    # once lowering available
+    @guppy
+    @no_type_check
+    def __pow__(self: int, exponent: int) -> int:
+        if exponent < 0:
+            panic(
+                "Negative exponent not supported in"
+                "__pow__ with int type base. Try casting the base to float."
+            )
+        res = 1
+        for _ in range(exponent):
+            res *= self
+        return res
 
     @guppy.custom(checker=ReversingChecker())
     def __radd__(self: int, other: int) -> int: ...
@@ -579,6 +600,9 @@ class Array:
     def __iter__(self: array[L, n] @ owned) -> "SizedIter[ArrayIter[L, n], n]":
         return SizedIter(ArrayIter(self, 0))
 
+    @guppy.custom(CopyInoutCompiler(), ArrayCopyChecker())
+    def copy(self: array[L, n]) -> array[L, n]: ...
+
 
 @guppy.struct
 class ArrayIter(Generic[L, n]):
@@ -633,6 +657,20 @@ class SizedIter:
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.
 @guppy.custom(checker=ResultChecker(), higher_order_value=False)
 def result(tag, value): ...
+
+
+@guppy.custom(checker=PanicChecker(), higher_order_value=False)
+def panic(msg, *args):
+    """Panic, throwing an error with the given message, and immediately exit the
+    program.
+
+    Return type is arbitrary, as this function never returns.
+
+    Args:
+        msg: The message to display. Must be a string literal.
+        args: Arbitrary extra inputs, will not affect the message. Only useful for
+        consuming linear values.
+    """
 
 
 @guppy.custom(checker=DunderChecker("__abs__"), higher_order_value=False)

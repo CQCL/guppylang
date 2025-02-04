@@ -281,6 +281,15 @@ class ResultExpr(ast.expr):
     _fields = ("value", "base_ty", "array_len", "tag")
 
 
+class PanicExpr(ast.expr):
+    """A `panic(msg, *args)` expression."""
+
+    msg: str
+    values: list[ast.expr]
+
+    _fields = ("msg", "values")
+
+
 class InoutReturnSentinel(ast.expr):
     """An invisible expression corresponding to an implicit use of borrowed vars
     whenever a function returns."""
@@ -378,3 +387,12 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
         self.cfg = cfg
         self.ty = ty
         self.captured = captured
+
+
+class CopyNode(ast.expr):
+    value: "PlaceNode"
+
+    def __init__(self, val: "PlaceNode"):
+        self.value = val
+
+    fields = ("value",)

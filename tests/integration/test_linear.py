@@ -7,7 +7,6 @@ import guppylang.std.quantum_functional as quantum_functional
 from guppylang.std.quantum_functional import cx, t, h, project_z
 from guppylang.tys.ty import NoneType
 
-import pytest
 
 
 def test_id(validate):
@@ -371,9 +370,6 @@ def test_while_move_back(validate):
         while True:
             s.q = qubit()
             return s
-        # Guppy is not yet smart enough to detect that this code is unreachable
-        s.q = qubit()
-        return s
 
     validate(module.compile())
 
@@ -503,5 +499,19 @@ def test_list_iter(validate):
         qs = [qubit() for _ in [0,1,2]]
         qs = [h(q) for q in qs]
         return qs
+
+    validate(module.compile())
+
+
+def test_non_terminating(validate):
+    module = GuppyModule("test")
+    module.load_all(quantum_functional)
+    module.load(qubit)
+
+    @guppy(module)
+    def test() -> None:
+        q = qubit()
+        while True:
+            q = h(q)
 
     validate(module.compile())
