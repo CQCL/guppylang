@@ -12,7 +12,7 @@ from guppylang.module import GuppyModule
 import guppylang.decorator as decorator
 
 
-def run_error_test(file, capsys, snapshot):
+def run_error_test(file, capsys, snapshot, version_sensitive=False):
     file = pathlib.Path(file)
 
     with pytest.raises(Exception) as exc_info:
@@ -30,8 +30,16 @@ def run_error_test(file, capsys, snapshot):
     err = capsys.readouterr().err
     err = err.replace(str(file), "$FILE")
 
+    if version_sensitive:
+        major, minor, *_ = sys.version_info
+        golden_file = file.with_name(file.stem + f"@python{major}{minor}.err")
+        if not golden_file.exists() and not snapshot._snapshot_update:
+            pytest.skip(f"No golden test available for Python {major}.{minor}")
+    else:
+        golden_file = file.with_suffix(".err")
+
     snapshot.snapshot_dir = str(file.parent)
-    snapshot.assert_match(err, file.with_suffix(".err").name)
+    snapshot.assert_match(err, golden_file.name)
 
 
 util = GuppyModule("test")

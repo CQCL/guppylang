@@ -3,5 +3,4 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 9, in test
     return (1, 2) + x
-           ~~~~~~~^~~
 TypeError: Operator not defined: Binary operator `+` not defined for `(int, int)` and `int`
