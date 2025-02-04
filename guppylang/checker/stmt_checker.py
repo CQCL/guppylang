@@ -27,7 +27,13 @@ from guppylang.cfg.builder import (
     make_var,
     tmp_vars,
 )
-from guppylang.checker.core import Context, FieldAccess, SubscriptAccess, Variable
+from guppylang.checker.core import (
+    Context,
+    FieldAccess,
+    SetitemCall,
+    SubscriptAccess,
+    Variable,
+)
 from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.checker.errors.type_errors import (
     AssignFieldTypeMismatchError,
@@ -198,6 +204,8 @@ class StmtChecker(AstVisitor[BBStatement]):
 
         # Create and store a temp variable to ensure RHS has a wire during compilation.
         tmp_rhs = self._check_assign(make_var(next(tmp_vars), rhs), rhs, rhs_ty)
+        print(tmp_rhs)
+        assert isinstance(tmp_rhs, PlaceNode) and isinstance(tmp_rhs.place, Variable)
 
         parent = value.place
 
@@ -224,7 +232,11 @@ class StmtChecker(AstVisitor[BBStatement]):
         )
 
         place = SubscriptAccess(
-            parent, item, rhs_ty, item_expr, setitem_call=(setitem_call, tmp_rhs)
+            parent,
+            item,
+            rhs_ty,
+            item_expr,
+            setitem_call=SetitemCall(setitem_call, tmp_rhs),
         )
         return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 

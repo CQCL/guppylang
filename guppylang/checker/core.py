@@ -166,6 +166,22 @@ class FieldAccess:
         return replace(self, exact_defined_at=node)
 
 
+class SetitemCall(NamedTuple):
+    """
+    Represents a `__setitem__` call for assigning values to array elements.
+
+    Holds the expression corresponding to the `__setitem__` call and the variable
+    holding the value to be written to the subscript.
+    """
+
+    #: Expression corresponding to the `__setitem__` call.
+    call: ast.expr
+
+    #: Variable holding the value that should be written to the subscript.
+    #: This variable *must be* assigned before compiling the call!
+    value_var: Variable
+
+
 @dataclass(frozen=True)
 class SubscriptAccess:
     """A place identifying a subscript `place[item]` access."""
@@ -176,7 +192,7 @@ class SubscriptAccess:
     item_expr: ast.expr
     getitem_call: ast.expr | None = None
     # Store a temp variable for the RHS of an assignment so it can be assigned a port.
-    setitem_call: tuple[ast.expr, ast.expr] | None = None
+    setitem_call: SetitemCall | None = None
 
     @dataclass(frozen=True)
     class Id:
