@@ -305,15 +305,28 @@ class GuppyDefinition:
     def __call__(self, *args: Any) -> Any:
         from guppylang.tracing.function import trace_call
 
+        # Check that the functions is loaded in the current module
+        globals = get_tracing_globals()
+        if self.wrapped.id not in globals.defs:
+            assert self.wrapped.id.module is not None
+            err = (
+                f"{self.wrapped.description.capitalize()} `{self.wrapped.name}` is not "
+                f"available in this module, consider importing it from "
+                f"`{self.wrapped.id.module.name}`"
+            )
+            raise TypeError(err)
+
         state = get_tracing_state()
         defn = state.globals.build_compiled_def(self.wrapped.id)
         if isinstance(defn, CompiledCallableDef):
             return trace_call(defn, *args)
-        elif isinstance(defn, TypeDef):
-            globals = get_tracing_globals()
-            if defn.id in globals.impls and "__new__" in globals.impls[defn.id]:
-                constructor = globals.defs[globals.impls[defn.id]["__new__"]]
-                return GuppyDefinition(constructor)(*args)
+        elif (
+            isinstance(defn, TypeDef)
+            and defn.id in globals.impls
+            and "__new__" in globals.impls[defn.id]
+        ):
+            constructor = globals.defs[globals.impls[defn.id]["__new__"]]
+            return GuppyDefinition(constructor)(*args)
         err = f"{defn.description.capitalize()} `{defn.name}` is not callable"
         raise TypeError(err)
 
