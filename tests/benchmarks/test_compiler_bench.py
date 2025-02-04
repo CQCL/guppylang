@@ -9,7 +9,7 @@ from guppylang.std.builtins import array, py
 from guppylang.std.quantum import cx, discard_array, h, qubit
 
 
-def big_array_module(n_q: int = 20, n_a: int = 5) -> ModulePointer:
+def big_array(n_q: int = 20, n_a: int = 5) -> GuppyModule:
     module = GuppyModule("big_array")
     module.load_all(quantum)
 
@@ -252,9 +252,28 @@ def big_array_module(n_q: int = 20, n_a: int = 5) -> ModulePointer:
             discard_array(b)
         return q
 
-    return module.compile()
+    return module
 
 
-def test_big_arrays(benchmark) -> None:
-    hugr: ModulePointer = benchmark(big_array_module)
+def big_array_compile() -> ModulePointer:
+    return big_array().compile()
+
+
+def test_big_array_compile(benchmark) -> None:
+    hugr: ModulePointer = benchmark(big_array_compile)
     benchmark.extra_info["nodes"] = hugr.module.num_nodes()
+
+
+def test_big_array_check(benchmark) -> None:
+    def big_array_check():
+        return big_array().check()
+
+    benchmark(big_array_check)
+
+
+def test_big_array_json(benchmark) -> None:
+    def big_array_json(mod: ModulePointer) -> str:
+        return mod.package.to_json()
+
+    _json_str: str = benchmark(big_array_json, big_array_compile())
+    benchmark.extra_info["bytes"] = len(_json_str.encode("utf-8"))
