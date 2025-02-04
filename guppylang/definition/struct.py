@@ -270,7 +270,9 @@ def parse_py_class(cls: type, sources: SourceMap) -> ast.ClassDef:
     if is_running_ipython():
         defn = find_ipython_def(cls.__name__)
         if defn is not None:
-            annotate_location(defn.node, defn.cell_source, f"<{defn.cell_name}>", 1)
+            file_name = f"<{defn.cell_name}>"
+            sources.add_file(file_name, defn.cell_source)
+            annotate_location(defn.node, defn.cell_source, file_name, 1)
             if not isinstance(defn.node, ast.ClassDef):
                 raise GuppyError(ExpectedError(defn.node, "a class definition"))
             return defn.node
