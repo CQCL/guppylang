@@ -10,6 +10,7 @@ from typing import Any, NamedTuple, TypeAlias
 from hugr import Wire, ops
 
 import guppylang.checker.expr_checker as expr_checker
+from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.checker.errors.type_errors import (
     BinaryOperatorNotDefinedError,
     UnaryOperatorNotDefinedError,
@@ -18,11 +19,11 @@ from guppylang.definition.common import DefId, Definition
 from guppylang.definition.function import RawFunctionDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
-from guppylang.error import GuppyTypeError
+from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.tracing.state import get_tracing_globals, get_tracing_state
 from guppylang.tracing.util import capture_guppy_errors, get_calling_frame, hide_trace
-from guppylang.tys.ty import TupleType, Type
+from guppylang.tys.ty import FunctionType, TupleType, Type
 
 # Mapping from unary dunder method to display name of the operation
 unary_table = dict(expr_checker.unary_table.values())
@@ -316,6 +317,19 @@ class GuppyObject(DunderMixin):
             "a regular guppy function"
         )
         raise ValueError(err)
+
+    @hide_trace
+    @capture_guppy_errors
+    def __call__(self, *args):
+        if not isinstance(self._ty, FunctionType):
+            err = f"Value of type `{self._ty}` is not callable"
+            raise TypeError(err)
+
+        # TODO: Support higher-order functions
+        state = get_tracing_state()
+        raise GuppyError(
+            UnsupportedError(state.node, "Higher-order comptime functions")
+        )
 
     @hide_trace
     def __iter__(self) -> Any:
