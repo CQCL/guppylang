@@ -11,6 +11,26 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
+def capture_guppy_errors(f: Callable[P, T]) -> Callable[P, T]:
+    """Context manager that captures Guppy errors and turns them into runtime
+    `TypeError`s."""
+
+    @functools.wraps(f)
+    def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
+        try:
+            return f(*args, **kwargs)
+        except GuppyError as err:
+            diagnostic = err.error
+            msg = diagnostic.rendered_title
+            if diagnostic.span_label:
+                msg += f": {diagnostic.rendered_span_label}"
+            if diagnostic.message:
+                msg += f"\n{diagnostic.rendered_message}"
+            raise TypeError(msg) from None
+
+    return wrapped
+
+
 def hide_trace(f: Callable[P, T]) -> Callable[P, T]:
     """Function decorator that hides compiler-internal frames from the traceback of any
     exception thrown by the decorated function."""
@@ -27,16 +47,6 @@ def tracing_except_hook(
     excty: type[BaseException], err: BaseException, traceback: TracebackType | None
 ) -> None:
     """Except hook that removes all compiler-internal frames from the traceback."""
-    if isinstance(err, GuppyError):
-        diagnostic = err.error
-        msg = diagnostic.rendered_title
-        if diagnostic.span_label:
-            msg += f": {diagnostic.rendered_span_label}"
-        if diagnostic.message:
-            msg += f"\n{diagnostic.rendered_message}"
-        err = TypeError(msg)
-        excty = TypeError
-
     traceback = remove_internal_frames(traceback)
     try:
         # Check if we're inside a jupyter notebook since it uses its own exception

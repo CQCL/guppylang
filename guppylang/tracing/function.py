@@ -30,7 +30,7 @@ from guppylang.tracing.unpacking import (
     unpack_guppy_object,
     update_packed_value,
 )
-from guppylang.tracing.util import tracing_except_hook
+from guppylang.tracing.util import capture_guppy_errors, tracing_except_hook
 from guppylang.tys.ty import FunctionType, InputFlags, type_to_row
 
 if TYPE_CHECKING:
@@ -111,6 +111,7 @@ def trace_function(
     builder.set_outputs(*regular_returns, *inout_returns)
 
 
+@capture_guppy_errors
 def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     state = get_tracing_state()
     globals = get_tracing_globals()
