@@ -111,3 +111,33 @@ def test_float(validate, run_float_fn_approx):
 
     # TODO: Requires lowering of `fpow` op: https://github.com/CQCL/hugr/issues/1905
     # run_float_fn_approx(compiled, ..., "pow", [...])
+
+
+def test_dunder_coercions(validate):
+    module = GuppyModule("module")
+
+    @guppy.comptime(module)
+    def test1(x: int) -> float:
+        return 1.0 + x
+
+    @guppy.comptime(module)
+    def test2(x: int) -> float:
+        return x + 1.0
+
+    @guppy.comptime(module)
+    def test3(x: float) -> float:
+        return 1 + x
+
+    @guppy.comptime(module)
+    def test4(x: float) -> float:
+        return x + 1
+
+    @guppy.comptime(module)
+    def test4(x: int, y: float) -> float:
+        return x + y
+
+    @guppy.comptime(module)
+    def test5(x: float, y: int) -> float:
+        return x + y
+
+    validate(module.compile())

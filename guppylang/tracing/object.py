@@ -3,45 +3,104 @@ import inspect
 import itertools
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, NamedTuple, TypeAlias
 
 from hugr import Wire, ops
 
+from guppylang.checker.errors.type_errors import BinaryOperatorNotDefinedError, \
+    UnaryOperatorNotDefinedError
+import guppylang.checker.expr_checker as expr_checker
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.function import RawFunctionDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
-from guppylang.error import GuppyError
+from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.tracing.state import get_tracing_globals, get_tracing_state
-from guppylang.tracing.util import get_calling_frame, hide_trace
+from guppylang.tracing.util import get_calling_frame, hide_trace, capture_guppy_errors
 from guppylang.tys.ty import TupleType, Type
 
-DunderMethod: TypeAlias = Callable[["DunderMixin", Any], Any]
+# Mapping from unary dunder method to display name of the operation
+unary_table = {
+    method: display_name for method, display_name in expr_checker.unary_table.values()
+}
+
+# Mapping from binary dunder method to reversed method and display name of the operation
+binary_table = {
+    method: (reverse_method, display_name)
+    for method, reverse_method, display_name in expr_checker.binary_table.values()
+}
+
+# Mapping from reverse binary dunder method to original method and display name of the
+# operation
+reverse_binary_table = {
+    reverse_method: (method, display_name)
+    for method, reverse_method, display_name in expr_checker.binary_table.values()
+}
+
+UnaryDunderMethod: TypeAlias = Callable[["DunderMixin"], Any]
+BinaryDunderMethod: TypeAlias = Callable[["DunderMixin", Any], Any]
 
 
-def also_try_reversed(method_name: str) -> Callable[[DunderMethod], DunderMethod]:
-    """Decorator to delegate calls to dunder methods like `__add__` on `GuppyObject`s to
-    their reversed version `__radd__` if the original one doesn't type check.
+def unary_operation(f: UnaryDunderMethod) -> UnaryDunderMethod:
+    """Decorator for methods corresponding to unary operations like `__neg__` etc.
+
+    Emits a user error if the binary operation is not defined for the given type.
     """
 
-    def decorator(f: DunderMethod) -> DunderMethod:
-        @functools.wraps(f)
-        def wrapped(self: "DunderMixin", other: Any) -> Any:
-            try:
-                return f(self, other)
-            except GuppyError:
-                from guppylang.tracing.state import get_tracing_state
-                from guppylang.tracing.unpacking import guppy_object_from_py
+    @functools.wraps(f)
+    @capture_guppy_errors
+    def wrapped(self: "DunderMixin") -> Any:
+        with suppress(Exception):
+            return f(self)
 
-                state = get_tracing_state()
-                obj = guppy_object_from_py(other, state.dfg.builder, state.node)
-                return obj.__getattr__(method_name)(self)
+        from guppylang.tracing.state import get_tracing_state
 
-        return wrapped
+        state = get_tracing_state()
+        assert isinstance(self, GuppyObject)
+        raise GuppyTypeError(
+            UnaryOperatorNotDefinedError(state.node, self._ty, unary_table[f.__name__])
+        )
 
-    return decorator
+    return wrapped
+
+
+def binary_operation(f: BinaryDunderMethod) -> BinaryDunderMethod:
+    """Decorator for methods corresponding to binary operations like `__add__` etc.
+
+    Delegate calls to their reversed versions `__radd__` etc. if the original one
+    doesn't type check. Otherwise, emits an error informing the user that the binary
+    operation is not defined for those types.
+    """
+
+    @functools.wraps(f)
+    @capture_guppy_errors
+    def wrapped(self: "DunderMixin", other: Any) -> Any:
+        with suppress(Exception):
+            return f(self, other)
+        with suppress(Exception):
+            from guppylang.tracing.state import get_tracing_state
+            from guppylang.tracing.unpacking import guppy_object_from_py
+
+            state = get_tracing_state()
+            obj = guppy_object_from_py(other, state.dfg.builder, state.node)
+
+            if f.__name__ in binary_table:
+                reverse_method, display_name = binary_table[f.__name__]
+                left_ty, right_ty = self._ty, obj._ty
+            else:
+                reverse_method, display_name = reverse_binary_table[f.__name__]
+                left_ty, right_ty = obj._ty, self._ty
+            return obj.__getattr__(reverse_method)(self)
+
+        assert isinstance(self, GuppyObject)
+        raise GuppyTypeError(
+            BinaryOperatorNotDefinedError(state.node, left_ty, right_ty, display_name)
+        )
+
+    return wrapped
 
 
 class DunderMixin(ABC):
@@ -55,11 +114,11 @@ class DunderMixin(ABC):
     def __abs__(self) -> Any:
         return self.__getattr__("__abs__")()
 
-    @also_try_reversed("__radd__")
+    @binary_operation
     def __add__(self, other: Any) -> Any:
         return self.__getattr__("__add__")(other)
 
-    @also_try_reversed("__rand__")
+    @binary_operation
     def __and__(self, other: Any) -> Any:
         return self.__getattr__("__and__")(other)
 
@@ -72,7 +131,7 @@ class DunderMixin(ABC):
     def __divmod__(self, other: Any) -> Any:
         return self.__getattr__("__divmod__")(other)
 
-    @also_try_reversed("__eq__")
+    @binary_operation
     def __eq__(self, other: object) -> Any:
         return self.__getattr__("__eq__")(other)
 
@@ -82,114 +141,129 @@ class DunderMixin(ABC):
     def __floor__(self) -> Any:
         return self.__getattr__("__floor__")()
 
-    @also_try_reversed("__rfloordiv__")
+    @binary_operation
     def __floordiv__(self, other: Any) -> Any:
         return self.__getattr__("__floordiv__")(other)
 
-    @also_try_reversed("__le__")
+    @binary_operation
     def __ge__(self, other: Any) -> Any:
         return self.__getattr__("__ge__")(other)
 
-    @also_try_reversed("__lt__")
+    @binary_operation
     def __gt__(self, other: Any) -> Any:
         return self.__getattr__("__gt__")(other)
 
     def __int__(self) -> Any:
         return self.__getattr__("__int__")()
 
+    @unary_operation
     def __invert__(self) -> Any:
         return self.__getattr__("__invert__")()
 
-    @also_try_reversed("__ge__")
+    @binary_operation
     def __le__(self, other: Any) -> Any:
         return self.__getattr__("__le__")(other)
 
-    @also_try_reversed("__rlshift__")
+    @binary_operation
     def __lshift__(self, other: Any) -> Any:
         return self.__getattr__("__lshift__")(other)
 
-    @also_try_reversed("__gt__")
+    @binary_operation
     def __lt__(self, other: Any) -> Any:
         return self.__getattr__("__lt__")(other)
 
-    @also_try_reversed("__rmod__")
+    @binary_operation
     def __mod__(self, other: Any) -> Any:
         return self.__getattr__("__mod__")(other)
 
-    @also_try_reversed("__rmul__")
+    @binary_operation
     def __mul__(self, other: Any) -> Any:
         return self.__getattr__("__mul__")(other)
 
-    @also_try_reversed("__ne__")
+    @binary_operation
     def __ne__(self, other: object) -> Any:
         return self.__getattr__("__ne__")(other)
 
+    @unary_operation
     def __neg__(self) -> Any:
         return self.__getattr__("__neg__")()
 
-    @also_try_reversed("__ror__")
+    @binary_operation
     def __or__(self, other: Any) -> Any:
         return self.__getattr__("__or__")(other)
 
+    @unary_operation
     def __pos__(self) -> Any:
         return self.__getattr__("__pos__")()
 
-    @also_try_reversed("__rpow__")
+    @binary_operation
     def __pow__(self, other: Any) -> Any:
         return self.__getattr__("__pow__")(other)
 
+    @binary_operation
     def __radd__(self, other: Any) -> Any:
         return self.__getattr__("__radd__")(other)
 
+    @binary_operation
     def __rand__(self, other: Any) -> Any:
         return self.__getattr__("__rand__")(other)
 
+    @binary_operation
     def __rfloordiv__(self, other: Any) -> Any:
         return self.__getattr__("__rfloordiv__")(other)
 
+    @binary_operation
     def __rlshift__(self, other: Any) -> Any:
         return self.__getattr__("__rlshift__")(other)
 
+    @binary_operation
     def __rmod__(self, other: Any) -> Any:
         return self.__getattr__("__rmod__")(other)
 
+    @binary_operation
     def __rmul__(self, other: Any) -> Any:
         return self.__getattr__("__rmul__")(other)
 
+    @binary_operation
     def __ror__(self, other: Any) -> Any:
         return self.__getattr__("__ror__")(other)
 
+    @binary_operation
     def __rpow__(self, other: Any) -> Any:
         return self.__getattr__("__rpow__")(other)
 
+    @binary_operation
     def __rrshift__(self, other: Any) -> Any:
         return self.__getattr__("__pow__")(other)
 
-    @also_try_reversed("__rrshift__")
+    @binary_operation
     def __rshift__(self, other: Any) -> Any:
         return self.__getattr__("__rshift__")(other)
 
+    @binary_operation
     def __rsub__(self, other: Any) -> Any:
         return self.__getattr__("__rsub__")(other)
 
+    @binary_operation
     def __rtruediv__(self, other: Any) -> Any:
         return self.__getattr__("__rtruediv__")(other)
 
+    @binary_operation
     def __rxor__(self, other: Any) -> Any:
         return self.__getattr__("__rxor__")(other)
 
-    @also_try_reversed("__rsub__")
+    @binary_operation
     def __sub__(self, other: Any) -> Any:
         return self.__getattr__("__sub__")(other)
 
-    @also_try_reversed("__rtruediv__")
+    @binary_operation
     def __truediv__(self, other: Any) -> Any:
         return self.__getattr__("__truediv__")(other)
 
     def __trunc__(self) -> Any:
         return self.__getattr__("__trunc__")()
 
-    @also_try_reversed("__rxor__")
+    @binary_operation
     def __xor__(self, other: Any) -> Any:
         return self.__getattr__("__xor__")(other)
 
