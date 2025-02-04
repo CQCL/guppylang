@@ -320,7 +320,7 @@ class GuppyObject(DunderMixin):
 
     @hide_trace
     @capture_guppy_errors
-    def __call__(self, *args):
+    def __call__(self, *args: Any) -> Any:
         if not isinstance(self._ty, FunctionType):
             err = f"Value of type `{self._ty}` is not callable"
             raise TypeError(err)
