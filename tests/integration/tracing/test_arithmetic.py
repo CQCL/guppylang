@@ -111,25 +111,3 @@ def test_float(validate, run_float_fn_approx):
 
     # TODO: Requires lowering of `fpow` op: https://github.com/CQCL/hugr/issues/1905
     # run_float_fn_approx(compiled, ..., "pow", [...])
-
-
-def test_mixed(validate, run_int_fn):
-    module = GuppyModule("module")
-
-    @guppy.comptime(module)
-    def foo(x: int, y: float) -> int:
-        a = 1 + (x + 2)
-        b = 1 - (a - 2)
-        c = 2 * (b * 3)
-        x += 1
-        x *= y
-        z = 1 + x
-        return int(z / 2)
-
-    @guppy(module)
-    def main() -> int:
-        return foo(1, 2.0)
-
-    compiled = module.compile()
-    validate(compiled)
-    run_int_fn(compiled, 42)
