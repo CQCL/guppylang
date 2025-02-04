@@ -9,23 +9,23 @@ from typing import Any, NamedTuple, TypeAlias
 
 from hugr import Wire, ops
 
-from guppylang.checker.errors.type_errors import BinaryOperatorNotDefinedError, \
-    UnaryOperatorNotDefinedError
 import guppylang.checker.expr_checker as expr_checker
+from guppylang.checker.errors.type_errors import (
+    BinaryOperatorNotDefinedError,
+    UnaryOperatorNotDefinedError,
+)
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.function import RawFunctionDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
-from guppylang.error import GuppyError, GuppyTypeError
+from guppylang.error import GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.tracing.state import get_tracing_globals, get_tracing_state
-from guppylang.tracing.util import get_calling_frame, hide_trace, capture_guppy_errors
+from guppylang.tracing.util import capture_guppy_errors, get_calling_frame, hide_trace
 from guppylang.tys.ty import TupleType, Type
 
 # Mapping from unary dunder method to display name of the operation
-unary_table = {
-    method: display_name for method, display_name in expr_checker.unary_table.values()
-}
+unary_table = dict(expr_checker.unary_table.values())
 
 # Mapping from binary dunder method to reversed method and display name of the operation
 binary_table = {
