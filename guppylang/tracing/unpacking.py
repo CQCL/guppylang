@@ -63,21 +63,26 @@ def unpack_guppy_object(obj: GuppyObject, builder: DfBase[P]) -> Any:
             return obj
 
 
-def repack_guppy_object(v: Any, builder: DfBase[P]) -> GuppyObject:
-    """Undoes the `unpack_guppy_object` operation."""
+def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObject:
+    """Constructs a Guppy object from a Python value.
+
+    Essentially undoes the `unpack_guppy_object` operation.
+    """
     match v:
         case GuppyObject() as obj:
             return obj
+        case GuppyDefinition() as defn:
+            return defn.to_guppy_object()
         case None:
             return GuppyObject(NoneType(), builder.add_op(ops.MakeTuple()))
         case tuple(vs):
-            objs = [repack_guppy_object(v, builder) for v in vs]
+            objs = [guppy_object_from_py(v, builder, node) for v in vs]
             return GuppyObject(
                 TupleType([obj._ty for obj in objs]),
                 builder.add_op(ops.MakeTuple(), *(obj._use_wire(None) for obj in objs)),
             )
         case list(vs) if len(vs) > 0:
-            objs = [repack_guppy_object(v, builder) for v in vs]
+            objs = [guppy_object_from_py(v, builder, node) for v in vs]
             elem_ty = objs[0]._ty
             hugr_elem_ty = ht.Option(elem_ty.to_hugr())
             wires = [
@@ -88,11 +93,13 @@ def repack_guppy_object(v: Any, builder: DfBase[P]) -> GuppyObject:
                 array_type(elem_ty, len(vs)),
                 builder.add_op(array_new(hugr_elem_ty, len(vs)), *wires),
             )
-        case _:
-            raise InternalGuppyError(
-                "Can only repack values that were constructed via "
-                "`unpack_guppy_object`"
-            )
+        case v:
+            ty = python_value_to_guppy_type(v, node, get_tracing_globals())
+            if ty is None:
+                raise GuppyError(IllegalPyExpressionError(node, type(v)))
+            hugr_val = python_value_to_hugr(v, ty)
+            assert hugr_val is not None
+            return GuppyObject(ty, builder.load(hugr_val))
 
 
 def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
@@ -127,38 +134,3 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
                 update_packed_value(v, GuppyObject(elem_ty, wire), builder)
         case _:
             pass
-
-
-def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObject:
-    match v:
-        case GuppyObject() as obj:
-            return obj
-        case GuppyDefinition() as defn:
-            return defn.to_guppy_object()
-        case None:
-            return GuppyObject(NoneType(), builder.add_op(ops.MakeTuple()))
-        case tuple(vs):
-            objs = [guppy_object_from_py(v, builder, node) for v in vs]
-            return GuppyObject(
-                TupleType([obj._ty for obj in objs]),
-                builder.add_op(ops.MakeTuple(), *(obj._use_wire(None) for obj in objs)),
-            )
-        case list(vs) if len(vs) > 0:
-            objs = [guppy_object_from_py(v, builder, node) for v in vs]
-            elem_ty = objs[0]._ty
-            hugr_elem_ty = ht.Option(elem_ty.to_hugr())
-            wires = [
-                builder.add_op(ops.Tag(1, hugr_elem_ty), obj._use_wire(None))
-                for obj in objs
-            ]
-            return GuppyObject(
-                array_type(elem_ty, len(vs)),
-                builder.add_op(array_new(hugr_elem_ty, len(vs)), *wires),
-            )
-        case v:
-            ty = python_value_to_guppy_type(v, node, get_tracing_globals())
-            if ty is None:
-                raise GuppyError(IllegalPyExpressionError(node, type(v)))
-            hugr_val = python_value_to_hugr(v, ty)
-            assert hugr_val is not None
-            return GuppyObject(ty, builder.load(hugr_val))

@@ -26,7 +26,6 @@ from guppylang.tracing.state import (
 from guppylang.tracing.unpacking import (
     P,
     guppy_object_from_py,
-    repack_guppy_object,
     unpack_guppy_object,
     update_packed_value,
 )
@@ -93,7 +92,7 @@ def trace_function(
         # Compute the inout extra outputs
         try:
             inout_returns = [
-                repack_guppy_object(inout_obj, builder)._use_wire(None)
+                guppy_object_from_py(inout_obj, builder, state.node)._use_wire(None)
                 for inout_obj, inp in zip(inputs, ty.inputs, strict=False)
                 if InputFlags.Inout in inp.flags
             ]
