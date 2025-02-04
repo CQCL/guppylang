@@ -114,3 +114,7 @@ exclude_also = [
     # Don't complain about abstract methods, they aren't run:
     "@abstractmethod",
 ]
+
+
+[tool.pytest.ini_options]
+addopts = "--benchmark-skip" # bencharks run explicitly with `just bench`
