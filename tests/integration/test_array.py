@@ -1,3 +1,5 @@
+import pytest
+
 from hugr import ops
 from hugr.std.int import IntVal
 
@@ -392,3 +394,235 @@ def test_copy_const(validate, run_int_fn):
     compiled = module.compile()
     validate(compiled)
     run_int_fn(compiled, expected=1)
+
+
+def test_subscript_assign(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def foo(xs: array[int, 3] @ owned, idx: int, n: int) -> array[int, 3]:
+        xs[idx] = n
+        return xs
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0, 0, 0)
+        xs = foo(xs, 0, 2)
+        return xs[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=2)
+
+
+def test_subscript_assign_add(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def foo(xs: array[int, 1], n: int) -> None:
+        xs[0] += n
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0)
+        for i in range(6):
+            foo(xs, i)
+        return xs[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=15)
+
+
+def test_subscript_assign_struct(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class S:
+        a: array[int, 2]
+
+    @guppy(module)
+    def foo(xs: array[int, 2], idx: int, n: int) -> None:
+        xs[idx] = n
+
+    @guppy(module)
+    def main() -> int:
+        s = S(array(0, 0))
+        foo(s.a, 1, 42)
+        return s.a[1]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=42)
+
+
+def test_subscript_assign_nested(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def foo(xs: array[array[int, 2], 2]) -> None:
+        xs[0][0] = 22
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(array(11, 11), array(11, 11))
+        foo(xs)
+        return xs[0][0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=22)
+
+
+def test_subscript_assign_nested_struct1(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class S:
+        a: array[int, 2]
+
+    @guppy(module)
+    def main() -> int:
+        s0 = S(array(0, 0))
+        s1 = S(array(1, 1))
+        arr = array(s0, s1)
+        arr[0].a[1] = 42
+        return arr[0].a[1]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=42)
+
+
+def test_subscript_assign_nested_struct2(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class A:
+        b: array[int, 2]
+
+    @guppy.struct(module)
+    class S:
+        a: array[A, 2]
+
+    @guppy(module)
+    def main() -> int:
+        s0 = S(array(A(array(0, 0)), A(array(0, 0))))
+        s1 = S(array(A(array(0, 0)), A(array(0, 0))))
+        arr = array(s0, s1)
+        arr[0].a[1].b = array(42, 42)
+        arr[0].a[1].b[0] = 43
+        return arr[0].a[1].b[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=43)
+
+
+def test_subscript_assign_nested_struct3(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class A:
+        b: array[int, 2]
+
+    @guppy.struct(module)
+    class S:
+        a: A
+
+    @guppy(module)
+    def main() -> int:
+        s0 = S(A(array(0, 0)))
+        s1 = S(A(array(0, 0)))
+        arr = array(s0, s1)
+        arr[0].a.b[0] = 2
+        return arr[0].a.b[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=2)
+
+
+def test_subscript_assign_unpacking(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(11, 22, 33)
+        xs[0], y = 44, 55
+        return xs[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=44)
+
+
+def test_subscript_subscript_assign(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0)
+        ys = array(1)
+        xs[0] = ys[0]
+        return xs[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
+
+def test_subscript_assign_unpacking_tuple(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0, 0, 0)
+        a, *b, xs[1] = (1, 2, 3, 4)
+        return xs[1]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=4)
+
+
+def test_subscript_assign_unpacking_complicated(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0, 0, 0)
+        (a1, a2), *b, (c1, c2) = array((0, 1), (2, 3), (4, 5), (5, 6))
+        return a1 + c1
+    
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=5)
+
+
+def test_subscript_assign_unpacking_range(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0, 0, 0)
+        a, *b, xs[1] = range(10)
+        return xs[1]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=9)
+
+
+def test_subscript_assign_unpacking_array(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(0, 0, 0)
+        a, *b, xs[1] = array(1, 2, 3, 4)
+        return xs[1]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=4)
