@@ -51,6 +51,10 @@ build-docs:
 build-wheels:
     uvx --from build pyproject-build --installer uv
 
-
+# Run benchmarks using pytest-benchmark.
 bench *PYTEST_FLAGS:
     uv run pytest --benchmark-only {{PYTEST_FLAGS}}
+
+# Run benchmarks and save JSON data to path/name.json.
+bench_save path name:
+    uv run pytest --benchmark-only --benchmark-storage={{path}} --benchmark-save={{name}}
