@@ -289,6 +289,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                     from guppylang.compiler.stmt_compiler import StmtCompiler
 
                     assert subscript.setitem_call is not None
+                    # Need to assign __setitem__ value before compiling call.
                     StmtCompiler(self.globals)._assign(
                         subscript.setitem_call.value_var, self.dfg[arg.place]
                     )

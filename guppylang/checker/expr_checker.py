@@ -925,13 +925,15 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
         case SubscriptAccess(parent=parent, item=item, ty=ty):
             from guppylang.checker.stmt_checker import StmtChecker
 
-            # Check a call to the `__setitem__` instance function
             rhs = with_type(ty, with_loc(node, InoutReturnSentinel(var=place)))
+            
             # Assign to a temporary to fulfill __setitem__ contract.
             tmp_rhs = StmtChecker(ctx)._check_assign(
                 make_var(next(tmp_vars), rhs), rhs, ty
             )
             assert isinstance(tmp_rhs, PlaceNode) and isinstance(tmp_rhs.place, Variable)
+
+            # Check a call to the `__setitem__` instance function
             exp_sig = FunctionType(
                 [
                     FuncInput(parent.ty, InputFlags.Inout),
