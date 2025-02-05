@@ -203,8 +203,7 @@ class StmtChecker(AstVisitor[BBStatement]):
         item = Variable(next(tmp_vars), item_ty, item_expr)
 
         # Create and store a temp variable to ensure RHS has a wire during compilation.
-        tmp_rhs = self._check_assign(make_var(next(tmp_vars), rhs), rhs, rhs_ty)
-        assert isinstance(tmp_rhs, PlaceNode) and isinstance(tmp_rhs.place, Variable)
+        rhs_var = Variable(next(tmp_vars), rhs_ty, rhs)
 
         parent = value.place
 
@@ -216,10 +215,10 @@ class StmtChecker(AstVisitor[BBStatement]):
             ],
             NoneType(),
         )
-        setitem_args = [
+        setitem_args: list[ast.expr] = [
             with_type(parent.ty, with_loc(lhs, PlaceNode(parent))),
             with_type(item.ty, with_loc(lhs, PlaceNode(item))),
-            tmp_rhs,
+            with_type(rhs_ty, with_loc(lhs, PlaceNode(rhs_var))),
         ]
         setitem_call, _ = self._synth_instance_fun(
             setitem_args[0],
@@ -235,7 +234,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             item,
             rhs_ty,
             item_expr,
-            setitem_call=SetitemCall(setitem_call, tmp_rhs),
+            setitem_call=SetitemCall(setitem_call, rhs_var),
         )
         return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 

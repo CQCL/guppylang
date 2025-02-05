@@ -40,7 +40,6 @@ from guppylang.nodes import (
     GenericParamValue,
     GlobalCall,
     GlobalName,
-    InoutReturnSentinel,
     LocalCall,
     PanicExpr,
     PartialApply,
@@ -228,10 +227,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def visit_Name(self, node: ast.Name) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
 
-    def visit_InoutReturnSentinel(self, node: InoutReturnSentinel) -> Wire:
-        assert not isinstance(node.var, str)
-        return self.dfg[node.var]
-
     def visit_Tuple(self, node: ast.Tuple) -> Wire:
         elems = [self.visit(e) for e in node.elts]
         types = [get_type(e) for e in node.elts]
@@ -286,13 +281,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 # `arg.place.parent` occurs as an arg of this call, so will also
                 # be recursively reassigned.
                 if subscript := contains_subscript(arg.place):
-                    from guppylang.compiler.stmt_compiler import StmtCompiler
-
                     assert subscript.setitem_call is not None
                     # Need to assign __setitem__ value before compiling call.
-                    StmtCompiler(self.globals)._assign(
-                        subscript.setitem_call.value_var, self.dfg[arg.place]
-                    )
+                    # Note that the assignment to `self.dfg[arg.place]` also updated
+                    # `self.dfg[subscript]` so that it now contains the value we want
+                    # to write back into the subscript.
+                    self.dfg[subscript.setitem_call.value_var] = self.dfg[subscript]
                     self.visit(subscript.setitem_call.call)
         assert next(inout_ports, None) is None, "Too many inout return ports"
 

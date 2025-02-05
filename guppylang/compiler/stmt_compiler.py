@@ -80,7 +80,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
                 self.dfg[subscript.item] = self.expr_compiler.compile(
                     subscript.item_expr, self.dfg
                 )
-            self._assign(subscript.setitem_call.value_var, port)
+            self.dfg[subscript.setitem_call.value_var] = port
             self.expr_compiler.visit(subscript.setitem_call.call)
         else:
             self.dfg[lhs.place] = port
