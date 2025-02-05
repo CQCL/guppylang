@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import hugr.build.function as hf
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr.build.dfg import DfBase
+from hugr import std
 from hugr.std.collections.array import EXTENSION
 
 from guppylang.compiler.core import CustomCompilerMethod
@@ -20,6 +22,9 @@ from guppylang.std._internal.compiler.prelude import (
     build_unwrap_right,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
+
+if TYPE_CHECKING:
+    from hugr.build.dfg import DfBase
 
 # ------------------------------------------------------
 # --------------- std.array operations -----------------
@@ -192,18 +197,39 @@ class ArrayClassicalGetItem(CustomCompilerMethod):
         self,
         builder: DfBase[ops.DfParentOp],
         name: str,
-        elem_ty: ht.Type,
-        length: ht.TypeArg,
     ) -> None:
         """Constructs function to call `array.__getitem__` for classical arrays."""
-        parent_op = ops.FuncDefn(name, [array_type(elem_ty, length), ht.ExtType])
+        # Array element type parameter
+        elem_ty_param = ht.TypeTypeParam(ht.TypeBound.Copyable)
+        # Array length parameter
+        length_param = ht.BoundedNatParam()
+        func_ty = ht.PolyFuncType(
+            params=[elem_ty_param, length_param],
+            body=ht.FunctionType(
+                input=[
+                    array_type(
+                        ht.Variable(0, ht.TypeBound.Copyable),
+                        ht.VariableArg(1, length_param),
+                    ),
+                    std.int.int_t(6)
+                ],
+                output=[
+                    ht.Variable(0, ht.TypeBound.Copyable),
+                ],
+            ),
+        )
+        parent_op = ops.FuncDefn(
+            name, func_ty.body.input, func_ty.params, func_ty.body.output
+        )
         func = hf.Function.new_nested(parent_op, builder.hugr, builder.parent_node)
-        func.declare_outputs([elem_ty])
 
-        # See https://github.com/CQCL/guppylang/issues/629
-        elem_opt_ty = ht.Option(elem_ty)
+        elem_opt_ty = ht.Option(ht.Variable(0, ht.TypeBound.Copyable))
         idx = func.add_op(convert_itousize(), func.inputs()[1])
-        result = func.add_op(array_get(elem_opt_ty, length), func.inputs()[0], idx)
+        result = func.add_op(
+            array_get(elem_opt_ty, ht.VariableArg(1, length_param)),
+            func.inputs()[0],
+            idx,
+        )
         elem_opt = build_unwrap(func, result, "Array index out of bounds")
         elem = build_unwrap(func, elem_opt, "array.__getitem__: Internal error")
         func.set_outputs(elem)
@@ -211,11 +237,27 @@ class ArrayClassicalGetItem(CustomCompilerMethod):
         self.func_def = func
 
     def call(
-        self, builder: DfBase[ops.DfParentOp], array: Wire, idx: Wire
+        self,
+        builder: DfBase[ops.DfParentOp],
+        array: Wire,
+        idx: Wire,
+        elem_ty: ht.Type,
+        length: ht.TypeArg,
     ) -> CallReturnWires:
-        func_call = builder.call(self.func_def, array, idx)
+        concrete_func_ty = ht.FunctionType(
+            input=[array_type(ht.Option(elem_ty), length), std.int.int_t(6)],
+            output=[elem_ty],
+        )
+        type_args = [ht.TypeTypeArg(elem_ty), length]
+        func_call = builder.call(
+            self.func_def,
+            array,
+            idx,
+            instantiation=concrete_func_ty,
+            type_args=type_args,
+        )
         return CallReturnWires(
-            regular_returns=[list(func_call.outputs())[0]], inout_returns=[array]
+            regular_returns=list(func_call.outputs()), inout_returns=[array]
         )
 
 
@@ -228,9 +270,11 @@ class ArrayGetitemCompiler(ArrayCompiler):
 
         if func_name not in self.globals.compiler_methods:
             self.globals.compiler_methods[func_name] = ArrayClassicalGetItem(
-                self.builder, func_name, self.elem_ty, self.length
+                self.builder, func_name
             )
-        return self.globals.compiler_methods[func_name].call(self.builder, array, idx)
+        return self.globals.compiler_methods[func_name].call(
+            self.builder, array, idx, self.elem_ty, self.length
+        )
 
     def build_linear_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Lowers a call to `array.__getitem__` for linear arrays."""

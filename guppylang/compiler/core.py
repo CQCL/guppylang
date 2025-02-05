@@ -22,7 +22,7 @@ class CustomCompilerMethod(ABC):
     """
 
     @abstractmethod
-    def call(self) -> CallReturnWires: ...
+    def call(self, *args) -> CallReturnWires: ...
 
 
 class CompiledContext:

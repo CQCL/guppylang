@@ -1,23 +1,26 @@
-from hugr import ops
-from hugr.std.int import IntVal
-
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import array, owned, mem_swap
-from tests.util import compile_guppy
+from guppylang.std.builtins import array
 
-from guppylang.std.quantum import qubit, discard
-import guppylang.std.quantum as quantum
 
-def test_inlining1(validate):
+def test_inlining(validate, run_int_fn):
     module = GuppyModule("test")
 
 
     @guppy(module)
-    def main(xs: array[int, 42], ys: array[int, 22]) -> None:
+    def main() -> int:
+        xs = array(1, 2, 4)
+        ys = array(8, 16)
         i = xs[0]
-        j = ys[1]
+        j = xs[1]
+        k = ys[0]
+        return i + j + k
 
-    print(module.compile_hugr().render_dot())
-    assert False
-    validate(module.compile())
+
+    # print(module.compile_hugr().render_dot())
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=11)
+
+
