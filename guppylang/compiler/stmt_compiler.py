@@ -9,7 +9,7 @@ from hugr.build.dfg import DfBase
 from guppylang.ast_util import AstVisitor, get_type
 from guppylang.checker.core import Variable
 from guppylang.compiler.core import (
-    CompiledGlobals,
+    CompiledContext,
     CompilerBase,
     DFContainer,
     return_var,
@@ -40,7 +40,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
     dfg: DFContainer
 
-    def __init__(self, globals: CompiledGlobals):
+    def __init__(self, globals: CompiledContext):
         super().__init__(globals)
         self.expr_compiler = ExprCompiler(globals)
 

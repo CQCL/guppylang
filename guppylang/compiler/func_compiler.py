@@ -5,7 +5,7 @@ from hugr import tys as ht
 from hugr.build.function import Function
 
 from guppylang.compiler.cfg_compiler import compile_cfg
-from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.compiler.core import CompiledContext, DFContainer
 from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.nodes import CheckedNestedFunctionDef
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 def compile_global_func_def(
     func: "CheckedFunctionDef",
     builder: Function,
-    globals: CompiledGlobals,
+    globals: CompiledContext,
 ) -> None:
     """Compiles a top-level function definition to Hugr."""
     cfg = compile_cfg(func.cfg, builder, builder.inputs(), globals)
@@ -26,7 +26,7 @@ def compile_global_func_def(
 def compile_local_func_def(
     func: CheckedNestedFunctionDef,
     dfg: DFContainer,
-    globals: CompiledGlobals,
+    globals: CompiledContext,
 ) -> Wire:
     """Compiles a local (nested) function definition to Hugr and loads it into a value.
 

@@ -12,7 +12,7 @@ from guppylang.ast_util import AstNode, get_type, has_empty_body, with_loc, with
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
-from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.compiler.core import CompiledContext, DFContainer
 from guppylang.definition.common import ParsableDef
 from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.diagnostic import Error, Help
@@ -130,7 +130,7 @@ class RawCustomFunctionDef(ParsableDef):
         args: list[Wire],
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompiledGlobals,
+        globals: CompiledContext,
         node: AstNode,
         function_ty: ht.FunctionType,
     ) -> Sequence[Wire]:
@@ -226,7 +226,7 @@ class CustomFunctionDef(CompiledCallableDef):
         self,
         type_args: Inst,
         dfg: "DFContainer",
-        globals: CompiledGlobals,
+        globals: CompiledContext,
         node: AstNode,
     ) -> Wire:
         """Loads the custom function as a value into a local dataflow graph.
@@ -270,7 +270,7 @@ class CustomFunctionDef(CompiledCallableDef):
         args: list[Wire],
         type_args: Inst,
         dfg: "DFContainer",
-        globals: CompiledGlobals,
+        globals: CompiledContext,
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
@@ -332,7 +332,7 @@ class CustomInoutCallCompiler(ABC):
 
     dfg: DFContainer
     type_args: Inst
-    globals: CompiledGlobals
+    globals: CompiledContext
     node: AstNode
     ty: ht.FunctionType
     func: CustomFunctionDef | None
@@ -341,7 +341,7 @@ class CustomInoutCallCompiler(ABC):
         self,
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompiledGlobals,
+        globals: CompiledContext,
         node: AstNode,
         hugr_ty: ht.FunctionType,
         func: CustomFunctionDef | None,

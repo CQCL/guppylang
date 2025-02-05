@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import cast
 
@@ -8,14 +8,24 @@ from hugr.build.dfg import DP, DefinitionBuilder, DfBase
 from guppylang.checker.core import FieldAccess, Globals, Place, PlaceId, Variable
 from guppylang.definition.common import CheckedDef, CompilableDef, CompiledDef, DefId
 from guppylang.definition.ty import TypeDef
-from guppylang.definition.value import CompiledCallableDef
+from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.error import InternalGuppyError
 from guppylang.tys.ty import StructType, Type
 
 CompiledLocals = dict[PlaceId, Wire]
 
 
-class CompiledGlobals:
+class CustomCompilerMethod(ABC):
+    """
+    Abstract base class for functions in custom compilers that should only be
+    constructed once to avoid inlining.
+    """
+
+    @abstractmethod
+    def call(self) -> CallReturnWires: ...
+
+
+class CompiledContext:
     """Compilation context containing all available definitions.
 
     Maintains a `worklist` of definitions which have been used by other compiled code
@@ -27,6 +37,7 @@ class CompiledGlobals:
     checked: dict[DefId, CheckedDef]
     compiled: dict[DefId, CompiledDef]
     worklist: set[DefId]
+    compiler_methods: dict[str, CustomCompilerMethod]
 
     checked_globals: Globals
 
@@ -40,6 +51,7 @@ class CompiledGlobals:
         self.checked = checked
         self.worklist = set()
         self.compiled = {}
+        self.compiler_methods = {}
         self.checked_globals = checked_globals
 
     def build_compiled_def(self, def_id: DefId) -> CompiledDef:
@@ -155,9 +167,9 @@ class DFContainer:
 class CompilerBase(ABC):
     """Base class for the Guppy compiler."""
 
-    globals: CompiledGlobals
+    globals: CompiledContext
 
-    def __init__(self, globals: CompiledGlobals) -> None:
+    def __init__(self, globals: CompiledContext) -> None:
         self.globals = globals
 
 

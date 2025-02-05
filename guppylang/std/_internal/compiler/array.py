@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import hugr.build.function as hf
 from hugr import Wire, ops
 from hugr import tys as ht
+from hugr.build.dfg import DfBase
 from hugr.std.collections.array import EXTENSION
 
+from guppylang.compiler.core import CustomCompilerMethod
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
@@ -180,18 +183,54 @@ class NewArrayCompiler(ArrayCompiler):
             return [self.build_classical_array(args)]
 
 
+class ArrayClassicalGetItem(CustomCompilerMethod):
+    """Compiler method for the classical `array.__getitem__` function."""
+
+    func_def: hf.Function
+
+    def __init__(
+        self,
+        builder: DfBase[ops.DfParentOp],
+        name: str,
+        elem_ty: ht.Type,
+        length: ht.TypeArg,
+    ) -> None:
+        """Constructs function to call `array.__getitem__` for classical arrays."""
+        parent_op = ops.FuncDefn(name, [array_type(elem_ty, length), ht.ExtType])
+        func = hf.Function.new_nested(parent_op, builder.hugr, builder.parent_node)
+        func.declare_outputs([elem_ty])
+
+        # See https://github.com/CQCL/guppylang/issues/629
+        elem_opt_ty = ht.Option(elem_ty)
+        idx = func.add_op(convert_itousize(), func.inputs()[1])
+        result = func.add_op(array_get(elem_opt_ty, length), func.inputs()[0], idx)
+        elem_opt = build_unwrap(func, result, "Array index out of bounds")
+        elem = build_unwrap(func, elem_opt, "array.__getitem__: Internal error")
+        func.set_outputs(elem)
+
+        self.func_def = func
+
+    def call(
+        self, builder: DfBase[ops.DfParentOp], array: Wire, idx: Wire
+    ) -> CallReturnWires:
+        func_call = builder.call(self.func_def, array, idx)
+        return CallReturnWires(
+            regular_returns=[list(func_call.outputs())[0]], inout_returns=[array]
+        )
+
+
 class ArrayGetitemCompiler(ArrayCompiler):
     """Compiler for the `array.__getitem__` function."""
 
     def build_classical_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Lowers a call to `array.__getitem__` for classical arrays."""
-        # See https://github.com/CQCL/guppylang/issues/629
-        elem_opt_ty = ht.Option(self.elem_ty)
-        idx = self.builder.add_op(convert_itousize(), idx)
-        result = self.builder.add_op(array_get(elem_opt_ty, self.length), array, idx)
-        elem_opt = build_unwrap(self.builder, result, "Array index out of bounds")
-        elem = build_unwrap(self.builder, elem_opt, "array.__getitem__: Internal error")
-        return CallReturnWires(regular_returns=[elem], inout_returns=[array])
+        func_name = "classical_array.__getitem__"
+
+        if func_name not in self.globals.compiler_methods:
+            self.globals.compiler_methods[func_name] = ArrayClassicalGetItem(
+                self.builder, func_name, self.elem_ty, self.length
+            )
+        return self.globals.compiler_methods[func_name].call(self.builder, array, idx)
 
     def build_linear_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Lowers a call to `array.__getitem__` for linear arrays."""
