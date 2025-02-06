@@ -10,7 +10,7 @@ from hugr.hugr.node_port import ToNode
 from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
 from guppylang.checker.core import Place, Variable
 from guppylang.compiler.core import (
-    CompiledContext,
+    CompilerContext,
     DFContainer,
     is_return_var,
     return_var,
@@ -24,7 +24,7 @@ def compile_cfg(
     cfg: CheckedCFG[Place],
     container: DfBase[DP],
     inputs: Sequence[Wire],
-    globals: CompiledContext,
+    globals: CompilerContext,
 ) -> hc.Cfg:
     """Compiles a CFG to Hugr."""
     # Patch the CFG with dummy return variables
@@ -66,7 +66,7 @@ def compile_bb(
     bb: CheckedBB[Place],
     builder: hc.Cfg,
     is_entry: bool,
-    globals: CompiledContext,
+    globals: CompilerContext,
 ) -> ToNode:
     """Compiles a single basic block to Hugr.
 

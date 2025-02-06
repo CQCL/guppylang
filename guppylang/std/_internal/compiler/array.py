@@ -235,6 +235,7 @@ class ArrayClassicalGetItem(
         elem = build_unwrap(func, elem_opt, "array.__getitem__: Internal error")
         func.set_outputs(elem)
 
+        print(func.parent_node)
         self.func_def = func
 
     def call(

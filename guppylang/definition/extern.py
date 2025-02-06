@@ -6,7 +6,7 @@ from hugr.build.dfg import DefinitionBuilder, OpVar
 
 from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals
-from guppylang.compiler.core import CompiledContext, DFContainer
+from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.value import CompiledValueDef, ValueDef
 from guppylang.span import SourceMap
@@ -74,6 +74,6 @@ class CompiledExternDef(ExternDef, CompiledValueDef):
 
     const_node: Node
 
-    def load(self, dfg: DFContainer, globals: CompiledContext, node: AstNode) -> Wire:
+    def load(self, dfg: DFContainer, globals: CompilerContext, node: AstNode) -> Wire:
         """Loads the extern value into a local Hugr dataflow graph."""
         return dfg.builder.load(self.const_node)

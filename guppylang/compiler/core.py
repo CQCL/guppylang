@@ -37,7 +37,7 @@ class CustomCompilerFunction(ABC):
     def call(self, *args: Any) -> CallReturnWires: ...
 
 
-class CompiledContext:
+class CompilerContext:
     """Compilation context containing all available definitions.
 
     Maintains a `worklist` of definitions which have been used by other compiled code
@@ -179,9 +179,9 @@ class DFContainer:
 class CompilerBase(ABC):
     """Base class for the Guppy compiler."""
 
-    globals: CompiledContext
+    globals: CompilerContext
 
-    def __init__(self, globals: CompiledContext) -> None:
+    def __init__(self, globals: CompilerContext) -> None:
         self.globals = globals
 
 

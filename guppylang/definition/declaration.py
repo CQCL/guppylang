@@ -10,7 +10,7 @@ from guppylang.ast_util import AstNode, has_empty_body, with_loc, with_type
 from guppylang.checker.core import Context, Globals, PyScope
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
-from guppylang.compiler.core import CompiledContext, DFContainer
+from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.function import (
     PyFunc,
@@ -121,7 +121,7 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         self,
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompiledContext,
+        globals: CompilerContext,
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
@@ -133,7 +133,7 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         args: list[Wire],
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompiledContext,
+        globals: CompilerContext,
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""

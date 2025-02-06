@@ -10,7 +10,7 @@ from guppylang.ast_util import AstVisitor, get_type
 from guppylang.checker.core import SubscriptAccess, Variable
 from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import (
-    CompiledContext,
+    CompilerContext,
     CompilerBase,
     DFContainer,
     return_var,
@@ -41,7 +41,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
     dfg: DFContainer
 
-    def __init__(self, globals: CompiledContext):
+    def __init__(self, globals: CompilerContext):
         super().__init__(globals)
         self.expr_compiler = ExprCompiler(globals)
 
