@@ -428,8 +428,6 @@ def test_subscript_assign_add(validate, run_int_fn):
         for i in range(6):
             foo(xs, i)
         return xs[0]
-    
-    print(module.compile_hugr().render_dot())
 
     compiled = module.compile()
     validate(compiled)
