@@ -68,7 +68,7 @@ def test_linear(validate):
         discard_array(xs)
 
     # print(module.compile_hugr().render_dot())
-
+    
     compiled = module.compile()
     validate(compiled)
 
@@ -90,8 +90,7 @@ def test_multiple_functions(validate, run_int_fn):
         xs = array(1, 2)
         return first(xs) + second(xs)
 
-    print(module.compile_hugr().render_dot())
-    assert False
+    # print(module.compile_hugr().render_dot())
 
     compiled = module.compile()
     validate(compiled)
