@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import cast
+from typing import Any, ParamSpec, Protocol, cast
 
 from hugr import Wire, ops
 from hugr.build.dfg import DP, DefinitionBuilder, DfBase
@@ -15,14 +15,26 @@ from guppylang.tys.ty import StructType, Type
 CompiledLocals = dict[PlaceId, Wire]
 
 
-class CustomCompilerMethod(ABC):
+P = ParamSpec("P")
+
+
+class FunctionCallProtocol(Protocol[P]):
+    """
+    Protocol allowing custom compiler functions to be called with different arguments
+    depending on the function.
+    """
+
+    def call(self, *args: P.args) -> CallReturnWires: ...
+
+
+class CustomCompilerFunction(ABC):
     """
     Abstract base class for functions in custom compilers that should only be
     constructed once to avoid inlining.
     """
 
     @abstractmethod
-    def call(self, *args) -> CallReturnWires: ...
+    def call(self, *args: Any) -> CallReturnWires: ...
 
 
 class CompiledContext:
@@ -37,7 +49,7 @@ class CompiledContext:
     checked: dict[DefId, CheckedDef]
     compiled: dict[DefId, CompiledDef]
     worklist: set[DefId]
-    compiler_methods: dict[str, CustomCompilerMethod]
+    compiler_functions: dict[str, CustomCompilerFunction]
 
     checked_globals: Globals
 
@@ -51,7 +63,7 @@ class CompiledContext:
         self.checked = checked
         self.worklist = set()
         self.compiled = {}
-        self.compiler_methods = {}
+        self.compiler_functions = {}
         self.checked_globals = checked_globals
 
     def build_compiled_def(self, def_id: DefId) -> CompiledDef:
