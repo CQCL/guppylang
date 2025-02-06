@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
+import itertools
+from abc import ABC
 from dataclasses import dataclass, field
-from typing import Any, ParamSpec, Protocol, cast
+from typing import cast
 
 from hugr import Wire, ops
 from hugr.build.dfg import DP, DefinitionBuilder, DfBase
@@ -8,33 +9,26 @@ from hugr.build.dfg import DP, DefinitionBuilder, DfBase
 from guppylang.checker.core import FieldAccess, Globals, Place, PlaceId, Variable
 from guppylang.definition.common import CheckedDef, CompilableDef, CompiledDef, DefId
 from guppylang.definition.ty import TypeDef
-from guppylang.definition.value import CallReturnWires, CompiledCallableDef
+from guppylang.definition.value import CompiledCallableDef
 from guppylang.error import InternalGuppyError
 from guppylang.tys.ty import StructType, Type
 
 CompiledLocals = dict[PlaceId, Wire]
 
 
-P = ParamSpec("P")
+_fresh_ids = itertools.count()
 
 
-class FunctionCallProtocol(Protocol[P]):
-    """
-    Protocol allowing custom compiler functions to be called with different arguments
-    depending on the function.
-    """
+@dataclass(frozen=True)
+class GlobalConstId:
+    id: int
 
-    def call(self, *args: P.args) -> CallReturnWires: ...
+    @staticmethod
+    def fresh() -> "GlobalConstId":
+        return GlobalConstId(next(_fresh_ids))
 
-
-class CustomCompilerFunction(ABC):
-    """
-    Abstract base class for functions in custom compilers that should only be
-    constructed once to avoid inlining.
-    """
-
-    @abstractmethod
-    def call(self, *args: Any) -> CallReturnWires: ...
+    def unique_name(self, base: str) -> str:
+        return f"{self.id}.{base}"
 
 
 class CompilerContext:
@@ -49,7 +43,8 @@ class CompilerContext:
     checked: dict[DefId, CheckedDef]
     compiled: dict[DefId, CompiledDef]
     worklist: set[DefId]
-    compiler_functions: dict[str, CustomCompilerFunction]
+
+    global_consts: dict[GlobalConstId, Wire]
 
     checked_globals: Globals
 
@@ -63,7 +58,7 @@ class CompilerContext:
         self.checked = checked
         self.worklist = set()
         self.compiled = {}
-        self.compiler_functions = {}
+        self.global_consts = {}
         self.checked_globals = checked_globals
 
     def build_compiled_def(self, def_id: DefId) -> CompiledDef:

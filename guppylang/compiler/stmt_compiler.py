@@ -10,8 +10,8 @@ from guppylang.ast_util import AstVisitor, get_type
 from guppylang.checker.core import SubscriptAccess, Variable
 from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import (
-    CompilerContext,
     CompilerBase,
+    CompilerContext,
     DFContainer,
     return_var,
 )

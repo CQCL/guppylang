@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from typing import Final
+
 import hugr.build.function as hf
-from hugr import Wire, ops
+from hugr import Node, Wire, ops
 from hugr import tys as ht
-from hugr.build.dfg import DfBase
 from hugr.std.collections.array import EXTENSION
 
-from guppylang.compiler.core import CustomCompilerFunction, FunctionCallProtocol
+from guppylang.compiler.core import (
+    GlobalConstId,
+)
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
@@ -183,21 +186,13 @@ class NewArrayCompiler(ArrayCompiler):
             return [self.build_classical_array(args)]
 
 
-class ArrayClassicalGetItem(
-    CustomCompilerFunction,
-    FunctionCallProtocol[
-        tuple[DfBase[ops.DfParentOp], ht.Type, ht.TypeArg, Wire, Wire]
-    ],
-):
-    """Compiler function for the classical `array.__getitem__` function."""
+ARRAY_GETITEM_CLASSICAL: Final[GlobalConstId] = GlobalConstId.fresh()
 
-    func_def: hf.Function
 
-    def __init__(
-        self,
-        builder: DfBase[ops.DfParentOp],
-        name: str,
-    ) -> None:
+class ArrayGetitemCompiler(ArrayCompiler):
+    """Compiler for the `array.__getitem__` function."""
+
+    def _construct_classical_getitem(self, name: str) -> Wire:
         """Constructs function to call `array.__getitem__` for classical arrays."""
         # Array element type parameter
         elem_ty_param = ht.TypeTypeParam(ht.TypeBound.Copyable)
@@ -221,7 +216,7 @@ class ArrayClassicalGetItem(
         parent_op = ops.FuncDefn(
             name, func_ty.body.input, func_ty.params, func_ty.body.output
         )
-        func = hf.Function.new_nested(parent_op, builder.hugr)
+        func = hf.Function.new_nested(parent_op, self.builder.hugr)
 
         # See https://github.com/CQCL/guppylang/issues/629
         elem_opt_ty = ht.Option(ht.Variable(0, ht.TypeBound.Copyable))
@@ -235,24 +230,22 @@ class ArrayClassicalGetItem(
         elem = build_unwrap(func, elem_opt, "array.__getitem__: Internal error")
         func.set_outputs(elem)
 
-        print(func.parent_node)
-        self.func_def = func
+        return func.parent_node
 
-    def call(
+    def _call_classical_getitem(
         self,
-        builder: DfBase[ops.DfParentOp],
-        elem_ty: ht.Type,
-        length: ht.TypeArg,
+        func: Wire,
         array: Wire,
         idx: Wire,
     ) -> CallReturnWires:
         concrete_func_ty = ht.FunctionType(
-            input=[array_type(ht.Option(elem_ty), length), INT_T],
-            output=[elem_ty],
+            input=[array_type(ht.Option(self.elem_ty), self.length), INT_T],
+            output=[self.elem_ty],
         )
-        type_args = [ht.TypeTypeArg(elem_ty), length]
-        func_call = builder.call(
-            self.func_def,
+        type_args = [ht.TypeTypeArg(self.elem_ty), self.length]
+        assert isinstance(func, Node)
+        func_call = self.builder.call(
+            func,
             array,
             idx,
             instantiation=concrete_func_ty,
@@ -262,24 +255,18 @@ class ArrayClassicalGetItem(
             regular_returns=list(func_call.outputs()), inout_returns=[array]
         )
 
-
-class ArrayGetitemCompiler(ArrayCompiler):
-    """Compiler for the `array.__getitem__` function."""
-
-    def build_classical_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
+    def compile_classical_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Lowers a call to `array.__getitem__` for classical arrays."""
-        func_name = "classical_array.__getitem__"
-
-        if func_name not in self.globals.compiler_functions:
-            self.globals.compiler_functions[func_name] = ArrayClassicalGetItem(
-                self.builder, func_name
+        if ARRAY_GETITEM_CLASSICAL not in self.globals.global_consts:
+            self.globals.global_consts[ARRAY_GETITEM_CLASSICAL] = (
+                self._construct_classical_getitem(
+                    name=ARRAY_GETITEM_CLASSICAL.unique_name("array.__getitem__")
+                )
             )
-        return self.globals.compiler_functions[func_name].call(
-            self.builder,
-            self.elem_ty,
-            self.length,
-            array,
-            idx,
+        return self._call_classical_getitem(
+            func=self.globals.global_consts[ARRAY_GETITEM_CLASSICAL],
+            array=array,
+            idx=idx,
         )
 
     def build_linear_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
@@ -306,7 +293,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
         if self.elem_ty.type_bound() == ht.TypeBound.Any:
             return self.build_linear_getitem(array, idx)
         else:
-            return self.build_classical_getitem(array, idx)
+            return self.compile_classical_getitem(array, idx)
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
