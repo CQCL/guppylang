@@ -33,6 +33,6 @@ inkwell = "0.5.0"
 [patch.crates-io]
 
 # Uncomment these to test the latest dependency version during development
-#  hugr = { git = "https://github.com/CQCL/hugr", rev = "ab94518" }
-#  hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "ab94518" }
-#  hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "ab94518" }
+ hugr = { git = "https://github.com/CQCL/hugr", rev = "5e7c81e" }
+ hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "5e7c81e" }
+ hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "5e7c81e" }
