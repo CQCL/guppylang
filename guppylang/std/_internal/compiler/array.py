@@ -197,6 +197,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
 
     def _construct_getitem_ty(self, bound: ht.TypeBound) -> ht.PolyFuncType:
         """Constructs a polymorphic function type for `__getitem__`"""
+        # a(T, N), int -> T, a(T, N)
         # Array element type parameter
         elem_ty_param = ht.TypeTypeParam(bound)
         # Array length parameter
@@ -229,11 +230,14 @@ class ArrayGetitemCompiler(ArrayCompiler):
         )
         func = hf.Function.new_nested(parent_op, self.builder.hugr)
 
+        elem_ty = ht.Variable(0, ht.TypeBound.Copyable)
+        length = ht.VariableArg(1, ht.BoundedNatParam())
+
         # See https://github.com/CQCL/guppylang/issues/629
-        elem_opt_ty = ht.Option(ht.Variable(0, ht.TypeBound.Copyable))
+        elem_opt_ty = ht.Option(elem_ty)
         idx = func.add_op(convert_itousize(), func.inputs()[1])
         result = func.add_op(
-            array_get(elem_opt_ty, ht.VariableArg(1, ht.BoundedNatParam())),
+            array_get(elem_opt_ty, length),
             func.inputs()[0],
             idx,
         )
@@ -252,18 +256,19 @@ class ArrayGetitemCompiler(ArrayCompiler):
         )
         func = hf.Function.new_nested(parent_op, self.builder.hugr)
 
-        elem_opt_ty = ht.Option(ht.Variable(0, ht.TypeBound.Any))
+        elem_ty = ht.Variable(0, ht.TypeBound.Any)
+        length = ht.VariableArg(1, ht.BoundedNatParam())
+
+        elem_opt_ty = ht.Option(elem_ty)
         none = func.add_op(ops.Tag(0, elem_opt_ty))
         idx = func.add_op(convert_itousize(), func.inputs()[1])
         result = func.add_op(
-            array_set(elem_opt_ty, ht.VariableArg(1, ht.BoundedNatParam())),
+            array_set(elem_opt_ty, length),
             func.inputs()[0],
             idx,
             none,
         )
-        elem_opt, array = build_unwrap_right(
-            func, result, "Array index out of bounds"
-        )
+        elem_opt, array = build_unwrap_right(func, result, "Array index out of bounds")
         elem = build_unwrap(
             func, elem_opt, "Linear array element has already been used"
         )
@@ -291,9 +296,10 @@ class ArrayGetitemCompiler(ArrayCompiler):
             instantiation=concrete_func_ty,
             type_args=type_args,
         )
+        outputs = list(func_call.outputs())
         return CallReturnWires(
-            regular_returns=[list(func_call.outputs())[0]],
-            inout_returns=[list(func_call.outputs())[1]],
+            regular_returns=[outputs[0]],
+            inout_returns=[outputs[1]],
         )
 
     def compile_classical_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
@@ -301,7 +307,9 @@ class ArrayGetitemCompiler(ArrayCompiler):
         if ARRAY_GETITEM_CLASSICAL not in self.globals.global_consts:
             self.globals.global_consts[ARRAY_GETITEM_CLASSICAL] = (
                 self._construct_classical_getitem(
-                    name=ARRAY_GETITEM_CLASSICAL.unique_name("array.__getitem__.classical")
+                    name=ARRAY_GETITEM_CLASSICAL.unique_name(
+                        "array.__getitem__.classical"
+                    )
                 )
             )
         return self._call_getitem(
@@ -309,7 +317,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
             array=array,
             idx=idx,
         )
-    
+
     def compile_linear_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Lowers a call to `array.__getitem__` for classical arrays."""
         if ARRAY_GETITEM_LINEAR not in self.globals.global_consts:
@@ -338,47 +346,157 @@ class ArrayGetitemCompiler(ArrayCompiler):
 class ArraySetitemCompiler(ArrayCompiler):
     """Compiler for the `array.__setitem__` function."""
 
-    def build_classical_setitem(
+    def _construct_setitem_ty(self, bound: ht.TypeBound) -> ht.PolyFuncType:
+        """Constructs a polymorphic function type for `__setitem__`"""
+        # a(T, N), int, T -> a(T, N)
+        elem_ty_param = ht.TypeTypeParam(bound)
+        length_param = ht.BoundedNatParam()
+        return ht.PolyFuncType(
+            params=[elem_ty_param, length_param],
+            body=ht.FunctionType(
+                input=[
+                    array_type(
+                        ht.Option(ht.Variable(0, bound)),
+                        ht.VariableArg(1, length_param),
+                    ),
+                    INT_T,
+                    ht.Variable(0, bound),
+                ],
+                output=[
+                    array_type(
+                        ht.Option(ht.Variable(0, bound)),
+                        ht.VariableArg(1, length_param),
+                    ),
+                ],
+            ),
+        )
+
+    def _construct_classical_setitem(self, name: str) -> Wire:
+        """Constructs a generic function for `__setitem__` for classical arrays."""
+        func_ty = self._construct_setitem_ty(ht.TypeBound.Copyable)
+        parent_op = ops.FuncDefn(
+            name, func_ty.body.input, func_ty.params, func_ty.body.output
+        )
+        func = hf.Function.new_nested(parent_op, self.builder.hugr)
+
+        elem_ty = ht.Variable(0, ht.TypeBound.Copyable)
+        length = ht.VariableArg(1, ht.BoundedNatParam())
+
+        elem_opt_ty = ht.Option(elem_ty)
+        idx = func.add_op(convert_itousize(), func.inputs()[1])
+        elem_opt = func.add_op(ops.Some(elem_ty), func.inputs()[2])
+        result = func.add_op(
+            array_set(elem_opt_ty, length),
+            func.inputs()[0],
+            idx,
+            elem_opt,
+        )
+        _, array = build_unwrap_right(func, result, "Array index out of bounds")
+
+        func.set_outputs(array)
+        return func.parent_node
+
+    def _construct_linear_setitem(self, name: str) -> Wire:
+        """Constructs function to call `array.__setitem__` for linear arrays."""
+        func_ty = self._construct_setitem_ty(ht.TypeBound.Any)
+        parent_op = ops.FuncDefn(
+            name, func_ty.body.input, func_ty.params, func_ty.body.output
+        )
+        func = hf.Function.new_nested(parent_op, self.builder.hugr)
+
+        elem_ty = ht.Variable(0, ht.TypeBound.Any)
+        length = ht.VariableArg(1, ht.BoundedNatParam())
+
+        elem_opt_ty = ht.Option(elem_ty)
+        elem = func.add_op(ops.Some(elem_ty), func.inputs()[2])
+        idx = func.add_op(convert_itousize(), func.inputs()[1])
+        result = func.add_op(
+            array_set(elem_opt_ty, length),
+            func.inputs()[0],
+            idx,
+            elem,
+        )
+        old_elem_opt, array = build_unwrap_right(
+            func, result, "Array index out of bounds"
+        )
+        build_unwrap_left(func, old_elem_opt, "Linear array element has not been used")
+
+        func.set_outputs(array)
+        return func.parent_node
+
+    def _call_setitem(
+        self,
+        func: Wire,
+        array: Wire,
+        idx: Wire,
+        elem: Wire,
+    ) -> CallReturnWires:
+        """Inserts a call to `array.__setitem__`."""
+        concrete_func_ty = ht.FunctionType(
+            input=[
+                array_type(ht.Option(self.elem_ty), self.length),
+                INT_T,
+                self.elem_ty,
+            ],
+            output=[array_type(ht.Option(self.elem_ty), self.length)],
+        )
+        type_args = [ht.TypeTypeArg(self.elem_ty), self.length]
+        assert isinstance(func, Node)
+        func_call = self.builder.call(
+            func,
+            array,
+            idx,
+            elem,
+            instantiation=concrete_func_ty,
+            type_args=type_args,
+        )
+        return CallReturnWires(
+            regular_returns=[],
+            inout_returns=list(func_call.outputs()),
+        )
+
+    def compile_classical_setitem(
         self, array: Wire, idx: Wire, elem: Wire
     ) -> CallReturnWires:
         """Lowers a call to `array.__setitem__` for classical arrays."""
-        # See https://github.com/CQCL/guppylang/issues/629
-        elem_opt_ty = ht.Option(self.elem_ty)
-        idx = self.builder.add_op(convert_itousize(), idx)
-        elem_opt = self.builder.add_op(ops.Some(self.elem_ty), elem)
-        result = self.builder.add_op(
-            array_set(elem_opt_ty, self.length), array, idx, elem_opt
+        if ARRAY_SETITEM_CLASSICAL not in self.globals.global_consts:
+            self.globals.global_consts[ARRAY_SETITEM_CLASSICAL] = (
+                self._construct_classical_setitem(
+                    name=ARRAY_SETITEM_CLASSICAL.unique_name(
+                        "array.__setitem__.classical"
+                    )
+                )
+            )
+        return self._call_setitem(
+            func=self.globals.global_consts[ARRAY_SETITEM_CLASSICAL],
+            array=array,
+            idx=idx,
+            elem=elem,
         )
-        # Unwrap the result, but we don't have to hold onto the returned old value
-        _, array = build_unwrap_right(self.builder, result, "Array index out of bounds")
-        return CallReturnWires(regular_returns=[], inout_returns=[array])
 
-    def build_linear_setitem(
+    def compile_linear_setitem(
         self, array: Wire, idx: Wire, elem: Wire
     ) -> CallReturnWires:
         """Lowers a call to `array.__setitem__` for linear arrays."""
-        # Embed the element into an optional
-        elem_opt_ty = ht.Option(self.elem_ty)
-        elem = self.builder.add_op(ops.Some(self.elem_ty), elem)
-        idx = self.builder.add_op(convert_itousize(), idx)
-        result = self.builder.add_op(
-            array_set(elem_opt_ty, self.length), array, idx, elem
+        if ARRAY_SETITEM_LINEAR not in self.globals.global_consts:
+            self.globals.global_consts[ARRAY_SETITEM_LINEAR] = (
+                self._construct_linear_setitem(
+                    name=ARRAY_SETITEM_LINEAR.unique_name("array.__setitem__.linear")
+                )
+            )
+        return self._call_setitem(
+            func=self.globals.global_consts[ARRAY_SETITEM_LINEAR],
+            array=array,
+            idx=idx,
+            elem=elem,
         )
-        old_elem_opt, array = build_unwrap_right(
-            self.builder, result, "Array index out of bounds"
-        )
-        # Check that the old element was `None`
-        build_unwrap_left(
-            self.builder, old_elem_opt, "Linear array element has not been used"
-        )
-        return CallReturnWires(regular_returns=[], inout_returns=[array])
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [array, idx, elem] = args
         if self.elem_ty.type_bound() == ht.TypeBound.Any:
-            return self.build_linear_setitem(array, idx, elem)
+            return self.compile_linear_setitem(array, idx, elem)
         else:
-            return self.build_classical_setitem(array, idx, elem)
+            return self.compile_classical_setitem(array, idx, elem)
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
