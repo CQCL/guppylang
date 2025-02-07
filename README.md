@@ -50,13 +50,6 @@ pip install guppylang
 ```
 
 
-## Usage
-
-See the [Getting Started][getting-started] guide and the other [examples].
-
-[getting-started]: ./examples/1-Getting-Started.md
-
-
 ## Development
 
 See [DEVELOPMENT.md](https://github.com/CQCL/guppylang/blob/main/DEVELOPMENT.md) for instructions on setting up the development environment.
