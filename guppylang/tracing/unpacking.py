@@ -8,10 +8,10 @@ from guppylang.ast_util import AstNode
 from guppylang.checker.errors.py_errors import IllegalPyExpressionError
 from guppylang.checker.expr_checker import python_value_to_guppy_type
 from guppylang.compiler.expr_compiler import python_value_to_hugr
-from guppylang.error import GuppyError, InternalGuppyError
+from guppylang.error import GuppyError
 from guppylang.std._internal.compiler.array import array_new, unpack_array
 from guppylang.std._internal.compiler.prelude import build_unwrap
-from guppylang.tracing.object import GuppyDefinition, GuppyObject
+from guppylang.tracing.object import GuppyDefinition, GuppyObject, GuppyStructObject
 from guppylang.tracing.state import get_tracing_globals, get_tracing_state
 from guppylang.tys.builtin import (
     array_type,
@@ -20,7 +20,7 @@ from guppylang.tys.builtin import (
     is_array_type,
 )
 from guppylang.tys.const import ConstValue
-from guppylang.tys.ty import NoneType, TupleType
+from guppylang.tys.ty import NoneType, StructType, TupleType
 
 P = TypeVar("P", bound=ops.DfParentOp)
 
@@ -40,6 +40,13 @@ def unpack_guppy_object(obj: GuppyObject, builder: DfBase[P]) -> Any:
                 unpack_guppy_object(GuppyObject(ty, wire), builder)
                 for ty, wire in zip(tys, unpack.outputs(), strict=False)
             )
+        case StructType() as ty:
+            unpack = builder.add_op(ops.UnpackTuple(), obj._use_wire(None))
+            field_values = [
+                unpack_guppy_object(GuppyObject(field.ty, wire), builder)
+                for field, wire in zip(ty.fields, unpack.outputs(), strict=True)
+            ]
+            return GuppyStructObject(ty, field_values)
         case ty if is_array_type(ty):
             length = get_array_length(ty)
             if isinstance(length, ConstValue):
@@ -81,6 +88,12 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
                 TupleType([obj._ty for obj in objs]),
                 builder.add_op(ops.MakeTuple(), *(obj._use_wire(None) for obj in objs)),
             )
+        case GuppyStructObject(_ty=struct_ty, _field_values=values):
+            wires = [
+                guppy_object_from_py(values[f.name], builder, node)._use_wire(None)
+                for f in struct_ty.fields
+            ]
+            return GuppyObject(struct_ty, builder.add_op(ops.MakeTuple(), *wires))
         case list(vs) if len(vs) > 0:
             objs = [guppy_object_from_py(v, builder, node) for v in vs]
             elem_ty = objs[0]._ty
@@ -124,6 +137,15 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
             wires = builder.add_op(ops.UnpackTuple(), obj._use_wire(None)).outputs()
             for v, ty, wire in zip(vs, obj._ty.element_types, wires, strict=True):
                 update_packed_value(v, GuppyObject(ty, wire), builder)
+        case GuppyStructObject(_ty=ty, _field_values=values):
+            assert obj._ty == ty
+            wires = builder.add_op(ops.UnpackTuple(), obj._use_wire(None)).outputs()
+            for (
+                field,
+                wire,
+            ) in zip(ty.fields, wires, strict=True):
+                v = values[field.name]
+                update_packed_value(v, GuppyObject(field.ty, wire), builder)
         case list(vs) if len(vs) > 0:
             assert is_array_type(obj._ty)
             elem_ty = get_element_type(obj._ty)

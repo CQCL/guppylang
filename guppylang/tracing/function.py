@@ -144,4 +144,5 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
             inout_wire = state.dfg[var]
             update_packed_value(arg, GuppyObject(inp.ty, inout_wire), state.dfg.builder)
 
-    return GuppyObject(ret_ty, ret_wire)
+    ret_obj = GuppyObject(ret_ty, ret_wire)
+    return unpack_guppy_object(ret_obj, state.dfg.builder)

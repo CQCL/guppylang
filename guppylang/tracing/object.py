@@ -2,7 +2,7 @@ import functools
 import inspect
 import itertools
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, NamedTuple, TypeAlias
@@ -23,7 +23,7 @@ from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.tracing.state import get_tracing_globals, get_tracing_state
 from guppylang.tracing.util import capture_guppy_errors, get_calling_frame, hide_trace
-from guppylang.tys.ty import FunctionType, TupleType, Type
+from guppylang.tys.ty import FunctionType, StructType, TupleType, Type
 
 # Mapping from unary dunder method to display name of the operation
 unary_table = dict(expr_checker.unary_table.values())
@@ -372,6 +372,41 @@ class GuppyObject(DunderMixin):
                 state = get_tracing_state()
                 state.unused_objs.remove(self._id)
         return self._wire
+
+
+class GuppyStructObject:
+    """The runtime representation of Guppy struct objects during tracing."""
+
+    _ty: StructType
+    _field_values: dict[str, Any]
+
+    def __init__(self, ty: StructType, field_values: Sequence[Any]) -> None:
+        field_values_dict = {
+            f.name: v for f, v in zip(ty.fields, field_values, strict=True)
+        }
+        object.__setattr__(self, "_ty", ty)
+        object.__setattr__(self, "_field_values", field_values_dict)
+
+    @hide_trace
+    def __getattr__(self, key: str) -> Any:  # type: ignore[misc]
+        # It could be an attribute
+        if key in self._field_values:
+            return self._field_values[key]
+        # Or a method
+        globals = get_tracing_globals()
+        func = globals.get_instance_func(self._ty, key)
+        if func is None:
+            err = f"Expression of type `{self._ty}` has no attribute `{key}`"
+            raise AttributeError(err)
+        return lambda *xs: GuppyDefinition(func)(self, *xs)
+
+    @hide_trace
+    def __setattr__(self, key: str, value: Any) -> None:
+        if key in self._field_values:
+            self._field_values[key] = value
+        else:
+            err = f"Expression of type `{self._ty}` has no attribute `{key}`"
+            raise AttributeError(err)
 
 
 @dataclass(frozen=True)
