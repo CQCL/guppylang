@@ -16,19 +16,18 @@ from guppylang.tys.ty import StructType, Type
 CompiledLocals = dict[PlaceId, Wire]
 
 
-_fresh_ids = itertools.count()
-
-
 @dataclass(frozen=True)
 class GlobalConstId:
     id: int
 
+    _fresh_ids = itertools.count()
+
     @staticmethod
     def fresh() -> "GlobalConstId":
-        return GlobalConstId(next(_fresh_ids))
+        return GlobalConstId(next(GlobalConstId._fresh_ids))
 
-    def unique_name(self, base: str) -> str:
-        return f"{self.id}.{base}"
+    def name(self, base: str) -> str:
+        return f"{base}.{self.id}"
 
 
 class CompilerContext:
