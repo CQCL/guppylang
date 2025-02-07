@@ -23,6 +23,7 @@ from guppylang.std._internal.compiler.prelude import (
     build_unwrap_right,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
+from guppylang.tys.builtin import int_type
 
 # ------------------------------------------------------
 # --------------- std.array operations -----------------
@@ -197,7 +198,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
 
     def _getitem_ty(self, bound: ht.TypeBound) -> ht.PolyFuncType:
         """Constructs a polymorphic function type for `__getitem__`"""
-        # a(T, N), int -> T, a(T, N)
+        # a(Option(T), N), int -> T, a(Option(T), N)
         # Array element type parameter
         elem_ty_param = ht.TypeTypeParam(bound)
         # Array length parameter
@@ -210,7 +211,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
                         ht.Option(ht.Variable(0, bound)),
                         ht.VariableArg(1, length_param),
                     ),
-                    INT_T,
+                    int_type().to_hugr(),
                 ],
                 output=[
                     ht.Variable(0, bound),
@@ -225,10 +226,12 @@ class ArrayGetitemCompiler(ArrayCompiler):
     def _build_classical_getitem(self, name: str) -> Wire:
         """Constructs a generic function for `__getitem__` for classical arrays."""
         func_ty = self._getitem_ty(ht.TypeBound.Copyable)
-        parent_op = ops.FuncDefn(
-            name, func_ty.body.input, func_ty.params, func_ty.body.output
+        func = self.globals.module.define_function(
+            name=name,
+            input_types=func_ty.body.input,
+            output_types=func_ty.body.output,
+            type_params=func_ty.params,
         )
-        func = hf.Function.new_nested(parent_op, self.builder.hugr)
 
         elem_ty = ht.Variable(0, ht.TypeBound.Copyable)
         length = ht.VariableArg(1, ht.BoundedNatParam())
@@ -251,10 +254,12 @@ class ArrayGetitemCompiler(ArrayCompiler):
     def _build_linear_getitem(self, name: str) -> Wire:
         """Constructs function to call `array.__getitem__` for linear arrays."""
         func_ty = self._getitem_ty(ht.TypeBound.Any)
-        parent_op = ops.FuncDefn(
-            name, func_ty.body.input, func_ty.params, func_ty.body.output
+        func = self.globals.module.define_function(
+            name=name,
+            input_types=func_ty.body.input,
+            output_types=func_ty.body.output,
+            type_params=func_ty.params,
         )
-        func = hf.Function.new_nested(parent_op, self.builder.hugr)
 
         elem_ty = ht.Variable(0, ht.TypeBound.Any)
         length = ht.VariableArg(1, ht.BoundedNatParam())
@@ -284,7 +289,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
     ) -> CallReturnWires:
         """Inserts a call to `array.__getitem__`."""
         concrete_func_ty = ht.FunctionType(
-            input=[array_type(ht.Option(self.elem_ty), self.length), INT_T],
+            input=[array_type(ht.Option(self.elem_ty), self.length), int_type().to_hugr()],
             output=[self.elem_ty, array_type(ht.Option(self.elem_ty), self.length)],
         )
         type_args = [ht.TypeTypeArg(self.elem_ty), self.length]
@@ -346,7 +351,7 @@ class ArraySetitemCompiler(ArrayCompiler):
 
     def _setitem_ty(self, bound: ht.TypeBound) -> ht.PolyFuncType:
         """Constructs a polymorphic function type for `__setitem__`"""
-        # a(T, N), int, T -> a(T, N)
+        # a(Option(T), N), int, T -> a(Option(T), N)
         elem_ty_param = ht.TypeTypeParam(bound)
         length_param = ht.BoundedNatParam()
         return ht.PolyFuncType(
@@ -357,7 +362,7 @@ class ArraySetitemCompiler(ArrayCompiler):
                         ht.Option(ht.Variable(0, bound)),
                         ht.VariableArg(1, length_param),
                     ),
-                    INT_T,
+                    int_type().to_hugr(),
                     ht.Variable(0, bound),
                 ],
                 output=[
@@ -372,10 +377,12 @@ class ArraySetitemCompiler(ArrayCompiler):
     def _build_classical_setitem(self, name: str) -> Wire:
         """Constructs a generic function for `__setitem__` for classical arrays."""
         func_ty = self._setitem_ty(ht.TypeBound.Copyable)
-        parent_op = ops.FuncDefn(
-            name, func_ty.body.input, func_ty.params, func_ty.body.output
+        func = self.globals.module.define_function(
+            name=name,
+            input_types=func_ty.body.input,
+            output_types=func_ty.body.output,
+            type_params=func_ty.params,
         )
-        func = hf.Function.new_nested(parent_op, self.builder.hugr)
 
         elem_ty = ht.Variable(0, ht.TypeBound.Copyable)
         length = ht.VariableArg(1, ht.BoundedNatParam())
@@ -397,10 +404,12 @@ class ArraySetitemCompiler(ArrayCompiler):
     def _build_linear_setitem(self, name: str) -> Wire:
         """Constructs function to call `array.__setitem__` for linear arrays."""
         func_ty = self._setitem_ty(ht.TypeBound.Any)
-        parent_op = ops.FuncDefn(
-            name, func_ty.body.input, func_ty.params, func_ty.body.output
+        func = self.globals.module.define_function(
+            name=name,
+            input_types=func_ty.body.input,
+            output_types=func_ty.body.output,
+            type_params=func_ty.params,
         )
-        func = hf.Function.new_nested(parent_op, self.builder.hugr)
 
         elem_ty = ht.Variable(0, ht.TypeBound.Any)
         length = ht.VariableArg(1, ht.BoundedNatParam())
@@ -433,7 +442,7 @@ class ArraySetitemCompiler(ArrayCompiler):
         concrete_func_ty = ht.FunctionType(
             input=[
                 array_type(ht.Option(self.elem_ty), self.length),
-                INT_T,
+                int_type().to_hugr(),
                 self.elem_ty,
             ],
             output=[array_type(ht.Option(self.elem_ty), self.length)],
