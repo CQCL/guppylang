@@ -367,9 +367,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert isinstance(func, CompiledCallableDef)
 
         args = [self.visit(arg) for arg in node.args]
-        rets = func.compile_call(
-            args, list(node.type_args), self.dfg, self.ctx, node
-        )
+        rets = func.compile_call(args, list(node.type_args), self.dfg, self.ctx, node)
         if isinstance(func, CustomFunctionDef) and not func.has_signature:
             func_ty = FunctionType(
                 [FuncInput(get_type(arg), InputFlags.NoFlags) for arg in node.args],

@@ -29,9 +29,7 @@ class CompiledValueDef(ValueDef, CompiledDef):
     """Abstract base class for compiled definitions that represent values."""
 
     @abstractmethod
-    def load(
-        self, dfg: "DFContainer", ctx: "CompilerContext", node: AstNode
-    ) -> Wire:
+    def load(self, dfg: "DFContainer", ctx: "CompilerContext", node: AstNode) -> Wire:
         """Loads the defined value into a local Hugr dataflow graph."""
 
 

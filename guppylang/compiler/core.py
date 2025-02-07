@@ -19,15 +19,17 @@ CompiledLocals = dict[PlaceId, Wire]
 @dataclass(frozen=True)
 class GlobalConstId:
     id: int
+    base_name: str
 
     _fresh_ids = itertools.count()
 
     @staticmethod
-    def fresh() -> "GlobalConstId":
-        return GlobalConstId(next(GlobalConstId._fresh_ids))
+    def fresh(base_name: str) -> "GlobalConstId":
+        return GlobalConstId(next(GlobalConstId._fresh_ids), base_name)
 
-    def name(self, base: str) -> str:
-        return f"{base}.{self.id}"
+    @property
+    def name(self) -> str:
+        return f"{self.base_name}.{self.id}"
 
 
 class CompilerContext:
