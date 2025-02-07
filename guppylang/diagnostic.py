@@ -132,7 +132,11 @@ class Diagnostic(SubDiagnostic, Protocol):
 
     def add_sub_diagnostic(self, sub: "SubDiagnostic") -> Self:
         """Adds a new sub-diagnostic."""
-        if self.span and sub.span and to_span(sub.span).file != to_span(self.span).file:
+        if (
+            self.span is not None
+            and sub.span is not None
+            and to_span(sub.span).file != to_span(self.span).file
+        ):
             raise InternalGuppyError(
                 "Diagnostic: Cross-file sub-diagnostics are not supported"
             )
