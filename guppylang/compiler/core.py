@@ -173,10 +173,10 @@ class DFContainer:
 class CompilerBase(ABC):
     """Base class for the Guppy compiler."""
 
-    globals: CompilerContext
+    ctx: CompilerContext
 
-    def __init__(self, globals: CompilerContext) -> None:
-        self.globals = globals
+    def __init__(self, ctx: CompilerContext) -> None:
+        self.ctx = ctx
 
 
 def return_var(n: int) -> str:

@@ -121,7 +121,7 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         self,
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompilerContext,
+        ctx: CompilerContext,
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
@@ -133,7 +133,7 @@ class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
         args: list[Wire],
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompilerContext,
+        ctx: CompilerContext,
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""

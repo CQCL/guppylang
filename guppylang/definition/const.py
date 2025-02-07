@@ -58,6 +58,6 @@ class CompiledConstDef(ConstDef, CompiledValueDef):
 
     const_node: Node
 
-    def load(self, dfg: DFContainer, globals: CompilerContext, node: AstNode) -> Wire:
+    def load(self, dfg: DFContainer, ctx: CompilerContext, node: AstNode) -> Wire:
         """Loads the extern value into a local Hugr dataflow graph."""
         return dfg.builder.load(self.const_node)

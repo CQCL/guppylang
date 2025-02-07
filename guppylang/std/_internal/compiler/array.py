@@ -226,7 +226,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
     def _build_classical_getitem(self, name: str) -> Wire:
         """Constructs a generic function for `__getitem__` for classical arrays."""
         func_ty = self._getitem_ty(ht.TypeBound.Copyable)
-        func = self.globals.module.define_function(
+        func = self.ctx.module.define_function(
             name=name,
             input_types=func_ty.body.input,
             output_types=func_ty.body.output,
@@ -254,7 +254,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
     def _build_linear_getitem(self, name: str) -> Wire:
         """Constructs function to call `array.__getitem__` for linear arrays."""
         func_ty = self._getitem_ty(ht.TypeBound.Any)
-        func = self.globals.module.define_function(
+        func = self.ctx.module.define_function(
             name=name,
             input_types=func_ty.body.input,
             output_types=func_ty.body.output,
@@ -309,28 +309,28 @@ class ArrayGetitemCompiler(ArrayCompiler):
 
     def compile_classical_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Lowers a call to `array.__getitem__` for classical arrays."""
-        if ARRAY_GETITEM_CLASSICAL not in self.globals.global_consts:
-            self.globals.global_consts[ARRAY_GETITEM_CLASSICAL] = (
+        if ARRAY_GETITEM_CLASSICAL not in self.ctx.global_consts:
+            self.ctx.global_consts[ARRAY_GETITEM_CLASSICAL] = (
                 self._build_classical_getitem(
                     name=ARRAY_GETITEM_CLASSICAL.name("array.__getitem__.classical")
                 )
             )
         return self._build_call_getitem(
-            func=self.globals.global_consts[ARRAY_GETITEM_CLASSICAL],
+            func=self.ctx.global_consts[ARRAY_GETITEM_CLASSICAL],
             array=array,
             idx=idx,
         )
 
     def compile_linear_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Lowers a call to `array.__getitem__` for classical arrays."""
-        if ARRAY_GETITEM_LINEAR not in self.globals.global_consts:
-            self.globals.global_consts[ARRAY_GETITEM_LINEAR] = (
+        if ARRAY_GETITEM_LINEAR not in self.ctx.global_consts:
+            self.ctx.global_consts[ARRAY_GETITEM_LINEAR] = (
                 self._build_linear_getitem(
                     name=ARRAY_GETITEM_LINEAR.name("array.__getitem__.linear")
                 )
             )
         return self._build_call_getitem(
-            func=self.globals.global_consts[ARRAY_GETITEM_LINEAR],
+            func=self.ctx.global_consts[ARRAY_GETITEM_LINEAR],
             array=array,
             idx=idx,
         )
@@ -377,7 +377,7 @@ class ArraySetitemCompiler(ArrayCompiler):
     def _build_classical_setitem(self, name: str) -> Wire:
         """Constructs a generic function for `__setitem__` for classical arrays."""
         func_ty = self._setitem_ty(ht.TypeBound.Copyable)
-        func = self.globals.module.define_function(
+        func = self.ctx.module.define_function(
             name=name,
             input_types=func_ty.body.input,
             output_types=func_ty.body.output,
@@ -404,7 +404,7 @@ class ArraySetitemCompiler(ArrayCompiler):
     def _build_linear_setitem(self, name: str) -> Wire:
         """Constructs function to call `array.__setitem__` for linear arrays."""
         func_ty = self._setitem_ty(ht.TypeBound.Any)
-        func = self.globals.module.define_function(
+        func = self.ctx.module.define_function(
             name=name,
             input_types=func_ty.body.input,
             output_types=func_ty.body.output,
@@ -466,14 +466,14 @@ class ArraySetitemCompiler(ArrayCompiler):
         self, array: Wire, idx: Wire, elem: Wire
     ) -> CallReturnWires:
         """Lowers a call to `array.__setitem__` for classical arrays."""
-        if ARRAY_SETITEM_CLASSICAL not in self.globals.global_consts:
-            self.globals.global_consts[ARRAY_SETITEM_CLASSICAL] = (
+        if ARRAY_SETITEM_CLASSICAL not in self.ctx.global_consts:
+            self.ctx.global_consts[ARRAY_SETITEM_CLASSICAL] = (
                 self._build_classical_setitem(
                     name=ARRAY_SETITEM_CLASSICAL.name("array.__setitem__.classical")
                 )
             )
         return self._build_call_setitem(
-            func=self.globals.global_consts[ARRAY_SETITEM_CLASSICAL],
+            func=self.ctx.global_consts[ARRAY_SETITEM_CLASSICAL],
             array=array,
             idx=idx,
             elem=elem,
@@ -483,14 +483,14 @@ class ArraySetitemCompiler(ArrayCompiler):
         self, array: Wire, idx: Wire, elem: Wire
     ) -> CallReturnWires:
         """Lowers a call to `array.__setitem__` for linear arrays."""
-        if ARRAY_SETITEM_LINEAR not in self.globals.global_consts:
-            self.globals.global_consts[ARRAY_SETITEM_LINEAR] = (
+        if ARRAY_SETITEM_LINEAR not in self.ctx.global_consts:
+            self.ctx.global_consts[ARRAY_SETITEM_LINEAR] = (
                 self._build_linear_setitem(
                     name=ARRAY_SETITEM_LINEAR.name("array.__setitem__.linear")
                 )
             )
         return self._build_call_setitem(
-            func=self.globals.global_consts[ARRAY_SETITEM_LINEAR],
+            func=self.ctx.global_consts[ARRAY_SETITEM_LINEAR],
             array=array,
             idx=idx,
             elem=elem,

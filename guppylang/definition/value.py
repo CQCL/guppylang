@@ -30,7 +30,7 @@ class CompiledValueDef(ValueDef, CompiledDef):
 
     @abstractmethod
     def load(
-        self, dfg: "DFContainer", globals: "CompilerContext", node: AstNode
+        self, dfg: "DFContainer", ctx: "CompilerContext", node: AstNode
     ) -> Wire:
         """Loads the defined value into a local Hugr dataflow graph."""
 
@@ -68,7 +68,7 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
         args: list[Wire],
         type_args: Inst,
         dfg: "DFContainer",
-        globals: "CompilerContext",
+        ctx: "CompilerContext",
         node: AstNode,
     ) -> "CallReturnWires":
         """Compiles a call to the function.
@@ -82,7 +82,7 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
         self,
         type_args: Inst,
         dfg: "DFContainer",
-        globals: "CompilerContext",
+        ctx: "CompilerContext",
         node: AstNode,
     ) -> Wire:
         """Loads the function into a local Hugr dataflow graph.

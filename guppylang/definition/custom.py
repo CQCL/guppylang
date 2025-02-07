@@ -130,7 +130,7 @@ class RawCustomFunctionDef(ParsableDef):
         args: list[Wire],
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompilerContext,
+        ctx: CompilerContext,
         node: AstNode,
         function_ty: ht.FunctionType,
     ) -> Sequence[Wire]:
@@ -140,7 +140,7 @@ class RawCustomFunctionDef(ParsableDef):
         self.call_compiler._setup(
             type_args,
             dfg,
-            globals,
+            ctx,
             node,
             function_ty,
             None,
@@ -226,7 +226,7 @@ class CustomFunctionDef(CompiledCallableDef):
         self,
         type_args: Inst,
         dfg: "DFContainer",
-        globals: CompilerContext,
+        ctx: CompilerContext,
         node: AstNode,
     ) -> Wire:
         """Loads the custom function as a value into a local dataflow graph.
@@ -257,7 +257,7 @@ class CustomFunctionDef(CompiledCallableDef):
 
         func_dfg = DFContainer(func, dfg.locals.copy())
         args: list[Wire] = list(func.inputs())
-        returns = self.compile_call(args, type_args, func_dfg, globals, node)
+        returns = self.compile_call(args, type_args, func_dfg, ctx, node)
 
         func.set_outputs(*returns.regular_returns, *returns.inout_returns)
 
@@ -270,7 +270,7 @@ class CustomFunctionDef(CompiledCallableDef):
         args: list[Wire],
         type_args: Inst,
         dfg: "DFContainer",
-        globals: CompilerContext,
+        ctx: CompilerContext,
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
@@ -284,7 +284,7 @@ class CustomFunctionDef(CompiledCallableDef):
             )
         hugr_ty = concrete_ty.to_hugr()
 
-        self.call_compiler._setup(type_args, dfg, globals, node, hugr_ty, self)
+        self.call_compiler._setup(type_args, dfg, ctx, node, hugr_ty, self)
         return self.call_compiler.compile_with_inouts(args)
 
 
@@ -332,7 +332,7 @@ class CustomInoutCallCompiler(ABC):
 
     dfg: DFContainer
     type_args: Inst
-    globals: CompilerContext
+    ctx: CompilerContext
     node: AstNode
     ty: ht.FunctionType
     func: CustomFunctionDef | None
@@ -341,14 +341,14 @@ class CustomInoutCallCompiler(ABC):
         self,
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompilerContext,
+        ctx: CompilerContext,
         node: AstNode,
         hugr_ty: ht.FunctionType,
         func: CustomFunctionDef | None,
     ) -> None:
         self.type_args = type_args
         self.dfg = dfg
-        self.globals = globals
+        self.ctx = ctx
         self.node = node
         self.ty = hugr_ty
         self.func = func

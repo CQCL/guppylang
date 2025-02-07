@@ -378,7 +378,7 @@ class GuppyModule:
 class _CompiledModule:
     """Cached compiled module and definitions"""
 
-    globs: CompilerContext
+    context: CompilerContext
     module: ModulePointer
 
 
