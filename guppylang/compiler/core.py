@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from typing import cast
 
 from hugr import Wire, ops
+from hugr import tys as ht
+from hugr.build import function as hf
 from hugr.build.dfg import DP, DefinitionBuilder, DfBase
 
 from guppylang.checker.core import FieldAccess, Globals, Place, PlaceId, Variable
@@ -45,7 +47,7 @@ class CompilerContext:
     compiled: dict[DefId, CompiledDef]
     worklist: set[DefId]
 
-    global_consts: dict[GlobalConstId, Wire]
+    global_funcs: dict[GlobalConstId, hf.Function]
 
     checked_globals: Globals
 
@@ -59,7 +61,7 @@ class CompilerContext:
         self.checked = checked
         self.worklist = set()
         self.compiled = {}
-        self.global_consts = {}
+        self.global_funcs = {}
         self.checked_globals = checked_globals
 
     def build_compiled_def(self, def_id: DefId) -> CompiledDef:
@@ -100,6 +102,28 @@ class CompilerContext:
         compiled_func = self.build_compiled_def(checked_func.id)
         assert isinstance(compiled_func, CompiledCallableDef)
         return compiled_func
+
+    def declare_global_func(
+        self,
+        const_id: GlobalConstId,
+        inputs: ht.TypeRow,
+        outputs: ht.TypeRow,
+        params: list[ht.TypeParam],
+    ) -> tuple[hf.Function, bool]:
+        """
+        Creates a function builder for a global function if it doesn't already exist,
+        else returns the existing one.
+        """
+        if const_id in self.global_funcs:
+            return self.global_funcs[const_id], True
+        func = self.module.define_function(
+            name=const_id.name,
+            input_types=inputs,
+            output_types=outputs,
+            type_params=params,
+        )
+        self.global_funcs[const_id] = func
+        return func, False
 
 
 @dataclass

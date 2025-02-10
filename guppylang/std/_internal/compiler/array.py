@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
-from hugr import Node, Wire, ops
+from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.std.collections.array import EXTENSION
 
@@ -206,14 +206,14 @@ ARRAY_SETITEM_LINEAR: Final[GlobalConstId] = GlobalConstId.fresh(
 class ArrayGetitemCompiler(ArrayCompiler):
     """Compiler for the `array.__getitem__` function."""
 
-    def _getitem_func(self, bound: ht.TypeBound, name: str) -> hf.Function:
+    def _getitem_ty(self, bound: ht.TypeBound) -> ht.PolyFuncType:
         """Constructs a polymorphic function type for `__getitem__`"""
         # a(Option(T), N), int -> T, a(Option(T), N)
         # Array element type parameter
         elem_ty_param = ht.TypeTypeParam(bound)
         # Array length parameter
         length_param = ht.BoundedNatParam()
-        func_ty = ht.PolyFuncType(
+        return ht.PolyFuncType(
             params=[elem_ty_param, length_param],
             body=ht.FunctionType(
                 input=[
@@ -232,17 +232,9 @@ class ArrayGetitemCompiler(ArrayCompiler):
                 ],
             ),
         )
-        return self.ctx.module.define_function(
-            name=name,
-            input_types=func_ty.body.input,
-            output_types=func_ty.body.output,
-            type_params=func_ty.params,
-        )
 
-    def _build_classical_getitem(self, name: str) -> Wire:
+    def _build_classical_getitem(self, func: hf.Function) -> None:
         """Constructs a generic function for `__getitem__` for classical arrays."""
-        func = self._getitem_func(ht.TypeBound.Copyable, name)
-
         elem_ty = ht.Variable(0, ht.TypeBound.Copyable)
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
@@ -259,12 +251,9 @@ class ArrayGetitemCompiler(ArrayCompiler):
 
         # Return input array unmodified for consistency with linear implementation.
         func.set_outputs(elem, func.inputs()[0])
-        return func.parent_node
 
-    def _build_linear_getitem(self, name: str) -> Wire:
+    def _build_linear_getitem(self, func: hf.Function) -> None:
         """Constructs function to call `array.__getitem__` for linear arrays."""
-        func = self._getitem_func(ht.TypeBound.Any, name)
-
         elem_ty = ht.Variable(0, ht.TypeBound.Any)
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
@@ -283,11 +272,10 @@ class ArrayGetitemCompiler(ArrayCompiler):
         )
 
         func.set_outputs(elem, array)
-        return func.parent_node
 
     def _build_call_getitem(
         self,
-        func: Wire,
+        func: hf.Function,
         array: Wire,
         idx: Wire,
     ) -> CallReturnWires:
@@ -300,9 +288,8 @@ class ArrayGetitemCompiler(ArrayCompiler):
             output=[self.elem_ty, array_type(ht.Option(self.elem_ty), self.length)],
         )
         type_args = [ht.TypeTypeArg(self.elem_ty), self.length]
-        assert isinstance(func, Node)
         func_call = self.builder.call(
-            func,
+            func.parent_node,
             array,
             idx,
             instantiation=concrete_func_ty,
@@ -314,36 +301,33 @@ class ArrayGetitemCompiler(ArrayCompiler):
             inout_returns=[outputs[1]],
         )
 
-    def compile_classical_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
-        """Lowers a call to `array.__getitem__` for classical arrays."""
-        if ARRAY_GETITEM_CLASSICAL not in self.ctx.global_consts:
-            self.ctx.global_consts[ARRAY_GETITEM_CLASSICAL] = (
-                self._build_classical_getitem(name=ARRAY_GETITEM_CLASSICAL.name)
-            )
-        return self._build_call_getitem(
-            func=self.ctx.global_consts[ARRAY_GETITEM_CLASSICAL],
-            array=array,
-            idx=idx,
-        )
-
-    def compile_linear_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
-        """Lowers a call to `array.__getitem__` for classical arrays."""
-        if ARRAY_GETITEM_LINEAR not in self.ctx.global_consts:
-            self.ctx.global_consts[ARRAY_GETITEM_LINEAR] = self._build_linear_getitem(
-                name=ARRAY_GETITEM_LINEAR.name
-            )
-        return self._build_call_getitem(
-            func=self.ctx.global_consts[ARRAY_GETITEM_LINEAR],
-            array=array,
-            idx=idx,
-        )
-
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [array, idx] = args
         if self.elem_ty.type_bound() == ht.TypeBound.Any:
-            return self.compile_linear_getitem(array, idx)
+            func_ty = self._getitem_ty(ht.TypeBound.Any)
+            func, already_exists = self.ctx.declare_global_func(
+                ARRAY_GETITEM_LINEAR,
+                func_ty.body.input,
+                func_ty.body.output,
+                func_ty.params,
+            )
+            if not already_exists:
+                self._build_linear_getitem(func)
         else:
-            return self.compile_classical_getitem(array, idx)
+            func_ty = self._getitem_ty(ht.TypeBound.Copyable)
+            func, already_exists = self.ctx.declare_global_func(
+                ARRAY_GETITEM_CLASSICAL,
+                func_ty.body.input,
+                func_ty.body.output,
+                func_ty.params,
+            )
+            if not already_exists:
+                self._build_classical_getitem(func)
+        return self._build_call_getitem(
+            func=func,
+            array=array,
+            idx=idx,
+        )
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
@@ -377,16 +361,8 @@ class ArraySetitemCompiler(ArrayCompiler):
             ),
         )
 
-    def _build_classical_setitem(self, name: str) -> Wire:
+    def _build_classical_setitem(self, func: hf.Function) -> None:
         """Constructs a generic function for `__setitem__` for classical arrays."""
-        func_ty = self._setitem_ty(ht.TypeBound.Copyable)
-        func = self.ctx.module.define_function(
-            name=name,
-            input_types=func_ty.body.input,
-            output_types=func_ty.body.output,
-            type_params=func_ty.params,
-        )
-
         elem_ty = ht.Variable(0, ht.TypeBound.Copyable)
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
@@ -402,18 +378,9 @@ class ArraySetitemCompiler(ArrayCompiler):
         _, array = build_unwrap_right(func, result, "Array index out of bounds")
 
         func.set_outputs(array)
-        return func.parent_node
 
-    def _build_linear_setitem(self, name: str) -> Wire:
+    def _build_linear_setitem(self, func: hf.Function) -> None:
         """Constructs function to call `array.__setitem__` for linear arrays."""
-        func_ty = self._setitem_ty(ht.TypeBound.Any)
-        func = self.ctx.module.define_function(
-            name=name,
-            input_types=func_ty.body.input,
-            output_types=func_ty.body.output,
-            type_params=func_ty.params,
-        )
-
         elem_ty = ht.Variable(0, ht.TypeBound.Any)
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
@@ -432,11 +399,10 @@ class ArraySetitemCompiler(ArrayCompiler):
         build_unwrap_left(func, old_elem_opt, "Linear array element has not been used")
 
         func.set_outputs(array)
-        return func.parent_node
 
     def _build_call_setitem(
         self,
-        func: Wire,
+        func: hf.Function,
         array: Wire,
         idx: Wire,
         elem: Wire,
@@ -451,9 +417,8 @@ class ArraySetitemCompiler(ArrayCompiler):
             output=[array_type(ht.Option(self.elem_ty), self.length)],
         )
         type_args = [ht.TypeTypeArg(self.elem_ty), self.length]
-        assert isinstance(func, Node)
         func_call = self.builder.call(
-            func,
+            func.parent_node,
             array,
             idx,
             elem,
@@ -465,42 +430,29 @@ class ArraySetitemCompiler(ArrayCompiler):
             inout_returns=list(func_call.outputs()),
         )
 
-    def compile_classical_setitem(
-        self, array: Wire, idx: Wire, elem: Wire
-    ) -> CallReturnWires:
-        """Lowers a call to `array.__setitem__` for classical arrays."""
-        if ARRAY_SETITEM_CLASSICAL not in self.ctx.global_consts:
-            self.ctx.global_consts[ARRAY_SETITEM_CLASSICAL] = (
-                self._build_classical_setitem(name=ARRAY_SETITEM_CLASSICAL.name)
-            )
-        return self._build_call_setitem(
-            func=self.ctx.global_consts[ARRAY_SETITEM_CLASSICAL],
-            array=array,
-            idx=idx,
-            elem=elem,
-        )
-
-    def compile_linear_setitem(
-        self, array: Wire, idx: Wire, elem: Wire
-    ) -> CallReturnWires:
-        """Lowers a call to `array.__setitem__` for linear arrays."""
-        if ARRAY_SETITEM_LINEAR not in self.ctx.global_consts:
-            self.ctx.global_consts[ARRAY_SETITEM_LINEAR] = self._build_linear_setitem(
-                name=ARRAY_SETITEM_LINEAR.name
-            )
-        return self._build_call_setitem(
-            func=self.ctx.global_consts[ARRAY_SETITEM_LINEAR],
-            array=array,
-            idx=idx,
-            elem=elem,
-        )
-
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [array, idx, elem] = args
         if self.elem_ty.type_bound() == ht.TypeBound.Any:
-            return self.compile_linear_setitem(array, idx, elem)
+            func_ty = self._setitem_ty(ht.TypeBound.Any)
+            func, already_exists = self.ctx.declare_global_func(
+                ARRAY_SETITEM_LINEAR,
+                func_ty.body.input,
+                func_ty.body.output,
+                func_ty.params,
+            )
+            if not already_exists:
+                self._build_linear_setitem(func)
         else:
-            return self.compile_classical_setitem(array, idx, elem)
+            func_ty = self._setitem_ty(ht.TypeBound.Copyable)
+            func, already_exists = self.ctx.declare_global_func(
+                ARRAY_SETITEM_CLASSICAL,
+                func_ty.body.input,
+                func_ty.body.output,
+                func_ty.params,
+            )
+            if not already_exists:
+                self._build_classical_setitem(func)
+        return self._build_call_setitem(func=func, array=array, idx=idx, elem=elem)
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
