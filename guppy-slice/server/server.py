@@ -2,16 +2,15 @@ from dataclasses import dataclass
 import logging
 
 from pygls.server import LanguageServer
-from lsprotocol import types 
-
-from .slicing import ProgramDependencies
+from lsprotocol import types
 
 server = LanguageServer("guppySliceServer", "v0.1")
+
 
 @dataclass
 class ServerState:
     focus_mode: bool
-    dependencies: ProgramDependencies
+
 
 def toggle(self):
     self.focus_mode = not self.focus_mode
@@ -20,17 +19,18 @@ def toggle(self):
         # (Re-)run analysis to populate dependencies.
         pass
 
+
 def focus_mode_status(self) -> str:
     if self.focus_mode:
-        return 'on'
+        return "on"
     else:
-        return 'off'
+        return "off"
 
 
-server_state = ServerState(False, ProgramDependencies())
+server_state = ServerState(False)
 
 
-@server.command('toggleFocusMode')
+@server.command("toggleFocusMode")
 def toggle_variable(ls: LanguageServer, *args):
     global server_state
     server_state.toggle()
@@ -41,6 +41,7 @@ def toggle_variable(ls: LanguageServer, *args):
 @server.feature(types.TEXT_DOCUMENT_DID_CHANGE)
 def did_open_or_change(ls: LanguageServer, params: types.DidOpenTextDocumentParams):
     pass
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(message)s")
