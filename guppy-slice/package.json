@@ -1,6 +1,6 @@
 {
   "name": "guppy-slice",
-  "displayName": "guppy-slice",
+  "displayName": "Guppy Slice",
   "description": "A program slicer for Guppy quantum programs",
   "version": "0.0.1",
   "engines": {
@@ -16,8 +16,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "guppy-slice.toggleFocusMode",
-        "title": "Toggle Focus Mode"
+        "command": "extension.toggleFocusMode",
+        "title": "Guppy Slice: Toggle Focus Mode"
       }
     ]
   },

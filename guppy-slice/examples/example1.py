@@ -9,7 +9,7 @@ test_module.load_all(quantum)
 
 
 @guppy(test_module)
-def test(q: qubit @ owned, x: int) -> int:  # type: ignore
+def test(q: qubit @ owned, x: int, b: int) -> int:  # type: ignore
     xs = array(x, 0, 0)
     r = qubit()
     cx(q, r)
