@@ -10,7 +10,7 @@ from hugr.hugr.node_port import ToNode
 from guppylang.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
 from guppylang.checker.core import Place, Variable
 from guppylang.compiler.core import (
-    CompiledGlobals,
+    CompilerContext,
     DFContainer,
     is_return_var,
     return_var,
@@ -24,7 +24,7 @@ def compile_cfg(
     cfg: CheckedCFG[Place],
     container: DfBase[DP],
     inputs: Sequence[Wire],
-    globals: CompiledGlobals,
+    ctx: CompilerContext,
 ) -> hc.Cfg:
     """Compiles a CFG to Hugr."""
     # Patch the CFG with dummy return variables
@@ -54,7 +54,7 @@ def compile_cfg(
 
     blocks: dict[CheckedBB[Place], ToNode] = {}
     for bb in cfg.bbs:
-        blocks[bb] = compile_bb(bb, builder, bb == cfg.entry_bb, globals)
+        blocks[bb] = compile_bb(bb, builder, bb == cfg.entry_bb, ctx)
     for bb in cfg.bbs:
         for i, succ in enumerate(bb.successors):
             builder.branch(blocks[bb][i], blocks[succ])
@@ -66,7 +66,7 @@ def compile_bb(
     bb: CheckedBB[Place],
     builder: hc.Cfg,
     is_entry: bool,
-    globals: CompiledGlobals,
+    ctx: CompilerContext,
 ) -> ToNode:
     """Compiles a single basic block to Hugr.
 
@@ -94,12 +94,12 @@ def compile_bb(
     dfg = DFContainer(block)
     for v, wire in zip(inputs, block.input_node, strict=True):
         dfg[v] = wire
-    dfg = StmtCompiler(globals).compile_stmts(bb.statements, dfg)
+    dfg = StmtCompiler(ctx).compile_stmts(bb.statements, dfg)
 
     # If we branch, we also have to compile the branch predicate
     if len(bb.successors) > 1:
         assert bb.branch_pred is not None
-        branch_port = ExprCompiler(globals).compile(bb.branch_pred, dfg)
+        branch_port = ExprCompiler(ctx).compile(bb.branch_pred, dfg)
     else:
         # Even if we don't branch, we still have to add a `Sum(())` predicates
         branch_port = dfg.builder.add_op(ops.Tag(0, ht.UnitSum(1)))
