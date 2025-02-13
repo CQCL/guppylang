@@ -306,20 +306,14 @@ class ArrayGetitemCompiler(ArrayCompiler):
         if self.elem_ty.type_bound() == ht.TypeBound.Any:
             func_ty = self._getitem_ty(ht.TypeBound.Any)
             func, already_exists = self.ctx.declare_global_func(
-                ARRAY_GETITEM_LINEAR,
-                func_ty.body.input,
-                func_ty.body.output,
-                func_ty.params,
+                ARRAY_GETITEM_LINEAR, func_ty
             )
             if not already_exists:
                 self._build_linear_getitem(func)
         else:
             func_ty = self._getitem_ty(ht.TypeBound.Copyable)
             func, already_exists = self.ctx.declare_global_func(
-                ARRAY_GETITEM_CLASSICAL,
-                func_ty.body.input,
-                func_ty.body.output,
-                func_ty.params,
+                ARRAY_GETITEM_CLASSICAL, func_ty
             )
             if not already_exists:
                 self._build_classical_getitem(func)
@@ -435,20 +429,14 @@ class ArraySetitemCompiler(ArrayCompiler):
         if self.elem_ty.type_bound() == ht.TypeBound.Any:
             func_ty = self._setitem_ty(ht.TypeBound.Any)
             func, already_exists = self.ctx.declare_global_func(
-                ARRAY_SETITEM_LINEAR,
-                func_ty.body.input,
-                func_ty.body.output,
-                func_ty.params,
+                ARRAY_SETITEM_LINEAR, func_ty
             )
             if not already_exists:
                 self._build_linear_setitem(func)
         else:
             func_ty = self._setitem_ty(ht.TypeBound.Copyable)
             func, already_exists = self.ctx.declare_global_func(
-                ARRAY_SETITEM_CLASSICAL,
-                func_ty.body.input,
-                func_ty.body.output,
-                func_ty.params,
+                ARRAY_SETITEM_CLASSICAL, func_ty
             )
             if not already_exists:
                 self._build_classical_setitem(func)

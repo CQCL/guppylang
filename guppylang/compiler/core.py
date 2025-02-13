@@ -106,9 +106,7 @@ class CompilerContext:
     def declare_global_func(
         self,
         const_id: GlobalConstId,
-        inputs: ht.TypeRow,
-        outputs: ht.TypeRow,
-        params: list[ht.TypeParam],
+        func_ty: ht.PolyFuncType,
     ) -> tuple[hf.Function, bool]:
         """
         Creates a function builder for a global function if it doesn't already exist,
@@ -118,9 +116,9 @@ class CompilerContext:
             return self.global_funcs[const_id], True
         func = self.module.define_function(
             name=const_id.name,
-            input_types=inputs,
-            output_types=outputs,
-            type_params=params,
+            input_types=func_ty.body.input,
+            output_types=func_ty.body.output,
+            type_params=func_ty.params,
         )
         self.global_funcs[const_id] = func
         return func, False
