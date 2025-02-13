@@ -69,7 +69,8 @@ def compute_dependencies(test_file):
             mod_deps[func.name] = (deps, func_offset)
 
         return mod_deps
-
+    
+compute_dependencies("examples/example1.py")
 
 # Helper method to adjust position for the guppy decorator and function definition.
 def adjust_pos(pos: Position, line_offset) -> Position:

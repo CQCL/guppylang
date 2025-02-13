@@ -53,7 +53,7 @@ def compute_slice(ls: LanguageServer, params):
 
     # Retrieve previously computed dependencies.
     uri_deps = server_state.deps.get(uri)
-    if uri_deps is None:
+    if len(uri_deps) == 0:
         ls.show_message(f"Dependencies not computed for {uri}")
         return
 
