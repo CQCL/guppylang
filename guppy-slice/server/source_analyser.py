@@ -70,7 +70,7 @@ def compute_dependencies(test_file):
 
         return mod_deps
     
-compute_dependencies("examples/example1.py")
+# compute_dependencies("examples/example1.py")
 
 # Helper method to adjust position for the guppy decorator and function definition.
 def adjust_pos(pos: Position, line_offset) -> Position:
