@@ -8,7 +8,7 @@ from hugr import Wire, ops
 from hugr import ext as he
 from hugr import tys as ht
 from hugr.std.float import FLOAT_T
-from tket2_exts import futures, qsystem, quantum, result, rotation, utils
+from tket2_exts import futures, qsystem, qsystem_utils, quantum, result, rotation
 
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
@@ -19,7 +19,7 @@ from guppylang.definition.value import CallReturnWires
 
 FUTURES_EXTENSION = futures()
 QSYSTEM_EXTENSION = qsystem()
-QSYSTEM_UTILS_EXTENSION = utils()
+QSYSTEM_UTILS_EXTENSION = qsystem_utils()
 QUANTUM_EXTENSION = quantum()
 RESULT_EXTENSION = result()
 ROTATION_EXTENSION = rotation()

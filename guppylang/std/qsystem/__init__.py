@@ -5,10 +5,9 @@ from guppylang.module import GuppyModule
 from guppylang.std import angles
 from guppylang.std._internal.compiler.quantum import (
     QSYSTEM_EXTENSION,
-    QSYSTEM_UTILS_EXTENSION,
     InoutMeasureCompiler,
 )
-from guppylang.std._internal.util import external_op, quantum_op
+from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle
 from guppylang.std.builtins import owned
 from guppylang.std.quantum import qubit
@@ -72,13 +71,6 @@ def reset(q: qubit) -> None: ...
 @guppy.hugr_op(quantum_op("QFree", ext=QSYSTEM_EXTENSION), module=qsystem)
 @no_type_check
 def qfree(q: qubit @ owned) -> None: ...
-
-
-@guppy.hugr_op(
-    external_op("GetCurrentShot", [], ext=QSYSTEM_UTILS_EXTENSION), module=qsystem
-)
-@no_type_check
-def get_current_shot() -> int: ...
 
 
 # ------------------------------------------------------
