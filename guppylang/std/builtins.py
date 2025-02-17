@@ -125,10 +125,8 @@ class Bool:
     @guppy.hugr_op(logic_op("Or"))
     def __or__(self: bool, other: bool) -> bool: ...
 
-    # TODO: Use hugr op once implemented: https://github.com/CQCL/hugr/issues/1418
-    @guppy
-    def __xor__(self: bool, other: bool) -> bool:
-        return self != other
+    @guppy.hugr_op(logic_op("Xor"))
+    def __xor__(self: bool, other: bool) -> bool: ...
 
 
 @guppy.extend_type(string_type_def)
@@ -357,8 +355,6 @@ class Int:
     @guppy.custom(NoopCompiler())
     def __pos__(self: int) -> int: ...
 
-    # TODO use hugr int op "ipow"
-    # once lowering available
     @guppy
     @no_type_check
     def __pow__(self: int, exponent: int) -> int:
@@ -367,10 +363,10 @@ class Int:
                 "Negative exponent not supported in"
                 "__pow__ with int type base. Try casting the base to float."
             )
-        res = 1
-        for _ in range(exponent):
-            res *= self
-        return res
+        return self.__pow_impl(exponent)
+
+    @guppy.hugr_op(int_op("ipow"))
+    def __pow_impl(self: int, exponent: int) -> int: ...
 
     @guppy.custom(checker=ReversingChecker())
     def __radd__(self: int, other: int) -> int: ...
