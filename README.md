@@ -40,7 +40,6 @@ More examples and tutorials are available [here][examples].
 
 [examples]: ./examples/
 
-
 ## Install
 
 Guppy can be installed via `pip`. Requires Python >= 3.10.
@@ -49,13 +48,12 @@ Guppy can be installed via `pip`. Requires Python >= 3.10.
 pip install guppylang
 ```
 
-
 ## Development
 
 See [DEVELOPMENT.md](https://github.com/CQCL/guppylang/blob/main/DEVELOPMENT.md) for instructions on setting up the development environment.
 
 ## License
 
-This project is licensed under Apache License, Version 2.0 ([LICENCE][] or http://www.apache.org/licenses/LICENSE-2.0).
+This project is licensed under Apache License, Version 2.0 ([LICENCE][] or <http://www.apache.org/licenses/LICENSE-2.0>).
 
   [LICENCE]: ./LICENCE
