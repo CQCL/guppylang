@@ -5,7 +5,7 @@ from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
 from guppylang.std.builtins import owned
-from guppylang.std.qsystem import get_current_shot
+from guppylang.std.qsystem.utils import get_current_shot
 from guppylang.std.quantum import qubit
 from guppylang.std.qsystem.functional import (
     phased_x,
