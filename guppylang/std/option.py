@@ -57,7 +57,7 @@ class Option(Generic[T]):  # type: ignore[misc]
         """Swaps the value of `self` with `nothing` and returns the original value.
 
         Panics if the option is a `nothing` value."""
-        n: Option[T] = nothing()
+        n: Option[T] = nothing()  # type: ignore[type-arg, valid-type]
         mem_swap(n, self)
         return n.unwrap()
 
