@@ -53,13 +53,11 @@ class Option(Generic[T]):  # type: ignore[misc]
 
     @guppy
     @no_type_check
-    def take(self: "Option[T]") -> T:
-        """Swaps the value of `self` with `nothing` and returns the original value.
-
-        Panics if the option is a `nothing` value."""
+    def take(self: "Option[T]") -> "Option[T]":
+        """Swaps the value of `self` with `nothing` and returns the original value."""
         n: Option[T] = nothing()  # type: ignore[type-arg, valid-type]
         mem_swap(n, self)
-        return n.unwrap()
+        return n
 
 
 @guppy.custom(OptionConstructor(0))

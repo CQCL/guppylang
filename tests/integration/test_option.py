@@ -46,7 +46,7 @@ def test_take(validate, run_int_fn):
     @no_type_check
     def main() -> int:
         x: Option[int] = some(42)
-        y = x.take()
+        y = x.take().unwrap()
         is_none = 1 if x.is_nothing() else 0
         return y + is_none
 
