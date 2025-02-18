@@ -1,3 +1,4 @@
+from typing import no_type_check
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std.option import Option, nothing, some
@@ -8,6 +9,7 @@ def test_none(validate, run_int_fn):
     module.load(Option, nothing)
 
     @guppy(module)
+    @no_type_check
     def main() -> int:
         x: Option[int] = nothing()
         is_none = 10 if x.is_nothing() else 0
@@ -24,6 +26,7 @@ def test_some_unwrap(validate, run_int_fn):
     module.load(Option, some)
 
     @guppy(module)
+    @no_type_check
     def main() -> int:
         x: Option[int] = some(42)
         is_none = 1 if x.is_nothing() else 0
@@ -34,3 +37,19 @@ def test_some_unwrap(validate, run_int_fn):
     validate(compiled)
     run_int_fn(compiled, expected=42)
 
+
+def test_take(validate, run_int_fn):
+    module = GuppyModule("test_range")
+    module.load(Option, some)
+
+    @guppy(module)
+    @no_type_check
+    def main() -> int:
+        x: Option[int] = some(42)
+        y = x.take()
+        is_none = 1 if x.is_nothing() else 0
+        return y + is_none
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=43)

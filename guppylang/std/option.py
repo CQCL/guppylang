@@ -10,7 +10,7 @@ from guppylang.std._internal.compiler.option import (
     OptionTestCompiler,
     OptionUnwrapCompiler,
 )
-from guppylang.std.builtins import owned
+from guppylang.std.builtins import mem_swap, owned
 from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.param import TypeParam
 
@@ -50,6 +50,16 @@ class Option(Generic[T]):  # type: ignore[misc]
 
         Panics if the option is a `nothing` value.
         """
+
+    @guppy
+    @no_type_check
+    def take(self: "Option[T]") -> T:
+        """Swaps the value of `self` with `nothing` and returns the original value.
+
+        Panics if the option is a `nothing` value."""
+        n: Option[T] = nothing()
+        mem_swap(n, self)
+        return n.unwrap()
 
 
 @guppy.custom(OptionConstructor(0))
