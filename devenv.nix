@@ -36,6 +36,8 @@
 
   env.LLVM_SYS_140_PREFIX = pkgs.llvmPackages_14.libllvm.dev;
 
+  env.LD_LIBRARY_PATH = "${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib pkgs.zlib ]}";
+
   languages.rust = {
     enable = true;
     channel = "stable";
