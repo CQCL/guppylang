@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.16.0](https://github.com/CQCL/guppylang/compare/v0.15.0...v0.16.0) (2025-02-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* `CompiledGlobals` renamed to `CompilerContext`
+
+### Features
+
+* add `Option.take()` for swapping with None ([#809](https://github.com/CQCL/guppylang/issues/809)) ([9a459d5](https://github.com/CQCL/guppylang/commit/9a459d57e19a7194b30468fa15719f9b9ed4a135))
+
+
+### Code Refactoring
+
+* Stop inlining array.__getitem__ and arrary.__setitem__ ([#799](https://github.com/CQCL/guppylang/issues/799)) ([bb199a0](https://github.com/CQCL/guppylang/commit/bb199a0d581ead991212a2b7afe45e8f856fd214)), closes [#786](https://github.com/CQCL/guppylang/issues/786)
+
 ## [0.15.0](https://github.com/CQCL/guppylang/compare/v0.14.0...v0.15.0) (2025-02-07)
 
 
