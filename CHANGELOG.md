@@ -14,7 +14,7 @@
 
 ### Code Refactoring
 
-* Stop inlining array.__getitem__ and arrary.__setitem__ ([#799](https://github.com/CQCL/guppylang/issues/799)) ([bb199a0](https://github.com/CQCL/guppylang/commit/bb199a0d581ead991212a2b7afe45e8f856fd214)), closes [#786](https://github.com/CQCL/guppylang/issues/786)
+* Stop inlining array.__getitem__ and array.__setitem__ ([#799](https://github.com/CQCL/guppylang/issues/799)) ([bb199a0](https://github.com/CQCL/guppylang/commit/bb199a0d581ead991212a2b7afe45e8f856fd214)), closes [#786](https://github.com/CQCL/guppylang/issues/786)
 
 ## [0.15.0](https://github.com/CQCL/guppylang/compare/v0.14.0...v0.15.0) (2025-02-07)
 
