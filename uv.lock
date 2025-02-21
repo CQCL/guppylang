@@ -565,6 +565,7 @@ dev = [
     { name = "pip" },
     { name = "pre-commit" },
     { name = "pytest" },
+    { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
@@ -581,6 +582,7 @@ execution = [
     { name = "maturin" },
     { name = "pip" },
     { name = "pytest" },
+    { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
@@ -594,6 +596,7 @@ lint = [
 pytket-integration = [
     { name = "ipykernel" },
     { name = "pytest" },
+    { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
@@ -603,6 +606,7 @@ pytket-integration = [
 test = [
     { name = "ipykernel" },
     { name = "pytest" },
+    { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
@@ -628,6 +632,7 @@ dev = [
     { name = "pip", specifier = ">=24" },
     { name = "pre-commit", specifier = ">=3.6.0,<4" },
     { name = "pytest", specifier = ">=8.3.2,<9" },
+    { name = "pytest-asyncio", specifier = ">=0.16,<0.17" },
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
@@ -644,6 +649,7 @@ execution = [
     { name = "maturin", specifier = ">=1.7.7,<2" },
     { name = "pip", specifier = ">=24" },
     { name = "pytest", specifier = ">=8.3.2,<9" },
+    { name = "pytest-asyncio", specifier = ">=0.16,<0.17" },
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
@@ -657,6 +663,7 @@ lint = [
 pytket-integration = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "pytest", specifier = ">=8.3.2,<9" },
+    { name = "pytest-asyncio", specifier = ">=0.16,<0.17" },
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
@@ -666,6 +673,7 @@ pytket-integration = [
 test = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "pytest", specifier = ">=8.3.2,<9" },
+    { name = "pytest-asyncio", specifier = ">=0.16,<0.17" },
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
@@ -1576,6 +1584,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8b/6c/62bbd536103af674e227c41a8f3dcd022d591f6eed5facb5a0f31ee33bbc/pytest-8.3.3.tar.gz", hash = "sha256:70b98107bd648308a7952b06e6ca9a50bc660be218d53c257cc1fc94fda10181", size = 1442487 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6b/77/7440a06a8ead44c7757a64362dd22df5760f9b12dc5f11b6188cd2fc27a0/pytest-8.3.3-py3-none-any.whl", hash = "sha256:a6853c7375b2663155079443d2e45de913a911a11d669df02a50814944db57b2", size = 342341 },
+]
+
+[[package]]
+name = "pytest-asyncio"
+version = "0.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/89/53/8844d99d5343eecbb6d740d708581fbf63cefd560c07c7164b12691e54eb/pytest-asyncio-0.16.0.tar.gz", hash = "sha256:7496c5977ce88c34379df64a66459fe395cd05543f0a2f837016e7144391fcfb", size = 12095 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/17/d0/d9bd672577857bb59004d7a0902abb5f27770c1d234860a08898eb058bd2/pytest_asyncio-0.16.0-py3-none-any.whl", hash = "sha256:5f2a21273c47b331ae6aa5b36087047b4899e40f03f18397c0e65fa5cca54e9b", size = 12119 },
 ]
 
 [[package]]
