@@ -28,12 +28,16 @@ class _RuntimeState:
         self.edge_vals = {}
         self.parent = parent
 
-    def find(self, outp: OutPort) -> Value:
-        if (v := self.edge_vals.get(outp)) is not None:
-            return v
-        if self.parent is None:
-            raise RuntimeError(f"Not found: {outp}")
-        return self.parent.find(outp)
+    def find_ancestral(self, outp: OutPort) -> Value:
+        p = self.parent
+        while p is not None:
+            if (v := p.edge_vals.get(outp)) is not None:
+                return v
+            p = p.parent
+        raise RuntimeError(f"Not found: {outp}")
+
+    def new(self) -> "_RuntimeState":
+        return _RuntimeState(self)
 
 
 def make_val(v: Any, ty: tys.Type) -> Value:
@@ -131,30 +135,27 @@ class PyRuntime:
         """parent is a DataflowOp"""
         parent_node = h[parent].op
         if isinstance(parent_node, ops.DFG | ops.FuncDefn):
-            results, _ = await self._run_dataflow_subgraph(h, st, parent, inputs)
-            return results
+            return await self._run_dataflow_subgraph(h, st.new(), parent, inputs)
         if isinstance(parent_node, ops.CFG):
             pc: Node = h.children(parent)[0]
-            last_inp_state: dict[
-                Node, _RuntimeState
-            ] = {}  # State at input to each block
+            last_inp_state: dict[Node, _RuntimeState] = {}
             next_st = st
             while True:
                 assert isinstance(h[pc].op, ops.DataflowBlock)
-                if (prev_st := last_inp_state.get(pc)) is not None:
-                    # We need to keep (OutPorts) read by Dom edges, but we don't have
-                    # dominance info! Dominators are blocks that *must* have been
-                    # executed (on all possible control-flow paths); instead,
-                    # overapproximate with values common to all control-flow paths *that
-                    # we have seen*.
-                    # TODO: note, we could (in outermost run_graph) identify all the
-                    # OutPorts that are sources to Dom edges, and filter down to those
-                    # (ideally, as well as this).
-                    next_st = remove_keys_since(next_st, prev_st)
-                last_inp_state[pc] = next_st
-                results, next_st = await self._run_dataflow_subgraph(
-                    h, next_st, pc, inputs
+                prev_st = last_inp_state.get(pc)
+                # We need to keep (OutPorts) read by Dom edges, but we don't have
+                # dominance info! Dominators are blocks that *must* have been
+                # executed (on all possible control-flow paths); instead,
+                # overapproximate with values common to all control-flow paths *that
+                # we have seen*.
+                # TODO: note, we could (in outermost run_graph) identify all the
+                # OutPorts that are sources to Dom edges, and filter down to those
+                # (ideally, as well as this).
+                in_state = last_inp_state[pc] = (
+                    next_st if prev_st is None else remove_keys_since(next_st, prev_st)
                 )
+                next_st = in_state.new()
+                results = await self._run_dataflow_subgraph(h, next_st, pc, inputs)
                 (tag, inputs) = unpack_first(*results)
                 (bb,) = h.linked_ports(pc[tag])  # Should only be 1
                 pc = bb.node
@@ -163,11 +164,10 @@ class PyRuntime:
         if isinstance(parent_node, ops.Conditional):
             (tag, inputs) = unpack_first(*inputs)
             case_node = h.children(parent)[tag]
-            results, _ = await self._run_dataflow_subgraph(h, st, case_node, inputs)
-            return results
+            return await self._run_dataflow_subgraph(h, st.new(), case_node, inputs)
         if isinstance(parent_node, ops.TailLoop):
             while True:
-                results, _ = await self._run_dataflow_subgraph(h, st, parent, inputs)
+                results = await self._run_dataflow_subgraph(h, st.new(), parent, inputs)
                 (tag, inputs) = unpack_first(*results)
                 if tag == BREAK_TAG:
                     return inputs
@@ -176,14 +176,12 @@ class PyRuntime:
     async def _run_dataflow_subgraph(
         self,
         h: Hugr[ops.Op],
-        outer_st: _RuntimeState,
+        st: _RuntimeState,
         parent: Node,
         inputs: list[Value],
-    ) -> tuple[list[Value], _RuntimeState]:
+    ) -> list[Value]:
         # assert isinstance(h[parent], ops.DfParentOp) # no, DfParentOp is a Protocal
         # FuncDefn corresponds to a Call, but inputs are the arguments
-        st = _RuntimeState(outer_st)
-
         async def get_output(src: OutPort, wait: bool) -> Value:
             while wait and (src not in st.edge_vals):
                 assert self.num_workers > 1
@@ -231,10 +229,9 @@ class PyRuntime:
                 (func_tgt,) = h.linked_ports(
                     InPort(node, tk_node._function_port_offset())
                 )  # TODO Make this non-private?
-                results, _ = await self._run_dataflow_subgraph(
-                    h, st, func_tgt.node, inps
+                return await self._run_dataflow_subgraph(
+                    h, st.new(), func_tgt.node, inps
                 )
-                return results
             elif isinstance(tk_node, ops.CallIndirect):
                 return await do_eval(*inps)  # Function first
             elif isinstance(tk_node, ops.Tag):
@@ -285,7 +282,7 @@ class PyRuntime:
                     if h[src.node].parent == parent:
                         schedule(src.node)
                     else:
-                        st.edge_vals[src] = outer_st.find(src)
+                        st.edge_vals[src] = st.find_ancestral(src)
             que.put_nowait(n)
 
         for n in h.children(
@@ -317,7 +314,7 @@ class PyRuntime:
         # No need to wait here, all nodes finishing executing:
         result = await get_inputs(out_node, wait=False)
 
-        return result, st
+        return result
 
 
 def unpack_first(*vals: Value) -> tuple[int, list[Value]]:
