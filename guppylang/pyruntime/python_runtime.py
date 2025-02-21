@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from typing import Any, NoReturn, TypeVar, cast
 
 from hugr import Hugr, InPort, Node, OutPort, ops, tys, val
@@ -129,21 +130,26 @@ class PyRuntime:
     ) -> list[Value]:
         """parent is a DataflowOp"""
         parent_node = h[parent].op
-        if isinstance(parent_node, (ops.DFG, ops.FuncDefn)):
+        if isinstance(parent_node, ops.DFG | ops.FuncDefn):
             results, _ = await self._run_dataflow_subgraph(h, st, parent, inputs)
             return results
         if isinstance(parent_node, ops.CFG):
             pc: Node = h.children(parent)[0]
-            last_inp_state: dict[Node, _RuntimeState] = {}  # State at input to each block
+            last_inp_state: dict[
+                Node, _RuntimeState
+            ] = {}  # State at input to each block
             next_st = st
             while True:
                 assert isinstance(h[pc].op, ops.DataflowBlock)
                 if (prev_st := last_inp_state.get(pc)) is not None:
-                    # We need to keep (OutPorts) read by Dom edges. But, we don't know the dominators!
-                    # Dominators are blocks that *must* always have been executed (on all control-flow paths);
-                    # instead, overapproximate by values produced on all control-flow paths *that we have seen*.
-                    # TODO: note, we could (in outermost run_graph) identify all the OutPorts that are sources
-                    # to Dom edges, and filter down to those (ideally, as well as this).
+                    # We need to keep (OutPorts) read by Dom edges, but we don't have
+                    # dominance info! Dominators are blocks that *must* have been
+                    # executed (on all possible control-flow paths); instead,
+                    # overapproximate with values common to all control-flow paths *that
+                    # we have seen*.
+                    # TODO: note, we could (in outermost run_graph) identify all the
+                    # OutPorts that are sources to Dom edges, and filter down to those
+                    # (ideally, as well as this).
                     next_st = remove_keys_since(next_st, prev_st)
                 last_inp_state[pc] = next_st
                 results, next_st = await self._run_dataflow_subgraph(
@@ -168,9 +174,13 @@ class PyRuntime:
         raise RuntimeError("Unknown container type")
 
     async def _run_dataflow_subgraph(
-        self, h: Hugr[ops.Op], outer_st: _RuntimeState, parent: Node, inputs: list[Value]
+        self,
+        h: Hugr[ops.Op],
+        outer_st: _RuntimeState,
+        parent: Node,
+        inputs: list[Value],
     ) -> tuple[list[Value], _RuntimeState]:
-        # assert isinstance(h[parent], ops.DfParentOp) # DfParentOp is a Protocal so no can do
+        # assert isinstance(h[parent], ops.DfParentOp) # no, DfParentOp is a Protocal
         # FuncDefn corresponds to a Call, but inputs are the arguments
         st = _RuntimeState(outer_st)
 
@@ -199,7 +209,7 @@ class PyRuntime:
 
             if isinstance(
                 tk_node,
-                (ops.Const, ops.FuncDefn, ops.FuncDecl, ops.AliasDefn, ops.AliasDecl),
+                ops.Const | ops.FuncDefn | ops.FuncDecl | ops.AliasDefn | ops.AliasDecl,
             ):
                 # These are static only, no value outputs
                 return []
@@ -215,7 +225,7 @@ class PyRuntime:
                 return [LoadedFunc(h, funcp.node)]
 
             inps = await get_inputs(node, wait=True)
-            if isinstance(tk_node, (ops.Conditional, ops.CFG, ops.DFG, ops.TailLoop)):
+            if isinstance(tk_node, ops.Conditional | ops.CFG | ops.DFG | ops.TailLoop):
                 return await self._run_container(h, st, node, inps)
             elif isinstance(tk_node, ops.Call):
                 (func_tgt,) = h.linked_ports(
@@ -239,8 +249,7 @@ class PyRuntime:
                 return await run_ext_op(tk_node, inps)
             elif isinstance(tk_node, ops.AsExtOp):
                 return await run_ext_op(tk_node.ext_op.to_custom_op(), inps)
-            else:
-                raise RuntimeError("Unknown node type.")
+            raise RuntimeError(f"Unknown op {tk_node}")
 
         async def worker(queue: asyncio.Queue[Node]) -> NoReturn:
             # each worker gets the next node in the queue
@@ -252,10 +261,10 @@ class PyRuntime:
 
                 # assign outputs to edges
                 assert len(outs) == _num_value_outputs(h[node].op)
-                for outport_idx, val in enumerate(outs):
+                for outport_idx, valu in enumerate(outs):
                     outp = OutPort(node, outport_idx)
-                    self.callback(outp, val)
-                    st.edge_vals[outp] = val
+                    self.callback(outp, valu)
+                    st.edge_vals[outp] = valu
                 # signal this node is now done
                 queue.task_done()
 
@@ -329,10 +338,10 @@ def _node_inputs(op: ops.Op, include_order: bool = False) -> Iterable[int]:
         n = len(op.instantiation.input)
         yield from range(n)
         n += 1  # Skip Function input
-    elif isinstance(op, (ops.Const, ops.FuncDefn)):
+    elif isinstance(op, ops.Const | ops.FuncDefn):
         n = 0
     else:
-        raise RuntimeError(f"Unknown dataflow op {op}")
+        raise RuntimeError(f"Unknown dataflow op {op}")  # noqa: TRY004
     if include_order:
         yield n
 
@@ -342,10 +351,10 @@ def _num_value_outputs(op: ops.Op) -> int:
         sig = op.outer_signature()
     elif isinstance(op, ops.Call):
         sig = op.instantiation
-    elif isinstance(op, (ops.Const, ops.FuncDefn)):
+    elif isinstance(op, ops.Const | ops.FuncDefn):
         return 0
     else:
-        raise RuntimeError(f"Unknown dataflow op {op}")
+        raise RuntimeError(f"Unknown dataflow op {op}")  # noqa: TRY004
     return len(sig.output)
 
 
@@ -361,7 +370,7 @@ BREAK_TAG = ops.Break(tys.Either([tys.Unit], [tys.Unit])).tag
 
 
 def remove_keys_since(new_st: _RuntimeState, tmpl_st: _RuntimeState) -> _RuntimeState:
-    """Construct a new state like `new_st` but containing only keys also in `tmpl_st`."""
+    """Construct a new state with values from `new_st` but only keys common to both."""
 
     def list_frames(st: _RuntimeState) -> list[_RuntimeState]:
         lst = [] if st.parent is None else list_frames(st.parent)
@@ -386,9 +395,6 @@ def remove_keys_since(new_st: _RuntimeState, tmpl_st: _RuntimeState) -> _Runtime
             {k: v for k, v in new_frame.edge_vals.items() if k in keys_can_keep}
         )
     return condensed_frame
-
-
-from dataclasses import dataclass
 
 
 @dataclass

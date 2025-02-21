@@ -164,16 +164,17 @@ async def run_ext_op(op: ops.Custom, inputs: list[Value]) -> list[Value]:
         if op.op_name == "Eq":  # Yeah, presumably case sensitive, so why not 'eq'
             (x, y) = inputs
             return [bool_to_val(val_to_bool(x) == val_to_bool(y))]
-    elif op.extension == "prelude":
-        if op.op_name == "load_nat":
-            (v,) = op.args
-            assert isinstance(v, tys.BoundedNatArg)
-            return [USizeVal(v.n)]
+    elif op.extension == "prelude" and op.op_name == "load_nat":
+        (v,) = op.args
+        assert isinstance(v, tys.BoundedNatArg)
+        return [USizeVal(v.n)]
     raise RuntimeError(f"Unknown op {op}")
+
 
 def val_to_bool(v: Value) -> bool:
     assert v in [val.TRUE, val.FALSE]
     return v == val.TRUE
+
 
 def bool_to_val(b: bool) -> Value:
     return val.TRUE if b else val.FALSE
