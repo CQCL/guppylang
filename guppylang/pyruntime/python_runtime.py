@@ -1,14 +1,8 @@
 """Implementation of simple python-only runtime."""
 
 import asyncio
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    Optional,
-    TypeVar,
-    cast,
-)
+from collections.abc import Callable, Iterable
+from typing import Any, NoReturn, TypeVar, cast
 
 from hugr import Hugr, InPort, Node, OutPort, ops, tys, val
 from hugr.std.int import INT_T_DEF, IntVal
@@ -65,9 +59,9 @@ class PyRuntime:
         """Initialise with locally available namespaces, and the number of
         workers (asyncio tasks) to use in execution."""
         self.num_workers = num_workers
-        self._callback: Optional[Callable[[OutPort, Value], None]] = None
+        self._callback: Callable[[OutPort, Value], None] | None = None
 
-    def set_callback(self, callback: Optional[Callable[[OutPort, Value], None]]):
+    def set_callback(self, callback: Callable[[OutPort, Value], None] | None) -> None:
         """Set a callback function that takes an OutPort and Value,
         which will be called every time a value is output.
         Can be used to inspect intermediate values."""
@@ -77,15 +71,15 @@ class PyRuntime:
         self,
         out_port: OutPort,
         val: Value,
-    ):
+    ) -> None:
         """If a callback function is set, call it with an edge and the value on
         the edge."""
         if self._callback:
             self._callback(out_port, val)
 
     async def run_graph(
-        self,  # ALAN next line we've changed sig, does ignore work?
-        run_g: Hugr,  # type:ignore
+        self,
+        run_g: Hugr[ops.Op],
         *py_inputs: Any,
         fn_name: str | Node | None = None,
     ) -> list[Value]:
@@ -131,7 +125,7 @@ class PyRuntime:
         )
 
     async def _run_container(
-        self, h: Hugr, st: _RuntimeState, parent: Node, inputs: list[Value]
+        self, h: Hugr[ops.Op], st: _RuntimeState, parent: Node, inputs: list[Value]
     ) -> list[Value]:
         """parent is a DataflowOp"""
         parent_node = h[parent].op
@@ -140,7 +134,7 @@ class PyRuntime:
             return results
         if isinstance(parent_node, ops.CFG):
             pc: Node = h.children(parent)[0]
-            last_inp_state = {}  # State at input to each block
+            last_inp_state: dict[Node, _RuntimeState] = {}  # State at input to each block
             next_st = st
             while True:
                 assert isinstance(h[pc].op, ops.DataflowBlock)
@@ -174,7 +168,7 @@ class PyRuntime:
         raise RuntimeError("Unknown container type")
 
     async def _run_dataflow_subgraph(
-        self, h: Hugr, outer_st: _RuntimeState, parent: Node, inputs: list[Value]
+        self, h: Hugr[ops.Op], outer_st: _RuntimeState, parent: Node, inputs: list[Value]
     ) -> tuple[list[Value], _RuntimeState]:
         # assert isinstance(h[parent], ops.DfParentOp) # DfParentOp is a Protocal so no can do
         # FuncDefn corresponds to a Call, but inputs are the arguments
@@ -248,7 +242,7 @@ class PyRuntime:
             else:
                 raise RuntimeError("Unknown node type.")
 
-        async def worker(queue: asyncio.Queue[Node]):
+        async def worker(queue: asyncio.Queue[Node]) -> NoReturn:
             # each worker gets the next node in the queue
             while True:
                 node = await queue.get()
@@ -273,7 +267,7 @@ class PyRuntime:
         # node's inputs to become available.
         scheduled: set[Node] = set()
 
-        def schedule(n: Node):
+        def schedule(n: Node) -> None:
             if n in scheduled:
                 return
             scheduled.add(n)  # Ok as acyclic
@@ -399,7 +393,7 @@ from dataclasses import dataclass
 
 @dataclass
 class LoadedFunc(val.ExtensionValue):
-    h: Hugr
+    h: Hugr[ops.Op]
     n: Node
 
     def to_value(self) -> val.Extension:

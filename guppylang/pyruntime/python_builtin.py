@@ -133,7 +133,7 @@ async def run_ext_op(op: ops.Custom, inputs: list[Value]) -> list[Value]:
             )
             return [val.Some(elem, ArrayVal(rest, array.ty.ty))]
         elif op.op_name == "repeat":
-            from .python_runtime import do_eval, _single
+            from .python_runtime import _single, do_eval
 
             (func,) = inputs
             (length, elem_ty, _exts) = op.args
@@ -159,17 +159,21 @@ async def run_ext_op(op: ops.Custom, inputs: list[Value]) -> list[Value]:
             raise RuntimeError("YES THIS HAPPENS - non-ArrayVal array")
     elif op.extension == "logic":
         if op.op_name == "Not":
-            (a,) = inputs
-            assert a in [val.TRUE, val.FALSE]
-            return [val.FALSE if a == val.TRUE else val.TRUE]
+            (x,) = inputs
+            return [bool_to_val(not val_to_bool(x))]
         if op.op_name == "Eq":  # Yeah, presumably case sensitive, so why not 'eq'
-            (a, b) = inputs
-            assert a in [val.TRUE, val.FALSE]
-            assert b in [val.TRUE, val.FALSE]
-            return [val.TRUE if (a == b) else val.FALSE]
+            (x, y) = inputs
+            return [bool_to_val(val_to_bool(x) == val_to_bool(y))]
     elif op.extension == "prelude":
         if op.op_name == "load_nat":
             (v,) = op.args
             assert isinstance(v, tys.BoundedNatArg)
             return [USizeVal(v.n)]
     raise RuntimeError(f"Unknown op {op}")
+
+def val_to_bool(v: Value) -> bool:
+    assert v in [val.TRUE, val.FALSE]
+    return v == val.TRUE
+
+def bool_to_val(b: bool) -> Value:
+    return val.TRUE if b else val.FALSE
