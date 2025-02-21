@@ -5,6 +5,7 @@ from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
 from guppylang.std.builtins import owned
+from guppylang.std.qsystem.utils import get_current_shot
 from guppylang.std.quantum import qubit
 from guppylang.std.qsystem.functional import (
     phased_x,
@@ -18,7 +19,7 @@ from guppylang.std.qsystem.functional import (
 )
 
 
-def compile_qsystem_guppy(fn) -> ModulePointer:
+def compile_qsystem_guppy(fn) -> ModulePointer:  # type: ignore[no-untyped-def]
     """A decorator that combines @guppy with HUGR compilation.
 
     Modified version of `tests.util.compile_guppy` that loads the qsytem module.
@@ -29,17 +30,18 @@ def compile_qsystem_guppy(fn) -> ModulePointer:
     ), "`@compile_qsystem_guppy` does not support extra arguments."
 
     module = GuppyModule("module")
-    module.load(angle, qubit)
+    module.load(angle, qubit, get_current_shot)  # type: ignore[arg-type]
     module.load_all(qsystem_functional)
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
 
 
-def test_qsystem(validate):
+def test_qsystem(validate):  # type: ignore[no-untyped-def]
     """Compile various operations from the qsystem extension."""
 
     @compile_qsystem_guppy
     def test(q1: qubit @ owned, q2: qubit @ owned, a1: angle) -> bool:
+        shot = get_current_shot()
         q1 = phased_x(q1, a1, a1)
         q1, q2 = zz_phase(q1, q2, a1)
         q1 = rz(q1, a1)
