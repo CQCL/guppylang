@@ -378,7 +378,7 @@ def remove_keys_since(new_st: _RuntimeState, tmpl_st: _RuntimeState) -> _Runtime
         return lst
 
     new_frames = list_frames(new_st)
-    old_frames = list_frames(new_st)
+    old_frames = list_frames(tmpl_st)
     # Optimization: skip over identical frames
     i = 0
     while new_frames[i] is old_frames[i]:
