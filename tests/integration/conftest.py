@@ -95,7 +95,17 @@ def _run_fn(run_fn_name: str):
 
 @pytest.fixture
 def run_int_fn():
-    return _run_fn("run_int_function")
+    import asyncio
+    from guppylang.pyruntime import PyRuntime
+    from hugr.std.int import IntVal
+
+    def run(module: ModulePointer, expected: Any, fn_name: str | None = None):
+        outs = asyncio.run(PyRuntime().run_graph(module.module, fn_name=fn_name))
+        (out,) = outs
+        exp = IntVal(expected, 6)
+        assert out == exp or out == exp.to_value()
+
+    return run
 
 
 @pytest.fixture
