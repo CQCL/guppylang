@@ -383,8 +383,8 @@ def remove_keys_since(new_st: _RuntimeState, tmpl_st: _RuntimeState) -> _Runtime
     i = 0
     while new_frames[i] is old_frames[i]:
         i += 1
-        if i == len(old_frames) or i == len(new_frames):
-            return old_frames[i - 1]
+        if i == len(old_frames):
+            return tmpl_st
     assert i > 0  # Root frame is empty
     keys_can_keep = frozenset.union(
         *(frozenset(old_frame.edge_vals.keys()) for old_frame in old_frames[i:])
