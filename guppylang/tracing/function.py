@@ -90,16 +90,24 @@ def trace_function(
             regular_returns = []
 
         # Compute the inout extra outputs
-        try:
-            inout_returns = [
-                guppy_object_from_py(inout_obj, builder, state.node)._use_wire(None)
-                for inout_obj, inp in zip(inputs, ty.inputs, strict=False)
-                if InputFlags.Inout in inp.flags
-            ]
-        except ValueError as err:
-            raise GuppyError(
-                TracingReturnLinearityViolationError(node, str(err))
-            ) from None
+        inout_returns = []
+        assert ty.input_names is not None
+        for inout_obj, inp, name in zip(
+            inputs, ty.inputs, ty.input_names, strict=False
+        ):
+            if InputFlags.Inout in inp.flags:
+                try:
+                    inout_returns.append(
+                        guppy_object_from_py(inout_obj, builder, node)._use_wire(None)
+                    )
+                except ValueError as err:
+                    msg = (
+                        f"Borrowed argument `{name}` cannot be returned back to the "
+                        f"caller:\n\n{err}"
+                    )
+                    raise GuppyError(
+                        TracingReturnLinearityViolationError(node, msg)
+                    ) from None
 
     # Check that all allocated linear objects have been used
     if state.unused_objs:
