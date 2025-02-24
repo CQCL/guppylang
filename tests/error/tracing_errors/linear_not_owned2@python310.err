@@ -1,0 +1,19 @@
+Error: Linearity violation in function return (at $FILE:11:0)
+   | 
+ 9 | 
+10 | @guppy.comptime(module)
+11 | def test(qs: array[qubit, 10]) -> None:
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 |     measure(qs[0])
+   | ^^^^^^^^^^^^^^^^^^
+
+Borrowed argument `qs` cannot be returned back to the caller:
+
+Value with linear
+type `qubit` was already used
+
+Previous use occurred in
+$FILE:12
+as an argument to `measure`
+
+Guppy compilation failed due to 1 previous error
