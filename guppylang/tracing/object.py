@@ -340,7 +340,7 @@ class GuppyObject(DunderMixin):
             return (
                 GuppyObject(ty, wire)
                 for ty, wire in zip(
-                    self._ty.element_types, unpack.outputs(), strict=False
+                    self._ty.element_types, unpack.outputs(), strict=True
                 )
             )
         raise TypeError(f"Expression of type `{self._ty}` is not iterable")

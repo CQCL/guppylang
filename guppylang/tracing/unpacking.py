@@ -38,7 +38,7 @@ def unpack_guppy_object(obj: GuppyObject, builder: DfBase[P]) -> Any:
             unpack = builder.add_op(ops.UnpackTuple(), obj._use_wire(None))
             return tuple(
                 unpack_guppy_object(GuppyObject(ty, wire), builder)
-                for ty, wire in zip(tys, unpack.outputs(), strict=False)
+                for ty, wire in zip(tys, unpack.outputs(), strict=True)
             )
         case StructType() as ty:
             unpack = builder.add_op(ops.UnpackTuple(), obj._use_wire(None))

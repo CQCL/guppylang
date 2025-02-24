@@ -57,7 +57,7 @@ def trace_function(
     with set_tracing_state(state):
         inputs = [
             unpack_guppy_object(GuppyObject(inp.ty, wire), builder)
-            for wire, inp in zip(builder.inputs(), ty.inputs, strict=False)
+            for wire, inp in zip(builder.inputs(), ty.inputs, strict=True)
         ]
 
         with exception_hook(tracing_except_hook):
@@ -92,9 +92,7 @@ def trace_function(
         # Compute the inout extra outputs
         inout_returns = []
         assert ty.input_names is not None
-        for inout_obj, inp, name in zip(
-            inputs, ty.inputs, ty.input_names, strict=False
-        ):
+        for inout_obj, inp, name in zip(inputs, ty.inputs, ty.input_names, strict=True):
             if InputFlags.Inout in inp.flags:
                 try:
                     inout_returns.append(
@@ -132,7 +130,7 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     # Create dummy variables and bind the objects to them
     arg_vars = [Variable(next(tmp_vars), obj._ty, None) for obj in args_objs]
     locals = Locals({var.name: var for var in arg_vars})
-    for obj, var in zip(args_objs, arg_vars, strict=False):
+    for obj, var in zip(args_objs, arg_vars, strict=True):
         state.dfg[var] = obj._use_wire(func)
 
     # Check call
@@ -147,7 +145,7 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     ret_wire = ExprCompiler(state.globals).compile(call_node, state.dfg)
 
     # Update inouts
-    for inp, arg, var in zip(func.ty.inputs, args, arg_vars, strict=False):
+    for inp, arg, var in zip(func.ty.inputs, args, arg_vars, strict=True):
         if InputFlags.Inout in inp.flags:
             inout_wire = state.dfg[var]
             update_packed_value(arg, GuppyObject(inp.ty, inout_wire), state.dfg.builder)
