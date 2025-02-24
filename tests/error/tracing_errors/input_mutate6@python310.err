@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "$FILE", line 29, in <module>
+    module.compile()
+  File "$FILE", line 25, in foo
+    s.x = 1
+TypeError: Object of type `S` is immutable

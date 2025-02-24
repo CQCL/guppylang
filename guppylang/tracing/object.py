@@ -379,13 +379,17 @@ class GuppyStructObject:
 
     _ty: StructType
     _field_values: dict[str, Any]
+    _frozen: bool
 
-    def __init__(self, ty: StructType, field_values: Sequence[Any]) -> None:
+    def __init__(
+        self, ty: StructType, field_values: Sequence[Any], frozen: bool
+    ) -> None:
         field_values_dict = {
             f.name: v for f, v in zip(ty.fields, field_values, strict=True)
         }
         object.__setattr__(self, "_ty", ty)
         object.__setattr__(self, "_field_values", field_values_dict)
+        object.__setattr__(self, "_frozen", frozen)
 
     @hide_trace
     def __getattr__(self, key: str) -> Any:  # type: ignore[misc]
@@ -403,6 +407,9 @@ class GuppyStructObject:
     @hide_trace
     def __setattr__(self, key: str, value: Any) -> None:
         if key in self._field_values:
+            if self._frozen:
+                err = f"Object of type `{self._ty}` is immutable"
+                raise TypeError(err)
             self._field_values[key] = value
         else:
             err = f"Expression of type `{self._ty}` has no attribute `{key}`"

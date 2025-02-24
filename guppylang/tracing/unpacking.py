@@ -11,6 +11,7 @@ from guppylang.compiler.expr_compiler import python_value_to_hugr
 from guppylang.error import GuppyError
 from guppylang.std._internal.compiler.array import array_new, unpack_array
 from guppylang.std._internal.compiler.prelude import build_unwrap
+from guppylang.tracing.frozenlist import frozenlist
 from guppylang.tracing.object import GuppyDefinition, GuppyObject, GuppyStructObject
 from guppylang.tracing.state import get_tracing_globals, get_tracing_state
 from guppylang.tys.builtin import (
@@ -25,11 +26,17 @@ from guppylang.tys.ty import NoneType, StructType, TupleType
 P = TypeVar("P", bound=ops.DfParentOp)
 
 
-def unpack_guppy_object(obj: GuppyObject, builder: DfBase[P]) -> Any:
+def unpack_guppy_object(
+    obj: GuppyObject, builder: DfBase[P], frozen: bool = False
+) -> Any:
     """Tries to turn as much of the structure of a GuppyObject into Python objects.
 
     For example, Guppy tuples are turned into Python tuples and Guppy arrays are turned
     into Python lists.
+
+    Setting `frozen=True` ensures that the resulting Python objects are not mutable in-
+    place. This should be set for objects that originate from function inputs that are
+    not borrowed.
     """
     match obj._ty:
         case NoneType():
@@ -37,16 +44,16 @@ def unpack_guppy_object(obj: GuppyObject, builder: DfBase[P]) -> Any:
         case TupleType(element_types=tys):
             unpack = builder.add_op(ops.UnpackTuple(), obj._use_wire(None))
             return tuple(
-                unpack_guppy_object(GuppyObject(ty, wire), builder)
+                unpack_guppy_object(GuppyObject(ty, wire), builder, frozen)
                 for ty, wire in zip(tys, unpack.outputs(), strict=True)
             )
         case StructType() as ty:
             unpack = builder.add_op(ops.UnpackTuple(), obj._use_wire(None))
             field_values = [
-                unpack_guppy_object(GuppyObject(field.ty, wire), builder)
+                unpack_guppy_object(GuppyObject(field.ty, wire), builder, frozen)
                 for field, wire in zip(ty.fields, unpack.outputs(), strict=True)
             ]
-            return GuppyStructObject(ty, field_values)
+            return GuppyStructObject(ty, field_values, frozen)
         case ty if is_array_type(ty):
             length = get_array_length(ty)
             if isinstance(length, ConstValue):
@@ -59,10 +66,11 @@ def unpack_guppy_object(obj: GuppyObject, builder: DfBase[P]) -> Any:
                 opt_elems = unpack_array(builder, obj._use_wire(None))
                 err = "Linear array element has already been used"
                 elems = [build_unwrap(builder, opt_elem, err) for opt_elem in opt_elems]
-                return [
-                    unpack_guppy_object(GuppyObject(elem_ty, wire), builder)
+                obj_list = [
+                    unpack_guppy_object(GuppyObject(elem_ty, wire), builder, frozen)
                     for wire in elems
                 ]
+                return frozenlist(obj_list) if frozen else obj_list
             else:
                 # Cannot handle generic sizes
                 return obj

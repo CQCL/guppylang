@@ -56,7 +56,14 @@ def trace_function(
     state = TracingState(ctx, DFContainer(builder, {}), node)
     with set_tracing_state(state):
         inputs = [
-            unpack_guppy_object(GuppyObject(inp.ty, wire), builder)
+            unpack_guppy_object(
+                GuppyObject(inp.ty, wire),
+                builder,
+                # Function inputs are only allowed to be mutable if they are borrowed.
+                # For owned arguments, mutation wouldn't be observable by the caller,
+                # thus breaking the semantics expected from Python.
+                frozen=InputFlags.Inout not in inp.flags,
+            )
             for wire, inp in zip(builder.inputs(), ty.inputs, strict=True)
         ]
 
