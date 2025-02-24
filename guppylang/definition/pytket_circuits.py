@@ -14,7 +14,7 @@ from guppylang.checker.errors.py_errors import (
 )
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
-from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.definition.common import (
     CompilableDef,
     ParsableDef,
@@ -231,7 +231,7 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
         self,
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompiledGlobals,
+        ctx: CompilerContext,
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
@@ -243,7 +243,7 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
         args: list[Wire],
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompiledGlobals,
+        ctx: CompilerContext,
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""

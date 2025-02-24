@@ -46,6 +46,7 @@ from guppylang.checker.core import (
     Globals,
     Locals,
     Place,
+    SetitemCall,
     SubscriptAccess,
     Variable,
 )
@@ -89,7 +90,6 @@ from guppylang.nodes import (
     FieldAccessAndDrop,
     GenericParamValue,
     GlobalName,
-    InoutReturnSentinel,
     IterEnd,
     IterHasNext,
     IterNext,
@@ -922,6 +922,8 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
         case FieldAccess(parent=parent):
             return replace(place, parent=check_inout_arg_place(parent, ctx, node))
         case SubscriptAccess(parent=parent, item=item, ty=ty):
+            # Create temporary variable for the setitem value
+            tmp_var = Variable(next(tmp_vars), ty, node)
             # Check a call to the `__setitem__` instance function
             exp_sig = FunctionType(
                 [
@@ -931,10 +933,10 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 ],
                 NoneType(),
             )
-            setitem_args = [
+            setitem_args: list[ast.expr] = [
                 with_type(parent.ty, with_loc(node, PlaceNode(parent))),
                 with_type(item.ty, with_loc(node, PlaceNode(item))),
-                with_type(ty, with_loc(node, InoutReturnSentinel(var=place))),
+                with_type(ty, with_loc(node, PlaceNode(tmp_var))),
             ]
             setitem_call, _ = ExprSynthesizer(ctx).synthesize_instance_func(
                 setitem_args[0],
@@ -944,7 +946,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 exp_sig,
                 True,
             )
-            return replace(place, setitem_call=setitem_call)
+            return replace(place, setitem_call=SetitemCall(setitem_call, tmp_var))
 
 
 def synthesize_call(

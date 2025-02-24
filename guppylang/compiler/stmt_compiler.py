@@ -7,10 +7,11 @@ from hugr import Wire, ops
 from hugr.build.dfg import DfBase
 
 from guppylang.ast_util import AstVisitor, get_type
-from guppylang.checker.core import Variable
+from guppylang.checker.core import SubscriptAccess, Variable
+from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import (
-    CompiledGlobals,
     CompilerBase,
+    CompilerContext,
     DFContainer,
     return_var,
 )
@@ -40,9 +41,9 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
     dfg: DFContainer
 
-    def __init__(self, globals: CompiledGlobals):
-        super().__init__(globals)
-        self.expr_compiler = ExprCompiler(globals)
+    def __init__(self, ctx: CompilerContext):
+        super().__init__(ctx)
+        self.expr_compiler = ExprCompiler(ctx)
 
     def compile_stmts(
         self,
@@ -71,7 +72,18 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
     @_assign.register
     def _assign_place(self, lhs: PlaceNode, port: Wire) -> None:
-        self.dfg[lhs.place] = port
+        if (subscript := contains_subscript(lhs.place)) and isinstance(
+            lhs.place, SubscriptAccess
+        ):
+            assert subscript.setitem_call is not None
+            if subscript.item not in self.dfg:
+                self.dfg[subscript.item] = self.expr_compiler.compile(
+                    subscript.item_expr, self.dfg
+                )
+            self.dfg[subscript.setitem_call.value_var] = port
+            self.expr_compiler.visit(subscript.setitem_call.call)
+        else:
+            self.dfg[lhs.place] = port
 
     @_assign.register
     def _assign_tuple(self, lhs: TupleUnpack, port: Wire) -> None:
@@ -185,5 +197,5 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         from guppylang.compiler.func_compiler import compile_local_func_def
 
         var = Variable(node.name, node.ty, node)
-        loaded_func = compile_local_func_def(node, self.dfg, self.globals)
+        loaded_func = compile_local_func_def(node, self.dfg, self.ctx)
         self.dfg[var] = loaded_func

@@ -51,6 +51,17 @@ class AssignFieldTypeMismatchError(Error):
 
 
 @dataclass(frozen=True)
+class AssignSubscriptTypeMismatchError(Error):
+    title: ClassVar[str] = "Type mismatch"
+    span_label: ClassVar[str] = (
+        "Cannot assign expression of type `{actual}` to array element of type "
+        "`{expected}`"
+    )
+    actual: Type
+    expected: Type
+
+
+@dataclass(frozen=True)
 class NonLinearInstantiateError(Error):
     title: ClassVar[str] = "Not defined for linear argument"
     span_label: ClassVar[str] = (

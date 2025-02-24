@@ -14,7 +14,7 @@ from hugr.package import ModulePointer, Package
 import guppylang.compiler.hugr_extension
 from guppylang import decorator
 from guppylang.checker.core import Globals, PyScope
-from guppylang.compiler.core import CompiledGlobals
+from guppylang.compiler.core import CompilerContext
 from guppylang.definition.common import (
     CheckableDef,
     CheckedDef,
@@ -355,7 +355,7 @@ class GuppyModule:
         from guppylang.tracing.state import set_tracing_globals
 
         with set_tracing_globals(self._globals | self._imported_globals):
-            ctx = CompiledGlobals(
+            ctx = CompilerContext(
                 checked_defs, graph, self._imported_globals | self._globals
             )
             for defn in self._checked_defs.values():
@@ -382,7 +382,7 @@ class GuppyModule:
 class _CompiledModule:
     """Cached compiled module and definitions"""
 
-    globs: CompiledGlobals
+    context: CompilerContext
     module: ModulePointer
 
 

@@ -481,7 +481,7 @@ class _Guppy:
             raise ValueError("Function definition must belong to a module")
         compiled_module = module.compile()
         assert module._compiled is not None, "Module should be compiled"
-        globs = module._compiled.globs
+        globs = module._compiled.context
         assert globs is not None
         compiled_def = globs.build_compiled_def(f_def.id)
         assert isinstance(compiled_def, CompiledFunctionDef)

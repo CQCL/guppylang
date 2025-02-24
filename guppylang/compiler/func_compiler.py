@@ -5,7 +5,7 @@ from hugr import tys as ht
 from hugr.build.function import Function
 
 from guppylang.compiler.cfg_compiler import compile_cfg
-from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.nodes import CheckedNestedFunctionDef
 
@@ -16,17 +16,17 @@ if TYPE_CHECKING:
 def compile_global_func_def(
     func: "CheckedFunctionDef",
     builder: Function,
-    globals: CompiledGlobals,
+    ctx: CompilerContext,
 ) -> None:
     """Compiles a top-level function definition to Hugr."""
-    cfg = compile_cfg(func.cfg, builder, builder.inputs(), globals)
+    cfg = compile_cfg(func.cfg, builder, builder.inputs(), ctx)
     builder.set_outputs(*cfg)
 
 
 def compile_local_func_def(
     func: CheckedNestedFunctionDef,
     dfg: DFContainer,
-    globals: CompiledGlobals,
+    ctx: CompilerContext,
 ) -> Wire:
     """Compiles a local (nested) function definition to Hugr and loads it into a value.
 
@@ -64,13 +64,13 @@ def compile_local_func_def(
         func.cfg.input_tys.append(func.ty)
 
         # Compile the CFG
-        cfg = compile_cfg(func.cfg, func_builder, call_args, globals)
+        cfg = compile_cfg(func.cfg, func_builder, call_args, ctx)
         func_builder.set_outputs(*cfg)
     else:
         # Otherwise, we treat the function like a normal global variable
         from guppylang.definition.function import CompiledFunctionDef
 
-        globals.compiled[func.def_id] = CompiledFunctionDef(
+        ctx.compiled[func.def_id] = CompiledFunctionDef(
             func.def_id,
             func.name,
             func,
@@ -80,7 +80,7 @@ def compile_local_func_def(
             func.cfg,
             func_builder,
         )
-        globals.worklist.add(func.def_id)  # will compile the CFG later
+        ctx.worklist.add(func.def_id)  # will compile the CFG later
 
     # Finally, load the function into the local data-flow graph
     loaded = dfg.builder.load_function(func_builder, closure_ty)

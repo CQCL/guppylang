@@ -40,7 +40,6 @@ from guppylang.nodes import (
     GenericParamValue,
     GlobalCall,
     GlobalName,
-    InoutReturnSentinel,
     LocalCall,
     PanicExpr,
     PartialApply,
@@ -203,7 +202,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self.dfg[node.place]
 
     def visit_GlobalName(self, node: GlobalName) -> Wire:
-        defn = self.globals.build_compiled_def(node.def_id)
+        defn = self.ctx.build_compiled_def(node.def_id)
         assert isinstance(defn, CompiledValueDef)
         if isinstance(defn, CompiledCallableDef) and defn.ty.parametrized:
             # TODO: This should be caught during checking
@@ -211,7 +210,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 node, "Polymorphic functions as dynamic higher-order values"
             )
             raise GuppyError(err)
-        return defn.load(self.dfg, self.globals, node)
+        return defn.load(self.dfg, self.ctx, node)
 
     def visit_GenericParamValue(self, node: GenericParamValue) -> Wire:
         match node.param.ty:
@@ -227,10 +226,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_Name(self, node: ast.Name) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
-
-    def visit_InoutReturnSentinel(self, node: InoutReturnSentinel) -> Wire:
-        assert not isinstance(node.var, str)
-        return self.dfg[node.var]
 
     def visit_Tuple(self, node: ast.Tuple) -> Wire:
         elems = [self.visit(e) for e in node.elts]
@@ -286,7 +281,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 # `arg.place.parent` occurs as an arg of this call, so will also
                 # be recursively reassigned.
                 if subscript := contains_subscript(arg.place):
-                    self.visit(subscript.setitem_call)
+                    assert subscript.setitem_call is not None
+                    # Need to assign __setitem__ value before compiling call.
+                    # Note that the assignment to `self.dfg[arg.place]` also updated
+                    # `self.dfg[subscript]` so that it now contains the value we want
+                    # to write back into the subscript.
+                    self.dfg[subscript.setitem_call.value_var] = self.dfg[subscript]
+                    self.visit(subscript.setitem_call.call)
         assert next(inout_ports, None) is None, "Too many inout return ports"
 
     def visit_LocalCall(self, node: LocalCall) -> Wire:
@@ -362,13 +363,11 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
     def visit_GlobalCall(self, node: GlobalCall) -> Wire:
-        func = self.globals.build_compiled_def(node.def_id)
+        func = self.ctx.build_compiled_def(node.def_id)
         assert isinstance(func, CompiledCallableDef)
 
         args = [self.visit(arg) for arg in node.args]
-        rets = func.compile_call(
-            args, list(node.type_args), self.dfg, self.globals, node
-        )
+        rets = func.compile_call(args, list(node.type_args), self.dfg, self.ctx, node)
         if isinstance(func, CustomFunctionDef) and not func.has_signature:
             func_ty = FunctionType(
                 [FuncInput(get_type(arg), InputFlags.NoFlags) for arg in node.args],
@@ -396,7 +395,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # For now, we can only TypeApply global FunctionDefs/Decls.
         if not isinstance(node.value, GlobalName):
             raise InternalGuppyError("Dynamic TypeApply not supported yet!")
-        defn = self.globals.build_compiled_def(node.value.def_id)
+        defn = self.ctx.build_compiled_def(node.value.def_id)
         assert isinstance(defn, CompiledCallableDef)
 
         # We have to be very careful here: If we instantiate `foo: forall T. T -> T`
@@ -412,7 +411,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             raise GuppyError(err)
 
-        return defn.load_with_args(node.inst, self.dfg, self.globals, node)
+        return defn.load_with_args(node.inst, self.dfg, self.ctx, node)
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> Wire:
         # The only case that is not desugared by the type checker is the `not` operation
@@ -546,9 +545,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         args: list[Wire],
         type_args: Sequence[Argument] | None = None,
     ) -> CallReturnWires:
-        func = self.globals.get_instance_func(ty, method)
+        func = self.ctx.get_instance_func(ty, method)
         assert func is not None
-        return func.compile_call(args, type_args or [], self.dfg, self.globals, node)
+        return func.compile_call(args, type_args or [], self.dfg, self.ctx, node)
 
     @contextmanager
     def _build_generators(
@@ -561,7 +560,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         """
         from guppylang.compiler.stmt_compiler import StmtCompiler
 
-        compiler = StmtCompiler(self.globals)
+        compiler = StmtCompiler(self.ctx)
         with ExitStack() as stack:
             for gen in gens:
                 # Build the generator
