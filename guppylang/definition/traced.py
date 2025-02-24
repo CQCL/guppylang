@@ -142,6 +142,4 @@ class CompiledTracedFunctionDef(TracedFunctionDef, CompiledCallableDef):
         """Compiles the body of the function by tracing it."""
         from guppylang.tracing.function import trace_function
 
-        trace_function(
-            self.python_func, self.ty, self.func_def, ctx, self.defined_at
-        )
+        trace_function(self.python_func, self.ty, self.func_def, ctx, self.defined_at)
