@@ -22,7 +22,11 @@ from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
-from guppylang.tracing.state import get_tracing_globals, get_tracing_state
+from guppylang.tracing.state import (
+    get_tracing_globals,
+    get_tracing_state,
+    tracing_active,
+)
 from guppylang.tracing.util import capture_guppy_errors, get_calling_frame, hide_trace
 from guppylang.tys.ty import FunctionType, StructType, TupleType, Type
 
@@ -439,6 +443,12 @@ class GuppyDefinition:
     @hide_trace
     def __call__(self, *args: Any) -> Any:
         from guppylang.tracing.function import trace_call
+
+        if not tracing_active():
+            raise RuntimeError(
+                f"{self.wrapped.description.capitalize()} `{self.wrapped.name}` may "
+                "only be called in a Guppy context"
+            )
 
         # Check that the functions is loaded in the current module
         globals = get_tracing_globals()

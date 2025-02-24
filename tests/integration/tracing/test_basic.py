@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 
@@ -64,6 +66,19 @@ def test_calls(validate):
     @guppy(module)
     def regular2(x: int) -> int:
         return comptime1(x)
+
+    validate(module.compile())
+
+
+def test_load_func(validate):
+    module = GuppyModule("test")
+
+    @guppy.declare(module)
+    def foo(x: int) -> int: ...
+
+    @guppy.comptime(module)
+    def test() -> Callable[[int], int]:
+        return foo
 
     validate(module.compile())
 

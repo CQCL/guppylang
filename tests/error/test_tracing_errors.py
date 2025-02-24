@@ -1,6 +1,7 @@
 import pathlib
 import pytest
 
+from guppylang.tracing.state import reset_state
 from tests.error.util import run_error_test
 
 path = pathlib.Path(__file__).parent.resolve() / "tracing_errors"
@@ -16,4 +17,7 @@ files = [str(f) for f in files]
 
 @pytest.mark.parametrize("file", files)
 def test_tracing_errors(file, capsys, snapshot):
+    # Reset the tracing state by hand since the previous test catches the exception so
+    # it's not reset
+    reset_state()
     run_error_test(file, capsys, snapshot)

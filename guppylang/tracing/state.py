@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals
 from guppylang.compiler.core import CompilerContext, DFContainer
+from guppylang.error import InternalGuppyError
 
 if TYPE_CHECKING:
     from guppylang.tracing.object import GuppyObject, ObjectId
@@ -27,14 +28,24 @@ _GLOBALS: Globals | None = None
 
 def get_tracing_state() -> TracingState:
     if _STATE is None:
-        raise RuntimeError("Guppy tracing mode is not active")
+        raise InternalGuppyError("Guppy tracing mode is not active")
     return _STATE
 
 
 def get_tracing_globals() -> Globals:
     if _GLOBALS is None:
-        raise RuntimeError("Guppy tracing mode is not active")
+        raise InternalGuppyError("Guppy tracing mode is not active")
     return _GLOBALS
+
+
+def tracing_active() -> bool:
+    global _STATE
+    return _STATE is not None
+
+
+def reset_state() -> None:
+    global _STATE
+    _STATE = None
 
 
 @contextmanager

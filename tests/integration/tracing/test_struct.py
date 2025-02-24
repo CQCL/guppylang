@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Generic
 
 from guppylang.decorator import guppy
@@ -125,3 +126,17 @@ def test_generic_nested(validate, run_float_fn_approx):
     compiled = module.compile()
     validate(compiled)
     run_float_fn_approx(compiled, 11111)
+
+
+def test_load_constructor(validate):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class S:
+        x: int
+
+    @guppy.comptime(module)
+    def test() -> Callable[[int], S]:
+        return S
+
+    validate(module.compile())

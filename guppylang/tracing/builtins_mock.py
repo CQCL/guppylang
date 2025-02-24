@@ -10,7 +10,7 @@ import builtins
 from collections.abc import Callable
 from typing import Any
 
-from guppylang.tracing.object import GuppyObject
+from guppylang.tracing.object import GuppyObject, GuppyStructObject
 
 
 def _mock_meta(cls: type) -> type:
@@ -28,24 +28,24 @@ def _mock_meta(cls: type) -> type:
             return cls.__subclasscheck__(subclass)
 
         def __eq__(self, other: object) -> Any:
-            return other == builtins.int
+            return other == cls
 
         def __ne__(self, other: object) -> Any:
-            return other != builtins.int
+            return other != cls
 
     MockMeta.__name__ = type.__name__
     MockMeta.__qualname__ = type.__qualname__
     return MockMeta
 
 
-class float(metaclass=_mock_meta(builtins.float)):  # type: ignore[misc]
+class float(builtins.float, metaclass=_mock_meta(builtins.float)):  # type: ignore[misc]
     def __new__(cls, x: Any = 0.0, /) -> Any:
         if isinstance(x, GuppyObject):
             return x.__float__()
         return builtins.float(x)
 
 
-class int(metaclass=_mock_meta(builtins.int)):  # type: ignore[misc]
+class int(builtins.int, metaclass=_mock_meta(builtins.int)):  # type: ignore[misc]
     def __new__(cls, x: Any = 0, /, **kwargs: Any) -> Any:
         if isinstance(x, GuppyObject):
             return x.__int__(**kwargs)
@@ -53,7 +53,7 @@ class int(metaclass=_mock_meta(builtins.int)):  # type: ignore[misc]
 
 
 def len(x: Any) -> Any:
-    if isinstance(x, GuppyObject):
+    if isinstance(x, GuppyObject | GuppyStructObject):
         return x.__len__()
     return builtins.len(x)
 

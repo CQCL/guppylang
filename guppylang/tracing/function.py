@@ -30,7 +30,7 @@ from guppylang.tracing.unpacking import (
     update_packed_value,
 )
 from guppylang.tracing.util import capture_guppy_errors, tracing_except_hook
-from guppylang.tys.ty import FunctionType, InputFlags, type_to_row
+from guppylang.tys.ty import FunctionType, InputFlags, type_to_row, unify
 
 if TYPE_CHECKING:
     import ast
@@ -91,7 +91,7 @@ def trace_function(
             ) from None
 
         # Check that the output type is correct
-        if out_obj._ty != ty.output:
+        if unify(out_obj._ty, ty.output, {}) is None:
             raise GuppyError(
                 TypeMismatchError(node, ty.output, out_obj._ty, "return value")
             )
