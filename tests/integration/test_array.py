@@ -46,6 +46,20 @@ def test_len_linear(validate):
     assert isinstance(val.val, IntVal)
     assert val.val.v == 42
 
+def test_len_generic():
+    module = GuppyModule("test")
+
+    n = guppy.nat_var("n", module=module)
+
+    @guppy(module)
+    def main(qs: array[bool, n]) -> bool:
+        for i in range(len(qs)):
+            if qs[i]:
+                return True
+        return False
+
+    module.compile()
+
 
 def test_index(validate):
     @compile_guppy
