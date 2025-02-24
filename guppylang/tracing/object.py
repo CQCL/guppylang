@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, NamedTuple, TypeAlias
 
 from hugr import Wire, ops
@@ -349,9 +350,13 @@ class GuppyObject(DunderMixin):
         # Panic if the value has already been used
         if self._used and self._ty.linear:
             use = self._used
+            # TODO: Should we print the full path to the file or only the name as is
+            #  done here? Note that the former will lead to challenges with golden
+            #  tests
+            filename = Path(use.module).name
             err = (
                 f"Value with linear type `{self._ty}` was already used\n\n"
-                f"Previous use occurred in {use.module}:{use.lineno}"
+                f"Previous use occurred in {filename}:{use.lineno}"
             )
             if use.called_func:
                 err += f" as an argument to `{use.called_func.name}`"

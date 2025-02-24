@@ -5,4 +5,4 @@ Traceback (most recent call last):
     cx(q, q)
 ValueError: Value with linear type `qubit` was already used
 
-Previous use occurred in $FILE:11 as an argument to `cx`
+Previous use occurred in linear_copy1.py:11 as an argument to `cx`
