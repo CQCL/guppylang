@@ -18,7 +18,7 @@ from guppylang.checker.expr_checker import (
 from guppylang.checker.func_checker import (
     check_signature,
 )
-from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.definition.common import (
     CompilableDef,
     ParsableDef,
@@ -110,7 +110,7 @@ class CompiledTracedFunctionDef(TracedFunctionDef, CompiledCallableDef):
         self,
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompiledGlobals,
+        ctx: CompilerContext,
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
@@ -123,7 +123,7 @@ class CompiledTracedFunctionDef(TracedFunctionDef, CompiledCallableDef):
         args: list[Wire],
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompiledGlobals,
+        ctx: CompilerContext,
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
@@ -138,10 +138,10 @@ class CompiledTracedFunctionDef(TracedFunctionDef, CompiledCallableDef):
             inout_returns=list(call[num_returns:]),
         )
 
-    def compile_inner(self, globals: CompiledGlobals) -> None:
+    def compile_inner(self, ctx: CompilerContext) -> None:
         """Compiles the body of the function by tracing it."""
         from guppylang.tracing.function import trace_function
 
         trace_function(
-            self.python_func, self.ty, self.func_def, globals, self.defined_at
+            self.python_func, self.ty, self.func_def, ctx, self.defined_at
         )

@@ -9,7 +9,7 @@ from guppylang.ast_util import AstNode, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import Context, Locals, Variable
 from guppylang.checker.errors.type_errors import TypeMismatchError
-from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.definition.value import CompiledCallableDef
 from guppylang.diagnostic import Error
@@ -49,11 +49,11 @@ def trace_function(
     python_func: Callable[..., Any],
     ty: FunctionType,
     builder: DfBase[P],
-    globals: CompiledGlobals,
+    ctx: CompilerContext,
     node: AstNode,
 ) -> None:
     """Kicks off tracing of a function."""
-    state = TracingState(globals, DFContainer(builder, {}), node)
+    state = TracingState(ctx, DFContainer(builder, {}), node)
     with set_tracing_state(state):
         inputs = [
             unpack_guppy_object(GuppyObject(inp.ty, wire), builder)
@@ -142,7 +142,7 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     )
 
     # Compile call
-    ret_wire = ExprCompiler(state.globals).compile(call_node, state.dfg)
+    ret_wire = ExprCompiler(state.ctx).compile(call_node, state.dfg)
 
     # Update inouts
     for inp, arg, var in zip(func.ty.inputs, args, arg_vars, strict=True):

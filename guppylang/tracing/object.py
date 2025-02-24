@@ -440,7 +440,7 @@ class GuppyDefinition:
             raise TypeError(err)
 
         state = get_tracing_state()
-        defn = state.globals.build_compiled_def(self.wrapped.id)
+        defn = state.ctx.build_compiled_def(self.wrapped.id)
         if isinstance(defn, CompiledCallableDef):
             return trace_call(defn, *args)
         elif (
@@ -458,9 +458,9 @@ class GuppyDefinition:
 
     def to_guppy_object(self) -> GuppyObject:
         state = get_tracing_state()
-        defn = state.globals.build_compiled_def(self.id)
+        defn = state.ctx.build_compiled_def(self.id)
         if isinstance(defn, CompiledValueDef):
-            wire = defn.load(state.dfg, state.globals, state.node)
+            wire = defn.load(state.dfg, state.ctx, state.node)
             return GuppyObject(defn.ty, wire, None)
         elif isinstance(defn, TypeDef):
             globals = get_tracing_globals()

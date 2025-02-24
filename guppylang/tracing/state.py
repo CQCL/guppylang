@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals
-from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.compiler.core import CompilerContext, DFContainer
 
 if TYPE_CHECKING:
     from guppylang.tracing.object import GuppyObject, ObjectId
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class TracingState:
-    globals: CompiledGlobals
+    ctx: CompilerContext
     dfg: DFContainer
     node: AstNode
 
