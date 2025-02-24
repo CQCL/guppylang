@@ -97,10 +97,18 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
                 builder.add_op(ops.MakeTuple(), *(obj._use_wire(None) for obj in objs)),
             )
         case GuppyStructObject(_ty=struct_ty, _field_values=values):
-            wires = [
-                guppy_object_from_py(values[f.name], builder, node)._use_wire(None)
-                for f in struct_ty.fields
-            ]
+            wires = []
+            for f in struct_ty.fields:
+                obj = guppy_object_from_py(values[f.name], builder, node)
+                # Check that the field still has the correct type. Since we allow users
+                # to mutate structs unchecked, this needs to be checked here
+                if obj._ty != f.ty:
+                    msg = (
+                        f"Field `{f.name}` of object with type `{struct_ty}` has an "
+                        f"unexpected type. Expected `{f.ty}`, got `{obj._ty}`."
+                    )
+                    raise TypeError(msg)
+                wires.append(obj._use_wire(None))
             return GuppyObject(struct_ty, builder.add_op(ops.MakeTuple(), *wires))
         case list(vs) if len(vs) > 0:
             objs = [guppy_object_from_py(v, builder, node) for v in vs]

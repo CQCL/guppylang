@@ -7,9 +7,7 @@ Error: Linearity violation in function return (at $FILE:11:0)
 12 |     measure(qs[0])
    | ^^^^^^^^^^^^^^^^^^
 
-Borrowed argument `qs` cannot be returned back to the caller:
-
-Value with linear
+Borrowed argument `qs` cannot be returned back to the caller. Value with linear
 type `qubit` was already used
 
 Previous use occurred in

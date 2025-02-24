@@ -39,6 +39,13 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
+class TracingReturnTypeError(Error):
+    title: ClassVar[str] = "Type error in function return"
+    message: ClassVar[str] = "{msg}"
+    msg: str
+
+
+@dataclass(frozen=True)
 class TracingReturnLinearityViolationError(Error):
     title: ClassVar[str] = "Linearity violation in function return"
     message: ClassVar[str] = "{msg}"
@@ -73,6 +80,10 @@ def trace_function(
 
         try:
             out_obj = guppy_object_from_py(py_out, builder, node)
+        except TypeError as err:
+            # Type error in the return statement. For example, this happens if users
+            # try to return a struct with invalid field values
+            raise GuppyError(TracingReturnTypeError(node, str(err))) from None
         except ValueError as err:
             # Linearity violation in the return statement
             raise GuppyError(
@@ -101,18 +112,30 @@ def trace_function(
         assert ty.input_names is not None
         for inout_obj, inp, name in zip(inputs, ty.inputs, ty.input_names, strict=True):
             if InputFlags.Inout in inp.flags:
+                err_prefix = (
+                    f"Borrowed argument `{name}` cannot be returned back to the "
+                    f"caller. "
+                )
                 try:
-                    inout_returns.append(
-                        guppy_object_from_py(inout_obj, builder, node)._use_wire(None)
-                    )
+                    obj = guppy_object_from_py(inout_obj, builder, node)
+                    inout_returns.append(obj._use_wire(None))
+                except TypeError as err:
+                    e: Error = TracingReturnTypeError(node, err_prefix + str(err))
+                    raise GuppyError(e) from None
                 except ValueError as err:
-                    msg = (
-                        f"Borrowed argument `{name}` cannot be returned back to the "
-                        f"caller:\n\n{err}"
+                    e = TracingReturnLinearityViolationError(
+                        node, err_prefix + str(err)
                     )
-                    raise GuppyError(
-                        TracingReturnLinearityViolationError(node, msg)
-                    ) from None
+                    raise GuppyError(e) from None
+                # Also check that the type hasn't changed (for example, the user could
+                # have changed to length of an array, thus changing its type)
+                if obj._ty != inp.ty:
+                    msg = (
+                        f"{err_prefix}Expected it to have type `{inp.ty}`, but got "
+                        f"`{obj._ty}`."
+                    )
+                    e = TracingReturnLinearityViolationError(node, msg)
+                    raise GuppyError(e) from None
 
     # Check that all allocated linear objects have been used
     if state.unused_objs:
