@@ -122,6 +122,10 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
                 array_type(elem_ty, len(vs)),
                 builder.add_op(array_new(hugr_elem_ty, len(vs)), *wires),
             )
+        case []:
+            # Empty lists are tricky since we can't infer the element type here
+            # TODO: Propagate type information?
+            raise TypeError("Cannot infer the type of empty list")
         case v:
             ty = python_value_to_guppy_type(v, node, get_tracing_globals())
             if ty is None:
