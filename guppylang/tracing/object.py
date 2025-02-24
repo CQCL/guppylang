@@ -383,7 +383,7 @@ class GuppyObject(DunderMixin):
         return self._wire
 
 
-class GuppyStructObject:
+class GuppyStructObject(DunderMixin):
     """The runtime representation of Guppy struct objects during tracing."""
 
     _ty: StructType
