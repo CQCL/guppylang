@@ -1,6 +1,7 @@
 import importlib.util
 import inspect
 import pathlib
+import re
 import sys
 
 import pytest
@@ -12,7 +13,13 @@ from guppylang.module import GuppyModule
 import guppylang.decorator as decorator
 
 
-def run_error_test(file, capsys, snapshot, version_sensitive=False):
+# Regular expression to match the `~~~~~^^^~~~` highlights that are printed in
+# tracebacks from Python 3.11 onwards. We strip those out so we can use the same golden
+# files for Python 3.10
+TRACEBACK_HIGHLIGHT = re.compile(r" *~*\^\^*~*")
+
+
+def run_error_test(file, capsys, snapshot):
     file = pathlib.Path(file)
 
     with pytest.raises(Exception) as exc_info:
@@ -30,16 +37,17 @@ def run_error_test(file, capsys, snapshot, version_sensitive=False):
     err = capsys.readouterr().err
     err = err.replace(str(file), "$FILE")
 
-    if version_sensitive:
-        major, minor, *_ = sys.version_info
-        golden_file = file.with_name(file.stem + f"@python{major}{minor}.err")
-        if not golden_file.exists() and not snapshot._snapshot_update:
-            pytest.skip(f"No golden test available for Python {major}.{minor}")
-    else:
-        golden_file = file.with_suffix(".err")
+    # If we're comparing tracebacks, strip the highlights that are only present for
+    # Python 3.11+
+    if err.startswith("Traceback (most recent call last):"):
+        err = "\n".join(
+            line
+            for line in err.split("\n")
+            if not TRACEBACK_HIGHLIGHT.fullmatch(line)
+        )
 
     snapshot.snapshot_dir = str(file.parent)
-    snapshot.assert_match(err, golden_file.name)
+    snapshot.assert_match(err, file.with_suffix(".err").name)
 
 
 util = GuppyModule("test")

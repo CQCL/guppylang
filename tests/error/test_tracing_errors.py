@@ -16,4 +16,4 @@ files = [str(f) for f in files]
 
 @pytest.mark.parametrize("file", files)
 def test_tracing_errors(file, capsys, snapshot):
-    run_error_test(file, capsys, snapshot, version_sensitive=True)
+    run_error_test(file, capsys, snapshot)
