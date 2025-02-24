@@ -103,16 +103,21 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
                 # Check that the field still has the correct type. Since we allow users
                 # to mutate structs unchecked, this needs to be checked here
                 if obj._ty != f.ty:
-                    msg = (
+                    raise TypeError(
                         f"Field `{f.name}` of object with type `{struct_ty}` has an "
                         f"unexpected type. Expected `{f.ty}`, got `{obj._ty}`."
                     )
-                    raise TypeError(msg)
                 wires.append(obj._use_wire(None))
             return GuppyObject(struct_ty, builder.add_op(ops.MakeTuple(), *wires))
         case list(vs) if len(vs) > 0:
             objs = [guppy_object_from_py(v, builder, node) for v in vs]
             elem_ty = objs[0]._ty
+            for i, obj in enumerate(objs[1:]):
+                if obj._ty != elem_ty:
+                    raise TypeError(
+                        f"Element at index {i + 1} does not match the type of "
+                        f"previous elements. Expected `{elem_ty}`, got `{obj._ty}`."
+                    )
             hugr_elem_ty = ht.Option(elem_ty.to_hugr())
             wires = [
                 builder.add_op(ops.Tag(1, hugr_elem_ty), obj._use_wire(None))
