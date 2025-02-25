@@ -153,7 +153,7 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
             v_obj._wire = obj._use_wire(None)
             if v_obj._ty.linear and v_obj._used:
                 state = get_tracing_state()
-                state.unused_objs.add(v_obj._id)
+                state.unused_linear_objs[v_obj._id] = v_obj
             v_obj._used = None
         case None:
             assert isinstance(obj._ty, NoneType)

@@ -138,8 +138,8 @@ def trace_function(
                     raise GuppyError(e) from None
 
     # Check that all allocated linear objects have been used
-    if state.unused_objs:
-        unused = state.allocated_objs[state.unused_objs.pop()]
+    if state.unused_linear_objs:
+        _, unused = state.unused_linear_objs.popitem()
         msg = f"Value with linear type `{unused._ty}` is leaked by this function"
         raise GuppyError(TracingReturnLinearityViolationError(node, msg)) from None
 

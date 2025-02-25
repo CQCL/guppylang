@@ -14,12 +14,24 @@ if TYPE_CHECKING:
 
 @dataclass
 class TracingState:
+    """Internal state that is used during the tracing phase of comptime functions."""
+
+    #: Reference to the global compilation context.
     ctx: CompilerContext
+
+    #: The current dataflow graph under construction.
     dfg: DFContainer
+
+    #: An AST node capturing the code block that is currently being traced
     node: AstNode
 
-    allocated_objs: "dict[ObjectId, GuppyObject]" = field(default_factory=dict)
-    unused_objs: "set[ObjectId]" = field(default_factory=set)
+    #: Set of all allocated linear GuppyObjects where the `used` flag is not set,
+    #: indexed by their id. This is used to detect linearity violations.
+    unused_linear_objs: "dict[ObjectId, GuppyObject]" = field(default_factory=dict)
+
+    @property
+    def globals(self) -> Globals:
+        return self.ctx.checked_globals
 
 
 _STATE: TracingState | None = None

@@ -301,9 +301,8 @@ class GuppyObject(DunderMixin):
         self._used = used
         self._id = next(fresh_id)
         state = get_tracing_state()
-        state.allocated_objs[self._id] = self
         if ty.linear and not self._used:
-            state.unused_objs.add(self._id)
+            state.unused_linear_objs[self._id] = self
 
     @hide_trace
     def __getattr__(self, key: str) -> Any:  # type: ignore[misc]
@@ -379,7 +378,7 @@ class GuppyObject(DunderMixin):
             self._used = ObjectUse(module_name, frame.f_lineno, called_func)
             if self._ty.linear:
                 state = get_tracing_state()
-                state.unused_objs.remove(self._id)
+                state.unused_linear_objs.pop(self._id)
         return self._wire
 
 
