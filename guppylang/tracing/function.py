@@ -19,7 +19,6 @@ from guppylang.tracing.builtins_mock import mock_builtins
 from guppylang.tracing.object import GuppyObject
 from guppylang.tracing.state import (
     TracingState,
-    get_tracing_globals,
     get_tracing_state,
     set_tracing_state,
 )
@@ -149,7 +148,6 @@ def trace_function(
 @capture_guppy_errors
 def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     state = get_tracing_state()
-    globals = get_tracing_globals()
     assert func.defined_at is not None
 
     # Try to turn args into `GuppyObjects`
@@ -168,7 +166,7 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
         with_loc(func.defined_at, with_type(var.ty, PlaceNode(var))) for var in arg_vars
     ]
     call_node, ret_ty = func.synthesize_call(
-        arg_exprs, func.defined_at, Context(globals, locals, {})
+        arg_exprs, func.defined_at, Context(state.globals, locals, {})
     )
 
     # Compile call

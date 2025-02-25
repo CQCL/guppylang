@@ -352,14 +352,11 @@ class GuppyModule:
         graph.metadata["name"] = self.name
 
         # Lower definitions to Hugr
-        from guppylang.tracing.state import set_tracing_globals
-
-        with set_tracing_globals(self._globals | self._imported_globals):
-            ctx = CompilerContext(
-                checked_defs, graph, self._imported_globals | self._globals
-            )
-            for defn in self._checked_defs.values():
-                ctx.compile(defn)
+        ctx = CompilerContext(
+            checked_defs, graph, self._imported_globals | self._globals
+        )
+        for defn in self._checked_defs.values():
+            ctx.compile(defn)
 
         # TODO: Currently we just include a hardcoded list of extensions. We should
         # compute this dynamically from the imported dependencies instead.

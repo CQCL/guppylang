@@ -35,19 +35,12 @@ class TracingState:
 
 
 _STATE: TracingState | None = None
-_GLOBALS: Globals | None = None
 
 
 def get_tracing_state() -> TracingState:
     if _STATE is None:
         raise InternalGuppyError("Guppy tracing mode is not active")
     return _STATE
-
-
-def get_tracing_globals() -> Globals:
-    if _GLOBALS is None:
-        raise InternalGuppyError("Guppy tracing mode is not active")
-    return _GLOBALS
 
 
 def tracing_active() -> bool:
@@ -67,12 +60,3 @@ def set_tracing_state(state: TracingState) -> Iterator[None]:
     _STATE = state
     yield
     _STATE = old_state
-
-
-@contextmanager
-def set_tracing_globals(globals: Globals) -> Iterator[None]:
-    global _GLOBALS
-    old_globals = _GLOBALS
-    _GLOBALS = globals
-    yield
-    _GLOBALS = old_globals

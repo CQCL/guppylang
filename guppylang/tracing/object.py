@@ -22,11 +22,7 @@ from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
-from guppylang.tracing.state import (
-    get_tracing_globals,
-    get_tracing_state,
-    tracing_active,
-)
+from guppylang.tracing.state import get_tracing_state, tracing_active
 from guppylang.tracing.util import capture_guppy_errors, get_calling_frame, hide_trace
 from guppylang.tys.ty import FunctionType, StructType, TupleType, Type
 
@@ -306,8 +302,7 @@ class GuppyObject(DunderMixin):
 
     @hide_trace
     def __getattr__(self, key: str) -> Any:  # type: ignore[misc]
-        globals = get_tracing_globals()
-        func = globals.get_instance_func(self._ty, key)
+        func = get_tracing_state().globals.get_instance_func(self._ty, key)
         if func is None:
             raise AttributeError(
                 f"Expression of type `{self._ty}` has no attribute `{key}`"
@@ -405,8 +400,7 @@ class GuppyStructObject(DunderMixin):
         if key in self._field_values:
             return self._field_values[key]
         # Or a method
-        globals = get_tracing_globals()
-        func = globals.get_instance_func(self._ty, key)
+        func = get_tracing_state().globals.get_instance_func(self._ty, key)
         if func is None:
             err = f"Expression of type `{self._ty}` has no attribute `{key}`"
             raise AttributeError(err)
@@ -450,7 +444,8 @@ class GuppyDefinition:
             )
 
         # Check that the functions is loaded in the current module
-        globals = get_tracing_globals()
+        state = get_tracing_state()
+        globals = state.globals
         if self.wrapped.id not in globals.defs:
             assert self.wrapped.id.module is not None
             err = (
@@ -460,7 +455,6 @@ class GuppyDefinition:
             )
             raise TypeError(err)
 
-        state = get_tracing_state()
         defn = state.ctx.build_compiled_def(self.wrapped.id)
         if isinstance(defn, CompiledCallableDef):
             return trace_call(defn, *args)
@@ -484,7 +478,7 @@ class GuppyDefinition:
             wire = defn.load(state.dfg, state.ctx, state.node)
             return GuppyObject(defn.ty, wire, None)
         elif isinstance(defn, TypeDef):
-            globals = get_tracing_globals()
+            globals = state.globals
             if defn.id in globals.impls and "__new__" in globals.impls[defn.id]:
                 constructor = globals.defs[globals.impls[defn.id]["__new__"]]
                 return GuppyDefinition(constructor).to_guppy_object()

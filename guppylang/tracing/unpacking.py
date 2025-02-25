@@ -13,7 +13,7 @@ from guppylang.std._internal.compiler.array import array_new, unpack_array
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.tracing.frozenlist import frozenlist
 from guppylang.tracing.object import GuppyDefinition, GuppyObject, GuppyStructObject
-from guppylang.tracing.state import get_tracing_globals, get_tracing_state
+from guppylang.tracing.state import get_tracing_state
 from guppylang.tys.builtin import (
     array_type,
     get_array_length,
@@ -132,7 +132,7 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
             # TODO: Propagate type information?
             raise TypeError("Cannot infer the type of empty list")
         case v:
-            ty = python_value_to_guppy_type(v, node, get_tracing_globals())
+            ty = python_value_to_guppy_type(v, node, get_tracing_state().globals)
             if ty is None:
                 raise GuppyError(IllegalPyExpressionError(node, type(v)))
             hugr_val = python_value_to_hugr(v, ty)
