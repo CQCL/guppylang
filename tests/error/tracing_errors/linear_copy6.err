@@ -8,7 +8,7 @@ Error: Linearity violation in function return (at $FILE:10:0)
 12 |     return q, q
    | ^^^^^^^^^^^^^^^
 
-Value with linear type `qubit` was already used
+Value with non-copyable type `qubit` was already used
 
 Previous use occurred in
 linear_copy6.py:15

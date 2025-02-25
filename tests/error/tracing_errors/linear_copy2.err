@@ -3,6 +3,6 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 12, in test
     cx(q, r)
-ValueError: Value with linear type `qubit` was already used
+ValueError: Value with non-copyable type `qubit` was already used
 
 Previous use occurred in linear_copy2.py:12 as an argument to `cx`

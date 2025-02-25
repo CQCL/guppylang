@@ -7,10 +7,10 @@ Error: Linearity violation in function return (at $FILE:11:0)
 12 |     measure(qs[0])
    | ^^^^^^^^^^^^^^^^^^
 
-Borrowed argument `qs` cannot be returned back to the caller. Value with linear
-type `qubit` was already used
+Borrowed argument `qs` cannot be returned back to the caller. Value with non-
+copyable type `qubit` was already used
 
-Previous use occurred in linear_not_owned2.py:12
-as an argument to `measure`
+Previous use occurred in
+linear_not_owned2.py:12 as an argument to `measure`
 
 Guppy compilation failed due to 1 previous error

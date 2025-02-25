@@ -64,7 +64,7 @@ def unpack_guppy_object(
                     return obj
                 elem_ty = get_element_type(ty)
                 opt_elems = unpack_array(builder, obj._use_wire(None))
-                err = "Linear array element has already been used"
+                err = "Non-copyable array element has already been used"
                 elems = [build_unwrap(builder, opt_elem, err) for opt_elem in opt_elems]
                 obj_list = [
                     unpack_guppy_object(GuppyObject(elem_ty, wire), builder, frozen)
@@ -151,9 +151,9 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
         case GuppyObject() as v_obj:
             assert v_obj._ty == obj._ty
             v_obj._wire = obj._use_wire(None)
-            if v_obj._ty.linear and v_obj._used:
+            if not v_obj._ty.droppable and v_obj._used:
                 state = get_tracing_state()
-                state.unused_linear_objs[v_obj._id] = v_obj
+                state.unused_undroppable_objs[v_obj._id] = v_obj
             v_obj._used = None
         case None:
             assert isinstance(obj._ty, NoneType)
@@ -175,7 +175,7 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
             assert is_array_type(obj._ty)
             elem_ty = get_element_type(obj._ty)
             opt_wires = unpack_array(builder, obj._use_wire(None))
-            err = "Linear array element has already been used"
+            err = "Non-droppable array element has already been used"
             for v, opt_wire in zip(vs, opt_wires, strict=True):
                 (wire,) = build_unwrap(builder, opt_wire, err).outputs()
                 update_packed_value(v, GuppyObject(elem_ty, wire), builder)

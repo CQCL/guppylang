@@ -271,7 +271,7 @@ class DunderMixin(ABC):
 
 
 class ObjectUse(NamedTuple):
-    """Records a use of a linear `GuppyObject`."""
+    """Records a use of a non-copyable `GuppyObject`."""
 
     #: Path of the Python file in which the use occurred
     module: str
@@ -321,8 +321,8 @@ class GuppyObject(DunderMixin):
         self._used = used
         self._id = GuppyObjectId.fresh()
         state = get_tracing_state()
-        if ty.linear and not self._used:
-            state.unused_linear_objs[self._id] = self
+        if not ty.droppable and not self._used:
+            state.unused_undroppable_objs[self._id] = self
 
     @hide_trace
     def __getattr__(self, key: str) -> Any:  # type: ignore[misc]
@@ -364,14 +364,14 @@ class GuppyObject(DunderMixin):
 
     def _use_wire(self, called_func: CompiledCallableDef | None) -> Wire:
         # Panic if the value has already been used
-        if self._used and self._ty.linear:
+        if self._used and not self._ty.copyable:
             use = self._used
             # TODO: Should we print the full path to the file or only the name as is
             #  done here? Note that the former will lead to challenges with golden
             #  tests
             filename = Path(use.module).name
             err = (
-                f"Value with linear type `{self._ty}` was already used\n\n"
+                f"Value with non-copyable type `{self._ty}` was already used\n\n"
                 f"Previous use occurred in {filename}:{use.lineno}"
             )
             if use.called_func:
@@ -389,9 +389,9 @@ class GuppyObject(DunderMixin):
                 module = inspect.getmodule(frame)
                 module_name = module.__file__ if module and module.__file__ else "???"
             self._used = ObjectUse(module_name, frame.f_lineno, called_func)
-            if self._ty.linear:
+            if not self._ty.droppable:
                 state = get_tracing_state()
-                state.unused_linear_objs.pop(self._id)
+                state.unused_undroppable_objs.pop(self._id)
         return self._wire
 
 

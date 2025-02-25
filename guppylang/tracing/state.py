@@ -25,9 +25,11 @@ class TracingState:
     #: An AST node capturing the code block that is currently being traced
     node: AstNode
 
-    #: Set of all allocated linear GuppyObjects where the `used` flag is not set,
+    #: Set of all allocated undroppable GuppyObjects where the `used` flag is not set,
     #: indexed by their id. This is used to detect linearity violations.
-    unused_linear_objs: "dict[GuppyObjectId, GuppyObject]" = field(default_factory=dict)
+    unused_undroppable_objs: "dict[GuppyObjectId, GuppyObject]" = field(
+        default_factory=dict
+    )
 
     @property
     def globals(self) -> Globals:
