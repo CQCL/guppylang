@@ -2,11 +2,11 @@ import functools
 import inspect
 import itertools
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, NamedTuple, TypeAlias
+from typing import Any, ClassVar, NamedTuple, TypeAlias
 
 from hugr import Wire, ops
 
@@ -273,29 +273,50 @@ class DunderMixin(ABC):
 class ObjectUse(NamedTuple):
     """Records a use of a linear `GuppyObject`."""
 
+    #: Path of the Python file in which the use occurred
     module: str
+
+    #: Line number of the use
     lineno: int
+
+    #: If the use was as an argument to a Guppy function, we also record a reference to
+    #: the called function.
     called_func: CompiledCallableDef | None
 
 
-ObjectId = int
+@dataclass(frozen=True)
+class GuppyObjectId:
+    """Unique id for abstract GuppyObjects allocated during tracing."""
 
-fresh_id = itertools.count()
+    id: int
+
+    _fresh_ids: ClassVar[Iterator[int]] = itertools.count()
+
+    @classmethod
+    def fresh(cls) -> "GuppyObjectId":
+        return GuppyObjectId(next(cls._fresh_ids))
 
 
 class GuppyObject(DunderMixin):
     """The runtime representation of abstract Guppy objects during tracing."""
 
+    #: The type of this object
     _ty: Type
+
+    #: The Hugr wire holding this object
     _wire: Wire
+
+    #: Whether this object has been used
     _used: ObjectUse | None
-    _id: ObjectId
+
+    #: Unique id for this object
+    _id: GuppyObjectId
 
     def __init__(self, ty: Type, wire: Wire, used: ObjectUse | None = None) -> None:
         self._ty = ty
         self._wire = wire
         self._used = used
-        self._id = next(fresh_id)
+        self._id = GuppyObjectId.fresh()
         state = get_tracing_state()
         if ty.linear and not self._used:
             state.unused_linear_objs[self._id] = self

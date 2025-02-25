@@ -58,7 +58,11 @@ def trace_function(
     ctx: CompilerContext,
     node: AstNode,
 ) -> None:
-    """Kicks off tracing of a function."""
+    """Kicks off tracing of a function.
+
+    Invokes the passed Python callable and constructs the corresponding Hugr using the
+    passed builder.
+    """
     state = TracingState(ctx, DFContainer(builder, {}), node)
     with set_tracing_state(state):
         inputs = [
@@ -147,6 +151,11 @@ def trace_function(
 
 @capture_guppy_errors
 def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
+    """Handles calls to Guppy functions during tracing.
+
+    Checks that the passed arguments match the signature of the function and also
+    handles inout arguments.
+    """
     state = get_tracing_state()
     assert func.defined_at is not None
 

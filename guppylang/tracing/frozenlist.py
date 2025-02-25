@@ -8,6 +8,11 @@ ERROR_MSG = (
 
 
 class frozenlist(list):  # type: ignore[type-arg]
+    """An immutable list subclass.
+
+    Raises a `TypeError` for any operation that would mutate the list.
+    """
+
     def append(self, *args: Any, **kwargs: Any) -> None:
         raise TypeError(ERROR_MSG)
 
