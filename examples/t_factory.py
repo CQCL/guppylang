@@ -58,7 +58,9 @@ def distill(
 def t_state(timeout: int) -> Option[qubit]:
     """Create a T state using magic state distillation with `timeout` attempts.
 
-    On success returns a qubit in a magic T state. On failure returns nothing.
+    On success returns a qubit in a magic T state.
+
+    On failure (i.e. number of attempts are exceeded) returns nothing.
     """
     if timeout > 0:
         tgt = prepare_approx(qubit())
