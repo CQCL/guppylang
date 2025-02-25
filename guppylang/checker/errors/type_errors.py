@@ -157,6 +157,19 @@ class MissingReturnValueError(Error):
 
 
 @dataclass(frozen=True)
+class TypeApplyNotGenericError(Error):
+    title: ClassVar[str] = "Not generic"
+    span_label: ClassVar[str] = (
+        "{thing} is not generic, so no type parameters can be provided"
+    )
+    func_name: str | None
+
+    @property
+    def thing(self) -> str:
+        return f"`{self.func_name}`" if self.func_name else "This function"
+
+
+@dataclass(frozen=True)
 class NotCallableError(Error):
     title: ClassVar[str] = "Not callable"
     span_label: ClassVar[str] = "Expected a function, got expression of type `{actual}`"
@@ -166,18 +179,22 @@ class NotCallableError(Error):
 @dataclass(frozen=True)
 class WrongNumberOfArgsError(Error):
     title: ClassVar[str] = ""  # Custom implementation in `rendered_title`
-    span_label: ClassVar[str] = "Expected {expected} function arguments, got `{actual}`"
     expected: int
     actual: int
     detailed: bool = True
+    is_type_apply: bool = False
 
     @property
     def rendered_title(self) -> str:
         return (
-            "Not enough arguments"
+            f"Not enough {self.argument_kind}s"
             if self.expected > self.actual
-            else "Too many arguments"
+            else f"Too many {self.argument_kind}s"
         )
+
+    @property
+    def argument_kind(self) -> str:
+        return "type argument" if self.is_type_apply else "argument"
 
     @property
     def rendered_span_label(self) -> str:
@@ -185,9 +202,13 @@ class WrongNumberOfArgsError(Error):
             return f"Expected {self.expected}, got {self.actual}"
         diff = self.expected - self.actual
         if diff < 0:
-            msg = "Unexpected arguments" if diff < -1 else "Unexpected argument"
+            msg = f"Unexpected {self.argument_kind}"
+            if diff < -1:
+                msg += "s"
         else:
-            msg = "Missing arguments" if diff > 1 else "Missing argument"
+            msg = f"Missing {self.argument_kind}"
+            if diff > 1:
+                msg += "s"
         return f"{msg} (expected {self.expected}, got {self.actual})"
 
     @dataclass(frozen=True)
