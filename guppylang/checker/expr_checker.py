@@ -860,7 +860,11 @@ def try_coerce_to(
 def check_type_apply(ty: FunctionType, node: ast.Subscript, ctx: Context) -> Inst:
     """Checks a `f[T1, T2, ...]` type application of a generic function."""
     func = node.value
-    arg_exprs = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+    arg_exprs = (
+        node.slice.elts
+        if isinstance(node.slice, ast.Tuple) and len(node.slice.elts) > 0
+        else [node.slice]
+    )
     globals = ctx.globals
 
     if not ty.parametrized:

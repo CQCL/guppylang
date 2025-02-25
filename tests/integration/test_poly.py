@@ -255,6 +255,22 @@ def test_type_apply_nat(validate):
     validate(module.compile())
 
 
+def test_type_apply_empty_tuple(validate):
+    module = GuppyModule("test")
+    T = guppy.type_var("T", module=module)
+
+    @guppy.declare(module)
+    def foo(x: T) -> None:
+        ...
+
+    @guppy(module)
+    def main() -> None:
+        # `()` is the type of an empty tuple (`tuple[]` is not syntactically valid)
+        foo[()]
+
+    validate(module.compile())
+
+
 def test_pass_poly_basic(validate):
     module = GuppyModule("test")
     T = guppy.type_var("T", module=module)
