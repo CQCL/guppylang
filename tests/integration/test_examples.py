@@ -7,9 +7,9 @@ def test_demo_notebook(nb_regression):
     nb_regression.check("examples/demo.ipynb")
 
 
-def test_tracing_notebook(nb_regression):
+def test_comptime_notebook(nb_regression):
     nb_regression.diff_ignore += ("/metadata/language_info/version",)
-    nb_regression.check("examples/tracing.ipynb")
+    nb_regression.check("examples/comptime.ipynb")
 
 
 def test_random_walk_qpe(validate):
