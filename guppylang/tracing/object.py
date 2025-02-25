@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar, NamedTuple, TypeAlias
 
-from hugr import Wire, ops
+from hugr import Wire
 
 import guppylang.checker.expr_checker as expr_checker
 from guppylang.checker.errors.generic import UnsupportedError
@@ -24,7 +24,7 @@ from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.tracing.state import get_tracing_state, tracing_active
 from guppylang.tracing.util import capture_guppy_errors, get_calling_frame, hide_trace
-from guppylang.tys.ty import FunctionType, StructType, TupleType, Type
+from guppylang.tys.ty import FunctionType, StructType, Type
 
 # Mapping from unary dunder method to display name of the operation
 unary_table = dict(expr_checker.unary_table.values())
@@ -298,7 +298,10 @@ class GuppyObjectId:
 
 
 class GuppyObject(DunderMixin):
-    """The runtime representation of abstract Guppy objects during tracing."""
+    """The runtime representation of abstract Guppy objects during tracing.
+
+    They correspond to a single Hugr wire within the current dataflow graph.
+    """
 
     #: The type of this object
     _ty: Type
@@ -323,6 +326,8 @@ class GuppyObject(DunderMixin):
 
     @hide_trace
     def __getattr__(self, key: str) -> Any:  # type: ignore[misc]
+        # Guppy objects don't have fields (structs are treated separately below), so the
+        # only attributes we have to worry about are methods.
         func = get_tracing_state().globals.get_instance_func(self._ty, key)
         if func is None:
             raise AttributeError(
@@ -333,8 +338,8 @@ class GuppyObject(DunderMixin):
     @hide_trace
     def __bool__(self) -> Any:
         err = (
-            "Branching on a dynamic value is not allowed during tracing. Try using "
-            "a regular guppy function"
+            "Branching on a dynamic value is not allowed in a comptime context. "
+            "Consider defining a regular Guppy function to perform dynamic branching."
         )
         raise ValueError(err)
 
@@ -353,16 +358,8 @@ class GuppyObject(DunderMixin):
 
     @hide_trace
     def __iter__(self) -> Any:
-        state = get_tracing_state()
-        builder = state.dfg.builder
-        if isinstance(self._ty, TupleType):
-            unpack = builder.add_op(ops.UnpackTuple(), self._use_wire(None))
-            return (
-                GuppyObject(ty, wire)
-                for ty, wire in zip(
-                    self._ty.element_types, unpack.outputs(), strict=True
-                )
-            )
+        # Abstract Guppy objects are not iterable from Python since our iterator
+        # protocol doesn't work during tracing.
         raise TypeError(f"Expression of type `{self._ty}` is not iterable")
 
     def _use_wire(self, called_func: CompiledCallableDef | None) -> Wire:
@@ -399,10 +396,30 @@ class GuppyObject(DunderMixin):
 
 
 class GuppyStructObject(DunderMixin):
-    """The runtime representation of Guppy struct objects during tracing."""
+    """The runtime representation of Guppy struct objects during tracing.
 
+    Note that `GuppyStructObject` is not a `GuppyObject` itself since it's not backed
+    by a single wire, but it can contain multiple of them.
+
+    Mutation of structs during tracing is generally unchecked. We allow users to write
+    whatever they want into the fields, making it more or less isomorphic to a Python
+    dataclass. Thus, structs need to be checked at function call boundaries to ensure
+    that the user hasn't messed up. This is done in `guppylang.tracing.unpacking.
+    guppy_object_from_py`.
+
+    Similar to dataclasses, we allow structs to be `frozen` which makes them immutable.
+    This is needed to preserve Python semantics when structs are used as non-borrowed
+    function arguments: Mutation in the function body cannot be observed from the
+    outside, so we prevent it to avoid confusion.
+    """
+
+    #: The type of this struct object
     _ty: StructType
+
+    #: Mapping from field names to values. The values can be any Python object.
     _field_values: dict[str, Any]
+
+    #: Whether this struct object is frozen, i.e. immutable
     _frozen: bool
 
     def __init__(
@@ -437,6 +454,12 @@ class GuppyStructObject(DunderMixin):
         else:
             err = f"Expression of type `{self._ty}` has no attribute `{key}`"
             raise AttributeError(err)
+
+    @hide_trace
+    def __iter__(self) -> Any:
+        # Abstract Guppy objects are not iterable from Python since our iterator
+        # protocol doesn't work during tracing.
+        raise TypeError(f"Expression of type `{self._ty}` is not iterable")
 
 
 @dataclass(frozen=True)

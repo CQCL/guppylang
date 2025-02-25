@@ -69,6 +69,7 @@ def get_calling_frame() -> FrameType | None:
 
 
 def remove_internal_frames(tb: TracebackType | None) -> TracebackType | None:
+    """Removes internal frames relating to the Guppy compiler from a traceback."""
     if tb:
         module = inspect.getmodule(tb.tb_frame)
         if module is not None and module.__name__.startswith("guppylang."):
