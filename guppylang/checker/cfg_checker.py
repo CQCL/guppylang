@@ -110,7 +110,7 @@ def check_cfg(
         if bb in compiled:
             # If the BB was already compiled, we just have to check that the signatures
             # match.
-            check_rows_match(input_row, compiled[bb].sig.input_row, bb)
+            check_rows_match(input_row, compiled[bb].sig.input_row, bb, globals)
         else:
             # Otherwise, check the BB and enqueue its successors
             checked_bb = check_bb(
@@ -150,7 +150,6 @@ def check_cfg(
     from guppylang.checker.linearity_checker import check_cfg_linearity
 
     linearity_checked_cfg = check_cfg_linearity(checked_cfg, func_name, globals)
-
     return linearity_checked_cfg
 
 
@@ -189,6 +188,13 @@ class BranchTypeError(Error):
     @dataclass(frozen=True)
     class TypeHint(Note):
         span_label: ClassVar[str] = "This is of type `{ty}`"
+        ty: Type
+
+    @dataclass(frozen=True)
+    class GlobalHint(Note):
+        message: ClassVar[str] = (
+            "{ident} may be shadowing a global name with type `{ty}` on some branches"
+        )
         ty: Type
 
 
@@ -260,13 +266,43 @@ def check_bb(
     return checked_bb
 
 
-def check_rows_match(row1: Row[Variable], row2: Row[Variable], bb: BB) -> None:
+def check_rows_match(
+    row1: Row[Variable], row2: Row[Variable], bb: BB, globals: Globals
+) -> None:
     """Checks that the types of two rows match up.
 
     Otherwise, an error is thrown, alerting the user that a variable has different
     types on different control-flow paths.
     """
     map1, map2 = {v.name: v for v in row1}, {v.name: v for v in row2}
+
+    # If block signature lengths don't match but no undefined error was thrown, some
+    # variables may be shadowing global variables.
+    if map1.keys() != map2.keys():
+        for x in map1.keys() ^ map2.keys():
+            if x in globals:
+                v = map1.get(x) or map2.get(x)
+                assert v is not None
+                g = globals[x]
+                assert hasattr(g, "ty")
+                if v.ty != g.ty:
+                    ident = (
+                        "Expression"
+                        if v.name.startswith("%")
+                        else f"Variable `{v.name}`"
+                    )
+                    use = bb.containing_cfg.live_before[bb][v.name].vars.used[v.name]
+                    err = BranchTypeError(use, ident)
+                    err.add_sub_diagnostic(BranchTypeError.TypeHint(v.defined_at, v.ty))
+                    # We don't add a location to the type hint for the global variable,
+                    # since  it could lead to cross-file diagnostics (which are not
+                    # supported) or refer to long function definitions.
+                    err.add_sub_diagnostic(BranchTypeError.GlobalHint(None, g.ty))
+                    raise GuppyError(err)
+                # Remove variables from comparison below if types match.
+                map1.pop(x, None)
+                map2.pop(x, None)
+
     assert map1.keys() == map2.keys()
     for x in map1:
         v1, v2 = map1[x], map2[x]
