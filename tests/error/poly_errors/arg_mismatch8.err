@@ -1,0 +1,8 @@
+Error: Type mismatch (at $FILE:18:6)
+   | 
+16 | def main(x: float) -> None:
+17 |     f = foo[int]
+18 |     f(x)
+   |       ^ Expected argument of type `int`, got `float`
+
+Guppy compilation failed due to 1 previous error

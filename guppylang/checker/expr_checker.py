@@ -67,6 +67,7 @@ from guppylang.checker.errors.type_errors import (
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
     NotCallableError,
+    TypeApplyNotGenericError,
     TypeInferenceError,
     TypeMismatchError,
     UnaryOperatorNotDefinedError,
@@ -119,6 +120,7 @@ from guppylang.tys.builtin import (
     string_type,
 )
 from guppylang.tys.param import ConstParam, TypeParam
+from guppylang.tys.parsing import arg_from_ast
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
@@ -603,6 +605,11 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
+        # Special case for subscripts on functions: Those are type applications
+        if isinstance(ty, FunctionType):
+            inst = check_type_apply(ty, node, self.ctx)
+            return instantiate_poly(node.value, ty, inst), ty.instantiate(inst)
+        # Otherwise, it's a regular __getitem__ subscript
         item_expr, item_ty = self.synthesize(node.slice)
         # Give the item a unique name so we can refer to it later in case we also want
         # to compile a call to `__setitem__`
@@ -848,6 +855,38 @@ def try_coerce_to(
         assert len(subst) == 0, "Coercion methods are not generic"
         return node
     return None
+
+
+def check_type_apply(ty: FunctionType, node: ast.Subscript, ctx: Context) -> Inst:
+    """Checks a `f[T1, T2, ...]` type application of a generic function."""
+    func = node.value
+    arg_exprs = (
+        node.slice.elts
+        if isinstance(node.slice, ast.Tuple) and len(node.slice.elts) > 0
+        else [node.slice]
+    )
+    globals = ctx.globals
+
+    if not ty.parametrized:
+        func_name = globals[func.def_id].name if isinstance(func, GlobalName) else None
+        raise GuppyError(TypeApplyNotGenericError(node, func_name))
+
+    exp, act = len(ty.params), len(arg_exprs)
+    assert exp > 0
+    assert act > 0
+    if exp != act:
+        if exp < act:
+            span = Span(to_span(arg_exprs[exp]).start, to_span(arg_exprs[-1]).end)
+        else:
+            span = Span(to_span(arg_exprs[-1]).end, to_span(node).end)
+        err = WrongNumberOfArgsError(span, exp, act, detailed=True, is_type_apply=True)
+        err.add_sub_diagnostic(WrongNumberOfArgsError.SignatureHint(None, ty))
+        raise GuppyError(err)
+
+    return [
+        param.check_arg(arg_from_ast(arg_expr, globals, ctx.generic_params), arg_expr)
+        for arg_expr, param in zip(arg_exprs, ty.params, strict=True)
+    ]
 
 
 def check_num_args(
