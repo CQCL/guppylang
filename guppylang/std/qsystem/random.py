@@ -40,11 +40,15 @@ class RNG:
         module=qsystem_random,
     )
     @no_type_check
-    def random_int(self: "RNG") -> int: ...
+    def _random_int(self: "RNG") -> int: ...
+
+    @guppy(qsystem_random)
+    def random_int(self: "RNG") -> int:
+        return int(self.random_int())  # type: ignore[operator] # "RawFunctionDef" not callable
 
     @guppy(qsystem_random)
     def random_nat(self: "RNG") -> nat:
-        return nat(self.random_int())
+        return nat(self.random_int())  # type: ignore[call-arg, operator] # Too many arguments for "nat"; "RawFunctionDef" not callable
 
     @guppy.hugr_op(
         external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION),
@@ -58,4 +62,8 @@ class RNG:
         module=qsystem_random,
     )
     @no_type_check
-    def random_int_bounded(self: "RNG", bound: int) -> int: ...
+    def _random_int_bounded(self: "RNG", bound: int) -> int: ...
+
+    @guppy(qsystem_random)
+    def random_int_bounded(self: "RNG", bound: int) -> int:
+        return int(self._random_int_bounded(bound))
