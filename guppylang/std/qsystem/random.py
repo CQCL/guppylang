@@ -1,23 +1,19 @@
 from typing import no_type_check
 
-from hugr import tys as ht
-
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std._internal.compiler.quantum import (
     QSYSTEM_RANDOM_EXTENSION,
     RNGCONTEXT_T,
 )
-from guppylang.std._internal.util import external_op, int_arg
+from guppylang.std._internal.util import external_op
 from guppylang.std.builtins import owned
 
 qsystem_random = GuppyModule("qsystem.random")
 
-RNGCONTEXT_TA = ht.TypeTypeArg(RNGCONTEXT_T)
-
 
 @guppy.struct(qsystem_random)
-class Random:  # type: ignore[operator] # "RawStructDef" not callable
+class Random:
     ctx: "RNGContext"
 
     @guppy(qsystem_random)
@@ -42,7 +38,7 @@ class Random:  # type: ignore[operator] # "RawStructDef" not callable
 @guppy.type(RNGCONTEXT_T, copyable=False, module=qsystem_random)
 class RNGContext:
     @guppy.hugr_op(
-        external_op("NewRNGContext", [int_arg()], ext=QSYSTEM_RANDOM_EXTENSION),
+        external_op("NewRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION),
         module=qsystem_random,
     )
     @no_type_check
@@ -55,7 +51,7 @@ class RNGContext:
     # def init_safe(seed: int) -> "RNGContext" | None:
 
     @guppy.hugr_op(
-        external_op("DeleteRNGContext", [RNGCONTEXT_TA], ext=QSYSTEM_RANDOM_EXTENSION),
+        external_op("DeleteRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION),
         module=qsystem_random,
     )
     @no_type_check
@@ -63,14 +59,14 @@ class RNGContext:
     def discard(self: "RNGContext" @ owned) -> None: ...
 
     @guppy.hugr_op(
-        external_op("RandomInt", [RNGCONTEXT_TA], ext=QSYSTEM_RANDOM_EXTENSION),
+        external_op("RandomInt", [], ext=QSYSTEM_RANDOM_EXTENSION),
         module=qsystem_random,
     )
     @no_type_check
     def _random_int(self: "RNGContext") -> ("RNGContext", int): ...
 
     @guppy.hugr_op(
-        external_op("RandomFloat", [RNGCONTEXT_TA], ext=QSYSTEM_RANDOM_EXTENSION),
+        external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION),
         module=qsystem_random,
     )
     @no_type_check
@@ -78,7 +74,7 @@ class RNGContext:
 
     @guppy.hugr_op(
         external_op(
-            "RandomIntBounded", [RNGCONTEXT_TA, int_arg()], ext=QSYSTEM_RANDOM_EXTENSION
+            "RandomIntBounded", [], ext=QSYSTEM_RANDOM_EXTENSION
         ),
         module=qsystem_random,
     )
