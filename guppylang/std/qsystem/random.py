@@ -24,8 +24,11 @@ def _new_rng_context(seed: int) -> Option["RNG"]: ...
 
 @guppy.type(RNGCONTEXT_T, copyable=False, droppable=False, module=qsystem_random)
 class RNG:
+    """Random number generator."""
+
     @guppy(qsystem_random)  # type: ignore[misc] # 27: Unsupported decorated constructor type # 28: Self argument missing for a non-static method (or an invalid type for self)
     def __new__(seed: int) -> "RNG":
+        """Create a new random number generator using a seed."""
         return _new_rng_context(seed).unwrap()  # type: ignore[no-any-return] # Returning Any from function declared to return "RNGContext"
 
     @guppy.hugr_op(
@@ -44,7 +47,8 @@ class RNG:
 
     @guppy(qsystem_random)
     def random_nat(self: "RNG") -> nat:
-        return nat(self.random_int())
+        """Generate a random 32-bit natural number."""
+        return nat(self.random_int())  # type: ignore[call-arg] # Too many arguments for "nat"
 
     @guppy.hugr_op(
         external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION),
