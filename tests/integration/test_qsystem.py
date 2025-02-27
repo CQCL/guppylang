@@ -4,7 +4,7 @@ import guppylang.decorator
 from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
-from guppylang.std.builtins import owned
+from guppylang.std.builtins import nat, owned
 from guppylang.std.qsystem.random import RNG
 from guppylang.std.qsystem.utils import get_current_shot
 from guppylang.std.quantum import qubit
@@ -61,12 +61,13 @@ def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
     """Compile various operations from the qsystem random extension."""
 
     @compile_qsystem_guppy
-    def test() -> tuple[int, float, int]:
+    def test() -> tuple[int, nat, float, int]:
         rng = RNG(42)
         rint = rng.random_int()
+        rnat = rng.random_nat()
         rfloat = rng.random_float()
         rint_bnd = rng.random_int_bounded(100)
         rng.discard()
-        return rint, rfloat, rint_bnd
+        return rint, rnat, rfloat, rint_bnd
 
     validate(test)
