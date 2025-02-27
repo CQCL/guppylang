@@ -7,7 +7,7 @@ from guppylang.std._internal.compiler.quantum import (
     RNGCONTEXT_T,
 )
 from guppylang.std._internal.util import external_op
-from guppylang.std.builtins import owned
+from guppylang.std.builtins import nat, owned
 from guppylang.std.option import Option
 
 qsystem_random = GuppyModule("qsystem.random")
@@ -33,7 +33,6 @@ class RNG:
         module=qsystem_random,
     )
     @no_type_check
-    # TODO: Should we be calling `__del__` somewhere?
     def discard(self: "RNG" @ owned) -> None: ...
 
     @guppy.hugr_op(
@@ -42,6 +41,10 @@ class RNG:
     )
     @no_type_check
     def random_int(self: "RNG") -> int: ...
+
+    @guppy(qsystem_random)
+    def random_nat(self: "RNG") -> nat:
+        return nat(self.random_int())
 
     @guppy.hugr_op(
         external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION),
