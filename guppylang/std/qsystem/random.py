@@ -8,47 +8,25 @@ from guppylang.std._internal.compiler.quantum import (
 )
 from guppylang.std._internal.util import external_op
 from guppylang.std.builtins import owned
+from guppylang.std.option import Option
 
 qsystem_random = GuppyModule("qsystem.random")
+qsystem_random.load(Option)  # type: ignore[arg-type] # Argument 1 to "load" of "GuppyModule" has incompatible type "type[Option]"; expected "Definition | GuppyModule | Module"
 
 
-@guppy.struct(qsystem_random)
-class Random:
-    ctx: "RNGContext"
-
-    @guppy(qsystem_random)
-    @no_type_check
-    def random_int(self: "Random") -> int:
-        self.ctx, rnd = self.ctx._random_int()
-        return rnd
-
-    @guppy(qsystem_random)
-    @no_type_check
-    def random_float(self: "Random") -> float:
-        self.ctx, rnd = self.ctx._random_float()
-        return rnd
-
-    @guppy(qsystem_random)
-    @no_type_check
-    def random_int_bounded(self: "Random", bound: int) -> int:
-        self.ctx, rnd = self.ctx._random_int_bounded(bound)
-        return rnd
+@guppy.hugr_op(
+    external_op("NewRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION),
+    module=qsystem_random,
+)
+@no_type_check
+def _new_rng_context(seed: int) -> Option["RNG"]: ...
 
 
-@guppy.type(RNGCONTEXT_T, copyable=False, module=qsystem_random)
-class RNGContext:
-    @guppy.hugr_op(
-        external_op("NewRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION),
-        module=qsystem_random,
-    )
-    @no_type_check
-    # Initialize the random number generator.
-    # Can only be initialised once per program. Second init fails at rutime.
-    def __new__(seed: int) -> "RNGContext": ...
-
-    # init safely, returning None if already acquired.
-    # TODO: unsure if it's possible as a static method
-    # def init_safe(seed: int) -> "RNGContext" | None:
+@guppy.type(RNGCONTEXT_T, copyable=False, droppable=False, module=qsystem_random)
+class RNG:
+    @guppy(qsystem_random)  # type: ignore[misc] # 27: Unsupported decorated constructor type # 28: Self argument missing for a non-static method (or an invalid type for self)
+    def __new__(seed: int) -> "RNG":
+        return _new_rng_context(seed).unwrap()  # type: ignore[no-any-return] # Returning Any from function declared to return "RNGContext"
 
     @guppy.hugr_op(
         external_op("DeleteRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION),
@@ -56,27 +34,25 @@ class RNGContext:
     )
     @no_type_check
     # TODO: Should we be calling `__del__` somewhere?
-    def discard(self: "RNGContext" @ owned) -> None: ...
+    def discard(self: "RNG" @ owned) -> None: ...
 
     @guppy.hugr_op(
         external_op("RandomInt", [], ext=QSYSTEM_RANDOM_EXTENSION),
         module=qsystem_random,
     )
     @no_type_check
-    def _random_int(self: "RNGContext") -> ("RNGContext", int): ...
+    def random_int(self: "RNG") -> int: ...
 
     @guppy.hugr_op(
         external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION),
         module=qsystem_random,
     )
     @no_type_check
-    def _random_float(self: "RNGContext") -> ("RNGContext", float): ...
+    def random_float(self: "RNG") -> float: ...
 
     @guppy.hugr_op(
-        external_op(
-            "RandomIntBounded", [], ext=QSYSTEM_RANDOM_EXTENSION
-        ),
+        external_op("RandomIntBounded", [], ext=QSYSTEM_RANDOM_EXTENSION),
         module=qsystem_random,
     )
     @no_type_check
-    def _random_int_bounded(self: "RNGContext", bound: int) -> ("RNGContext", int): ...
+    def random_int_bounded(self: "RNG", bound: int) -> int: ...
