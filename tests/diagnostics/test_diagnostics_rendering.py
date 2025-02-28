@@ -212,3 +212,12 @@ def test_three_line_span(snapshot, request):
     span = Span(Loc(file, 1, 5), Loc(file, 3, 1))
     diagnostic = MyError(span)
     run_test(source, diagnostic, snapshot, request)
+
+
+def test_message_new_line(snapshot, request):
+    @dataclass(frozen=True)
+    class MyError(Error):
+        message: ClassVar[str] = "Apple " * 20 + "\n\n" + "Orange " * 30
+
+    diagnostic = MyError(None)
+    run_test("", diagnostic, snapshot, request)
