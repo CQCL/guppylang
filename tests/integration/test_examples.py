@@ -3,7 +3,7 @@
 
 def test_demo_notebook(nb_regression):
     nb_regression.diff_ignore += ("/metadata/language_info/version",)
-    nb_regression.check("tests/demo.ipynb")
+    nb_regression.check("tests/notebooks/demo.ipynb")
 
 
 def test_random_walk_qpe(validate):
