@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0](https://github.com/CQCL/guppylang/compare/v0.16.0...v0.17.0) (2025-02-28)
+
+
+### Features
+
+* add `get_current_shot()` to qsystem module ([#806](https://github.com/CQCL/guppylang/issues/806)) ([3632ec6](https://github.com/CQCL/guppylang/commit/3632ec606f44ee57d5ce484ca019cc683570156f))
+* Allow explicit application of type arguments ([#821](https://github.com/CQCL/guppylang/issues/821)) ([8f90c04](https://github.com/CQCL/guppylang/commit/8f90c046ac41597b4b0bfdf118648553f1bd7dae)), closes [#770](https://github.com/CQCL/guppylang/issues/770)
+
+
+### Bug Fixes
+
+* Fix rendering of line breaks in diagnostics ([#819](https://github.com/CQCL/guppylang/issues/819)) ([75efd22](https://github.com/CQCL/guppylang/commit/75efd229fcb11514815bfa971d58e323eaaf68eb)), closes [#818](https://github.com/CQCL/guppylang/issues/818)
+
 ## [0.16.0](https://github.com/CQCL/guppylang/compare/v0.15.0...v0.16.0) (2025-02-19)
 
 
