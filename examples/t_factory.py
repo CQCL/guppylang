@@ -19,7 +19,8 @@ phi = np.arccos(1 / 3)
 
 # Preparation of approximate T state, from https://arxiv.org/abs/2310.12106
 @guppy
-def prepare_approx(q: qubit @ owned) -> qubit:
+def prepare_approx() -> qubit:
+    q = qubit()
     ry(q, angle(py(phi)))
     rz(q, pi / 4)
     return q
@@ -61,8 +62,8 @@ def t_state(timeout: int) -> Option[qubit]:
     On failure (i.e. number of attempts are exceeded) returns nothing.
     """
     if timeout > 0:
-        tgt = prepare_approx(qubit())
-        qs = array(prepare_approx(qubit()) for _ in range(4))
+        tgt = prepare_approx()
+        qs = array(prepare_approx() for _ in range(4))
 
         q, success = distill(tgt, qs)
         if success:
