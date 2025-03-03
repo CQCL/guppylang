@@ -1,0 +1,10 @@
+Error: Not enough type arguments (at $FILE:19:16)
+   | 
+17 | @guppy(module)
+18 | def main() -> None:
+19 |     foo[int, int]
+   |                 ^ Missing type argument (expected 3, got 2)
+
+Note: Function signature is `forall S, T, U. (S, T, U) -> None`
+
+Guppy compilation failed due to 1 previous error
