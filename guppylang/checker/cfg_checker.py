@@ -293,6 +293,8 @@ def check_rows_match(
                 and line_col(v2.defined_at) < line_col(v1.defined_at)
             ):
                 v1, v2 = v2, v1
+            # We shouldn't mention temporary variables (starting with `%`)
+            # in error messages:
             ident = "Expression" if v1.name.startswith("%") else f"Variable `{v1.name}`"
             use = bb.containing_cfg.live_before[bb][v1.name].vars.used[v1.name]
             err = BranchTypeError(use, ident)
