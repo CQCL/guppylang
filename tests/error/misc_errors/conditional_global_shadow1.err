@@ -8,7 +8,7 @@ Error: Different types (at $FILE:14:11)
 13 |         x = 4
    |         - This is of type `int`
 
-Note: Variable `x` may be shadowing a global name with type `() -> None` on some
-branches
+Note: Variable `x` may be shadowing a global function definition of type `() ->
+None` on some branches
 
 Guppy compilation failed due to 1 previous error

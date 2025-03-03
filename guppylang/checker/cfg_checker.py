@@ -16,6 +16,7 @@ from guppylang.cfg.cfg import CFG, BaseCFG
 from guppylang.checker.core import Context, Globals, Locals, Place, V, Variable
 from guppylang.checker.expr_checker import ExprSynthesizer, to_bool
 from guppylang.checker.stmt_checker import StmtChecker
+from guppylang.definition.value import ValueDef
 from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError
 from guppylang.tys.param import Parameter
@@ -193,9 +194,10 @@ class BranchTypeError(Error):
     @dataclass(frozen=True)
     class GlobalHint(Note):
         message: ClassVar[str] = (
-            "{ident} may be shadowing a global name with type `{ty}` on some branches"
+            "{ident} may be shadowing a global {defn.description} definition of type "
+            "`{defn.ty}` on some branches"
         )
-        ty: Type
+        defn: ValueDef
 
 
 def check_bb(
@@ -275,37 +277,13 @@ def check_rows_match(
     types on different control-flow paths.
     """
     map1, map2 = {v.name: v for v in row1}, {v.name: v for v in row2}
-
-    # If block signature lengths don't match but no undefined error was thrown, some
-    # variables may be shadowing global variables.
-    if map1.keys() != map2.keys():
-        for x in map1.keys() ^ map2.keys():
-            if x in globals:
-                v = map1.get(x) or map2.get(x)
-                assert v is not None
-                g = globals[x]
-                assert hasattr(g, "ty")
-                if v.ty != g.ty:
-                    ident = (
-                        "Expression"
-                        if v.name.startswith("%")
-                        else f"Variable `{v.name}`"
-                    )
-                    use = bb.containing_cfg.live_before[bb][v.name].vars.used[v.name]
-                    err = BranchTypeError(use, ident)
-                    err.add_sub_diagnostic(BranchTypeError.TypeHint(v.defined_at, v.ty))
-                    # We don't add a location to the type hint for the global variable,
-                    # since  it could lead to cross-file diagnostics (which are not
-                    # supported) or refer to long function definitions.
-                    err.add_sub_diagnostic(BranchTypeError.GlobalHint(None, g.ty))
-                    raise GuppyError(err)
-                # Remove variables from comparison below if types match.
-                map1.pop(x, None)
-                map2.pop(x, None)
-
-    assert map1.keys() == map2.keys()
-    for x in map1:
-        v1, v2 = map1[x], map2[x]
+    for x in map1.keys() | map2.keys():
+        # If block signature lengths don't match but no undefined error was thrown, some
+        # variables may be shadowing global variables.
+        v1 = map1.get(x) or globals[x]
+        assert isinstance(v1, Variable | ValueDef)
+        v2 = map2.get(x) or globals[x]
+        assert isinstance(v2, Variable | ValueDef)
         if v1.ty != v2.ty:
             # In the error message, we want to mention the variable that was first
             # defined at the start.
@@ -315,13 +293,24 @@ def check_rows_match(
                 and line_col(v2.defined_at) < line_col(v1.defined_at)
             ):
                 v1, v2 = v2, v1
-            # We shouldn't mention temporary variables (starting with `%`)
-            # in error messages:
             ident = "Expression" if v1.name.startswith("%") else f"Variable `{v1.name}`"
             use = bb.containing_cfg.live_before[bb][v1.name].vars.used[v1.name]
             err = BranchTypeError(use, ident)
-            err.add_sub_diagnostic(BranchTypeError.TypeHint(v1.defined_at, v1.ty))
-            err.add_sub_diagnostic(BranchTypeError.TypeHint(v2.defined_at, v2.ty))
+            # We don't add a location to the type hint for the global variable,
+            # since it could lead to cross-file diagnostics (which are not
+            # supported) or refer to long function definitions.
+            sub1 = (
+                BranchTypeError.TypeHint(v1.defined_at, v1.ty)
+                if isinstance(v1, Variable)
+                else BranchTypeError.GlobalHint(None, v1)
+            )
+            sub2 = (
+                BranchTypeError.TypeHint(v2.defined_at, v2.ty)
+                if isinstance(v2, Variable)
+                else BranchTypeError.GlobalHint(None, v2)
+            )
+            err.add_sub_diagnostic(sub1)
+            err.add_sub_diagnostic(sub2)
             raise GuppyError(err)
 
 
