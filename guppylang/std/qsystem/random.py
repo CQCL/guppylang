@@ -22,6 +22,14 @@ qsystem_random.load(Option)  # type: ignore[arg-type] # Argument 1 to "load" of 
 def _new_rng_context(seed: int) -> Option["RNG"]: ...
 
 
+@guppy(qsystem_random)
+def maybe_rng(seed: int) -> Option["RNG"]:  # type: ignore[type-arg] # "Option" expects no type arguments, but 1 given
+    """Safely create a new random number generator using a seed.
+
+    Returns `nothing` if RNG is already initialized."""
+    return _new_rng_context(seed)  # type: ignore[no-any-return] # Returning Any from function declared to return "Option"
+
+
 @guppy.type(RNGCONTEXT_T, copyable=False, droppable=False, module=qsystem_random)
 class RNG:
     """Random number generator."""

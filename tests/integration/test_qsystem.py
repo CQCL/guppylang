@@ -5,7 +5,7 @@ from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
 from guppylang.std.builtins import nat, owned
-from guppylang.std.qsystem.random import RNG
+from guppylang.std.qsystem.random import RNG, maybe_rng
 from guppylang.std.qsystem.utils import get_current_shot
 from guppylang.std.quantum import qubit
 from guppylang.std.qsystem.functional import (
@@ -32,7 +32,7 @@ def compile_qsystem_guppy(fn) -> ModulePointer:  # type: ignore[no-untyped-def]
     ), "`@compile_qsystem_guppy` does not support extra arguments."
 
     module = GuppyModule("module")
-    module.load(angle, qubit, get_current_shot, RNG)  # type: ignore[arg-type]
+    module.load(angle, qubit, get_current_shot, RNG, maybe_rng)  # type: ignore[arg-type]
     module.load_all(qsystem_functional)
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
@@ -63,6 +63,8 @@ def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
     @compile_qsystem_guppy
     def test() -> tuple[int, nat, float, int]:
         rng = RNG(42)
+        rng2 = maybe_rng(84)
+        rng2.unwrap_nothing()
         rint = rng.random_int()
         rnat = rng.random_nat()
         rfloat = rng.random_float()
