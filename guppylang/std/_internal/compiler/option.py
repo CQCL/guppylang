@@ -7,7 +7,7 @@ from hugr import val as hv
 from guppylang.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
-from guppylang.std._internal.compiler.prelude import build_unwrap
+from guppylang.std._internal.compiler.prelude import build_expect_none, build_unwrap
 from guppylang.tys.arg import TypeArg
 
 
@@ -58,3 +58,12 @@ class OptionUnwrapCompiler(OptionCompiler, CustomCallCompiler):
         [opt] = args
         err = "Option.unwrap: value is `Nothing`"
         return list(build_unwrap(self.builder, opt, err).outputs())
+
+
+class OptionUnwrapNothingCompiler(OptionCompiler, CustomCallCompiler):
+    """Compiler for the `Option.unwrap_nothing` method."""
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        [opt] = args
+        err = "Option.unwrap: value is `Some`"
+        return list(build_expect_none(self.builder, opt, err).outputs())
