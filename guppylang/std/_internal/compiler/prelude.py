@@ -180,9 +180,11 @@ class UnwrapOpCompiler(CustomInoutCallCompiler):
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         assert len(self.ty.output) == 1
+        # To instantiate the op we need a function signature that wraps the output of 
+        # the function that is being compiled into a sum type.
         opt_func_type = ht.FunctionType(
             input=self.ty.input,
-            output=[ht.Option(error_type, *self.ty.output)],
+            output=[ht.Either([error_type()], self.ty.output)],
         )
         op = self.op(opt_func_type, self.type_args)
         option = self.builder.add_op(op, *args)

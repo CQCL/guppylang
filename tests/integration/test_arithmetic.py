@@ -308,7 +308,7 @@ def test_float_to_int(validate, run_int_fn) -> None:
 
     @guppy(module)
     def main() -> int:
-        return int(2.0)
+        return int(2.75)
 
     compiled = module.compile()
     validate(compiled)
