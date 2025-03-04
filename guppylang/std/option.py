@@ -9,6 +9,7 @@ from guppylang.std._internal.compiler.option import (
     OptionConstructor,
     OptionTestCompiler,
     OptionUnwrapCompiler,
+    OptionUnwrapNothingCompiler,
 )
 from guppylang.std.builtins import mem_swap, owned
 from guppylang.tys.arg import Argument, TypeArg
@@ -49,6 +50,14 @@ class Option(Generic[T]):  # type: ignore[misc]
         """Returns the contained `some` value, consuming `self`.
 
         Panics if the option is a `nothing` value.
+        """
+
+    @guppy.custom(OptionUnwrapNothingCompiler())
+    @no_type_check
+    def unwrap_nothing(self: "Option[T]" @ owned) -> None:
+        """Returns `None` if the option is a `nothing` value, consuming `self`.
+
+        Panics if the option is a `some` value.
         """
 
     @guppy
