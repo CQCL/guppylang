@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeVar
 
@@ -12,12 +13,20 @@ from hugr import Node, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
 
-from guppylang.definition.custom import CustomCallCompiler
+from guppylang.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
+from guppylang.tys.builtin import int_type
+from guppylang.tys.subst import Inst
+from guppylang.tys.ty import type_to_row
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from hugr.build.dfg import DfBase
+
+    from guppylang.tys.subst import Inst
+
 
 # --------------------------------------------
 # --------------- prelude --------------------
@@ -148,6 +157,37 @@ class MemSwapCompiler(CustomCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [x, y] = args
         return CallReturnWires(regular_returns=[], inout_returns=[y, x])
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        raise InternalGuppyError("Call compile_with_inouts instead")
+
+
+class UnwrapOpCompiler(CustomInoutCallCompiler):
+    """Compiler for operations that require unwrapping an single option value result
+    which can potentially cause an error.
+
+    Args:
+        op: A HUGR operation that outputs an option value.
+        err_msg: The error message to be raised if the unwrapped option is an error.
+    """
+
+    op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]
+    err_msg: str
+
+    def __init__(self, op: Callable[[ht.FunctionType, Inst], ops.DataflowOp], err: str):
+        self.op = op
+        self.err_msg = err
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        assert len(self.ty.output) == 1
+        opt_func_type = ht.FunctionType(
+            input=self.ty.input,
+            output=[ht.Option(error_type, *self.ty.output)],
+        )
+        op = self.op(opt_func_type, self.type_args)
+        option = self.builder.add_op(op, *args)
+        result = build_unwrap(self.builder, option, self.err_msg)
+        return CallReturnWires(regular_returns=[result], inout_returns=[])
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")

@@ -301,3 +301,15 @@ def test_pow(validate, run_int_fn) -> None:
     compiled = module.compile()
     validate(compiled)
     run_int_fn(compiled, -11)
+
+
+def test_float_to_int(validate, run_int_fn) -> None:
+    module = GuppyModule("test_cast")
+
+    @guppy(module)
+    def main() -> int:
+        return int(2.0)
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, 2)
