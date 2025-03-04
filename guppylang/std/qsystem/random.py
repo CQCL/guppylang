@@ -1,6 +1,12 @@
 from typing import no_type_check
 
+from hugr import Wire
+from hugr import tys as ht
+from hugr.std.int import int_t
+
 from guppylang.decorator import guppy
+from guppylang.definition.custom import CustomInoutCallCompiler
+from guppylang.definition.value import CallReturnWires
 from guppylang.module import GuppyModule
 from guppylang.std._internal.compiler.quantum import (
     QSYSTEM_RANDOM_EXTENSION,
@@ -12,6 +18,34 @@ from guppylang.std.option import Option
 
 qsystem_random = GuppyModule("qsystem.random")
 qsystem_random.load(Option)  # type: ignore[arg-type] # Argument 1 to "load" of "GuppyModule" has incompatible type "type[Option]"; expected "Definition | GuppyModule | Module"
+
+
+class RandomIntCompiler(CustomInoutCallCompiler):
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [ctx] = args
+        [rnd, ctx] = self.builder.add_op(
+            external_op("RandomInt", [], ext=QSYSTEM_RANDOM_EXTENSION)(
+                ht.FunctionType([RNGCONTEXT_T], [int_t(5), RNGCONTEXT_T]), []
+            ),
+            ctx,
+        )
+        # TODO: iwiden rnd before returning
+        return CallReturnWires(regular_returns=[rnd], inout_returns=[ctx])
+
+
+class RandomIntBoundedCompiler(CustomInoutCallCompiler):
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [ctx, bound] = args
+        # TODO: Add a check for the bound to be under 32-bits and itrunc/inarrow it
+        [rnd, ctx] = self.builder.add_op(
+            external_op("RandomIntBounded", [], ext=QSYSTEM_RANDOM_EXTENSION)(
+                ht.FunctionType([RNGCONTEXT_T, int_t(5)], [int_t(5), RNGCONTEXT_T]), []
+            ),
+            ctx,
+            bound,
+        )
+        # TODO: iwiden rnd before returning
+        return CallReturnWires(regular_returns=[rnd], inout_returns=[ctx])
 
 
 @guppy.hugr_op(
@@ -34,7 +68,7 @@ def maybe_rng(seed: int) -> Option["RNG"]:  # type: ignore[type-arg] # "Option" 
 class RNG:
     """Random number generator."""
 
-    @guppy(qsystem_random)  # type: ignore[misc] # 27: Unsupported decorated constructor type # 28: Self argument missing for a non-static method (or an invalid type for self)
+    @guppy(qsystem_random)  # type: ignore[misc] # Unsupported decorated constructor type; Self argument missing for a non-static method (or an invalid type for self)
     def __new__(seed: int) -> "RNG":
         """Create a new random number generator using a seed."""
         return _new_rng_context(seed).unwrap()  # type: ignore[no-any-return] # Returning Any from function declared to return "RNGContext"
@@ -46,10 +80,7 @@ class RNG:
     @no_type_check
     def discard(self: "RNG" @ owned) -> None: ...
 
-    @guppy.hugr_op(
-        external_op("RandomInt", [], ext=QSYSTEM_RANDOM_EXTENSION),
-        module=qsystem_random,
-    )
+    @guppy.custom(RandomIntCompiler(), module=qsystem_random)
     @no_type_check
     def random_int(self: "RNG") -> int: ...
 
@@ -65,9 +96,6 @@ class RNG:
     @no_type_check
     def random_float(self: "RNG") -> float: ...
 
-    @guppy.hugr_op(
-        external_op("RandomIntBounded", [], ext=QSYSTEM_RANDOM_EXTENSION),
-        module=qsystem_random,
-    )
+    @guppy.custom(RandomIntBoundedCompiler(), module=qsystem_random)
     @no_type_check
     def random_int_bounded(self: "RNG", bound: int) -> int: ...
