@@ -46,6 +46,7 @@ from guppylang.checker.core import (
     Globals,
     Locals,
     Place,
+    SetitemCall,
     SubscriptAccess,
     Variable,
 )
@@ -66,6 +67,7 @@ from guppylang.checker.errors.type_errors import (
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
     NotCallableError,
+    TypeApplyNotGenericError,
     TypeInferenceError,
     TypeMismatchError,
     UnaryOperatorNotDefinedError,
@@ -89,7 +91,6 @@ from guppylang.nodes import (
     FieldAccessAndDrop,
     GenericParamValue,
     GlobalName,
-    InoutReturnSentinel,
     IterEnd,
     IterHasNext,
     IterNext,
@@ -119,6 +120,7 @@ from guppylang.tys.builtin import (
     string_type,
 )
 from guppylang.tys.param import ConstParam, TypeParam
+from guppylang.tys.parsing import arg_from_ast
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
@@ -603,6 +605,11 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
+        # Special case for subscripts on functions: Those are type applications
+        if isinstance(ty, FunctionType):
+            inst = check_type_apply(ty, node, self.ctx)
+            return instantiate_poly(node.value, ty, inst), ty.instantiate(inst)
+        # Otherwise, it's a regular __getitem__ subscript
         item_expr, item_ty = self.synthesize(node.slice)
         # Give the item a unique name so we can refer to it later in case we also want
         # to compile a call to `__setitem__`
@@ -850,6 +857,38 @@ def try_coerce_to(
     return None
 
 
+def check_type_apply(ty: FunctionType, node: ast.Subscript, ctx: Context) -> Inst:
+    """Checks a `f[T1, T2, ...]` type application of a generic function."""
+    func = node.value
+    arg_exprs = (
+        node.slice.elts
+        if isinstance(node.slice, ast.Tuple) and len(node.slice.elts) > 0
+        else [node.slice]
+    )
+    globals = ctx.globals
+
+    if not ty.parametrized:
+        func_name = globals[func.def_id].name if isinstance(func, GlobalName) else None
+        raise GuppyError(TypeApplyNotGenericError(node, func_name))
+
+    exp, act = len(ty.params), len(arg_exprs)
+    assert exp > 0
+    assert act > 0
+    if exp != act:
+        if exp < act:
+            span = Span(to_span(arg_exprs[exp]).start, to_span(arg_exprs[-1]).end)
+        else:
+            span = Span(to_span(arg_exprs[-1]).end, to_span(node).end)
+        err = WrongNumberOfArgsError(span, exp, act, detailed=True, is_type_apply=True)
+        err.add_sub_diagnostic(WrongNumberOfArgsError.SignatureHint(None, ty))
+        raise GuppyError(err)
+
+    return [
+        param.check_arg(arg_from_ast(arg_expr, globals, ctx.generic_params), arg_expr)
+        for arg_expr, param in zip(arg_exprs, ty.params, strict=True)
+    ]
+
+
 def check_num_args(
     exp: int, act: int, node: AstNode, sig: FunctionType | None = None
 ) -> None:
@@ -922,6 +961,8 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
         case FieldAccess(parent=parent):
             return replace(place, parent=check_inout_arg_place(parent, ctx, node))
         case SubscriptAccess(parent=parent, item=item, ty=ty):
+            # Create temporary variable for the setitem value
+            tmp_var = Variable(next(tmp_vars), ty, node)
             # Check a call to the `__setitem__` instance function
             exp_sig = FunctionType(
                 [
@@ -931,10 +972,10 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 ],
                 NoneType(),
             )
-            setitem_args = [
+            setitem_args: list[ast.expr] = [
                 with_type(parent.ty, with_loc(node, PlaceNode(parent))),
                 with_type(item.ty, with_loc(node, PlaceNode(item))),
-                with_type(ty, with_loc(node, InoutReturnSentinel(var=place))),
+                with_type(ty, with_loc(node, PlaceNode(tmp_var))),
             ]
             setitem_call, _ = ExprSynthesizer(ctx).synthesize_instance_func(
                 setitem_args[0],
@@ -944,7 +985,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 exp_sig,
                 True,
             )
-            return replace(place, setitem_call=setitem_call)
+            return replace(place, setitem_call=SetitemCall(setitem_call, tmp_var))
 
 
 def synthesize_call(

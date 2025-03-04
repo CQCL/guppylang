@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.16.0](https://github.com/CQCL/guppylang/compare/v0.15.0...v0.16.0) (2025-02-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* `CompiledGlobals` renamed to `CompilerContext`
+
+### Features
+
+* add `Option.take()` for swapping with None ([#809](https://github.com/CQCL/guppylang/issues/809)) ([9a459d5](https://github.com/CQCL/guppylang/commit/9a459d57e19a7194b30468fa15719f9b9ed4a135))
+
+
+### Code Refactoring
+
+* Stop inlining array.__getitem__ and array.__setitem__ ([#799](https://github.com/CQCL/guppylang/issues/799)) ([bb199a0](https://github.com/CQCL/guppylang/commit/bb199a0d581ead991212a2b7afe45e8f856fd214)), closes [#786](https://github.com/CQCL/guppylang/issues/786)
+
+## [0.15.0](https://github.com/CQCL/guppylang/compare/v0.14.0...v0.15.0) (2025-02-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* classical arrays can no longer be implicitly copied
+* `pytket` circuits no longer supported by `py` expressions (use `@pytket` or `load_pytket` instead)
+
+### Features
+
+* add `panic` builtin function ([#757](https://github.com/CQCL/guppylang/issues/757)) ([4ae3032](https://github.com/CQCL/guppylang/commit/4ae3032088771166de867c5d8f2f19924d9e0cd3))
+* Add array copy method ([#784](https://github.com/CQCL/guppylang/issues/784)) ([15bae6e](https://github.com/CQCL/guppylang/commit/15bae6eee6f334485f0a71cf3d58a135f5e533bc))
+* add boolean xor support ([#747](https://github.com/CQCL/guppylang/issues/747)) ([7fa4c8d](https://github.com/CQCL/guppylang/commit/7fa4c8d6cf94bf19faa618d4d48d023da1484514)), closes [#750](https://github.com/CQCL/guppylang/issues/750)
+* Add CH gate to the stdlib ([#793](https://github.com/CQCL/guppylang/issues/793)) ([1199a14](https://github.com/CQCL/guppylang/commit/1199a14a80210dbd9dd61f72c35ca7b846a0ec2e)), closes [#792](https://github.com/CQCL/guppylang/issues/792)
+* Add string type ([#733](https://github.com/CQCL/guppylang/issues/733)) ([aa9341b](https://github.com/CQCL/guppylang/commit/aa9341b13c9277756296dd98a86989e23c40e3a8))
+* Array subscript assignment for classical arrays ([#776](https://github.com/CQCL/guppylang/issues/776)) ([6880e11](https://github.com/CQCL/guppylang/commit/6880e111ebba409f37c16b7b6b77fd08a68bdda8))
+* Make `True` and `False` branches unconditional ([#740](https://github.com/CQCL/guppylang/issues/740)) ([748ea95](https://github.com/CQCL/guppylang/commit/748ea95cc6df449e29454a9b0a6ab1d56f370e1b))
+* Refactor to support affine arrays ([#768](https://github.com/CQCL/guppylang/issues/768)) ([92ec6d1](https://github.com/CQCL/guppylang/commit/92ec6d19765fb66f548f818778ec02772abd33f3))
+* Remove circuits from `py` expressions ([#746](https://github.com/CQCL/guppylang/issues/746)) ([ee8926b](https://github.com/CQCL/guppylang/commit/ee8926bb5f3a6b43aea105f702c0e4ff3202b79b))
+* support integer exponentiation in guppy source ([#753](https://github.com/CQCL/guppylang/issues/753)) ([70c8fcf](https://github.com/CQCL/guppylang/commit/70c8fcf1cbe009f5938cffc5df2a274cb85eee99))
+
+
+### Bug Fixes
+
+* Allow string py expressions in result and panic ([#759](https://github.com/CQCL/guppylang/issues/759)) ([53401cc](https://github.com/CQCL/guppylang/commit/53401cc9bcc51844a59258e505ece941687ca32f))
+* Fix error printing for structs defined in notebooks ([#777](https://github.com/CQCL/guppylang/issues/777)) ([b41e0fc](https://github.com/CQCL/guppylang/commit/b41e0fcb4aa37d587800059361605bfae3e783c5))
+* Fix pytest hanging ([#754](https://github.com/CQCL/guppylang/issues/754)) ([9ad02bb](https://github.com/CQCL/guppylang/commit/9ad02bbb92a5d798398376647a7431669e72d4bc))
+* panic on negative exponent in ipow ([#758](https://github.com/CQCL/guppylang/issues/758)) ([821771a](https://github.com/CQCL/guppylang/commit/821771a12a3aff93a5f7661211197818f3905b3b))
+* Properly report errors for unsupported subscript assignments ([#738](https://github.com/CQCL/guppylang/issues/738)) ([8afa2a9](https://github.com/CQCL/guppylang/commit/8afa2a93ae224c57932eb6042464f5722668f742)), closes [#736](https://github.com/CQCL/guppylang/issues/736)
+* remove newlines in extension description ([#762](https://github.com/CQCL/guppylang/issues/762)) ([2f5eed3](https://github.com/CQCL/guppylang/commit/2f5eed3f9064ae92d397940a337d6453ab9206ce))
+
+
+### Documentation
+
+* remove broken link in README ([#801](https://github.com/CQCL/guppylang/issues/801)) ([fb1c3b5](https://github.com/CQCL/guppylang/commit/fb1c3b5638de5f3e3869dc6e04d08721c258c4dc))
+
 ## [0.14.0](https://github.com/CQCL/guppylang/compare/v0.13.1...v0.14.0) (2024-12-19)
 
 

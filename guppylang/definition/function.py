@@ -22,7 +22,7 @@ from guppylang.checker.func_checker import (
     check_signature,
     parse_function_with_docstring,
 )
-from guppylang.compiler.core import CompiledGlobals, DFContainer
+from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import (
     CheckableDef,
@@ -196,7 +196,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         self,
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompiledGlobals,
+        ctx: CompilerContext,
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
@@ -207,13 +207,13 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
         args: list[Wire],
         type_args: Inst,
         dfg: DFContainer,
-        globals: CompiledGlobals,
+        ctx: CompilerContext,
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
         return compile_call(args, type_args, dfg, self.ty, self.func_def)
 
-    def compile_inner(self, globals: CompiledGlobals) -> None:
+    def compile_inner(self, globals: CompilerContext) -> None:
         """Compiles the body of the function."""
         compile_global_func_def(self, self.func_def, globals)
 

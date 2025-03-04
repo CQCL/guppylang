@@ -1,0 +1,9 @@
+Error: Not generic (at $FILE:20:4)
+   | 
+18 | def main() -> None:
+19 |     f = foo
+20 |     f[int](0)
+   |     ^^^^^^ This function is not generic, so no type parameters can be
+   |            provided
+
+Guppy compilation failed due to 1 previous error

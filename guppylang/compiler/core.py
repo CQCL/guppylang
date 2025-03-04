@@ -1,8 +1,11 @@
+import itertools
 from abc import ABC
 from dataclasses import dataclass, field
 from typing import cast
 
 from hugr import Wire, ops
+from hugr import tys as ht
+from hugr.build import function as hf
 from hugr.build.dfg import DP, DefinitionBuilder, DfBase
 
 from guppylang.checker.core import FieldAccess, Globals, Place, PlaceId, Variable
@@ -15,7 +18,23 @@ from guppylang.tys.ty import StructType, Type
 CompiledLocals = dict[PlaceId, Wire]
 
 
-class CompiledGlobals:
+@dataclass(frozen=True)
+class GlobalConstId:
+    id: int
+    base_name: str
+
+    _fresh_ids = itertools.count()
+
+    @staticmethod
+    def fresh(base_name: str) -> "GlobalConstId":
+        return GlobalConstId(next(GlobalConstId._fresh_ids), base_name)
+
+    @property
+    def name(self) -> str:
+        return f"{self.base_name}.{self.id}"
+
+
+class CompilerContext:
     """Compilation context containing all available definitions.
 
     Maintains a `worklist` of definitions which have been used by other compiled code
@@ -27,6 +46,8 @@ class CompiledGlobals:
     checked: dict[DefId, CheckedDef]
     compiled: dict[DefId, CompiledDef]
     worklist: set[DefId]
+
+    global_funcs: dict[GlobalConstId, hf.Function]
 
     checked_globals: Globals
 
@@ -40,6 +61,7 @@ class CompiledGlobals:
         self.checked = checked
         self.worklist = set()
         self.compiled = {}
+        self.global_funcs = {}
         self.checked_globals = checked_globals
 
     def build_compiled_def(self, def_id: DefId) -> CompiledDef:
@@ -80,6 +102,26 @@ class CompiledGlobals:
         compiled_func = self.build_compiled_def(checked_func.id)
         assert isinstance(compiled_func, CompiledCallableDef)
         return compiled_func
+
+    def declare_global_func(
+        self,
+        const_id: GlobalConstId,
+        func_ty: ht.PolyFuncType,
+    ) -> tuple[hf.Function, bool]:
+        """
+        Creates a function builder for a global function if it doesn't already exist,
+        else returns the existing one.
+        """
+        if const_id in self.global_funcs:
+            return self.global_funcs[const_id], True
+        func = self.module.define_function(
+            name=const_id.name,
+            input_types=func_ty.body.input,
+            output_types=func_ty.body.output,
+            type_params=func_ty.params,
+        )
+        self.global_funcs[const_id] = func
+        return func, False
 
 
 @dataclass
@@ -155,10 +197,10 @@ class DFContainer:
 class CompilerBase(ABC):
     """Base class for the Guppy compiler."""
 
-    globals: CompiledGlobals
+    ctx: CompilerContext
 
-    def __init__(self, globals: CompiledGlobals) -> None:
-        self.globals = globals
+    def __init__(self, ctx: CompilerContext) -> None:
+        self.ctx = ctx
 
 
 def return_var(n: int) -> str:

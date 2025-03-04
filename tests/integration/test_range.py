@@ -1,7 +1,6 @@
 from guppylang.decorator import guppy
-from guppylang.std.builtins import nat, range, SizedIter, Range, py
+from guppylang.std.builtins import range, SizedIter, Range, py
 from guppylang.module import GuppyModule
-from tests.util import compile_guppy
 
 def test_range(validate, run_int_fn):
     module = GuppyModule("test_range")

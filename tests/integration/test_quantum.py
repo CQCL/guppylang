@@ -33,6 +33,7 @@ from guppylang.std.quantum_functional import (
     ry,
     rz,
     crz,
+    ch,
     toffoli,
     reset,
     quantum_functional,
@@ -91,6 +92,7 @@ def test_2qb_op(validate):
         q1, q2 = cx(q1, q2)
         q1, q2 = cy(q1, q2)
         q1, q2 = cz(q1, q2)
+        q1, q2 = ch(q1, q2)
         return (q1, q2)
 
     validate(test)

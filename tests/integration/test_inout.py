@@ -1,4 +1,3 @@
-import pytest
 
 
 from guppylang.decorator import guppy

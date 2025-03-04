@@ -27,12 +27,14 @@ from guppylang.definition.struct import CheckedStructDef, RawStructDef
 from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import (
+    CopyNode,
     DesugaredArrayComp,
     DesugaredGeneratorExpr,
     GenericParamValue,
     GlobalCall,
     MakeIter,
     PanicExpr,
+    PlaceNode,
     ResultExpr,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
@@ -162,6 +164,49 @@ class ArrayLenChecker(CustomCallChecker):
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         _, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
         return self._get_const_len(inst), subst
+
+
+class ArrayCopyChecker(CustomCallChecker):
+    """Function call checker for the `array.copy` function."""
+
+    @dataclass(frozen=True)
+    class NonCopyableElementsError(Error):
+        title: ClassVar[str] = "Non-copyable elements"
+        span_label: ClassVar[str] = "Elements of type `{ty}` cannot be copied."
+        ty: Type
+
+        @dataclass(frozen=True)
+        class Explanation(Note):
+            message: ClassVar[str] = "Only arrays with copyable elements can be copied"
+
+    @dataclass(frozen=True)
+    class ExpectedArrayError(Error):
+        title: ClassVar[str] = "Non-array copy"
+        span_label: ClassVar[str] = (
+            "Expected array expression, got expression of type {ty}"
+        )
+        ty: Type
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        check_num_args(1, len(args), self.node)
+        [array_arg] = args
+        array_arg, array_ty = ExprSynthesizer(self.ctx).synthesize(array_arg)
+        if not is_array_type(array_ty):
+            raise GuppyTypeError(
+                ArrayCopyChecker.ExpectedArrayError(self.node, array_ty)
+            )
+        if isinstance(array_ty.args[0], TypeArg) and not array_ty.args[0].ty.copyable:
+            err = ArrayCopyChecker.NonCopyableElementsError(
+                self.node, array_ty.args[0].ty
+            )
+            err.add_sub_diagnostic(
+                ArrayCopyChecker.NonCopyableElementsError.Explanation(None)
+            )
+            raise GuppyTypeError(err)
+        if isinstance(array_arg, PlaceNode):
+            return CopyNode(array_arg), array_ty
+        else:
+            return array_arg, array_ty
 
 
 class NewArrayChecker(CustomCallChecker):

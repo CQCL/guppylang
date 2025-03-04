@@ -12,7 +12,7 @@ from guppylang.tys.ty import FunctionType, Type
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Context
-    from guppylang.compiler.core import CompiledGlobals, DFContainer
+    from guppylang.compiler.core import CompilerContext, DFContainer
 
 
 @dataclass(frozen=True)
@@ -29,9 +29,7 @@ class CompiledValueDef(ValueDef, CompiledDef):
     """Abstract base class for compiled definitions that represent values."""
 
     @abstractmethod
-    def load(
-        self, dfg: "DFContainer", globals: "CompiledGlobals", node: AstNode
-    ) -> Wire:
+    def load(self, dfg: "DFContainer", ctx: "CompilerContext", node: AstNode) -> Wire:
         """Loads the defined value into a local Hugr dataflow graph."""
 
 
@@ -68,7 +66,7 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
         args: list[Wire],
         type_args: Inst,
         dfg: "DFContainer",
-        globals: "CompiledGlobals",
+        ctx: "CompilerContext",
         node: AstNode,
     ) -> "CallReturnWires":
         """Compiles a call to the function.
@@ -82,7 +80,7 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
         self,
         type_args: Inst,
         dfg: "DFContainer",
-        globals: "CompiledGlobals",
+        ctx: "CompilerContext",
         node: AstNode,
     ) -> Wire:
         """Loads the function into a local Hugr dataflow graph.
@@ -91,7 +89,7 @@ class CompiledCallableDef(CallableDef, CompiledValueDef):
         """
 
     def load(
-        self, dfg: "DFContainer", globals: "CompiledGlobals", node: AstNode
+        self, dfg: "DFContainer", globals: "CompilerContext", node: AstNode
     ) -> Wire:
         """Loads the defined value into a local Hugr dataflow graph."""
         return self.load_with_args([], dfg, globals, node)

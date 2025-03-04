@@ -12,7 +12,7 @@ from guppylang.std._internal.compiler.quantum import (
     RotationCompiler,
 )
 from guppylang.std._internal.util import quantum_op
-from guppylang.std.angles import angle
+from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import array, owned
 from guppylang.std.option import Option
 
@@ -162,3 +162,15 @@ def discard_array(qubits: array[qubit, N] @ owned) -> None:
     """Discard an array of qubits."""
     for q in qubits:
         discard(q)
+
+
+# -------NON-PRIMITIVE-------
+
+
+@guppy
+@no_type_check
+def ch(control: qubit, target: qubit) -> None:
+    # based on https://quantumcomputing.stackexchange.com/a/15737
+    ry(target, -pi / 4)
+    cz(control, target)
+    ry(target, pi / 4)

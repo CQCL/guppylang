@@ -27,11 +27,18 @@ from guppylang.cfg.builder import (
     make_var,
     tmp_vars,
 )
-from guppylang.checker.core import Context, FieldAccess, Variable
+from guppylang.checker.core import (
+    Context,
+    FieldAccess,
+    SetitemCall,
+    SubscriptAccess,
+    Variable,
+)
 from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.checker.errors.type_errors import (
     AssignFieldTypeMismatchError,
     AssignNonPlaceHelp,
+    AssignSubscriptTypeMismatchError,
     AttributeNotFoundError,
     MissingReturnValueError,
     StarredTupleUnpackError,
@@ -58,7 +65,9 @@ from guppylang.nodes import (
 from guppylang.span import Span, to_span
 from guppylang.tys.builtin import (
     array_type,
+    get_element_type,
     get_iter_size,
+    is_array_type,
     is_sized_iter_type,
     nat_type,
 )
@@ -67,6 +76,9 @@ from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.subst import Subst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
+    FuncInput,
+    FunctionType,
+    InputFlags,
     NoneType,
     StructType,
     TupleType,
@@ -92,6 +104,19 @@ class StmtChecker(AstVisitor[BBStatement]):
 
     def _synth_expr(self, node: ast.expr) -> tuple[ast.expr, Type]:
         return ExprSynthesizer(self.ctx).synthesize(node)
+
+    def _synth_instance_fun(
+        self,
+        node: ast.expr,
+        args: list[ast.expr],
+        func_name: str,
+        description: str,
+        exp_sig: FunctionType | None = None,
+        give_reason: bool = False,
+    ) -> tuple[ast.expr, Type]:
+        return ExprSynthesizer(self.ctx).synthesize_instance_func(
+            node, args, func_name, description, exp_sig, give_reason
+        )
 
     def _check_expr(
         self, node: ast.expr, ty: Type, kind: str = "expression"
@@ -152,8 +177,66 @@ class StmtChecker(AstVisitor[BBStatement]):
     @_check_assign.register
     def _check_subscript_assign(
         self, lhs: ast.Subscript, rhs: ast.expr, rhs_ty: Type
-    ) -> AnyUnpack:
-        raise GuppyError(UnsupportedError(lhs, "Subscript assignments"))
+    ) -> PlaceNode:
+        # Check subscript is array subscript.
+        value, container_ty = self._synth_expr(lhs.value)
+        if not is_array_type(container_ty):
+            raise GuppyError(
+                UnsupportedError(lhs, "Subscript assignments to non-arrays")
+            )
+
+        # Check array element type matches type of RHS.
+        element_ty = get_element_type(container_ty)
+        if element_ty != rhs_ty:
+            raise GuppyTypeError(
+                AssignSubscriptTypeMismatchError(to_span(lhs), rhs_ty, element_ty)
+            )
+
+        # As with field assignment, only allow place assignments for now.
+        if not isinstance(value, PlaceNode):
+            raise GuppyError(
+                UnsupportedError(value, "Assigning to this expression", singular=True)
+            )
+
+        # Synthesize __setitem__ call.
+        item_expr, item_ty = self._synth_expr(lhs.slice)
+        item = Variable(next(tmp_vars), item_ty, item_expr)
+
+        # Create and store a temp variable to ensure RHS has a wire during compilation.
+        rhs_var = Variable(next(tmp_vars), rhs_ty, rhs)
+
+        parent = value.place
+
+        exp_set_sig = FunctionType(
+            [
+                FuncInput(parent.ty, InputFlags.Inout),
+                FuncInput(item.ty, InputFlags.NoFlags),
+                FuncInput(rhs_ty, InputFlags.Owned),
+            ],
+            NoneType(),
+        )
+        setitem_args: list[ast.expr] = [
+            with_type(parent.ty, with_loc(lhs, PlaceNode(parent))),
+            with_type(item.ty, with_loc(lhs, PlaceNode(item))),
+            with_type(rhs_ty, with_loc(lhs, PlaceNode(rhs_var))),
+        ]
+        setitem_call, _ = self._synth_instance_fun(
+            setitem_args[0],
+            setitem_args[1:],
+            "__setitem__",
+            "allowed to be assigned to",
+            exp_set_sig,
+            True,
+        )
+
+        place = SubscriptAccess(
+            parent,
+            item,
+            rhs_ty,
+            item_expr,
+            setitem_call=SetitemCall(setitem_call, rhs_var),
+        )
+        return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 
     @_check_assign.register
     def _check_tuple_assign(

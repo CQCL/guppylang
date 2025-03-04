@@ -3,7 +3,6 @@ from typing import Generic, TYPE_CHECKING
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 
-import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Callable

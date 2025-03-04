@@ -9,7 +9,6 @@ from guppylang.ast_util import (
 from guppylang.cfg.builder import is_py_expression
 from guppylang.checker.core import Context, Globals, Locals
 from guppylang.checker.errors.generic import ExpectedError
-from guppylang.checker.expr_checker import eval_py_expr
 from guppylang.definition.common import Definition
 from guppylang.definition.module import ModuleDef
 from guppylang.definition.parameter import ParamDef
@@ -92,6 +91,8 @@ def arg_from_ast(
 
     # Py-expressions can also be used to specify static numbers
     if py_expr := is_py_expression(node):
+        from guppylang.checker.expr_checker import eval_py_expr
+
         v = eval_py_expr(py_expr, Context(globals, Locals({}), {}))
         if isinstance(v, int):
             nat_ty = NumericType(NumericType.Kind.Nat)

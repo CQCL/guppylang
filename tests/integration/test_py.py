@@ -2,13 +2,10 @@
 
 from importlib.util import find_spec
 
-import pytest
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std.builtins import py, array, nat, owned
-from guppylang.std import quantum
-from guppylang.std.quantum import qubit
 from tests.util import compile_guppy
 
 tket2_installed = find_spec("tket2") is not None

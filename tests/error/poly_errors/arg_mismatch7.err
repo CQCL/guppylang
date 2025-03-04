@@ -1,0 +1,9 @@
+Error: Type mismatch (at $FILE:17:12)
+   | 
+15 | @guppy(module)
+16 | def main(xs: array[int, 42]) -> None:
+17 |     foo[43](xs)
+   |             ^^ Expected argument of type `array[int, 43]`, got `array[int,
+   |                42]`
+
+Guppy compilation failed due to 1 previous error

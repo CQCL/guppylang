@@ -146,3 +146,13 @@ def reset(q: qubit @ owned) -> qubit:
 def project_z(q: qubit @ owned) -> tuple[qubit, bool]:
     b = quantum.project_z(q)
     return q, b
+
+
+# -------NON-PRIMITIVE-------
+
+
+@guppy(quantum_functional)
+@no_type_check
+def ch(control: qubit @ owned, target: qubit @ owned) -> tuple[qubit, qubit]:
+    quantum.ch(control, target)
+    return control, target

@@ -43,6 +43,7 @@ from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
     AnyCall,
     CheckedNestedFunctionDef,
+    CopyNode,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
@@ -219,6 +220,13 @@ class BBLinearityChecker(ast.NodeVisitor):
         yield new_scope
         self.scope = scope
 
+    def visit_CopyNode(
+        self,
+        node: CopyNode,
+    ) -> None:
+        # Linear argument type is already caught by the typechecker
+        return
+
     def visit_PlaceNode(
         self,
         node: PlaceNode,
@@ -255,6 +263,7 @@ class BBLinearityChecker(ast.NodeVisitor):
             self.scope.assign(subscript.item)
             # Visiting the `__getitem__(place.parent, place.item)` call ensures that we
             # linearity-check the parent and element.
+            assert subscript.getitem_call is not None
             self.visit(subscript.getitem_call)
         # For all other places, we record uses of all leaves
         else:
@@ -331,7 +340,9 @@ class BBLinearityChecker(ast.NodeVisitor):
         # Places involving subscripts are given back by visiting the `__setitem__` call
         if subscript := contains_subscript(place):
             assert subscript.setitem_call is not None
-            self.visit(subscript.setitem_call)
+            for leaf in leaf_places(subscript.setitem_call.value_var):
+                self.scope.assign(leaf)
+            self.visit(subscript.setitem_call.call)
             self._reassign_single_inout_arg(subscript.parent, node)
         else:
             for leaf in leaf_places(place):

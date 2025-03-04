@@ -126,3 +126,18 @@ def test_nat_recurse(validate):
 
     validate(module.compile())
 
+
+def test_type_apply(validate):
+    module = GuppyModule("test")
+    T = guppy.type_var("T", module=module)
+    n = guppy.nat_var("n", module=module)
+
+    @guppy.declare(module)
+    def foo(x: array[T, n]) -> array[T, n]: ...
+
+    @guppy(module)
+    def identity(x: array[T, n]) -> array[T, n]:
+        return foo[T, n](x)
+
+    validate(module.compile())
+

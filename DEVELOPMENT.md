@@ -30,9 +30,8 @@ To setup the environment manually you will need:
 
 - Just: [just.systems](https://just.systems/)
 - uv `>=0.4.27`: [docs.astral.sh](https://docs.astral.sh/uv/getting-started/installation/)
-    * If you have an older manually installed `uv` version you can upgrade it
-      with `uv self update`, or by following the instructions in your package
-      manager.
+  - If you have an older manually installed `uv` version you can upgrade it with `uv self update`,
+    or by following the instructions in your package manager.
 
 The extended test suite has additional requirements. These are **optional**; tests that require them will be skipped if they are not installed.
 
@@ -108,7 +107,7 @@ PRs should be made against the `main` branch, and should pass all CI checks befo
 
 The general format of a contribution title should be:
 
-```
+```text
 <type>(<scope>)!: <description>
 ```
 
