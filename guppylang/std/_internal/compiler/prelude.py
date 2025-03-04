@@ -16,9 +16,7 @@ from hugr import val as hv
 from guppylang.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
-from guppylang.tys.builtin import int_type
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import type_to_row
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -180,7 +178,7 @@ class UnwrapOpCompiler(CustomInoutCallCompiler):
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         assert len(self.ty.output) == 1
-        # To instantiate the op we need a function signature that wraps the output of 
+        # To instantiate the op we need a function signature that wraps the output of
         # the function that is being compiled into a sum type.
         opt_func_type = ht.FunctionType(
             input=self.ty.input,

@@ -308,7 +308,19 @@ def test_float_to_int(validate, run_int_fn) -> None:
 
     @guppy(module)
     def main() -> int:
-        return int(2.75)
+        return int(-2.75)
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, -2)
+
+
+def test_float_to_nat(validate, run_int_fn) -> None:
+    module = GuppyModule("test_cast")
+
+    @guppy(module)
+    def main() -> nat:
+        return nat(2.75)
 
     compiled = module.compile()
     validate(compiled)

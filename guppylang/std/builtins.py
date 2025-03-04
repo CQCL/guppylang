@@ -492,7 +492,13 @@ class Float:
     @guppy.hugr_op(float_op("fmul"))
     def __mul__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(unsupported_op("trunc_u"))  # TODO `trunc_u` returns an option
+    @guppy.custom(
+        UnwrapOpCompiler(
+            # Use `int_op` to instantiate type arg with 64-bit integer.
+            int_op("trunc_u", hugr.std.int.CONVERSIONS_EXTENSION),
+            "Unsuccessful nat cast",
+        )
+    )
     def __nat__(self: float) -> nat: ...
 
     @guppy.hugr_op(float_op("fne"))
