@@ -16,6 +16,7 @@ from guppylang.cfg.cfg import CFG, BaseCFG
 from guppylang.checker.core import Context, Globals, Locals, Place, V, Variable
 from guppylang.checker.expr_checker import ExprSynthesizer, to_bool
 from guppylang.checker.stmt_checker import StmtChecker
+from guppylang.definition.value import ValueDef
 from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError
 from guppylang.tys.param import Parameter
@@ -110,7 +111,7 @@ def check_cfg(
         if bb in compiled:
             # If the BB was already compiled, we just have to check that the signatures
             # match.
-            check_rows_match(input_row, compiled[bb].sig.input_row, bb)
+            check_rows_match(input_row, compiled[bb].sig.input_row, bb, globals)
         else:
             # Otherwise, check the BB and enqueue its successors
             checked_bb = check_bb(
@@ -150,7 +151,6 @@ def check_cfg(
     from guppylang.checker.linearity_checker import check_cfg_linearity
 
     linearity_checked_cfg = check_cfg_linearity(checked_cfg, func_name, globals)
-
     return linearity_checked_cfg
 
 
@@ -190,6 +190,21 @@ class BranchTypeError(Error):
     class TypeHint(Note):
         span_label: ClassVar[str] = "This is of type `{ty}`"
         ty: Type
+
+    @dataclass(frozen=True)
+    class GlobalHint(Note):
+        message: ClassVar[str] = (
+            "{ident} may be shadowing a global {defn.description} definition of type "
+            "`{defn.ty}` on some branches"
+        )
+        defn: ValueDef
+
+
+@dataclass(frozen=True)
+class GlobalShadowError(Error):
+    title: ClassVar[str] = "Global variable conditionally shadowed"
+    span_label: ClassVar[str] = "{ident} may be shadowing a global variable"
+    ident: str
 
 
 def check_bb(
@@ -260,16 +275,22 @@ def check_bb(
     return checked_bb
 
 
-def check_rows_match(row1: Row[Variable], row2: Row[Variable], bb: BB) -> None:
+def check_rows_match(
+    row1: Row[Variable], row2: Row[Variable], bb: BB, globals: Globals
+) -> None:
     """Checks that the types of two rows match up.
 
     Otherwise, an error is thrown, alerting the user that a variable has different
     types on different control-flow paths.
     """
     map1, map2 = {v.name: v for v in row1}, {v.name: v for v in row2}
-    assert map1.keys() == map2.keys()
-    for x in map1:
-        v1, v2 = map1[x], map2[x]
+    for x in map1.keys() | map2.keys():
+        # If block signature lengths don't match but no undefined error was thrown, some
+        # variables may be shadowing global variables.
+        v1 = map1.get(x) or globals[x]
+        assert isinstance(v1, Variable | ValueDef)
+        v2 = map2.get(x) or globals[x]
+        assert isinstance(v2, Variable | ValueDef)
         if v1.ty != v2.ty:
             # In the error message, we want to mention the variable that was first
             # defined at the start.
@@ -284,9 +305,34 @@ def check_rows_match(row1: Row[Variable], row2: Row[Variable], bb: BB) -> None:
             ident = "Expression" if v1.name.startswith("%") else f"Variable `{v1.name}`"
             use = bb.containing_cfg.live_before[bb][v1.name].vars.used[v1.name]
             err = BranchTypeError(use, ident)
-            err.add_sub_diagnostic(BranchTypeError.TypeHint(v1.defined_at, v1.ty))
-            err.add_sub_diagnostic(BranchTypeError.TypeHint(v2.defined_at, v2.ty))
+            # We don't add a location to the type hint for the global variable,
+            # since it could lead to cross-file diagnostics (which are not
+            # supported) or refer to long function definitions.
+            sub1 = (
+                BranchTypeError.TypeHint(v1.defined_at, v1.ty)
+                if isinstance(v1, Variable)
+                else BranchTypeError.GlobalHint(None, v1)
+            )
+            sub2 = (
+                BranchTypeError.TypeHint(v2.defined_at, v2.ty)
+                if isinstance(v2, Variable)
+                else BranchTypeError.GlobalHint(None, v2)
+            )
+            err.add_sub_diagnostic(sub1)
+            err.add_sub_diagnostic(sub2)
             raise GuppyError(err)
+        else:
+            # TODO: Remove once https://github.com/CQCL/guppylang/issues/827 is done.
+            # If either is a global variable, don't allow shadowing even if types match.
+            if not (isinstance(v1, Variable) and isinstance(v2, Variable)):
+                local_var = v1 if isinstance(v1, Variable) else v2
+                ident = (
+                    "Expression"
+                    if local_var.name.startswith("%")
+                    else f"Variable `{local_var.name}`"
+                )
+                glob_err = GlobalShadowError(local_var.defined_at, ident)
+                raise GuppyError(glob_err)
 
 
 def diagnose_maybe_undefined(
