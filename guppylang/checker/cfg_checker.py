@@ -200,6 +200,13 @@ class BranchTypeError(Error):
         defn: ValueDef
 
 
+@dataclass(frozen=True)
+class GlobalShadowError(Error):
+    title: ClassVar[str] = "Global variable conditionally shadowed"
+    span_label: ClassVar[str] = "{ident} may be shadowing a global variable"
+    ident: str
+
+
 def check_bb(
     bb: BB,
     checked_cfg: CheckedCFG[Variable],
@@ -314,6 +321,18 @@ def check_rows_match(
             err.add_sub_diagnostic(sub1)
             err.add_sub_diagnostic(sub2)
             raise GuppyError(err)
+        else:
+            # TODO: Remove once https://github.com/CQCL/guppylang/issues/827 is done.
+            # If either is a global variable, don't allow shadowing even if types match.
+            if not (isinstance(v1, Variable) and isinstance(v2, Variable)):
+                local_var = v1 if isinstance(v1, Variable) else v2
+                ident = (
+                    "Expression"
+                    if local_var.name.startswith("%")
+                    else f"Variable `{local_var.name}`"
+                )
+                glob_err = GlobalShadowError(local_var.defined_at, ident)
+                raise GuppyError(glob_err)
 
 
 def diagnose_maybe_undefined(
