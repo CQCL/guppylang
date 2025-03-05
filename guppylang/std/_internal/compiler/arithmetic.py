@@ -55,6 +55,28 @@ def iwiden_s(from_width: int, to_width: int) -> ops.ExtOp:
     )
 
 
+def inarrow_u(from_width: int, to_width: int) -> ops.ExtOp:
+    """Returns an unsigned `std.arithmetic.int.narrow_u` operation."""
+    return _instantiate_int_op(
+        "inarrow_u",
+        [from_width, to_width],
+        [int_t(from_width)],
+        # TODO: add type for error
+        [ht.Either([], [int_t(to_width)])],
+    )
+
+
+def inarrow_s(from_width: int, to_width: int) -> ops.ExtOp:
+    """Returns a signed `std.arithmetic.int.narrow_s` operation."""
+    return _instantiate_int_op(
+        "inarrow_s",
+        [from_width, to_width],
+        [int_t(from_width)],
+        # TODO: add type for error
+        [ht.Either([], [int_t(to_width)])],
+    )
+
+
 # ------------------------------------------------------
 # --------- std.arithmetic.conversions ops -------------
 # ------------------------------------------------------
