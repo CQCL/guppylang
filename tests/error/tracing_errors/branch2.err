@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "$FILE", line 18, in <module>
+    module.compile()
+  File "$FILE", line 13, in test
+    if foo() > 1:
+ValueError: Branching on a dynamic value is not allowed in a comptime context. Consider defining a regular Guppy function to perform dynamic branching.
