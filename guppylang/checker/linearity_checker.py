@@ -493,8 +493,9 @@ class BBLinearityChecker(ast.NodeVisitor):
         with self.new_scope() as inner_scope:
             # In particular, assign the iterator variable in the new scope
             self._check_assign_targets(gen.iter_assign.targets)
-            self.visit(gen.hasnext_assign)
-            self.visit(gen.next_assign)
+            self.visit(gen.next_call)
+            self._check_assign_targets([gen.target])
+            self._check_assign_targets(gen.iter_assign.targets)
 
             # `if` guards are generally not allowed when we're iterating over linear
             # variables. The only exception is if all linear variables are already
@@ -544,8 +545,9 @@ class BBLinearityChecker(ast.NodeVisitor):
                             leaf.id, InoutReturnSentinel(leaf), UseKind.RETURN
                         )
 
-            # Check the iter finalizer so we record a final use of the iterator
-            self.visit(gen.iterend)
+            # Mark the iterator as used since it's carried into the next iteration
+            for leaf in leaf_places(gen.iter.place):
+                self.scope.use(leaf.id, gen.iter, UseKind.CONSUME)
 
             # We have to make sure that all linear variables that were introduced in the
             # inner scope have been used

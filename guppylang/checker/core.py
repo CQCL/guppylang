@@ -29,6 +29,7 @@ from guppylang.tys.builtin import (
     list_type_def,
     nat_type_def,
     none_type_def,
+    option_type_def,
     sized_iter_type_def,
     string_type_def,
     tuple_type_def,
@@ -257,6 +258,7 @@ class Globals:
             list_type_def,
             array_type_def,
             sized_iter_type_def,
+            option_type_def,
         ]
         defs = {defn.id: defn for defn in builtins}
         names = {defn.name: defn.id for defn in builtins}
