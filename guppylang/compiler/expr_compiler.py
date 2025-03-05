@@ -174,7 +174,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         only_true_inputs: list[PlaceNode] | None = None,
         only_false_inputs: list[PlaceNode] | None = None,
     ) -> tuple[AbstractContextManager[None], AbstractContextManager[None]]:
-        """Builds a `Conditional`, returing context managers to build the `True` and
+        """Builds a `Conditional`, returning context managers to build the `True` and
         `False` branch.
         """
         conditional = self.builder.add_conditional(

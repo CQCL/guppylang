@@ -8,6 +8,8 @@ from guppylang.decorator import guppy
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.module import GuppyModule
+from guppylang.std._internal.compiler.arithmetic import inarrow_s, iwiden_s
+from guppylang.std._internal.compiler.prelude import build_unwrap_right
 from guppylang.std._internal.compiler.quantum import (
     QSYSTEM_RANDOM_EXTENSION,
     RNGCONTEXT_T,
@@ -17,7 +19,6 @@ from guppylang.std.builtins import nat, owned
 from guppylang.std.option import Option
 
 qsystem_random = GuppyModule("qsystem.random")
-qsystem_random.load(Option)  # type: ignore[arg-type] # Argument 1 to "load" of "GuppyModule" has incompatible type "type[Option]"; expected "Definition | GuppyModule | Module"
 
 
 class RandomIntCompiler(CustomInoutCallCompiler):
@@ -29,14 +30,17 @@ class RandomIntCompiler(CustomInoutCallCompiler):
             ),
             ctx,
         )
-        # TODO: iwiden rnd before returning
+        [rnd] = self.builder.add_op(iwiden_s(5, 6), rnd)
         return CallReturnWires(regular_returns=[rnd], inout_returns=[ctx])
 
 
 class RandomIntBoundedCompiler(CustomInoutCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [ctx, bound] = args
-        # TODO: Add a check for the bound to be under 32-bits and itrunc/inarrow it
+        bound_sum = self.builder.add_op(inarrow_s(6, 5), bound)
+        bound = build_unwrap_right(
+            self.builder, bound_sum, "bound must be a 32-bit integer"
+        )
         [rnd, ctx] = self.builder.add_op(
             external_op("RandomIntBounded", [], ext=QSYSTEM_RANDOM_EXTENSION)(
                 ht.FunctionType([RNGCONTEXT_T, int_t(5)], [int_t(5), RNGCONTEXT_T]), []
@@ -44,7 +48,7 @@ class RandomIntBoundedCompiler(CustomInoutCallCompiler):
             ctx,
             bound,
         )
-        # TODO: iwiden rnd before returning
+        [rnd] = self.builder.add_op(iwiden_s(5, 6), rnd)
         return CallReturnWires(regular_returns=[rnd], inout_returns=[ctx])
 
 
