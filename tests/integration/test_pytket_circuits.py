@@ -7,7 +7,7 @@ import pytest
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std import quantum
-from guppylang.std.quantum import qubit
+from guppylang.std.quantum import qubit, discard_array
 from guppylang.std.builtins import array
 
 tket2_installed = find_spec("tket2") is not None
@@ -163,45 +163,51 @@ def test_load_circuits(validate):
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
-def test_registers(validate):
+def test_register_arrays(validate):
     from pytket import Circuit
 
-    circ = Circuit(1)
-    q_reg = circ.add_q_register("qubits", 2)
+    circ = Circuit(2)
+    reg = circ.add_q_register("extra_reg", 3)
+    circ.measure_register(reg, "extra_bits")
 
     module = GuppyModule("test")
     module.load_all(quantum)
 
-    @guppy.pytket(circ, module)
-    def guppy_circ(q1: qubit, reg: array[qubit, 2]) -> None: ...
+    guppy.load_pytket_with_arrays("guppy_circ", circ, module)
 
     @guppy(module)
-    def foo(q1: qubit, reg: array[qubit, 2]) -> None:
-        guppy_circ(q1, reg)
+    def foo(default_reg: array[qubit, 2], 
+            extra_reg: array[qubit, 3]) -> array[bool, 3]:
+        # Note that the default_reg name is 'q' so it has to come after 'e...' 
+        # lexicographically.
+        return guppy_circ(extra_reg, default_reg)
 
     validate(module.compile())
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
-def test_registers_measure(validate):
+def test_register_arrays_multiple_measure(validate):
     from pytket import Circuit
 
-    circ = Circuit(1, 1)
-    q_reg1 = circ.add_q_register("qubits1", 2)
-    q_reg2 = circ.add_q_register("qubits2", 3)
-    circ.measure_register(q_reg1, "bits")
-    circ.Measure(0, 0)
+    circ = Circuit(2)
+    reg1 = circ.add_q_register("extra_reg1", 3)
+    reg2 = circ.add_q_register("extra_reg2", 2)
+    circ.measure_register(reg1, "extra_bits1")
+    circ.measure_register(reg2, "extra_bits2")
 
     module = GuppyModule("test")
     module.load_all(quantum)
 
-    @guppy.pytket(circ, module)
-    def guppy_circ(q1: qubit, 
-                   reg1: array[qubit, 2], 
-                   reg2: array[qubit, 3]) -> tuple[bool, array[bool, 2]]: ...
+    guppy.load_pytket_with_arrays("guppy_circ", circ, module)
 
     @guppy(module)
-    def foo(q1: qubit, reg1: array[qubit, 2], reg2: array[qubit, 3]) -> None:
-        guppy_circ(q1, reg1, reg2)
+    def foo(default_reg: array[qubit, 2], 
+            extra_reg1: array[qubit, 3]) -> tuple[array[bool, 3], array[bool, 2]]:
+        extra_reg2 = array(qubit(), qubit())
+        result = guppy_circ(extra_reg1, extra_reg2, default_reg)
+        # Until we add linearity checks to loaded circuits need to discard non-owned 
+        # circuit.
+        discard_array(extra_reg2) 
+        return result
 
     validate(module.compile())
