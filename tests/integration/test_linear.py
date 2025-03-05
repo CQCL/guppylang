@@ -1,6 +1,7 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std.builtins import owned
+from guppylang.std.option import Option
 from guppylang.std.quantum import qubit, measure
 
 import guppylang.std.quantum_functional as quantum_functional
@@ -433,13 +434,8 @@ def test_for_nonlinear_break(validate):
         """An iterator that yields linear values but is not linear itself."""
 
         @guppy.declare(module)
-        def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]: ...
+        def __next__(self: "MyIter") -> Option[tuple[qubit, "MyIter"]]: ...
 
-        @guppy.declare(module)
-        def __next__(self: "MyIter") -> tuple[qubit, "MyIter"]: ...
-
-        @guppy.declare(module)
-        def __end__(self: "MyIter") -> None: ...
 
     @guppy.type(NoneType().to_hugr(), module=module)
     class MyType:

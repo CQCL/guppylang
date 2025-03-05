@@ -179,8 +179,8 @@ class VariableVisitor(ast.NodeVisitor):
         # The generators are evaluated left to right
         for gen in generators:
             inner_visitor.visit(gen.iter_assign)
-            inner_visitor.visit(gen.hasnext_assign)
-            inner_visitor.visit(gen.next_assign)
+            inner_visitor.visit(gen.next_call)
+            inner_visitor._handle_assign_target(gen.target, gen.iter_assign)
             for cond in gen.ifs:
                 inner_visitor.visit(cond)
         inner_visitor.visit(elt)
