@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
+from hugr import tys as ht
 from hugr import Hugr, Wire, val
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
@@ -31,6 +32,8 @@ from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCal
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap, Span, ToSpan
+from guppylang.std._internal.compiler.array import array_pop
+from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.tys.builtin import array_type, bool_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -75,7 +78,6 @@ class RawPytketDef(ParsableDef):
         )
 
         # Compare signatures.
-        # TODO: Allow arrays as arguments.
         circuit_signature = _signature_from_circuit(
             self.input_circuit, globals, self.defined_at
         )
@@ -89,11 +91,7 @@ class RawPytketDef(ParsableDef):
             )
             # raise GuppyError(err)
         return ParsedPytketDef(
-            self.id,
-            self.name,
-            func_ast,
-            stub_signature,
-            self.input_circuit,
+            self.id, self.name, func_ast, stub_signature, self.input_circuit, False
         )
 
 
@@ -107,17 +105,19 @@ class RawLoadPytketDef(ParsableDef):
         defined_at: The AST node of the definition (here always None).
         source_span: The source span where the circuit was loaded.
         input_circuit: The user-provided pytket circuit.
+        use_arrays: Whether the circuit function should use arrays as input types.
     """
 
     source_span: Span | None
     input_circuit: Any
+    use_arrays: bool
 
     description: str = field(default="pytket circuit", init=False)
 
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedPytketDef":
         """Creates a function signature based on the user-provided circuit."""
         circuit_signature = _signature_from_circuit(
-            self.input_circuit, globals, self.source_span
+            self.input_circuit, globals, self.source_span, self.use_arrays
         )
 
         return ParsedPytketDef(
@@ -126,6 +126,7 @@ class RawLoadPytketDef(ParsableDef):
             self.defined_at,
             circuit_signature,
             self.input_circuit,
+            self.use_arrays,
         )
 
 
@@ -139,10 +140,12 @@ class ParsedPytketDef(CallableDef, CompilableDef):
         defined_at: The AST node of the function stub, if there is one.
         ty: The type of the function.
         input_circuit: The user-provided pytket circuit.
+        use_arrays: Whether the circuit function should use arrays as input types.
     """
 
     ty: FunctionType
     input_circuit: Any
+    use_arrays: bool
 
     description: str = field(default="pytket circuit", init=False)
 
@@ -161,7 +164,6 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 hugr_func = mapping[circ.root]
 
                 func_type = self.ty.to_hugr_poly()
-                print(func_type.body)
                 outer_func = module.define_function(
                     self.name, func_type.body.input, func_type.body.output
                 )
@@ -171,6 +173,19 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 bool_wires = [
                     outer_func.load(val.FALSE) for _ in range(self.input_circuit.n_bits)
                 ]
+
+                # TODO: Replace with actual unpack HUGR op once 
+                # https://github.com/CQCL/hugr/issues/1947 is done.
+                def unpack(array: Wire, elem_ty: ht.Type, length: int) -> list[Wire]:
+                    err = "Internal error: unpacking of array failed"
+                    elts = []
+                    left_to_unpack = array
+                    for i in range(length):
+                        res = outer_func.add_op(array_pop(elem_ty, length, True), left_to_unpack)
+                        [elt_opt, array] = build_unwrap(self.builder, res, err)
+                        [elt] = build_unwrap(self.builder, elt_opt, err)
+                        elts.append(elt)
+                    return elts
 
                 call_node = outer_func.call(
                     hugr_func, *(list(outer_func.inputs()) + bool_wires)
@@ -192,6 +207,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
             self.defined_at,
             self.ty,
             self.input_circuit,
+            self.use_arrays,
             outer_func,
         )
 
@@ -225,6 +241,7 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
         ty: The type of the function.
         input_circuit: The user-provided pytket circuit.
         func_df: The Hugr function definition.
+        use_arrays: Whether the circuit function uses arrays as input types.
     """
 
     func_def: hf.Function
@@ -254,7 +271,10 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
 
 
 def _signature_from_circuit(
-    input_circuit: Any, globals: Globals, defined_at: ToSpan | None
+    input_circuit: Any,
+    globals: Globals,
+    defined_at: ToSpan | None,
+    use_arrays: bool = False,
 ) -> FunctionType:
     """Helper function for inferring a function signature from a pytket circuit."""
     try:
@@ -266,29 +286,24 @@ def _signature_from_circuit(
 
                 qubit = cast(TypeDef, globals["qubit"]).check_instantiate([], globals)
 
-                inputs = []
-                for q_reg in input_circuit.q_registers:
-                    if q_reg.name == "q":
-                        # Default register is added as separate qubit inputs.
-                        inputs.extend([FuncInput(qubit, InputFlags.Inout)] * q_reg.size)
-                    else:
-                        # All other registers are added as arrays.
-                        inputs.append(
-                            FuncInput(array_type(qubit, q_reg.size), InputFlags.Inout)
-                        )
-
-                # Same for outputs.
-                outputs = []
-                for c_reg in input_circuit.c_registers:
-                    if c_reg.name == "c":
-                        outputs.extend([bool_type()] * c_reg.size)
-                    else:
-                        outputs.append(array_type(bool_type(), c_reg.size))
-
-                circuit_signature = FunctionType(
-                    inputs,
-                    row_to_type(outputs),
-                )
+                if use_arrays:
+                    inputs = [
+                        FuncInput(array_type(qubit, q_reg.size), InputFlags.Inout)
+                        for q_reg in input_circuit.q_registers
+                    ]
+                    outputs = [
+                        array_type(bool_type(), c_reg.size)
+                        for c_reg in input_circuit.c_registers
+                    ]
+                    circuit_signature = FunctionType(
+                        inputs,
+                        row_to_type(outputs),
+                    )
+                else:
+                    circuit_signature = FunctionType(
+                        [FuncInput(qubit, InputFlags.Inout)] * input_circuit.n_qubits,
+                        row_to_type([bool_type()] * input_circuit.n_bits),
+                    )
             except ImportError:
                 err = Tket2NotInstalled(defined_at)
                 err.add_sub_diagnostic(Tket2NotInstalled.InstallInstruction(None))

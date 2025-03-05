@@ -527,7 +527,32 @@ class _Guppy:
 
         mod = module or self.get_module()
         span = _find_load_call(self._sources)
-        defn = RawLoadPytketDef(DefId.fresh(module), name, None, span, input_circuit)
+        defn = RawLoadPytketDef(
+            DefId.fresh(module), name, None, span, input_circuit, False
+        )
+        mod.register_def(defn)
+        return defn
+
+    @pretty_errors
+    def load_pytket_with_arrays(
+        self, name: str, input_circuit: Any, module: GuppyModule | None = None
+    ) -> RawLoadPytketDef:
+        """Adds a pytket circuit function definition with implicit signature."""
+        err_msg = "Only pytket circuits can be passed to guppy.load_pytket"
+        try:
+            import pytket
+
+            if not isinstance(input_circuit, pytket.circuit.Circuit):
+                raise TypeError(err_msg) from None
+
+        except ImportError:
+            raise TypeError(err_msg) from None
+
+        mod = module or self.get_module()
+        span = _find_load_call(self._sources)
+        defn = RawLoadPytketDef(
+            DefId.fresh(module), name, None, span, input_circuit, True
+        )
         mod.register_def(defn)
         return defn
 
