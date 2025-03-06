@@ -19,9 +19,8 @@ from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, AstVisitor, get_type
 from guppylang.cfg.builder import tmp_vars
-from guppylang.checker.core import Variable
+from guppylang.checker.core import Variable, contains_subscript
 from guppylang.checker.errors.generic import UnsupportedError
-from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import CompilerBase, DFContainer
 from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.definition.custom import CustomFunctionDef

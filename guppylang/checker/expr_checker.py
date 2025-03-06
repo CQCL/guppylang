@@ -930,7 +930,9 @@ def type_check_args(
     for inp, func_inp in zip(inputs, func_ty.inputs, strict=True):
         a, s = ExprChecker(ctx).check(inp, func_inp.ty.substitute(subst), "argument")
         if InputFlags.Inout in func_inp.flags and isinstance(a, PlaceNode):
-            a.place = check_inout_arg_place(a.place, ctx, a)
+            a.place = check_place_assignable(
+                a.place, ctx, a, "able to borrow subscripted elements"
+            )
         new_args.append(a)
         subst |= s
 
@@ -949,8 +951,11 @@ def type_check_args(
     return new_args, subst
 
 
-def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
-    """Performs additional checks for borrowed place arguments.
+def check_place_assignable(
+    place: Place, ctx: Context, node: ast.expr, reason: str
+) -> Place:
+    """Performs additional checks for assignments to places, for example for borrowed
+    place arguments after function returns.
 
     In particular, we need to check that places involving `place[item]` subscripts
     implement the corresponding `__setitem__` method.
@@ -959,10 +964,12 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
         case Variable():
             return place
         case FieldAccess(parent=parent):
-            return replace(place, parent=check_inout_arg_place(parent, ctx, node))
+            return replace(
+                place, parent=check_place_assignable(parent, ctx, node, reason)
+            )
         case SubscriptAccess(parent=parent, item=item, ty=ty):
             # Create temporary variable for the setitem value
-            tmp_var = Variable(next(tmp_vars), ty, node)
+            tmp_var = Variable(next(tmp_vars), item.ty, node)
             # Check a call to the `__setitem__` instance function
             exp_sig = FunctionType(
                 [
@@ -981,7 +988,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 setitem_args[0],
                 setitem_args[1:],
                 "__setitem__",
-                "able to borrow subscripted elements",
+                reason,
                 exp_sig,
                 True,
             )
