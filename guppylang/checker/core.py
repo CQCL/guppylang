@@ -225,6 +225,15 @@ class SubscriptAccess:
         return f"{self.parent}[...]"
 
 
+def contains_subscript(place: Place) -> SubscriptAccess | None:
+    """Checks if a place contains a subscript access and returns the rightmost one."""
+    while not isinstance(place, Variable):
+        if isinstance(place, SubscriptAccess):
+            return place
+        place = place.parent
+    return None
+
+
 PyScope = dict[str, Any]
 
 

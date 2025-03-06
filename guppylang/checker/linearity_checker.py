@@ -21,6 +21,7 @@ from guppylang.checker.core import (
     PlaceId,
     SubscriptAccess,
     Variable,
+    contains_subscript,
 )
 from guppylang.checker.errors.linearity import (
     AlreadyUsedError,
@@ -463,17 +464,25 @@ class BBLinearityChecker(ast.NodeVisitor):
                 err: Error = BorrowShadowedError(tgt, tgt.place)
                 err.add_sub_diagnostic(BorrowShadowedError.Rename(None))
                 raise GuppyError(err)
-            for tgt_place in leaf_places(tgt.place):
-                x = tgt_place.id
-                # Only check for overrides of places locally defined in this BB. Global
-                # checks are handled by dataflow analysis.
-                if x in self.scope.vars and x not in self.scope.used_local:
-                    place = self.scope[x]
-                    if not place.ty.droppable:
-                        err = PlaceNotUsedError(place.defined_at, place)
-                        err.add_sub_diagnostic(PlaceNotUsedError.Fix(None))
-                        raise GuppyError(err)
-                self.scope.assign(tgt_place)
+            # Subscript assignments also require checking the `__setitem__` call
+            if subscript := contains_subscript(tgt.place):
+                assert subscript.setitem_call is not None
+                self.visit(subscript.item_expr)
+                self.scope.assign(subscript.item)
+                self.scope.assign(subscript.setitem_call.value_var)
+                self.visit(subscript.setitem_call.call)
+            else:
+                for tgt_place in leaf_places(tgt.place):
+                    x = tgt_place.id
+                    # Only check for overrides of places locally defined in this BB.
+                    # Global checks are handled by dataflow analysis.
+                    if x in self.scope.vars and x not in self.scope.used_local:
+                        place = self.scope[x]
+                        if not place.ty.droppable:
+                            err = PlaceNotUsedError(place.defined_at, place)
+                            err.add_sub_diagnostic(PlaceNotUsedError.Fix(None))
+                            raise GuppyError(err)
+                    self.scope.assign(tgt_place)
 
     def _check_comprehension(
         self, gens: list[DesugaredGenerator], elt: ast.expr
@@ -579,15 +588,6 @@ def leaf_places(place: Place) -> Iterator[Place]:
             ]
         else:
             yield place
-
-
-def contains_subscript(place: Place) -> SubscriptAccess | None:
-    """Checks if a place contains a subscript access and returns the rightmost one."""
-    while not isinstance(place, Variable):
-        if isinstance(place, SubscriptAccess):
-            return place
-        place = place.parent
-    return None
 
 
 def is_inout_var(place: Place) -> TypeGuard[Variable]:
