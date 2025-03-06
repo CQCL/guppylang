@@ -597,7 +597,7 @@ class Array:
         return SizedIter(ArrayIter(self, 0))
 
     @guppy.custom(CopyInoutCompiler(), ArrayCopyChecker())
-    def copy(self: array[L, n]) -> array[L, n]: ...
+    def copy(self: array[T, n]) -> array[T, n]: ...
 
 
 @guppy.struct

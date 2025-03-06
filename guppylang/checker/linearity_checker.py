@@ -43,7 +43,6 @@ from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
     AnyCall,
     CheckedNestedFunctionDef,
-    CopyNode,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
@@ -219,13 +218,6 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.scope = new_scope
         yield new_scope
         self.scope = scope
-
-    def visit_CopyNode(
-        self,
-        node: CopyNode,
-    ) -> None:
-        # Linear argument type is already caught by the typechecker
-        return
 
     def visit_PlaceNode(
         self,
