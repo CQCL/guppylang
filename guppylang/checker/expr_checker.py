@@ -1173,7 +1173,7 @@ def check_generator(
     gen.iter, iter_ty = expr_sth.visit(gen.iter)
     gen.iter = with_type(iter_ty, gen.iter)
 
-    # The `next_ty` is `Option[tuple[elt_ty, iter_ty]]`
+    # The type returned by `next_call` is `Option[tuple[elt_ty, iter_ty]]`
     gen.next_call, option_ty = expr_sth.synthesize(gen.next_call)
     next_ty = get_element_type(option_ty)
     assert isinstance(next_ty, TupleType)
