@@ -156,6 +156,11 @@ class VariableVisitor(ast.NodeVisitor):
                 # Setting attributes counts as a use of the value, so we do a regular
                 # visit instead of treating it like a LHS
                 self.visit(value)
+            case ast.Subscript(value=value, slice=slice):
+                # Setting subscripts counts as a use of the value in the implicit,
+                # `__setitem__` call, so we do a regular visit
+                self.visit(slice)
+                self.visit(value)
             case ast.Starred(value=value):
                 self._handle_assign_target(value, node)
 

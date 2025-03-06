@@ -692,3 +692,27 @@ def test_multiple_functions(validate, run_int_fn):
     compiled = module.compile()
     validate(compiled)
     run_int_fn(compiled, expected=3)
+
+
+def test_assign_dataflow(validate):
+    """Test that dataflow analysis considers subscript assignments as uses and correctly
+    wires up the Hugr.
+
+    See https://github.com/CQCL/guppylang/issues/844
+    """
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def test1() -> None:
+        xs = array(1, 2)
+        for i in range(2):
+            xs[i] = 0
+
+    @guppy(module)
+    def test2() -> None:
+        xs = array(0, 1)
+        ys = array(1, 2)
+        for i in range(2):
+            ys[xs[i]] = 0
+
+    module.compile()
