@@ -208,8 +208,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         """
         true_case, false_case = self._if_else(cond, inputs, inputs)
         with false_case:
+            # If the condition is false, output the inputs as is
             pass
         with true_case:
+            # If the condition is true, we enter the `with` block
             yield
 
     def visit_CopyNode(self, node: CopyNode) -> Wire:
