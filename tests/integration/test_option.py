@@ -6,7 +6,6 @@ from guppylang.std.quantum import qubit
 
 def test_none(validate, run_int_fn):
     module = GuppyModule("test_range")
-    module.load(Option, nothing)
 
     @guppy(module)
     @no_type_check
@@ -23,7 +22,6 @@ def test_none(validate, run_int_fn):
 
 def test_some_unwrap(validate, run_int_fn):
     module = GuppyModule("test_range")
-    module.load(Option, some)
 
     @guppy(module)
     @no_type_check
@@ -39,7 +37,7 @@ def test_some_unwrap(validate, run_int_fn):
 
 def test_nothing_unwrap(validate, run_int_fn):
     module = GuppyModule("test_range")
-    module.load(Option, qubit, nothing)
+    module.load(qubit)
 
     @guppy(module)
     @no_type_check
@@ -55,7 +53,6 @@ def test_nothing_unwrap(validate, run_int_fn):
 
 def test_take(validate, run_int_fn):
     module = GuppyModule("test_range")
-    module.load(Option, some)
 
     @guppy(module)
     @no_type_check

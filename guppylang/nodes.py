@@ -200,24 +200,19 @@ class DesugaredGenerator(ast.expr):
     """
 
     iter_assign: ast.Assign
-    hasnext_assign: ast.Assign
-    next_assign: ast.Assign
-    iterend: ast.expr
+    next_call: ast.expr
     iter: ast.expr
-    hasnext: ast.expr
+    target: ast.expr
     ifs: list[ast.expr]
 
     borrowed_outer_places: "list[Place]"
 
     _fields = (
         "iter_assign",
-        "hasnext_assign",
-        "next_assign",
-        "iterend",
+        "next_call",
         "iter",
-        "hasnext",
+        "target",
         "ifs",
-        "borrowed_outer_places",
     )
 
 

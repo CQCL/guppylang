@@ -117,6 +117,7 @@ from guppylang.tys.builtin import (
     is_sized_iter_type,
     list_type,
     nat_type,
+    option_type,
     string_type,
 )
 from guppylang.tys.param import ConstParam, TypeParam
@@ -735,7 +736,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
         exp_sig = FunctionType(
             [FuncInput(ty, flags)],
-            TupleType([ExistentialTypeVar.fresh("T", True, True), ty]),
+            option_type(TupleType([ExistentialTypeVar.fresh("T", True, True), ty])),
         )
         return self.synthesize_instance_func(
             node.value, [], "__next__", "an iterator", exp_sig, True
@@ -1155,9 +1156,6 @@ def synthesize_comprehension(
     # Check remaining generators in inner context
     gens, elt, elt_ty = synthesize_comprehension(node, gens, elt, inner_ctx)
 
-    # The iter finalizer is again checked in the outer context
-    gen.iterend, iterend_ty = ExprSynthesizer(ctx).synthesize(gen.iterend)
-    gen.iterend = with_type(iterend_ty, gen.iterend)
     return [gen, *gens], elt, elt_ty
 
 
@@ -1179,12 +1177,15 @@ def check_generator(
     inner_locals: Locals[str, Variable] = Locals({}, parent_scope=ctx.locals)
     inner_ctx = Context(ctx.globals, inner_locals, ctx.generic_params)
     expr_sth, stmt_chk = ExprSynthesizer(inner_ctx), StmtChecker(inner_ctx)
-    gen.hasnext_assign = stmt_chk.visit_Assign(gen.hasnext_assign)
-    gen.next_assign = stmt_chk.visit_Assign(gen.next_assign)
-    gen.hasnext, hasnext_ty = expr_sth.visit(gen.hasnext)
-    gen.hasnext = with_type(hasnext_ty, gen.hasnext)
     gen.iter, iter_ty = expr_sth.visit(gen.iter)
     gen.iter = with_type(iter_ty, gen.iter)
+
+    # The type returned by `next_call` is `Option[tuple[elt_ty, iter_ty]]`
+    gen.next_call, option_ty = expr_sth.synthesize(gen.next_call)
+    next_ty = get_element_type(option_ty)
+    assert isinstance(next_ty, TupleType)
+    [elt_ty, _] = next_ty.element_types
+    gen.target = stmt_chk._check_assign(gen.target, gen.next_call, elt_ty)
 
     # Check `if` guards
     for i in range(len(gen.ifs)):
