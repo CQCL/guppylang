@@ -7,7 +7,7 @@ import guppylang.decorator
 from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
-from guppylang.std.builtins import owned, array
+from guppylang.std.builtins import owned, array, barrier
 
 from guppylang.std.quantum import (
     discard,
@@ -167,5 +167,27 @@ def test_panic_discard(validate):
     def test() -> None:
         q = qubit()
         panic("I panicked!", q)
+
+    validate(test)
+
+
+
+def test_barrier(validate):
+    """Barrier between ops."""
+
+    @compile_quantum_guppy
+    @no_type_check
+    def test() -> None:
+        q1, q2, q3, q4 = qubit(), qubit(), qubit(), qubit()
+
+
+        q1 = h(q1)
+        q2 = h(q2)
+        barrier(q1, q2, q3)
+        q3 = h(q3)
+
+        cx(q1, q2)
+        barrier(q2, q3)
+        cx(q3, q4)
 
     validate(test)

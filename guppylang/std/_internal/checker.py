@@ -451,3 +451,30 @@ def to_sized_iter(
     assert make_sized_iter is not None
     sized_iter, _ = make_sized_iter.check_call([iterator], sized_iter_ty, iterator, ctx)
     return sized_iter, sized_iter_ty
+
+
+class BarrierChecker(CustomCallChecker):
+    """Call checker for the `barrier` function."""
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        vals, tys = zip(
+            *[ExprSynthesizer(self.ctx).synthesize(val) for val in args], strict=True
+        )
+        # fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
+        # checker = ExprChecker(self.ctx)
+        # for i in range(len(rest)):
+        #     rest[i], subst = checker.check(rest[i], ty)
+        #     assert len(subst) == 0, "Array element type is closed"
+        # result_ty = array_type(ty, len(args))
+        call = GlobalCall(
+            def_id=self.func.id, args=vals
+        )
+        return with_loc(self.node, call), NoneType()
+
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        # Panic may return any type, so we don't have to check anything. Consequently
+        # we also can't infer anything in the expected type, so we always return an
+        # empty substitution
+        expr, _ = self.synthesize(args)
+        return expr, {}
