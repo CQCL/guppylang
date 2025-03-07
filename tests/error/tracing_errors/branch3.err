@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "$FILE", line 13, in <module>
+    module.compile()
+  File "$FILE", line 10, in test
+    return all(x for x in xs)
+ValueError: Branching on a dynamic value is not allowed in a comptime context. Consider defining a regular Guppy function to perform dynamic branching.

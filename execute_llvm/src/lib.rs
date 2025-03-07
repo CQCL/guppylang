@@ -5,6 +5,8 @@ use hugr::llvm::CodegenExtsBuilder;
 use hugr::package::Package;
 use hugr::Hugr;
 use hugr::{self, ops, std_extensions, HugrView};
+use inkwell::types::BasicType;
+use inkwell::values::BasicMetadataValueEnum;
 use inkwell::{context::Context, module::Module, values::GenericValue};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -79,9 +81,11 @@ fn compile_module<'a>(
     Ok(emitter.finish())
 }
 
-fn run_function<T>(
+fn run_function<T: Clone>(
     hugr_json: &str,
     fn_name: &str,
+    args: &[T],
+    encode_arg: impl Fn(&Context, T) -> BasicMetadataValueEnum,
     parse_result: impl FnOnce(&Context, GenericValue) -> PyResult<T>,
 ) -> PyResult<T> {
     let mut hugr = parse_hugr(hugr_json)?;
@@ -98,10 +102,29 @@ fn run_function<T>(
         .get_function(&mangled_name)
         .ok_or(pyerr!("Couldn't find function {} in module", mangled_name))?;
 
+    // Build a new function that calls the target function with the provided arguments.
+    // Calling `ExecutionEngine::run_function` with arguments directly always segfaults for some
+    // reason...
+    let main = module.add_function(
+        "__main__",
+        fv.get_type().get_return_type().unwrap().fn_type(&[], false),
+        None,
+    );
+    let bb = ctx.append_basic_block(main, "");
+    let builder = ctx.create_builder();
+    builder.position_at_end(bb);
+    let args: Vec<_> = args.iter().map(|a| encode_arg(&ctx, a.clone())).collect();
+    let res = builder
+        .build_call(fv, &args, "")
+        .unwrap()
+        .try_as_basic_value()
+        .unwrap_left();
+    builder.build_return(Some(&res)).unwrap();
+
     let ee = module
         .create_execution_engine()
         .map_err(|_| pyerr!("Failed to create execution engine"))?;
-    let llvm_result = unsafe { ee.run_function(fv, &[]) };
+    let llvm_result = unsafe { ee.run_function(main, &[]) };
     parse_result(&ctx, llvm_result)
 }
 
@@ -124,19 +147,29 @@ mod execute_llvm {
     }
 
     #[pyfunction]
-    fn run_int_function(hugr_json: &str, fn_name: &str) -> PyResult<i64> {
-        run_function::<i64>(hugr_json, fn_name, |_, llvm_val| {
-            // GenericVal is 64 bits wide
-            let int_with_sign = llvm_val.as_int(true);
-            let signed_int = int_with_sign as i64;
-            Ok(signed_int)
-        })
+    fn run_int_function(hugr_json: &str, fn_name: &str, args: Vec<i64>) -> PyResult<i64> {
+        run_function::<i64>(
+            hugr_json,
+            fn_name,
+            &args,
+            |ctx, i| ctx.i64_type().const_int(i as u64, true).into(),
+            |_, llvm_val| {
+                // GenericVal is 64 bits wide
+                let int_with_sign = llvm_val.as_int(true);
+                let signed_int = int_with_sign as i64;
+                Ok(signed_int)
+            },
+        )
     }
 
     #[pyfunction]
-    fn run_float_function(hugr_json: &str, fn_name: &str) -> PyResult<f64> {
-        run_function::<f64>(hugr_json, fn_name, |ctx, llvm_val| {
-            Ok(llvm_val.as_float(&ctx.f64_type()))
-        })
+    fn run_float_function(hugr_json: &str, fn_name: &str, args: Vec<f64>) -> PyResult<f64> {
+        run_function::<f64>(
+            hugr_json,
+            fn_name,
+            &args,
+            |ctx, f| ctx.f64_type().const_float(f).into(),
+            |ctx, llvm_val| Ok(llvm_val.as_float(&ctx.f64_type())),
+        )
     }
 }
