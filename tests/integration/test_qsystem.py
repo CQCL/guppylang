@@ -4,20 +4,21 @@ import guppylang.decorator
 from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
-from guppylang.std.builtins import nat, owned
+from guppylang.std.builtins import array, nat, owned
 from guppylang.std.qsystem.random import RNG, maybe_rng
-from guppylang.std.qsystem.utils import get_current_shot
+from guppylang.std.qsystem.utils import get_current_shot, rpc
 from guppylang.std.quantum import qubit
 from guppylang.std.qsystem.functional import (
-    phased_x,
-    zz_phase,
-    qsystem_functional,
     measure_and_reset,
-    zz_max,
+    measure,
+    phased_x,
+    qfree,
+    qsystem_functional,
     reset,
     rz,
-    measure,
-    qfree,
+    zz_max,
+    reset,
+    zz_phase,
 )
 
 
@@ -32,7 +33,7 @@ def compile_qsystem_guppy(fn) -> ModulePointer:  # type: ignore[no-untyped-def]
     ), "`@compile_qsystem_guppy` does not support extra arguments."
 
     module = GuppyModule("module")
-    module.load(angle, qubit, get_current_shot, RNG, maybe_rng)  # type: ignore[arg-type]
+    module.load(angle, qubit, get_current_shot, rpc, RNG, maybe_rng)  # type: ignore[arg-type]
     module.load_all(qsystem_functional)
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
@@ -43,7 +44,6 @@ def test_qsystem(validate):  # type: ignore[no-untyped-def]
 
     @compile_qsystem_guppy
     def test(q1: qubit @ owned, q2: qubit @ owned, a1: angle) -> bool:
-        shot = get_current_shot()
         q1 = phased_x(q1, a1, a1)
         q1, q2 = zz_phase(q1, q2, a1)
         q1 = rz(q1, a1)
@@ -53,6 +53,18 @@ def test_qsystem(validate):  # type: ignore[no-untyped-def]
         b = measure(q1)
         qfree(q2)
         return b
+
+    validate(test)
+
+def test_qsystem_utils(validate):  # type: ignore[no-untyped-def]
+    """Compile various operations from the qsystem utils extension."""
+
+    @compile_qsystem_guppy
+    def test() -> array[int, 50]:
+        shot = get_current_shot()
+        request = array(shot)
+        response: array[int, 50] = rpc(request)
+        return response
 
     validate(test)
 
