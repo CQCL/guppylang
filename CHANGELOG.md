@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.17.0](https://github.com/CQCL/guppylang/compare/v0.16.0...v0.17.0) (2025-03-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* `Option` is now a builtin type.
+* `angle.{__mul__, __rmul__, __truediv__, __rtruediv__` now take a `float` instead of an `int`.
+
+### Features
+
+* add `get_current_shot()` to qsystem module ([#806](https://github.com/CQCL/guppylang/issues/806)) ([3632ec6](https://github.com/CQCL/guppylang/commit/3632ec606f44ee57d5ce484ca019cc683570156f))
+* add `Option.unwrap_nothing()` method ([#829](https://github.com/CQCL/guppylang/issues/829)) ([abb1aa1](https://github.com/CQCL/guppylang/commit/abb1aa1707e94cbbce82a74b3d0c388c252483ef)), closes [#810](https://github.com/CQCL/guppylang/issues/810)
+* Allow explicit application of type arguments ([#821](https://github.com/CQCL/guppylang/issues/821)) ([8f90c04](https://github.com/CQCL/guppylang/commit/8f90c046ac41597b4b0bfdf118648553f1bd7dae)), closes [#770](https://github.com/CQCL/guppylang/issues/770)
+* Generalise scalar angle operations to float ([#824](https://github.com/CQCL/guppylang/issues/824)) ([d3f5c7f](https://github.com/CQCL/guppylang/commit/d3f5c7fa8514537c69293b9b422400f71f9e73b7))
+* **qsystem:** add Random number generation module ([08fbf47](https://github.com/CQCL/guppylang/commit/08fbf47230e7484795c7ed284d586170c3b6fa79))
+* Switch to improved iterator protocol ([#833](https://github.com/CQCL/guppylang/issues/833)) ([348dfdc](https://github.com/CQCL/guppylang/commit/348dfdc38ffd3aed6d0423b7fa0d28e340d95cfd))
+
+
+### Bug Fixes
+
+* Correctly handle assignments of arrays in control-flow ([#845](https://github.com/CQCL/guppylang/issues/845)) ([32ded02](https://github.com/CQCL/guppylang/commit/32ded02c216b3fcad1c0da964f4d15e78c887e62)), closes [#844](https://github.com/CQCL/guppylang/issues/844)
+* Fix error message for conditional shadowing of global variables ([#815](https://github.com/CQCL/guppylang/issues/815)) ([bdaae11](https://github.com/CQCL/guppylang/commit/bdaae11c3035d7691a1e2ed2e731f2d8764be49d)), closes [#772](https://github.com/CQCL/guppylang/issues/772)
+* Fix linearity checking for array copies ([#841](https://github.com/CQCL/guppylang/issues/841)) ([d9b085f](https://github.com/CQCL/guppylang/commit/d9b085f5dd08e9bc3514b18ede5ecfdb065c760e)), closes [#838](https://github.com/CQCL/guppylang/issues/838)
+* Fix mutation of nested arrays ([#839](https://github.com/CQCL/guppylang/issues/839)) ([ffb64f9](https://github.com/CQCL/guppylang/commit/ffb64f95b0fdb3b118c444a90184120eb7864230))
+* Fix rendering of line breaks in diagnostics ([#819](https://github.com/CQCL/guppylang/issues/819)) ([75efd22](https://github.com/CQCL/guppylang/commit/75efd229fcb11514815bfa971d58e323eaaf68eb)), closes [#818](https://github.com/CQCL/guppylang/issues/818)
+
 ## [0.16.0](https://github.com/CQCL/guppylang/compare/v0.15.0...v0.16.0) (2025-02-19)
 
 
