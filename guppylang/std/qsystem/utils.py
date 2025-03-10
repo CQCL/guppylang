@@ -2,9 +2,10 @@ from typing import no_type_check
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.std._internal.compiler.qsystem import RPCCompiler
 from guppylang.std._internal.compiler.quantum import QSYSTEM_UTILS_EXTENSION
 from guppylang.std._internal.util import external_op
-from guppylang.std.builtins import array
+from guppylang.std.builtins import array, owned
 
 qsystem_utils = GuppyModule("qsystem.utils")
 
@@ -20,9 +21,6 @@ M = guppy.nat_var("M", module=qsystem_utils)
 N = guppy.nat_var("N", module=qsystem_utils)
 
 
-@guppy.hugr_op(
-    external_op("RPC", [], ext=QSYSTEM_UTILS_EXTENSION),
-    module=qsystem_utils,
-)
+@guppy.custom(RPCCompiler(), module=qsystem_utils)
 @no_type_check
-def rpc(request: array[int, M]) -> array[int, N]: ...
+def rpc(request: array[int, M] @ owned) -> array[int, N]: ...

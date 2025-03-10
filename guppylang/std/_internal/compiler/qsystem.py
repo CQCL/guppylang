@@ -2,12 +2,14 @@ from hugr import Wire
 from hugr import tys as ht
 from hugr.std.int import int_t
 
-from guppylang.definition.custom import CustomInoutCallCompiler
+from guppylang.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.std._internal.compiler.arithmetic import inarrow_s, iwiden_s
+from guppylang.std._internal.compiler.array import array_type
 from guppylang.std._internal.compiler.prelude import build_unwrap_right
 from guppylang.std._internal.compiler.quantum import (
     QSYSTEM_RANDOM_EXTENSION,
+    QSYSTEM_UTILS_EXTENSION,
     RNGCONTEXT_T,
 )
 from guppylang.std._internal.util import external_op
@@ -42,3 +44,20 @@ class RandomIntBoundedCompiler(CustomInoutCallCompiler):
         )
         [rnd] = self.builder.add_op(iwiden_s(5, 6), rnd)
         return CallReturnWires(regular_returns=[rnd], inout_returns=[ctx])
+
+
+class RPCCompiler(CustomCallCompiler):
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        [request] = args
+        [response] = self.builder.add_op(
+            external_op("RPC", [], ext=QSYSTEM_UTILS_EXTENSION)(
+                ht.FunctionType(
+                    [array_type(int_t(6), ht.VariableArg(1, ht.BoundedNatParam()))],
+                    [array_type(int_t(6), ht.VariableArg(1, ht.BoundedNatParam()))],
+                ),
+                [],
+            ),
+            request,
+        )
+        # TODO: convert response from an array of optional ints to an array of ints
+        return [response]
