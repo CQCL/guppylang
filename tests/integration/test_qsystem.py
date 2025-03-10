@@ -5,8 +5,8 @@ from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
 from guppylang.std.builtins import array, nat, owned
-from guppylang.std.qsystem.random import RNG, maybe_rng
-from guppylang.std.qsystem.utils import get_current_shot, rpc
+from guppylang.std.qsystem.random import RNG, maybe_rng, qsystem_random
+from guppylang.std.qsystem.utils import get_current_shot, qsystem_utils, rpc
 from guppylang.std.quantum import qubit
 from guppylang.std.qsystem.functional import (
     measure_and_reset,
@@ -17,7 +17,6 @@ from guppylang.std.qsystem.functional import (
     reset,
     rz,
     zz_max,
-    reset,
     zz_phase,
 )
 
@@ -33,8 +32,10 @@ def compile_qsystem_guppy(fn) -> ModulePointer:  # type: ignore[no-untyped-def]
     ), "`@compile_qsystem_guppy` does not support extra arguments."
 
     module = GuppyModule("module")
-    module.load(angle, qubit, get_current_shot, rpc, RNG, maybe_rng)  # type: ignore[arg-type]
+    module.load(angle, qubit)  # type: ignore[arg-type]
     module.load_all(qsystem_functional)
+    module.load_all(qsystem_random)
+    module.load_all(qsystem_utils)
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
 
