@@ -459,18 +459,8 @@ class BarrierChecker(CustomCallChecker):
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in args]
-        # fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
-        # checker = ExprChecker(self.ctx)
-        # for i in range(len(rest)):
-        #     rest[i], subst = checker.check(rest[i], ty)
-        #     assert len(subst) == 0, "Array element type is closed"
-        # result_ty = array_type(ty, len(args))
         node = BarrierExpr(values=vals)
         return with_loc(self.node, node), NoneType()
-        # call = GlobalCall(
-        #     def_id=self.func.id, args=vals
-        # )
-        # return with_loc(self.node, call), NoneType()
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         # Barrier may return any type, so we don't have to check anything. Consequently
