@@ -1,0 +1,12 @@
+Error: Copy violation (at $FILE:13:3)
+   | 
+11 |    xs = array(array(1, 2, 3), array(1, 2, 3))
+12 |    ys = xs
+13 |    xs[0][0] = 0
+   |    ^^ Variable `xs` with non-copyable type `array[array[int, 3],
+   |       2]` cannot be borrowed ...
+   | 
+12 |    ys = xs
+   |         -- since it was already moved here
+
+Guppy compilation failed due to 1 previous error

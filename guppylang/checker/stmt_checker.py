@@ -30,7 +30,6 @@ from guppylang.cfg.builder import (
 from guppylang.checker.core import (
     Context,
     FieldAccess,
-    SetitemCall,
     SubscriptAccess,
     Variable,
 )
@@ -49,6 +48,7 @@ from guppylang.checker.errors.type_errors import (
 from guppylang.checker.expr_checker import (
     ExprChecker,
     ExprSynthesizer,
+    check_place_assignable,
     synthesize_comprehension,
 )
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
@@ -76,9 +76,7 @@ from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.subst import Subst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
-    FuncInput,
     FunctionType,
-    InputFlags,
     NoneType,
     StructType,
     TupleType,
@@ -172,6 +170,7 @@ class StmtChecker(AstVisitor[BBStatement]):
                 )
             )
         place = FieldAccess(value.place, struct_ty.field_dict[attr], lhs)
+        place = check_place_assignable(place, self.ctx, lhs, "assignable")
         return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 
     @_check_assign.register
@@ -198,44 +197,13 @@ class StmtChecker(AstVisitor[BBStatement]):
                 UnsupportedError(value, "Assigning to this expression", singular=True)
             )
 
-        # Synthesize __setitem__ call.
+        # Create a subscript place
         item_expr, item_ty = self._synth_expr(lhs.slice)
         item = Variable(next(tmp_vars), item_ty, item_expr)
+        place = SubscriptAccess(value.place, item, rhs_ty, item_expr)
 
-        # Create and store a temp variable to ensure RHS has a wire during compilation.
-        rhs_var = Variable(next(tmp_vars), rhs_ty, rhs)
-
-        parent = value.place
-
-        exp_set_sig = FunctionType(
-            [
-                FuncInput(parent.ty, InputFlags.Inout),
-                FuncInput(item.ty, InputFlags.NoFlags),
-                FuncInput(rhs_ty, InputFlags.Owned),
-            ],
-            NoneType(),
-        )
-        setitem_args: list[ast.expr] = [
-            with_type(parent.ty, with_loc(lhs, PlaceNode(parent))),
-            with_type(item.ty, with_loc(lhs, PlaceNode(item))),
-            with_type(rhs_ty, with_loc(lhs, PlaceNode(rhs_var))),
-        ]
-        setitem_call, _ = self._synth_instance_fun(
-            setitem_args[0],
-            setitem_args[1:],
-            "__setitem__",
-            "allowed to be assigned to",
-            exp_set_sig,
-            True,
-        )
-
-        place = SubscriptAccess(
-            parent,
-            item,
-            rhs_ty,
-            item_expr,
-            setitem_call=SetitemCall(setitem_call, rhs_var),
-        )
+        # Calling `check_place_assignable` makes sure that `__setitem__` is implemented
+        place = check_place_assignable(place, self.ctx, lhs, "assignable")
         return with_loc(lhs, with_type(rhs_ty, PlaceNode(place=place)))
 
     @_check_assign.register

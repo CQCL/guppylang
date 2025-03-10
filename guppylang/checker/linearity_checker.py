@@ -21,6 +21,7 @@ from guppylang.checker.core import (
     PlaceId,
     SubscriptAccess,
     Variable,
+    contains_subscript,
 )
 from guppylang.checker.errors.linearity import (
     AlreadyUsedError,
@@ -43,7 +44,6 @@ from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
     AnyCall,
     CheckedNestedFunctionDef,
-    CopyNode,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
@@ -219,13 +219,6 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.scope = new_scope
         yield new_scope
         self.scope = scope
-
-    def visit_CopyNode(
-        self,
-        node: CopyNode,
-    ) -> None:
-        # Linear argument type is already caught by the typechecker
-        return
 
     def visit_PlaceNode(
         self,
@@ -463,17 +456,25 @@ class BBLinearityChecker(ast.NodeVisitor):
                 err: Error = BorrowShadowedError(tgt, tgt.place)
                 err.add_sub_diagnostic(BorrowShadowedError.Rename(None))
                 raise GuppyError(err)
-            for tgt_place in leaf_places(tgt.place):
-                x = tgt_place.id
-                # Only check for overrides of places locally defined in this BB. Global
-                # checks are handled by dataflow analysis.
-                if x in self.scope.vars and x not in self.scope.used_local:
-                    place = self.scope[x]
-                    if not place.ty.droppable:
-                        err = PlaceNotUsedError(place.defined_at, place)
-                        err.add_sub_diagnostic(PlaceNotUsedError.Fix(None))
-                        raise GuppyError(err)
-                self.scope.assign(tgt_place)
+            # Subscript assignments also require checking the `__setitem__` call
+            if subscript := contains_subscript(tgt.place):
+                assert subscript.setitem_call is not None
+                self.visit(subscript.item_expr)
+                self.scope.assign(subscript.item)
+                self.scope.assign(subscript.setitem_call.value_var)
+                self.visit(subscript.setitem_call.call)
+            else:
+                for tgt_place in leaf_places(tgt.place):
+                    x = tgt_place.id
+                    # Only check for overrides of places locally defined in this BB.
+                    # Global checks are handled by dataflow analysis.
+                    if x in self.scope.vars and x not in self.scope.used_local:
+                        place = self.scope[x]
+                        if not place.ty.droppable:
+                            err = PlaceNotUsedError(place.defined_at, place)
+                            err.add_sub_diagnostic(PlaceNotUsedError.Fix(None))
+                            raise GuppyError(err)
+                    self.scope.assign(tgt_place)
 
     def _check_comprehension(
         self, gens: list[DesugaredGenerator], elt: ast.expr
@@ -493,8 +494,9 @@ class BBLinearityChecker(ast.NodeVisitor):
         with self.new_scope() as inner_scope:
             # In particular, assign the iterator variable in the new scope
             self._check_assign_targets(gen.iter_assign.targets)
-            self.visit(gen.hasnext_assign)
-            self.visit(gen.next_assign)
+            self.visit(gen.next_call)
+            self._check_assign_targets([gen.target])
+            self._check_assign_targets(gen.iter_assign.targets)
 
             # `if` guards are generally not allowed when we're iterating over linear
             # variables. The only exception is if all linear variables are already
@@ -544,8 +546,9 @@ class BBLinearityChecker(ast.NodeVisitor):
                             leaf.id, InoutReturnSentinel(leaf), UseKind.RETURN
                         )
 
-            # Check the iter finalizer so we record a final use of the iterator
-            self.visit(gen.iterend)
+            # Mark the iterator as used since it's carried into the next iteration
+            for leaf in leaf_places(gen.iter.place):
+                self.scope.use(leaf.id, gen.iter, UseKind.CONSUME)
 
             # We have to make sure that all linear variables that were introduced in the
             # inner scope have been used
@@ -579,15 +582,6 @@ def leaf_places(place: Place) -> Iterator[Place]:
             ]
         else:
             yield place
-
-
-def contains_subscript(place: Place) -> SubscriptAccess | None:
-    """Checks if a place contains a subscript access and returns the rightmost one."""
-    while not isinstance(place, Variable):
-        if isinstance(place, SubscriptAccess):
-            return place
-        place = place.parent
-    return None
 
 
 def is_inout_var(place: Place) -> TypeGuard[Variable]:

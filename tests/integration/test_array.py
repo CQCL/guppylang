@@ -543,6 +543,48 @@ def test_subscript_assign_nested_struct3(validate, run_int_fn):
     run_int_fn(compiled, expected=2)
 
 
+def test_subscript_assign_nested_struct4(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class S:
+        xs: array[int, 1]
+
+    @guppy(module)
+    def main() -> int:
+        arr = array(S(array(0)), S(array(1)))
+        arr[0].xs = array(3)
+        return arr[0].xs[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=3)
+
+
+def test_subscript_assign_nested_struct5(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy.struct(module)
+    class A:
+        b: array[int, 2]
+
+    @guppy.struct(module)
+    class S:
+        a: array[A, 2]
+
+    @guppy(module)
+    def main() -> int:
+        s0 = S(array(A(array(0, 0)), A(array(0, 0))))
+        s1 = S(array(A(array(0, 0)), A(array(0, 0))))
+        arr = array(s0, s1)
+        arr[0].a[0].b = array(42, 42)
+        return arr[0].a[0].b[0]
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=42)
+
+
 def test_subscript_assign_unpacking(validate, run_int_fn):
     module = GuppyModule("test")
 
@@ -650,3 +692,27 @@ def test_multiple_functions(validate, run_int_fn):
     compiled = module.compile()
     validate(compiled)
     run_int_fn(compiled, expected=3)
+
+
+def test_assign_dataflow(validate):
+    """Test that dataflow analysis considers subscript assignments as uses and correctly
+    wires up the Hugr.
+
+    See https://github.com/CQCL/guppylang/issues/844
+    """
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def test1() -> None:
+        xs = array(1, 2)
+        for i in range(2):
+            xs[i] = 0
+
+    @guppy(module)
+    def test2() -> None:
+        xs = array(0, 1)
+        ys = array(1, 2)
+        for i in range(2):
+            ys[xs[i]] = 0
+
+    module.compile()

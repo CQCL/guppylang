@@ -35,22 +35,22 @@ class angle:
 
     @guppy(angles)
     @no_type_check
-    def __mul__(self: "angle", other: int) -> "angle":
+    def __mul__(self: "angle", other: float) -> "angle":
         return angle(self.halfturns * other)
 
     @guppy(angles)
     @no_type_check
-    def __rmul__(self: "angle", other: int) -> "angle":
+    def __rmul__(self: "angle", other: float) -> "angle":
         return angle(self.halfturns * other)
 
     @guppy(angles)
     @no_type_check
-    def __truediv__(self: "angle", other: int) -> "angle":
+    def __truediv__(self: "angle", other: float) -> "angle":
         return angle(self.halfturns / other)
 
     @guppy(angles)
     @no_type_check
-    def __rtruediv__(self: "angle", other: int) -> "angle":
+    def __rtruediv__(self: "angle", other: float) -> "angle":
         return angle(other / self.halfturns)
 
     @guppy(angles)

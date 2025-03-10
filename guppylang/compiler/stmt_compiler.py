@@ -7,8 +7,7 @@ from hugr import Wire, ops
 from hugr.build.dfg import DfBase
 
 from guppylang.ast_util import AstVisitor, get_type
-from guppylang.checker.core import SubscriptAccess, Variable
-from guppylang.checker.linearity_checker import contains_subscript
+from guppylang.checker.core import Variable, contains_subscript
 from guppylang.compiler.core import (
     CompilerBase,
     CompilerContext,
@@ -72,15 +71,27 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
     @_assign.register
     def _assign_place(self, lhs: PlaceNode, port: Wire) -> None:
-        if (subscript := contains_subscript(lhs.place)) and isinstance(
-            lhs.place, SubscriptAccess
-        ):
+        if subscript := contains_subscript(lhs.place):
             assert subscript.setitem_call is not None
             if subscript.item not in self.dfg:
                 self.dfg[subscript.item] = self.expr_compiler.compile(
                     subscript.item_expr, self.dfg
                 )
-            self.dfg[subscript.setitem_call.value_var] = port
+            # If the subscript is nested inside the place, e.g. `xs[i].y = ...`, we
+            # first need to lookup `tmp = xs[i]`, assign `tmp.y = ...`, and then finally
+            # set `xs[i] = tmp`
+            if subscript != lhs.place:
+                assert subscript.getitem_call is not None
+                # Instead of `tmp` just use `xs[i]` as a "name", the dfg tracker doesn't
+                # care about this
+                self.dfg[subscript] = self.expr_compiler.compile(
+                    subscript.getitem_call, self.dfg
+                )
+            # Assign to the name `xs[i].y`
+            self.dfg[lhs.place] = port
+            # Look up `xs[i]` again since it was mutated by the assignment above, then
+            # compile a call to `__setitem__` to actually mutate
+            self.dfg[subscript.setitem_call.value_var] = self.dfg[subscript]
             self.expr_compiler.visit(subscript.setitem_call.call)
         else:
             self.dfg[lhs.place] = port

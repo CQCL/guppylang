@@ -24,8 +24,6 @@ from guppylang.nodes import (
     DesugaredGenerator,
     DesugaredGeneratorExpr,
     DesugaredListComp,
-    IterEnd,
-    IterHasNext,
     IterNext,
     MakeIter,
     NestedFunctionDef,
@@ -201,27 +199,24 @@ class CFGBuilder(AstVisitor[BB | None]):
         template = """
             it = make_iter
             while True:
-                b, it = has_next
-                if b:
-                    x, it = get_next
-                    body
-                else:
+                res = iter_next
+                if not res.is_some():
+                    res.unwrap_nothing()
                     break
-            end_iter  # Consume iterator one last time
+                x, it = res.unwrap()
+                body
         """
 
         it = make_var(next(tmp_vars), node.iter)
-        b = make_var(next(tmp_vars), node.iter)
+        res = make_var(next(tmp_vars), node.iter)
         new_nodes = template_replace(
             template,
             node.iter,
             it=it,
-            b=b,
+            res=res,
             x=node.target,
             make_iter=with_loc(node.iter, MakeIter(value=node.iter, origin_node=node)),
-            has_next=with_loc(node.iter, IterHasNext(value=it)),
-            get_next=with_loc(node.iter, IterNext(value=it)),
-            end_iter=with_loc(node.iter, IterEnd(value=it)),
+            iter_next=with_loc(node.iter, IterNext(value=it)),
             body=node.body,
         )
         return self.visit_stmts(new_nodes, bb, jumps)
@@ -510,18 +505,13 @@ def desugar_comprehension(
             raise GuppyError(UnsupportedError(g, "Async generators"))
         g.iter = builder.visit(g.iter)
         it = make_var(next(tmp_vars), g.iter)
-        hasnext = make_var(next(tmp_vars), g.iter)
         desugared = DesugaredGenerator(
             iter=it,
-            hasnext=hasnext,
             iter_assign=make_assign(
                 [it], with_loc(it, MakeIter(value=g.iter, origin_node=node))
             ),
-            hasnext_assign=make_assign(
-                [hasnext, it], with_loc(it, IterHasNext(value=it))
-            ),
-            next_assign=make_assign([g.target, it], with_loc(it, IterNext(value=it))),
-            iterend=with_loc(it, IterEnd(value=it)),
+            next_call=with_loc(it, IterNext(value=it)),
+            target=g.target,
             ifs=g.ifs,
             borrowed_outer_places=[],
         )

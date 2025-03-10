@@ -1,7 +1,6 @@
 import ast
 from collections.abc import Iterable, Iterator, Sequence
-from contextlib import ExitStack, contextmanager
-from functools import partial
+from contextlib import AbstractContextManager, ExitStack, contextmanager
 from typing import Any, TypeGuard, TypeVar
 
 import hugr
@@ -19,9 +18,8 @@ from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, AstVisitor, get_type
 from guppylang.cfg.builder import tmp_vars
-from guppylang.checker.core import Variable
+from guppylang.checker.core import Variable, contains_subscript
 from guppylang.checker.errors.generic import UnsupportedError
-from guppylang.checker.linearity_checker import contains_subscript
 from guppylang.compiler.core import CompilerBase, DFContainer
 from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.definition.custom import CustomFunctionDef
@@ -32,7 +30,6 @@ from guppylang.definition.value import (
 )
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
-    CopyNode,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
@@ -57,6 +54,7 @@ from guppylang.std._internal.compiler.list import (
 from guppylang.std._internal.compiler.prelude import build_error, build_panic
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
+    bool_type,
     get_element_type,
     int_type,
     is_array_type,
@@ -127,23 +125,24 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     @contextmanager
     def _new_loop(
         self,
+        just_inputs_vars: list[PlaceNode],
         loop_vars: list[PlaceNode],
-        continue_predicate: PlaceNode,
+        break_predicate: PlaceNode,
     ) -> Iterator[None]:
         """Context manager to build a graph inside a new `TailLoop` node.
 
         Automatically adds the `Output` node to the loop body once the context manager
         exits.
         """
+        just_inputs = [self.visit(name) for name in just_inputs_vars]
         loop_inputs = [self.visit(name) for name in loop_vars]
-        loop = self.builder.add_tail_loop([], loop_inputs)
-        with self._new_dfcontainer(loop_vars, loop):
+        loop = self.builder.add_tail_loop(just_inputs, loop_inputs)
+        with self._new_dfcontainer(just_inputs_vars + loop_vars, loop):
             yield
             # Output the branch predicate and the inputs for the next iteration. Note
             # that we have to do fresh calls to `self.visit` here since we're in a new
             # context
-            do_continue = self.visit(continue_predicate)
-            do_break = loop.add_op(hugr.std.logic.Not, do_continue)
+            do_break = self.visit(break_predicate)
             loop.set_loop_outputs(do_break, *(self.visit(name) for name in loop_vars))
         # Update the DFG with the outputs from the loop
         for node, wire in zip(loop_vars, loop, strict=True):
@@ -167,27 +166,51 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             yield
             case.set_outputs(*(self.visit(name) for name in outputs))
 
+    def _if_else(
+        self,
+        cond: ast.expr,
+        inputs: list[PlaceNode],
+        outputs: list[PlaceNode],
+        only_true_inputs: list[PlaceNode] | None = None,
+        only_false_inputs: list[PlaceNode] | None = None,
+    ) -> tuple[AbstractContextManager[None], AbstractContextManager[None]]:
+        """Builds a `Conditional`, returning context managers to build the `True` and
+        `False` branch.
+        """
+        conditional = self.builder.add_conditional(
+            self.visit(cond), *(self.visit(inp) for inp in inputs)
+        )
+        only_true_inputs_ = only_true_inputs or []
+        only_false_inputs_ = only_false_inputs or []
+
+        @contextmanager
+        def true_case() -> Iterator[None]:
+            with self._new_case(only_true_inputs_ + inputs, outputs, conditional, 1):
+                yield
+
+        @contextmanager
+        def false_case() -> Iterator[None]:
+            with self._new_case(only_false_inputs_ + inputs, outputs, conditional, 0):
+                yield
+            # Update the DFG with the outputs from the Conditional node
+            for node, wire in zip(outputs, conditional, strict=True):
+                self.dfg[node.place] = wire
+
+        return true_case(), false_case()
+
     @contextmanager
     def _if_true(self, cond: ast.expr, inputs: list[PlaceNode]) -> Iterator[None]:
         """Context manager to build a graph inside the `true` case of a `Conditional`
 
         In the `false` case, the inputs are outputted as is.
         """
-        conditional = self.builder.add_conditional(
-            self.visit(cond), *(self.visit(inp) for inp in inputs)
-        )
-        # If the condition is false, output the inputs as is
-        with self._new_case(inputs, inputs, conditional, 0):
+        true_case, false_case = self._if_else(cond, inputs, inputs)
+        with false_case:
+            # If the condition is false, output the inputs as is
             pass
-        # If the condition is true, we enter the `with` block
-        with self._new_case(inputs, inputs, conditional, 1):
+        with true_case:
+            # If the condition is true, we enter the `with` block
             yield
-        # Update the DFG with the outputs from the Conditional node
-        for node, wire in zip(inputs, conditional, strict=True):
-            self.dfg[node.place] = wire
-
-    def visit_CopyNode(self, node: CopyNode) -> Wire:
-        return self.visit(node.value)
 
     def visit_Constant(self, node: ast.Constant) -> Wire:
         if value := python_value_to_hugr(node.value, get_type(node)):
@@ -566,24 +589,43 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 # Build the generator
                 compiler.compile_stmts([gen.iter_assign], self.dfg)
                 assert isinstance(gen.iter, PlaceNode)
-                assert isinstance(gen.hasnext, PlaceNode)
-                inputs = [gen.iter] + [PlaceNode(place=var) for var in loop_vars]
+                iter_ty = get_type(gen.iter)
+                inputs = [PlaceNode(place=var) for var in loop_vars]
                 inputs += [
                     PlaceNode(place=place) for place in gen.borrowed_outer_places
                 ]
-                # Remember to finalize the iterator once we are done with it. Note that
-                # we need to use partial in the callback, so that we bind the *current*
-                # value of `gen` instead of only last
-                stack.callback(partial(lambda gen: self.visit(gen.iterend), gen))
-                # Enter a new tail loop
-                stack.enter_context(self._new_loop(inputs, gen.hasnext))
+                # Enter a new tail loop. Note that the iterator is a `just_input`, so
+                # will not be outputted by the loop
+                break_pred = PlaceNode(Variable(next(tmp_vars), bool_type(), gen.iter))
+                stack.enter_context(self._new_loop([gen.iter], inputs, break_pred))
                 # Enter a conditional checking if we have a next element
-                compiler.compile_stmts([gen.hasnext_assign], self.dfg)
-                stack.enter_context(self._if_true(gen.hasnext, inputs))
-                compiler.compile_stmts([gen.next_assign], self.dfg)
+                next_ty = TupleType([get_type(gen.target), iter_ty])
+                next_var = PlaceNode(Variable(next(tmp_vars), next_ty, gen.iter))
+                hasnext_case, stop_case = self._if_else(
+                    gen.next_call,
+                    inputs,
+                    only_true_inputs=[next_var],
+                    outputs=[break_pred, *inputs],
+                )
+                # In the "no" case, we set the break predicate to true
+                break_pred_hugr_ty = ht.Either([iter_ty.to_hugr()], [])
+                with stop_case:
+                    self.dfg[break_pred.place] = self.dfg.builder.add_op(
+                        ops.Tag(1, break_pred_hugr_ty)
+                    )
+                # Otherwise, we continue, set the break predicate to false, and insert
+                # the iterator for the next loop iteration
+                stack.enter_context(hasnext_case)
+                next_wire = self.dfg[next_var.place]
+                elt, it = self.dfg.builder.add_op(ops.UnpackTuple(), next_wire)
+                compiler.dfg = self.dfg
+                compiler._assign(gen.target, elt)
+                self.dfg[break_pred.place] = self.dfg.builder.add_op(
+                    ops.Tag(0, break_pred_hugr_ty), it
+                )
                 # Enter nested conditionals for each if guard on the generator
                 for if_expr in gen.ifs:
-                    stack.enter_context(self._if_true(if_expr, inputs))
+                    stack.enter_context(self._if_true(if_expr, [break_pred, *inputs]))
             # Yield control to the caller to build inside the loop
             yield
 
