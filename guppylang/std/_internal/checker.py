@@ -26,6 +26,7 @@ from guppylang.definition.struct import CheckedStructDef, RawStructDef
 from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import (
+    BarrierExpr,
     DesugaredArrayComp,
     DesugaredGeneratorExpr,
     GenericParamValue,
@@ -457,23 +458,22 @@ class BarrierChecker(CustomCallChecker):
     """Call checker for the `barrier` function."""
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        vals, tys = zip(
-            *[ExprSynthesizer(self.ctx).synthesize(val) for val in args], strict=True
-        )
+        vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in args]
         # fst, ty = ExprSynthesizer(self.ctx).synthesize(fst)
         # checker = ExprChecker(self.ctx)
         # for i in range(len(rest)):
         #     rest[i], subst = checker.check(rest[i], ty)
         #     assert len(subst) == 0, "Array element type is closed"
         # result_ty = array_type(ty, len(args))
-        call = GlobalCall(
-            def_id=self.func.id, args=vals
-        )
-        return with_loc(self.node, call), NoneType()
-
+        node = BarrierExpr(values=vals)
+        return with_loc(self.node, node), NoneType()
+        # call = GlobalCall(
+        #     def_id=self.func.id, args=vals
+        # )
+        # return with_loc(self.node, call), NoneType()
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        # Panic may return any type, so we don't have to check anything. Consequently
+        # Barrier may return any type, so we don't have to check anything. Consequently
         # we also can't infer anything in the expected type, so we always return an
         # empty substitution
         expr, _ = self.synthesize(args)

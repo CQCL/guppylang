@@ -34,7 +34,6 @@ from guppylang.std._internal.compiler.list import (
     ListSetitemCompiler,
 )
 from guppylang.std._internal.compiler.prelude import (
-    BarrierCompiler,
     MemSwapCompiler,
     UnwrapOpCompiler,
 )
@@ -962,12 +961,10 @@ def mem_swap(x: L, y: L) -> None:
     """Swaps the values of two variables."""
 
 
-@guppy.custom(
-    compiler=BarrierCompiler(), checker=BarrierChecker(), higher_order_value=False
-)
+@guppy.custom(checker=BarrierChecker(), higher_order_value=False)
 def barrier(*args) -> None:
-    """Barrier to guarantee that all operations before the barrier are completed before"
-    "operations after the barrier are started."""
+    """Barrier to guarantee that all operations before the barrier are completed before
+    operations after the barrier are started."""
 
 
 # Import `Option` since it's part of the default module. Has to be at the end of the
