@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "$FILE", line 21, in <module>
+    module.compile()
+  File "$FILE", line 10, in foo
+    xs[0] = 1
+TypeError: List is immutable. Consider calling `copy()` to obtain a mutable copy of this list
