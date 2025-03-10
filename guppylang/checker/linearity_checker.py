@@ -43,6 +43,7 @@ from guppylang.definition.value import CallableDef
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
     AnyCall,
+    BarrierExpr,
     CheckedNestedFunctionDef,
     DesugaredArrayComp,
     DesugaredGenerator,
@@ -413,6 +414,19 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.visit(node.item_expr)
         self.scope.assign(node.item)
         self.visit(node.getitem_expr)
+
+    def visit_BarrierExpr(self, node: BarrierExpr) -> None:
+        # A `barrier(expr1, expr2, ...)` expression. This has to be a custom AST node
+        # to support borrowed varargs.
+        inouts = []
+        for expr in node.values:
+            if isinstance(expr, PlaceNode):
+                self.visit_PlaceNode(expr, use_kind=UseKind.BORROW)
+                inouts.append(expr)
+            else:
+                self.visit(expr)
+        for expr in inouts:
+            self._reassign_single_inout_arg(expr.place, node)
 
     def visit_Expr(self, node: ast.Expr) -> None:
         # An expression statement where the return value is discarded
