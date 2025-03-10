@@ -285,6 +285,14 @@ class PanicExpr(ast.expr):
     _fields = ("msg", "values")
 
 
+class BarrierExpr(ast.expr):
+    """A `barrier(*args)` expression."""
+
+    values: list[ast.expr]
+
+    _fields = ("values",)
+
+
 class InoutReturnSentinel(ast.expr):
     """An invisible expression corresponding to an implicit use of borrowed vars
     whenever a function returns."""

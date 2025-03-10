@@ -27,6 +27,7 @@ from guppylang.definition.struct import CheckedStructDef, RawStructDef
 from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import (
+    BarrierExpr,
     DesugaredArrayComp,
     DesugaredGeneratorExpr,
     GenericParamValue,
@@ -474,3 +475,19 @@ def to_sized_iter(
     assert make_sized_iter is not None
     sized_iter, _ = make_sized_iter.check_call([iterator], sized_iter_ty, iterator, ctx)
     return sized_iter, sized_iter_ty
+
+
+class BarrierChecker(CustomCallChecker):
+    """Call checker for the `barrier` function."""
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in args]
+        node = BarrierExpr(values=vals)
+        return with_loc(self.node, node), NoneType()
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        # Barrier may return any type, so we don't have to check anything. Consequently
+        # we also can't infer anything in the expected type, so we always return an
+        # empty substitution
+        expr, _ = self.synthesize(args)
+        return expr, {}
