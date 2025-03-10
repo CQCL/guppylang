@@ -186,8 +186,13 @@ def test_barrier(validate):
         barrier(q1, q2, q3)
         q3 = h(q3)
 
-        cx(q1, q2)
+        q1, q2 = cx(q1, q2)
         barrier(q2, q3)
-        cx(q3, q4)
+        q3, q4 = cx(q3, q4)
+
+        discard(q1)
+        discard(q2)
+        discard(q3)
+        discard(q4)
 
     validate(test)

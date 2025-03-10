@@ -117,9 +117,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         """
         old = self.dfg
         # Check that the input names are unique
-        assert len({inp.place.id for inp in inputs}) == len(
-            inputs
-        ), "Inputs are not unique"
+        assert len({inp.place.id for inp in inputs}) == len(inputs), (
+            "Inputs are not unique"
+        )
         self.dfg = DFContainer(builder, self.dfg.locals.copy())
         hugr_input = builder.input_node
         for input_node, wire in zip(inputs, hugr_input, strict=True):
@@ -285,9 +285,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             types = type_to_row(return_ty)
             assert len(returns) == len(types)
             return self._pack_tuple(returns, types)
-        assert (
-            len(returns) == 1
-        ), f"Expected a single return value. Got {returns}. return type {return_ty}"
+        assert len(returns) == 1, (
+            f"Expected a single return value. Got {returns}. return type {return_ty}"
+        )
         return returns[0]
 
     def _update_inout_ports(
@@ -348,9 +348,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 func, func_ty, remaining_args
             )
             rets.extend(outs)
-        assert (
-            remaining_args == []
-        ), "Not all function arguments were consumed after a tensor call"
+        assert remaining_args == [], (
+            "Not all function arguments were consumed after a tensor call"
+        )
         return self._pack_returns(rets, node.tensor_ty.output)
 
     def _compile_tensor_with_leftovers(
@@ -521,10 +521,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._pack_returns(list(outs), get_type(node))
 
     def visit_BarrierExpr(self, node: BarrierExpr) -> Wire:
-        raise RuntimeError(" barrier is not supported")
         tys = [get_type(e).to_hugr() for e in node.values]
         op = hugr.std.prelude.PRELUDE_EXTENSION.get_op("Barrier").instantiate(
-            [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in tys])]
+            [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in tys])],
+            ht.FunctionType.endo(tys),
         )
 
         barrier_n = self.builder.add_op(op, *(self.visit(e) for e in node.values))
