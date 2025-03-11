@@ -8,7 +8,7 @@ from guppylang.ast_util import AstNode
 from guppylang.checker.errors.py_errors import IllegalPyExpressionError
 from guppylang.checker.expr_checker import python_value_to_guppy_type
 from guppylang.compiler.expr_compiler import python_value_to_hugr
-from guppylang.error import GuppyError, GuppyComptimeError
+from guppylang.error import GuppyComptimeError, GuppyError
 from guppylang.std._internal.compiler.array import array_new, unpack_array
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.tracing.frozenlist import frozenlist

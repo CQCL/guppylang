@@ -5,7 +5,7 @@ from collections.abc import Callable
 from types import FrameType, TracebackType
 from typing import ParamSpec, TypeVar
 
-from guppylang.error import GuppyError, exception_hook, GuppyComptimeError
+from guppylang.error import GuppyComptimeError, GuppyError, exception_hook
 
 P = ParamSpec("P")
 T = TypeVar("T")

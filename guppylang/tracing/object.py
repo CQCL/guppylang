@@ -24,7 +24,7 @@ from guppylang.definition.value import (
     CompiledCallableDef,
     CompiledValueDef,
 )
-from guppylang.error import GuppyError, GuppyTypeError, GuppyComptimeError
+from guppylang.error import GuppyComptimeError, GuppyError, GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.tracing.state import get_tracing_state, tracing_active
 from guppylang.tracing.util import capture_guppy_errors, get_calling_frame, hide_trace
