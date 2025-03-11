@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -36,19 +37,17 @@ class TracingState:
         return self.ctx.checked_globals
 
 
-_STATE: TracingState | None = None
+_STATE: ContextVar[TracingState | None] = ContextVar("_STATE", default=None)
 
 
 def reset_state() -> None:
     """Resets the tracing state to be undefined."""
-    global _STATE
-    _STATE = None
+    _STATE.set(None)
 
 
 def tracing_active() -> bool:
     """Checks if the tracing mode is currently active."""
-    global _STATE
-    return _STATE is not None
+    return _STATE.get() is not None
 
 
 def get_tracing_state() -> TracingState:
@@ -56,16 +55,15 @@ def get_tracing_state() -> TracingState:
 
     Raises an `InternalGuppyError` if the tracing mode is currently not active.
     """
-    if _STATE is None:
+    state = _STATE.get()
+    if state is None:
         raise InternalGuppyError("Guppy tracing mode is not active")
-    return _STATE
+    return state
 
 
 @contextmanager
 def set_tracing_state(state: TracingState) -> Iterator[None]:
     """Context manager to update tracing state for the duration of a code block."""
-    global _STATE
-    old_state = _STATE
-    _STATE = state
+    token = _STATE.set(state)
     yield
-    _STATE = old_state
+    _STATE.reset(token)
