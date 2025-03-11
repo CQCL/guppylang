@@ -1,5 +1,4 @@
-from abc import ABC
-from hugr import Node, Wire, ops
+from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.build import function as hf
 from hugr.build.dfg import DfBase
@@ -17,7 +16,6 @@ from guppylang.std._internal.compiler.quantum import (
     RNGCONTEXT_T,
 )
 from guppylang.std._internal.util import external_op
-
 
 # ------------------------------------------------------
 # ------ Helper class for (un|re)wrapping arrays -------
