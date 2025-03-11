@@ -49,7 +49,7 @@ BinaryDunderMethod: TypeAlias = Callable[["DunderMixin", Any], Any]
 def unary_operation(f: UnaryDunderMethod) -> UnaryDunderMethod:
     """Decorator for methods corresponding to unary operations like `__neg__` etc.
 
-    Emits a user error if the binary operation is not defined for the given type.
+    Emits a user error if the unary operation is not defined for the given type.
     """
 
     @functools.wraps(f)

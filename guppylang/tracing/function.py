@@ -131,7 +131,7 @@ def trace_function(
                     )
                     raise GuppyError(e) from None
                 # Also check that the type hasn't changed (for example, the user could
-                # have changed to length of an array, thus changing its type)
+                # have changed the length of an array, thus changing its type)
                 if obj._ty != inp.ty:
                     msg = (
                         f"{err_prefix}Expected it to have type `{inp.ty}`, but got "
