@@ -57,13 +57,14 @@ def test_qsystem(validate):  # type: ignore[no-untyped-def]
 
     validate(test)
 
+
 def test_qsystem_utils(validate):  # type: ignore[no-untyped-def]
     """Compile various operations from the qsystem utils extension."""
 
     @compile_qsystem_guppy
     def test() -> array[int, 50]:
         shot = get_current_shot()
-        request = array(shot)
+        request = array(shot + i for i in range(50))
         response: array[int, 50] = rpc(request)
         return response
 

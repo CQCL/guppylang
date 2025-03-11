@@ -55,7 +55,8 @@ class RPCCompiler(CustomCallCompiler):
     def compile(self, args: list[Wire]) -> list[Wire]:
         elem_ty = int_t(6)
         elem_opt_ty = ht.Option(elem_ty)
-        length = ht.VariableArg(1, ht.BoundedNatParam())
+        # length = ht.VariableArg(1, ht.BoundedNatParam())
+        length = ht.BoundedNatArg(50)
         [request] = args
 
         # Convert `request` from an array of optional ints to an array of ints
