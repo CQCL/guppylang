@@ -428,6 +428,8 @@ class GuppyStructObject(DunderMixin):
         field_values_dict = {
             f.name: v for f, v in zip(ty.fields, field_values, strict=True)
         }
+        # Can't use regular assignment for class attributes since we override
+        # `__setattr__` below
         object.__setattr__(self, "_ty", ty)
         object.__setattr__(self, "_field_values", field_values_dict)
         object.__setattr__(self, "_frozen", frozen)
