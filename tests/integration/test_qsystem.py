@@ -4,9 +4,9 @@ import guppylang.decorator
 from guppylang.module import GuppyModule
 from guppylang.std.angles import angle
 
-from guppylang.std.builtins import ArrayIter, array, nat, owned
-from guppylang.std.qsystem.random import RNG, maybe_rng
-from guppylang.std.qsystem.utils import get_current_shot, order_in_zones
+from guppylang.std.builtins import array, nat, owned
+from guppylang.std.qsystem.random import RNG, maybe_rng, qsystem_random
+from guppylang.std.qsystem.utils import get_current_shot, order_in_zones, qsystem_utils
 from guppylang.std.quantum import qubit, discard_array
 from guppylang.std.qsystem.functional import (
     phased_x,
@@ -32,8 +32,10 @@ def compile_qsystem_guppy(fn) -> ModulePointer:  # type: ignore[no-untyped-def]
     ), "`@compile_qsystem_guppy` does not support extra arguments."
 
     module = GuppyModule("module")
-    module.load(angle, qubit, ArrayIter, get_current_shot, RNG, maybe_rng, discard_array, order_in_zones)  # type: ignore[arg-type]
+    module.load(angle, qubit, discard_array)  # type: ignore[arg-type]
     module.load_all(qsystem_functional)
+    module.load_all(qsystem_random)
+    module.load_all(qsystem_utils)
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
 
@@ -42,7 +44,7 @@ def test_qsystem(validate):  # type: ignore[no-untyped-def]
     """Compile various operations from the qsystem extension."""
 
     @compile_qsystem_guppy
-    def test(q1: qubit @ owned, q2: qubit @ owned, a1: angle) -> bool:
+    def test(q1: qubit @ owned, q2: qubit @ owned, a1: angle) -> bool: # type: ignore[no-untyped-def]
         shot = get_current_shot()
         q1 = phased_x(q1, a1, a1)
         q1, q2 = zz_phase(q1, q2, a1)
@@ -55,6 +57,18 @@ def test_qsystem(validate):  # type: ignore[no-untyped-def]
         return b
 
     validate(test)
+
+
+def test_qsystem_utils(validate):  # type: ignore[no-untyped-def]
+    """Compile various operations from the qsystem utils extension."""
+
+    @compile_qsystem_guppy
+    def test_order() -> None:
+        qubits: array[qubit, 16] = array(qubit() for _ in range(16))
+        order_in_zones(qubits)
+        discard_array(qubits)
+
+    validate(test_order)
 
 
 def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
@@ -73,15 +87,4 @@ def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
         return rint, rnat, rfloat, rint_bnd
 
     validate(test)
-
-
-def test_qsystem_order(validate):  # type: ignore[no-untyped-def]
-    """Compile various operations from the qsystem random extension."""
-
-    @compile_qsystem_guppy
-    def test() -> None:
-        qubits: array[qubit, 16] = array(qubit() for _ in range(16))
-        order_in_zones(qubits)
-        discard_array(qubits)
-
-    validate(test)
+    
