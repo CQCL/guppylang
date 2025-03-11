@@ -19,7 +19,11 @@ from guppylang.checker.errors.type_errors import (
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.function import RawFunctionDef
 from guppylang.definition.ty import TypeDef
-from guppylang.definition.value import CompiledCallableDef, CompiledValueDef
+from guppylang.definition.value import (
+    CallableDef,
+    CompiledCallableDef,
+    CompiledValueDef,
+)
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.tracing.state import get_tracing_state, tracing_active
@@ -515,7 +519,26 @@ class GuppyDefinition:
         raise TypeError(err)
 
     def __getitem__(self, item: Any) -> Any:
-        return self
+        # If this is a type definition, then `__getitem__` might be called when
+        # specifying generic arguments
+        if isinstance(self.wrapped, TypeDef):
+            # It doesn't really matter what we return here since we don't support types
+            # as comptime values yet, so just give back the definition
+            return self
+        # TODO: Alternatively, it could be a type application on a generic function.
+        #  Supporting those requires a comptime representation of types as values
+        if tracing_active():
+            state = get_tracing_state()
+            defn = state.globals[self.wrapped.id]
+            if isinstance(defn, CallableDef) and defn.ty.parametrized:
+                raise RuntimeError(
+                    "Explicitly specifying type arguments of generic functions in a "
+                    "comptime context is not supported yet"
+                )
+        raise TypeError(
+            f"{self.wrapped.description.capitalize()} `{self.wrapped.name}` is not "
+            "subscriptable"
+        )
 
     def to_guppy_object(self) -> GuppyObject:
         state = get_tracing_state()
