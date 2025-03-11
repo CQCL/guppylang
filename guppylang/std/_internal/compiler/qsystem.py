@@ -17,86 +17,6 @@ from guppylang.std._internal.compiler.quantum import (
 )
 from guppylang.std._internal.util import external_op
 
-# ------------------------------------------------------
-# ------ Helper class for (un|re)wrapping arrays -------
-# ------------------------------------------------------
-
-
-class ArrayWrapper:
-    def add_unwrap_op(
-        self,
-        ctx: CompilerContext,
-        builder: DfBase[ops.DfParentOp],
-        option_array: Wire,
-        elem_ty: ht.Type,
-        length: ht.TypeArg,
-    ) -> Wire:
-        elem_opt_ty = ht.Option(elem_ty)
-        unwrap_fn = builder.load_function(
-            self.define_unwrap_fn_helper(ctx, elem_ty),
-            instantiation=ht.FunctionType([elem_opt_ty], [elem_ty]),
-            type_args=[ht.TypeTypeArg(elem_ty)],
-        )
-        [unwrapped_array] = builder.add_op(
-            array_map(elem_opt_ty, length, elem_ty), option_array, unwrap_fn
-        )
-        return unwrapped_array
-
-    def add_wrap_op(
-        self,
-        ctx: CompilerContext,
-        builder: DfBase[ops.DfParentOp],
-        unwrapped_array: Wire,
-        elem_ty: ht.Type,
-        length: ht.TypeArg,
-    ) -> Wire:
-        elem_opt_ty = ht.Option(elem_ty)
-        wrap_fn = builder.load_function(
-            self.define_wrap_fn_helper(ctx, elem_ty),
-            instantiation=ht.FunctionType([elem_ty], [elem_opt_ty]),
-            type_args=[ht.TypeTypeArg(elem_ty)],
-        )
-        [wrapped_array] = builder.add_op(
-            array_map(elem_ty, length, elem_opt_ty), unwrapped_array, wrap_fn
-        )
-        return wrapped_array
-
-    def define_unwrap_fn_helper(
-        self, ctx: CompilerContext, elem_ty: ht.Type
-    ) -> hf.Function:
-        func_ty = ht.PolyFuncType(
-            params=[ht.TypeTypeParam(ht.TypeBound.Any)],
-            body=ht.FunctionType([ht.Option(elem_ty)], [elem_ty]),
-        )
-        func, already_defined = ctx.declare_global_func(
-            GlobalConstId.fresh("qsystem.utils._unwrap.helper"), func_ty
-        )
-        if not already_defined:
-            err_msg = "qsystem.utils._unwrap: unexpected failure while unwrapping"
-            elem = build_unwrap(func, func.inputs()[0], err_msg)
-            func.set_outputs(elem)
-        return func
-
-    def define_wrap_fn_helper(
-        self, ctx: CompilerContext, elem_ty: ht.Type
-    ) -> hf.Function:
-        func_ty = ht.PolyFuncType(
-            params=[ht.TypeTypeParam(ht.TypeBound.Any)],
-            body=ht.FunctionType([elem_ty], [ht.Option(elem_ty)]),
-        )
-        func, already_defined = ctx.declare_global_func(
-            GlobalConstId.fresh("qsystem.utils._wrap.helper"), func_ty
-        )
-        if not already_defined:
-            elem_opt = func.add_op(ops.Some(elem_ty), func.inputs()[0])
-            func.set_outputs(elem_opt)
-        return func
-
-
-# ------------------------------------------------------
-# ------------- Custom qsystem compilers ---------------
-# ------------------------------------------------------
-
 
 class RandomIntCompiler(CustomInoutCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
@@ -129,15 +49,13 @@ class RandomIntBoundedCompiler(CustomInoutCallCompiler):
         return CallReturnWires(regular_returns=[rnd], inout_returns=[ctx])
 
 
-class OrderInZonesCompiler(CustomInoutCallCompiler, ArrayWrapper):
+class OrderInZonesCompiler(CustomInoutCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [option_qubits] = args
         elem_ty = ht.BoundedNatArg(16)
 
         # unwrap option array to be passed to OrderInZones
-        unwrapped_qubits = self.add_unwrap_op(
-            self.ctx, self.builder, option_qubits, ht.Qubit, elem_ty
-        )
+        qubits = add_unwrap_op(self.ctx, self.builder, option_qubits, ht.Qubit, elem_ty)
 
         [qubits] = self.builder.add_op(
             external_op("OrderInZones", [], ext=QSYSTEM_UTILS_EXTENSION)(
@@ -147,11 +65,79 @@ class OrderInZonesCompiler(CustomInoutCallCompiler, ArrayWrapper):
                 ),
                 [],
             ),
-            unwrapped_qubits,
+            qubits,
         )
 
         # rewrap array returned from OrderInZones
-        rewrapped_qubits = self.add_wrap_op(
-            self.ctx, self.builder, qubits, ht.Qubit, elem_ty
+        option_qubits = add_wrap_op(self.ctx, self.builder, qubits, ht.Qubit, elem_ty)
+        return CallReturnWires(regular_returns=[], inout_returns=[option_qubits])
+
+
+# ------------------------------------------------------
+# ---- Helper functions for (un)wrapping arrays -----
+# ------------------------------------------------------
+
+
+def add_unwrap_op(
+    ctx: CompilerContext,
+    builder: DfBase[ops.DfParentOp],
+    option_array: Wire,
+    elem_ty: ht.Type,
+    length: ht.TypeArg,
+) -> Wire:
+    def define_unwrap_fn_helper(ctx: CompilerContext, elem_ty: ht.Type) -> hf.Function:
+        func_ty = ht.PolyFuncType(
+            params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+            body=ht.FunctionType([ht.Option(elem_ty)], [elem_ty]),
         )
-        return CallReturnWires(regular_returns=[], inout_returns=[rewrapped_qubits])
+        func, already_defined = ctx.declare_global_func(
+            GlobalConstId.fresh("qsystem.utils._unwrap.helper"), func_ty
+        )
+        if not already_defined:
+            err_msg = "qsystem.utils._unwrap: unexpected failure while unwrapping"
+            elem = build_unwrap(func, func.inputs()[0], err_msg)
+            func.set_outputs(elem)
+        return func
+
+    elem_opt_ty = ht.Option(elem_ty)
+    unwrap_fn = builder.load_function(
+        define_unwrap_fn_helper(ctx, elem_ty),
+        instantiation=ht.FunctionType([elem_opt_ty], [elem_ty]),
+        type_args=[ht.TypeTypeArg(elem_ty)],
+    )
+    [unwrapped_array] = builder.add_op(
+        array_map(elem_opt_ty, length, elem_ty), option_array, unwrap_fn
+    )
+    return unwrapped_array
+
+
+def add_wrap_op(
+    ctx: CompilerContext,
+    builder: DfBase[ops.DfParentOp],
+    unwrapped_array: Wire,
+    elem_ty: ht.Type,
+    length: ht.TypeArg,
+) -> Wire:
+    def define_wrap_fn_helper(ctx: CompilerContext, elem_ty: ht.Type) -> hf.Function:
+        func_ty = ht.PolyFuncType(
+            params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+            body=ht.FunctionType([elem_ty], [ht.Option(elem_ty)]),
+        )
+        func, already_defined = ctx.declare_global_func(
+            GlobalConstId.fresh("qsystem.utils._wrap.helper"), func_ty
+        )
+        if not already_defined:
+            elem_opt = func.add_op(ops.Some(elem_ty), func.inputs()[0])
+            func.set_outputs(elem_opt)
+        return func
+
+    elem_opt_ty = ht.Option(elem_ty)
+    wrap_fn = builder.load_function(
+        define_wrap_fn_helper(ctx, elem_ty),
+        instantiation=ht.FunctionType([elem_ty], [elem_opt_ty]),
+        type_args=[ht.TypeTypeArg(elem_ty)],
+    )
+    [wrapped_array] = builder.add_op(
+        array_map(elem_ty, length, elem_opt_ty), unwrapped_array, wrap_fn
+    )
+    return wrapped_array
