@@ -3,4 +3,4 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 25, in foo
     s.x = 1
-TypeError: Object of type `S` is immutable
+guppylang.error.GuppyComptimeError: Object of type `S` is immutable

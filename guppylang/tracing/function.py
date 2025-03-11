@@ -13,7 +13,7 @@ from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.definition.value import CompiledCallableDef
 from guppylang.diagnostic import Error
-from guppylang.error import GuppyError, exception_hook
+from guppylang.error import GuppyError, exception_hook, GuppyComptimeError
 from guppylang.nodes import PlaceNode
 from guppylang.tracing.builtins_mock import mock_builtins
 from guppylang.tracing.object import GuppyObject
@@ -38,15 +38,8 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class TracingReturnTypeError(Error):
-    title: ClassVar[str] = "Type error in function return"
-    message: ClassVar[str] = "{msg}"
-    msg: str
-
-
-@dataclass(frozen=True)
-class TracingReturnLinearityViolationError(Error):
-    title: ClassVar[str] = "Linearity violation in function return"
+class TracingReturnError(Error):
+    title: ClassVar[str] = "Error in comptime function return"
     message: ClassVar[str] = "{msg}"
     msg: str
 
@@ -83,15 +76,11 @@ def trace_function(
 
         try:
             out_obj = guppy_object_from_py(py_out, builder, node)
-        except TypeError as err:
-            # Type error in the return statement. For example, this happens if users
-            # try to return a struct with invalid field values
-            raise GuppyError(TracingReturnTypeError(node, str(err))) from None
-        except ValueError as err:
-            # Linearity violation in the return statement
-            raise GuppyError(
-                TracingReturnLinearityViolationError(node, str(err))
-            ) from None
+        except GuppyComptimeError as err:
+            # Error in the return statement. For example, this happens if users
+            # try to return a struct with invalid field values or there is a linearity
+            # violation.
+            raise GuppyError(TracingReturnError(node, str(err))) from None
 
         # Check that the output type is correct
         if unify(out_obj._ty, ty.output, {}) is None:
@@ -122,13 +111,8 @@ def trace_function(
                 try:
                     obj = guppy_object_from_py(inout_obj, builder, node)
                     inout_returns.append(obj._use_wire(None))
-                except TypeError as err:
-                    e: Error = TracingReturnTypeError(node, err_prefix + str(err))
-                    raise GuppyError(e) from None
-                except ValueError as err:
-                    e = TracingReturnLinearityViolationError(
-                        node, err_prefix + str(err)
-                    )
+                except GuppyComptimeError as err:
+                    e = TracingReturnError(node, err_prefix + str(err))
                     raise GuppyError(e) from None
                 # Also check that the type hasn't changed (for example, the user could
                 # have changed the length of an array, thus changing its type)
@@ -137,14 +121,14 @@ def trace_function(
                         f"{err_prefix}Expected it to have type `{inp.ty}`, but got "
                         f"`{obj._ty}`."
                     )
-                    e = TracingReturnLinearityViolationError(node, msg)
+                    e = TracingReturnError(node, msg)
                     raise GuppyError(e) from None
 
     # Check that all allocated linear objects have been used
     if state.unused_undroppable_objs:
         _, unused = state.unused_undroppable_objs.popitem()
         msg = f"Value with non-droppable type `{unused._ty}` is leaked by this function"
-        raise GuppyError(TracingReturnLinearityViolationError(node, msg)) from None
+        raise GuppyError(TracingReturnError(node, msg)) from None
 
     builder.set_outputs(*regular_returns, *inout_returns)
 

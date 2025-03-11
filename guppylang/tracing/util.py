@@ -5,7 +5,7 @@ from collections.abc import Callable
 from types import FrameType, TracebackType
 from typing import ParamSpec, TypeVar
 
-from guppylang.error import GuppyError, exception_hook
+from guppylang.error import GuppyError, exception_hook, GuppyComptimeError
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -13,7 +13,7 @@ T = TypeVar("T")
 
 def capture_guppy_errors(f: Callable[P, T]) -> Callable[P, T]:
     """Context manager that captures Guppy errors and turns them into runtime
-    `TypeError`s."""
+    `GuppyComptimeException`s."""
 
     @functools.wraps(f)
     def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -26,7 +26,7 @@ def capture_guppy_errors(f: Callable[P, T]) -> Callable[P, T]:
                 msg += f": {diagnostic.rendered_span_label}"
             if diagnostic.message:
                 msg += f"\n{diagnostic.rendered_message}"
-            raise TypeError(msg) from None
+            raise GuppyComptimeError(msg) from None
 
     return wrapped
 

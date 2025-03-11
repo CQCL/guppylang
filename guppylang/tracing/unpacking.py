@@ -8,7 +8,7 @@ from guppylang.ast_util import AstNode
 from guppylang.checker.errors.py_errors import IllegalPyExpressionError
 from guppylang.checker.expr_checker import python_value_to_guppy_type
 from guppylang.compiler.expr_compiler import python_value_to_hugr
-from guppylang.error import GuppyError
+from guppylang.error import GuppyError, GuppyComptimeError
 from guppylang.std._internal.compiler.array import array_new, unpack_array
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.tracing.frozenlist import frozenlist
@@ -103,7 +103,7 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
                 # Check that the field still has the correct type. Since we allow users
                 # to mutate structs unchecked, this needs to be checked here
                 if obj._ty != f.ty:
-                    raise TypeError(
+                    raise GuppyComptimeError(
                         f"Field `{f.name}` of object with type `{struct_ty}` has an "
                         f"unexpected type. Expected `{f.ty}`, got `{obj._ty}`."
                     )
@@ -114,7 +114,7 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
             elem_ty = objs[0]._ty
             for i, obj in enumerate(objs[1:]):
                 if obj._ty != elem_ty:
-                    raise TypeError(
+                    raise GuppyComptimeError(
                         f"Element at index {i + 1} does not match the type of "
                         f"previous elements. Expected `{elem_ty}`, got `{obj._ty}`."
                     )
@@ -130,7 +130,7 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
         case []:
             # Empty lists are tricky since we can't infer the element type here
             # TODO: Propagate type information?
-            raise TypeError("Cannot infer the type of empty list")
+            raise GuppyComptimeError("Cannot infer the type of empty list")
         case v:
             ty = python_value_to_guppy_type(v, node, get_tracing_state().globals)
             if ty is None:

@@ -3,4 +3,4 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 9, in test
     return ~x
-TypeError: Operator not defined: Unary operator `~` not defined for `float`
+guppylang.error.GuppyComptimeError: Operator not defined: Unary operator `~` not defined for `float`

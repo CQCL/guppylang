@@ -3,4 +3,4 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 13, in test
     foo(set())
-TypeError: Unsupported Python expression: Expression of type `<class 'set'>` is not supported
+guppylang.error.GuppyComptimeError: Unsupported Python expression: Expression of type `<class 'set'>` is not supported

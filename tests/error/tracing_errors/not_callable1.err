@@ -3,4 +3,4 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 9, in test
     x(1)
-TypeError: Value of type `float` is not callable
+guppylang.error.GuppyComptimeError: Value of type `float` is not callable

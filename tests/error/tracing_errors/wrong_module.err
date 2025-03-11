@@ -3,4 +3,4 @@ Traceback (most recent call last):
     module2.compile()
   File "$FILE", line 14, in main
     return foo()
-TypeError: Function `foo` is not available in this module, consider importing it from `module1`
+guppylang.error.GuppyComptimeError: Function `foo` is not available in this module, consider importing it from `module1`

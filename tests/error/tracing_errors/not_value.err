@@ -3,4 +3,4 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 21, in test
     foo(T)
-TypeError: Type `T` is not a value
+guppylang.error.GuppyComptimeError: Type `T` is not a value

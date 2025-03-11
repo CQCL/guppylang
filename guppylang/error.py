@@ -29,6 +29,10 @@ class MissingModuleError(Exception):
     """Special Guppy exception for operations that require a guppy module."""
 
 
+class GuppyComptimeError(Exception):
+    """Exception for type and linearity errors that are caught in a comptime context."""
+
+
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
 

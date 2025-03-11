@@ -1,4 +1,4 @@
-Error: Linearity violation in function return (at $FILE:11:0)
+Error: Error in comptime function return (at $FILE:11:0)
    | 
  9 | 
 10 | @guppy.comptime(module)

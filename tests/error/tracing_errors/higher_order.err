@@ -3,4 +3,4 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 11, in test
     return f()
-TypeError: Unsupported: Higher-order comptime functions are not supported
+guppylang.error.GuppyComptimeError: Unsupported: Higher-order comptime functions are not supported

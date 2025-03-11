@@ -3,4 +3,4 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 16, in test
     return foo[int](0)
-RuntimeError: Explicitly specifying type arguments of generic functions in a comptime context is not supported yet
+guppylang.error.GuppyComptimeError: Explicitly specifying type arguments of generic functions in a comptime context is not supported yet

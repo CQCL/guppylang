@@ -24,7 +24,7 @@ from guppylang.definition.value import (
     CompiledCallableDef,
     CompiledValueDef,
 )
-from guppylang.error import GuppyError, GuppyTypeError
+from guppylang.error import GuppyError, GuppyTypeError, GuppyComptimeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.tracing.state import get_tracing_state, tracing_active
 from guppylang.tracing.util import capture_guppy_errors, get_calling_frame, hide_trace
@@ -334,7 +334,7 @@ class GuppyObject(DunderMixin):
         # only attributes we have to worry about are methods.
         func = get_tracing_state().globals.get_instance_func(self._ty, key)
         if func is None:
-            raise AttributeError(
+            raise GuppyComptimeError(
                 f"Expression of type `{self._ty}` has no attribute `{key}`"
             )
         return lambda *xs: GuppyDefinition(func)(self, *xs)
@@ -345,14 +345,14 @@ class GuppyObject(DunderMixin):
             "Branching on a dynamic value is not allowed in a comptime context. "
             "Consider defining a regular Guppy function to perform dynamic branching."
         )
-        raise ValueError(err)
+        raise GuppyComptimeError(err)
 
     @hide_trace
     @capture_guppy_errors
     def __call__(self, *args: Any) -> Any:
         if not isinstance(self._ty, FunctionType):
             err = f"Value of type `{self._ty}` is not callable"
-            raise TypeError(err)
+            raise GuppyComptimeError(err)
 
         # TODO: Support higher-order functions
         state = get_tracing_state()
@@ -364,7 +364,7 @@ class GuppyObject(DunderMixin):
     def __iter__(self) -> Any:
         # Abstract Guppy objects are not iterable from Python since our iterator
         # protocol doesn't work during tracing.
-        raise TypeError(f"Expression of type `{self._ty}` is not iterable")
+        raise GuppyComptimeError(f"Expression of type `{self._ty}` is not iterable")
 
     def _use_wire(self, called_func: CompiledCallableDef | None) -> Wire:
         # Panic if the value has already been used
@@ -380,7 +380,7 @@ class GuppyObject(DunderMixin):
             )
             if use.called_func:
                 err += f" as an argument to `{use.called_func.name}`"
-            raise ValueError(err)
+            raise GuppyComptimeError(err)
         # Otherwise, mark it as used
         else:
             frame = get_calling_frame()
@@ -455,7 +455,7 @@ class GuppyStructObject(DunderMixin):
         if key in self._field_values:
             if self._frozen:
                 err = f"Object of type `{self._ty}` is immutable"
-                raise TypeError(err)
+                raise GuppyComptimeError(err)
             self._field_values[key] = value
         else:
             err = f"Expression of type `{self._ty}` has no attribute `{key}`"
@@ -465,7 +465,7 @@ class GuppyStructObject(DunderMixin):
     def __iter__(self) -> Any:
         # Abstract Guppy objects are not iterable from Python since our iterator
         # protocol doesn't work during tracing.
-        raise TypeError(f"Expression of type `{self._ty}` is not iterable")
+        raise GuppyComptimeError(f"Expression of type `{self._ty}` is not iterable")
 
 
 @dataclass(frozen=True)
@@ -488,7 +488,7 @@ class GuppyDefinition:
         from guppylang.tracing.function import trace_call
 
         if not tracing_active():
-            raise RuntimeError(
+            raise GuppyComptimeError(
                 f"{self.wrapped.description.capitalize()} `{self.wrapped.name}` may "
                 "only be called in a Guppy context"
             )
@@ -503,7 +503,7 @@ class GuppyDefinition:
                 f"available in this module, consider importing it from "
                 f"`{self.wrapped.id.module.name}`"
             )
-            raise TypeError(err)
+            raise GuppyComptimeError(err)
 
         defn = state.ctx.build_compiled_def(self.wrapped.id)
         if isinstance(defn, CompiledCallableDef):
@@ -516,7 +516,7 @@ class GuppyDefinition:
             constructor = globals.defs[globals.impls[defn.id]["__new__"]]
             return GuppyDefinition(constructor)(*args)
         err = f"{defn.description.capitalize()} `{defn.name}` is not callable"
-        raise TypeError(err)
+        raise GuppyComptimeError(err)
 
     def __getitem__(self, item: Any) -> Any:
         # If this is a type definition, then `__getitem__` might be called when
@@ -531,11 +531,11 @@ class GuppyDefinition:
             state = get_tracing_state()
             defn = state.globals[self.wrapped.id]
             if isinstance(defn, CallableDef) and defn.ty.parametrized:
-                raise RuntimeError(
+                raise GuppyComptimeError(
                     "Explicitly specifying type arguments of generic functions in a "
                     "comptime context is not supported yet"
                 )
-        raise TypeError(
+        raise GuppyComptimeError(
             f"{self.wrapped.description.capitalize()} `{self.wrapped.name}` is not "
             "subscriptable"
         )
@@ -552,7 +552,7 @@ class GuppyDefinition:
                 constructor = globals.defs[globals.impls[defn.id]["__new__"]]
                 return GuppyDefinition(constructor).to_guppy_object()
         err = f"{defn.description.capitalize()} `{defn.name}` is not a value"
-        raise TypeError(err)
+        raise GuppyComptimeError(err)
 
     def compile(self) -> Any:
         from guppylang.decorator import guppy

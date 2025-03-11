@@ -1,4 +1,4 @@
-Error: Type error in function return (at $FILE:16:0)
+Error: Error in comptime function return (at $FILE:16:0)
    | 
 14 | 
 15 | @guppy.comptime(module)

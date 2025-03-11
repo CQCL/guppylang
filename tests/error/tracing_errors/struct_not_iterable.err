@@ -3,4 +3,4 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 20, in test
     for _ in s:
-TypeError: Expression of type `S` is not iterable
+guppylang.error.GuppyComptimeError: Expression of type `S` is not iterable
