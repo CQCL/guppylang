@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
-from hugr import Hugr, Wire, ops, val
+from hugr import Hugr, Wire, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
@@ -205,7 +205,9 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                         list(outer_func.inputs()),
                         strict=True,
                     ):
-                        input_list.extend(unpack(wire, ht.Option(qubit_type()), q_reg.size))
+                        input_list.extend(
+                            unpack(wire, ht.Option(qubit_type()), q_reg.size)
+                        )
 
                 else:
                     # Otherwise pass inputs directly.
@@ -215,11 +217,8 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
                 wires: list[Wire] = []
                 if self.use_arrays:
-                    # TODO: This duplicated new array compiler code.
+
                     def pack(elems: list[Wire], elem_ty: ht.Type, length: int) -> Wire:
-                        elem_opts = [
-                            outer_func.add_op(ops.Some(elem_ty), elem) for elem in elems
-                        ]
                         return outer_func.add_op(
                             array_new(ht.Option(elem_ty), length), *elems
                         )
