@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
+from hugr import Hugr, Wire, ops, val
 from hugr import tys as ht
-from hugr import Hugr, Wire, val
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
@@ -32,8 +32,11 @@ from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCal
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap, Span, ToSpan
-from guppylang.std._internal.compiler.array import array_pop
-from guppylang.std._internal.compiler.prelude import build_unwrap
+from guppylang.std._internal.compiler.array import (
+    array_new,
+    array_pop,
+)
+from guppylang.std._internal.compiler.prelude import build_unwrap, qubit_type
 from guppylang.tys.builtin import array_type, bool_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -174,28 +177,85 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     outer_func.load(val.FALSE) for _ in range(self.input_circuit.n_bits)
                 ]
 
-                # TODO: Replace with actual unpack HUGR op once 
-                # https://github.com/CQCL/hugr/issues/1947 is done.
-                def unpack(array: Wire, elem_ty: ht.Type, length: int) -> list[Wire]:
-                    err = "Internal error: unpacking of array failed"
-                    elts = []
-                    left_to_unpack = array
-                    for i in range(length):
-                        res = outer_func.add_op(array_pop(elem_ty, length, True), left_to_unpack)
-                        [elt_opt, array] = build_unwrap(self.builder, res, err)
-                        [elt] = build_unwrap(self.builder, elt_opt, err)
-                        elts.append(elt)
-                    return elts
+                input_list = []
+                if self.use_arrays:
+                    # If the input is given as arrays, we need to unpack each element in
+                    # them into separate wires.
+                    # TODO: Replace with actual unpack HUGR op once
+                    # https://github.com/CQCL/hugr/issues/1947 is done.
+                    def unpack(
+                        array: Wire, elem_ty: ht.Type, length: int
+                    ) -> list[Wire]:
+                        err = "Internal error: unpacking of array failed"
+                        elts: list[Wire] = []
+                        left_to_unpack = array
+                        for _ in range(length):
+                            res = outer_func.add_op(
+                                array_pop(elem_ty, length, True), left_to_unpack
+                            )
+                            [elt_opt, array] = build_unwrap(outer_func, res, err)
+                            [elt] = build_unwrap(outer_func, elt_opt, err)
+                            elts.append(elt)
+                        return elts
 
-                call_node = outer_func.call(
-                    hugr_func, *(list(outer_func.inputs()) + bool_wires)
-                )
-                # Pytket circuit hugr has qubit and bool wires in the opposite order.
-                output_list = list(call_node.outputs())
-                wires = (
-                    output_list[self.input_circuit.n_qubits :]
-                    + output_list[: self.input_circuit.n_qubits]
-                )
+                    # Must be same length due to earlier signature computation /
+                    # comparison.
+                    for q_reg, wire in zip(
+                        self.input_circuit.q_registers,
+                        list(outer_func.inputs()),
+                        strict=True,
+                    ):
+                        input_list.extend(unpack(wire, ht.Option(qubit_type()), q_reg.size))
+
+                else:
+                    # Otherwise pass inputs directly.
+                    input_list = list(outer_func.inputs())
+
+                call_node = outer_func.call(hugr_func, *(input_list + bool_wires))
+
+                wires: list[Wire] = []
+                if self.use_arrays:
+                    # TODO: This duplicated new array compiler code.
+                    def pack(elems: list[Wire], elem_ty: ht.Type, length: int) -> Wire:
+                        elem_opts = [
+                            outer_func.add_op(ops.Some(elem_ty), elem) for elem in elems
+                        ]
+                        return outer_func.add_op(
+                            array_new(ht.Option(elem_ty), length), *elems
+                        )
+
+                    output_list: list[Wire] = list(call_node.outputs())
+                    wire_idx = 0
+                    # First pack bool results into an array.
+                    for c_reg in self.input_circuit.c_registers:
+                        wires.append(
+                            pack(
+                                output_list[wire_idx : wire_idx + c_reg.size],
+                                ht.Bool,
+                                c_reg.size,
+                            )
+                        )
+                        wire_idx = wire_idx + c_reg.size
+                    # Then the borrowed qubits also need to be put back into arrays.
+                    for q_reg in self.input_circuit.q_registers:
+                        wires.append(
+                            pack(
+                                output_list[wire_idx : wire_idx + q_reg.size],
+                                qubit_type(),
+                                q_reg.size,
+                            )
+                        )
+                        wire_idx = wire_idx + q_reg.size
+
+                else:
+                    # Pytket circuit hugr has qubit and bool wires in the opposite
+                    # order.
+                    output_list = list(call_node.outputs())
+                    wires = (
+                        output_list[self.input_circuit.n_qubits :]
+                        + output_list[: self.input_circuit.n_qubits]
+                    )
+
                 outer_func.set_outputs(*wires)
 
         except ImportError:

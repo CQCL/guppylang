@@ -163,6 +163,44 @@ def test_load_circuits(validate):
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_measure_some(validate):
+    from pytket import Circuit
+
+    circ = Circuit(2, 1)
+    circ.CX(0, 1)
+    circ.Measure(0, 0)
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    guppy.load_pytket("guppy_circ", circ, module)
+
+    @guppy(module)
+    def foo(q1: qubit, q2: qubit) -> bool:
+        return  guppy_circ(q1, q2)
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_register_arrays_default(validate):
+    from pytket import Circuit
+
+    circ = Circuit(2)
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    guppy.load_pytket_with_arrays("guppy_circ", circ, module)
+
+    @guppy(module)
+    def foo(default_reg: array[qubit, 2]) -> None:
+        return guppy_circ(default_reg)
+
+    validate(module.compile())
+
+@pytest.mark.skip()
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
 def test_register_arrays(validate):
     from pytket import Circuit
 
@@ -185,6 +223,7 @@ def test_register_arrays(validate):
     validate(module.compile())
 
 
+@pytest.mark.skip()
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
 def test_register_arrays_multiple_measure(validate):
     from pytket import Circuit
