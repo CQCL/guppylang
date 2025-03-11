@@ -1,12 +1,14 @@
-from hugr import Wire
+from hugr import Wire, ops
 from hugr import tys as ht
+from hugr.build import function as hf
 from hugr.std.int import int_t
 
+from guppylang.compiler.core import GlobalConstId
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.std._internal.compiler.arithmetic import inarrow_s, iwiden_s
-from guppylang.std._internal.compiler.array import array_type
-from guppylang.std._internal.compiler.prelude import build_unwrap_right
+from guppylang.std._internal.compiler.array import array_map, array_type
+from guppylang.std._internal.compiler.prelude import build_unwrap, build_unwrap_right
 from guppylang.std._internal.compiler.quantum import (
     QSYSTEM_RANDOM_EXTENSION,
     QSYSTEM_UTILS_EXTENSION,
@@ -50,7 +52,18 @@ class OrderInZonesCompiler(CustomInoutCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [option_qubits] = args
 
-        unwrapped_qubits = self.unwrap(option_qubits)
+        # unwrap qubit array to be passed to OrderInZones
+        elem_ty = ht.Qubit
+        elem_opt_ty = ht.Option(elem_ty)
+        length = ht.BoundedNatArg(16)
+        unwrap_fn = self.builder.load_function(
+            self.define_unwrap_fn_helper(elem_ty),
+            instantiation=ht.FunctionType([elem_opt_ty], [elem_ty]),
+            type_args=[ht.TypeTypeArg(elem_ty)],
+        )
+        [unwrapped_qubits] = self.builder.add_op(
+            array_map(elem_opt_ty, length, elem_ty), option_qubits, unwrap_fn
+        )
 
         [out] = self.builder.add_op(
             external_op("OrderInZones", [], ext=QSYSTEM_UTILS_EXTENSION)(
@@ -60,15 +73,44 @@ class OrderInZonesCompiler(CustomInoutCallCompiler):
                 ),
                 [],
             ),
-            unwrapped_qubits
+            unwrapped_qubits,
+        )
+
+        # rewrap qubit array to be passed from OrderInZones
+        wrap_fn = self.builder.load_function(
+            self.define_wrap_fn_helper(elem_ty),
+            instantiation=ht.FunctionType([elem_ty], [elem_opt_ty]),
+            type_args=[ht.TypeTypeArg(elem_ty)],  # TODO: double check the type arg
+        )
+        [out] = self.builder.add_op(
+            array_map(elem_ty, length, elem_opt_ty), out, wrap_fn
         )
 
         return CallReturnWires(regular_returns=[], inout_returns=[out])
 
+    def define_unwrap_fn_helper(self, elem_ty: ht.Type) -> hf.Function:
+        func_ty = ht.PolyFuncType(
+            params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+            body=ht.FunctionType([ht.Option(elem_ty)], [elem_ty]),
+        )
+        func, already_defined = self.ctx.declare_global_func(
+            GlobalConstId.fresh("qsystem.utils.rpc._unwrap.helper"), func_ty
+        )
+        if not already_defined:
+            err_msg = "qsystem.utils.rpc._unwrap: unexpected failure while unwrapping"
+            elem = build_unwrap(func, func.inputs()[0], err_msg)
+            func.set_outputs(elem)
+        return func
 
-    def unwrap(self, option_qubits):
-        #
-        # todo: unwrap array[16, Option(qubit)] into array[16, qubit]
-        #
-        unwrapped_qubits = option_qubits
-        return unwrapped_qubits
+    def define_wrap_fn_helper(self, elem_ty: ht.Type) -> hf.Function:
+        func_ty = ht.PolyFuncType(
+            params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+            body=ht.FunctionType([elem_ty], [ht.Option(elem_ty)]),
+        )
+        func, already_defined = self.ctx.declare_global_func(
+            GlobalConstId.fresh("qsystem.utils.rpc._wrap.helper"), func_ty
+        )
+        if not already_defined:
+            elem_opt = func.add_op(ops.Some(elem_ty), func.inputs()[0])
+            func.set_outputs(elem_opt)
+        return func

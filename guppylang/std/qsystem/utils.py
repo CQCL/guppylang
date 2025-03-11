@@ -18,6 +18,7 @@ qsystem_utils.load(qubit)
 @no_type_check
 def get_current_shot() -> int: ...
 
+
 @guppy.custom(OrderInZonesCompiler(), module=qsystem_utils)
 @no_type_check
 def order_in_zones(qubits: array[qubit, 16]) -> None: ...
