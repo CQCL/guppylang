@@ -81,8 +81,6 @@ class TensorCall(ast.expr):
     )
 
 
-
-
 class TypeApply(ast.expr):
     value: ast.expr
     inst: Inst
@@ -290,6 +288,7 @@ class BarrierExpr(ast.expr):
     args: list[ast.expr]
     func_ty: FunctionType
     _fields = ("args", "func_ty")
+
 
 AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr
 
