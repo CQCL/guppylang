@@ -416,17 +416,8 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.visit(node.getitem_expr)
 
     def visit_BarrierExpr(self, node: BarrierExpr) -> None:
-        # A `barrier(expr1, expr2, ...)` expression. This has to be a custom AST node
-        # to support borrowed varargs.
-        inouts = []
-        for expr in node.values:
-            if isinstance(expr, PlaceNode):
-                self.visit_PlaceNode(expr, use_kind=UseKind.BORROW)
-                inouts.append(expr)
-            else:
-                self.visit(expr)
-        for expr in inouts:
-            self._reassign_single_inout_arg(expr.place, node)
+        self._visit_call_args(node.func_ty, node)
+        self._reassign_inout_args(node.func_ty, node)
 
     def visit_Expr(self, node: ast.Expr) -> None:
         # An expression statement where the return value is discarded
