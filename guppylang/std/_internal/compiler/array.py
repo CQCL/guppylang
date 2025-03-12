@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypeVar
 
 from hugr import Wire, ops
 from hugr import tys as ht
@@ -26,6 +26,8 @@ from guppylang.tys.builtin import int_type
 
 if TYPE_CHECKING:
     from hugr.build import function as hf
+    from hugr.build.dfg import DfBase
+
 
 # ------------------------------------------------------
 # --------------- std.array operations -----------------
@@ -141,6 +143,30 @@ def array_repeat(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
 # ------------------------------------------------------
 # --------- Custom compilers for non-native ops --------
 # ------------------------------------------------------
+
+
+P = TypeVar("P", bound=ops.DfParentOp)
+
+
+def unpack_array(builder: DfBase[P], array: Wire) -> list[Wire]:
+    """ """
+    # TODO: This should be an op
+    array_ty = builder.hugr.port_type(array.out_port())
+    assert isinstance(array_ty, ht.ExtType)
+    err = "Internal error: array unpacking failed"
+    match array_ty.args:
+        case [ht.BoundedNatArg(length), ht.TypeTypeArg(elem_ty)]:
+            elems: list[Wire] = []
+            for i in range(length):
+                res = builder.add_op(
+                    array_pop(elem_ty, length - i, from_left=True), array
+                )
+                elem, array = build_unwrap(builder, res, err)
+                elems.append(elem)
+            builder.add_op(array_discard_empty(elem_ty), array)
+            return elems
+        case _:
+            raise InternalGuppyError("Invalid array type args")
 
 
 class ArrayCompiler(CustomCallCompiler):

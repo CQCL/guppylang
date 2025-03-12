@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "$FILE", line 17, in <module>
+    module2.compile()
+  File "$FILE", line 14, in main
+    return foo()
+guppylang.error.GuppyComptimeError: Function `foo` is not available in this module, consider importing it from `module1`

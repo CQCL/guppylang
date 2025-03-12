@@ -1,0 +1,12 @@
+Error: Error in comptime function return (at $FILE:11:0)
+   | 
+ 9 | 
+10 | @guppy.comptime(module)
+11 | def test(q: qubit @ owned) -> None:
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 |     pass
+   | ^^^^^^^^
+
+Value with non-droppable type `qubit` is leaked by this function
+
+Guppy compilation failed due to 1 previous error
