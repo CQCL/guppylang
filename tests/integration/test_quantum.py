@@ -9,6 +9,7 @@ from guppylang.std.angles import angle
 
 from guppylang.std.builtins import owned, array, barrier
 
+from guppylang.std import quantum
 from guppylang.std.quantum import (
     discard,
     measure,
@@ -55,6 +56,7 @@ def compile_quantum_guppy(fn) -> ModulePointer:
     module.load(
         angle, qubit, discard, measure, measure_array, maybe_qubit, discard_array
     )
+    module.load(q=quantum)
     module.load_all(quantum_functional)
     guppylang.decorator.guppy(module)(fn)
     return module.compile()
@@ -171,7 +173,6 @@ def test_panic_discard(validate):
     validate(test)
 
 
-
 def test_barrier(validate):
     """Barrier between ops."""
 
@@ -180,19 +181,94 @@ def test_barrier(validate):
     def test() -> None:
         q1, q2, q3, q4 = qubit(), qubit(), qubit(), qubit()
 
-
-        q1 = h(q1)
-        q2 = h(q2)
+        q.h(q1)
+        q.h(q2)
         barrier(q1, q2, q3)
-        q3 = h(q3)
+        q.h(q3)
 
-        q1, q2 = cx(q1, q2)
+        q.cx(q1, q2)
         barrier(q2, q3)
-        q3, q4 = cx(q3, q4)
+        q.cx(q3, q4)
 
         discard(q1)
         discard(q2)
+        barrier()  # does nothing
         discard(q3)
         discard(q4)
+
+    validate(test)
+
+
+def test_barrier_array(validate):
+    """Barrier on array/struct access."""
+
+    @compile_quantum_guppy
+    @no_type_check
+    def test() -> None:
+        qs = array(qubit() for _ in range(4))
+        q.h(qs[1])
+        q.h(qs[2])
+        barrier(qs[1], qs[2], qs[3])
+        barrier(qs[1])
+        q.h(qs[3])
+
+        q.cx(qs[1], qs[2])
+        barrier(qs[2], qs[3])
+        q.cx(qs[3], qs[4])
+        barrier(qs)
+        discard_array(qs)
+
+    validate(test)
+
+
+def test_barrier_struct(validate):
+    """Barrier on array/struct access."""
+
+    module = GuppyModule("module")
+    module.load(qubit, discard)
+    module.load(q=quantum)
+
+    @guppylang.decorator.guppy.struct(module)
+    class S:
+        q1: qubit
+        q2: qubit
+        q3: qubit
+        q4: qubit
+
+    @guppylang.decorator.guppy(module)
+    @no_type_check
+    def test() -> None:
+        qs = S(qubit(), qubit(), qubit(), qubit())
+        q.h(qs.q1)
+        q.h(qs.q2)
+        barrier(qs.q1, qs.q2, qs.q3)
+        barrier(qs.q1)
+        q.h(qs.q3)
+
+        q.cx(qs.q1, qs.q2)
+        barrier(qs.q2, qs.q3)
+        q.cx(qs.q3, qs.q4)
+
+        discard(qs.q1)
+        discard(qs.q2)
+        discard(qs.q3)
+        discard(qs.q4)
+
+    validate(module.compile())
+
+
+def test_barrier_misc(validate):
+    """Barrier on classical and non-place."""
+
+    @compile_quantum_guppy
+    @no_type_check
+    def test() -> None:
+        q1 = qubit()
+        q.h(q1)
+        x = 1
+        barrier(q1, array(1, 2, 3), 2 + 3, x)
+
+        result("c", x)
+        result("c2", measure(q1))
 
     validate(test)
