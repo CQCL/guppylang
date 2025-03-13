@@ -33,11 +33,6 @@ if TYPE_CHECKING:
 # --------------------------------------------
 
 
-def qubit_type() -> ht.ExtType:
-    """Returns the hugr type of an qubit value."""
-    return hugr.std.PRELUDE.types["qubit"].instantiate([])
-
-
 def error_type() -> ht.ExtType:
     """Returns the hugr type of an error value."""
     return hugr.std.PRELUDE.types["error"].instantiate([])

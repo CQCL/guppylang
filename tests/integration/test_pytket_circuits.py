@@ -197,9 +197,10 @@ def test_register_arrays_default(validate):
     def foo(default_reg: array[qubit, 2]) -> None:
         return guppy_circ(default_reg)
 
+    # print(module.compile_hugr().render_dot())
     validate(module.compile())
 
-@pytest.mark.skip()
+
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
 def test_register_arrays(validate):
     from pytket import Circuit
@@ -223,7 +224,6 @@ def test_register_arrays(validate):
     validate(module.compile())
 
 
-@pytest.mark.skip()
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
 def test_register_arrays_multiple_measure(validate):
     from pytket import Circuit
