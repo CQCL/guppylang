@@ -468,10 +468,3 @@ class BarrierChecker(CustomCallChecker):
         args, ret_ty, _inst = synthesize_call(func_ty, args, self.node, self.ctx)
         node = BarrierExpr(args=args, func_ty=func_ty)
         return with_loc(self.node, node), ret_ty
-
-    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        # Barrier may return any type, so we don't have to check anything. Consequently
-        # we also can't infer anything in the expected type, so we always return an
-        # empty substitution
-        expr, _ = self.synthesize(args)
-        return expr, {}
