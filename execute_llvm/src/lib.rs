@@ -21,7 +21,7 @@ fn parse_hugr(hugr_json: &str) -> PyResult<hugr::Hugr> {
 }
 
 // Find the FuncDefn node for the function we're trying to execute.
-fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node> {
+fn find_funcdef_node<H: HugrView>(hugr: H, fn_name: &str) -> PyResult<H::Node> {
     let root = hugr.root();
     let mut fn_nodes = Vec::new();
     for n in hugr.children(root) {

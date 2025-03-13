@@ -1,0 +1,12 @@
+Error: Copy violation (at $FILE:15:14)
+   | 
+13 | def main() -> qubit:
+14 |    q = qubit()
+15 |    barrier(q, q)
+   |               ^ Variable `q` with non-copyable type `qubit` cannot be
+   |                 borrowed ...
+   | 
+15 |    barrier(q, q)
+   |            - since it was already borrowed here
+
+Guppy compilation failed due to 1 previous error

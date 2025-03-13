@@ -11,6 +11,7 @@ from guppylang.definition.custom import CopyInoutCompiler, NoopCompiler
 from guppylang.std._internal.checker import (
     ArrayCopyChecker,
     ArrayLenChecker,
+    BarrierChecker,
     CallableChecker,
     DunderChecker,
     NewArrayChecker,
@@ -944,6 +945,12 @@ def __import__(x): ...
 @guppy.custom(MemSwapCompiler())
 def mem_swap(x: L, y: L) -> None:
     """Swaps the values of two variables."""
+
+
+@guppy.custom(checker=BarrierChecker(), higher_order_value=False)
+def barrier(*args) -> None:
+    """Barrier to guarantee that all operations before the barrier are completed before
+    operations after the barrier are started."""
 
 
 # Import `Option` since it's part of the default module. Has to be at the end of the
