@@ -16,6 +16,7 @@ from guppylang.checker.expr_checker import (
     ExprSynthesizer,
     check_num_args,
     check_type_against,
+    synthesize_call,
     synthesize_comprehension,
 )
 from guppylang.definition.custom import (
