@@ -14,10 +14,8 @@ from guppylang.checker.errors.type_errors import (
 from guppylang.checker.expr_checker import (
     ExprChecker,
     ExprSynthesizer,
-    check_call,
     check_num_args,
     check_type_against,
-    synthesize_call,
     synthesize_comprehension,
 )
 from guppylang.definition.custom import (
@@ -52,7 +50,7 @@ from guppylang.tys.builtin import (
     string_type,
 )
 from guppylang.tys.const import Const, ConstValue
-from guppylang.tys.subst import Inst, Subst
+from guppylang.tys.subst import Subst
 from guppylang.tys.ty import (
     FunctionType,
     NoneType,

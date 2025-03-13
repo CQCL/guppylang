@@ -586,7 +586,7 @@ class Array:
 
     @guppy
     @no_type_check
-    def __len__(self: array[L, n]) -> int: 
+    def __len__(self: array[L, n]) -> int:
         return n
 
     @guppy.custom(NewArrayCompiler(), NewArrayChecker(), higher_order_value=False)
