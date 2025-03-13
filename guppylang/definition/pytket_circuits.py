@@ -93,7 +93,7 @@ class RawPytketDef(ParsableDef):
             err.add_sub_diagnostic(
                 PytketSignatureMismatch.TypeHint(None, circ_sig=circuit_signature)
             )
-            # raise GuppyError(err)
+            raise GuppyError(err)
         return ParsedPytketDef(
             self.id, self.name, func_ast, stub_signature, self.input_circuit, False
         )
