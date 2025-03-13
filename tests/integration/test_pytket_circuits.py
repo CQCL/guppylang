@@ -128,7 +128,7 @@ def test_load_circuit(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
 
-    guppy.load_pytket("guppy_circ", circ, module)
+    guppy.load_pytket("guppy_circ", circ, False, module)
 
     @guppy(module)
     def foo(q: qubit) -> None:
@@ -151,8 +151,8 @@ def test_load_circuits(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
 
-    guppy.load_pytket("guppy_circ1", circ1, module)
-    guppy.load_pytket("guppy_circ2", circ2, module)
+    guppy.load_pytket("guppy_circ1", circ1, False, module)
+    guppy.load_pytket("guppy_circ2", circ2, False, module)
 
     @guppy(module)
     def foo(q1: qubit, q2: qubit, q3: qubit) -> tuple[bool, bool]:
@@ -173,7 +173,7 @@ def test_measure_some(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
 
-    guppy.load_pytket("guppy_circ", circ, module)
+    guppy.load_pytket("guppy_circ", circ, False, module)
 
     @guppy(module)
     def foo(q1: qubit, q2: qubit) -> bool:
@@ -191,7 +191,7 @@ def test_register_arrays_default(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
 
-    guppy.load_pytket_with_arrays("guppy_circ", circ, module)
+    guppy.load_pytket("guppy_circ", circ, module=module)
 
     @guppy(module)
     def foo(default_reg: array[qubit, 2]) -> None:
@@ -212,7 +212,7 @@ def test_register_arrays(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
 
-    guppy.load_pytket_with_arrays("guppy_circ", circ, module)
+    guppy.load_pytket("guppy_circ", circ, module=module)
 
     @guppy(module)
     def foo(default_reg: array[qubit, 2], 
@@ -237,7 +237,7 @@ def test_register_arrays_multiple_measure(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
 
-    guppy.load_pytket_with_arrays("guppy_circ", circ, module)
+    guppy.load_pytket("guppy_circ", circ, module=module)
 
     @guppy(module)
     def foo(default_reg: array[qubit, 2], 
@@ -264,7 +264,7 @@ def test_register_arrays_mixed(validate):
     module = GuppyModule("test")
     module.load_all(quantum)
 
-    guppy.load_pytket_with_arrays("guppy_circ", circ, module)
+    guppy.load_pytket("guppy_circ", circ, module=module)
 
     @guppy(module)
     def foo(q: array[qubit, 2], 

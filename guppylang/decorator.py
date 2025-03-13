@@ -512,26 +512,13 @@ class _Guppy:
 
     @pretty_errors
     def load_pytket(
-        self, name: str, input_circuit: Any, module: GuppyModule | None = None
-    ) -> RawLoadPytketDef:
-        """Adds a pytket circuit function definition with implicit signature."""
-        return self._load_pytket_method(name, input_circuit, False, module)
-
-    @pretty_errors
-    def load_pytket_with_arrays(
-        self, name: str, input_circuit: Any, module: GuppyModule | None = None
-    ) -> RawLoadPytketDef:
-        """Adds a pytket circuit function definition with implicit signature that takes
-        arrays as register inputs."""
-        return self._load_pytket_method(name, input_circuit, True, module)
-
-    def _load_pytket_method(
         self,
         name: str,
         input_circuit: Any,
-        use_arrays: bool,
+        use_arrays: bool = True,
         module: GuppyModule | None = None,
     ) -> RawLoadPytketDef:
+        """Adds a pytket circuit function definition with implicit signature."""
         err_msg = "Only pytket circuits can be passed to guppy.load_pytket"
         try:
             import pytket
