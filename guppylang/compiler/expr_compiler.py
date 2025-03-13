@@ -529,9 +529,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
         barrier_n = self.builder.add_op(op, *(self.visit(e) for e in node.args))
 
-        self._update_inout_ports(
-            node.args, (barrier_n[i] for i in range(len(hugr_tys))), node.func_ty
-        )
+        self._update_inout_ports(node.args, list(barrier_n), node.func_ty)
         return self._pack_returns([], NoneType())
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> Wire:
