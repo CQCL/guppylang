@@ -7,8 +7,6 @@ from dataclasses import dataclass
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
-from guppylang.ipython_inspect import is_running_ipython
-
 if TYPE_CHECKING:
     from guppylang.diagnostic import Error, Fatal
 
@@ -97,18 +95,7 @@ def pretty_errors(f: FuncT) -> FuncT:
     @functools.wraps(f)
     def pretty_errors_wrapped(*args: Any, **kwargs: Any) -> Any:
         with exception_hook(hook):
-            try:
-                return f(*args, **kwargs)
-            except GuppyError as err:
-                # For normal usage, this `try` block is not necessary since the
-                # excepthook is automatically invoked when the exception (which is being
-                # reraised below) is not handled. However, when running tests, we have
-                # to manually invoke the hook to print the error message, since the
-                # tests always have to capture exceptions. The only exception are
-                # notebook tests which don't rely on the capsys fixture.
-                if _pytest_running() and not is_running_ipython():
-                    hook(type(err), err, err.__traceback__)
-                raise
+            return f(*args, **kwargs)
 
     return cast(FuncT, pretty_errors_wrapped)
 

@@ -1,0 +1,8 @@
+Error: Variable not defined (at $FILE:11:12)
+   | 
+ 9 |     @guppy.struct(module)
+10 |     class Foo:
+11 |         x: "blah"
+   |             ^^^^ `blah` is not defined
+
+Guppy compilation failed due to 1 previous error

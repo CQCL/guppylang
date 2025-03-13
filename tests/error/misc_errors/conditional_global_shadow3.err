@@ -1,0 +1,8 @@
+Error: Global variable conditionally shadowed (at $FILE:11:8)
+   | 
+ 9 | def bad(b: bool) -> int:
+10 |     if b:
+11 |         x = 4
+   |         ^ Variable `x` may be shadowing a global variable
+
+Guppy compilation failed due to 1 previous error

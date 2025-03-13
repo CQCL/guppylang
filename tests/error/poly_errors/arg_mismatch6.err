@@ -1,0 +1,8 @@
+Error: Type mismatch (at $FILE:17:13)
+   | 
+15 | @guppy(module)
+16 | def main(x: float) -> None:
+17 |     foo[int](x)
+   |              ^ Expected argument of type `int`, got `float`
+
+Guppy compilation failed due to 1 previous error

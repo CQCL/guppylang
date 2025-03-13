@@ -1,0 +1,14 @@
+Error: Different types (at $FILE:12:11)
+   | 
+10 |     if b:
+11 |         x = 4
+12 |     return x
+   |            ^ Variable `x` may refer to different types
+   | 
+11 |         x = 4
+   |         - This is of type `int`
+
+Note: Variable `x` may be shadowing a global extern definition of type `str` on
+some branches
+
+Guppy compilation failed due to 1 previous error

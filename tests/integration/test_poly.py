@@ -196,6 +196,81 @@ def test_infer_left_to_right(validate):
     validate(module.compile())
 
 
+def test_type_apply_basic(validate):
+    module = GuppyModule("test")
+    S = guppy.type_var("S", module=module)
+    T = guppy.type_var("T", module=module)
+
+    @guppy.declare(module)
+    def foo(x: T) -> T: ...
+
+    @guppy.declare(module)
+    def bar(x: S, y: T) -> S: ...
+
+    @guppy(module)
+    def main() -> tuple[int, float, float]:
+        x = foo[int](0)
+        y = foo[float](1.0)
+        z = bar[float, int](y, x)
+        return x, y, z
+
+    validate(module.compile())
+
+
+def test_type_apply_higher_order(validate):
+    module = GuppyModule("test")
+    S = guppy.type_var("S", module=module)
+    T = guppy.type_var("T", module=module)
+
+    @guppy.declare(module)
+    def foo(x: T) -> T: ...
+
+    @guppy.declare(module)
+    def bar(x: S, y: T) -> S: ...
+
+    @guppy(module)
+    def main() -> tuple[int, float, float]:
+        f = foo[int]
+        g = foo[float]
+        h = bar[float, int]
+        x = f(0)
+        y = g(1.0)
+        z = h(y, x)
+        return x, y, z
+
+    validate(module.compile())
+
+
+def test_type_apply_nat(validate):
+    module = GuppyModule("test")
+    n = guppy.nat_var("n", module=module)
+
+    @guppy.declare(module)
+    def foo(x: array[int, n]) -> int: ...
+
+    @guppy(module)
+    def main() -> int:
+        return foo[0](array()) + foo[2](array(1, 2))
+
+    validate(module.compile())
+
+
+def test_type_apply_empty_tuple(validate):
+    module = GuppyModule("test")
+    T = guppy.type_var("T", module=module)
+
+    @guppy.declare(module)
+    def foo(x: T) -> None:
+        ...
+
+    @guppy(module)
+    def main() -> None:
+        # `()` is the type of an empty tuple (`tuple[]` is not syntactically valid)
+        foo[()]
+
+    validate(module.compile())
+
+
 def test_pass_poly_basic(validate):
     module = GuppyModule("test")
     T = guppy.type_var("T", module=module)
