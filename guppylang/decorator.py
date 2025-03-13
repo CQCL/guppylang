@@ -584,6 +584,9 @@ class _GuppyDummy:
     def load(self, *args: Any, **kwargs: Any) -> None:
         pass
 
+    def get_module(self, *args: Any, **kwargs: Any) -> Any:
+        return GuppyModule("dummy", import_builtins=False)
+
 
 guppy = cast(_Guppy, _GuppyDummy()) if sphinx_running() else _Guppy()
 
