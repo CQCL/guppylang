@@ -244,9 +244,31 @@ def test_register_arrays_multiple_measure(validate):
             extra_reg1: array[qubit, 3]) -> tuple[array[bool, 3], array[bool, 2]]:
         extra_reg2 = array(qubit(), qubit())
         result = guppy_circ(extra_reg1, extra_reg2, default_reg)
-        # Until we add linearity checks to loaded circuits need to discard non-owned 
-        # circuit.
+        # Until we add linearity checks to loaded circuits need to discard owned 
+        # arrays.
         discard_array(extra_reg2) 
         return result
+
+    validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_register_arrays_mixed(validate):
+    from pytket import Circuit
+
+    circ = Circuit(2, 1)
+    reg = circ.add_q_register("q2", 3)
+    circ.measure_register(reg, "c2")
+    circ.Measure(0, 0)
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    guppy.load_pytket_with_arrays("guppy_circ", circ, module)
+
+    @guppy(module)
+    def foo(q: array[qubit, 2], 
+            q2: array[qubit, 3]) -> tuple[array[bool, 1], array[bool, 3]]:
+        return guppy_circ(q, q2)
 
     validate(module.compile())
