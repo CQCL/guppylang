@@ -4,7 +4,7 @@ from collections.abc import Callable, KeysView, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
-from typing import Any, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, TypeVar, cast, no_type_check, overload
 
 from hugr import ops
 from hugr import tys as ht
@@ -585,7 +585,14 @@ class _GuppyDummy:
         pass
 
 
-guppy = cast(_Guppy, _GuppyDummy()) if sphinx_running() else _Guppy()
+if TYPE_CHECKING:
+    _A = TypeVar("_A")
+    class _GuppyNoTypeCheck(_Guppy):
+        def __call__(self, arg: _A) -> _A:
+            return no_type_check(arg)
+    guppy = _GuppyNoTypeCheck()
+else:
+    guppy = cast(_Guppy, _GuppyDummy()) if sphinx_running() else _Guppy()
 
 
 def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.expr:
