@@ -10,7 +10,6 @@ from guppylang.decorator import guppy
 from guppylang.definition.custom import CopyInoutCompiler, NoopCompiler
 from guppylang.std._internal.checker import (
     ArrayCopyChecker,
-    ArrayLenChecker,
     CallableChecker,
     DunderChecker,
     NewArrayChecker,
@@ -585,8 +584,10 @@ class Array:
     @guppy.custom(ArraySetitemCompiler())
     def __setitem__(self: array[L, n], idx: int, value: L @ owned) -> None: ...
 
-    @guppy.custom(checker=ArrayLenChecker())
-    def __len__(self: array[L, n]) -> int: ...
+    @guppy
+    @no_type_check
+    def __len__(self: array[L, n]) -> int: 
+        return n
 
     @guppy.custom(NewArrayCompiler(), NewArrayChecker(), higher_order_value=False)
     def __new__(): ...

@@ -5,28 +5,34 @@ from hugr.std.int import IntVal
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import array, owned, mem_swap
+from guppylang.std.builtins import array, owned, mem_swap, nat
 from tests.util import compile_guppy
 
 from guppylang.std.quantum import qubit, discard
 import guppylang.std.quantum as quantum
 
 
-def test_len(validate):
+@pytest.mark.skip("Requires `is_to_u` in llvm")
+def test_len_execute(validate, run_int_fn):
     module = GuppyModule("test")
 
     @guppy(module)
     def main(xs: array[float, 42]) -> int:
         return len(xs)
 
-    package = module.compile()
-    validate(package)
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, 42)
 
-    hg = package.module
-    [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
-    assert isinstance(val, ops.Const)
-    assert isinstance(val.val, IntVal)
-    assert val.val.v == 42
+
+def test_len(validate):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main(qs: array[float, 42]) -> int:
+        return len(qs)
+
+    validate(module.compile())
 
 
 def test_len_linear(validate):
@@ -37,14 +43,8 @@ def test_len_linear(validate):
     def main(qs: array[qubit, 42]) -> int:
         return len(qs)
 
-    package = module.compile()
-    validate(package)
+    validate(module.compile())
 
-    hg = package.module
-    [val] = [data.op for node, data in hg.nodes() if isinstance(data.op, ops.Const)]
-    assert isinstance(val, ops.Const)
-    assert isinstance(val.val, IntVal)
-    assert val.val.v == 42
 
 def test_len_generic():
     module = GuppyModule("test")
