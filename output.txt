@@ -1,0 +1,1759 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.6, pytest-8.3.4, pluggy-1.5.0
+benchmark: 5.1.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /Users/tatiana.sedelnikov/Documents/Code/guppylang
+configfile: pyproject.toml
+plugins: snapshot-0.9.0, cov-5.0.0, pytest_notebook-0.10.0, anyio-4.8.0, benchmark-5.1.0
+collected 11 items
+
+tests/integration/test_pytket_circuits.py ........Fss                    [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_register_arrays_default _________________________
+
+validate = <function validate.<locals>.validate_impl at 0x1188f4860>
+
+    @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+    def test_register_arrays_default(validate):
+        from pytket import Circuit
+    
+        circ = Circuit(2)
+    
+        module = GuppyModule("test")
+        module.load_all(quantum)
+    
+        guppy.load_pytket_with_arrays("guppy_circ", circ, module)
+    
+        @guppy(module)
+        def foo(default_reg: array[qubit, 2]) -> None:
+            return guppy_circ(default_reg)
+    
+        print(module.compile_hugr().render_dot())
+>       validate(module.compile())
+
+tests/integration/test_pytket_circuits.py:201: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/integration/conftest.py:64: in validate_impl
+    validate_json(js)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+hugr = '{"modules":[{"version":"live","nodes":[{"parent":0,"op":"Module"},{"parent":0,"op":"FuncDefn","name":"","signature":{..."i":1,"b":"A"}],"output":[{"t":"R","i":2,"b":"A"}],"runtime_reqs":["guppylang"]}},"binary":false,"lower_funcs":[]}}}]}'
+
+    def validate_json(hugr: str):
+        # Executes `cargo run -p validator -- validate -`
+        # passing the hugr JSON as stdin
+        p = subprocess.run(  # noqa: S603
+            [validator, "validate", "-"],
+            text=True,
+            input=hugr,
+            capture_output=True,
+        )
+    
+        if p.returncode != 0:
+>           raise RuntimeError(f"{p.stderr}")
+E           RuntimeError: Error validating HUGR: Connected ports Port(Outgoing, 1) in node Node(8) and Port(Incoming, 0) in node Node(28) have incompatible kinds. Cannot connect array(1, []+[qubit]) to array(2, []+[qubit]).
+
+tests/integration/conftest.py:51: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+digraph test {
+	bgcolor=white margin=0 nodesep=0.15 rankdir="" ranksep=0.1
+	subgraph cluster0 {
+		subgraph cluster1 {
+			2 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+			3 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+			1 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>FuncDefn()</B><BR/><BR/>TKET1.bit_output_registers: []<BR/>TKET1.bit_registers: []<BR/>TKET1.phase: 0.0<BR/>TKET1.qubit_output_registers: [['q', [0]], ['q', [1]]]<BR/>TKET1.qubit_registers: [['q', [0]], ['q', [1]]]</FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+			color="#1CADE4" label="" margin=10
+		}
+		subgraph cluster4 {
+			5 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+			6 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+			7 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>pop_left</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+			subgraph cluster8 {
+				subgraph cluster9 {
+					10 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					11 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					16 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>LoadConst</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					17 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>panic</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					9 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Case</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					color="#1CADE4" label="" margin=10
+				}
+				subgraph cluster12 {
+					13 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					14 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					12 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Case</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					color="#1CADE4" label="" margin=10
+				}
+				8 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Conditional</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+				color="#1CADE4" label="" margin=10
+			}
+			subgraph cluster18 {
+				subgraph cluster19 {
+					20 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					21 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					26 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>LoadConst</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					27 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>panic</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					19 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Case</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					color="#1CADE4" label="" margin=10
+				}
+				subgraph cluster22 {
+					23 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					24 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					22 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Case</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					color="#1CADE4" label="" margin=10
+				}
+				18 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Conditional</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+				color="#1CADE4" label="" margin=10
+			}
+			28 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>pop_left</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+			subgraph cluster29 {
+				subgraph cluster30 {
+					31 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					32 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					37 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>LoadConst</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					38 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>panic</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					30 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Case</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					color="#1CADE4" label="" margin=10
+				}
+				subgraph cluster33 {
+					34 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					35 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					33 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Case</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					color="#1CADE4" label="" margin=10
+				}
+				29 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Conditional</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+				color="#1CADE4" label="" margin=10
+			}
+			subgraph cluster39 {
+				subgraph cluster40 {
+					41 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					42 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					47 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>LoadConst</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					48 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>panic</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					40 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Case</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					color="#1CADE4" label="" margin=10
+				}
+				subgraph cluster43 {
+					44 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					45 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					43 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Case</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					color="#1CADE4" label="" margin=10
+				}
+				39 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Conditional</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+				color="#1CADE4" label="" margin=10
+			}
+			49 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.2" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">2</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Call</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+			50 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>new_array</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+			4 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>FuncDefn(guppy_circ)</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+			color="#1CADE4" label="" margin=10
+		}
+		15 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Const(Error(1): Internal error: unpacking of array failed)</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+		25 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Const(Error(1): Internal error: unpacking of array failed)</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+		36 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Const(Error(1): Internal error: unpacking of array failed)</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+		46 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Const(Error(1): Internal error: unpacking of array failed)</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+		subgraph cluster51 {
+			52 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+			53 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+			subgraph cluster54 {
+				subgraph cluster55 {
+					56 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Input</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					57 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Output</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+					59 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD><TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.1" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">1</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Call</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					60 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>MakeTuple</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					61 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Tag(0)</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					55 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>DataflowBlock</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+					color="#1CADE4" label="" margin=10
+				}
+				58 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#ACCBF9" COLOR="white">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>ExitBlock</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+				54 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="in.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>CFG</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+				color="#1CADE4" label="" margin=10
+			}
+			51 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>FuncDefn(foo)</B></FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+        <TR>
+            <TD>
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3" CELLPADDING="2">
+                    <TR>
+                        <TD BGCOLOR="white" COLOR="#1CADE4" PORT="out.0" BORDER="1"><FONT POINT-SIZE="10.0" FACE="monospace" COLOR="black">0</FONT></TD>
+                    </TR>
+                </TABLE>
+            </TD>
+        </TR>
+    
+    </TABLE>
+    > shape=plain]
+			color="#1CADE4" label="" margin=10
+		}
+		0 [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"
+        BGCOLOR="#1CADE4" COLOR="#1CADE4">
+    
+    <TR>
+        <TD>
+        <TABLE BORDER="0" CELLBORDER="0">
+            <TR><TD><FONT POINT-SIZE="11.0" FACE="monospace"
+                COLOR="black"><B>Module</B><BR/><BR/>name: test</FONT></TD></TR>
+        </TABLE>
+        </TD>
+    </TR>
+    
+    </TABLE>
+    > shape=plain]
+		color="#1CADE4" label="" margin=10
+	}
+	2:"out.0" -> 3:"in.0" [label=Qubit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	2:"out.1" -> 3:"in.1" [label=Qubit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	5:"out.0" -> 7:"in.0" [label="array<2, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	7:"out.0" -> 8:"in.0" [label="Option(Option(Qubit), ExtType(type_def=TypeDef(name='array', description='Fixed-length array', params=[BoundedNatParam(upper_bound=None), TypeTypeParam(bound=<TypeBound.Any: 'A'>)], bound=FromParamsBound(indices=[1])), args=[BoundedNatArg(n=1), TypeTypeArg(ty=Option(Qubit))]))" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	15:"out.0" -> 16:"in.0" [label="" arrowhead=none arrowsize=1.0 color="#77CEEF" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	16:"out.0" -> 17:"in.0" [label=error arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	17:"out.0" -> 11:"in.0" [label="Option(Qubit)" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	17:"out.1" -> 11:"in.1" [label="array<1, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	13:"out.0" -> 14:"in.0" [label="Option(Qubit)" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	13:"out.1" -> 14:"in.1" [label="array<1, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	8:"out.0" -> 18:"in.0" [label="Option(Qubit)" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	25:"out.0" -> 26:"in.0" [label="" arrowhead=none arrowsize=1.0 color="#77CEEF" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	26:"out.0" -> 27:"in.0" [label=error arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	27:"out.0" -> 21:"in.0" [label=Qubit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	23:"out.0" -> 24:"in.0" [label=Qubit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	8:"out.1" -> 28:"in.0" [label="array<1, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	28:"out.0" -> 29:"in.0" [label="Option(Option(Qubit), ExtType(type_def=TypeDef(name='array', description='Fixed-length array', params=[BoundedNatParam(upper_bound=None), TypeTypeParam(bound=<TypeBound.Any: 'A'>)], bound=FromParamsBound(indices=[1])), args=[BoundedNatArg(n=1), TypeTypeArg(ty=Option(Qubit))]))" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	36:"out.0" -> 37:"in.0" [label="" arrowhead=none arrowsize=1.0 color="#77CEEF" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	37:"out.0" -> 38:"in.0" [label=error arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	38:"out.0" -> 32:"in.0" [label="Option(Qubit)" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	38:"out.1" -> 32:"in.1" [label="array<1, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	34:"out.0" -> 35:"in.0" [label="Option(Qubit)" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	34:"out.1" -> 35:"in.1" [label="array<1, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	29:"out.0" -> 39:"in.0" [label="Option(Qubit)" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	46:"out.0" -> 47:"in.0" [label="" arrowhead=none arrowsize=1.0 color="#77CEEF" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	47:"out.0" -> 48:"in.0" [label=error arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	48:"out.0" -> 42:"in.0" [label=Qubit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	44:"out.0" -> 45:"in.0" [label=Qubit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	1:"out.0" -> 49:"in.2" [label="" arrowhead=none arrowsize=1.0 color="#77CEEF" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	18:"out.0" -> 49:"in.0" [label=Qubit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	39:"out.0" -> 49:"in.1" [label=Qubit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	49:"out.0" -> 50:"in.0" [label=Qubit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	49:"out.1" -> 50:"in.1" [label=Qubit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	50:"out.0" -> 6:"in.0" [label="array<2, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	52:"out.0" -> 54:"in.0" [label="array<2, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	4:"out.0" -> 59:"in.1" [label="" arrowhead=none arrowsize=1.0 color="#77CEEF" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	56:"out.0" -> 59:"in.0" [label="array<2, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	61:"out.0" -> 57:"in.0" [label=Unit arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	59:"out.0" -> 57:"in.1" [label="array<2, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	55:"out.0" -> 58:"in.0" [label="" arrowhead=none arrowsize=1.0 color=black fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+	54:"out.0" -> 53:"in.0" [label="array<2, Type(Option(Qubit))>" arrowhead=none arrowsize=1.0 color="#1CADE4" fontcolor=black fontname=monospace fontsize=9 penwidth=1.5]
+}
+
+=========================== short test summary info ============================
+FAILED tests/integration/test_pytket_circuits.py::test_register_arrays_default
+==================== 1 failed, 8 passed, 2 skipped in 0.54s ====================
