@@ -27,11 +27,9 @@
     enable = true;
     uv = {
       enable = true;
-      sync = {
-        enable = true;
-        allExtras = true;
-      };
+      sync.enable = true;
     };
+    venv.enable = true;
   };
 
   env.LLVM_SYS_140_PREFIX = pkgs.llvmPackages_14.libllvm.dev;
