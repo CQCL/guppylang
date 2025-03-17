@@ -5,7 +5,9 @@ from typing_extensions import Self
 from guppylang.error import GuppyComptimeError
 
 ERROR_MSG = (
-    "List is immutable. Consider calling `copy()` to obtain a mutable copy of this list"
+    "This list is an owned function argument. Therefore, this mutation won't be "
+    "visible to the caller. Consider calling `copy()` to obtain a mutable local copy "
+    "of this list."
 )
 
 

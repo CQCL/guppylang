@@ -3,4 +3,4 @@ Traceback (most recent call last):
     module.compile()
   File "$FILE", line 15, in foo
     s.xs.clear()
-guppylang.error.GuppyComptimeError: List is immutable. Consider calling `copy()` to obtain a mutable copy of this list
+guppylang.error.GuppyComptimeError: This list is an owned function argument. Therefore, this mutation won't be visible to the caller. Consider calling `copy()` to obtain a mutable local copy of this list.

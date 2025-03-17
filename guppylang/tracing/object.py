@@ -457,7 +457,10 @@ class GuppyStructObject(DunderMixin):
     def __setattr__(self, key: str, value: Any) -> None:
         if key in self._field_values:
             if self._frozen:
-                err = f"Object of type `{self._ty}` is immutable"
+                err = (
+                    f"Object of type `{self._ty}` is an owned function argument. "
+                    "Therefore, this mutation won't be visible to the caller."
+                )
                 raise GuppyComptimeError(err)
             self._field_values[key] = value
         else:
