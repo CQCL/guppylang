@@ -5,6 +5,7 @@ import re
 import sys
 
 import pytest
+import sys
 from hugr import tys
 from hugr.tys import TypeBound
 

@@ -22,7 +22,7 @@ from guppylang.std._internal.checker import (
 )
 from guppylang.std._internal.compiler.array import (
     ArrayGetitemCompiler,
-    ArrayIterEndCompiler,
+    ArrayIterAsertAllUsedCompiler,
     ArraySetitemCompiler,
     NewArrayCompiler,
 )
@@ -560,14 +560,8 @@ class List:
     @guppy.custom(NoopCompiler())  # TODO: define via Guppy source instead
     def __iter__(self: list[L] @ owned) -> list[L]: ...
 
-    @guppy.hugr_op(unsupported_op("IsNotEmpty"))  # TODO
-    def __hasnext__(self: list[L] @ owned) -> tuple[bool, list[L]]: ...
-
-    @guppy.hugr_op(unsupported_op("AssertEmpty"))  # TODO
-    def __end__(self: list[L] @ owned) -> None: ...
-
     @guppy.hugr_op(unsupported_op("pop"))
-    def __next__(self: list[L] @ owned) -> tuple[L, list[L]]: ...
+    def __next__(self: list[L] @ owned) -> "Option[tuple[L, list[L]]]": ...  # type: ignore[type-arg]
 
     @guppy.custom(ListPushCompiler())
     def append(self: list[L], item: L @ owned) -> None: ...
@@ -599,7 +593,7 @@ class Array:
         return SizedIter(ArrayIter(self, 0))
 
     @guppy.custom(CopyInoutCompiler(), ArrayCopyChecker())
-    def copy(self: array[L, n]) -> array[L, n]: ...
+    def copy(self: array[T, n]) -> array[T, n]: ...
 
 
 @guppy.struct
@@ -609,17 +603,17 @@ class ArrayIter(Generic[L, n]):
 
     @guppy
     @no_type_check
-    def __hasnext__(self: "ArrayIter[L, n]" @ owned) -> tuple[bool, "ArrayIter[L, n]"]:
-        return self.i < int(n), self
+    def __next__(
+        self: "ArrayIter[L, n]" @ owned,
+    ) -> "Option[tuple[L, ArrayIter[L, n]]]":
+        if self.i < int(n):
+            elem = _array_unsafe_getitem(self.xs, self.i)
+            return some((elem, ArrayIter(self.xs, self.i + 1)))
+        self._assert_all_used()
+        return nothing()
 
-    @guppy
-    @no_type_check
-    def __next__(self: "ArrayIter[L, n]" @ owned) -> tuple[L, "ArrayIter[L, n]"]:
-        elem = _array_unsafe_getitem(self.xs, self.i)
-        return elem, ArrayIter(self.xs, self.i + 1)
-
-    @guppy.custom(ArrayIterEndCompiler())
-    def __end__(self: "ArrayIter[L, n]" @ owned) -> None: ...
+    @guppy.custom(ArrayIterAsertAllUsedCompiler())
+    def _assert_all_used(self: "ArrayIter[L, n]" @ owned) -> None: ...
 
 
 @guppy.custom(ArrayGetitemCompiler())
@@ -884,19 +878,11 @@ class Range:
         return self
 
     @guppy
-    def __hasnext__(self: "Range") -> tuple[bool, "Range"]:
-        return (self.next < self.stop, self)
-
-    @guppy
-    def __next__(self: "Range") -> tuple[int, "Range"]:
-        # Fine not to check bounds while we can only be called from inside a `for` loop.
-        # if self.start >= self.stop:
-        #    raise StopIteration
-        return (self.next, Range(self.next + 1, self.stop))  # type: ignore[call-arg]
-
-    @guppy
-    def __end__(self: "Range") -> None:
-        pass
+    @no_type_check
+    def __next__(self: "Range") -> "Option[tuple[int, Range]]":
+        if self.next < self.stop:
+            return some((self.next, Range(self.next + 1, self.stop)))
+        return nothing()
 
 
 @guppy.custom(checker=RangeChecker(), higher_order_value=False)
@@ -960,3 +946,11 @@ def __import__(x): ...
 @guppy.custom(MemSwapCompiler())
 def mem_swap(x: L, y: L) -> None:
     """Swaps the values of two variables."""
+
+
+# Import `Option` since it's part of the default module. Has to be at the end of the
+# file to avoid cyclic import.
+#
+# TODO: This is a temporary solution until https://github.com/CQCL/guppylang/issues/732
+#  is properly addressed.
+from guppylang.std.option import Option, nothing, some  # noqa: E402

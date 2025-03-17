@@ -1,3 +1,5 @@
+import pytest
+
 from hugr import ops, val
 
 from guppylang.decorator import guppy
@@ -49,5 +51,20 @@ def test_extern_tuple(validate):
     def main() -> float:
         x, y = ext  # noqa: F821
         return x + y
+
+    validate(module.compile())
+
+
+@pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/827")
+def test_extern_conditional_assign(validate):
+    module = GuppyModule("module")
+
+    guppy.extern("x", ty="int", module=module)
+
+    @guppy(module)
+    def main(b: bool) -> int:
+        if b:
+            x = 4
+        return x
 
     validate(module.compile())

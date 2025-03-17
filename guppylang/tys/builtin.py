@@ -150,6 +150,12 @@ def _sized_iter_to_hugr(args: Sequence[Argument]) -> ht.Type:
     return ty_arg.ty.to_hugr()
 
 
+def _option_to_hugr(args: Sequence[Argument]) -> ht.Type:
+    [arg] = args
+    assert isinstance(arg, TypeArg)
+    return ht.Option(arg.ty.to_hugr())
+
+
 callable_type_def = CallableTypeDef(DefId.fresh(), None)
 tuple_type_def = _TupleTypeDef(DefId.fresh(), None)
 none_type_def = _NoneTypeDef(DefId.fresh(), None)
@@ -213,6 +219,15 @@ sized_iter_type_def = OpaqueTypeDef(
     never_droppable=False,
     to_hugr=_sized_iter_to_hugr,
 )
+option_type_def = OpaqueTypeDef(
+    id=DefId.fresh(),
+    name="Option",
+    defined_at=None,
+    params=[TypeParam(0, "T", must_be_copyable=False, must_be_droppable=False)],
+    never_copyable=False,
+    never_droppable=False,
+    to_hugr=_option_to_hugr,
+)
 
 
 def bool_type() -> OpaqueType:
@@ -251,6 +266,10 @@ def sized_iter_type(iter_type: Type, size: int | Const) -> OpaqueType:
     return OpaqueType([TypeArg(iter_type), ConstArg(size)], sized_iter_type_def)
 
 
+def option_type(element_ty: Type) -> OpaqueType:
+    return OpaqueType([TypeArg(element_ty)], option_type_def)
+
+
 def is_bool_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == bool_type_def
 
@@ -273,7 +292,7 @@ def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
 
 def get_element_type(ty: Type) -> Type:
     assert isinstance(ty, OpaqueType)
-    assert ty.defn == list_type_def or ty.defn == array_type_def
+    assert ty.defn in (list_type_def, array_type_def, option_type_def)
     (arg, *_) = ty.args
     assert isinstance(arg, TypeArg)
     return arg.ty

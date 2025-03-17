@@ -1,0 +1,8 @@
+Error: Not generic (at $FILE:19:4)
+   | 
+17 | @guppy(module)
+18 | def main() -> None:
+19 |     foo[int](0)
+   |     ^^^^^^^^ `foo` is not generic, so no type parameters can be provided
+
+Guppy compilation failed due to 1 previous error

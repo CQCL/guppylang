@@ -227,6 +227,9 @@ ARRAY_SETITEM_CLASSICAL: Final[GlobalConstId] = GlobalConstId.fresh(
 ARRAY_SETITEM_LINEAR: Final[GlobalConstId] = GlobalConstId.fresh(
     "array.__setitem__.linear"
 )
+ARRAY_ITER_ASSERT_ALL_USED_HELPER: Final[GlobalConstId] = GlobalConstId.fresh(
+    "ArrayIter._assert_all_used.helper"
+)
 
 
 class ArrayGetitemCompiler(ArrayCompiler):
@@ -472,27 +475,44 @@ class ArraySetitemCompiler(ArrayCompiler):
         raise InternalGuppyError("Call compile_with_inouts instead")
 
 
-class ArrayIterEndCompiler(ArrayCompiler):
-    """Compiler for the `ArrayIter.__end__` method."""
+class ArrayIterAsertAllUsedCompiler(ArrayCompiler):
+    """Compiler for the `ArrayIter._assert_all_used` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         # For linear array iterators, map the array of optional elements to an
         # `array[None, n]` that we can discard.
         if self.elem_ty.type_bound() == ht.TypeBound.Any:
             elem_opt_ty = ht.Option(self.elem_ty)
-            none_ty = ht.UnitSum(1)
-            # Define `unwrap_none` function. If any of the elements are not `None`,
-            # then the users must have called `__end__` prematurely and we panic.
-            func = self.builder.define_function("unwrap_none", [elem_opt_ty], [none_ty])
-            err_msg = "Linear array element has not been used in iterator"
-            build_expect_none(func, func.inputs()[0], err_msg)
-            func.set_outputs(func.add_op(ops.Tag(0, none_ty)))
-            func = self.builder.load_function(func)
+            unit_ty = ht.UnitSum(1)
+            # Instantiate `unwrap_none` function
+            func = self.builder.load_function(
+                self.define_unwrap_none_helper(),
+                type_args=[ht.TypeTypeArg(self.elem_ty)],
+                instantiation=ht.FunctionType([elem_opt_ty], [unit_ty]),
+            )
             # Map it over the array so that the resulting array is no longer linear and
             # can be discarded
             [array_iter] = args
             array, _ = self.builder.add_op(ops.UnpackTuple(), array_iter)
             self.builder.add_op(
-                array_map(elem_opt_ty, self.length, none_ty), array, func
+                array_map(elem_opt_ty, self.length, unit_ty), array, func
             )
         return []
+
+    def define_unwrap_none_helper(self) -> hf.Function:
+        """Define an `unwrap_none` function that checks that the passed element is
+        indeed `None`."""
+        opt_ty = ht.Option(ht.Variable(0, ht.TypeBound.Any))
+        unit_ty = ht.UnitSum(1)
+        func_ty = ht.PolyFuncType(
+            params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+            body=ht.FunctionType([opt_ty], [unit_ty]),
+        )
+        func, already_defined = self.ctx.declare_global_func(
+            ARRAY_ITER_ASSERT_ALL_USED_HELPER, func_ty
+        )
+        if not already_defined:
+            err_msg = "ArrayIter._assert_all_used: array element has not been used"
+            build_expect_none(func, func.inputs()[0], err_msg)
+            func.set_outputs(func.add_op(ops.MakeTuple()))
+        return func

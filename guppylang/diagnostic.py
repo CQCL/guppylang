@@ -237,9 +237,8 @@ class DiagnosticsRenderer:
             # Omit the title if we don't have a span, but a long message. This case
             # should be fairly rare.
             msg = diag.rendered_message or diag.rendered_title
-            self.buffer += textwrap.wrap(
-                f"{self.level_str(diag.level)}: {msg}",
-                self.MAX_MESSAGE_LINE_LEN,
+            self.buffer += wrap(
+                f"{self.level_str(diag.level)}: {msg}", self.MAX_MESSAGE_LINE_LEN
             )
         else:
             span = to_span(diag.span)
@@ -267,16 +266,12 @@ class DiagnosticsRenderer:
                     )
             if diag.rendered_message:
                 self.buffer.append("")
-                self.buffer += textwrap.wrap(
-                    diag.rendered_message,
-                    self.MAX_MESSAGE_LINE_LEN,
-                    replace_whitespace=False,  # Keep \n's in the message
-                )
+                self.buffer += wrap(diag.rendered_message, self.MAX_MESSAGE_LINE_LEN)
         # Finally, render all sub-diagnostics that have a non-span message
         for sub_diag in diag.children:
             if sub_diag.rendered_message:
                 self.buffer.append("")
-                self.buffer += textwrap.wrap(
+                self.buffer += wrap(
                     f"{self.level_str(sub_diag.level)}: {sub_diag.rendered_message}",
                     self.MAX_MESSAGE_LINE_LEN,
                 )
@@ -372,7 +367,7 @@ class DiagnosticsRenderer:
 
         # Render the label next to the highlight
         if label:
-            [label_first, *label_rest] = textwrap.wrap(
+            [label_first, *label_rest] = wrap(
                 label,
                 self.MAX_LABEL_LINE_LEN,
                 # One space after the last `^`
@@ -390,3 +385,24 @@ class DiagnosticsRenderer:
     def level_str(level: DiagnosticLevel) -> str:
         """Returns the text used to identify the different kinds of diagnostics."""
         return level.name.lower().capitalize()
+
+
+def wrap(text: str, width: int, **kwargs: Any) -> list[str]:
+    """Custom version of `textwrap.wrap` that correctly handles text with line breaks.
+
+    Even with `replace_whitespace=False`, the original version doesn't count line breaks
+    as new paragraphs and instead would produce bad results like
+
+    ```
+    short paragraph of text
+
+    long paragraph of text xxxxx                             # broken too early :(
+    xxxx xxxxxx xxxx xxxxx xxxxxxxx xxxxxxxxxxxx xxxxx xx
+    xxxx xxxxxxx xxxxx xx xxxx xxxxxxx xxxx
+    ```
+    """
+    return [
+        line
+        for paragraph in text.splitlines()
+        for line in (textwrap.wrap(paragraph, width, **kwargs) if paragraph else [""])
+    ]

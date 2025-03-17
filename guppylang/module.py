@@ -298,6 +298,7 @@ class GuppyModule:
             for def_id, defn in parsed.items()
         }
 
+    @pretty_errors
     def check(self) -> None:
         """Type-checks the module."""
         if self.checked:

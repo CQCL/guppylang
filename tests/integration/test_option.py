@@ -2,11 +2,10 @@ from typing import no_type_check
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std.option import Option, nothing, some
-
+from guppylang.std.quantum import qubit
 
 def test_none(validate, run_int_fn):
     module = GuppyModule("test_range")
-    module.load(Option, nothing)
 
     @guppy(module)
     @no_type_check
@@ -23,7 +22,6 @@ def test_none(validate, run_int_fn):
 
 def test_some_unwrap(validate, run_int_fn):
     module = GuppyModule("test_range")
-    module.load(Option, some)
 
     @guppy(module)
     @no_type_check
@@ -37,10 +35,24 @@ def test_some_unwrap(validate, run_int_fn):
     validate(compiled)
     run_int_fn(compiled, expected=42)
 
+def test_nothing_unwrap(validate, run_int_fn):
+    module = GuppyModule("test_range")
+    module.load(qubit)
+
+    @guppy(module)
+    @no_type_check
+    def main() -> int:
+        x: Option[qubit] = nothing()
+        x.unwrap_nothing() # linearity error without this line
+        return 1
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=1)
+
 
 def test_take(validate, run_int_fn):
     module = GuppyModule("test_range")
-    module.load(Option, some)
 
     @guppy(module)
     @no_type_check

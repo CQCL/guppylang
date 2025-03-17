@@ -67,6 +67,7 @@ from guppylang.checker.errors.type_errors import (
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
     NotCallableError,
+    TypeApplyNotGenericError,
     TypeInferenceError,
     TypeMismatchError,
     UnaryOperatorNotDefinedError,
@@ -116,9 +117,11 @@ from guppylang.tys.builtin import (
     is_sized_iter_type,
     list_type,
     nat_type,
+    option_type,
     string_type,
 )
 from guppylang.tys.param import ConstParam, TypeParam
+from guppylang.tys.parsing import arg_from_ast
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     ExistentialTypeVar,
@@ -603,6 +606,11 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
+        # Special case for subscripts on functions: Those are type applications
+        if isinstance(ty, FunctionType):
+            inst = check_type_apply(ty, node, self.ctx)
+            return instantiate_poly(node.value, ty, inst), ty.instantiate(inst)
+        # Otherwise, it's a regular __getitem__ subscript
         item_expr, item_ty = self.synthesize(node.slice)
         # Give the item a unique name so we can refer to it later in case we also want
         # to compile a call to `__setitem__`
@@ -728,7 +736,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
         exp_sig = FunctionType(
             [FuncInput(ty, flags)],
-            TupleType([ExistentialTypeVar.fresh("T", True, True), ty]),
+            option_type(TupleType([ExistentialTypeVar.fresh("T", True, True), ty])),
         )
         return self.synthesize_instance_func(
             node.value, [], "__next__", "an iterator", exp_sig, True
@@ -850,6 +858,38 @@ def try_coerce_to(
     return None
 
 
+def check_type_apply(ty: FunctionType, node: ast.Subscript, ctx: Context) -> Inst:
+    """Checks a `f[T1, T2, ...]` type application of a generic function."""
+    func = node.value
+    arg_exprs = (
+        node.slice.elts
+        if isinstance(node.slice, ast.Tuple) and len(node.slice.elts) > 0
+        else [node.slice]
+    )
+    globals = ctx.globals
+
+    if not ty.parametrized:
+        func_name = globals[func.def_id].name if isinstance(func, GlobalName) else None
+        raise GuppyError(TypeApplyNotGenericError(node, func_name))
+
+    exp, act = len(ty.params), len(arg_exprs)
+    assert exp > 0
+    assert act > 0
+    if exp != act:
+        if exp < act:
+            span = Span(to_span(arg_exprs[exp]).start, to_span(arg_exprs[-1]).end)
+        else:
+            span = Span(to_span(arg_exprs[-1]).end, to_span(node).end)
+        err = WrongNumberOfArgsError(span, exp, act, detailed=True, is_type_apply=True)
+        err.add_sub_diagnostic(WrongNumberOfArgsError.SignatureHint(None, ty))
+        raise GuppyError(err)
+
+    return [
+        param.check_arg(arg_from_ast(arg_expr, globals, ctx.generic_params), arg_expr)
+        for arg_expr, param in zip(arg_exprs, ty.params, strict=True)
+    ]
+
+
 def check_num_args(
     exp: int, act: int, node: AstNode, sig: FunctionType | None = None
 ) -> None:
@@ -891,7 +931,9 @@ def type_check_args(
     for inp, func_inp in zip(inputs, func_ty.inputs, strict=True):
         a, s = ExprChecker(ctx).check(inp, func_inp.ty.substitute(subst), "argument")
         if InputFlags.Inout in func_inp.flags and isinstance(a, PlaceNode):
-            a.place = check_inout_arg_place(a.place, ctx, a)
+            a.place = check_place_assignable(
+                a.place, ctx, a, "able to borrow subscripted elements"
+            )
         new_args.append(a)
         subst |= s
 
@@ -910,8 +952,11 @@ def type_check_args(
     return new_args, subst
 
 
-def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
-    """Performs additional checks for borrowed place arguments.
+def check_place_assignable(
+    place: Place, ctx: Context, node: ast.expr, reason: str
+) -> Place:
+    """Performs additional checks for assignments to places, for example for borrowed
+    place arguments after function returns.
 
     In particular, we need to check that places involving `place[item]` subscripts
     implement the corresponding `__setitem__` method.
@@ -920,10 +965,12 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
         case Variable():
             return place
         case FieldAccess(parent=parent):
-            return replace(place, parent=check_inout_arg_place(parent, ctx, node))
+            return replace(
+                place, parent=check_place_assignable(parent, ctx, node, reason)
+            )
         case SubscriptAccess(parent=parent, item=item, ty=ty):
             # Create temporary variable for the setitem value
-            tmp_var = Variable(next(tmp_vars), ty, node)
+            tmp_var = Variable(next(tmp_vars), item.ty, node)
             # Check a call to the `__setitem__` instance function
             exp_sig = FunctionType(
                 [
@@ -942,7 +989,7 @@ def check_inout_arg_place(place: Place, ctx: Context, node: PlaceNode) -> Place:
                 setitem_args[0],
                 setitem_args[1:],
                 "__setitem__",
-                "able to borrow subscripted elements",
+                reason,
                 exp_sig,
                 True,
             )
@@ -1109,9 +1156,6 @@ def synthesize_comprehension(
     # Check remaining generators in inner context
     gens, elt, elt_ty = synthesize_comprehension(node, gens, elt, inner_ctx)
 
-    # The iter finalizer is again checked in the outer context
-    gen.iterend, iterend_ty = ExprSynthesizer(ctx).synthesize(gen.iterend)
-    gen.iterend = with_type(iterend_ty, gen.iterend)
     return [gen, *gens], elt, elt_ty
 
 
@@ -1133,12 +1177,15 @@ def check_generator(
     inner_locals: Locals[str, Variable] = Locals({}, parent_scope=ctx.locals)
     inner_ctx = Context(ctx.globals, inner_locals, ctx.generic_params)
     expr_sth, stmt_chk = ExprSynthesizer(inner_ctx), StmtChecker(inner_ctx)
-    gen.hasnext_assign = stmt_chk.visit_Assign(gen.hasnext_assign)
-    gen.next_assign = stmt_chk.visit_Assign(gen.next_assign)
-    gen.hasnext, hasnext_ty = expr_sth.visit(gen.hasnext)
-    gen.hasnext = with_type(hasnext_ty, gen.hasnext)
     gen.iter, iter_ty = expr_sth.visit(gen.iter)
     gen.iter = with_type(iter_ty, gen.iter)
+
+    # The type returned by `next_call` is `Option[tuple[elt_ty, iter_ty]]`
+    gen.next_call, option_ty = expr_sth.synthesize(gen.next_call)
+    next_ty = get_element_type(option_ty)
+    assert isinstance(next_ty, TupleType)
+    [elt_ty, _] = next_ty.element_types
+    gen.target = stmt_chk._check_assign(gen.target, gen.next_call, elt_ty)
 
     # Check `if` guards
     for i in range(len(gen.ifs)):

@@ -7,6 +7,7 @@ from hugr import ops
 from hugr import tys as ht
 from hugr.std.int import int_t
 
+from guppylang.std._internal.compiler.prelude import error_type
 from guppylang.tys.ty import NumericType
 
 INT_T = int_t(NumericType.INT_WIDTH)
@@ -52,6 +53,26 @@ def iwiden_s(from_width: int, to_width: int) -> ops.ExtOp:
     """Returns a signed `std.arithmetic.int.widen_s` operation."""
     return _instantiate_int_op(
         "iwiden_s", [from_width, to_width], [int_t(from_width)], [int_t(to_width)]
+    )
+
+
+def inarrow_u(from_width: int, to_width: int) -> ops.ExtOp:
+    """Returns an unsigned `std.arithmetic.int.narrow_u` operation."""
+    return _instantiate_int_op(
+        "inarrow_u",
+        [from_width, to_width],
+        [int_t(from_width)],
+        [ht.Either([error_type()], [int_t(to_width)])],
+    )
+
+
+def inarrow_s(from_width: int, to_width: int) -> ops.ExtOp:
+    """Returns a signed `std.arithmetic.int.narrow_s` operation."""
+    return _instantiate_int_op(
+        "inarrow_s",
+        [from_width, to_width],
+        [int_t(from_width)],
+        [ht.Either([error_type()], [int_t(to_width)])],
     )
 
 
