@@ -7,7 +7,7 @@ Error: Error in comptime function return (at $FILE:9:0)
 10 |     xs.clear()
    | ^^^^^^^^^^^^^^
 
-Borrowed argument `xs` cannot be returned back to the caller. Cannot infer the
-type of empty list
+Argument `xs` is borrowed, so it is implicitly returned to the caller. Cannot
+infer the type of empty list
 
 Guppy compilation failed due to 1 previous error

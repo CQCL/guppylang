@@ -105,8 +105,8 @@ def trace_function(
         for inout_obj, inp, name in zip(inputs, ty.inputs, ty.input_names, strict=True):
             if InputFlags.Inout in inp.flags:
                 err_prefix = (
-                    f"Borrowed argument `{name}` cannot be returned back to the "
-                    f"caller. "
+                    f"Argument `{name}` is borrowed, so it is implicitly returned to "
+                    f"the caller. "
                 )
                 try:
                     obj = guppy_object_from_py(inout_obj, builder, node)

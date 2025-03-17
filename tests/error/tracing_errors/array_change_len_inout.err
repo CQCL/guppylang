@@ -7,7 +7,7 @@ Error: Error in comptime function return (at $FILE:9:0)
 10 |     xs.pop()
    | ^^^^^^^^^^^^
 
-Borrowed argument `xs` cannot be returned back to the caller. Expected it to
-have type `array[int, 10]`, but got `array[int, 9]`.
+Argument `xs` is borrowed, so it is implicitly returned to the caller. Expected
+it to have type `array[int, 10]`, but got `array[int, 9]`.
 
 Guppy compilation failed due to 1 previous error

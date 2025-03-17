@@ -7,8 +7,8 @@ Error: Error in comptime function return (at $FILE:10:0)
 11 |     measure(q)
    | ^^^^^^^^^^^^^^
 
-Borrowed argument `q` cannot be returned back to the caller. Value with non-
-copyable type `qubit` was already used
+Argument `q` is borrowed, so it is implicitly returned to the caller. Value with
+non-copyable type `qubit` was already used
 
 Previous use occurred in
 linear_not_owned1.py:11 as an argument to `measure`

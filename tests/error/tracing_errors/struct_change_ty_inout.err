@@ -7,7 +7,7 @@ Error: Error in comptime function return (at $FILE:16:0)
 17 |     s.x = 1.0
    | ^^^^^^^^^^^^^
 
-Borrowed argument `s` cannot be returned back to the caller. Field `x` of object
-with type `S` has an unexpected type. Expected `int`, got `float`.
+Argument `s` is borrowed, so it is implicitly returned to the caller. Field `x`
+of object with type `S` has an unexpected type. Expected `int`, got `float`.
 
 Guppy compilation failed due to 1 previous error
