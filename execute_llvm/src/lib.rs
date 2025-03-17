@@ -13,15 +13,16 @@ macro_rules! pyerr {
     ($fmt:literal $(,$arg:tt)*) => { PyValueError::new_err(format!($fmt, $($arg),*)) }
 }
 
-fn parse_hugr(hugr_json: &str) -> PyResult<hugr::Hugr> {
-    let mut pkg = Package::from_json(hugr_json, &std_extensions::std_reg())
+fn parse_hugr(hugr_str: &str) -> PyResult<hugr::Hugr> {
+    let mut pkg = Package::load_str(hugr_str, Some(&std_extensions::std_reg()))
         .map_err(|e| pyerr!("Couldn't deserialize hugr: {}", e))?;
     let hugr = std::mem::take(&mut pkg.modules[0]);
+    println!("{}", hugr.mermaid_string());
     Ok(hugr)
 }
 
 // Find the FuncDefn node for the function we're trying to execute.
-fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node> {
+fn find_funcdef_node<H: HugrView>(hugr: H, fn_name: &str) -> PyResult<H::Node> {
     let root = hugr.root();
     let mut fn_nodes = Vec::new();
     for n in hugr.children(root) {
@@ -42,11 +43,16 @@ fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node>
     }
 }
 
-fn guppy_pass(mut hugr: Hugr) -> Hugr {
+fn guppy_pass(hugr: &mut Hugr, entry_fn: &str) {
     hugr::algorithms::MonomorphizePass::default()
-        .run(&mut hugr)
+        .run(hugr)
         .unwrap();
-    hugr::algorithms::remove_polyfuncs(hugr)
+    hugr::algorithms::RemoveDeadFuncsPass::default()
+        .with_module_entry_points([
+            find_funcdef_node(&hugr, entry_fn).expect("entry point function error.")
+        ])
+        .run(hugr)
+        .unwrap();
 }
 
 fn codegen_extensions() -> CodegenExtsMap<'static, Hugr> {
@@ -80,12 +86,12 @@ fn compile_module<'a>(
 }
 
 fn run_function<T>(
-    hugr_json: &str,
+    hugr_str: &str,
     fn_name: &str,
     parse_result: impl FnOnce(&Context, GenericValue) -> PyResult<T>,
 ) -> PyResult<T> {
-    let mut hugr = parse_hugr(hugr_json)?;
-    hugr = guppy_pass(hugr);
+    let mut hugr = parse_hugr(hugr_str)?;
+    guppy_pass(&mut hugr, fn_name);
     let ctx = Context::create();
 
     let namer = hugr::llvm::emit::Namer::default();
@@ -113,11 +119,11 @@ mod execute_llvm {
     use super::*;
 
     #[pyfunction]
-    fn compile_module_to_string(hugr_json: &str) -> PyResult<String> {
-        let mut hugr = parse_hugr(hugr_json)?;
+    fn compile_module_to_string(hugr_str: &str) -> PyResult<String> {
+        let mut hugr = parse_hugr(hugr_str)?;
         let ctx = Context::create();
 
-        hugr = guppy_pass(hugr);
+        guppy_pass(&mut hugr, "main");
         let module = compile_module(&hugr, &ctx, Default::default())?;
 
         Ok(module.print_to_string().to_str().unwrap().to_string())
