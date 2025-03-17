@@ -215,7 +215,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 call_node = outer_func.call(hugr_func, *(input_list + bool_wires))
 
                 # Pytket circuit hugr has qubit and bool wires in the opposite
-                # order.
+                # order to Guppy output wires.
                 output_list: list[Wire] = list(call_node.outputs())
                 wires = (
                     output_list[self.input_circuit.n_qubits :]
