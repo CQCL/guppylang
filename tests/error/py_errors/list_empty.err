@@ -4,6 +4,6 @@ Error: Cannot infer type (at $FILE:6:9)
 5 | def foo() -> None:
 6 |     xs = py([])
   |          ^^^^^^ Cannot infer type variables in expression of type
-  |                 `array[?T, 0]`
+  |                 `frozenarray[?T, 0]`
 
 Guppy compilation failed due to 1 previous error

@@ -54,7 +54,7 @@ def validate(request, export_test_cases_dir: Path):
         if isinstance(hugr, PackagePointer):
             hugr = hugr.package
         # Validate via the json encoding
-        js = hugr.to_json()
+        js = hugr.to_str()
 
         if export_test_cases_dir:
             file_name = f"{request.node.name}{f'_{name}' if name else ''}.json"
