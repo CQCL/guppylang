@@ -3,6 +3,7 @@ from hugr import tys
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std.builtins import owned
+from guppylang.std.option import Option
 from guppylang.std.quantum import qubit
 from guppylang.std.quantum_functional import h, cx
 
@@ -252,13 +253,7 @@ def test_linear_next_nonlinear_iter(validate):
         """An iterator that yields linear values but is not linear itself."""
 
         @guppy.declare(module)
-        def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]: ...
-
-        @guppy.declare(module)
-        def __next__(self: "MyIter") -> tuple[qubit, "MyIter"]: ...
-
-        @guppy.declare(module)
-        def __end__(self: "MyIter") -> None: ...
+        def __next__(self: "MyIter") -> Option[tuple[qubit, "MyIter"]]: ...
 
     @guppy.type(NoneType().to_hugr(), module=module)
     class MyType:
@@ -290,13 +285,7 @@ def test_nonlinear_next_linear_iter(validate):
         """A linear iterator that yields non-linear values."""
 
         @guppy.declare(module)
-        def __hasnext__(self: "MyIter" @owned) -> tuple[bool, "MyIter"]: ...
-
-        @guppy.declare(module)
-        def __next__(self: "MyIter" @owned) -> tuple[int, "MyIter"]: ...
-
-        @guppy.declare(module)
-        def __end__(self: "MyIter" @owned) -> None: ...
+        def __next__(self: "MyIter" @owned) -> Option[tuple[int, "MyIter"]]: ...
 
     @guppy.type(NoneType().to_hugr(), module=module)
     class MyType:

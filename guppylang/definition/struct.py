@@ -1,6 +1,5 @@
 import ast
 import inspect
-import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any, ClassVar
@@ -27,6 +26,7 @@ from guppylang.definition.custom import (
     CustomFunctionDef,
     DefaultCallChecker,
 )
+from guppylang.definition.function import parse_source
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
 from guppylang.diagnostic import Error, Help
@@ -278,9 +278,7 @@ def parse_py_class(cls: type, sources: SourceMap) -> ast.ClassDef:
             return defn.node
         # else, fall through to handle builtins.
     source_lines, line_offset = inspect.getsourcelines(cls)
-    source = "".join(source_lines)  # Lines already have trailing \n's
-    source = textwrap.dedent(source)
-    cls_ast = ast.parse(source).body[0]
+    source, cls_ast, line_offset = parse_source(source_lines, line_offset)
     file = inspect.getsourcefile(cls)
     if file is None:
         raise GuppyError(UnknownSourceError(None, cls))
