@@ -365,7 +365,9 @@ class GuppyObject(DunderMixin):
     def __iter__(self) -> Any:
         # Abstract Guppy objects are not iterable from Python since our iterator
         # protocol doesn't work during tracing.
-        raise GuppyComptimeError(f"Expression of type `{self._ty}` is not iterable")
+        raise GuppyComptimeError(
+            f"Expression of type `{self._ty}` is not iterable at comptime"
+        )
 
     def _use_wire(self, called_func: CompiledCallableDef | None) -> Wire:
         # Panic if the value has already been used
