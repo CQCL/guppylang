@@ -106,13 +106,13 @@ from guppylang.nodes import (
 from guppylang.span import Span, to_span
 from guppylang.tys.arg import TypeArg
 from guppylang.tys.builtin import (
-    array_type,
     bool_type,
     float_type,
+    frozenarray_type,
     get_element_type,
     int_type,
-    is_array_type,
     is_bool_type,
+    is_frozenarray_type,
     is_list_type,
     is_sized_iter_type,
     list_type,
@@ -1270,12 +1270,14 @@ def _python_list_to_guppy_type(
     representable in Guppy.
     """
     if len(vs) == 0:
-        return array_type(ExistentialTypeVar.fresh("T", True, True), 0)
+        return frozenarray_type(ExistentialTypeVar.fresh("T", True, True), 0)
 
     # All the list elements must have a unifiable types
     v, *rest = vs
     elt_hint = (
-        get_element_type(type_hint) if type_hint and is_array_type(type_hint) else None
+        get_element_type(type_hint)
+        if type_hint and is_frozenarray_type(type_hint)
+        else None
     )
     el_ty = python_value_to_guppy_type(v, node, globals, elt_hint)
     if el_ty is None:
@@ -1287,4 +1289,4 @@ def _python_list_to_guppy_type(
         if (subst := unify(ty, el_ty, {})) is None:
             raise GuppyError(PyExprIncoherentListError(node))
         el_ty = el_ty.substitute(subst)
-    return array_type(el_ty, len(vs))
+    return frozenarray_type(el_ty, len(vs))

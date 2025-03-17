@@ -63,8 +63,8 @@ from guppylang.tys.builtin import (
     bool_type,
     get_element_type,
     int_type,
-    is_array_type,
     is_bool_type,
+    is_frozenarray_type,
 )
 from guppylang.tys.const import BoundConstVar, ConstValue, ExistentialConstVar
 from guppylang.tys.subst import Inst
@@ -681,13 +681,13 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
             if doesnt_contain_none(vs):
                 return hv.Tuple(*vs)
         case list(elts):
-            assert is_array_type(exp_ty)
+            assert is_frozenarray_type(exp_ty)
             elem_ty = get_element_type(exp_ty)
             vs = [python_value_to_hugr(elt, elem_ty) for elt in elts]
             if doesnt_contain_none(vs):
-                opt_ty = ht.Option(elem_ty.to_hugr())
-                opt_vs: list[hv.Value] = [hv.Some(v) for v in vs]
-                return hugr.std.collections.array.ArrayVal(opt_vs, opt_ty)
+                return hugr.std.collections.static_array.StaticArrayVal(
+                    vs, elem_ty.to_hugr(), name=f"static_pyarray.{next(tmp_vars)}"
+                )
         case _:
             return None
     return None

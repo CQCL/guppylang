@@ -1,7 +1,6 @@
 """Guppy module for builtin types and operations."""
 
 # mypy: disable-error-code="empty-body, misc, override, valid-type, no-untyped-def"
-
 from typing import Any, Generic, TypeVar, no_type_check
 
 import hugr.std.int
@@ -26,6 +25,7 @@ from guppylang.std._internal.compiler.array import (
     ArraySetitemCompiler,
     NewArrayCompiler,
 )
+from guppylang.std._internal.compiler.frozenarray import FrozenarrayGetitemCompiler
 from guppylang.std._internal.compiler.list import (
     ListGetitemCompiler,
     ListLengthCompiler,
@@ -44,6 +44,7 @@ from guppylang.tys.builtin import (
     array_type_def,
     bool_type_def,
     float_type_def,
+    frozenarray_type_def,
     int_type_def,
     list_type_def,
     nat_type_def,
@@ -616,6 +617,45 @@ class ArrayIter(Generic[L, n]):
 
 @guppy.custom(ArrayGetitemCompiler())
 def _array_unsafe_getitem(xs: array[L, n], idx: int) -> L: ...
+
+
+@guppy.extend_type(frozenarray_type_def)
+class frozenarray(Generic[T, n]):
+    """An immutable array of fixed static size."""
+
+    @guppy.custom(FrozenarrayGetitemCompiler())
+    def __getitem__(self: "frozenarray[T, n]", item: int) -> T: ...  # type: ignore[type-arg]
+
+    @guppy
+    @no_type_check
+    def __len__(self: "frozenarray[T, n]") -> int:
+        return n
+
+    @guppy
+    @no_type_check
+    def __iter__(self: "frozenarray[T, n]") -> "SizedIter[FrozenarrayIter[T, n], n]":
+        return SizedIter(FrozenarrayIter(self, 0))
+
+    @guppy
+    @no_type_check
+    def mutable_copy(self: "frozenarray[T, n]") -> array[T, n]:
+        """Creates a mutable copy of this array."""
+        return array(x for x in self)
+
+
+@guppy.struct
+class FrozenarrayIter(Generic[T, n]):
+    xs: frozenarray[T, n]  # type: ignore[type-arg]
+    i: int
+
+    @guppy
+    @no_type_check
+    def __next__(
+        self: "FrozenarrayIter[T, n]",
+    ) -> "Option[tuple[T, FrozenarrayIter[T, n]]]":
+        if self.i < int(n):
+            return some((self.xs[self.i], FrozenarrayIter(self.xs, self.i + 1)))
+        return nothing()
 
 
 @guppy.extend_type(sized_iter_type_def)

@@ -5,7 +5,7 @@ from importlib.util import find_spec
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import py, array, nat, owned
+from guppylang.std.builtins import py, array, frozenarray, nat, owned
 from tests.util import compile_guppy
 
 tket2_installed = find_spec("tket2") is not None
@@ -73,7 +73,7 @@ def test_tuple_implicit(validate):
 
 def test_list_basic(validate):
     @compile_guppy
-    def foo() -> array[int, 3]:
+    def foo() -> frozenarray[int, 3]:
         xs = py([1, 2, 3])
         return xs
 
@@ -82,7 +82,7 @@ def test_list_basic(validate):
 
 def test_list_empty(validate):
     @compile_guppy
-    def foo() -> array[int, 0]:
+    def foo() -> frozenarray[int, 0]:
         return py([])
 
     validate(foo)
@@ -91,7 +91,7 @@ def test_list_empty(validate):
 def test_list_empty_nested(validate):
     @compile_guppy
     def foo() -> None:
-        xs: array[tuple[int, array[bool, 0]], 1] = py([(42, [])])
+        xs: frozenarray[tuple[int, frozenarray[bool, 0]], 1] = py([(42, [])])
 
     validate(foo)
 
@@ -99,7 +99,7 @@ def test_list_empty_nested(validate):
 def test_list_empty_multiple(validate):
     @compile_guppy
     def foo() -> None:
-        xs: tuple[array[int, 0], array[bool, 0]] = py([], [])
+        xs: tuple[frozenarray[int, 0], frozenarray[bool, 0]] = py([], [])
 
     validate(foo)
 
@@ -109,7 +109,7 @@ def test_nats_from_ints(validate):
     def foo() -> None:
         x: nat = py(1)
         y: tuple[nat, nat] = py(2, 3)
-        z: array[nat, 3] = py([4, 5, 6])
+        z: frozenarray[nat, 3] = py([4, 5, 6])
 
     validate(foo)
 
