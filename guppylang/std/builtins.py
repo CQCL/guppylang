@@ -87,6 +87,8 @@ class array(list[_T], Generic[_T, _n]):
     """Class to import in order to use arrays."""
 
     def __init__(self, *args: Any):
+        # Call the list constructor. This way, users can use the array constructor
+        # inside comptime functions and get a list as output
         list.__init__(self, args)
 
 
