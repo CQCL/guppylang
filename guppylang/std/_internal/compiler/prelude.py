@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Final, TypeVar
 
 import hugr.std.collections
 import hugr.std.int
@@ -13,6 +13,7 @@ from hugr import Node, Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
 
+from guppylang.compiler.core import CompilerContext, GlobalConstId
 from guppylang.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
@@ -21,6 +22,7 @@ from guppylang.tys.subst import Inst
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from hugr.build import function as hf
     from hugr.build.dfg import DfBase
 
     from guppylang.tys.subst import Inst
@@ -160,33 +162,94 @@ class MemSwapCompiler(CustomCallCompiler):
         raise InternalGuppyError("Call compile_with_inouts instead")
 
 
+UNWRAP_RESULT_CLASSICAL: Final[GlobalConstId] = GlobalConstId.fresh(
+    "unwrap_result.classical"
+)
+
+UNWRAP_RESULT_LINEAR: Final[GlobalConstId] = GlobalConstId.fresh("unwrap_result.linear")
+
+
+def _build_unwrap_result(func: hf.Function, result_type_var: ht.Variable) -> None:
+    either = func.inputs()[0]
+    conditional = func.add_conditional(either)
+    with conditional.add_case(0) as case:
+        [error] = list(case.inputs())
+        case.set_outputs(
+            *build_panic(case, [error_type()], [result_type_var], error, *case.inputs())
+        )
+    with conditional.add_case(1) as case:
+        case.set_outputs(*case.inputs())
+    func.set_outputs(conditional.to_node())
+
+
+def unwrap_result(
+    builder: DfBase[P],
+    ctx: CompilerContext,
+    either: Wire,
+) -> Wire:
+    """Builds or retrieves and then calls a function that unwraps an `hugr.tys.Either`
+    value, panicking if the result is an error.
+    """
+    either_ty = builder.hugr.port_type(either.out_port())
+    assert isinstance(either_ty, ht.Either)
+    [error_tys, result_tys] = either_ty.variant_rows
+    result_bound = either_ty.type_bound()
+    # Construct the function signature for unwrapping a result of type T.
+    func_ty = ht.PolyFuncType(
+        params=[ht.TypeTypeParam(result_bound)],
+        body=ht.FunctionType(
+            input=[ht.Either(error_tys, [ht.Variable(0, result_bound)])],
+            output=[ht.Variable(0, result_bound)],
+        ),
+    )
+    # Build global unwrap result function if it doesn't already exist.
+    if result_bound == ht.TypeBound.Any:
+        func, already_exists = ctx.declare_global_func(UNWRAP_RESULT_LINEAR, func_ty)
+        if not already_exists:
+            _build_unwrap_result(func, ht.Variable(0, result_bound))
+    else:
+        func, already_exists = ctx.declare_global_func(UNWRAP_RESULT_CLASSICAL, func_ty)
+        if not already_exists:
+            _build_unwrap_result(func, ht.Variable(0, result_bound))
+    # Call the global function.
+    concrete_ty = ht.FunctionType(
+        input=[ht.Either(error_tys, result_tys)], output=result_tys
+    )
+    type_args = [ht.TypeTypeArg(*result_tys)]
+    func_call = builder.call(
+        func.parent_node,
+        either,
+        instantiation=concrete_ty,
+        type_args=type_args,
+    )
+    [result] = list(func_call.outputs())
+    return result
+
+
 class UnwrapOpCompiler(CustomInoutCallCompiler):
-    """Compiler for operations that require unwrapping an single option value result
-    which can potentially cause an error.
+    """Compiler for operations that require unwrapping a result which could potentially
+    cause a panic.
 
     Args:
-        op: A HUGR operation that outputs an option value.
-        err_msg: The error message to be raised if the unwrapped option is an error.
+        op: A HUGR operation that outputs an Either<error, result> value.
     """
 
     op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]
-    err_msg: str
 
-    def __init__(self, op: Callable[[ht.FunctionType, Inst], ops.DataflowOp], err: str):
+    def __init__(self, op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]):
         self.op = op
-        self.err_msg = err
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         assert len(self.ty.output) == 1
         # To instantiate the op we need a function signature that wraps the output of
-        # the function that is being compiled into a sum type.
+        # the function that is being compiled into an either type.
         opt_func_type = ht.FunctionType(
             input=self.ty.input,
             output=[ht.Either([error_type()], self.ty.output)],
         )
         op = self.op(opt_func_type, self.type_args)
-        option = self.builder.add_op(op, *args)
-        result = build_unwrap(self.builder, option, self.err_msg)
+        either = self.builder.add_op(op, *args)
+        result = unwrap_result(self.builder, self.ctx, either)
         return CallReturnWires(regular_returns=[result], inout_returns=[])
 
     def compile(self, args: list[Wire]) -> list[Wire]:

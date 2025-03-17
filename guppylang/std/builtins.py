@@ -473,7 +473,6 @@ class Float:
         UnwrapOpCompiler(
             # Use `int_op` to instantiate type arg with 64-bit integer.
             int_op("trunc_s", hugr.std.int.CONVERSIONS_EXTENSION),
-            "Unsuccessful integer cast",
         )
     )
     def __int__(self: float) -> int: ...
@@ -496,7 +495,6 @@ class Float:
         UnwrapOpCompiler(
             # Use `int_op` to instantiate type arg with 64-bit integer.
             int_op("trunc_u", hugr.std.int.CONVERSIONS_EXTENSION),
-            "Unsuccessful nat cast",
         )
     )
     def __nat__(self: float) -> nat: ...
