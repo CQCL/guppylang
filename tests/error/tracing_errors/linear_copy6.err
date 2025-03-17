@@ -10,7 +10,6 @@ Error: Error in comptime function return (at $FILE:10:0)
 
 Value with non-copyable type `qubit` was already used
 
-Previous use occurred in
-linear_copy6.py:15
+Previous use occurred in linear_copy6.py:15
 
 Guppy compilation failed due to 1 previous error
