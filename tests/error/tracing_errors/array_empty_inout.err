@@ -8,6 +8,6 @@ Error: Error in comptime function return (at $FILE:9:0)
    | ^^^^^^^^^^^^^^
 
 Argument `xs` is borrowed, so it is implicitly returned to the caller. Cannot
-infer the type of empty list
+infer the type of empty list.
 
 Guppy compilation failed due to 1 previous error

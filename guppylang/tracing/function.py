@@ -112,7 +112,10 @@ def trace_function(
                     obj = guppy_object_from_py(inout_obj, builder, node)
                     inout_returns.append(obj._use_wire(None))
                 except GuppyComptimeError as err:
-                    e = TracingReturnError(node, err_prefix + str(err))
+                    msg = str(err)
+                    if not msg.endswith("."):
+                        msg += "."
+                    e = TracingReturnError(node, err_prefix + msg)
                     raise GuppyError(e) from None
                 # Also check that the type hasn't changed (for example, the user could
                 # have changed the length of an array, thus changing its type)
