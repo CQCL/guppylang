@@ -120,7 +120,7 @@ def test_nested_left(validate, run_int_fn):
     run_int_fn(package, expected=sum(x + y for y in range(10) for x in range(20)))
 
 
-def test_generic(validate):
+def test_generic_size(validate):
     module = GuppyModule("test")
     n = guppy.nat_var("n", module)
 
@@ -129,6 +129,15 @@ def test_generic(validate):
         return array(x + 1 for x in xs)
 
     validate(module.compile())
+
+
+def test_generic_elem(validate):
+    module = GuppyModule("test")
+    T = guppy.type_var("T")
+
+    @guppy(module)
+    def foo(x: T) -> array[T, 10]:
+        return array(x for _ in range(10))
 
 
 def test_borrow(validate):
