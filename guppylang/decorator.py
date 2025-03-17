@@ -515,8 +515,9 @@ class _Guppy:
         self,
         name: str,
         input_circuit: Any,
-        use_arrays: bool = True,
         module: GuppyModule | None = None,
+        *,
+        use_arrays: bool = True,
     ) -> RawLoadPytketDef:
         """Adds a pytket circuit function definition with implicit signature."""
         err_msg = "Only pytket circuits can be passed to guppy.load_pytket"
