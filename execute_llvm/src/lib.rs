@@ -17,7 +17,6 @@ fn parse_hugr(pkg_bytes: &[u8]) -> PyResult<hugr::Hugr> {
     let mut pkg = Package::load(pkg_bytes, Some(&std_extensions::std_reg()))
         .map_err(|e| pyerr!("Couldn't deserialize hugr: {}", e))?;
     let hugr = std::mem::take(&mut pkg.modules[0]);
-    println!("{}", hugr.mermaid_string());
     Ok(hugr)
 }
 
