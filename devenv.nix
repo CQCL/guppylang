@@ -8,6 +8,7 @@
     pkgs.llvmPackages_14.libllvm
     pkgs.libffi
     pkgs.libxml2
+    pkgs.graphviz
   ]
   ++ lib.optionals pkgs.stdenv.isLinux [
     pkgs.stdenv.cc.cc.lib

@@ -81,9 +81,6 @@ class TensorCall(ast.expr):
     )
 
 
-AnyCall = LocalCall | GlobalCall | TensorCall
-
-
 class TypeApply(ast.expr):
     value: ast.expr
     inst: Inst
@@ -283,6 +280,17 @@ class PanicExpr(ast.expr):
     values: list[ast.expr]
 
     _fields = ("msg", "values")
+
+
+class BarrierExpr(ast.expr):
+    """A `barrier(*args)` expression."""
+
+    args: list[ast.expr]
+    func_ty: FunctionType
+    _fields = ("args", "func_ty")
+
+
+AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr
 
 
 class InoutReturnSentinel(ast.expr):

@@ -242,5 +242,22 @@ class UnwrapOpCompiler(CustomInoutCallCompiler):
         result = unwrap_result(self.builder, self.ctx, either)
         return CallReturnWires(regular_returns=[result], inout_returns=[])
 
+
+class BarrierCompiler(CustomCallCompiler):
+    """Compiler for the `barrier` function."""
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        tys = [t for arg in args if (t := self.builder.hugr.port_type(arg.out_port()))]
+
+        op = hugr.std.prelude.PRELUDE_EXTENSION.get_op("Barrier").instantiate(
+            [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in tys])]
+        )
+
+        barrier_n = self.builder.add_op(op, *args)
+
+        return CallReturnWires(
+            regular_returns=[], inout_returns=[barrier_n[i] for i in range(len(tys))]
+        )
+
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
