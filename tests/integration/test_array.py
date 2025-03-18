@@ -22,17 +22,12 @@ def test_len_execute(validate, run_int_fn):
 
     compiled = module.compile()
     validate(compiled)
-    run_int_fn(compiled, 42)
+    if run_int_fn is not None:
+        run_int_fn(compiled, 42)
 
 
 def test_len(validate):
-    module = GuppyModule("test")
-
-    @guppy(module)
-    def main(qs: array[float, 42]) -> int:
-        return len(qs)
-
-    validate(module.compile())
+    test_len_execute(validate, None)
 
 
 def test_len_linear(validate):
@@ -46,7 +41,7 @@ def test_len_linear(validate):
     validate(module.compile())
 
 
-def test_len_generic():
+def test_len_generic(validate):
     module = GuppyModule("test")
 
     n = guppy.nat_var("n", module=module)
@@ -58,7 +53,16 @@ def test_len_generic():
                 return True
         return False
 
-    module.compile()
+    package = module.compile()
+    validate(package)
+
+    hg = package.module
+    load_nats = [
+        data.op
+        for _, data in hg.nodes()
+        if isinstance(data.op, ops.ExtOp) and data.op.op_def().name == "load_nat"
+    ]
+    assert len(load_nats) == 1
 
 
 def test_index(validate):
@@ -129,7 +133,7 @@ def test_linear_subscript(validate):
     def foo(q: qubit) -> None: ...
 
     @guppy(module)
-    def main(qs: array[qubit, 42] @owned, i: int) -> array[qubit, 42]:
+    def main(qs: array[qubit, 42] @ owned, i: int) -> array[qubit, 42]:
         foo(qs[i])
         return qs
 
@@ -158,7 +162,7 @@ def test_multi_subscripts(validate):
     def foo(q1: qubit, q2: qubit) -> None: ...
 
     @guppy(module)
-    def main(qs: array[qubit, 42] @owned) -> array[qubit, 42]:
+    def main(qs: array[qubit, 42] @ owned) -> array[qubit, 42]:
         foo(qs[0], qs[1])
         foo(qs[0], qs[0])  # Will panic at runtime
         return qs
@@ -179,7 +183,7 @@ def test_struct_array(validate):
     def foo(q1: qubit, q2: qubit) -> None: ...
 
     @guppy(module)
-    def main(ss: array[S, 10] @owned) -> array[S, 10]:
+    def main(ss: array[S, 10] @ owned) -> array[S, 10]:
         # This will panic at runtime :(
         # To make this work, we would need to replace the qubits in the struct
         # with `qubit | None` and write back `None` after `q1` has been extracted...
@@ -197,12 +201,10 @@ def test_nested_subscripts(validate):
     def foo(q: qubit) -> None: ...
 
     @guppy.declare(module)
-    def bar(
-        q1: qubit, q2: qubit, q3: qubit, q4: qubit
-    ) -> None: ...
+    def bar(q1: qubit, q2: qubit, q3: qubit, q4: qubit) -> None: ...
 
     @guppy(module)
-    def main(qs: array[array[qubit, 13], 42] @owned) -> array[array[qubit, 13], 42]:
+    def main(qs: array[array[qubit, 13], 42] @ owned) -> array[array[qubit, 13], 42]:
         foo(qs[0][0])
         # The following should work *without* panicking at runtime! Accessing `qs[0][0]`
         # replaces one qubit with `None` but puts everything back into `qs` before
@@ -237,7 +239,7 @@ def test_struct_nested_subscript(validate):
     def foo(q1: qubit) -> None: ...
 
     @guppy(module)
-    def main(a: A @owned, i: int, j: int, k: int) -> A:
+    def main(a: A @ owned, i: int, j: int, k: int) -> A:
         foo(a.xs[i].ys[j][k].c)
         return a
 
@@ -251,7 +253,7 @@ def test_generic_function(validate):
     n = guppy.nat_var("n", module=module)
 
     @guppy(module)
-    def foo(xs: array[T, n] @owned) -> array[T, n]:
+    def foo(xs: array[T, n] @ owned) -> array[T, n]:
         return xs
 
     @guppy(module)
@@ -281,7 +283,7 @@ def test_exec_array(validate, run_int_fn):
 
     @guppy(module)
     def main() -> int:
-        a = array(1,2,3)
+        a = array(1, 2, 3)
         return a[0] + a[1] + a[2]
 
     package = module.compile()
@@ -314,6 +316,7 @@ def test_mem_swap(validate):
     module = GuppyModule("test")
 
     module.load(qubit)
+
     @guppy(module)
     def foo(x: qubit, y: qubit) -> None:
         mem_swap(x, y)
@@ -344,7 +347,7 @@ def test_copy1(validate, run_int_fn):
         xs = array(1, 2, 3)
         ys = xs.copy()
         xs = array(4, 5, 6)
-        return xs[0] + ys[0] # Check copy isn't modified
+        return xs[0] + ys[0]  # Check copy isn't modified
 
     compiled = module.compile()
     validate(compiled)
@@ -359,7 +362,7 @@ def test_copy2(validate, run_int_fn):
         xs = array(1, 2, 3)
         ys = copy(xs)
         xs = array(4, 5, 6)
-        return xs[0] + ys[0] # Check copy isn't modified
+        return xs[0] + ys[0]  # Check copy isn't modified
 
     compiled = module.compile()
     validate(compiled)
@@ -373,7 +376,7 @@ def test_copy3(validate, run_int_fn):
     def main() -> int:
         xs = array(1, 2, 3)
         ys = copy(xs)
-        return xs[0] # Check original can keep being used
+        return xs[0]  # Check original can keep being used
 
     compiled = module.compile()
     validate(compiled)
@@ -396,6 +399,7 @@ def test_copy_struct(validate, run_int_fn):
     compiled = module.compile()
     validate(compiled)
     run_int_fn(compiled, expected=1)
+
 
 def test_copy_const(validate, run_int_fn):
     module = GuppyModule("test")
@@ -650,7 +654,7 @@ def test_subscript_assign_unpacking_complicated(validate, run_int_fn):
         xs = array(0, 0, 0)
         (a1, a2), *b, (c1, c2) = array((0, 1), (2, 3), (4, 5), (5, 6))
         return a1 + c1
-    
+
     compiled = module.compile()
     validate(compiled)
     run_int_fn(compiled, expected=5)
@@ -684,7 +688,6 @@ def test_subscript_assign_unpacking_array(validate, run_int_fn):
     run_int_fn(compiled, expected=4)
 
 
-
 # Verifies that array.__getitem__ works across multiple functions calls.
 def test_multiple_functions(validate, run_int_fn):
     module = GuppyModule("test")
@@ -696,7 +699,6 @@ def test_multiple_functions(validate, run_int_fn):
     @guppy(module)
     def second(arr: array[int, 2]) -> int:
         return arr[1]
-
 
     @guppy(module)
     def main() -> int:
