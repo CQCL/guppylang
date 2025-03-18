@@ -162,11 +162,7 @@ class MemSwapCompiler(CustomCallCompiler):
         raise InternalGuppyError("Call compile_with_inouts instead")
 
 
-UNWRAP_RESULT_CLASSICAL: Final[GlobalConstId] = GlobalConstId.fresh(
-    "unwrap_result.classical"
-)
-
-UNWRAP_RESULT_LINEAR: Final[GlobalConstId] = GlobalConstId.fresh("unwrap_result.linear")
+UNWRAP_RESULT: Final[GlobalConstId] = GlobalConstId.fresh("unwrap_result")
 
 
 def _build_unwrap_result(func: hf.Function, result_type_var: ht.Variable) -> None:
@@ -179,7 +175,7 @@ def _build_unwrap_result(func: hf.Function, result_type_var: ht.Variable) -> Non
         )
     with conditional.add_case(1) as case:
         case.set_outputs(*case.inputs())
-    func.set_outputs(conditional.to_node())
+    func.set_outputs(*conditional.outputs())
 
 
 def unwrap_result(
@@ -193,24 +189,18 @@ def unwrap_result(
     either_ty = builder.hugr.port_type(either.out_port())
     assert isinstance(either_ty, ht.Either)
     [error_tys, result_tys] = either_ty.variant_rows
-    result_bound = either_ty.type_bound()
     # Construct the function signature for unwrapping a result of type T.
     func_ty = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(result_bound)],
+        params=[ht.TypeTypeParam(ht.TypeBound.Any)],
         body=ht.FunctionType(
-            input=[ht.Either(error_tys, [ht.Variable(0, result_bound)])],
-            output=[ht.Variable(0, result_bound)],
+            input=[ht.Either(error_tys, [ht.Variable(0, ht.TypeBound.Any)])],
+            output=[ht.Variable(0, ht.TypeBound.Any)],
         ),
     )
     # Build global unwrap result function if it doesn't already exist.
-    if result_bound == ht.TypeBound.Any:
-        func, already_exists = ctx.declare_global_func(UNWRAP_RESULT_LINEAR, func_ty)
-        if not already_exists:
-            _build_unwrap_result(func, ht.Variable(0, result_bound))
-    else:
-        func, already_exists = ctx.declare_global_func(UNWRAP_RESULT_CLASSICAL, func_ty)
-        if not already_exists:
-            _build_unwrap_result(func, ht.Variable(0, result_bound))
+    func, already_exists = ctx.declare_global_func(UNWRAP_RESULT, func_ty)
+    if not already_exists:
+        _build_unwrap_result(func, ht.Variable(0, ht.TypeBound.Any))
     # Call the global function.
     concrete_ty = ht.FunctionType(
         input=[ht.Either(error_tys, result_tys)], output=result_tys
