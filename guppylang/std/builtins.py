@@ -32,7 +32,7 @@ from guppylang.std._internal.compiler.list import (
     ListPushCompiler,
     ListSetitemCompiler,
 )
-from guppylang.std._internal.compiler.prelude import MemSwapCompiler
+from guppylang.std._internal.compiler.prelude import MemSwapCompiler, UnwrapOpCompiler
 from guppylang.std._internal.util import (
     float_op,
     int_op,
@@ -468,7 +468,12 @@ class Float:
     @guppy.hugr_op(float_op("fgt"))
     def __gt__(self: float, other: float) -> bool: ...
 
-    @guppy.hugr_op(unsupported_op("trunc_s"))  # TODO `trunc_s` returns an option
+    @guppy.custom(
+        UnwrapOpCompiler(
+            # Use `int_op` to instantiate type arg with 64-bit integer.
+            int_op("trunc_s", hugr.std.int.CONVERSIONS_EXTENSION),
+        )
+    )
     def __int__(self: float) -> int: ...
 
     @guppy.hugr_op(float_op("fle"))
@@ -485,7 +490,12 @@ class Float:
     @guppy.hugr_op(float_op("fmul"))
     def __mul__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(unsupported_op("trunc_u"))  # TODO `trunc_u` returns an option
+    @guppy.custom(
+        UnwrapOpCompiler(
+            # Use `int_op` to instantiate type arg with 64-bit integer.
+            int_op("trunc_u", hugr.std.int.CONVERSIONS_EXTENSION),
+        )
+    )
     def __nat__(self: float) -> nat: ...
 
     @guppy.hugr_op(float_op("fne"))
