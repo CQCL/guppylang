@@ -13,8 +13,8 @@ macro_rules! pyerr {
     ($fmt:literal $(,$arg:tt)*) => { PyValueError::new_err(format!($fmt, $($arg),*)) }
 }
 
-fn parse_hugr(hugr_str: &str) -> PyResult<hugr::Hugr> {
-    let mut pkg = Package::load_str(hugr_str, Some(&std_extensions::std_reg()))
+fn parse_hugr(pkg_bytes: &[u8]) -> PyResult<hugr::Hugr> {
+    let mut pkg = Package::load(pkg_bytes, Some(&std_extensions::std_reg()))
         .map_err(|e| pyerr!("Couldn't deserialize hugr: {}", e))?;
     let hugr = std::mem::take(&mut pkg.modules[0]);
     println!("{}", hugr.mermaid_string());
@@ -86,11 +86,11 @@ fn compile_module<'a>(
 }
 
 fn run_function<T>(
-    hugr_str: &str,
+    pkg_bytes: &[u8],
     fn_name: &str,
     parse_result: impl FnOnce(&Context, GenericValue) -> PyResult<T>,
 ) -> PyResult<T> {
-    let mut hugr = parse_hugr(hugr_str)?;
+    let mut hugr = parse_hugr(pkg_bytes)?;
     guppy_pass(&mut hugr, fn_name);
     let ctx = Context::create();
 
@@ -119,8 +119,8 @@ mod execute_llvm {
     use super::*;
 
     #[pyfunction]
-    fn compile_module_to_string(hugr_str: &str) -> PyResult<String> {
-        let mut hugr = parse_hugr(hugr_str)?;
+    fn compile_module_to_string(pkg_bytes: &[u8]) -> PyResult<String> {
+        let mut hugr = parse_hugr(pkg_bytes)?;
         let ctx = Context::create();
 
         guppy_pass(&mut hugr, "main");
@@ -130,8 +130,8 @@ mod execute_llvm {
     }
 
     #[pyfunction]
-    fn run_int_function(hugr_json: &str, fn_name: &str) -> PyResult<i64> {
-        run_function::<i64>(hugr_json, fn_name, |_, llvm_val| {
+    fn run_int_function(pkg_bytes: &[u8], fn_name: &str) -> PyResult<i64> {
+        run_function::<i64>(pkg_bytes, fn_name, |_, llvm_val| {
             // GenericVal is 64 bits wide
             let int_with_sign = llvm_val.as_int(true);
             let signed_int = int_with_sign as i64;
@@ -140,8 +140,8 @@ mod execute_llvm {
     }
 
     #[pyfunction]
-    fn run_float_function(hugr_json: &str, fn_name: &str) -> PyResult<f64> {
-        run_function::<f64>(hugr_json, fn_name, |ctx, llvm_val| {
+    fn run_float_function(pkg_bytes: &[u8], fn_name: &str) -> PyResult<f64> {
+        run_function::<f64>(pkg_bytes, fn_name, |ctx, llvm_val| {
             Ok(llvm_val.as_float(&ctx.f64_type()))
         })
     }
