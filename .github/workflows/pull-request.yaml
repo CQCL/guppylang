@@ -14,7 +14,7 @@ on:
 env:
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
-  UV_VERSION: "0.4.27"
+  UV_VERSION: "0.6.6"
 
 
 jobs:
@@ -52,7 +52,7 @@ jobs:
         run: uv run ruff check guppylang
 
       - name: Install Guppy with llvm-based execution
-        run: uv sync --extra execution
+        run: uv sync --group execution
 
       - name: Cargo build validator
         run: cargo build -p validator --release
@@ -87,7 +87,7 @@ jobs:
           enable-cache: true
 
       - name: Install Guppy with execution and pytket
-        run: uv sync --frozen --python ${{ env.PYTHON_VERSION }} --extra execution --extra pytket
+        run: uv sync --frozen --python ${{ env.PYTHON_VERSION }} --group execution --extra pytket
 
       - name: Cargo build validator
         run: cargo build -p validator --release
