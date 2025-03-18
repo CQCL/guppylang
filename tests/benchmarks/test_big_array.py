@@ -272,6 +272,7 @@ def test_big_array_check(benchmark) -> None:
 
 
 def test_big_array_json(benchmark) -> None:
+    # TODO deprecate/add benchmark for to_bytes
     def big_array_json(mod: ModulePointer) -> str:
         return mod.package.to_json()
 

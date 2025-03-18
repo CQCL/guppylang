@@ -10,7 +10,7 @@ setup:
 
 # Prepare the environment for development, including the extra dependency groups.
 setup-extras:
-    uv sync --extra pytket --extra execution --inexact
+    uv sync --extra pytket --group execution --inexact
 
 # Run the pre-commit checks.
 check:
