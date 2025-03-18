@@ -1,23 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-from hugr.package import FuncDefnPointer, PackagePointer
+from typing import TYPE_CHECKING
 
 import guppylang
 from guppylang.module import GuppyModule
 
 if TYPE_CHECKING:
-    from hugr import Hugr
-
-    from guppylang.definition.function import RawFunctionDef
-
-    try:
-        from tket2.circuit import (
-            Tk2Circuit,  # type: ignore[import-untyped, import-not-found, unused-ignore]
-        )
-    except ImportError:
-        Tk2Circuit = Any
+    from hugr.package import FuncDefnPointer, PackagePointer
 
 
 def compile_guppy(fn) -> FuncDefnPointer:

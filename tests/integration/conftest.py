@@ -37,13 +37,13 @@ def validate(request, export_test_cases_dir: Path):
     else:
         pytest.skip("Skipping validation tests as requested")
 
-    def validate_str(package_str: str):
+    def validate_bytes(package_bytes: bytes):
         # Executes `cargo run -p validator -- validate -`
         # passing the hugr JSON as stdin
         p = subprocess.run(  # noqa: S603
             [validator, "validate", "-"],
-            text=True,
-            input=package_str,
+            text=False,
+            input=package_bytes,
             capture_output=True,
         )
 
@@ -56,14 +56,14 @@ def validate(request, export_test_cases_dir: Path):
         if isinstance(package, Hugr):
             package = Package([package])
         # Validate via the json encoding
-        package_str = package.to_str()
+        package_bytes = package.to_bytes()
 
         if export_test_cases_dir:
-            file_name = f"{request.node.name}{f'_{name}' if name else ''}.json"
+            file_name = f"{request.node.name}{f'_{name}' if name else ''}.hugr"
             export_file = export_test_cases_dir / file_name
-            export_file.write_text(package_str)
+            export_file.write_bytes(package_bytes)
 
-        validate_str(package_str)
+        validate_bytes(package_bytes)
 
     return validate_impl
 
@@ -81,8 +81,8 @@ def _run_fn(run_fn_name: str):
             if not fn:
                 pytest.skip("Skipping llvm execution")
 
-            package_str: str = module.package.to_str()
-            res = fn(package_str, fn_name)
+            package_bytes = module.package.to_bytes()
+            res = fn(package_bytes, fn_name)
             if res != expected:
                 raise LLVMException(
                     f"Expected value ({expected}) doesn't match actual value ({res})"
