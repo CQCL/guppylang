@@ -1,0 +1,13 @@
+Error: Error in comptime function return (at $FILE:9:0)
+   | 
+ 7 | 
+ 8 | @guppy.comptime(module)
+ 9 | def test(xs: array[int, 10]) -> None:
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10 |     xs.clear()
+   | ^^^^^^^^^^^^^^
+
+Argument `xs` is borrowed, so it is implicitly returned to the caller. Cannot
+infer the type of empty list.
+
+Guppy compilation failed due to 1 previous error
