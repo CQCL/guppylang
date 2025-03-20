@@ -5,7 +5,6 @@
   # see https://github.com/CQCL/tket2/blob/main/devenv.nix
   packages = [
     pkgs.just
-    pkgs.llvmPackages_14.libllvm
     pkgs.libffi
     pkgs.libxml2
     pkgs.graphviz
@@ -40,5 +39,6 @@
   languages.rust = {
     enable = true;
     channel = "stable";
+    components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" ];
   };
 }
