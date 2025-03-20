@@ -29,10 +29,10 @@ from __future__ import annotations
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     from pytket.backends.backendresult import BackendResult
 
@@ -40,8 +40,8 @@ try:
     from warnings import deprecated  # type: ignore[attr-defined]
 except ImportError:
     # Python < 3.13
-    def deprecated(_msg):  # type: ignore[no-redef]
-        def _deprecated(func):
+    def deprecated(_msg: str) -> Callable[..., Any]:  # type: ignore[no-redef, unused-ignore]
+        def _deprecated(func: Any) -> Any:
             return func
 
         return _deprecated
@@ -244,13 +244,14 @@ class QsysResult:
 
     def collated_counts(self) -> Counter[tuple[tuple[str, str], ...]]:
         """Calculate counts of bit strings for each tag by collating across shots using
-        `HShots.tag_collated_shots`. Each `result` entry per shot is seen to be
+        `QsysResult.tag_collated_shots`. Each `result` entry per shot is seen to be
         appending to the bitstring for that tag.
 
         If the result value is a list, it is flattened and appended to the bitstring.
 
         Example:
-            >>> res = HShots([HResult([("a", 1), ("a", 0)]), HResult([("a", [0, 1])])])
+            >>> shots = [QsysShot([("a", 1), ("a", 0)]), QsysShot([("a", [0, 1])])]
+            >>> res = QsysResult(shots)
             >>> res.collated_counts()
             Counter({(("a", "10"),): 1, (("a", "01"),): 1})
 
