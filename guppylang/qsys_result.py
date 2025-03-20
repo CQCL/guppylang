@@ -262,9 +262,11 @@ class QsysResult:
             for d in self._collated_shots_iter()
         )
 
+
 @deprecated("Use QsysResult instead.")
 class HShots(QsysResult):
     """Deprecated alias for QsysResult."""
+
 
 def _flat_bitstring(data: Iterable[DataValue]) -> str:
     return "".join(_cast_primitive_bit(prim) for prim in _flatten(data))

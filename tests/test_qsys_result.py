@@ -3,10 +3,9 @@ from collections import Counter
 
 import pytest
 
-from guppylang.qsys_result import REG_INDEX_PATTERN, QsysShot, QsysResult
-
 # test deprecated module
 from guppylang.hresult import HResult
+from guppylang.qsys_result import REG_INDEX_PATTERN, QsysResult, QsysShot
 
 
 @pytest.mark.parametrize(
