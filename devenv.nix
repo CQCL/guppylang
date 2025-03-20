@@ -18,6 +18,8 @@
     with pkgs.darwin.apple_sdk; [
       frameworks.CoreServices
       frameworks.CoreFoundation
+      pkgs.zlib
+      pkgs.ncurses
     ]
   );
 
