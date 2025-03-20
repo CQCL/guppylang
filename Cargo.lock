@@ -441,7 +441,6 @@ name = "execute_llvm"
 version = "0.2.3"
 dependencies = [
  "hugr",
- "inkwell",
  "pyo3",
  "serde_json",
 ]
