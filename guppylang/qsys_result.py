@@ -36,6 +36,17 @@ if TYPE_CHECKING:
 
     from pytket.backends.backendresult import BackendResult
 
+try:
+    from warnings import deprecated  # type: ignore[attr-defined]
+except ImportError:
+    # Python < 3.13
+    def deprecated(_msg):  # type: ignore[no-redef]
+        def _deprecated(func):
+            return func
+
+        return _deprecated
+
+
 #: Primitive data types that can be returned by a result
 DataPrimitive = int | float | bool
 #: Data value that can be returned by a result: a primitive or a list of primitives
@@ -48,7 +59,7 @@ BitChar = Literal["0", "1"]
 
 
 @dataclass
-class HResult:
+class QsysShot:
     """Results from a single shot execution."""
 
     entries: list[TaggedResult] = field(default_factory=list)
@@ -118,6 +129,11 @@ class HResult:
         return dict(tags)
 
 
+@deprecated("Use QsysShot instead.")
+class HResult(QsysShot):
+    """Deprecated alias for QsysShot."""
+
+
 def _cast_primitive_bit(data: DataValue) -> BitChar:
     if isinstance(data, int) and data in {0, 1}:
         return str(data)  # type: ignore[return-value]
@@ -125,16 +141,16 @@ def _cast_primitive_bit(data: DataValue) -> BitChar:
 
 
 @dataclass
-class HShots:
+class QsysResult:
     """Results accumulated over multiple shots."""
 
-    results: list[HResult]
+    results: list[QsysShot]
 
     def __init__(
-        self, results: Iterable[HResult | Iterable[TaggedResult]] | None = None
+        self, results: Iterable[QsysShot | Iterable[TaggedResult]] | None = None
     ):
         self.results = [
-            res if isinstance(res, HResult) else HResult(res) for res in results or []
+            res if isinstance(res, QsysShot) else QsysShot(res) for res in results or []
         ]
 
     def register_counts(
@@ -246,6 +262,9 @@ class HShots:
             for d in self._collated_shots_iter()
         )
 
+@deprecated("Use QsysResult instead.")
+class HShots(QsysResult):
+    """Deprecated alias for QsysResult."""
 
 def _flat_bitstring(data: Iterable[DataValue]) -> str:
     return "".join(_cast_primitive_bit(prim) for prim in _flatten(data))

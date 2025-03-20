@@ -3,7 +3,10 @@ from collections import Counter
 
 import pytest
 
-from guppylang.hresult import REG_INDEX_PATTERN, HResult, HShots
+from guppylang.qsys_result import REG_INDEX_PATTERN, QsysShot, QsysResult
+
+# test deprecated module
+from guppylang.hresult import HResult
 
 
 @pytest.mark.parametrize(
@@ -39,7 +42,7 @@ def test_as_dict():
 
 
 def test_to_register_bits():
-    results = HResult()
+    results = QsysShot()
     results.append("c[0]", 1)
     results.append("c[1]", 0)
     results.append("c[3]", 1)
@@ -49,7 +52,7 @@ def test_to_register_bits():
 
     assert results.to_register_bits() == {"c": "1001", "d": "1010", "x": "0"}
 
-    shots = HShots([results, results])
+    shots = QsysResult([results, results])
     assert shots.register_counts() == {
         "c": Counter({"1001": 2}),
         "d": Counter({"1010": 2}),
@@ -60,27 +63,27 @@ def test_to_register_bits():
 @pytest.mark.parametrize(
     "results",
     [
-        HResult([("t", 1.0)]),
-        HResult([("t[1]", 1.0)]),
-        HResult([("t", [1.0])]),
-        HResult([("t[0]", [0])]),
-        HResult([("t[0]", 3)]),
+        QsysShot([("t", 1.0)]),
+        QsysShot([("t[1]", 1.0)]),
+        QsysShot([("t", [1.0])]),
+        QsysShot([("t[0]", [0])]),
+        QsysShot([("t[0]", 3)]),
     ],
 )
-def test_to_register_bits_bad(results: HResult):
+def test_to_register_bits_bad(results: QsysShot):
     with pytest.raises(ValueError, match="Expected bit"):
         _ = results.to_register_bits()
 
 
 def test_counter():
-    shot1 = HResult()
+    shot1 = QsysShot()
     shot1.append("c", [1, 0, 1, 0])
     shot1.append("d", [1, 0, 1])
 
-    shot2 = HResult()
+    shot2 = QsysShot()
     shot2.append("c", [1, 0, 1])
 
-    shots = HShots([shot1, shot2])
+    shots = QsysResult([shot1, shot2])
     assert shots.register_counts() == {
         "c": Counter({"1010": 1, "101": 1}),
         "d": Counter({"101": 1}),
@@ -97,7 +100,7 @@ def test_pytket():
     shot results."""
     pytest.importorskip("pytket", reason="pytket not installed")
 
-    hsim_shots = HShots(
+    hsim_shots = QsysResult(
         ([("c", [1, 0]), ("d", [1, 0, 0])], [("c", [0, 0]), ("d", [1, 0, 1])])
     )
 
@@ -120,7 +123,7 @@ def test_collate_tag():
 
     shotlist = []
     for _ in range(10):
-        shot = HResult()
+        shot = QsysShot()
         _ = [
             shot.append(reg, 1)
             for reg, size in (("c", 3), ("d", 5))
@@ -128,21 +131,23 @@ def test_collate_tag():
         ]
         shotlist.append(shot)
 
-    weird_shot = HResult((("c", 1), ("d", 1), ("d", 0), ("e", 1)))
+    weird_shot = QsysShot((("c", 1), ("d", 1), ("d", 0), ("e", 1)))
     assert weird_shot.collate_tags() == {"c": [1], "d": [1, 0], "e": [1]}
 
-    lst_shot = HResult([("lst", [1, 0, 1]), ("lst", [1, 0, 1])])
-    shots = HShots([*shotlist, weird_shot, lst_shot])
+    lst_shot = QsysShot([("lst", [1, 0, 1]), ("lst", [1, 0, 1])])
+    shots = QsysResult([*shotlist, weird_shot, lst_shot])
 
     counter = shots.collated_counts()
-    assert counter == Counter({
-        (("c", "111"), ("d", "11111")): 10,
-        (("c", "1"), ("d", "10"), ("e", "1")): 1,
-        (("lst", "101101"),): 1,
-    })
+    assert counter == Counter(
+        {
+            (("c", "111"), ("d", "11111")): 10,
+            (("c", "1"), ("d", "10"), ("e", "1")): 1,
+            (("lst", "101101"),): 1,
+        }
+    )
 
-    float_shots = HShots(
-        [HResult([("f", 1.0), ("f", 0.1)]), HResult([("f", [2.0]), ("g", 2.0)])]
+    float_shots = QsysResult(
+        [QsysShot([("f", 1.0), ("f", 0.1)]), QsysShot([("f", [2.0]), ("g", 2.0)])]
     )
 
     assert float_shots.collated_shots() == [
