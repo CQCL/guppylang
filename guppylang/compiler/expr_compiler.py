@@ -508,7 +508,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._pack_returns([], NoneType())
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
-        err = build_error(self.builder, 1, node.msg)
+        err = build_error(self.builder, node.signal, node.msg)
         in_tys = [get_type(e).to_hugr() for e in node.values]
         out_tys = [ty.to_hugr() for ty in type_to_row(get_type(node))]
         outs = build_panic(

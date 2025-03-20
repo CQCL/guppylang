@@ -13,6 +13,7 @@ from guppylang.std._internal.checker import (
     BarrierChecker,
     CallableChecker,
     DunderChecker,
+    ExitChecker,
     NewArrayChecker,
     PanicChecker,
     RangeChecker,
@@ -667,7 +668,21 @@ def result(tag, value): ...
 @guppy.custom(checker=PanicChecker(), higher_order_value=False)
 def panic(msg, *args):
     """Panic, throwing an error with the given message, and immediately exit the
-    program.
+    program, aborting any subsequent shots.
+
+    Return type is arbitrary, as this function never returns.
+
+    Args:
+        msg: The message to display. Must be a string literal.
+        args: Arbitrary extra inputs, will not affect the message. Only useful for
+        consuming linear values.
+    """
+
+
+@guppy.custom(checker=ExitChecker(), higher_order_value=False)
+def exit(msg: str, signal: int, *args):
+    """Exit, reporting the given message and signal, and immediately exit the
+    program. Subsequent shots may still run.
 
     Return type is arbitrary, as this function never returns.
 
