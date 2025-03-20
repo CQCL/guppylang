@@ -59,6 +59,7 @@ def test_result_panic(validate):
         result("a", True)
         result("b", 10)
         panic("Boo!")
+        exit("Foo!")
         result("c", 10.5)
 
     compiled = module.compile()

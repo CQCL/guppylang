@@ -201,6 +201,8 @@ version = "1.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "755717a7de9ec452bf7f3f1a3099085deabd7f2962b861dae91ecd7a365903d2"
 dependencies = [
+ "jobserver",
+ "libc",
  "shlex",
 ]
 
@@ -531,8 +533,7 @@ dependencies = [
 [[package]]
 name = "hugr"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24412f943ef2bc0644f8dc973e1da1bcdfe61fa4805829b576315d6285a9b293"
+source = "git+https://github.com/CQCL/hugr?rev=6bd76659#6bd76659d1f3f3b100cef46f0d5f7ceec79699a9"
 dependencies = [
  "hugr-core",
  "hugr-llvm",
@@ -542,8 +543,7 @@ dependencies = [
 [[package]]
 name = "hugr-cli"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89381bfa1cd7128f0a377d214a7a3c08197cc1abe3dada4286176864565b36a7"
+source = "git+https://github.com/CQCL/hugr?rev=6bd76659#6bd76659d1f3f3b100cef46f0d5f7ceec79699a9"
 dependencies = [
  "clap",
  "clap-verbosity-flag",
@@ -556,8 +556,7 @@ dependencies = [
 [[package]]
 name = "hugr-core"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e81979bfda3765878e0812eded1f4ad68f72b9c830deba59f101fccff619e524"
+source = "git+https://github.com/CQCL/hugr?rev=6bd76659#6bd76659d1f3f3b100cef46f0d5f7ceec79699a9"
 dependencies = [
  "cgmath",
  "delegate",
@@ -581,13 +580,13 @@ dependencies = [
  "strum",
  "thiserror 2.0.12",
  "typetag",
+ "zstd",
 ]
 
 [[package]]
 name = "hugr-llvm"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83a3ca755c0371b1e4dfa637b886a0e6beadae58ba0c44853bb2a58b88478943"
+source = "git+https://github.com/CQCL/hugr?rev=6bd76659#6bd76659d1f3f3b100cef46f0d5f7ceec79699a9"
 dependencies = [
  "anyhow",
  "delegate",
@@ -595,6 +594,7 @@ dependencies = [
  "hugr-core",
  "inkwell",
  "itertools 0.14.0",
+ "lazy_static",
  "petgraph 0.7.1",
  "strum",
 ]
@@ -602,8 +602,7 @@ dependencies = [
 [[package]]
 name = "hugr-passes"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbcc81a7cdcf5edf63a7ef8219ba3cad556d7847d35cf7b35d8e11743c4289b7"
+source = "git+https://github.com/CQCL/hugr?rev=6bd76659#6bd76659d1f3f3b100cef46f0d5f7ceec79699a9"
 dependencies = [
  "ascent",
  "hugr-core",
@@ -714,6 +713,15 @@ name = "itoa"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d75a2a4b1b190afb6f5425f10f6a8f959d2ea0b9c2b1d79553551850539e4674"
+
+[[package]]
+name = "jobserver"
+version = "0.1.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48d1dbcbbeb6a7fec7e059840aa538bd62aaccf972c7346c4d9d2059312853d0"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "lazy_static"
@@ -830,6 +838,12 @@ dependencies = [
  "fixedbitset 0.5.7",
  "indexmap",
 ]
+
+[[package]]
+name = "pkg-config"
+version = "0.3.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "portable-atomic"
@@ -1537,4 +1551,32 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "zstd"
+version = "0.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e91ee311a569c327171651566e07972200e76fcfe2242a4fa446149a3881c08a"
+dependencies = [
+ "zstd-safe",
+]
+
+[[package]]
+name = "zstd-safe"
+version = "7.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f49c4d5f0abb602a93fb8736af2a4f4dd9512e36f7f570d66e65ff867ed3b9d"
+dependencies = [
+ "zstd-sys",
+]
+
+[[package]]
+name = "zstd-sys"
+version = "2.0.15+zstd.1.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb81183ddd97d0c74cedf1d50d85c8d08c1b8b68ee863bdee9e706eedba1a237"
+dependencies = [
+ "cc",
+ "pkg-config",
 ]

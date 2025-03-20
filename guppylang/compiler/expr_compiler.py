@@ -40,6 +40,7 @@ from guppylang.nodes import (
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
+    ExitKind,
     FieldAccessAndDrop,
     GenericParamValue,
     GlobalCall,
@@ -58,7 +59,7 @@ from guppylang.std._internal.compiler.array import array_repeat
 from guppylang.std._internal.compiler.list import (
     list_new,
 )
-from guppylang.std._internal.compiler.prelude import build_error, build_panic
+from guppylang.std._internal.compiler.prelude import build_error, build_panic, panic
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     bool_type,
@@ -511,14 +512,14 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         err = build_error(self.builder, node.signal, node.msg)
         in_tys = [get_type(e).to_hugr() for e in node.values]
         out_tys = [ty.to_hugr() for ty in type_to_row(get_type(node))]
-        outs = build_panic(
-            self.builder,
-            in_tys,
-            out_tys,
-            err,
-            *(self.visit(e) for e in node.values),
-        ).outputs()
-        return self._pack_returns(list(outs), get_type(node))
+        args = [self.visit(e) for e in node.values]
+        match node.kind:
+            case ExitKind.Panic:
+                h_node = build_panic(self.builder, in_tys, out_tys, err, *args)
+            case ExitKind.ExitShot:
+                op = panic(in_tys, out_tys, ExitKind.ExitShot)
+                h_node = self.builder.add_op(op, err, *args)
+        return self._pack_returns(list(h_node.outputs()), get_type(node))
 
     def visit_BarrierExpr(self, node: BarrierExpr) -> Wire:
         hugr_tys = [get_type(e).to_hugr() for e in node.args]
