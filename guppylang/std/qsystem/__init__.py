@@ -3,10 +3,8 @@ from typing import no_type_check
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std import angles
-from guppylang.std._internal.compiler.quantum import (
-    QSYSTEM_EXTENSION,
-    InoutMeasureCompiler,
-)
+from guppylang.std._internal.compiler.quantum import InoutMeasureCompiler
+from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_EXTENSION
 from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle
 from guppylang.std.builtins import owned
