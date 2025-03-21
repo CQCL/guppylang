@@ -57,7 +57,7 @@ fn guppy_pass(hugr: &mut Hugr, entry_fn: &str) {
 fn codegen_extensions() -> CodegenExtsMap<'static, Hugr> {
     CodegenExtsBuilder::default()
         .add_default_prelude_extensions()
-        .add_int_extensions()
+        .add_default_int_extensions()
         .add_float_extensions()
         .add_conversion_extensions()
         .add_logic_extensions()

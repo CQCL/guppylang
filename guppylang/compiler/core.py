@@ -234,6 +234,7 @@ EXTENSION_OPS_WITH_SIDE_EFFECTS: list[str] = [
     # Results should be order w.r.t. each other but also w.r.t. panics
     *(op_def.qualified_name() for op_def in RESULT_EXTENSION.operations.values()),
     PRELUDE.get_op("panic").qualified_name(),
+    PRELUDE.get_op("exit").qualified_name(),
     # Qubit allocation and deallocation have the side-effect of changing the number of
     # available free qubits
     QUANTUM_EXTENSION.get_op("QAlloc").qualified_name(),
