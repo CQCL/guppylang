@@ -59,7 +59,7 @@ def test_result_panic(validate):
         result("a", True)
         result("b", 10)
         panic("Boo!")
-        exit("Foo!")
+        exit("Foo!", 1)
         result("c", 10.5)
 
     compiled = module.compile()
@@ -70,8 +70,9 @@ def test_result_panic(validate):
     [a] = find_ext_nodes(hugr, RESULT_EXTENSION.get_op("result_bool").qualified_name())
     [b] = find_ext_nodes(hugr, RESULT_EXTENSION.get_op("result_int").qualified_name())
     [p] = find_ext_nodes(hugr, PRELUDE.get_op("panic").qualified_name())
+    [e] = find_ext_nodes(hugr, PRELUDE.get_op("exit").qualified_name())
     [c] = find_ext_nodes(hugr, RESULT_EXTENSION.get_op("result_f64").qualified_name())
-    check_order(hugr, [a, b, p, c])
+    check_order(hugr, [a, b, p, e, c])
 
 
 def test_qalloc_qfree(validate):
