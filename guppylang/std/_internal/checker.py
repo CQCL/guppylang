@@ -440,7 +440,9 @@ class ExitChecker(CustomCallChecker):
                 raise GuppyTypeError(msg_err)
             case [_msg]:
                 signal_err = ExitChecker.NoSignalError(self.node)
-                signal_err.add_sub_diagnostic(ExitChecker.NoSignalError.Suggestion(None))
+                signal_err.add_sub_diagnostic(
+                    ExitChecker.NoSignalError.Suggestion(None)
+                )
                 raise GuppyTypeError(signal_err)
             case [msg, signal, *rest]:
                 msg, _ = ExprChecker(self.ctx).check(msg, string_type())
