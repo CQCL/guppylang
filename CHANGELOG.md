@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.18.0](https://github.com/CQCL/guppylang/compare/v0.17.0...v0.18.0) (2025-03-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **qsystem:** removed `random.RNG.random_nat()` and `random.maybe_rng()`
+
+### Features
+
+* add exit function that stops a shot ([#874](https://github.com/CQCL/guppylang/issues/874)) ([8093940](https://github.com/CQCL/guppylang/commit/809394011a68b88bec47a330e6d525f7f0075e7f))
+
+
+### Bug Fixes
+
+* **qsystem:** remove `random_nat` and `maybe_rng` ([#873](https://github.com/CQCL/guppylang/issues/873)) ([635e7ed](https://github.com/CQCL/guppylang/commit/635e7edf1fab854d0e83111ada09b85f27385377))
+
 ## [0.17.0](https://github.com/CQCL/guppylang/compare/v0.16.0...v0.17.0) (2025-03-18)
 
 
