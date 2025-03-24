@@ -4,7 +4,7 @@
       "release-type": "python",
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": false,
+      "bump-patch-for-minor-pre-major": true,
       "draft": false,
       "prerelease": false,
       "draft-pull-request": true,
