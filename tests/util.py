@@ -1,23 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-from hugr.package import FuncDefnPointer, ModulePointer
+from typing import TYPE_CHECKING
 
 import guppylang
 from guppylang.module import GuppyModule
 
 if TYPE_CHECKING:
-    from hugr import Hugr
-
-    from guppylang.definition.function import RawFunctionDef
-
-    try:
-        from tket2.circuit import (
-            Tk2Circuit,  # type: ignore[import-untyped, import-not-found, unused-ignore]
-        )
-    except ImportError:
-        Tk2Circuit = Any
+    from hugr.package import FuncDefnPointer, PackagePointer
 
 
 def compile_guppy(fn) -> FuncDefnPointer:
@@ -35,32 +24,12 @@ def compile_guppy(fn) -> FuncDefnPointer:
     return defn.compile()
 
 
-def dump_llvm(hugr: Hugr | ModulePointer):
-    # TODO: Support multiple modules?
-    if isinstance(hugr, ModulePointer):
-        hugr = hugr.module
-
+def dump_llvm(package: PackagePointer):
     try:
         from execute_llvm import compile_module_to_string
 
-        hugr_json = hugr.to_json()
-        llvm_module = compile_module_to_string(hugr_json)
+        llvm_module = compile_module_to_string(package.package.to_bytes())
         print(llvm_module)  # noqa: T201
 
     except ImportError:
         pass
-
-
-def guppy_to_circuit(guppy_func: RawFunctionDef) -> Tk2Circuit:
-    """Convert a Guppy function definition to a `Tk2Circuit`."""
-    # TODO: Should this be part of the guppy API?
-    from tket2.circuit import Tk2Circuit
-
-    module = guppy_func.id.module
-    assert module is not None, "Function definition must belong to a module"
-
-    hugr = module.compile()
-    assert hugr is not None, "Module must be compilable"
-
-    json = hugr.to_json()
-    return Tk2Circuit.from_guppy_json(json, guppy_func.name)

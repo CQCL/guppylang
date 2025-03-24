@@ -512,7 +512,12 @@ class _Guppy:
 
     @pretty_errors
     def load_pytket(
-        self, name: str, input_circuit: Any, module: GuppyModule | None = None
+        self,
+        name: str,
+        input_circuit: Any,
+        module: GuppyModule | None = None,
+        *,
+        use_arrays: bool = True,
     ) -> RawLoadPytketDef:
         """Adds a pytket circuit function definition with implicit signature."""
         err_msg = "Only pytket circuits can be passed to guppy.load_pytket"
@@ -527,7 +532,9 @@ class _Guppy:
 
         mod = module or self.get_module()
         span = _find_load_call(self._sources)
-        defn = RawLoadPytketDef(DefId.fresh(module), name, None, span, input_circuit)
+        defn = RawLoadPytketDef(
+            DefId.fresh(module), name, None, span, input_circuit, use_arrays
+        )
         mod.register_def(defn)
         return defn
 
@@ -583,6 +590,9 @@ class _GuppyDummy:
 
     def load(self, *args: Any, **kwargs: Any) -> None:
         pass
+
+    def get_module(self, *args: Any, **kwargs: Any) -> Any:
+        return GuppyModule("dummy", import_builtins=False)
 
 
 guppy = cast(_Guppy, _GuppyDummy()) if sphinx_running() else _Guppy()

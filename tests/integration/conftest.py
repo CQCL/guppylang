@@ -1,5 +1,5 @@
 from hugr import Hugr
-from hugr.package import Package, PackagePointer, ModulePointer
+from hugr.package import Package, PackagePointer
 
 from pathlib import Path
 import pytest
@@ -37,31 +37,33 @@ def validate(request, export_test_cases_dir: Path):
     else:
         pytest.skip("Skipping validation tests as requested")
 
-    def validate_json(hugr: str):
+    def validate_bytes(package_bytes: bytes):
         # Executes `cargo run -p validator -- validate -`
         # passing the hugr JSON as stdin
         p = subprocess.run(  # noqa: S603
             [validator, "validate", "-"],
-            text=True,
-            input=hugr,
+            text=False,
+            input=package_bytes,
             capture_output=True,
         )
 
         if p.returncode != 0:
             raise RuntimeError(f"{p.stderr}")
 
-    def validate_impl(hugr: Package | PackagePointer | Hugr, name=None):
-        if isinstance(hugr, PackagePointer):
-            hugr = hugr.package
+    def validate_impl(package: Package | PackagePointer | Hugr, name=None):
+        if isinstance(package, PackagePointer):
+            package = package.package
+        if isinstance(package, Hugr):
+            package = Package([package])
         # Validate via the json encoding
-        js = hugr.to_str()
+        package_bytes = package.to_bytes()
 
         if export_test_cases_dir:
-            file_name = f"{request.node.name}{f'_{name}' if name else ''}.json"
+            file_name = f"{request.node.name}{f'_{name}' if name else ''}.hugr"
             export_file = export_test_cases_dir / file_name
-            export_file.write_text(js)
+            export_file.write_bytes(package_bytes)
 
-        validate_json(js)
+        validate_bytes(package_bytes)
 
     return validate_impl
 
@@ -71,7 +73,7 @@ class LLVMException(Exception):
 
 
 def _run_fn(run_fn_name: str):
-    def f(module: ModulePointer, expected: Any, fn_name: str = "main"):
+    def f(module: PackagePointer, expected: Any, fn_name: str = "main"):
         try:
             import execute_llvm
 
@@ -79,8 +81,8 @@ def _run_fn(run_fn_name: str):
             if not fn:
                 pytest.skip("Skipping llvm execution")
 
-            package_json: str = module.package.to_json()
-            res = fn(package_json, fn_name)
+            package_bytes = module.package.to_bytes()
+            res = fn(package_bytes, fn_name)
             if res != expected:
                 raise LLVMException(
                     f"Expected value ({expected}) doesn't match actual value ({res})"
@@ -105,7 +107,7 @@ def run_float_fn_approx():
     run_fn = _run_fn("run_float_function")
 
     def run_approx(
-        hugr: Package,
+        hugr: PackagePointer,
         expected: float,
         fn_name: str = "main",
         *,
