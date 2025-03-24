@@ -662,7 +662,18 @@ class SizedIter:
 
 # TODO: This is a temporary hack until we have implemented the proper results mechanism.
 @guppy.custom(checker=ResultChecker(), higher_order_value=False)
-def result(tag, value): ...
+def result(tag, value):
+    """Report a result with the given tag and value.
+
+    This is the primary way to report results from the program back to the user.
+    On Quantinuum systems a single shot execution will return a list of pairs of
+    (tag, value).
+
+    Args:
+        tag: The tag of the result. Must be a string literal
+        value: The value of the result. Currently supported value types are `int`,
+        `float`, and `bool`.
+    """
 
 
 @guppy.custom(checker=PanicChecker(), higher_order_value=False)
