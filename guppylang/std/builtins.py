@@ -686,6 +686,8 @@ def exit(msg: str, signal: int, *args):
 
     Return type is arbitrary, as this function never returns.
 
+    On Quantinuum systems only signals in the range 1<=signal<=1000 are supported.
+
     Args:
         msg: The message to display. Must be a string literal.
         args: Arbitrary extra inputs, will not affect the message. Only useful for
