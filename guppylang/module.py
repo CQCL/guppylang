@@ -256,11 +256,13 @@ class GuppyModule:
         for defn in buffer.values():
             self.register_def(defn, instance)
 
-    def unregister(self, defn: Definition) -> None:
+    def unregister(self, defn: GuppyDefinition | Definition) -> None:
         """Removes a definition from this module.
 
         Also removes all methods when unregistering a type.
         """
+        if isinstance(defn, GuppyDefinition):
+            defn = defn.wrapped
         self._checked = False
         self._compiled = None
         self._raw_defs.pop(defn.id, None)
