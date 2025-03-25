@@ -22,9 +22,9 @@ def capture_guppy_errors(f: Callable[P, T]) -> Callable[P, T]:
         except GuppyError as err:
             diagnostic = err.error
             msg = diagnostic.rendered_title
-            if diagnostic.span_label:
+            if diagnostic.rendered_span_label:
                 msg += f": {diagnostic.rendered_span_label}"
-            if diagnostic.message:
+            if diagnostic.rendered_message:
                 msg += f"\n{diagnostic.rendered_message}"
             raise GuppyComptimeError(msg) from None
 
