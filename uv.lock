@@ -2342,7 +2342,11 @@ wheels = [
 [[package]]
 name = "tket2-eccs"
 version = "0.3.0"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-eccs&rev=82dc8f6#82dc8f624cdea872fcdcce8793143fdfc3fd1fd1" }
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/66/c235509596f8b719635d38143fdd4ca2aaaaf484c6c3865314e58ea1a0f5/tket2_eccs-0.3.0.tar.gz", hash = "sha256:56c5b350b2f2ab709a33f8b0147a9ac118a501a6c9d6eb95e463e76ba33d3e4f", size = 4425732 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/57/dd/10738d78e3af2c0d8b477f73073586363140b60634f44487917f98f423c0/tket2_eccs-0.3.0-py3-none-any.whl", hash = "sha256:3c84ede88cc70b9bd15956ce79f07b0905dc9f8947140c785ef617962a129f89", size = 4427993 },
+]
 
 [[package]]
 name = "tket2-exts"
