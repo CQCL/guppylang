@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "$FILE", line 16, in <module>
+    module.compile()
+  File "$FILE", line 13, in test
+    foo(1)
+guppylang.error.GuppyComptimeError: Not enough arguments: Expected 2, got 1

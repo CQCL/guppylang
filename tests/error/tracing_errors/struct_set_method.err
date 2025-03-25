@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "$FILE", line 22, in <module>
+    module.compile()
+  File "$FILE", line 19, in test
+    s.foo = 0
+AttributeError: Expression of type `S` has no attribute `foo`
