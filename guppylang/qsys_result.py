@@ -29,22 +29,14 @@ from __future__ import annotations
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
+
+from typing_extensions import deprecated
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
 
     from pytket.backends.backendresult import BackendResult
-
-try:
-    from warnings import deprecated  # type: ignore[attr-defined]
-except ImportError:
-    # Python < 3.13
-    def deprecated(_msg: str) -> Callable[..., Any]:  # type: ignore[no-redef, unused-ignore]
-        def _deprecated(func: Any) -> Any:
-            return func
-
-        return _deprecated
 
 
 #: Primitive data types that can be returned by a result

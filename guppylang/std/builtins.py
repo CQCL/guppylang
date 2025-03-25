@@ -2,10 +2,10 @@
 
 # mypy: disable-error-code="empty-body, misc, override, valid-type, no-untyped-def"
 
-from collections.abc import Callable
 from typing import Any, Generic, TypeVar, no_type_check
 
 import hugr.std.int
+from typing_extensions import deprecated
 
 from guppylang.decorator import guppy
 from guppylang.definition.custom import CopyInoutCompiler, NoopCompiler
@@ -57,17 +57,6 @@ from guppylang.tys.builtin import (
     sized_iter_type_def,
     string_type_def,
 )
-
-try:
-    from warnings import deprecated  # type: ignore[attr-defined]
-except ImportError:
-    # Python < 3.13
-    def deprecated(_msg: str) -> Callable[..., Any]:  # type: ignore[no-redef, unused-ignore]
-        def _deprecated(func: Any) -> Any:
-            return func
-
-        return _deprecated
-
 
 guppy.init_module(import_builtins=False)
 
