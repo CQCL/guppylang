@@ -146,7 +146,8 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
     using `guppy_object_from_py`, updates the wires of any `GuppyObjects` contained in
     `v` to the new wires specified by `obj`.
 
-    Also resets the used flag on any of those updated wires.
+    Also resets the used flag on any of those updated wires. This corresponds to making
+    the object available again since it now corresponds to a fresh wire.
     """
     match v:
         case GuppyObject() as v_obj:
