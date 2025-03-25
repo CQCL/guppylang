@@ -5,7 +5,7 @@ from hugr import tys as ht
 from hugr.build.dfg import DfBase
 
 from guppylang.ast_util import AstNode
-from guppylang.checker.errors.py_errors import IllegalPyExpressionError
+from guppylang.checker.errors.comptime_errors import IllegalComptimeExpressionError
 from guppylang.checker.expr_checker import python_value_to_guppy_type
 from guppylang.compiler.expr_compiler import python_value_to_hugr
 from guppylang.error import GuppyComptimeError, GuppyError
@@ -135,7 +135,7 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
         case v:
             ty = python_value_to_guppy_type(v, node, get_tracing_state().globals)
             if ty is None:
-                raise GuppyError(IllegalPyExpressionError(node, type(v)))
+                raise GuppyError(IllegalComptimeExpressionError(node, type(v)))
             hugr_val = python_value_to_hugr(v, ty)
             assert hugr_val is not None
             return GuppyObject(ty, builder.load(hugr_val))

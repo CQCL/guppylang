@@ -9,7 +9,7 @@ from hugr.build.dfg import DefinitionBuilder, OpVar
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals, PyScope
-from guppylang.checker.errors.py_errors import (
+from guppylang.checker.errors.comptime_errors import (
     PytketSignatureMismatch,
     Tket2NotInstalled,
 )

@@ -2,6 +2,7 @@
 
 # mypy: disable-error-code="empty-body, misc, override, valid-type, no-untyped-def"
 
+from collections.abc import Callable
 from typing import Any, Generic, TypeVar, no_type_check
 
 import hugr.std.int
@@ -55,18 +56,33 @@ from guppylang.tys.builtin import (
     string_type_def,
 )
 
+try:
+    from warnings import deprecated  # type: ignore[attr-defined]
+except ImportError:
+    # Python < 3.13
+    def deprecated(_msg: str) -> Callable[..., Any]:  # type: ignore[no-redef, unused-ignore]
+        def _deprecated(func: Any) -> Any:
+            return func
+
+        return _deprecated
+
+
 guppy.init_module(import_builtins=False)
 
 T = guppy.type_var("T")
 L = guppy.type_var("L", copyable=False, droppable=False)
 
 
-def py(*args: Any) -> Any:
+def comptime(*args: Any) -> Any:
     """Function to tag compile-time evaluated Python expressions in a Guppy context.
 
     This function acts like the identity when execute in a Python context.
     """
     return tuple(args)
+
+
+#: Deprecated alias for `comptime` expressions
+py = deprecated("Use `comptime` instead")(comptime)
 
 
 class _Owned:

@@ -6,4 +6,4 @@ x = 42
 
 @compile_guppy
 def foo(x: int) -> int:
-    return py(x + 1)
+    return comptime(x + 1)

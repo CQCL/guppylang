@@ -21,13 +21,13 @@ from guppylang.diagnostic import Error
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
 from guppylang.nodes import (
+    ComptimeExpr,
     DesugaredGenerator,
     DesugaredGeneratorExpr,
     DesugaredListComp,
     IterNext,
     MakeIter,
     NestedFunctionDef,
-    PyExpr,
 )
 from guppylang.tys.ty import NoneType
 
@@ -346,7 +346,7 @@ class ExprBuilder(ast.NodeTransformer):
         return with_loc(node, DesugaredGeneratorExpr(elt=elt, generators=generators))
 
     def visit_Call(self, node: ast.Call) -> ast.AST:
-        return is_py_expression(node) or self.generic_visit(node)
+        return is_comptime_expression(node) or self.generic_visit(node)
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
         # Short-circuit expressions must be built using the `BranchBuilder`. However, we
@@ -538,30 +538,32 @@ def is_functional_annotation(stmt: ast.stmt) -> bool:
 
 
 @dataclass(frozen=True)
-class EmptyPyExprError(Error):
-    title: ClassVar[str] = "Invalid Python expression"
-    span_label: ClassVar[str] = "Compile-time `py(...)` expression requires an argument"
+class EmptyComptimeExprError(Error):
+    title: ClassVar[str] = "Invalid comptime expression"
+    span_label: ClassVar[str] = "Comptime expression requires an argument"
 
 
-def is_py_expression(node: ast.AST) -> PyExpr | None:
-    """Checks if the given node is a compile-time `py(...)` expression and turns it into
-    a `PyExpr` AST node.
+def is_comptime_expression(node: ast.AST) -> ComptimeExpr | None:
+    """Checks if the given node is a `comptime(...)` expression and turns it into
+    a `ComptimeExpr` AST node.
+
+    Also accepts the `py(...)` alias for `comptime` expressions.
 
     Otherwise, returns `None`.
     """
     if (
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
-        and node.func.id == "py"
+        and node.func.id in ("py", "comptime")
     ):
         match node.args:
             case []:
-                raise GuppyError(EmptyPyExprError(node))
+                raise GuppyError(EmptyComptimeExprError(node))
             case [arg]:
                 pass
             case args:
                 arg = with_loc(node, ast.Tuple(elts=args, ctx=ast.Load))
-        return with_loc(node, PyExpr(value=arg))
+        return with_loc(node, ComptimeExpr(value=arg))
     return None
 
 
