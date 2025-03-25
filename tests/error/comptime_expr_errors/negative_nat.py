@@ -4,4 +4,4 @@ from tests.util import compile_guppy
 
 @compile_guppy
 def foo() -> nat:
-    return py(-1)
+    return comptime(-1)

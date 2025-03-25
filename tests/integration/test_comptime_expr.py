@@ -5,13 +5,23 @@ from importlib.util import find_spec
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import py, array, frozenarray, nat, owned
+from guppylang.std.builtins import py, comptime, array, frozenarray, nat, owned
 from tests.util import compile_guppy
 
 tket2_installed = find_spec("tket2") is not None
 
 
 def test_basic(validate):
+    x = 42
+
+    @compile_guppy
+    def foo() -> int:
+        return comptime(x + 1)
+
+    validate(foo)
+
+
+def test_py_alias(validate):
     x = 42
 
     @compile_guppy
@@ -24,7 +34,7 @@ def test_basic(validate):
 def test_builtin(validate):
     @compile_guppy
     def foo() -> int:
-        return py(len({"a": 1337, "b": None}))
+        return comptime(len({"a": 1337, "b": None}))
 
     validate(foo)
 
@@ -34,7 +44,7 @@ def test_if(validate):
 
     @compile_guppy
     def foo() -> int:
-        if py(b or 1 > 6):
+        if comptime(b or 1 > 6):
             return 0
         return 1
 
@@ -46,7 +56,7 @@ def test_redeclare_after(validate):
 
     @compile_guppy
     def foo() -> int:
-        return py(x)
+        return comptime(x)
 
     x = False
 
@@ -56,7 +66,7 @@ def test_redeclare_after(validate):
 def test_tuple(validate):
     @compile_guppy
     def foo() -> int:
-        x, y = py((1, False))
+        x, y = comptime((1, False))
         return x
 
     validate(foo)
@@ -65,7 +75,7 @@ def test_tuple(validate):
 def test_tuple_implicit(validate):
     @compile_guppy
     def foo() -> int:
-        x, y = py(1, False)
+        x, y = comptime(1, False)
         return x
 
     validate(foo)
@@ -74,7 +84,7 @@ def test_tuple_implicit(validate):
 def test_list_basic(validate):
     @compile_guppy
     def foo() -> frozenarray[int, 3]:
-        xs = py([1, 2, 3])
+        xs = comptime([1, 2, 3])
         return xs
 
     validate(foo)
@@ -83,7 +93,7 @@ def test_list_basic(validate):
 def test_list_empty(validate):
     @compile_guppy
     def foo() -> frozenarray[int, 0]:
-        return py([])
+        return comptime([])
 
     validate(foo)
 
@@ -91,7 +101,7 @@ def test_list_empty(validate):
 def test_list_empty_nested(validate):
     @compile_guppy
     def foo() -> None:
-        xs: frozenarray[tuple[int, frozenarray[bool, 0]], 1] = py([(42, [])])
+        xs: frozenarray[tuple[int, frozenarray[bool, 0]], 1] = comptime([(42, [])])
 
     validate(foo)
 
@@ -99,7 +109,7 @@ def test_list_empty_nested(validate):
 def test_list_empty_multiple(validate):
     @compile_guppy
     def foo() -> None:
-        xs: tuple[frozenarray[int, 0], frozenarray[bool, 0]] = py([], [])
+        xs: tuple[frozenarray[int, 0], frozenarray[bool, 0]] = comptime([], [])
 
     validate(foo)
 
@@ -107,9 +117,9 @@ def test_list_empty_multiple(validate):
 def test_nats_from_ints(validate):
     @compile_guppy
     def foo() -> None:
-        x: nat = py(1)
-        y: tuple[nat, nat] = py(2, 3)
-        z: frozenarray[nat, 3] = py([4, 5, 6])
+        x: nat = comptime(1)
+        y: tuple[nat, nat] = comptime(2, 3)
+        z: frozenarray[nat, 3] = comptime([4, 5, 6])
 
     validate(foo)
 
@@ -117,7 +127,7 @@ def test_nats_from_ints(validate):
 def test_strings(validate):
     @compile_guppy
     def foo() -> None:
-        x: str = py("a" + "b")
+        x: str = comptime("a" + "b")
 
     validate(foo)
 
@@ -127,14 +137,14 @@ def test_func_type_arg(validate):
     n = 10
 
     @guppy(module)
-    def foo(xs: array[int, py(n)] @ owned) -> array[int, py(n)]:
+    def foo(xs: array[int, comptime(n)] @ owned) -> array[int, comptime(n)]:
         return xs
 
     @guppy.declare(module)
-    def bar(xs: array[int, py(n)]) -> array[int, py(n)]: ...
+    def bar(xs: array[int, comptime(n)]) -> array[int, comptime(n)]: ...
 
     @guppy.struct(module)
     class Baz:
-        xs: array[int, py(n)]
+        xs: array[int, comptime(n)]
 
     validate(module.compile())

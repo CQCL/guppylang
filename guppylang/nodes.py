@@ -254,7 +254,7 @@ class DesugaredArrayComp(ast.expr):
     )
 
 
-class PyExpr(ast.expr):
+class ComptimeExpr(ast.expr):
     """A compile-time evaluated `py(...)` expression."""
 
     value: ast.expr

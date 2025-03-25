@@ -44,11 +44,10 @@ class InvalidTypeArgError(Error):
 
 
 @dataclass(frozen=True)
-class IllegalPyTypeArgError(Error):
+class IllegalComptimeTypeArgError(Error):
     title: ClassVar[str] = "Invalid type argument"
     span_label: ClassVar[str] = (
-        "Compile-time `py(...)` expression evaluating to `{obj}` is not a valid type "
-        "argument"
+        "Comptime expression evaluating to `{obj}` is not a valid type argument"
     )
     obj: object
 

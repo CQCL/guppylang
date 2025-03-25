@@ -50,15 +50,15 @@ from guppylang.checker.core import (
     SubscriptAccess,
     Variable,
 )
+from guppylang.checker.errors.comptime_errors import (
+    ComptimeExprEvalError,
+    ComptimeExprIncoherentListError,
+    ComptimeExprNotCPythonError,
+    ComptimeExprNotStaticError,
+    IllegalComptimeExpressionError,
+)
 from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang.checker.errors.linearity import NonDroppableForBreakError
-from guppylang.checker.errors.py_errors import (
-    IllegalPyExpressionError,
-    PyExprEvalError,
-    PyExprIncoherentListError,
-    PyExprNotCPythonError,
-    PyExprNotStaticError,
-)
 from guppylang.checker.errors.type_errors import (
     AttributeNotFoundError,
     BadProtocolError,
@@ -85,6 +85,7 @@ from guppylang.error import (
 )
 from guppylang.experimental import check_function_tensors_enabled, check_lists_enabled
 from guppylang.nodes import (
+    ComptimeExpr,
     DesugaredGenerator,
     DesugaredGeneratorExpr,
     DesugaredListComp,
@@ -98,7 +99,6 @@ from guppylang.nodes import (
     MakeIter,
     PartialApply,
     PlaceNode,
-    PyExpr,
     SubscriptAccessAndDrop,
     TensorCall,
     TypeApply,
@@ -330,8 +330,10 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
         else:
             raise GuppyTypeError(NotCallableError(node.func, func_ty))
 
-    def visit_PyExpr(self, node: PyExpr, ty: Type) -> tuple[ast.expr, Subst]:
-        python_val = eval_py_expr(node, self.ctx)
+    def visit_ComptimeExpr(
+        self, node: ComptimeExpr, ty: Type
+    ) -> tuple[ast.expr, Subst]:
+        python_val = eval_comptime_expr(node, self.ctx)
         if act := python_value_to_guppy_type(
             python_val, node.value, self.ctx.globals, ty
         ):
@@ -342,7 +344,7 @@ class ExprChecker(AstVisitor[tuple[ast.expr, Subst]]):
             subst = {x: s for x, s in subst.items() if x in ty.unsolved_vars}
             return with_type(act, with_loc(node, ast.Constant(value=python_val))), subst
 
-        raise GuppyError(IllegalPyExpressionError(node.value, type(python_val)))
+        raise GuppyError(IllegalComptimeExpressionError(node.value, type(python_val)))
 
     def generic_visit(self, node: ast.expr, ty: Type) -> tuple[ast.expr, Subst]:
         # Try to synthesize and then check if we can unify it with the given type
@@ -756,12 +758,12 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             f"construction: `{ast.unparse(node)}`"
         )
 
-    def visit_PyExpr(self, node: PyExpr) -> tuple[ast.expr, Type]:
-        python_val = eval_py_expr(node, self.ctx)
+    def visit_ComptimeExpr(self, node: ComptimeExpr) -> tuple[ast.expr, Type]:
+        python_val = eval_comptime_expr(node, self.ctx)
         if ty := python_value_to_guppy_type(python_val, node, self.ctx.globals):
             return with_loc(node, ast.Constant(value=python_val)), ty
 
-        raise GuppyError(IllegalPyExpressionError(node.value, type(python_val)))
+        raise GuppyError(IllegalComptimeExpressionError(node.value, type(python_val)))
 
     def visit_NamedExpr(self, node: ast.NamedExpr) -> tuple[ast.expr, Type]:
         raise InternalGuppyError(
@@ -1195,12 +1197,12 @@ def check_generator(
     return gen, inner_ctx
 
 
-def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
-    """Evaluates a `py(...)` expression."""
+def eval_comptime_expr(node: ComptimeExpr, ctx: Context) -> Any:
+    """Evaluates a `comptime(...)` expression."""
     # The method we used for obtaining the Python variables in scope only works in
     # CPython (see `get_py_scope()`).
     if sys.implementation.name != "cpython":
-        raise GuppyError(PyExprNotCPythonError(node))
+        raise GuppyError(ComptimeExprNotCPythonError(node))
 
     try:
         python_val = eval(  # noqa: S307
@@ -1209,12 +1211,12 @@ def eval_py_expr(node: PyExpr, ctx: Context) -> Any:
             DummyEvalDict(ctx, node.value),
         )
     except DummyEvalDict.GuppyVarUsedError as e:
-        raise GuppyError(PyExprNotStaticError(e.node or node, e.var)) from None
+        raise GuppyError(ComptimeExprNotStaticError(e.node or node, e.var)) from None
     except Exception as e:
         # Remove the top frame pointing to the `eval` call from the stack trace
         tb = e.__traceback__.tb_next if e.__traceback__ else None
         tb_formatted = "".join(traceback.format_exception(type(e), e, tb))
-        raise GuppyError(PyExprEvalError(node.value, tb_formatted)) from e
+        raise GuppyError(ComptimeExprEvalError(node.value, tb_formatted)) from e
     return python_val
 
 
@@ -1287,6 +1289,6 @@ def _python_list_to_guppy_type(
         if ty is None:
             return None
         if (subst := unify(ty, el_ty, {})) is None:
-            raise GuppyError(PyExprIncoherentListError(node))
+            raise GuppyError(ComptimeExprIncoherentListError(node))
         el_ty = el_ty.substitute(subst)
     return frozenarray_type(el_ty, len(vs))
