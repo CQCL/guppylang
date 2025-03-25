@@ -61,12 +61,16 @@ T = guppy.type_var("T")
 L = guppy.type_var("L", copyable=False, droppable=False)
 
 
-def py(*args: Any) -> Any:
+def comptime(*args: Any) -> Any:
     """Function to tag compile-time evaluated Python expressions in a Guppy context.
 
     This function acts like the identity when execute in a Python context.
     """
     return tuple(args)
+
+
+#: Alias for `comptime` expressions
+py = comptime
 
 
 class _Owned:

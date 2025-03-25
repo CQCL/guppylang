@@ -9,7 +9,7 @@ from tests.error.util import run_error_test
 tket2_installed = find_spec("tket2") is not None
 
 
-path = pathlib.Path(__file__).parent.resolve() / "py_errors"
+path = pathlib.Path(__file__).parent.resolve() / "comptime_expr_errors"
 files = [
     x
     for x in path.iterdir()
@@ -24,7 +24,7 @@ files = [str(f) for f in files]
 
 @pytest.mark.parametrize("file", files)
 @pytest.mark.skipif(not tket2_installed, reason="tket2 is not installed")
-def test_py_errors(file, capsys, snapshot):
+def test_comptime_expr_errors(file, capsys, snapshot):
     run_error_test(file, capsys, snapshot)
 
 

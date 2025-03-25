@@ -1,9 +1,9 @@
-Error: Python error (at $FILE:6:14)
+Error: Python error (at $FILE:6:20)
   | 
 4 | @compile_guppy
 5 | def foo() -> int:
-6 |     return py(1 / 0)
-  |               ^^^^^ Error occurred while evaluating this expression
+6 |     return comptime(1 / 0)
+  |                     ^^^^^ Error occurred while evaluating this comptime expression
 
 Traceback printed below:
 
