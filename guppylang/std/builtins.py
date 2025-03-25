@@ -414,7 +414,7 @@ class Int:
     @guppy.custom(checker=ReversingChecker())  # TODO: RHS is unsigned
     def __rrshift__(self: int, other: int) -> int: ...
 
-    @guppy.custom(checker=ReversingChecker())  # TODO: RHS is unsigned
+    @guppy.hugr_op(int_op("ishr"))  # TODO: RHS is unsigned
     def __rshift__(self: int, other: int) -> int: ...
 
     @guppy.custom(checker=ReversingChecker())
