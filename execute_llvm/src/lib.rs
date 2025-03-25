@@ -7,7 +7,7 @@ use hugr::Hugr;
 use hugr::{self, ops, std_extensions, HugrView};
 use inkwell::types::BasicType;
 use inkwell::values::BasicMetadataValueEnum;
-use inkwell::{context::Context, module::Module, values::GenericValue};
+use hugr::llvm::inkwell::{self, context::Context, module::Module, values::GenericValue};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -15,15 +15,15 @@ macro_rules! pyerr {
     ($fmt:literal $(,$arg:tt)*) => { PyValueError::new_err(format!($fmt, $($arg),*)) }
 }
 
-fn parse_hugr(hugr_json: &str) -> PyResult<hugr::Hugr> {
-    let mut pkg = Package::from_json(hugr_json, &std_extensions::std_reg())
+fn parse_hugr(pkg_bytes: &[u8]) -> PyResult<hugr::Hugr> {
+    let mut pkg = Package::load(pkg_bytes, Some(&std_extensions::std_reg()))
         .map_err(|e| pyerr!("Couldn't deserialize hugr: {}", e))?;
     let hugr = std::mem::take(&mut pkg.modules[0]);
     Ok(hugr)
 }
 
 // Find the FuncDefn node for the function we're trying to execute.
-fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node> {
+fn find_funcdef_node<H: HugrView>(hugr: H, fn_name: &str) -> PyResult<H::Node> {
     let root = hugr.root();
     let mut fn_nodes = Vec::new();
     for n in hugr.children(root) {
@@ -44,17 +44,22 @@ fn find_funcdef_node(hugr: impl HugrView, fn_name: &str) -> PyResult<hugr::Node>
     }
 }
 
-fn guppy_pass(mut hugr: Hugr) -> Hugr {
+fn guppy_pass(hugr: &mut Hugr, entry_fn: &str) {
     hugr::algorithms::MonomorphizePass::default()
-        .run(&mut hugr)
+        .run(hugr)
         .unwrap();
-    hugr::algorithms::remove_polyfuncs(hugr)
+    hugr::algorithms::RemoveDeadFuncsPass::default()
+        .with_module_entry_points([
+            find_funcdef_node(&hugr, entry_fn).expect("entry point function error.")
+        ])
+        .run(hugr)
+        .unwrap();
 }
 
 fn codegen_extensions() -> CodegenExtsMap<'static, Hugr> {
     CodegenExtsBuilder::default()
         .add_default_prelude_extensions()
-        .add_int_extensions()
+        .add_default_int_extensions()
         .add_float_extensions()
         .add_conversion_extensions()
         .add_logic_extensions()
@@ -82,14 +87,14 @@ fn compile_module<'a>(
 }
 
 fn run_function<T: Clone>(
-    hugr_json: &str,
+    pkg_bytes: &[u8],
     fn_name: &str,
     args: &[T],
     encode_arg: impl Fn(&Context, T) -> BasicMetadataValueEnum,
     parse_result: impl FnOnce(&Context, GenericValue) -> PyResult<T>,
 ) -> PyResult<T> {
-    let mut hugr = parse_hugr(hugr_json)?;
-    hugr = guppy_pass(hugr);
+    let mut hugr = parse_hugr(pkg_bytes)?;
+    guppy_pass(&mut hugr, fn_name);
     let ctx = Context::create();
 
     let namer = hugr::llvm::emit::Namer::default();
@@ -136,20 +141,20 @@ mod execute_llvm {
     use super::*;
 
     #[pyfunction]
-    fn compile_module_to_string(hugr_json: &str) -> PyResult<String> {
-        let mut hugr = parse_hugr(hugr_json)?;
+    fn compile_module_to_string(pkg_bytes: &[u8]) -> PyResult<String> {
+        let mut hugr = parse_hugr(pkg_bytes)?;
         let ctx = Context::create();
 
-        hugr = guppy_pass(hugr);
+        guppy_pass(&mut hugr, "main");
         let module = compile_module(&hugr, &ctx, Default::default())?;
 
         Ok(module.print_to_string().to_str().unwrap().to_string())
     }
 
     #[pyfunction]
-    fn run_int_function(hugr_json: &str, fn_name: &str, args: Vec<i64>) -> PyResult<i64> {
+    fn run_int_function(pkg_bytes: &[u8], fn_name: &str, args: Vec<i64>) -> PyResult<i64> {
         run_function::<i64>(
-            hugr_json,
+            pkg_bytes,
             fn_name,
             &args,
             |ctx, i| ctx.i64_type().const_int(i as u64, true).into(),
@@ -163,9 +168,9 @@ mod execute_llvm {
     }
 
     #[pyfunction]
-    fn run_float_function(hugr_json: &str, fn_name: &str, args: Vec<f64>) -> PyResult<f64> {
+    fn run_float_function(pkg_bytes: &[u8], fn_name: &str, args: Vec<f64>) -> PyResult<f64> {
         run_function::<f64>(
-            hugr_json,
+            pkg_bytes,
             fn_name,
             &args,
             |ctx, f| ctx.f64_type().const_float(f).into(),

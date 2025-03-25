@@ -1,6 +1,6 @@
 [project]
 name = "guppylang"
-version = "0.16.0"
+version = "0.17.1"
 requires-python = ">=3.10,<4"
 description = "Pythonic quantum-classical programming language"
 license = { file = "LICENCE" }
@@ -38,8 +38,8 @@ dependencies = [
     "networkx >=3.2.1,<4",
     "pydantic >=2.7.0b1,<3",
     "typing-extensions >=4.9.0,<5",
-    "hugr >=0.10.3,<0.11",
-    "tket2-exts>=0.5.0,<0.6",
+    "hugr ~= 0.11.3",
+    "tket2-exts ~= 0.6.0",
 ]
 
 [project.optional-dependencies]
@@ -65,7 +65,7 @@ test = [
     "pytest-notebook >=0.10.0,<0.11",
     "pytest-snapshot >=0.9.0,<1",
     "ipykernel >=6.29.5,<7",
-    "tket2>=0.7.0",
+    "tket2 ~= 0.8.1",
     "pytest-benchmark>=5.1.0",
 ]
 execution = [
@@ -85,9 +85,9 @@ members = ["execute_llvm"]
 execute-llvm = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
-#  hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "e40b6c7" }
-# tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", rev = "633ebd7"}
-# tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", rev = "259cf88"}
+# hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "6bd76659" }
+# tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", rev = "309879e" }
+# tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", rev = "309879e" }
 
 
 [build-system]

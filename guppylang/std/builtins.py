@@ -10,9 +10,10 @@ from guppylang.decorator import guppy
 from guppylang.definition.custom import CopyInoutCompiler, NoopCompiler
 from guppylang.std._internal.checker import (
     ArrayCopyChecker,
-    ArrayLenChecker,
+    BarrierChecker,
     CallableChecker,
     DunderChecker,
+    ExitChecker,
     NewArrayChecker,
     PanicChecker,
     RangeChecker,
@@ -33,7 +34,10 @@ from guppylang.std._internal.compiler.list import (
     ListPushCompiler,
     ListSetitemCompiler,
 )
-from guppylang.std._internal.compiler.prelude import MemSwapCompiler
+from guppylang.std._internal.compiler.prelude import (
+    MemSwapCompiler,
+    UnwrapOpCompiler,
+)
 from guppylang.std._internal.util import (
     float_op,
     int_op,
@@ -471,7 +475,12 @@ class Float:
     @guppy.hugr_op(float_op("fgt"))
     def __gt__(self: float, other: float) -> bool: ...
 
-    @guppy.hugr_op(unsupported_op("trunc_s"))  # TODO `trunc_s` returns an option
+    @guppy.custom(
+        UnwrapOpCompiler(
+            # Use `int_op` to instantiate type arg with 64-bit integer.
+            int_op("trunc_s", hugr.std.int.CONVERSIONS_EXTENSION),
+        )
+    )
     def __int__(self: float) -> int: ...
 
     @guppy.hugr_op(float_op("fle"))
@@ -488,7 +497,12 @@ class Float:
     @guppy.hugr_op(float_op("fmul"))
     def __mul__(self: float, other: float) -> float: ...
 
-    @guppy.hugr_op(unsupported_op("trunc_u"))  # TODO `trunc_u` returns an option
+    @guppy.custom(
+        UnwrapOpCompiler(
+            # Use `int_op` to instantiate type arg with 64-bit integer.
+            int_op("trunc_u", hugr.std.int.CONVERSIONS_EXTENSION),
+        )
+    )
     def __nat__(self: float) -> nat: ...
 
     @guppy.hugr_op(float_op("fne"))
@@ -581,8 +595,10 @@ class Array:
     @guppy.custom(ArraySetitemCompiler())
     def __setitem__(self: array[L, n], idx: int, value: L @ owned) -> None: ...
 
-    @guppy.custom(checker=ArrayLenChecker())
-    def __len__(self: array[L, n]) -> int: ...
+    @guppy
+    @no_type_check
+    def __len__(self: array[L, n]) -> int:
+        return n
 
     @guppy.custom(NewArrayCompiler(), NewArrayChecker(), higher_order_value=False)
     def __new__(): ...
@@ -646,17 +662,43 @@ class SizedIter:
         """Dummy implementation making sized iterators iterable themselves."""
 
 
-# TODO: This is a temporary hack until we have implemented the proper results mechanism.
 @guppy.custom(checker=ResultChecker(), higher_order_value=False)
-def result(tag, value): ...
+def result(tag, value):
+    """Report a result with the given tag and value.
+
+    This is the primary way to report results from the program back to the user.
+    On Quantinuum systems a single shot execution will return a list of pairs of
+    (tag, value).
+
+    Args:
+        tag: The tag of the result. Must be a string literal
+        value: The value of the result. Currently supported value types are `int`,
+        `nat`, `float`, and `bool`.
+    """
 
 
 @guppy.custom(checker=PanicChecker(), higher_order_value=False)
 def panic(msg, *args):
     """Panic, throwing an error with the given message, and immediately exit the
-    program.
+    program, aborting any subsequent shots.
 
     Return type is arbitrary, as this function never returns.
+
+    Args:
+        msg: The message to display. Must be a string literal.
+        args: Arbitrary extra inputs, will not affect the message. Only useful for
+        consuming linear values.
+    """
+
+
+@guppy.custom(checker=ExitChecker(), higher_order_value=False)
+def exit(msg: str, signal: int, *args):
+    """Exit, reporting the given message and signal, and immediately exit the
+    program. Subsequent shots may still run.
+
+    Return type is arbitrary, as this function never returns.
+
+    On Quantinuum systems only signals in the range 1<=signal<=1000 are supported.
 
     Args:
         msg: The message to display. Must be a string literal.
@@ -946,6 +988,12 @@ def __import__(x): ...
 @guppy.custom(MemSwapCompiler())
 def mem_swap(x: L, y: L) -> None:
     """Swaps the values of two variables."""
+
+
+@guppy.custom(checker=BarrierChecker(), higher_order_value=False)
+def barrier(*args) -> None:
+    """Barrier to guarantee that all operations before the barrier are completed before
+    operations after the barrier are started."""
 
 
 # Import `Option` since it's part of the default module. Has to be at the end of the

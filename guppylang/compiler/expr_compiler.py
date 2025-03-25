@@ -1,7 +1,7 @@
 import ast
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import AbstractContextManager, ExitStack, contextmanager
-from typing import Any, TypeGuard, TypeVar
+from typing import Any, Final, TypeGuard, TypeVar
 
 import hugr
 import hugr.std.collections.array
@@ -12,6 +12,7 @@ import hugr.std.prelude
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr import val as hv
+from hugr.build import function as hf
 from hugr.build.cond_loop import Conditional
 from hugr.build.dfg import DP, DfBase
 from typing_extensions import assert_never
@@ -20,7 +21,12 @@ from guppylang.ast_util import AstNode, AstVisitor, get_type
 from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import Variable, contains_subscript
 from guppylang.checker.errors.generic import UnsupportedError
-from guppylang.compiler.core import CompilerBase, DFContainer
+from guppylang.compiler.core import (
+    CompilerBase,
+    CompilerContext,
+    DFContainer,
+    GlobalConstId,
+)
 from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import (
@@ -30,9 +36,11 @@ from guppylang.definition.value import (
 )
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
+    BarrierExpr,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
+    ExitKind,
     FieldAccessAndDrop,
     GenericParamValue,
     GlobalCall,
@@ -51,7 +59,7 @@ from guppylang.std._internal.compiler.array import array_repeat
 from guppylang.std._internal.compiler.list import (
     list_new,
 )
-from guppylang.std._internal.compiler.prelude import build_error, build_panic
+from guppylang.std._internal.compiler.prelude import build_error, build_panic, panic
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     bool_type,
@@ -278,10 +286,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             types = type_to_row(return_ty)
             assert len(returns) == len(types)
             return self._pack_tuple(returns, types)
-        assert len(returns) == 1, (
-            f"Expected a single return value. Got {returns}. "
-            f"return type {return_ty}"
-        )
+        assert (
+            len(returns) == 1
+        ), f"Expected a single return value. Got {returns}. return type {return_ty}"
         return returns[0]
 
     def _update_inout_ports(
@@ -502,17 +509,29 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._pack_returns([], NoneType())
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
-        err = build_error(self.builder, 1, node.msg)
+        err = build_error(self.builder, node.signal, node.msg)
         in_tys = [get_type(e).to_hugr() for e in node.values]
         out_tys = [ty.to_hugr() for ty in type_to_row(get_type(node))]
-        outs = build_panic(
-            self.builder,
-            in_tys,
-            out_tys,
-            err,
-            *(self.visit(e) for e in node.values),
-        ).outputs()
-        return self._pack_returns(list(outs), get_type(node))
+        args = [self.visit(e) for e in node.values]
+        match node.kind:
+            case ExitKind.Panic:
+                h_node = build_panic(self.builder, in_tys, out_tys, err, *args)
+            case ExitKind.ExitShot:
+                op = panic(in_tys, out_tys, ExitKind.ExitShot)
+                h_node = self.builder.add_op(op, err, *args)
+        return self._pack_returns(list(h_node.outputs()), get_type(node))
+
+    def visit_BarrierExpr(self, node: BarrierExpr) -> Wire:
+        hugr_tys = [get_type(e).to_hugr() for e in node.args]
+        op = hugr.std.prelude.PRELUDE_EXTENSION.get_op("Barrier").instantiate(
+            [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in hugr_tys])],
+            ht.FunctionType.endo(hugr_tys),
+        )
+
+        barrier_n = self.builder.add_op(op, *(self.visit(e) for e in node.args))
+
+        self._update_inout_ports(node.args, iter(barrier_n), node.func_ty)
+        return self._pack_returns([], NoneType())
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> Wire:
         # Make up a name for the list under construction and bind it to an empty list
@@ -538,9 +557,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # See https://github.com/CQCL/guppylang/issues/629
         hugr_elt_ty = ht.Option(node.elt_ty.to_hugr())
         # Initialise array with `None`s
-        make_none = self.builder.define_function("init_none", [], [hugr_elt_ty])
-        make_none.set_outputs(make_none.add_op(ops.Tag(0, hugr_elt_ty)))
-        make_none = self.builder.load_function(make_none)
+        make_none = array_comprehension_init_func(self.ctx)
+        make_none = self.builder.load_function(
+            make_none,
+            instantiation=ht.FunctionType([], [hugr_elt_ty]),
+            type_args=[ht.TypeTypeArg(node.elt_ty.to_hugr())],
+        )
         self.dfg[array_var] = self.builder.add_op(
             array_repeat(hugr_elt_ty, node.length.to_arg().to_hugr()), make_none
         )
@@ -705,6 +727,30 @@ def tket2_result_op(
         args=args,
         signature=sig,
     )
+
+
+ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(
+    "array.__comprehension.init"
+)
+
+
+def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
+    """Returns the Hugr function that is used to initialise arrays elements before a
+    comprehension.
+
+    Just returns the `None` variant of the optional element type.
+
+    See https://github.com/CQCL/guppylang/issues/629
+    """
+    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Any))
+    sig = ht.PolyFuncType(
+        params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+        body=ht.FunctionType([], [ht.Option(v)]),
+    )
+    func, already_defined = ctx.declare_global_func(ARRAY_COMPREHENSION_INIT, sig)
+    if not already_defined:
+        func.set_outputs(func.add_op(ops.Tag(0, ht.Option(v))))
+    return func
 
 
 T = TypeVar("T")

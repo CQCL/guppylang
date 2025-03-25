@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from guppylang.diagnostic import Error, Help
+from guppylang.diagnostic import Error, Help, Note
+from guppylang.tys.ty import FunctionType
 
 
 @dataclass(frozen=True)
@@ -58,7 +59,10 @@ class Tket2NotInstalled(Error):
 @dataclass(frozen=True)
 class PytketSignatureMismatch(Error):
     title: ClassVar[str] = "Signature mismatch"
-    span_label: ClassVar[str] = (
-        "Signature `{name}` doesn't match provided pytket circuit"
-    )
+    span_label: ClassVar[str] = "Signature `{name}` doesn't match provided circuit"
     name: str
+
+    @dataclass(frozen=True)
+    class TypeHint(Note):
+        message: ClassVar[str] = "Expected circuit signature is `{circ_sig}`"
+        circ_sig: FunctionType

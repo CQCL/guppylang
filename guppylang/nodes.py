@@ -2,6 +2,7 @@
 
 import ast
 from collections.abc import Mapping
+from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from guppylang.ast_util import AstNode
@@ -79,9 +80,6 @@ class TensorCall(ast.expr):
         "args",
         "tensor_ty",
     )
-
-
-AnyCall = LocalCall | GlobalCall | TensorCall
 
 
 class TypeApply(ast.expr):
@@ -276,13 +274,31 @@ class ResultExpr(ast.expr):
     _fields = ("value", "base_ty", "array_len", "tag")
 
 
-class PanicExpr(ast.expr):
-    """A `panic(msg, *args)` expression."""
+class ExitKind(Enum):
+    ExitShot = 0  # Exit the current shot
+    Panic = 1  # Panic the program ending all shots
 
+
+class PanicExpr(ast.expr):
+    """A `panic(msg, *args)` or `exit(msg, *args)` expression ."""
+
+    kind: ExitKind
+    signal: int
     msg: str
     values: list[ast.expr]
 
-    _fields = ("msg", "values")
+    _fields = ("kind", "signal", "msg", "values")
+
+
+class BarrierExpr(ast.expr):
+    """A `barrier(*args)` expression."""
+
+    args: list[ast.expr]
+    func_ty: FunctionType
+    _fields = ("args", "func_ty")
+
+
+AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr
 
 
 class InoutReturnSentinel(ast.expr):

@@ -14,7 +14,6 @@ from guppylang.checker.errors.type_errors import (
 from guppylang.checker.expr_checker import (
     ExprChecker,
     ExprSynthesizer,
-    check_call,
     check_num_args,
     check_type_against,
     synthesize_call,
@@ -27,8 +26,10 @@ from guppylang.definition.struct import CheckedStructDef, RawStructDef
 from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import (
+    BarrierExpr,
     DesugaredArrayComp,
     DesugaredGeneratorExpr,
+    ExitKind,
     GenericParamValue,
     GlobalCall,
     MakeIter,
@@ -51,9 +52,11 @@ from guppylang.tys.builtin import (
     string_type,
 )
 from guppylang.tys.const import Const, ConstValue
-from guppylang.tys.subst import Inst, Subst
+from guppylang.tys.subst import Subst
 from guppylang.tys.ty import (
+    FuncInput,
     FunctionType,
+    InputFlags,
     NoneType,
     NumericType,
     StructType,
@@ -141,28 +144,6 @@ class CallableChecker(CustomCallChecker):
         )
         const = with_loc(self.node, ast.Constant(value=is_callable))
         return const, bool_type()
-
-
-class ArrayLenChecker(CustomCallChecker):
-    """Function call checker for the `array.__len__` function."""
-
-    @staticmethod
-    def _get_const_len(inst: Inst) -> ast.expr:
-        """Helper function to extract the static length from the inferred type args."""
-        # TODO: This will stop working once we allow generic function defs. Then, the
-        #  argument could also just be variable instead of a concrete number.
-        match inst:
-            case [_, ConstArg(const=ConstValue(value=int(n)))]:
-                return ast.Constant(value=n)
-        raise InternalGuppyError(f"array.__len__: Invalid instantiation: {inst}")
-
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        _, _, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
-        return self._get_const_len(inst), int_type()
-
-    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        _, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
-        return self._get_const_len(inst), subst
 
 
 class ArrayCopyChecker(CustomCallChecker):
@@ -391,7 +372,7 @@ class ResultChecker(CustomCallChecker):
 
 
 class PanicChecker(CustomCallChecker):
-    """Call checker for the `panic` function."""
+    """Call checker for the `panic`  function."""
 
     @dataclass(frozen=True)
     class NoMessageError(Error):
@@ -414,13 +395,79 @@ class PanicChecker(CustomCallChecker):
                     raise GuppyTypeError(ExpectedError(msg, "a string literal"))
 
                 vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
-                node = PanicExpr(msg.value, vals)
+                # TODO variable signals once default arguments are available
+                node = PanicExpr(
+                    kind=ExitKind.Panic, msg=msg.value, values=vals, signal=1
+                )
                 return with_loc(self.node, node), NoneType()
             case args:
                 return assert_never(args)  # type: ignore[arg-type]
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         # Panic may return any type, so we don't have to check anything. Consequently
+        # we also can't infer anything in the expected type, so we always return an
+        # empty substitution
+        expr, _ = self.synthesize(args)
+        return expr, {}
+
+
+class ExitChecker(CustomCallChecker):
+    """Call checker for the ``exit` functions."""
+
+    @dataclass(frozen=True)
+    class NoMessageError(Error):
+        title: ClassVar[str] = "No exit message"
+        span_label: ClassVar[str] = "Missing message argument to exit call"
+
+        @dataclass(frozen=True)
+        class Suggestion(Note):
+            message: ClassVar[str] = 'Add a message: `exit("message", 0)`'
+
+    @dataclass(frozen=True)
+    class NoSignalError(Error):
+        title: ClassVar[str] = "No exit signal"
+        span_label: ClassVar[str] = "Missing signal argument to exit call"
+
+        @dataclass(frozen=True)
+        class Suggestion(Note):
+            message: ClassVar[str] = 'Add a signal: `exit("message", 0)`'
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        match args:
+            case []:
+                msg_err = ExitChecker.NoMessageError(self.node)
+                msg_err.add_sub_diagnostic(ExitChecker.NoMessageError.Suggestion(None))
+                raise GuppyTypeError(msg_err)
+            case [_msg]:
+                signal_err = ExitChecker.NoSignalError(self.node)
+                signal_err.add_sub_diagnostic(
+                    ExitChecker.NoSignalError.Suggestion(None)
+                )
+                raise GuppyTypeError(signal_err)
+            case [msg, signal, *rest]:
+                msg, _ = ExprChecker(self.ctx).check(msg, string_type())
+                if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
+                    raise GuppyTypeError(ExpectedError(msg, "a string literal"))
+                # TODO allow variable signals after https://github.com/CQCL/hugr/issues/1863
+                signal, _ = ExprChecker(self.ctx).check(signal, int_type())
+                if not isinstance(signal, ast.Constant) or not isinstance(
+                    signal.value, int
+                ):
+                    raise GuppyTypeError(ExpectedError(msg, "an integer literal"))
+
+                vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
+                node = PanicExpr(
+                    kind=ExitKind.ExitShot,
+                    msg=msg.value,
+                    values=vals,
+                    signal=signal.value,
+                )
+                return with_loc(self.node, node), NoneType()
+            case args:
+                return assert_never(args)  # type: ignore[arg-type]
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        # Exit may return any type, so we don't have to check anything. Consequently
         # we also can't infer anything in the expected type, so we always return an
         # empty substitution
         expr, _ = self.synthesize(args)
@@ -474,3 +521,18 @@ def to_sized_iter(
     assert make_sized_iter is not None
     sized_iter, _ = make_sized_iter.check_call([iterator], sized_iter_ty, iterator, ctx)
     return sized_iter, sized_iter_ty
+
+
+class BarrierChecker(CustomCallChecker):
+    """Call checker for the `barrier` function."""
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        tys = [ExprSynthesizer(self.ctx).synthesize(val)[1] for val in args]
+        func_ty = FunctionType(
+            [FuncInput(t, InputFlags.Inout) for t in tys],
+            NoneType(),
+        )
+        args, ret_ty, inst = synthesize_call(func_ty, args, self.node, self.ctx)
+        assert len(inst) == 0, "func_ty is not generic"
+        node = BarrierExpr(args=args, func_ty=func_ty)
+        return with_loc(self.node, node), ret_ty

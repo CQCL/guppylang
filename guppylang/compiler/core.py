@@ -1,12 +1,19 @@
 import itertools
 from abc import ABC
+from collections import defaultdict
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import cast
+from typing import Any, cast
 
-from hugr import Wire, ops
+import tket2_exts
+from hugr import Hugr, Node, Wire, ops
 from hugr import tys as ht
 from hugr.build import function as hf
 from hugr.build.dfg import DP, DefinitionBuilder, DfBase
+from hugr.hugr.base import OpVarCov
+from hugr.hugr.node_port import ToNode
+from hugr.std import PRELUDE
 
 from guppylang.checker.core import FieldAccess, Globals, Place, PlaceId, Variable
 from guppylang.definition.common import CheckedDef, CompilableDef, CompiledDef, DefId
@@ -90,8 +97,9 @@ class CompilerContext:
         self.worklist.add(defn.id)
         while self.worklist:
             next_id = self.worklist.pop()
-            next_def = self.build_compiled_def(next_id)
-            next_def.compile_inner(self)
+            with track_hugr_side_effects():
+                next_def = self.build_compiled_def(next_id)
+                next_def.compile_inner(self)
 
     def get_instance_func(
         self, ty: Type | TypeDef, name: str
@@ -216,3 +224,94 @@ def return_var(n: int) -> str:
 def is_return_var(x: str) -> bool:
     """Checks whether the given name is a dummy return variable."""
     return x.startswith("%ret")
+
+
+QUANTUM_EXTENSION = tket2_exts.quantum()
+RESULT_EXTENSION = tket2_exts.result()
+
+#: List of extension ops that have side-effects, identified by their qualified name
+EXTENSION_OPS_WITH_SIDE_EFFECTS: list[str] = [
+    # Results should be order w.r.t. each other but also w.r.t. panics
+    *(op_def.qualified_name() for op_def in RESULT_EXTENSION.operations.values()),
+    PRELUDE.get_op("panic").qualified_name(),
+    PRELUDE.get_op("exit").qualified_name(),
+    # Qubit allocation and deallocation have the side-effect of changing the number of
+    # available free qubits
+    QUANTUM_EXTENSION.get_op("QAlloc").qualified_name(),
+    QUANTUM_EXTENSION.get_op("QFree").qualified_name(),
+    QUANTUM_EXTENSION.get_op("MeasureFree").qualified_name(),
+]
+
+
+def may_have_side_effect(op: ops.Op) -> bool:
+    """Checks whether an operation could have a side-effect.
+
+    We need to insert implicit state order edges between these kinds of nodes to ensure
+    they are executed in the correct order, even if there is no data dependency.
+    """
+    match op:
+        case ops.ExtOp() as ext_op:
+            return ext_op.op_def().qualified_name() in EXTENSION_OPS_WITH_SIDE_EFFECTS
+        case ops.Custom(op_name=op_name, extension=extension):
+            qualified_name = f"{extension}.{op_name}" if extension else op_name
+            return qualified_name in EXTENSION_OPS_WITH_SIDE_EFFECTS
+        case ops.Call() | ops.CallIndirect():
+            # Conservative choice is to assume that all calls could have side effects.
+            # In the future we could inspect the call graph to figure out a more
+            # precise answer
+            return True
+        case _:
+            return False
+
+
+@contextmanager
+def track_hugr_side_effects() -> Iterator[None]:
+    """Initialises the tracking of nodes with side-effects during Hugr building.
+
+    Ensures that state-order edges are implicitly inserted between side-effectful nodes
+    to ensure they are executed in the order they are added.
+    """
+    # Remember original `Hugr.add_node` method that is monkey-patched below.
+    hugr_add_node = Hugr.add_node
+    # Last node with potential side effects for each dataflow parent
+    prev_node_with_side_effect: defaultdict[Node, Node | None] = defaultdict(
+        lambda: None
+    )
+
+    def hugr_add_node_with_order(
+        self: Hugr[OpVarCov],
+        op: ops.Op,
+        parent: ToNode | None = None,
+        num_outs: int | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Node:
+        """Monkey-patched version of `Hugr.add_node` that takes care of implicitly
+        inserting state order edges between operations that could have side-effects.
+        """
+        new_node = hugr_add_node(self, op, parent, num_outs, metadata)
+        if may_have_side_effect(op):
+            handle_side_effect(new_node, self)
+        return new_node
+
+    def handle_side_effect(node: Node, hugr: Hugr[OpVarCov]) -> None:
+        """Performs the actual order-edge insertion, assuming that `node` has a side-
+        effect."""
+        parent = hugr[node].parent
+        if parent is not None:
+            if prev := prev_node_with_side_effect[parent]:
+                hugr.add_order_link(prev, node)
+            else:
+                # If this is the first side-effectful op in this DFG, make a recursive
+                # call with the parent since the parent is also considered side-
+                # effectful now. We shouldn't walk up through function definitions
+                # or basic blocks though
+                if not isinstance(hugr[parent].op, ops.FuncDefn | ops.DataflowBlock):
+                    handle_side_effect(parent, hugr)
+            prev_node_with_side_effect[parent] = node
+
+    # Monkey-patch the `add_node` method
+    Hugr.add_node = hugr_add_node_with_order  # type: ignore[method-assign]
+    try:
+        yield
+    finally:
+        Hugr.add_node = hugr_add_node  # type: ignore[method-assign]
