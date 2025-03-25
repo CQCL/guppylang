@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.18.0](https://github.com/CQCL/guppylang/compare/v0.17.1...v0.18.0) (2025-03-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* Lists loaded from `py(...)` expressions are now turned into immutable `frozenarray`s instead of regular `array`s.
+* Guppy decorators now return instances of `GuppyDefinition`
+
+### Features
+
+* Add frozenarray type for lists loaded from py expressions ([#868](https://github.com/CQCL/guppylang/issues/868)) ([e619c78](https://github.com/CQCL/guppylang/commit/e619c782495b036a567e5c20841d46f5951dcc73))
+* Comptime functions ([#727](https://github.com/CQCL/guppylang/issues/727)) ([f9cc5c5](https://github.com/CQCL/guppylang/commit/f9cc5c5d2c498b75dba6cb3be1f9b9854ce9bda2)), closes [#751](https://github.com/CQCL/guppylang/issues/751)
+
 ## [0.17.1](https://github.com/CQCL/guppylang/compare/v0.17.0...v0.17.1) (2025-03-24)
 
 
