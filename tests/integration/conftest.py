@@ -73,7 +73,7 @@ class LLVMException(Exception):
 
 
 def _run_fn(run_fn_name: str):
-    def f(module: PackagePointer, expected: Any, fn_name: str = "main"):
+    def f(module: PackagePointer, expected: Any, fn_name: str = "main", args: list[Any] | None = None):
         try:
             import execute_llvm
 
@@ -82,7 +82,7 @@ def _run_fn(run_fn_name: str):
                 pytest.skip("Skipping llvm execution")
 
             package_bytes = module.package.to_bytes()
-            res = fn(package_bytes, fn_name)
+            res = fn(package_bytes, fn_name, args or [])
             if res != expected:
                 raise LLVMException(
                     f"Expected value ({expected}) doesn't match actual value ({res})"
@@ -110,11 +110,17 @@ def run_float_fn_approx():
         hugr: PackagePointer,
         expected: float,
         fn_name: str = "main",
+        args: list[Any] | None = None,
         *,
         rel: float | None = None,
         abs: float | None = None,
         nan_ok: bool = False,
     ):
-        return run_fn(hugr, pytest.approx(expected, rel=rel, abs=abs, nan_ok=nan_ok))
+        return run_fn(
+            hugr,
+            pytest.approx(expected, rel=rel, abs=abs, nan_ok=nan_ok),
+            fn_name,
+            args,
+        )
 
     return run_approx

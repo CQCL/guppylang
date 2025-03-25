@@ -1,0 +1,15 @@
+Error: Error in comptime function return (at $FILE:10:0)
+   | 
+ 8 | 
+ 9 | @guppy.comptime(module)
+10 | def test() -> tuple[qubit, qubit]:
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   | ...
+12 |     return q, q
+   | ^^^^^^^^^^^^^^^
+
+Value with non-copyable type `qubit` was already used
+
+Previous use occurred in linear_copy6.py:15
+
+Guppy compilation failed due to 1 previous error
