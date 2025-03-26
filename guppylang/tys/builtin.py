@@ -12,7 +12,7 @@ from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
-from guppylang.std._internal.compiler.tket2_exts import BOOL_EXTENSION
+from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
@@ -157,10 +157,6 @@ def _option_to_hugr(args: Sequence[Argument]) -> ht.Type:
     return ht.Option(arg.ty.to_hugr())
 
 
-BOOL_T_DEF = BOOL_EXTENSION.get_type("bool")
-BOOL_T = ht.ExtType(BOOL_T_DEF)
-
-
 callable_type_def = CallableTypeDef(DefId.fresh(), None)
 tuple_type_def = _TupleTypeDef(DefId.fresh(), None)
 none_type_def = _NoneTypeDef(DefId.fresh(), None)
@@ -171,7 +167,7 @@ bool_type_def = OpaqueTypeDef(
     params=[],
     never_copyable=False,
     never_droppable=False,
-    to_hugr=lambda _: BOOL_T,
+    to_hugr=lambda _: OpaqueBool,
 )
 nat_type_def = _NumericTypeDef(
     DefId.fresh(), "nat", None, NumericType(NumericType.Kind.Nat)

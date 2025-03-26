@@ -19,6 +19,11 @@ from guppylang.diagnostic import Error, Help
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
+from guppylang.std._internal.compiler.tket2_bool import (
+    OpaqueBool,
+    bool_to_sum,
+    sum_to_bool,
+)
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     FuncInput,
@@ -429,6 +434,48 @@ class OpCompiler(CustomInoutCallCompiler):
         return CallReturnWires(
             regular_returns=list(node[:num_returns]),
             inout_returns=list(node[num_returns:]),
+        )
+
+
+class BoolOpCompiler(CustomInoutCallCompiler):
+    """Call compiler for functions that are directly implemented via Hugr ops but need
+    input and/or output conversions from hugr sum bools to the opaque bools Guppy is 
+    using.
+
+    args:
+        op: A function that takes an instantiation of the type arguments as well as
+            the monomorphic function type, and returns a concrete HUGR op.
+    """
+
+    op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]
+
+    def __init__(self, op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]) -> None:
+        self.op = op
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        converted_in = [ht.Bool if inp == OpaqueBool else inp for inp in self.ty.input]
+        converted_out = [
+            ht.Bool if out == OpaqueBool else out for out in self.ty.output
+        ]
+        hugr_op_ty = ht.FunctionType(converted_in, converted_out)
+        op = self.op(hugr_op_ty, self.type_args)
+        converted_args = [
+            self.builder.add_op(bool_to_sum(), arg)
+            if self.builder.hugr.port_type(arg.out_port()) == OpaqueBool
+            else arg
+            for arg in args
+        ]
+        node = self.builder.add_op(op, *converted_args)
+        result = list(node.outputs())
+        converted_result = [
+            self.builder.add_op(sum_to_bool(), res)
+            if self.builder.hugr.port_type(res.out_port()) == ht.Bool
+            else res
+            for res in result
+        ]
+        return CallReturnWires(
+            regular_returns=converted_result,
+            inout_returns=[],
         )
 
 

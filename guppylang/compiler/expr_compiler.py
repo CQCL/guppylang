@@ -59,6 +59,12 @@ from guppylang.std._internal.compiler.list import (
     list_new,
 )
 from guppylang.std._internal.compiler.prelude import build_error, build_panic
+from guppylang.std._internal.compiler.tket2_bool import (
+    OpaqueBool,
+    OpaqueBoolVal,
+    bool_to_sum,
+    not_op,
+)
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     bool_type,
@@ -184,8 +190,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         """Builds a `Conditional`, returning context managers to build the `True` and
         `False` branch.
         """
+        cond_wire = self.visit(cond)
+        cond_ty = self.builder.hugr.port_type(cond_wire.out_port())
+        if cond_ty == OpaqueBool:
+            cond_wire = self.builder.add_op(bool_to_sum(), cond_wire)
         conditional = self.builder.add_conditional(
-            self.visit(cond), *(self.visit(inp) for inp in inputs)
+            cond_wire, *(self.visit(inp) for inp in inputs)
         )
         only_true_inputs_ = only_true_inputs or []
         only_false_inputs_ = only_false_inputs or []
@@ -447,7 +457,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # since it is not implemented via a dunder method
         if isinstance(node.op, ast.Not):
             arg = self.visit(node.operand)
-            return self.builder.add_op(hugr.std.logic.Not, arg)
+            return self.builder.add_op(not_op(), arg)
 
         raise InternalGuppyError("Node should have been removed during type checking.")
 
@@ -498,13 +508,17 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                     assert_never(c)
         else:
             op_name = f"result_{base_name}"
+        typ = get_type(node.value).to_hugr()
         op = tket2_result_op(
             op_name=op_name,
-            typ=get_type(node.value).to_hugr(),
+            typ=typ,
             tag=node.tag,
             extra_args=extra_args,
         )
-        self.builder.add_op(op, self.visit(node.value))
+        val_wire = self.visit(node.value)
+        if typ == OpaqueBool:
+            val_wire = self.builder.add_op(bool_to_sum(), val_wire)
+        self.builder.add_op(op, val_wire)
         return self._pack_returns([], NoneType())
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
@@ -677,7 +691,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
     """
     match v:
         case bool():
-            return hv.bool_value(v)
+            return OpaqueBoolVal(v)
         case str():
             return hugr.std.prelude.StringVal(v)
         case int():
@@ -716,6 +730,8 @@ def tket2_result_op(
         ht.StringArg(tag),
         *extra_args,
     ]
+    if typ == OpaqueBool:
+        typ = ht.Bool
     sig = ht.FunctionType(
         input=[typ],
         output=[],

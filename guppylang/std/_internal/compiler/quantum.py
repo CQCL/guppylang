@@ -9,15 +9,18 @@ from hugr import ext as he
 from hugr import tys as ht
 from hugr.std.float import FLOAT_T
 
-
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
-from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_RANDOM_EXTENSION, QUANTUM_EXTENSION, ROTATION_EXTENSION
+from guppylang.std._internal.compiler.tket2_bool import sum_to_bool
+from guppylang.std._internal.compiler.tket2_exts import (
+    QSYSTEM_RANDOM_EXTENSION,
+    QUANTUM_EXTENSION,
+    ROTATION_EXTENSION,
+)
 
 # ----------------------------------------------
 # --------- tket2.* extensions -----------------
 # ----------------------------------------------
-
 
 
 RNGCONTEXT_T_DEF = QSYSTEM_RANDOM_EXTENSION.get_type("context")
@@ -60,6 +63,7 @@ class InoutMeasureCompiler(CustomInoutCallCompiler):
             ),
             q,
         )
+        bit = self.builder.add_op(sum_to_bool(), bit)
         return CallReturnWires(regular_returns=[bit], inout_returns=[q])
 
 

@@ -7,6 +7,7 @@ from typing import no_type_check
 from hugr import tys as ht
 
 from guppylang.decorator import guppy
+from guppylang.definition.custom import BoolOpCompiler
 from guppylang.std._internal.compiler.quantum import (
     InoutMeasureCompiler,
     RotationCompiler,
@@ -136,7 +137,7 @@ def project_z(q: qubit) -> bool: ...
 def discard(q: qubit @ owned) -> None: ...
 
 
-@guppy.hugr_op(quantum_op("MeasureFree"))
+@guppy.custom(BoolOpCompiler(quantum_op("MeasureFree")))
 @no_type_check
 def measure(q: qubit @ owned) -> bool: ...
 

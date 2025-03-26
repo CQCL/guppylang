@@ -1,12 +1,12 @@
 from tket2_exts import (
     futures,
+    opaque_bool,
     qsystem,
     qsystem_random,
     qsystem_utils,
     quantum,
     result,
     rotation,
-    opaque_bool,
 )
 
 BOOL_EXTENSION = opaque_bool()

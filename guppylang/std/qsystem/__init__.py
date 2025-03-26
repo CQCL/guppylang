@@ -1,6 +1,7 @@
 from typing import no_type_check
 
 from guppylang.decorator import guppy
+from guppylang.definition.custom import BoolOpCompiler
 from guppylang.module import GuppyModule
 from guppylang.std import angles
 from guppylang.std._internal.compiler.quantum import InoutMeasureCompiler
@@ -43,7 +44,9 @@ def rz(q: qubit, angle: angle) -> None:
     _rz(q, f1)
 
 
-@guppy.hugr_op(quantum_op("Measure", ext=QSYSTEM_EXTENSION), module=qsystem)
+@guppy.custom(
+    BoolOpCompiler(quantum_op("Measure", ext=QSYSTEM_EXTENSION)), module=qsystem
+)
 @no_type_check
 def measure(q: qubit @ owned) -> bool: ...
 
