@@ -1,3 +1,4 @@
+# mypy: disable-error-code="no-any-return"
 from typing import no_type_check
 
 from guppylang.decorator import guppy
@@ -11,7 +12,7 @@ from guppylang.std._internal.compiler.quantum import (
 )
 from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_RANDOM_EXTENSION
 from guppylang.std._internal.util import external_op
-from guppylang.std.builtins import nat, owned
+from guppylang.std.builtins import owned
 from guppylang.std.option import Option
 
 qsystem_random = GuppyModule("qsystem.random")
@@ -25,14 +26,6 @@ qsystem_random = GuppyModule("qsystem.random")
 def _new_rng_context(seed: int) -> Option["RNG"]: ...
 
 
-@guppy(qsystem_random)
-def maybe_rng(seed: int) -> Option["RNG"]:  # type: ignore[type-arg] # "Option" expects no type arguments, but 1 given
-    """Safely create a new random number generator using a seed.
-
-    Returns `nothing` if RNG is already initialized."""
-    return _new_rng_context(seed)  # type: ignore[no-any-return] # Returning Any from function declared to return "Option"
-
-
 @guppy.type(RNGCONTEXT_T, copyable=False, droppable=False, module=qsystem_random)
 class RNG:
     """Random number generator."""
@@ -40,31 +33,50 @@ class RNG:
     @guppy(qsystem_random)  # type: ignore[misc] # Unsupported decorated constructor type; Self argument missing for a non-static method (or an invalid type for self)
     def __new__(seed: int) -> "RNG":
         """Create a new random number generator using a seed."""
-        return _new_rng_context(seed).unwrap()  # type: ignore[no-any-return] # Returning Any from function declared to return "RNGContext"
+        return _new_rng_context(seed).unwrap()
+
+    @guppy(qsystem_random)
+    def discard(self: "RNG" @ owned) -> None:  # type: ignore[valid-type] # Invalid type comment or annotation
+        """Discard the random number generator."""
+        self._discard()
+
+    @guppy(qsystem_random)
+    def random_int(self: "RNG") -> int:
+        """Generate a random 32-bit signed integer."""
+        return self._random_int()
+
+    @guppy(qsystem_random)
+    def random_float(self: "RNG") -> float:
+        """Generate a random floating point value in the range [0,1)."""
+        return self._random_float()
+
+    @guppy(qsystem_random)
+    def random_int_bounded(self: "RNG", bound: int) -> int:
+        """Generate a random 32-bit integer in the range [0, bound).
+
+        Args:
+            bound: The upper bound of the range, needs to less than 2^31.
+        """
+        return self._random_int_bounded(bound)
 
     @guppy.hugr_op(
         external_op("DeleteRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION),
         module=qsystem_random,
     )
     @no_type_check
-    def discard(self: "RNG" @ owned) -> None: ...
+    def _discard(self: "RNG" @ owned) -> None: ...
 
     @guppy.custom(RandomIntCompiler(), module=qsystem_random)
     @no_type_check
-    def random_int(self: "RNG") -> int: ...
-
-    @guppy(qsystem_random)
-    def random_nat(self: "RNG") -> nat:
-        """Generate a random 32-bit natural number."""
-        return nat(self.random_int())  # type: ignore[call-arg] # Too many arguments for "nat"
+    def _random_int(self: "RNG") -> int: ...
 
     @guppy.hugr_op(
         external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION),
         module=qsystem_random,
     )
     @no_type_check
-    def random_float(self: "RNG") -> float: ...
+    def _random_float(self: "RNG") -> float: ...
 
     @guppy.custom(RandomIntBoundedCompiler(), module=qsystem_random)
     @no_type_check
-    def random_int_bounded(self: "RNG", bound: int) -> int: ...
+    def _random_int_bounded(self: "RNG", bound: int) -> int: ...

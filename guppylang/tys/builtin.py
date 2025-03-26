@@ -144,6 +144,14 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     return hugr.std.collections.array.Array(elem_ty, hugr_arg)
 
 
+def _frozenarray_to_hugr(args: Sequence[Argument]) -> ht.Type:
+    # Type checker ensures that we get a two args
+    [ty_arg, len_arg] = args
+    assert isinstance(ty_arg, TypeArg)
+    assert isinstance(len_arg, ConstArg)
+    return hugr.std.collections.static_array.StaticArray(ty_arg.ty.to_hugr())
+
+
 def _sized_iter_to_hugr(args: Sequence[Argument]) -> ht.Type:
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
@@ -208,6 +216,18 @@ array_type_def = OpaqueTypeDef(
     never_droppable=False,
     to_hugr=_array_to_hugr,
 )
+frozenarray_type_def = OpaqueTypeDef(
+    id=DefId.fresh(),
+    name="frozenarray",
+    defined_at=None,
+    params=[
+        TypeParam(0, "T", must_be_copyable=True, must_be_droppable=True),
+        ConstParam(1, "n", NumericType(NumericType.Kind.Nat)),
+    ],
+    never_copyable=False,
+    never_droppable=False,
+    to_hugr=_frozenarray_to_hugr,
+)
 sized_iter_type_def = OpaqueTypeDef(
     id=DefId.fresh(),
     name="SizedIter",
@@ -261,6 +281,12 @@ def array_type(element_ty: Type, length: int | Const) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty), ConstArg(length)], array_type_def)
 
 
+def frozenarray_type(element_ty: Type, length: int | Const) -> OpaqueType:
+    if isinstance(length, int):
+        length = ConstValue(nat_type(), length)
+    return OpaqueType([TypeArg(element_ty), ConstArg(length)], frozenarray_type_def)
+
+
 def sized_iter_type(iter_type: Type, size: int | Const) -> OpaqueType:
     if isinstance(size, int):
         size = ConstValue(nat_type(), size)
@@ -287,16 +313,33 @@ def is_array_type(ty: Type) -> TypeGuard[OpaqueType]:
     return isinstance(ty, OpaqueType) and ty.defn == array_type_def
 
 
+def is_frozenarray_type(ty: Type) -> TypeGuard[OpaqueType]:
+    return isinstance(ty, OpaqueType) and ty.defn == frozenarray_type_def
+
+
 def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
     return isinstance(ty, OpaqueType) and ty.defn == sized_iter_type_def
 
 
 def get_element_type(ty: Type) -> Type:
     assert isinstance(ty, OpaqueType)
-    assert ty.defn in (list_type_def, array_type_def, option_type_def)
+    assert ty.defn in (
+        list_type_def,
+        array_type_def,
+        frozenarray_type_def,
+        option_type_def,
+    )
     (arg, *_) = ty.args
     assert isinstance(arg, TypeArg)
     return arg.ty
+
+
+def get_array_length(ty: Type) -> Const:
+    assert isinstance(ty, OpaqueType)
+    assert ty.defn == array_type_def
+    [_, length_arg] = ty.args
+    assert isinstance(length_arg, ConstArg)
+    return length_arg.const
 
 
 def get_iter_size(ty: Type) -> Const:

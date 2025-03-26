@@ -25,6 +25,7 @@ from guppylang.tys.builtin import (
     bool_type_def,
     callable_type_def,
     float_type_def,
+    frozenarray_type_def,
     int_type_def,
     list_type_def,
     nat_type_def,
@@ -266,6 +267,7 @@ class Globals:
             string_type_def,
             list_type_def,
             array_type_def,
+            frozenarray_type_def,
             sized_iter_type_def,
             option_type_def,
         ]

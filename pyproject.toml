@@ -1,6 +1,6 @@
 [project]
 name = "guppylang"
-version = "0.17.0"
+version = "0.18.0"
 requires-python = ">=3.10,<4"
 description = "Pythonic quantum-classical programming language"
 license = { file = "LICENCE" }
@@ -38,7 +38,7 @@ dependencies = [
     "networkx >=3.2.1,<4",
     "pydantic >=2.7.0b1,<3",
     "typing-extensions >=4.9.0,<5",
-    "hugr ~= 0.11.1",
+    "hugr ~= 0.11.3",
     "tket2-exts ~= 0.6.0",
 ]
 

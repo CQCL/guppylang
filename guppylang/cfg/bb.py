@@ -8,12 +8,12 @@ from typing_extensions import Self
 
 from guppylang.ast_util import AstNode, name_nodes_in_ast
 from guppylang.nodes import (
+    ComptimeExpr,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredGeneratorExpr,
     DesugaredListComp,
     NestedFunctionDef,
-    PyExpr,
 )
 
 if TYPE_CHECKING:
@@ -194,8 +194,8 @@ class VariableVisitor(ast.NodeVisitor):
             x: n for x, n in inner_stats.used.items() if x not in self.stats.assigned
         }
 
-    def visit_PyExpr(self, node: PyExpr) -> None:
-        # Don't look into `py(...)` expressions
+    def visit_ComptimeExpr(self, node: ComptimeExpr) -> None:
+        # Don't look into `comptime(...)` expressions
         pass
 
     def visit_NestedFunctionDef(self, node: NestedFunctionDef) -> None:

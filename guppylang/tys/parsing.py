@@ -6,7 +6,7 @@ from guppylang.ast_util import (
     set_location_from,
     shift_loc,
 )
-from guppylang.cfg.builder import is_py_expression
+from guppylang.cfg.builder import is_comptime_expression
 from guppylang.checker.core import Context, Globals, Locals
 from guppylang.checker.errors.generic import ExpectedError
 from guppylang.definition.common import Definition
@@ -21,7 +21,7 @@ from guppylang.tys.errors import (
     FlagNotAllowedError,
     FreeTypeVarError,
     HigherKindedTypeVarError,
-    IllegalPyTypeArgError,
+    IllegalComptimeTypeArgError,
     InvalidCallableTypeError,
     InvalidFlagError,
     InvalidTypeArgError,
@@ -90,15 +90,15 @@ def arg_from_ast(
         return ConstArg(ConstValue(nat_ty, node.value))
 
     # Py-expressions can also be used to specify static numbers
-    if py_expr := is_py_expression(node):
-        from guppylang.checker.expr_checker import eval_py_expr
+    if comptime_expr := is_comptime_expression(node):
+        from guppylang.checker.expr_checker import eval_comptime_expr
 
-        v = eval_py_expr(py_expr, Context(globals, Locals({}), {}))
+        v = eval_comptime_expr(comptime_expr, Context(globals, Locals({}), {}))
         if isinstance(v, int):
             nat_ty = NumericType(NumericType.Kind.Nat)
             return ConstArg(ConstValue(nat_ty, v))
         else:
-            raise GuppyError(IllegalPyTypeArgError(node, v))
+            raise GuppyError(IllegalComptimeTypeArgError(node, v))
 
     # Finally, we also support delayed annotations in strings
     if isinstance(node, ast.Constant) and isinstance(node.value, str):

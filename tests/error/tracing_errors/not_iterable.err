@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "$FILE", line 13, in <module>
+    module.compile()
+  File "$FILE", line 9, in test
+    for _ in x:
+guppylang.error.GuppyComptimeError: Expression of type `int` is not iterable at comptime

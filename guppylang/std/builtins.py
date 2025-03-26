@@ -5,6 +5,7 @@
 from typing import Any, Generic, TypeVar, no_type_check
 
 import hugr.std.int
+from typing_extensions import deprecated
 
 from guppylang.decorator import guppy
 from guppylang.definition.custom import (
@@ -17,6 +18,7 @@ from guppylang.std._internal.checker import (
     BarrierChecker,
     CallableChecker,
     DunderChecker,
+    ExitChecker,
     NewArrayChecker,
     PanicChecker,
     RangeChecker,
@@ -30,6 +32,7 @@ from guppylang.std._internal.compiler.array import (
     ArraySetitemCompiler,
     NewArrayCompiler,
 )
+from guppylang.std._internal.compiler.frozenarray import FrozenarrayGetitemCompiler
 from guppylang.std._internal.compiler.list import (
     ListGetitemCompiler,
     ListLengthCompiler,
@@ -51,6 +54,7 @@ from guppylang.tys.builtin import (
     array_type_def,
     bool_type_def,
     float_type_def,
+    frozenarray_type_def,
     int_type_def,
     list_type_def,
     nat_type_def,
@@ -64,12 +68,16 @@ T = guppy.type_var("T")
 L = guppy.type_var("L", copyable=False, droppable=False)
 
 
-def py(*args: Any) -> Any:
+def comptime(*args: Any) -> Any:
     """Function to tag compile-time evaluated Python expressions in a Guppy context.
 
     This function acts like the identity when execute in a Python context.
     """
     return tuple(args)
+
+
+#: Deprecated alias for `comptime` expressions
+py = deprecated("Use `comptime` instead")(comptime)
 
 
 class _Owned:
@@ -90,11 +98,13 @@ _T = TypeVar("_T")
 _n = TypeVar("_n")
 
 
-class array(Generic[_T, _n]):
+class array(list[_T], Generic[_T, _n]):
     """Class to import in order to use arrays."""
 
     def __init__(self, *args: Any):
-        pass
+        # Call the list constructor. This way, users can use the array constructor
+        # inside comptime functions and get a list as output
+        list.__init__(self, args)
 
 
 @guppy.extend_type(bool_type_def)
@@ -193,7 +203,7 @@ class Nat:
     @guppy.custom(BoolOpCompiler(int_op("ile_u")))
     def __le__(self: nat, other: nat) -> bool: ...
 
-    @guppy.hugr_op(int_op("ishl", n_vars=2))
+    @guppy.hugr_op(int_op("ishl"))
     def __lshift__(self: nat, other: nat) -> nat: ...
 
     @guppy.custom(BoolOpCompiler(int_op("ilt_u")))
@@ -408,7 +418,7 @@ class Int:
     @guppy.custom(checker=ReversingChecker())  # TODO: RHS is unsigned
     def __rrshift__(self: int, other: int) -> int: ...
 
-    @guppy.custom(checker=ReversingChecker())  # TODO: RHS is unsigned
+    @guppy.hugr_op(int_op("ishr"))  # TODO: RHS is unsigned
     def __rshift__(self: int, other: int) -> int: ...
 
     @guppy.custom(checker=ReversingChecker())
@@ -637,6 +647,45 @@ class ArrayIter(Generic[L, n]):
 def _array_unsafe_getitem(xs: array[L, n], idx: int) -> L: ...
 
 
+@guppy.extend_type(frozenarray_type_def)
+class frozenarray(Generic[T, n]):
+    """An immutable array of fixed static size."""
+
+    @guppy.custom(FrozenarrayGetitemCompiler())
+    def __getitem__(self: "frozenarray[T, n]", item: int) -> T: ...  # type: ignore[type-arg]
+
+    @guppy
+    @no_type_check
+    def __len__(self: "frozenarray[T, n]") -> int:
+        return n
+
+    @guppy
+    @no_type_check
+    def __iter__(self: "frozenarray[T, n]") -> "SizedIter[FrozenarrayIter[T, n], n]":
+        return SizedIter(FrozenarrayIter(self, 0))
+
+    @guppy
+    @no_type_check
+    def mutable_copy(self: "frozenarray[T, n]") -> array[T, n]:
+        """Creates a mutable copy of this array."""
+        return array(x for x in self)
+
+
+@guppy.struct
+class FrozenarrayIter(Generic[T, n]):
+    xs: frozenarray[T, n]  # type: ignore[type-arg]
+    i: int
+
+    @guppy
+    @no_type_check
+    def __next__(
+        self: "FrozenarrayIter[T, n]",
+    ) -> "Option[tuple[T, FrozenarrayIter[T, n]]]":
+        if self.i < int(n):
+            return some((self.xs[self.i], FrozenarrayIter(self.xs, self.i + 1)))
+        return nothing()
+
+
 @guppy.extend_type(sized_iter_type_def)
 class SizedIter:
     """A wrapper around an iterator type `L` promising that the iterator will yield
@@ -663,17 +712,43 @@ class SizedIter:
         """Dummy implementation making sized iterators iterable themselves."""
 
 
-# TODO: This is a temporary hack until we have implemented the proper results mechanism.
 @guppy.custom(checker=ResultChecker(), higher_order_value=False)
-def result(tag, value): ...
+def result(tag, value):
+    """Report a result with the given tag and value.
+
+    This is the primary way to report results from the program back to the user.
+    On Quantinuum systems a single shot execution will return a list of pairs of
+    (tag, value).
+
+    Args:
+        tag: The tag of the result. Must be a string literal
+        value: The value of the result. Currently supported value types are `int`,
+        `nat`, `float`, and `bool`.
+    """
 
 
 @guppy.custom(checker=PanicChecker(), higher_order_value=False)
 def panic(msg, *args):
     """Panic, throwing an error with the given message, and immediately exit the
-    program.
+    program, aborting any subsequent shots.
 
     Return type is arbitrary, as this function never returns.
+
+    Args:
+        msg: The message to display. Must be a string literal.
+        args: Arbitrary extra inputs, will not affect the message. Only useful for
+        consuming linear values.
+    """
+
+
+@guppy.custom(checker=ExitChecker(), higher_order_value=False)
+def exit(msg: str, signal: int, *args):
+    """Exit, reporting the given message and signal, and immediately exit the
+    program. Subsequent shots may still run.
+
+    Return type is arbitrary, as this function never returns.
+
+    On Quantinuum systems only signals in the range 1<=signal<=1000 are supported.
 
     Args:
         msg: The message to display. Must be a string literal.

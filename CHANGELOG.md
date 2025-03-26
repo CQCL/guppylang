@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.18.0](https://github.com/CQCL/guppylang/compare/v0.17.1...v0.18.0) (2025-03-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* Lists loaded from `py(...)` expressions are now turned into immutable `frozenarray`s instead of regular `array`s.
+* Guppy decorators now return instances of `GuppyDefinition`
+
+### Features
+
+* Add frozenarray type for lists loaded from py expressions ([#868](https://github.com/CQCL/guppylang/issues/868)) ([e619c78](https://github.com/CQCL/guppylang/commit/e619c782495b036a567e5c20841d46f5951dcc73))
+* Comptime functions ([#727](https://github.com/CQCL/guppylang/issues/727)) ([f9cc5c5](https://github.com/CQCL/guppylang/commit/f9cc5c5d2c498b75dba6cb3be1f9b9854ce9bda2)), closes [#751](https://github.com/CQCL/guppylang/issues/751)
+
+## [0.17.1](https://github.com/CQCL/guppylang/compare/v0.17.0...v0.17.1) (2025-03-24)
+
+
+### Features
+
+* add exit function that stops a shot ([#874](https://github.com/CQCL/guppylang/issues/874)) ([8093940](https://github.com/CQCL/guppylang/commit/809394011a68b88bec47a330e6d525f7f0075e7f))
+
+
+### Bug Fixes
+
+* **qsystem:** remove unsupported random_nat and maybe_rng ([635e7ed](https://github.com/CQCL/guppylang/commit/635e7edf1fab854d0e83111ada09b85f27385377))
+
+
+### Documentation
+
+* add docstring for `result` ([#879](https://github.com/CQCL/guppylang/issues/879)) ([8b1e2a1](https://github.com/CQCL/guppylang/commit/8b1e2a11294d25a2119aec668d26c3171c565ec8))
+* add supported range to `exit` docstring ([#878](https://github.com/CQCL/guppylang/issues/878)) ([83f4730](https://github.com/CQCL/guppylang/commit/83f4730761895ace578c2d796963ca569e6399c8))
+
 ## [0.17.0](https://github.com/CQCL/guppylang/compare/v0.16.0...v0.17.0) (2025-03-18)
 
 

@@ -5,10 +5,11 @@
   # see https://github.com/CQCL/tket2/blob/main/devenv.nix
   packages = [
     pkgs.just
-    pkgs.llvmPackages_14.libllvm
+    pkgs.graphviz
+
+    # These are required for hugr-llvm to be able to link to llvm.
     pkgs.libffi
     pkgs.libxml2
-    pkgs.graphviz
   ]
   ++ lib.optionals pkgs.stdenv.isLinux [
     pkgs.stdenv.cc.cc.lib
@@ -17,11 +18,13 @@
     with pkgs.darwin.apple_sdk; [
       frameworks.CoreServices
       frameworks.CoreFoundation
+      pkgs.zlib
+      pkgs.ncurses
     ]
   );
 
   enterShell = ''
-    export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
+    export LD_LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}";
   '';
 
   languages.python = {
@@ -35,10 +38,9 @@
 
   env.LLVM_SYS_140_PREFIX = pkgs.llvmPackages_14.libllvm.dev;
 
-  env.LD_LIBRARY_PATH = "${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]}";
-
   languages.rust = {
     enable = true;
     channel = "stable";
+    components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" ];
   };
 }

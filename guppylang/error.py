@@ -1,5 +1,4 @@
 import functools
-import os
 import sys
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -30,6 +29,10 @@ class MissingModuleError(Exception):
     """Special Guppy exception for operations that require a guppy module."""
 
 
+class GuppyComptimeError(Exception):
+    """Exception for type and linearity errors that are caught in a comptime context."""
+
+
 class InternalGuppyError(Exception):
     """Exception for internal problems during compilation."""
 
@@ -54,9 +57,13 @@ def exception_hook(hook: ExceptHook) -> Iterator[None]:
         ) -> Any:
             return hook(etype, value, tb)
 
-        ipython_shell.set_custom_exc((GuppyError,), ipython_excepthook)
+        old_hook = ipython_shell.CustomTB
+        old_exc_tuple = ipython_shell.custom_exceptions
+        ipython_shell.set_custom_exc((Exception,), ipython_excepthook)
         yield
-        ipython_shell.set_custom_exc((), None)
+        ipython_shell.set_custom_exc(
+            old_exc_tuple, lambda shell, *args, **kwargs: old_hook(*args, **kwargs)
+        )
     except NameError:
         pass
     else:
@@ -98,11 +105,3 @@ def pretty_errors(f: FuncT) -> FuncT:
             return f(*args, **kwargs)
 
     return cast(FuncT, pretty_errors_wrapped)
-
-
-def _pytest_running() -> bool:
-    """Checks if we are currently running pytest.
-
-    See https://docs.pytest.org/en/latest/example/simple.html#pytest-current-test-environment-variable
-    """
-    return "PYTEST_CURRENT_TEST" in os.environ
