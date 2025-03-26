@@ -199,7 +199,7 @@ class Nat:
     @guppy.hugr_op(int_op("ile_u"))
     def __le__(self: nat, other: nat) -> bool: ...
 
-    @guppy.hugr_op(int_op("ishl", n_vars=2))
+    @guppy.hugr_op(int_op("ishl"))
     def __lshift__(self: nat, other: nat) -> nat: ...
 
     @guppy.hugr_op(int_op("ilt_u"))

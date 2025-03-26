@@ -346,8 +346,9 @@ def test_shift(validate, run_int_fn) -> None:
 
     @guppy(module)
     def main() -> int:
-        return (2 << 3) + (56 >> 3)
+        nats = (nat(7) << nat(2)) - (nat(1) << nat(3))
+        return int(nats) + (2 << 3) + (53 >> 3)
 
     compiled = module.compile()
     validate(compiled)
-    run_int_fn(compiled, 23)
+    run_int_fn(compiled, 42)
