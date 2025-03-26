@@ -199,7 +199,7 @@ class Nat:
     @guppy.hugr_op(int_op("ile_u"))
     def __le__(self: nat, other: nat) -> bool: ...
 
-    @guppy.hugr_op(int_op("ishl", n_vars=2))
+    @guppy.hugr_op(int_op("ishl"))
     def __lshift__(self: nat, other: nat) -> nat: ...
 
     @guppy.hugr_op(int_op("ilt_u"))
@@ -414,7 +414,7 @@ class Int:
     @guppy.custom(checker=ReversingChecker())  # TODO: RHS is unsigned
     def __rrshift__(self: int, other: int) -> int: ...
 
-    @guppy.custom(checker=ReversingChecker())  # TODO: RHS is unsigned
+    @guppy.hugr_op(int_op("ishr"))  # TODO: RHS is unsigned
     def __rshift__(self: int, other: int) -> int: ...
 
     @guppy.custom(checker=ReversingChecker())

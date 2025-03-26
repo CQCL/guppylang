@@ -339,3 +339,16 @@ def test_float_to_nat(validate, run_int_fn) -> None:
     compiled = module.compile()
     validate(compiled)
     run_int_fn(compiled, 2)
+
+
+def test_shift(validate, run_int_fn) -> None:
+    module = GuppyModule("test_shift")
+
+    @guppy(module)
+    def main() -> int:
+        nats = (nat(7) << nat(2)) - (nat(1) << nat(3))
+        return int(nats) + (2 << 3) + (53 >> 3)
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, 42)
