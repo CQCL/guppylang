@@ -69,4 +69,6 @@ class angle:
         return self.halfturns == other.halfturns
 
 
-pi = guppy.constant("pi", ty="angle", value=hv.Tuple(FloatVal(1.0)), module=angles)
+pi: angle = guppy.constant(
+    "pi", ty="angle", value=hv.Tuple(FloatVal(1.0)), module=angles
+)
