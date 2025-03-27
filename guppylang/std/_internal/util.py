@@ -252,6 +252,7 @@ def bool_logic_op(op_name: str) -> Callable[[ht.FunctionType, Inst], ops.Dataflo
         A function that takes an instantiation of the type arguments and returns
         a concrete HUGR op.
     """
+
     def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
         return ops.ExtOp(
             BOOL_EXTENSION.get_op(op_name),

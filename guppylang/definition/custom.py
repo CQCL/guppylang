@@ -439,7 +439,7 @@ class OpCompiler(CustomInoutCallCompiler):
 
 class BoolOpCompiler(CustomInoutCallCompiler):
     """Call compiler for functions that are directly implemented via Hugr ops but need
-    input and/or output conversions from hugr sum bools to the opaque bools Guppy is 
+    input and/or output conversions from hugr sum bools to the opaque bools Guppy is
     using.
 
     args:
