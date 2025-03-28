@@ -1,5 +1,6 @@
 //! This module provides a Python interface to compile and execute a Hugr program to LLVM IR.
 use hugr::llvm::custom::CodegenExtsMap;
+use hugr::llvm::inkwell::{self, context::Context, module::Module, values::GenericValue};
 use hugr::llvm::utils::fat::FatExt;
 use hugr::llvm::CodegenExtsBuilder;
 use hugr::package::Package;
@@ -7,9 +8,10 @@ use hugr::Hugr;
 use hugr::{self, ops, std_extensions, HugrView};
 use inkwell::types::BasicType;
 use inkwell::values::BasicMetadataValueEnum;
-use hugr::llvm::inkwell::{self, context::Context, module::Module, values::GenericValue};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+
+mod bool;
 
 macro_rules! pyerr {
     ($fmt:literal $(,$arg:tt)*) => { PyValueError::new_err(format!($fmt, $($arg),*)) }
@@ -64,6 +66,7 @@ fn codegen_extensions() -> CodegenExtsMap<'static, Hugr> {
         .add_conversion_extensions()
         .add_logic_extensions()
         .add_default_array_extensions()
+        .add_extension(bool::BoolCodegenExtension)
         .finish()
 }
 

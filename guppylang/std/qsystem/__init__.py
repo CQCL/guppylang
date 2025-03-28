@@ -1,12 +1,11 @@
 from typing import no_type_check
 
 from guppylang.decorator import guppy
+from guppylang.definition.custom import BoolOpCompiler
 from guppylang.module import GuppyModule
 from guppylang.std import angles
-from guppylang.std._internal.compiler.quantum import (
-    QSYSTEM_EXTENSION,
-    InoutMeasureCompiler,
-)
+from guppylang.std._internal.compiler.quantum import InoutMeasureCompiler
+from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_EXTENSION
 from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle
 from guppylang.std.builtins import owned
@@ -45,7 +44,9 @@ def rz(q: qubit, angle: angle) -> None:
     _rz(q, f1)
 
 
-@guppy.hugr_op(quantum_op("Measure", ext=QSYSTEM_EXTENSION), module=qsystem)
+@guppy.custom(
+    BoolOpCompiler(quantum_op("Measure", ext=QSYSTEM_EXTENSION)), module=qsystem
+)
 @no_type_check
 def measure(q: qubit @ owned) -> bool: ...
 
