@@ -39,7 +39,7 @@ class OpaqueBoolVal(hv.ExtensionValue):
 
     def to_value(self) -> hv.Extension:
         name = "ConstBool"
-        payload = {"value": self.v}
+        payload = self.v
         return hv.Extension(
             name,
             typ=OpaqueBool,
