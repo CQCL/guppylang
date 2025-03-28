@@ -108,6 +108,7 @@ class bool:
     ``False`` using the standard truth testing procedure.
     """
 
+
 @guppy.extend_type(bool_type_def)
 class Bool:
     @guppy.hugr_op(bool_logic_op("and"))
