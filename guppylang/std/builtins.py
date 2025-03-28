@@ -1,7 +1,11 @@
 """Guppy module for builtin types and operations."""
 
-# mypy: disable-error-code="empty-body, misc, override, valid-type, no-untyped-def"
+# ruff: noqa: E501
+# mypy: disable-error-code="empty-body, misc, override, valid-type, no-untyped-def, has-type"
 
+from __future__ import annotations
+
+import builtins
 from typing import Any, Generic, TypeVar, no_type_check
 
 import hugr.std.int
@@ -90,22 +94,19 @@ class _Owned:
 owned = _Owned()
 
 
-class nat:
-    """Class to import in order to use nats."""
-
-
 _T = TypeVar("_T")
 _n = TypeVar("_n")
 
 
-class array(list[_T], Generic[_T, _n]):
-    """Class to import in order to use arrays."""
+@guppy.extend_type(bool_type_def)
+class bool:
+    """Booleans representing truth values.
 
-    def __init__(self, *args: Any):
-        # Call the list constructor. This way, users can use the array constructor
-        # inside comptime functions and get a list as output
-        list.__init__(self, args)
+    The bool type has exactly two constant instances: ``True`` and ``False``.
 
+    The bool constructor takes a single argument and converts it to ``True`` or
+    ``False`` using the standard truth testing procedure.
+    """
 
 @guppy.extend_type(bool_type_def)
 class Bool:
@@ -147,13 +148,17 @@ class Bool:
 
 
 @guppy.extend_type(string_type_def)
-class String:
+class str:
+    """A string, i.e. immutable sequences of Unicode code points."""
+
     @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
     def __new__(x): ...
 
 
 @guppy.extend_type(nat_type_def)
-class Nat:
+class nat:
+    """A 64-bit unsigned integer."""
+
     @guppy.custom(NoopCompiler())
     def __abs__(self: nat) -> nat: ...
 
@@ -294,7 +299,9 @@ class Nat:
 
 
 @guppy.extend_type(int_type_def)
-class Int:
+class int:
+    """A 64-bit signed integer."""
+
     @guppy.hugr_op(int_op("iabs"))  # TODO: Maybe wrong? (signed vs unsigned!)
     def __abs__(self: int) -> int: ...
 
@@ -446,7 +453,9 @@ class Int:
 
 
 @guppy.extend_type(float_type_def)
-class Float:
+class float:
+    """An IEEE754 double-precision floating point value."""
+
     @guppy.hugr_op(float_op("fabs"))
     def __abs__(self: float) -> float: ...
 
@@ -569,7 +578,9 @@ class Float:
 
 
 @guppy.extend_type(list_type_def)
-class List:
+class list(Generic[_T]):
+    """Mutable sequence items with homogeneous types."""
+
     @guppy.custom(ListGetitemCompiler())
     def __getitem__(self: list[L], idx: int) -> L: ...
 
@@ -586,7 +597,7 @@ class List:
     def __iter__(self: list[L] @ owned) -> list[L]: ...
 
     @guppy.hugr_op(unsupported_op("pop"))
-    def __next__(self: list[L] @ owned) -> "Option[tuple[L, list[L]]]": ...  # type: ignore[type-arg]
+    def __next__(self: list[L] @ owned) -> Option[tuple[L, list[L]]]: ...  # type: ignore[type-arg]
 
     @guppy.custom(ListPushCompiler())
     def append(self: list[L], item: L @ owned) -> None: ...
@@ -599,7 +610,9 @@ n = guppy.nat_var("n")
 
 
 @guppy.extend_type(array_type_def)
-class Array:
+class array(builtins.list[_T], Generic[_T, _n]):
+    """Sequence of homogeneous values with statically known fixed length."""
+
     @guppy.custom(ArrayGetitemCompiler())
     def __getitem__(self: array[L, n], idx: int) -> L: ...
 
@@ -616,23 +629,30 @@ class Array:
 
     @guppy
     @no_type_check
-    def __iter__(self: array[L, n] @ owned) -> "SizedIter[ArrayIter[L, n], n]":
+    def __iter__(self: array[L, n] @ owned) -> SizedIter[ArrayIter[L, n], n]:
         return SizedIter(ArrayIter(self, 0))
 
     @guppy.custom(CopyInoutCompiler(), ArrayCopyChecker())
     def copy(self: array[T, n]) -> array[T, n]: ...
 
+    def __new__(cls, *args: _T) -> builtins.list[_T]:  # type: ignore[no-redef]  # noqa: F811
+        # Runtime array constructor that is used for comptime. We return an actual list
+        # in line with the comptime unpacking logic that turns arrays into lists.
+        return [*args]
+
 
 @guppy.struct
 class ArrayIter(Generic[L, n]):
+    """Iterator over arrays."""
+
     xs: array[L, n]
     i: int
 
     @guppy
     @no_type_check
     def __next__(
-        self: "ArrayIter[L, n]" @ owned,
-    ) -> "Option[tuple[L, ArrayIter[L, n]]]":
+        self: ArrayIter[L, n] @ owned,
+    ) -> Option[tuple[L, ArrayIter[L, n]]]:
         if self.i < int(n):
             elem = _array_unsafe_getitem(self.xs, self.i)
             return some((elem, ArrayIter(self.xs, self.i + 1)))
@@ -640,7 +660,7 @@ class ArrayIter(Generic[L, n]):
         return nothing()
 
     @guppy.custom(ArrayIterAsertAllUsedCompiler())
-    def _assert_all_used(self: "ArrayIter[L, n]" @ owned) -> None: ...
+    def _assert_all_used(self: ArrayIter[L, n] @ owned) -> None: ...
 
 
 @guppy.custom(ArrayGetitemCompiler())
@@ -652,35 +672,37 @@ class frozenarray(Generic[T, n]):
     """An immutable array of fixed static size."""
 
     @guppy.custom(FrozenarrayGetitemCompiler())
-    def __getitem__(self: "frozenarray[T, n]", item: int) -> T: ...  # type: ignore[type-arg]
+    def __getitem__(self: frozenarray[T, n], item: int) -> T: ...  # type: ignore[type-arg]
 
     @guppy
     @no_type_check
-    def __len__(self: "frozenarray[T, n]") -> int:
+    def __len__(self: frozenarray[T, n]) -> int:
         return n
 
     @guppy
     @no_type_check
-    def __iter__(self: "frozenarray[T, n]") -> "SizedIter[FrozenarrayIter[T, n], n]":
+    def __iter__(self: frozenarray[T, n]) -> SizedIter[FrozenarrayIter[T, n], n]:
         return SizedIter(FrozenarrayIter(self, 0))
 
     @guppy
     @no_type_check
-    def mutable_copy(self: "frozenarray[T, n]") -> array[T, n]:
+    def mutable_copy(self: frozenarray[T, n]) -> array[T, n]:
         """Creates a mutable copy of this array."""
         return array(x for x in self)
 
 
 @guppy.struct
 class FrozenarrayIter(Generic[T, n]):
+    """Iterator for frozenarrays."""
+
     xs: frozenarray[T, n]  # type: ignore[type-arg]
     i: int
 
     @guppy
     @no_type_check
     def __next__(
-        self: "FrozenarrayIter[T, n]",
-    ) -> "Option[tuple[T, FrozenarrayIter[T, n]]]":
+        self: FrozenarrayIter[T, n],
+    ) -> Option[tuple[T, FrozenarrayIter[T, n]]]:
         if self.i < int(n):
             return some((self.xs[self.i], FrozenarrayIter(self.xs, self.i + 1)))
         return nothing()
@@ -700,15 +722,15 @@ class SizedIter:
         return cls
 
     @guppy.custom(NoopCompiler())
-    def __new__(iterator: L @ owned) -> "SizedIter[L, n]":  # type: ignore[type-arg]
+    def __new__(iterator: L @ owned) -> SizedIter[L, n]:  # type: ignore[type-arg]
         """Casts an iterator into a `SizedIter`."""
 
     @guppy.custom(NoopCompiler())
-    def unwrap_iter(self: "SizedIter[L, n]" @ owned) -> L:
+    def unwrap_iter(self: SizedIter[L, n] @ owned) -> L:
         """Extracts the actual iterator."""
 
     @guppy.custom(NoopCompiler())
-    def __iter__(self: "SizedIter[L, n]" @ owned) -> "SizedIter[L, n]":  # type: ignore[type-arg]
+    def __iter__(self: SizedIter[L, n] @ owned) -> SizedIter[L, n]:  # type: ignore[type-arg]
         """Dummy implementation making sized iterators iterable themselves."""
 
 
@@ -966,12 +988,12 @@ class Range:
     stop: int
 
     @guppy
-    def __iter__(self: "Range") -> "Range":
+    def __iter__(self: Range) -> Range:
         return self
 
     @guppy
     @no_type_check
-    def __next__(self: "Range") -> "Option[tuple[int, Range]]":
+    def __next__(self: Range) -> Option[tuple[int, Range]]:
         if self.next < self.stop:
             return some((self.next, Range(self.next + 1, self.stop)))
         return nothing()
