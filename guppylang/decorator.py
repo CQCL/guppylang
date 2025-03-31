@@ -29,7 +29,11 @@ from guppylang.definition.function import (
     RawFunctionDef,
 )
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
-from guppylang.definition.pytket_circuits import RawLoadPytketDef
+from guppylang.definition.pytket_circuits import (
+    CompiledPytketDef,
+    RawLoadPytketDef,
+    RawPytketDef,
+)
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.traced import RawTracedFunctionDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
@@ -473,7 +477,8 @@ class _Guppy:
         return module.compile()
 
     def compile_function(
-        self, f_def: RawFunctionDef | RawTracedFunctionDef
+        self,
+        f_def: RawFunctionDef | RawTracedFunctionDef | RawLoadPytketDef | RawPytketDef,
     ) -> FuncDefnPointer:
         """Compiles a single function definition."""
         module = f_def.id.module
@@ -484,7 +489,7 @@ class _Guppy:
         globs = module._compiled.context
         assert globs is not None
         compiled_def = globs.build_compiled_def(f_def.id)
-        assert isinstance(compiled_def, CompiledFunctionDef)
+        assert isinstance(compiled_def, CompiledFunctionDef | CompiledPytketDef)
         node = compiled_def.func_def.parent_node
         return FuncDefnPointer(
             compiled_module.package, compiled_module.module_index, node
