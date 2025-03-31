@@ -510,14 +510,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         else:
             op_name = f"result_{base_name}"
         val_wire = self.visit(node.value)
+        typ = get_type(node.value).to_hugr()
         if is_bool_type(node.base_ty):
             val_wire = self.builder.add_op(bool_to_sum(), val_wire)
-            hugr_ty = ht.Bool
-        else:
-            hugr_ty = node.base_ty.to_hugr()
+            typ = ht.Bool
         op = tket2_result_op(
             op_name=op_name,
-            typ=hugr_ty,
+            typ=typ,
             tag=node.tag,
             extra_args=extra_args,
         )
