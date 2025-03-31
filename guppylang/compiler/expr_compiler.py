@@ -509,16 +509,18 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                     assert_never(c)
         else:
             op_name = f"result_{base_name}"
-        typ = get_type(node.value).to_hugr()
+        val_wire = self.visit(node.value)
+        if is_bool_type(node.base_ty):
+            val_wire = self.builder.add_op(bool_to_sum(), val_wire)
+            hugr_ty = ht.Bool
+        else:
+            hugr_ty = node.base_ty.to_hugr()
         op = tket2_result_op(
             op_name=op_name,
-            typ=typ,
+            typ=hugr_ty,
             tag=node.tag,
             extra_args=extra_args,
         )
-        val_wire = self.visit(node.value)
-        if typ == OpaqueBool:
-            val_wire = self.builder.add_op(bool_to_sum(), val_wire)
         self.builder.add_op(op, val_wire)
         return self._pack_returns([], NoneType())
 
@@ -731,8 +733,6 @@ def tket2_result_op(
         ht.StringArg(tag),
         *extra_args,
     ]
-    if typ == OpaqueBool:
-        typ = ht.Bool
     sig = ht.FunctionType(
         input=[typ],
         output=[],
