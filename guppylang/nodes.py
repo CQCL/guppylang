@@ -298,7 +298,16 @@ class BarrierExpr(ast.expr):
     _fields = ("args", "func_ty")
 
 
-AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr
+class StateResultExpr(ast.expr):
+    """A `state_result(tag, *args)` expression."""
+
+    tag: str
+    args: list[ast.expr]
+    func_ty: FunctionType
+    _fields = ("tag", "args", "func_ty")
+
+
+AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr | StateResultExpr
 
 
 class InoutReturnSentinel(ast.expr):

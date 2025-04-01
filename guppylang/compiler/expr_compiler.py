@@ -27,7 +27,7 @@ from guppylang.compiler.core import (
     DFContainer,
     GlobalConstId,
 )
-from guppylang.compiler.hugr_extension import PartialOp
+from guppylang.compiler.hugr_extension import PartialOp, UnsupportedOp
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import (
     CallReturnWires,
@@ -527,6 +527,21 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in hugr_tys])],
             ht.FunctionType.endo(hugr_tys),
         )
+
+        barrier_n = self.builder.add_op(op, *(self.visit(e) for e in node.args))
+
+        self._update_inout_ports(node.args, iter(barrier_n), node.func_ty)
+        return self._pack_returns([], NoneType())
+
+    def visit_StateResultExpr(self, node: BarrierExpr) -> Wire:
+        hugr_tys = [get_type(e).to_hugr() for e in node.args]
+
+        # op = hugr.std.prelude.PRELUDE_EXTENSION.get_op("StateResult").instantiate(
+        #    [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in hugr_tys[1:]])],
+        #    ht.FunctionType(hugr_tys, hugr_tys[1:])
+        # )
+
+        op = UnsupportedOp("StateResult", hugr_tys, hugr_tys[1:])
 
         barrier_n = self.builder.add_op(op, *(self.visit(e) for e in node.args))
 
