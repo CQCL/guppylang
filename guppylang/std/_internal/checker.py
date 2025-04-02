@@ -35,6 +35,7 @@ from guppylang.nodes import (
     MakeIter,
     PanicExpr,
     ResultExpr,
+    StateResultExpr,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
 from guppylang.tys.builtin import (
@@ -305,6 +306,16 @@ class NewArrayChecker(CustomCallChecker):
 TAG_MAX_LEN = 200
 
 
+@dataclass(frozen=True)
+class TooLongError(Error):
+    title: ClassVar[str] = "Tag too long"
+    span_label: ClassVar[str] = "Result tag is too long"
+
+    @dataclass(frozen=True)
+    class Hint(Note):
+        message: ClassVar[str] = f"Result tags are limited to {TAG_MAX_LEN} bytes"
+
+
 class ResultChecker(CustomCallChecker):
     """Call checker for the `result` function."""
 
@@ -320,15 +331,6 @@ class ResultChecker(CustomCallChecker):
                 "Only numeric values or arrays thereof are allowed as results"
             )
 
-    @dataclass(frozen=True)
-    class TooLongError(Error):
-        title: ClassVar[str] = "Tag too long"
-        span_label: ClassVar[str] = "Result tag is too long"
-
-        @dataclass(frozen=True)
-        class Hint(Note):
-            message: ClassVar[str] = f"Result tags are limited to {TAG_MAX_LEN} bytes"
-
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(2, len(args), self.node)
         [tag, value] = args
@@ -336,8 +338,8 @@ class ResultChecker(CustomCallChecker):
         if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
             raise GuppyTypeError(ExpectedError(tag, "a string literal"))
         if len(tag.value.encode("utf-8")) > TAG_MAX_LEN:
-            err: Error = ResultChecker.TooLongError(tag)
-            err.add_sub_diagnostic(ResultChecker.TooLongError.Hint(None))
+            err: Error = TooLongError(tag)
+            err.add_sub_diagnostic(TooLongError.Hint(None))
             raise GuppyTypeError(err)
         value, ty = ExprSynthesizer(self.ctx).synthesize(value)
         # We only allow numeric values or vectors of numeric values
@@ -535,4 +537,28 @@ class BarrierChecker(CustomCallChecker):
         args, ret_ty, inst = synthesize_call(func_ty, args, self.node, self.ctx)
         assert len(inst) == 0, "func_ty is not generic"
         node = BarrierExpr(args=args, func_ty=func_ty)
+        return with_loc(self.node, node), ret_ty
+
+
+class StateResultChecker(CustomCallChecker):
+    """Call checker for the `state_result` function."""
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        tag, _ = ExprChecker(self.ctx).check(args[0], string_type())
+        if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
+            raise GuppyTypeError(ExpectedError(tag, "a string literal"))
+        if len(tag.value.encode("utf-8")) > TAG_MAX_LEN:
+            err: Error = TooLongError(tag)
+            err.add_sub_diagnostic(TooLongError.Hint(None))
+            raise GuppyTypeError(err)
+
+        tys = [ExprSynthesizer(self.ctx).synthesize(val)[1] for val in args]
+        func_ty = FunctionType(
+            [FuncInput(tys[0], InputFlags.NoFlags)]
+            + [FuncInput(t, InputFlags.Inout) for t in tys[1:]],
+            NoneType(),
+        )
+        args, ret_ty, inst = synthesize_call(func_ty, args, self.node, self.ctx)
+        assert len(inst) == 0, "func_ty is not generic"
+        node = StateResultExpr(tag=args[0], args=args, func_ty=func_ty)
         return with_loc(self.node, node), ret_ty
