@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.1](https://github.com/CQCL/guppylang/compare/v0.18.0...v0.18.1) (2025-04-02)
+
+
+### Bug Fixes
+
+* add missing compilation for int __rshift__ ([#885](https://github.com/CQCL/guppylang/issues/885)) ([5cd9225](https://github.com/CQCL/guppylang/commit/5cd9225250abe4548f0fdc791e81682af6f8a41d)), closes [#886](https://github.com/CQCL/guppylang/issues/886)
+* Allow standalone compilation of pytket functions ([#903](https://github.com/CQCL/guppylang/issues/903)) ([6416513](https://github.com/CQCL/guppylang/commit/641651365a7ebf59a7d6861415ab509a19edd477))
+
 ## [0.18.0](https://github.com/CQCL/guppylang/compare/v0.17.1...v0.18.0) (2025-03-25)
 
 
