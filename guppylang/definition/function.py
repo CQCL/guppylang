@@ -265,7 +265,7 @@ def parse_py_func(f: PyFunc, sources: SourceMap) -> tuple[ast.FunctionDef, str |
                 # got from inspect. Line numbers will be wrong, but that's the best we
                 # can do.
                 sources.add_file(file, source)
-                line_offset = 1
+                line_offset = 0
     else:
         file = inspect.getsourcefile(f)
         if file is None:

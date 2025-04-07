@@ -11,6 +11,11 @@ def test_comptime_notebook(nb_regression):
     nb_regression.check("tests/integration/notebooks/comptime.ipynb")
 
 
+def test_misc_notebook_tests(nb_regression):
+    nb_regression.diff_ignore += ("/metadata/language_info/version",)
+    nb_regression.check("tests/integration/notebooks/misc_notebook_tests.ipynb")
+
+
 def test_random_walk_qpe(validate):
     from examples.random_walk_qpe import hugr
 
