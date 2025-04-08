@@ -96,7 +96,7 @@ def rz(q: qubit, angle: angle) -> None:
 @guppy.hugr_op(quantum_op("Measure", ext=QSYSTEM_EXTENSION), module=qsystem)
 @no_type_check
 def measure(q: qubit @ owned) -> bool:
-    """Measure a qubit."""
+    """Measure a qubit destructively."""
 
 
 @guppy.custom(InoutMeasureCompiler("MeasureReset", QSYSTEM_EXTENSION), module=qsystem)
