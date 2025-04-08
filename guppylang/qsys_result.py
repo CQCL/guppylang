@@ -141,7 +141,7 @@ class QsysResult:
     def __init__(
         self,
         results: Iterable[QsysShot | Iterable[TaggedResult]] | None = None,
-        progress_bar: bool = False
+        progress_bar: bool = False,
     ):
         if progress_bar:
             # verify tqdm is available
