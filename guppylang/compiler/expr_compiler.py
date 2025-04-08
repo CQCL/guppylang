@@ -55,11 +55,16 @@ from guppylang.nodes import (
     TypeApply,
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
-from guppylang.std._internal.compiler.array import array_repeat
+from guppylang.std._internal.compiler.array import array_map, array_repeat
 from guppylang.std._internal.compiler.list import (
     list_new,
 )
-from guppylang.std._internal.compiler.prelude import build_error, build_panic, panic
+from guppylang.std._internal.compiler.prelude import (
+    build_error,
+    build_panic,
+    build_unwrap,
+    panic,
+)
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     bool_type,
@@ -68,7 +73,6 @@ from guppylang.tys.builtin import (
     is_bool_type,
     is_frozenarray_type,
 )
-from guppylang.tys.const import BoundConstVar, ConstValue, ExistentialConstVar
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
@@ -464,7 +468,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self.visit(node.getitem_expr)
 
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
-        extra_args = []
+        value_wire = self.visit(node.value)
+        base_ty = node.base_ty.to_hugr()
+        extra_args: list[ht.TypeArg] = []
         if isinstance(node.base_ty, NumericType):
             match node.base_ty.kind:
                 case NumericType.Kind.Nat:
@@ -483,29 +489,28 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             base_name = "bool"
         if node.array_len is not None:
             op_name = f"result_array_{base_name}"
-            match node.array_len:
-                case ConstValue(value=value):
-                    assert isinstance(value, int)
-                    extra_args = [ht.BoundedNatArg(n=value), *extra_args]
-                case BoundConstVar():
-                    # TODO: We need to handle this once we allow function definitions
-                    #  that are generic over array lengths
-                    raise NotImplementedError
-                case ExistentialConstVar() as var:
-                    raise InternalGuppyError(
-                        f"Unsolved existential variable during Hugr lowering: {var}"
-                    )
-                case c:
-                    assert_never(c)
+            size_arg = node.array_len.to_arg().to_hugr()
+            extra_args = [size_arg, *extra_args]
+            hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
+            # Remove the option wrapping in the array
+            unwrap = array_unwrap_elem(self.ctx)
+            unwrap = self.builder.load_function(
+                unwrap,
+                instantiation=ht.FunctionType([ht.Option(base_ty)], [base_ty]),
+                type_args=[ht.TypeTypeArg(base_ty)],
+            )
+            map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
+            value_wire = self.builder.add_op(map_op, value_wire, unwrap)
         else:
             op_name = f"result_{base_name}"
+            hugr_ty = node.base_ty.to_hugr()
         op = tket2_result_op(
             op_name=op_name,
-            typ=get_type(node.value).to_hugr(),
+            typ=hugr_ty,
             tag=node.tag,
             extra_args=extra_args,
         )
-        self.builder.add_op(op, self.visit(node.value))
+        self.builder.add_op(op, value_wire)
         return self._pack_returns([], NoneType())
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
@@ -732,6 +737,7 @@ def tket2_result_op(
 ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(
     "array.__comprehension.init"
 )
+ARRAY_UNWRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__unwrap_elem")
 
 
 def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
@@ -750,6 +756,21 @@ def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
     func, already_defined = ctx.declare_global_func(ARRAY_COMPREHENSION_INIT, sig)
     if not already_defined:
         func.set_outputs(func.add_op(ops.Tag(0, ht.Option(v))))
+    return func
+
+
+def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
+    """Returns the Hugr function that is used to unwrap the elements in an option array
+    to turn it into a regular array."""
+    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Any))
+    sig = ht.PolyFuncType(
+        params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+        body=ht.FunctionType([ht.Option(v)], [v]),
+    )
+    func, already_defined = ctx.declare_global_func(ARRAY_UNWRAP_ELEM, sig)
+    if not already_defined:
+        msg = "Linear array element has already been used"
+        func.set_outputs(build_unwrap(func, func.inputs()[0], msg))
     return func
 
 
