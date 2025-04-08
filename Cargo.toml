@@ -35,3 +35,6 @@ hugr-cli = "0.15.2"
 #  hugr = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
 #  hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
 #  hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
+
+# Uncomment if latest tket2 dependency is needed for execute_llvm
+tket2 = { git = "https://github.com/CQCL/tket2.git", branch = "main" }

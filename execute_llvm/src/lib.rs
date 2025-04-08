@@ -11,6 +11,8 @@ use inkwell::values::BasicMetadataValueEnum;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+mod bool;
+
 macro_rules! pyerr {
     ($fmt:literal $(,$arg:tt)*) => { PyValueError::new_err(format!($fmt, $($arg),*)) }
 }
@@ -64,6 +66,7 @@ fn codegen_extensions() -> CodegenExtsMap<'static, Hugr> {
         .add_conversion_extensions()
         .add_logic_extensions()
         .add_default_array_extensions()
+        .add_extension(bool::BoolCodegenExtension)
         .finish()
 }
 
