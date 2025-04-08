@@ -767,7 +767,7 @@ def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
         params=[ht.TypeTypeParam(ht.TypeBound.Any)],
         body=ht.FunctionType([ht.Option(v)], [v]),
     )
-    func, already_defined = ctx.declare_global_func(ARRAY_COMPREHENSION_INIT, sig)
+    func, already_defined = ctx.declare_global_func(ARRAY_UNWRAP_ELEM, sig)
     if not already_defined:
         msg = "Linear array element has already been used"
         func.set_outputs(build_unwrap(func, func.inputs()[0], msg))
