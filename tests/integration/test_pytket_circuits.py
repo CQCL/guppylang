@@ -272,3 +272,34 @@ def test_register_arrays_mixed(validate):
         return guppy_circ(q, q2)
 
     validate(module.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_compile_sig(validate):
+    from pytket import Circuit
+
+    circ = Circuit(1)
+    circ.H(0)
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    @guppy.pytket(circ, module)
+    def guppy_circ(q1: qubit) -> None: ...
+
+    validate(guppy_circ.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_compile_load(validate):
+    from pytket import Circuit
+
+    circ = Circuit(1)
+    circ.H(0)
+
+    module = GuppyModule("test")
+    module.load_all(quantum)
+
+    pytket_func = guppy.load_pytket("guppy_circ", circ, module, use_arrays=False)
+
+    validate(pytket_func.compile())
