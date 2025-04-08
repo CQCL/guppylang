@@ -9,6 +9,7 @@ from hugr import ext as he
 from hugr import tys as ht
 from hugr.std.float import FLOAT_T
 from tket2_exts import (
+    debug,
     futures,
     qsystem,
     qsystem_random,
@@ -16,7 +17,6 @@ from tket2_exts import (
     quantum,
     result,
     rotation,
-    debug,
 )
 
 from guppylang.definition.custom import CustomInoutCallCompiler
