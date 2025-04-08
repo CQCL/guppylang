@@ -139,8 +139,19 @@ class QsysResult:
     results: list[QsysShot]
 
     def __init__(
-        self, results: Iterable[QsysShot | Iterable[TaggedResult]] | None = None
+        self,
+        results: Iterable[QsysShot | Iterable[TaggedResult]] | None = None,
+        progress_bar: bool = False
     ):
+        if progress_bar:
+            # verify tqdm is available
+            try:
+                from tqdm import tqdm
+            except ImportError as e:
+                raise ImportError(
+                    "tqdm is required for progress bar, install with the `progress` extra"
+                ) from e
+            results = tqdm(results, unit="shots")
         self.results = [
             res if isinstance(res, QsysShot) else QsysShot(res) for res in results or []
         ]

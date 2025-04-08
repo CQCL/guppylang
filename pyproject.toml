@@ -45,6 +45,7 @@ dependencies = [
 [project.optional-dependencies]
 # pytket = ["pytket >=1.30.0,<2", "tket2 >=0.4.1,<0.5"]
 pytket = ["pytket>=1.34"]
+progress = ["tqdm >=4.65.0,<5"]
 
 [project.urls]
 homepage = "https://github.com/CQCL/guppylang"
