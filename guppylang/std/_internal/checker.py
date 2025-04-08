@@ -560,5 +560,5 @@ class StateResultChecker(CustomCallChecker):
         )
         args, ret_ty, inst = synthesize_call(func_ty, args, self.node, self.ctx)
         assert len(inst) == 0, "func_ty is not generic"
-        node = StateResultExpr(tag=args[0], args=args, func_ty=func_ty)
+        node = StateResultExpr(tag=tag.value, args=args, func_ty=func_ty)
         return with_loc(self.node, node), ret_ty

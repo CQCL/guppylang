@@ -27,7 +27,7 @@ from guppylang.compiler.core import (
     DFContainer,
     GlobalConstId,
 )
-from guppylang.compiler.hugr_extension import PartialOp, UnsupportedOp
+from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import (
     CallReturnWires,
@@ -50,12 +50,18 @@ from guppylang.nodes import (
     PartialApply,
     PlaceNode,
     ResultExpr,
+    StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
     TypeApply,
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
-from guppylang.std._internal.compiler.array import array_repeat
+from guppylang.std._internal.compiler.array import (
+    array_new,
+    array_repeat,
+    array_type,
+    unpack_array,
+)
 from guppylang.std._internal.compiler.list import (
     list_new,
 )
@@ -533,19 +539,24 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         self._update_inout_ports(node.args, iter(barrier_n), node.func_ty)
         return self._pack_returns([], NoneType())
 
-    def visit_StateResultExpr(self, node: BarrierExpr) -> Wire:
-        hugr_tys = [get_type(e).to_hugr() for e in node.args]
+    def visit_StateResultExpr(self, node: StateResultExpr) -> Wire:
+        num_qubits = len(node.args) - 1
+        num_qubits_arg = ht.BoundedNatArg(num_qubits)
+        args = [ht.StringArg(node.tag), num_qubits_arg]
+        sig = ht.FunctionType(
+            [array_type(ht.Qubit, num_qubits_arg)],
+            [array_type(ht.Qubit, num_qubits_arg)],
+        )
+        op = ops.Custom(
+            op_name="StateResult", signature=sig, args=args, extension="tket2.debug"
+        )
 
-        # op = hugr.std.prelude.PRELUDE_EXTENSION.get_op("StateResult").instantiate(
-        #    [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in hugr_tys[1:]])],
-        #    ht.FunctionType(hugr_tys, hugr_tys[1:])
-        # )
+        qubits_in = [self.visit(e) for e in node.args[1:]]
+        qubits_arr = self.builder.add_op(array_new(ht.Qubit, num_qubits), *qubits_in)
+        qubits_arr = self.builder.add_op(op, qubits_arr)
+        qubits_out = unpack_array(self.builder, qubits_arr)
 
-        op = UnsupportedOp("StateResult", hugr_tys, hugr_tys[1:])
-
-        barrier_n = self.builder.add_op(op, *(self.visit(e) for e in node.args))
-
-        self._update_inout_ports(node.args, iter(barrier_n), node.func_ty)
+        self._update_inout_ports(node.args, iter(qubits_out), node.func_ty)
         return self._pack_returns([], NoneType())
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> Wire:
