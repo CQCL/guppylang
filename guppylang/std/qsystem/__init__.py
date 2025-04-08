@@ -143,7 +143,7 @@ def _phased_x(q: qubit, angle1: float, angle2: float) -> None:
 def _zz_phase(q1: qubit, q2: qubit, angle: float) -> None:
     """ZZPhase operation from the qsystem extension.
 
-    See `guppylang.std.qsystem.phased_x` for a public definition that
+    See `guppylang.std.qsystem.zz_phase` for a public definition that
     accepts angle parameters.
     """
 
