@@ -24,6 +24,7 @@ from guppylang.std._internal.checker import (
     RangeChecker,
     ResultChecker,
     ReversingChecker,
+    StateResultChecker,
     UnsupportedChecker,
 )
 from guppylang.std._internal.compiler.array import (
@@ -737,7 +738,7 @@ def result(tag, value):
     (tag, value).
 
     Args:
-        tag: The tag of the result. Must be a string literal
+        tag: The tag of the result. Must be a string literal.
         value: The value of the result. Currently supported value types are `int`,
         `nat`, `float`, and `bool`.
     """
@@ -770,6 +771,20 @@ def exit(msg: str, signal: int, *args):
         msg: The message to display. Must be a string literal.
         args: Arbitrary extra inputs, will not affect the message. Only useful for
         consuming linear values.
+    """
+
+
+@guppy.custom(checker=StateResultChecker(), higher_order_value=False)
+def state_result(tag, *args) -> None:
+    """Report the quantum state of the specified qubits.
+
+    This is a debugging function that works only when the program is executed
+    on a supported simulator.
+
+    Args:
+        tag: A string literal representing the tag of the result.
+        args: The qubits whose quantum state is to be reported. The order they are given
+        in corresponds to the order in which the state will be reported.
     """
 
 

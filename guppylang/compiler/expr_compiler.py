@@ -50,12 +50,18 @@ from guppylang.nodes import (
     PartialApply,
     PlaceNode,
     ResultExpr,
+    StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
     TypeApply,
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
-from guppylang.std._internal.compiler.array import array_repeat
+from guppylang.std._internal.compiler.array import (
+    array_new,
+    array_repeat,
+    array_type,
+    unpack_array,
+)
 from guppylang.std._internal.compiler.list import (
     list_new,
 )
@@ -531,6 +537,33 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         barrier_n = self.builder.add_op(op, *(self.visit(e) for e in node.args))
 
         self._update_inout_ports(node.args, iter(barrier_n), node.func_ty)
+        return self._pack_returns([], NoneType())
+
+    def visit_StateResultExpr(self, node: StateResultExpr) -> Wire:
+        num_qubits = len(node.args) - 1
+        num_qubits_arg = ht.BoundedNatArg(num_qubits)
+        args = [ht.StringArg(node.tag), num_qubits_arg]
+        sig = ht.FunctionType(
+            [array_type(ht.Qubit, num_qubits_arg)],
+            [array_type(ht.Qubit, num_qubits_arg)],
+        )
+        op = ops.Custom(
+            op_name="StateResult", signature=sig, args=args, extension="tket2.debug"
+        )
+
+        qubits_in = [self.visit(e) for e in node.args[1:]]
+        # TODO: This should be caught during checking.
+        for q in qubits_in:
+            t = self.builder.hugr.port_type(q.out_port())
+            if t != ht.Qubit:
+                raise GuppyError(
+                    UnsupportedError(node, "Non-qubit inputs to state_result")
+                )
+        qubits_arr = self.builder.add_op(array_new(ht.Qubit, num_qubits), *qubits_in)
+        qubits_arr = self.builder.add_op(op, qubits_arr)
+        qubits_out = unpack_array(self.builder, qubits_arr)
+
+        self._update_inout_ports(node.args, iter(qubits_out), node.func_ty)
         return self._pack_returns([], NoneType())
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> Wire:
