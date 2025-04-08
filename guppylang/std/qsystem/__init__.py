@@ -21,6 +21,19 @@ qsystem.load_all(angles)
 @guppy(qsystem)
 @no_type_check
 def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
+    r"""phased_x gate command.
+
+    .. math::
+
+        \mathrm{phasedx}(q, \theta_1, \theta_2)=
+          \mathrm{Rz(\theta_2)Rx(\theta_1)Rz(\theta_2)}&=
+          \begin{pmatrix}
+          \cos(\frac{\pi \theta_1}{2}) &
+            -i e^{-i \pi \theta_2}\sin(\frac{\pi\theta_1}{2})\\
+          -i e^{i \pi \theta_2}\sin(\frac{\pi\theta_1}{2}) &
+            \cos(\frac{\pi \theta_1}{2})
+           \end{pmatrix}
+    """
     f1 = float(angle1)
     f2 = float(angle2)
     _phased_x(q, f1, f2)
@@ -28,12 +41,36 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
 
 @guppy.hugr_op(quantum_op("ZZMax", ext=QSYSTEM_EXTENSION), module=qsystem)
 @no_type_check
-def zz_max(q1: qubit, q2: qubit) -> None: ...
+def zz_max(q1: qubit, q2: qubit) -> None:
+    r"""zz_max gate command.
+
+    .. math::
+        \mathrm{zz_max}(q_1,q_2)=\mathrm{zz_max}(q_2,q_1)=
+        \exp(\frac{- i \pi}{4}\big(Z \otimes Z \big))=
+          \begin{pmatrix}
+            e^{\frac{-i \pi}{4}} & 0 & 0 & 0 \\
+            0 & e^{\frac{i \pi}{4}} & 0 & 0 \\
+            0 & 0 & e^{\frac{i \pi}{4}} & 0 \\
+            0 & 0 & 0 & e^{\frac{-i \pi}{4}}
+        \end{pmatrix}
+    """
 
 
 @guppy(qsystem)
 @no_type_check
 def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
+    r"""zz_phase gate command.
+
+    .. math::
+        \mathrm{zz_phase}(q_1,q_2,\theta)=\mathrm{zz_phase}(q_2,q_1,\theta)=
+        \exp(\frac{- i \pi \theta}{2}\big(Z \otimes Z \big))=
+          \begin{pmatrix}
+            e^{\frac{-i \pi \theta}{2}} & 0 & 0 & 0 \\
+            0 & e^{\frac{i \pi \theta}{2}} & 0 & 0 \\
+            0 & 0 & e^{\frac{i \pi \theta}{2}} & 0 \\
+            0 & 0 & 0 & e^{\frac{-i \pi \theta}{2}}
+        \end{pmatrix}
+    """
     f = float(angle)
     _zz_phase(q1, q2, f)
 
@@ -41,13 +78,25 @@ def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
 @guppy(qsystem)
 @no_type_check
 def rz(q: qubit, angle: angle) -> None:
+    r"""rz gate command.
+
+    .. math::
+        \mathrm{rz}(q,\theta)=
+        \exp(\frac{- i \pi \theta}{2}\big(Z \big))=
+          \begin{pmatrix}
+            e^{\frac{-i \pi \theta}{2}} & 0  \\
+            0 & e^{\frac{i \pi \theta}{2}}
+        \end{pmatrix}
+    """
+
     f1 = float(angle)
     _rz(q, f1)
 
 
 @guppy.hugr_op(quantum_op("Measure", ext=QSYSTEM_EXTENSION), module=qsystem)
 @no_type_check
-def measure(q: qubit @ owned) -> bool: ...
+def measure(q: qubit @ owned) -> bool:
+    """Measure a qubit."""
 
 
 @guppy.custom(InoutMeasureCompiler("MeasureReset", QSYSTEM_EXTENSION), module=qsystem)
@@ -58,7 +107,8 @@ def measure_and_reset(q: qubit) -> bool:
 
 @guppy.hugr_op(quantum_op("Reset", ext=QSYSTEM_EXTENSION), module=qsystem)
 @no_type_check
-def reset(q: qubit) -> None: ...
+def reset(q: qubit) -> None:
+    """Reset a qubit to the |0> state."""
 
 
 # TODO
