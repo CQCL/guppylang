@@ -25,7 +25,7 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
 
     .. math::
 
-        \mathrm{phasedx}(q, \theta_1, \theta_2)=
+        \mathrm{phased\_x}(q, \theta_1, \theta_2)=
           \mathrm{Rz(\theta_2)Rx(\theta_1)Rz(\theta_2)}&=
           \begin{pmatrix}
           \cos(\frac{\pi \theta_1}{2}) &
@@ -45,7 +45,7 @@ def zz_max(q1: qubit, q2: qubit) -> None:
     r"""zz_max gate command.
 
     .. math::
-        \mathrm{zz_max}(q_1,q_2)=\mathrm{zz_max}(q_2,q_1)=
+        \mathrm{zz\_max}(q_1,q_2)=\mathrm{zz\_max}(q_2,q_1)=
         \exp(\frac{- i \pi}{4}\big(Z \otimes Z \big))=
           \begin{pmatrix}
             e^{\frac{-i \pi}{4}} & 0 & 0 & 0 \\
@@ -62,7 +62,7 @@ def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
     r"""zz_phase gate command.
 
     .. math::
-        \mathrm{zz_phase}(q_1,q_2,\theta)=\mathrm{zz_phase}(q_2,q_1,\theta)=
+        \mathrm{zz\_phase}(q_1,q_2,\theta)=\mathrm{zz\_phase}(q_2,q_1,\theta)=
         \exp(\frac{- i \pi \theta}{2}\big(Z \otimes Z \big))=
           \begin{pmatrix}
             e^{\frac{-i \pi \theta}{2}} & 0 & 0 & 0 \\
