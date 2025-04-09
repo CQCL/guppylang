@@ -45,6 +45,7 @@ from guppylang.std._internal.compiler.prelude import (
     UnwrapOpCompiler,
 )
 from guppylang.std._internal.util import (
+    external_op,
     float_op,
     int_op,
     logic_op,
@@ -1068,3 +1069,20 @@ def barrier(*args) -> None:
 # TODO: This is a temporary solution until https://github.com/CQCL/guppylang/issues/732
 #  is properly addressed.
 from guppylang.std.option import Option, nothing, some  # noqa: E402
+
+
+# These should work equally well for signed integers if the need should arise
+@guppy.hugr_op(
+    external_op(
+        "bytecast_int64_to_float64", args=[], ext=hugr.std.int.CONVERSIONS_EXTENSION
+    )
+)
+def bytecast_nat_to_float(n: nat) -> float: ...
+
+
+@guppy.hugr_op(
+    external_op(
+        "bytecast_float64_to_int64", args=[], ext=hugr.std.int.CONVERSIONS_EXTENSION
+    )
+)
+def bytecast_float_to_nat(f: float) -> nat: ...
