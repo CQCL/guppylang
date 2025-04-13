@@ -1,0 +1,10 @@
+Error: Tag too long (at $FILE:15:17)
+   | 
+13 | def main() -> None:
+14 |     q1 = qubit()
+15 |     state_result(comptime("a" * (TAG_MAX_LEN + 1)), q1)
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Result tag is too long
+
+Note: Result tags are limited to 200 bytes
+
+Guppy compilation failed due to 1 previous error

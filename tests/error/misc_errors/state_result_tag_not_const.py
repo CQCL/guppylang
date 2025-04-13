@@ -7,9 +7,9 @@ module = GuppyModule("test")
 module.load(qubit, discard, state_result)
 
 @guppy(module)
-def main() -> None:
+def main(y: bool) -> None:
     q1 = qubit()
-    state_result(q1)
+    state_result("foo" if y else "bar", q1)
     discard(q1)
 
 module.compile()

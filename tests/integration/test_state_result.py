@@ -1,16 +1,37 @@
+from modulefinder import ModuleFinder
 from typing import no_type_check
 
 from guppylang import decorator
 from guppylang.module import GuppyModule
-from guppylang.std.builtins import state_result, array, owned
-from guppylang.std.quantum import qubit, discard, x, h
+from guppylang.std.builtins import array, owned
+from guppylang.std.debug import state_result
+from guppylang.std.quantum import qubit, discard, discard_array
 from guppylang.std import quantum
+from guppylang.std import debug
 
-from tests.integration.test_quantum import compile_quantum_guppy
+def compile_debug_guppy(fn) -> ModuleFinder:
+    """A decorator that combines @guppy with HUGR compilation.
+
+    Modified version of `tests.util.compile_guppy` that loads the quantum and debug 
+    modules.
+    """
+    assert not isinstance(
+        fn,
+        GuppyModule,
+    ), "`@compile_debug_guppy` does not support extra arguments."
+
+    module = GuppyModule("module")
+    module.load(
+        qubit, discard, discard_array
+    )
+    module.load(q=quantum)
+    module.load_all(debug)
+    decorator.guppy(module)(fn)
+    return module.compile()
 
 
 def test_basic(validate):
-    @compile_quantum_guppy
+    @compile_debug_guppy
     def main() -> None:
         q1 = qubit()
         q2 = qubit()
@@ -21,16 +42,8 @@ def test_basic(validate):
     validate(main)
 
 
-def test_empty(validate):
-    @compile_quantum_guppy
-    def main() -> None:
-        state_result("tag")
-
-    validate(main)
-
-
 def test_multi(validate):
-    @compile_quantum_guppy
+    @compile_debug_guppy
     @no_type_check
     def main() -> None:
         q1 = qubit()
@@ -45,7 +58,7 @@ def test_multi(validate):
 
 
 def test_array(validate):
-    @compile_quantum_guppy
+    @compile_debug_guppy
     @no_type_check
     def main() -> None:
         qs = array(qubit() for _ in range(4))
@@ -67,6 +80,7 @@ def test_struct(validate):
     """Barrier on array/struct access."""
 
     module = GuppyModule("module")
+    module.load(state_result)
     module.load(qubit, discard)
     module.load(q=quantum)
 

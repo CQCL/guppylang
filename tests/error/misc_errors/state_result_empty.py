@@ -6,7 +6,7 @@ module = GuppyModule("test")
 module.load(state_result)
 
 @guppy(module)
-def main(x: int) -> None:
-    state_result("tag", x)
+def main() -> None:
+    state_result("tag")
 
 module.compile()

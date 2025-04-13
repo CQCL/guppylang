@@ -552,16 +552,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         )
 
         qubits_in = [self.visit(e) for e in node.args[1:]]
-        # TODO: This should be caught during checking.
-        for q in qubits_in:
-            t = self.builder.hugr.port_type(q.out_port())
-            if t != ht.Qubit:
-                raise GuppyError(
-                    UnsupportedError(node, "Non-qubit inputs to state_result")
-                )
-        qubits_arr = self.builder.add_op(array_new(ht.Qubit, num_qubits), *qubits_in)
-        qubits_arr = self.builder.add_op(op, qubits_arr)
-        qubits_out = unpack_array(self.builder, qubits_arr)
+        qubits_arr_in = self.builder.add_op(array_new(ht.Qubit, num_qubits), *qubits_in)
+        qubits_arr_out = self.builder.add_op(op, qubits_arr_in)
+        qubits_out = unpack_array(self.builder, qubits_arr_out)
 
         self._update_inout_ports(node.args, iter(qubits_out), node.func_ty)
         return self._pack_returns([], NoneType())

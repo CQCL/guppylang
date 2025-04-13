@@ -1,12 +1,15 @@
 from guppylang.std.debug import state_result
+from guppylang.std.quantum import discard, qubit
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 
 module = GuppyModule("test")
-module.load(state_result)
+module.load(qubit, discard, state_result)
 
 @guppy(module)
-def main(x: int) -> None:
-    state_result("tag", x)
+def main() -> None:
+    q1 = qubit()
+    state_result("tag", q1, 123)
+    discard(q1)
 
 module.compile()
