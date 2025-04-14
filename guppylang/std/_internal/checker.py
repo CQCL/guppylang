@@ -27,6 +27,7 @@ from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import (
     BarrierExpr,
+    ByteCastExpr,
     DesugaredArrayComp,
     DesugaredGeneratorExpr,
     ExitKind,
@@ -536,3 +537,35 @@ class BarrierChecker(CustomCallChecker):
         assert len(inst) == 0, "func_ty is not generic"
         node = BarrierExpr(args=args, func_ty=func_ty)
         return with_loc(self.node, node), ret_ty
+
+
+class ByteCastChecker(CustomCallChecker):
+    """Checker for bytecast operations"""
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        args_tys = [ExprSynthesizer(self.ctx).synthesize(val) for val in args]
+
+        from_arg = self.func.ty.args[0]
+        to_arg = self.func.ty.args[1]
+
+        print(f"from_arg: {from_arg}")
+        print(f"to_arg: {to_arg}")
+
+        if isinstance(from_arg, ConstValue) and isinstance(to_arg, ConstValue):
+            if isinstance(from_arg.ty, NumericType) and isinstance(
+                to_arg.ty, NumericType
+            ):
+                if from_arg.ty.kind == NumericType.Kind.Float and (
+                    to_arg.ty.kind == NumericType.Kind.Nat
+                    or to_arg.ty.kind == NumericType.Kind.Int
+                ):
+                    return ByteCastExpr(args_tys[0][0], "bytecast_float64_to_int64")
+                elif to_arg.ty.kind == NumericType.Kind.Float and (
+                    from_arg.ty.kind == NumericType.Kind.Nat
+                    or from_arg.ty.kind == NumericType.Kind.Int
+                ):
+                    return ByteCastExpr(args_tys[0][0], "bytecast_int64_to_float64")
+            else:
+                raise GuppyTypeError(f"Bytecasting not defined from type {from_arg.ty} to {to_arg.ty}")
+        else:
+            raise GuppyTypeError(f"Bytecasting is only defined on numeric types, not generics. Conversion can't be inferred for {from_arg} -> {to_arg}")

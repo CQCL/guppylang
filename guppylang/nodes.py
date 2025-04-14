@@ -398,3 +398,13 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
         self.cfg = cfg
         self.ty = ty
         self.captured = captured
+
+
+class ByteCastExpr(ast.Expr):
+    arg: ast.expr
+    op_name: str
+
+    _fields = (
+        "arg",
+        "op_name",
+    )

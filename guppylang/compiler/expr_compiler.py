@@ -37,6 +37,7 @@ from guppylang.definition.value import (
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
     BarrierExpr,
+    ByteCastExpr,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredListComp,
@@ -581,6 +582,11 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 int_type(), "__add__", node, [count, one]
             )
         return self.dfg[array_var]
+
+    def visit_ByteCastExpr(self, node: ByteCastExpr) -> Wire:
+        wire = self.compile(node.arg)
+        op = hugr.std.int.CONVERSIONS_EXTENSION.get_op(node.op_name)
+        return self.builder.add_op(op, wire)
 
     def _build_method_call(
         self,

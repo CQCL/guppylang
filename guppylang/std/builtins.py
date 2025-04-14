@@ -16,6 +16,7 @@ from guppylang.definition.custom import CopyInoutCompiler, NoopCompiler
 from guppylang.std._internal.checker import (
     ArrayCopyChecker,
     BarrierChecker,
+    ByteCastChecker,
     CallableChecker,
     DunderChecker,
     ExitChecker,
@@ -1086,3 +1087,9 @@ def bytecast_nat_to_float(n: nat) -> float: ...
     )
 )
 def bytecast_float_to_nat(f: float) -> nat: ...
+
+
+BC_S = guppy.type_var("BC_S")
+BC_T = guppy.type_var("BC_T")
+@guppy.custom(checker=ByteCastChecker())
+def bytecast(inp: BC_S) -> BC_T: ...
