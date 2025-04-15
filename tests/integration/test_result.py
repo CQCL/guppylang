@@ -1,5 +1,6 @@
 import pytest
 
+from guppylang import GuppyModule, guppy
 from guppylang.std.builtins import result, nat, array
 from tests.util import compile_guppy
 
@@ -23,7 +24,6 @@ def test_multi(validate):
     validate(main)
 
 
-@pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/631")
 def test_array(validate):
     @compile_guppy
     def main(
@@ -33,6 +33,30 @@ def test_array(validate):
         result("b", x)
         result("c", y)
         result("d", z)
+
+    validate(main)
+
+
+def test_array_generic(validate):
+    module = GuppyModule("test")
+    n = guppy.nat_var("n", module=module)
+
+    @guppy(module)
+    def main(
+        w: array[nat, n], x: array[int, n], y: array[float, n], z: array[bool, n]
+    ) -> None:
+        result("a", w)
+        result("b", x)
+        result("c", y)
+        result("d", z)
+
+    validate(module.compile())
+
+
+def test_array_drop_after_result(validate):
+    @compile_guppy
+    def main() -> None:
+        result("a", array(1, 2, 3))
 
     validate(main)
 
