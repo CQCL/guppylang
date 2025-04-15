@@ -54,6 +54,7 @@ from guppylang.nodes import (
     LocalCall,
     PartialApply,
     PlaceNode,
+    ResultExpr,
     StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
@@ -62,6 +63,7 @@ from guppylang.tys.ty import (
     FuncInput,
     FunctionType,
     InputFlags,
+    NoneType,
     StructType,
 )
 
@@ -419,6 +421,13 @@ class BBLinearityChecker(ast.NodeVisitor):
     def visit_BarrierExpr(self, node: BarrierExpr) -> None:
         self._visit_call_args(node.func_ty, node)
         self._reassign_inout_args(node.func_ty, node)
+
+    def visit_ResultExpr(self, node: ResultExpr) -> None:
+        ty = get_type(node.value)
+        flag = InputFlags.Inout if not ty.copyable else InputFlags.NoFlags
+        func_ty = FunctionType([FuncInput(ty, flag)], NoneType())
+        self._visit_call_args(func_ty, node)
+        self._reassign_inout_args(func_ty, node)
 
     def visit_StateResultExpr(self, node: StateResultExpr) -> None:
         self._visit_call_args(node.func_ty, node)

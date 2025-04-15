@@ -353,10 +353,8 @@ class ResultChecker(CustomCallChecker):
             assert isinstance(len_arg, ConstArg)
             if not self._is_numeric_or_bool_type(ty_arg.ty):
                 raise GuppyError(err)
-            _base_ty = ty_arg.ty
-            _array_len = len_arg.const
-            # See https://github.com/CQCL/guppylang/issues/631
-            raise GuppyError(UnsupportedError(value, "Array results"))
+            base_ty = ty_arg.ty
+            array_len = len_arg.const
         else:
             raise GuppyError(err)
         node = ResultExpr(value, base_ty, array_len, tag.value)

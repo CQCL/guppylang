@@ -273,6 +273,10 @@ class ResultExpr(ast.expr):
 
     _fields = ("value", "base_ty", "array_len", "tag")
 
+    @property
+    def args(self) -> list[ast.expr]:
+        return [self.value]
+
 
 class ExitKind(Enum):
     ExitShot = 0  # Exit the current shot
@@ -307,7 +311,7 @@ class StateResultExpr(ast.expr):
     _fields = ("tag", "args", "func_ty")
 
 
-AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr | StateResultExpr
+AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr | ResultExpr | StateResultExpr
 
 
 class InoutReturnSentinel(ast.expr):
