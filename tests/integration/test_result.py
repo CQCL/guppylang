@@ -53,6 +53,14 @@ def test_array_generic(validate):
     validate(module.compile())
 
 
+def test_array_drop_after_result(validate):
+    @compile_guppy
+    def main() -> None:
+        result("a", array(1, 2, 3))
+
+    validate(main)
+
+
 def test_same_tag(validate):
     @compile_guppy
     def main(x: int, y: float, z: bool) -> None:
