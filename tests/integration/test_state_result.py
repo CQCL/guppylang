@@ -57,7 +57,7 @@ def test_multi(validate):
     validate(main)
 
 
-def test_array(validate):
+def test_array_access(validate):
     @compile_debug_guppy
     @no_type_check
     def main() -> None:
@@ -76,9 +76,7 @@ def test_array(validate):
     validate(main)
 
 
-def test_struct(validate):
-    """Barrier on array/struct access."""
-
+def test_struct_access(validate):
     module = GuppyModule("module")
     module.load(state_result)
     module.load(qubit, discard)
@@ -108,5 +106,36 @@ def test_struct(validate):
         discard(qs.q2)
         discard(qs.q3)
         discard(qs.q4)
+
+    validate(module.compile())
+
+
+def test_array(validate):
+    @compile_debug_guppy
+    @no_type_check
+    def main() -> None:
+        qs = array(qubit() for _ in range(4))
+        q.h(qs[1])
+        q.h(qs[2])
+        q.cx(qs[0], qs[3])
+        state_result("tag", qs)
+        discard_array(qs)
+
+    validate(main)
+
+
+def test_generic_array(validate):
+    module = GuppyModule("module")
+    module.load(state_result)
+    module.load(qubit, discard)
+    module.load(q=quantum)
+
+    n = decorator.guppy.nat_var("n", module=module)
+
+    @decorator.guppy(module)
+    @no_type_check
+    def main(qs: array[qubit, n]) -> None:
+        q.cx(qs[0], qs[1])
+        state_result("tag", qs)
 
     validate(module.compile())

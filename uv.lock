@@ -2314,7 +2314,7 @@ wheels = [
 [[package]]
 name = "tket2"
 version = "0.8.1"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=ts%2Fdebug-ext#bf4129b88b3718b6f4feb7553e4dc43fed210729" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=ts%2Fdebug-ext#3b15e1870df36dfa9243af9c2312416934cf29c3" }
 dependencies = [
     { name = "hugr" },
     { name = "pytket" },
@@ -2325,12 +2325,12 @@ dependencies = [
 [[package]]
 name = "tket2-eccs"
 version = "0.3.0"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-eccs&branch=ts%2Fdebug-ext#bf4129b88b3718b6f4feb7553e4dc43fed210729" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-eccs&branch=ts%2Fdebug-ext#3b15e1870df36dfa9243af9c2312416934cf29c3" }
 
 [[package]]
 name = "tket2-exts"
 version = "0.6.0"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-exts&branch=ts%2Fdebug-ext#bf4129b88b3718b6f4feb7553e4dc43fed210729" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-exts&branch=ts%2Fdebug-ext#3b15e1870df36dfa9243af9c2312416934cf29c3" }
 dependencies = [
     { name = "hugr" },
 ]

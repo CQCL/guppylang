@@ -4,14 +4,19 @@ from typing import ClassVar
 
 from guppylang.ast_util import with_loc
 from guppylang.checker.errors.generic import ExpectedError
-from guppylang.checker.expr_checker import ExprChecker, synthesize_call
+from guppylang.checker.expr_checker import ExprChecker, ExprSynthesizer, synthesize_call
 from guppylang.definition.custom import CustomCallChecker
 from guppylang.definition.ty import TypeDef
 from guppylang.diagnostic import Error
 from guppylang.error import GuppyTypeError
 from guppylang.nodes import StateResultExpr
 from guppylang.std._internal.checker import TAG_MAX_LEN, TooLongError
-from guppylang.tys.builtin import string_type
+from guppylang.tys.builtin import (
+    get_array_length,
+    get_element_type,
+    is_array_type,
+    string_type,
+)
 from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, NoneType, Type
 
 
@@ -23,6 +28,12 @@ class StateResultChecker(CustomCallChecker):
         title: ClassVar[str] = "Missing qubit inputs"
         span_label: ClassVar[str] = (
             "Qubits whose state should be reported must be passed explicitly"
+        )
+
+    class MoreThanOneArrayError(Error):
+        title: ClassVar[str] = "More than one array passed"
+        span_label: ClassVar[str] = (
+            "Only one array is allowed to be passed to `state_result`"
         )
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
@@ -43,18 +54,38 @@ class StateResultChecker(CustomCallChecker):
         qubit_defn = self.ctx.globals[qubit.id]
         assert isinstance(qubit_defn, TypeDef)
         qubit_ty = qubit_defn.check_instantiate([], self.ctx.globals)
-        for arg in args[1:]:
-            qbt, _ = ExprChecker(self.ctx).check(arg, qubit_ty)
-            if not ExprChecker(self.ctx).check(arg, qubit_ty):
-                raise GuppyTypeError(ExpectedError(arg, "a qubit"))
-            syn_args.append(qbt)
 
-        func_ty = FunctionType(
-            [FuncInput(string_type(), InputFlags.NoFlags)]
-            + [FuncInput(qubit_ty, InputFlags.Inout)] * len(args[1:]),
-            NoneType(),
-        )
+        array_len = None
+        arg, ty = ExprSynthesizer(self.ctx).synthesize(args[1])
+        if is_array_type(ty):
+            if len(args) > 2:
+                raise GuppyTypeError(self.MoreThanOneArrayError(self.node))
+            element_ty = get_element_type(ty)
+            if not element_ty == qubit_ty:
+                raise GuppyTypeError(ExpectedError(arg, "an array of qubits"))
+            syn_args.append(arg)
+            func_ty = FunctionType(
+                [
+                    FuncInput(string_type(), InputFlags.NoFlags),
+                    FuncInput(ty, InputFlags.Inout),
+                ],
+                NoneType(),
+            )
+            array_len = get_array_length(ty)
+        else:
+            for arg in args[1:]:
+                qbt, _ = ExprChecker(self.ctx).check(arg, qubit_ty)
+                if not ExprChecker(self.ctx).check(arg, qubit_ty):
+                    raise GuppyTypeError(ExpectedError(arg, "a qubit"))
+                syn_args.append(qbt)
+            func_ty = FunctionType(
+                [FuncInput(string_type(), InputFlags.NoFlags)]
+                + [FuncInput(qubit_ty, InputFlags.Inout)] * len(args[1:]),
+                NoneType(),
+            )
         args, ret_ty, inst = synthesize_call(func_ty, syn_args, self.node, self.ctx)
         assert len(inst) == 0, "func_ty is not generic"
-        node = StateResultExpr(tag=tag.value, args=args, func_ty=func_ty)
+        node = StateResultExpr(
+            tag=tag.value, args=args, func_ty=func_ty, array_len=array_len
+        )
         return with_loc(self.node, node), ret_ty

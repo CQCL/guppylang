@@ -308,10 +308,14 @@ class StateResultExpr(ast.expr):
     tag: str
     args: list[ast.expr]
     func_ty: FunctionType
-    _fields = ("tag", "args", "func_ty")
+    #: Array length in case this is an array result, otherwise `None`
+    array_len: Const | None
+    _fields = ("tag", "args", "func_ty", "has_array_input")
 
 
-AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr | ResultExpr | StateResultExpr
+AnyCall = (
+    LocalCall | GlobalCall | TensorCall | BarrierExpr | ResultExpr | StateResultExpr
+)
 
 
 class InoutReturnSentinel(ast.expr):

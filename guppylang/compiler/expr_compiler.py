@@ -57,8 +57,8 @@ from guppylang.nodes import (
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
 from guppylang.std._internal.compiler.array import (
-    array_new,
     array_map,
+    array_new,
     array_repeat,
     array_type,
     unpack_array,
@@ -546,8 +546,11 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._pack_returns([], NoneType())
 
     def visit_StateResultExpr(self, node: StateResultExpr) -> Wire:
-        num_qubits = len(node.args) - 1
-        num_qubits_arg = ht.BoundedNatArg(num_qubits)
+        num_qubits_arg = (
+            node.array_len.to_arg().to_hugr()
+            if node.array_len
+            else ht.BoundedNatArg(len(node.args) - 1)
+        )
         args = [ht.StringArg(node.tag), num_qubits_arg]
         sig = ht.FunctionType(
             [array_type(ht.Qubit, num_qubits_arg)],
@@ -557,10 +560,34 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             op_name="StateResult", signature=sig, args=args, extension="tket2.debug"
         )
 
-        qubits_in = [self.visit(e) for e in node.args[1:]]
-        qubits_arr_in = self.builder.add_op(array_new(ht.Qubit, num_qubits), *qubits_in)
-        qubits_arr_out = self.builder.add_op(op, qubits_arr_in)
-        qubits_out = unpack_array(self.builder, qubits_arr_out)
+        if not node.array_len:
+            qubits_in = [self.visit(e) for e in node.args[1:]]
+            qubit_arr_in = self.builder.add_op(
+                array_new(ht.Qubit, len(node.args) - 1), *qubits_in
+            )
+            qubit_arr_out = self.builder.add_op(op, qubit_arr_in)
+            qubits_out = unpack_array(self.builder, qubit_arr_out)
+        else:
+            qubits_in = [self.visit(node.args[1])]
+            unwrap = array_unwrap_elem(self.ctx)
+            unwrap = self.builder.load_function(
+                unwrap,
+                instantiation=ht.FunctionType([ht.Option(ht.Qubit)], [ht.Qubit]),
+                type_args=[ht.TypeTypeArg(ht.Qubit)],
+            )
+            map_op = array_map(ht.Option(ht.Qubit), num_qubits_arg, ht.Qubit)
+            unwrapped_qubit_arr = self.builder.add_op(map_op, qubits_in[0], unwrap)
+
+            qubit_arr_out = self.builder.add_op(op, unwrapped_qubit_arr)
+
+            wrap = array_wrap_elem(self.ctx)
+            wrap = self.builder.load_function(
+                wrap,
+                instantiation=ht.FunctionType([ht.Qubit], [ht.Option(ht.Qubit)]),
+                type_args=[ht.TypeTypeArg(ht.Qubit)],
+            )
+            map_op = array_map(ht.Qubit, num_qubits_arg, ht.Option(ht.Qubit))
+            qubits_out = [self.builder.add_op(map_op, qubit_arr_out, wrap)]
 
         self._update_inout_ports(node.args, iter(qubits_out), node.func_ty)
         return self._pack_returns([], NoneType())
@@ -765,6 +792,7 @@ ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(
     "array.__comprehension.init"
 )
 ARRAY_UNWRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__unwrap_elem")
+ARRAY_WRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__wrap_elem")
 
 
 def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
@@ -798,6 +826,20 @@ def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
     if not already_defined:
         msg = "Linear array element has already been used"
         func.set_outputs(build_unwrap(func, func.inputs()[0], msg))
+    return func
+
+
+def array_wrap_elem(ctx: CompilerContext) -> hf.Function:
+    """Returns the Hugr function that is used to wrap the elements in an regular array
+    to turn it into a option array."""
+    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Any))
+    sig = ht.PolyFuncType(
+        params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+        body=ht.FunctionType([v], [ht.Option(v)]),
+    )
+    func, already_defined = ctx.declare_global_func(ARRAY_WRAP_ELEM, sig)
+    if not already_defined:
+        func.set_outputs(func.add_op(ops.Tag(1, ht.Option(v)), func.inputs()[0]))
     return func
 
 
