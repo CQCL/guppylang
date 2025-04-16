@@ -544,6 +544,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+progress = [
+    { name = "tqdm" },
+]
 pytket = [
     { name = "pytket" },
 ]
@@ -563,6 +566,7 @@ dev = [
     { name = "pytket" },
     { name = "ruff" },
     { name = "tket2" },
+    { name = "types-tqdm" },
 ]
 docs = [
     { name = "sphinx" },
@@ -583,6 +587,7 @@ lint = [
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "ruff" },
+    { name = "types-tqdm" },
 ]
 pytket-integration = [
     { name = "ipykernel" },
@@ -612,9 +617,10 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
     { name = "tket2-exts", specifier = "~=0.6.0" },
+    { name = "tqdm", marker = "extra == 'progress'", specifier = ">=4.65.0,<5" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
-provides-extras = ["pytket"]
+provides-extras = ["pytket", "progress"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -631,6 +637,7 @@ dev = [
     { name = "pytket", specifier = ">=1.34.0" },
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
     { name = "tket2", specifier = "~=0.8.1" },
+    { name = "types-tqdm", specifier = ">=4.65.0,<5" },
 ]
 docs = [
     { name = "sphinx", specifier = ">=7.2.6,<9" },
@@ -651,6 +658,7 @@ lint = [
     { name = "mypy", specifier = "==1.10.0" },
     { name = "pre-commit", specifier = ">=3.6.0,<4" },
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
+    { name = "types-tqdm", specifier = ">=4.65.0,<5" },
 ]
 pytket-integration = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
@@ -2418,6 +2426,18 @@ wheels = [
 ]
 
 [[package]]
+name = "tqdm"
+version = "4.67.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540 },
+]
+
+[[package]]
 name = "traitlets"
 version = "5.14.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2433,6 +2453,30 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a9/60/47d92293d9bc521cd2301e423a358abfac0ad409b3a1606d8fbae1321961/types_python_dateutil-2.9.0.20241206.tar.gz", hash = "sha256:18f493414c26ffba692a72369fea7a154c502646301ebfe3d56a04b3767284cb", size = 13802 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0f/b3/ca41df24db5eb99b00d97f89d7674a90cb6b3134c52fb8121b6d8d30f15c/types_python_dateutil-2.9.0.20241206-py3-none-any.whl", hash = "sha256:e248a4bc70a486d3e3ec84d0dc30eec3a5f979d6e7ee4123ae043eedbb987f53", size = 14384 },
+]
+
+[[package]]
+name = "types-requests"
+version = "2.32.0.20250328"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/00/7d/eb174f74e3f5634eaacb38031bbe467dfe2e545bc255e5c90096ec46bc46/types_requests-2.32.0.20250328.tar.gz", hash = "sha256:c9e67228ea103bd811c96984fac36ed2ae8da87a36a633964a21f199d60baf32", size = 22995 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cc/15/3700282a9d4ea3b37044264d3e4d1b1f0095a4ebf860a99914fd544e3be3/types_requests-2.32.0.20250328-py3-none-any.whl", hash = "sha256:72ff80f84b15eb3aa7a8e2625fffb6a93f2ad5a0c20215fc1dcfa61117bcb2a2", size = 20663 },
+]
+
+[[package]]
+name = "types-tqdm"
+version = "4.67.0.20250404"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "types-requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f4/a1/75e0d6f96f8c34a1bad6c232566182f2ae53ffdf7ab9c75afb61b2a07354/types_tqdm-4.67.0.20250404.tar.gz", hash = "sha256:e9997c655ffbba3ab78f4418b5511c05a54e76824d073d212166dc73aa56c768", size = 17159 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/35/85/2c09e94d2554e8314cbc74f897c1b3012930b34a22f6905bb0b9fb79f40e/types_tqdm-4.67.0.20250404-py3-none-any.whl", hash = "sha256:4a9b897eb4036f757240f4cb4a794f296265c04de46fdd058e453891f0186eed", size = 24053 },
 ]
 
 [[package]]
