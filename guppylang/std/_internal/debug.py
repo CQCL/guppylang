@@ -30,6 +30,7 @@ class StateResultChecker(CustomCallChecker):
             "Qubits whose state should be reported must be passed explicitly"
         )
 
+    @dataclass(frozen=True)
     class MoreThanOneArrayError(Error):
         title: ClassVar[str] = "Too many array arguments"
         span_label: ClassVar[str] = "Only one array argument is allowed"
