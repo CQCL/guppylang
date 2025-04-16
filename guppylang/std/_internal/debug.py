@@ -32,13 +32,11 @@ class StateResultChecker(CustomCallChecker):
 
     class MoreThanOneArrayError(Error):
         title: ClassVar[str] = "Too many array arguments"
-        span_label: ClassVar[str] = (
-            "Only one array argument is allowed"
-        )
+        span_label: ClassVar[str] = "Only one array argument is allowed"
 
         @dataclass(frozen=True)
         class Suggestion(Note):
-            message: ClassVar[str] = 'Consider passing separate qubits`'
+            message: ClassVar[str] = "Consider passing separate qubits`"
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         tag, _ = ExprChecker(self.ctx).check(args[0], string_type())

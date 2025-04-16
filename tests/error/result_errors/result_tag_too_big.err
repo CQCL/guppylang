@@ -1,9 +1,9 @@
-Error: Tag too long (at $FILE:8:11)
+Error: Tag too long (at $FILE:7:11)
   | 
-6 | @compile_guppy
-7 | def foo(y: bool) -> None:
-8 |     result(comptime("a" * (TAG_MAX_LEN + 1)), y)
-  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Result tag is too long
+5 | def foo(y: bool) -> None:
+6 |     # each tick or cross is 3 bytes. The cross sends the tag over the limit.
+7 |     result("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅❌", y)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Result tag is too long
 
 Note: Result tags are limited to 200 bytes
 

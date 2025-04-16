@@ -1,8 +1,7 @@
-from guppylang.std.builtins import result, comptime
+from guppylang.std.builtins import result
 from tests.util import compile_guppy
 
-TAG_MAX_LEN = 200
-
 @compile_guppy
-def foo(y: bool) -> None:    
-    result(comptime("a" * (TAG_MAX_LEN + 1)), y)
+def foo(y: bool) -> None:
+    # each tick or cross is 3 bytes. The cross sends the tag over the limit.
+    result("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅❌", y)
