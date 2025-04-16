@@ -607,7 +607,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "graphviz", specifier = ">=0.20.1,<0.21" },
-    { name = "hugr", git = "https://github.com/CQCL/hugr?subdirectory=hugr-py&rev=b6efb03" },
+    { name = "hugr", specifier = "~=0.11.5" },
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
@@ -674,8 +674,8 @@ test = [
 
 [[package]]
 name = "hugr"
-version = "0.11.4"
-source = { git = "https://github.com/CQCL/hugr?subdirectory=hugr-py&rev=b6efb03#b6efb03bde407740ba546fff72435cc9d70a380b" }
+version = "0.11.5"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "graphviz" },
     { name = "pydantic" },
@@ -683,6 +683,35 @@ dependencies = [
     { name = "pyzstd" },
     { name = "semver" },
     { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/28/b7/154e50a68ff7a5f8dc9f18b662c04da8b81368a6b301f9c071f035551df7/hugr-0.11.5.tar.gz", hash = "sha256:e05aaa0ec65da32ade4669d3e195461a67b7f157d467deac879fb3e110eb55b0", size = 279712 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f4/85/52b1f80aac56d1ce6b7b0df37e3868595379a01a13cf5b518dc34c25ca23/hugr-0.11.5-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:5eb5a06a00961317c9c9752745a4b1871967bcc9fdbc69a34701d3f5d2d164ee", size = 577952 },
+    { url = "https://files.pythonhosted.org/packages/a2/c8/7d1a01ba9cfe73a5a30b985e63df53e3f4c0cf336c99905f74a742034c81/hugr-0.11.5-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:9c9b7c9adf0b28ec84196668f603f4b768543a936c4674ae834726cba9172f70", size = 550146 },
+    { url = "https://files.pythonhosted.org/packages/3f/98/86665f324a458a66630fd4582ea108c38793baab561691293a5788fa31de/hugr-0.11.5-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5034b7205fad40af5ea25f0323199fa8b036598466a1064e3ba55a02d4132de2", size = 584327 },
+    { url = "https://files.pythonhosted.org/packages/39/e5/90543c60b800436f7bd4ed64cb4cc9a96d9c889f00a24a46987c2754dac4/hugr-0.11.5-cp310-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:899c9c4aab192964767b767632e8218c7131667a896d93a456bc661839ed95c4", size = 595237 },
+    { url = "https://files.pythonhosted.org/packages/22/47/d7c8e3d613335e1810b7e373d1ad528116d810dd0c046e736c0d78afe572/hugr-0.11.5-cp310-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:d12a33c1edc8283cb4f7cfbdaafb7fa6ad6d75940b75f2ca3ebfe04661595270", size = 645775 },
+    { url = "https://files.pythonhosted.org/packages/5d/cd/acde4862e0b890337d9cd91173100960b562cbbe70e06bacc5627f627414/hugr-0.11.5-cp310-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:7652cc413ff3961dae1d9d336d9697ff459c31e61e9eed3dc2cea55004524386", size = 704875 },
+    { url = "https://files.pythonhosted.org/packages/b8/46/9720329fa7ba97e4eff9c39b1957c7d5056103d494b778ae76dea40e39bc/hugr-0.11.5-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:eaf3409a1f8d9d12d92f63fc27006f8551310ea5378127614b4d6b0a3b09ebc9", size = 598574 },
+    { url = "https://files.pythonhosted.org/packages/fc/a4/0e91b35be02580698c76800fa21bcda8cead10714ba1eea7f07fd84cfc4f/hugr-0.11.5-cp310-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:d9f8a5713be93e8b2082460f095d1801a357cb51ca2c1b6b0915a95c3dffbe9e", size = 623914 },
+    { url = "https://files.pythonhosted.org/packages/31/57/50959efddb85f7ef11a1db649e7ef09a553032fad6b2b5aa136769146421/hugr-0.11.5-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:d84fb767195f213538caa4943cb951131eb72adaa0952d9c7362d559abc21e56", size = 763741 },
+    { url = "https://files.pythonhosted.org/packages/c4/62/5712d51bbc1a2ab6ae868af186ff201f8524995795a215a3111cb3877a48/hugr-0.11.5-cp310-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:0cc9d250bb0212af74599e9e6d64877253ef321a60990edafbab5c33a050e98f", size = 856289 },
+    { url = "https://files.pythonhosted.org/packages/5a/cf/fef656cdf3b956db834dc7cbe6b7923609f2571c9158aed9459132b67f68/hugr-0.11.5-cp310-abi3-musllinux_1_2_i686.whl", hash = "sha256:40eab739ced00c9f5ce65a138e94eba41c417548220155e4c9c3dff5e1f62b2e", size = 791785 },
+    { url = "https://files.pythonhosted.org/packages/10/ae/50a40512bd3b80118c1d8624b2fd1a8657637460067221fe8daf7704e008/hugr-0.11.5-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:6772587804c6c6ad05ada682391e24f4fa092c2ebbf072548873fbc94ff6944d", size = 769516 },
+    { url = "https://files.pythonhosted.org/packages/45/31/b5cf0741fbc06eb32e37329c627e7faa9e9c63ff37b3900da6cff540bb46/hugr-0.11.5-cp310-abi3-win32.whl", hash = "sha256:77180084496f4d2219b6726c004c9f2ac2c8cecd089c20a2fecbc5ce92b176db", size = 446669 },
+    { url = "https://files.pythonhosted.org/packages/20/b9/2954e2b1d3fa62968a5a507809286c817b1478f6bd59c82d9b2c40fd3d47/hugr-0.11.5-cp310-abi3-win_amd64.whl", hash = "sha256:5bedcb7ec307cae84a555d2896d4bb95346fc8542170fa083afcfaacb17d34f1", size = 469800 },
+    { url = "https://files.pythonhosted.org/packages/93/e4/0b206770a1cea919cc353219faec5831ec3884eb26397206d343c02ddc98/hugr-0.11.5-cp313-cp313t-macosx_10_12_x86_64.whl", hash = "sha256:9d518a5b491ae9cde53133b0ba8540a68f88be5fae6a59f285e48e8417e1eb9c", size = 563661 },
+    { url = "https://files.pythonhosted.org/packages/46/f0/afb8909c5a156516afb4462bc73ed3d1b228b7abf8a9cfbeb9bd277ebcf9/hugr-0.11.5-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:841ec051d36c7b21077c06543dd3401230be855ca5ab3dc068baedacec1a8415", size = 547325 },
+    { url = "https://files.pythonhosted.org/packages/69/f4/56f110a7aaf3f0bcceafc7fea52119a3bb5cbc283917209a41e0e85a3146/hugr-0.11.5-cp313-cp313t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e94fe91b55f759ed678afe2a3dd14704e4c74b9552894806ce7cf4d5a82d99ab", size = 582541 },
+    { url = "https://files.pythonhosted.org/packages/07/d8/04237985205fe55e2548c9707a4a095e32d3b269b4ad6a9013e5f5ebd935/hugr-0.11.5-cp313-cp313t-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:a811eddba246351d7257d221611fe4e44137e6f6f669439f2b51fcf08d05aadf", size = 596194 },
+    { url = "https://files.pythonhosted.org/packages/64/56/b3e698db7c7514d020d8d0f30754da67eb5126553429f93988eea81b562d/hugr-0.11.5-cp313-cp313t-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:4208c70bd5c97771258d576ab372b3c0bccc80e329c54b7acf1b69f26c3492bb", size = 643035 },
+    { url = "https://files.pythonhosted.org/packages/d4/44/6f428c0a56c9a6a3d60ed30468c611d94fddc0f536ce22842089fe994660/hugr-0.11.5-cp313-cp313t-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:567c3603d8cc02f35a3a0768353b46d79b47ed3fe90002ae33635f4181bc2e72", size = 708542 },
+    { url = "https://files.pythonhosted.org/packages/2d/d7/feb6f619f1a5e7a24090c53c3a240f71a751f768cae2a6a05eeb0ded0fef/hugr-0.11.5-cp313-cp313t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c87c1f63230c8efe4c6d52f818116eeb68dc484294beee06afdf9b660808f8a1", size = 596104 },
+    { url = "https://files.pythonhosted.org/packages/09/30/d45914e5ae2f2cb0411e9a37f32b27fb84e5f565ccc0acd4f39889bf9af4/hugr-0.11.5-cp313-cp313t-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:24cd2079b8651b53bcb8361aadfae37ada84cdaa87d291119d5141fbaba94eba", size = 621959 },
+    { url = "https://files.pythonhosted.org/packages/ea/ec/998c220a70ebb8ee8de3b3c041397562cbf0211b1ca6ca0476ea07c509d8/hugr-0.11.5-cp313-cp313t-musllinux_1_2_aarch64.whl", hash = "sha256:34590c06c642d66da2c49b927f8d268d60365770bc09ad3da0c509e269598225", size = 761701 },
+    { url = "https://files.pythonhosted.org/packages/a5/20/7b2cc493c1fbf4895e4d48c4d5e29f772970d134d1a7cd5d71a688de3a42/hugr-0.11.5-cp313-cp313t-musllinux_1_2_armv7l.whl", hash = "sha256:6ea097f2663470b5dd7d6247c4277963e9059e365b975048cef8e0f06afed0ea", size = 857752 },
+    { url = "https://files.pythonhosted.org/packages/0e/05/9012b9258fc2bd62077f8289babb02b264c86d32842612d1bdf66d0c4e78/hugr-0.11.5-cp313-cp313t-musllinux_1_2_i686.whl", hash = "sha256:5a144bbb7203e4f579b23cd20b54a73f8819fb3cff0d32f756e935bf19b5934a", size = 790559 },
+    { url = "https://files.pythonhosted.org/packages/9a/81/ebabf4db710ce81df7dd353e4db5b6a3b92b7d68eaf795b071fff6a4898b/hugr-0.11.5-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:7e9978534a67ad3c4461a9a9c86dc5866a7e336129c63a82378a293cb9316cdf", size = 767320 },
 ]
 
 [[package]]
