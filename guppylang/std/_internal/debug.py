@@ -36,7 +36,7 @@ class StateResultChecker(CustomCallChecker):
 
         @dataclass(frozen=True)
         class Suggestion(Note):
-            message: ClassVar[str] = "Consider passing separate qubits`"
+            message: ClassVar[str] = "Consider passing separate qubits"
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         tag, _ = ExprChecker(self.ctx).check(args[0], string_type())
@@ -61,7 +61,9 @@ class StateResultChecker(CustomCallChecker):
         arg, ty = ExprSynthesizer(self.ctx).synthesize(args[1])
         if is_array_type(ty):
             if len(args) > 2:
-                raise GuppyTypeError(self.MoreThanOneArrayError(self.node))
+                err = self.MoreThanOneArrayError(self.node)
+                err.add_sub_diagnostic(self.MoreThanOneArrayError.Suggestion(None))
+                raise GuppyTypeError(err)
             element_ty = get_element_type(ty)
             if not element_ty == qubit_ty:
                 raise GuppyTypeError(ExpectedError(arg, "an array of qubits"))
