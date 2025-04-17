@@ -86,7 +86,7 @@ execute-llvm = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "b6efb03" }
-# tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", rev = "309879e" }
+tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", rev = "b488125" }
 # tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", rev = "309879e" }
 
 
