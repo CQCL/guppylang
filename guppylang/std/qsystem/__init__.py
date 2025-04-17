@@ -1,5 +1,7 @@
 from typing import no_type_check
 
+from typing_extensions import deprecated
+
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std import angles
@@ -8,7 +10,7 @@ from guppylang.std._internal.compiler.quantum import (
     InoutMeasureCompiler,
 )
 from guppylang.std._internal.util import quantum_op
-from guppylang.std.angles import angle
+from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import owned
 from guppylang.std.quantum import qubit
 
@@ -39,10 +41,13 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
     _phased_x(q, f1, f2)
 
 
-@guppy.hugr_op(quantum_op("ZZMax", ext=QSYSTEM_EXTENSION), module=qsystem)
+@guppy(qsystem)
+@deprecated("zz_max is not a system primitive, use zz_phase directly with angle pi/2.")
 @no_type_check
 def zz_max(q1: qubit, q2: qubit) -> None:
     r"""zz_max gate command.
+    
+    This is a special case of the ZZPhase operation with angle = pi/2
 
     .. math::
         \mathrm{zz\_max}(q_1,q_2)=\mathrm{zz\_max}(q_2,q_1)=
@@ -62,6 +67,7 @@ def zz_max(q1: qubit, q2: qubit) -> None:
     ...     rz(angle(3/2), q2)
     >>> qsystem_cx.compile()
     """
+    zz_phase(q1, q2, pi / 2)
 
 
 @guppy(qsystem)
