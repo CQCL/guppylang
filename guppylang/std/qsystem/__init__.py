@@ -46,7 +46,7 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
 @no_type_check
 def zz_max(q1: qubit, q2: qubit) -> None:
     r"""zz_max gate command.
-    
+
     This is a special case of the ZZPhase operation with angle = pi/2
 
     .. math::
