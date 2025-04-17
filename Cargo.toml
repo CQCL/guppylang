@@ -22,7 +22,7 @@ missing_docs = "warn"
 debug_assert_with_mut_call = "warn"
 
 [workspace.dependencies]
-pyo3 = "0.23.3"
+pyo3 = "0.24.1"
 serde_json = "1.0.111"
 cargo_toml = "0.20.4"
 thiserror = "2.0.6"
