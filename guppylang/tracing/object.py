@@ -18,6 +18,7 @@ from guppylang.checker.errors.type_errors import (
 )
 from guppylang.definition.common import DefId, Definition
 from guppylang.definition.function import RawFunctionDef
+from guppylang.definition.pytket_circuits import RawLoadPytketDef, RawPytketDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import (
     CallableDef,
@@ -563,5 +564,7 @@ class GuppyDefinition:
     def compile(self) -> Any:
         from guppylang.decorator import guppy
 
-        assert isinstance(self.wrapped, RawFunctionDef)
+        assert isinstance(
+            self.wrapped, RawFunctionDef | RawLoadPytketDef | RawPytketDef
+        )
         return guppy.compile_function(self.wrapped)

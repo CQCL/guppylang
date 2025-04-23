@@ -1,4 +1,5 @@
 import ast
+import builtins
 import inspect
 from collections.abc import Callable, KeysView, Sequence
 from dataclasses import dataclass, field
@@ -10,6 +11,7 @@ from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
 from hugr.package import FuncDefnPointer, ModulePointer
+from typing_extensions import dataclass_transform
 
 import guppylang
 from guppylang.ast_util import annotate_location
@@ -29,7 +31,11 @@ from guppylang.definition.function import (
     RawFunctionDef,
 )
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
-from guppylang.definition.pytket_circuits import RawLoadPytketDef
+from guppylang.definition.pytket_circuits import (
+    CompiledPytketDef,
+    RawLoadPytketDef,
+    RawPytketDef,
+)
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.traced import RawTracedFunctionDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
@@ -56,10 +62,11 @@ from guppylang.tys.ty import NumericType
 
 S = TypeVar("S")
 T = TypeVar("T")
+F = TypeVar("F", bound=Callable[..., Any])
 Decorator = Callable[[S], T]
 
-FuncDecorator = Decorator[PyFunc, GuppyDefinition]
-ClassDecorator = Decorator[PyClass, GuppyDefinition]
+FuncDecorator = Decorator[PyFunc, PyFunc]
+ClassDecorator = Decorator[PyClass, PyClass]
 
 
 _JUPYTER_NOTEBOOK_MODULE = "<jupyter-notebook>"
@@ -94,22 +101,26 @@ class _Guppy:
         self._sources = SourceMap()
 
     @overload
-    def __call__(self, arg: PyFunc) -> GuppyDefinition: ...
+    def __call__(self, arg: F) -> F: ...
 
     @overload
-    def __call__(self, arg: GuppyModule) -> FuncDecorator: ...
+    def __call__(
+        self, arg: GuppyModule
+    ) -> Callable[[F], F]: ...  # Cannot use `Decorator[F]`, otherwise mypy chokes
 
     @pretty_errors
-    def __call__(self, arg: PyFunc | GuppyModule) -> FuncDecorator | GuppyDefinition:
+    def __call__(self, arg: F | GuppyModule) -> Decorator[F, F] | F:
         """Decorator to annotate Python functions as Guppy code.
 
         Optionally, the `GuppyModule` in which the function should be placed can
         be passed to the decorator.
         """
 
-        def dec(f: Callable[..., Any], module: GuppyModule) -> GuppyDefinition:
+        def dec(f: F, module: GuppyModule) -> F:
             defn = module.register_func_def(f)
-            return GuppyDefinition(defn)
+            # We're pretending to return the function unchanged, but in fact we return
+            # a `GuppyDefinition` that handles the comptime logic
+            return GuppyDefinition(defn)  # type: ignore[return-value]
 
         return self._with_optional_module(dec, arg)
 
@@ -212,7 +223,7 @@ class _Guppy:
         bound: ht.TypeBound | None = None,
         params: Sequence[Parameter] | None = None,
         module: GuppyModule | None = None,
-    ) -> ClassDecorator:
+    ) -> Callable[[type[T]], type[T]]:
         """Decorator to annotate a class definitions as Guppy types.
 
         Requires the static Hugr translation of the type. Additionally, the type can be
@@ -228,7 +239,7 @@ class _Guppy:
 
         mk_hugr_ty = (lambda _: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
 
-        def dec(c: type) -> GuppyDefinition:
+        def dec(c: type[T]) -> type[T]:
             defn = OpaqueTypeDef(
                 DefId.fresh(mod),
                 name or c.__name__,
@@ -241,11 +252,23 @@ class _Guppy:
             )
             mod.register_def(defn)
             mod._register_buffered_instance_funcs(defn)
-            return GuppyDefinition(defn)
+            # We're pretending to return the class unchanged, but in fact we return
+            # a `GuppyDefinition` that handles the comptime logic
+            return GuppyDefinition(defn)  # type: ignore[return-value]
 
         return dec
 
-    @property
+    @overload
+    @dataclass_transform()
+    def struct(self, cls: builtins.type[T]) -> builtins.type[T]: ...
+
+    @overload
+    @dataclass_transform()
+    def struct(
+        self, module: GuppyModule
+    ) -> Callable[[builtins.type[T]], builtins.type[T]]: ...
+
+    @property  # type: ignore[misc]
     def struct(
         self,
     ) -> Callable[[PyClass | GuppyModule], ClassDecorator | GuppyDefinition]:
@@ -268,7 +291,7 @@ class _Guppy:
         frame = get_calling_frame()
         python_scope = frame.f_globals | frame.f_locals if frame else {}
 
-        def dec(cls: type, module: GuppyModule) -> GuppyDefinition:
+        def dec(cls: type[T], module: GuppyModule) -> type[T]:
             defn = RawStructDef(
                 DefId.fresh(module), cls.__name__, None, cls, python_scope
             )
@@ -281,7 +304,9 @@ class _Guppy:
                 implicit_module._instance_func_buffer = None
                 if not implicit_module_existed:
                     self._modules.pop(caller_id)
-            return GuppyDefinition(defn)
+            # We're pretending to return the class unchanged, but in fact we return
+            # a `GuppyDefinition` that handles the comptime logic
+            return GuppyDefinition(defn)  # type: ignore[return-value]
 
         def higher_dec(arg: GuppyModule | PyClass) -> ClassDecorator | GuppyDefinition:
             if isinstance(arg, GuppyModule):
@@ -326,7 +351,7 @@ class _Guppy:
         higher_order_value: bool = True,
         name: str = "",
         module: GuppyModule | None = None,
-    ) -> FuncDecorator:
+    ) -> Callable[[F], F]:
         """Decorator to add custom typing or compilation behaviour to function decls.
 
         Optionally, usage of the function as a higher-order value can be disabled. In
@@ -335,7 +360,7 @@ class _Guppy:
         """
         mod = module or self.get_module()
 
-        def dec(f: PyFunc) -> GuppyDefinition:
+        def dec(f: F) -> F:
             call_checker = checker or DefaultCallChecker()
             func = RawCustomFunctionDef(
                 DefId.fresh(mod),
@@ -347,7 +372,9 @@ class _Guppy:
                 higher_order_value,
             )
             mod.register_def(func)
-            return GuppyDefinition(func)
+            # We're pretending to return the function unchanged, but in fact we return
+            # a `GuppyDefinition` that handles the comptime logic
+            return GuppyDefinition(func)  # type: ignore[return-value]
 
         return dec
 
@@ -358,7 +385,7 @@ class _Guppy:
         higher_order_value: bool = True,
         name: str = "",
         module: GuppyModule | None = None,
-    ) -> FuncDecorator:
+    ) -> Callable[[F], F]:
         """Decorator to annotate function declarations as HUGR ops.
 
         Args:
@@ -373,10 +400,10 @@ class _Guppy:
         return self.custom(OpCompiler(op), checker, higher_order_value, name, module)
 
     @overload
-    def declare(self, arg: GuppyModule) -> GuppyDefinition: ...
+    def declare(self, arg: GuppyModule) -> Callable[[F], F]: ...
 
     @overload
-    def declare(self, arg: PyFunc) -> FuncDecorator: ...
+    def declare(self, arg: F) -> F: ...
 
     def declare(self, arg: GuppyModule | PyFunc) -> FuncDecorator | GuppyDefinition:
         """Decorator to declare functions"""
@@ -389,7 +416,7 @@ class _Guppy:
 
     def constant(
         self, name: str, ty: str, value: hv.Value, module: GuppyModule | None = None
-    ) -> GuppyDefinition:
+    ) -> T:  # type: ignore[type-var]  # Since we're returning a free type variable
         """Adds a constant to a module, backed by a `hugr.val.Value`."""
         module = module or self.get_module()
         type_ast = _parse_expr_string(
@@ -397,7 +424,9 @@ class _Guppy:
         )
         defn = RawConstDef(DefId.fresh(module), name, None, type_ast, value)
         module.register_def(defn)
-        return GuppyDefinition(defn)
+        # We're pretending to return a free type variable, but in fact we return
+        # a `GuppyDefinition` that handles the comptime logic
+        return GuppyDefinition(defn)  # type: ignore[return-value]
 
     def extern(
         self,
@@ -406,7 +435,7 @@ class _Guppy:
         symbol: str | None = None,
         constant: bool = True,
         module: GuppyModule | None = None,
-    ) -> GuppyDefinition:
+    ) -> T:  # type: ignore[type-var]  # Since we're returning a free type variable
         """Adds an extern symbol to a module."""
         module = module or self.get_module()
         type_ast = _parse_expr_string(
@@ -416,7 +445,9 @@ class _Guppy:
             DefId.fresh(module), name, None, symbol or name, constant, type_ast
         )
         module.register_def(defn)
-        return GuppyDefinition(defn)
+        # We're pretending to return a free type variable, but in fact we return
+        # a `GuppyDefinition` that handles the comptime logic
+        return GuppyDefinition(defn)  # type: ignore[return-value]
 
     def load(self, m: ModuleType | GuppyModule) -> None:
         caller = self._get_python_caller()
@@ -473,7 +504,8 @@ class _Guppy:
         return module.compile()
 
     def compile_function(
-        self, f_def: RawFunctionDef | RawTracedFunctionDef
+        self,
+        f_def: RawFunctionDef | RawTracedFunctionDef | RawLoadPytketDef | RawPytketDef,
     ) -> FuncDefnPointer:
         """Compiles a single function definition."""
         module = f_def.id.module
@@ -484,7 +516,7 @@ class _Guppy:
         globs = module._compiled.context
         assert globs is not None
         compiled_def = globs.build_compiled_def(f_def.id)
-        assert isinstance(compiled_def, CompiledFunctionDef)
+        assert isinstance(compiled_def, CompiledFunctionDef | CompiledPytketDef)
         node = compiled_def.func_def.parent_node
         return FuncDefnPointer(
             compiled_module.package, compiled_module.module_index, node
