@@ -21,8 +21,8 @@ from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
 from guppylang.std._internal.compiler.tket2_bool import (
     OpaqueBool,
-    bool_to_sum,
-    sum_to_bool,
+    make_opaque,
+    read_bool,
 )
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -460,7 +460,7 @@ class BoolOpCompiler(CustomInoutCallCompiler):
         hugr_op_ty = ht.FunctionType(converted_in, converted_out)
         op = self.op(hugr_op_ty, self.type_args)
         converted_args = [
-            self.builder.add_op(bool_to_sum(), arg)
+            self.builder.add_op(read_bool(), arg)
             if self.builder.hugr.port_type(arg.out_port()) == OpaqueBool
             else arg
             for arg in args
@@ -468,7 +468,7 @@ class BoolOpCompiler(CustomInoutCallCompiler):
         node = self.builder.add_op(op, *converted_args)
         result = list(node.outputs())
         converted_result = [
-            self.builder.add_op(sum_to_bool(), res)
+            self.builder.add_op(make_opaque(), res)
             if self.builder.hugr.port_type(res.out_port()) == ht.Bool
             else res
             for res in result

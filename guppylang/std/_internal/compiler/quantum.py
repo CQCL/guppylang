@@ -11,7 +11,7 @@ from hugr.std.float import FLOAT_T
 
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
-from guppylang.std._internal.compiler.tket2_bool import sum_to_bool
+from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, make_opaque
 from guppylang.std._internal.compiler.tket2_exts import (
     QSYSTEM_RANDOM_EXTENSION,
     QUANTUM_EXTENSION,
@@ -44,7 +44,7 @@ def from_halfturns_unchecked() -> ops.ExtOp:
 
 class InoutMeasureCompiler(CustomInoutCallCompiler):
     """Compiler for the measure functions with an inout qubit
-    such as the `project_z` function."""
+    such as the `project_z` function - requiring conversion to tket.bool."""
 
     opname: str
     ext: he.Extension
@@ -63,7 +63,31 @@ class InoutMeasureCompiler(CustomInoutCallCompiler):
             ),
             q,
         )
-        bit = self.builder.add_op(sum_to_bool(), bit)
+        bit = self.builder.add_op(make_opaque(), bit)
+        return CallReturnWires(regular_returns=[bit], inout_returns=[q])
+
+
+class InoutMeasureResetCompiler(CustomInoutCallCompiler):
+    """Compiler for the measure functions with an inout qubit
+    such as the `project_z` function."""
+
+    opname: str
+    ext: he.Extension
+
+    def __init__(self, opname: str | None = None, ext: he.Extension | None = None):
+        self.opname = opname or "Measure"
+        self.ext = ext or QUANTUM_EXTENSION
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        from guppylang.std._internal.util import quantum_op
+
+        [q] = args
+        [q, bit] = self.builder.add_op(
+            quantum_op(self.opname, ext=self.ext)(
+                ht.FunctionType([ht.Qubit], [ht.Qubit, OpaqueBool]), []
+            ),
+            q,
+        )
         return CallReturnWires(regular_returns=[bit], inout_returns=[q])
 
 

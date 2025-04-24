@@ -10,16 +10,16 @@ BOOL_DEF = BOOL_EXTENSION.get_type("bool")
 OpaqueBool = ht.ExtType(BOOL_DEF)
 
 
-def bool_to_sum() -> ops.ExtOp:
+def read_bool() -> ops.ExtOp:
     return ops.ExtOp(
-        BOOL_EXTENSION.get_op("bool_to_sum"),
+        BOOL_EXTENSION.get_op("read"),
         ht.FunctionType([OpaqueBool], [ht.Bool]),
     )
 
 
-def sum_to_bool() -> ops.ExtOp:
+def make_opaque() -> ops.ExtOp:
     return ops.ExtOp(
-        BOOL_EXTENSION.get_op("sum_to_bool"),
+        BOOL_EXTENSION.get_op("make_opaque"),
         ht.FunctionType([ht.Bool], [OpaqueBool]),
     )
 

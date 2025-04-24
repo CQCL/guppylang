@@ -30,11 +30,11 @@ impl BoolCodegenExtension {
         op: BoolOp,
     ) -> Result<()> {
         match op {
-            BoolOp::bool_to_sum => {
+            BoolOp::read => {
                 let [inp] = args
                     .inputs
                     .try_into()
-                    .map_err(|_| anyhow!("BoolOp::bool_to_sum expects one argument"))?;
+                    .map_err(|_| anyhow!("BoolOp::read expects one argument"))?;
                 let res = inp.into_int_value();
                 let true_val = emit_value(context, &Value::true_val())?;
                 let false_val = emit_value(context, &Value::false_val())?;
@@ -43,11 +43,11 @@ impl BoolCodegenExtension {
                     .build_select(res, true_val, false_val, "")?;
                 args.outputs.finish(context.builder(), vec![res])
             }
-            BoolOp::sum_to_bool => {
+            BoolOp::make_opaque => {
                 let [inp] = args
                     .inputs
                     .try_into()
-                    .map_err(|_| anyhow!("BoolOp::sum_to_bool expects one argument"))?;
+                    .map_err(|_| anyhow!("BoolOp::make_opaque expects one argument"))?;
                 let bool_ty = context.llvm_sum_type(SumType::new_unary(2))?;
                 let bool_val = LLVMSumValue::try_new(inp, bool_ty)?;
                 let res = bool_val.build_get_tag(context.builder())?;
@@ -57,7 +57,7 @@ impl BoolCodegenExtension {
                 let [inp] = args
                     .inputs
                     .try_into()
-                    .map_err(|_| anyhow!("BoolOp::bool_to_sum expects one argument"))?;
+                    .map_err(|_| anyhow!("BoolOp::not expects one argument"))?;
                 let res = inp.into_int_value();
                 let res = context.builder().build_not(res, "")?;
                 args.outputs.finish(context.builder(), vec![res.into()])

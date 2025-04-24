@@ -68,8 +68,8 @@ from guppylang.std._internal.compiler.prelude import (
 from guppylang.std._internal.compiler.tket2_bool import (
     OpaqueBool,
     OpaqueBoolVal,
-    bool_to_sum,
     not_op,
+    read_bool,
 )
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
@@ -198,7 +198,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         cond_wire = self.visit(cond)
         cond_ty = self.builder.hugr.port_type(cond_wire.out_port())
         if cond_ty == OpaqueBool:
-            cond_wire = self.builder.add_op(bool_to_sum(), cond_wire)
+            cond_wire = self.builder.add_op(read_bool(), cond_wire)
         conditional = self.builder.add_conditional(
             cond_wire, *(self.visit(inp) for inp in inputs)
         )
@@ -501,7 +501,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             op_name = f"result_array_{base_name}"
             size_arg = node.array_len.to_arg().to_hugr()
             extra_args = [size_arg, *extra_args]
-            hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
             # Remove the option wrapping in the array
             unwrap = array_unwrap_elem(self.ctx)
             unwrap = self.builder.load_function(
@@ -511,15 +510,23 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
             value_wire = self.builder.add_op(map_op, value_wire, unwrap)
+            if is_bool_type(node.base_ty):
+                # We need to coerce a read on all the array elements if they are bools.
+                array_read = array_read_bool(self.ctx)
+                array_read = self.builder.load_function(array_read)
+                map_op = array_map(OpaqueBool, size_arg, ht.Bool)
+                value_wire = self.builder.add_op(map_op, value_wire, array_read)
+                base_ty = ht.Bool
+            hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
         else:
+            if is_bool_type(node.base_ty):
+                base_ty = ht.Bool
+                value_wire = self.builder.add_op(read_bool(), value_wire)
             op_name = f"result_{base_name}"
-        typ = get_type(node.value).to_hugr()
-        if is_bool_type(node.base_ty):
-            value_wire = self.builder.add_op(bool_to_sum(), value_wire)
-            typ = ht.Bool
+            hugr_ty = base_ty
         op = tket2_result_op(
             op_name=op_name,
-            typ=typ,
+            typ=hugr_ty,
             tag=node.tag,
             extra_args=extra_args,
         )
@@ -752,6 +759,8 @@ ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(
 )
 ARRAY_UNWRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__unwrap_elem")
 
+ARRAY_READ_BOOL: Final[GlobalConstId] = GlobalConstId.fresh("array.__read_bool")
+
 
 def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
     """Returns the Hugr function that is used to initialise arrays elements before a
@@ -784,6 +793,19 @@ def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
     if not already_defined:
         msg = "Linear array element has already been used"
         func.set_outputs(build_unwrap(func, func.inputs()[0], msg))
+    return func
+
+
+def array_read_bool(ctx: CompilerContext) -> hf.Function:
+    """Returns the Hugr function that is used to unwrap the elements in an option array
+    to turn it into a regular array."""
+    sig = ht.PolyFuncType(
+        params=[],
+        body=ht.FunctionType([OpaqueBool], [ht.Bool]),
+    )
+    func, already_defined = ctx.declare_global_func(ARRAY_READ_BOOL, sig)
+    if not already_defined:
+        func.set_outputs(func.add_op(read_bool(), func.inputs()[0]))
     return func
 
 
