@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, TypeVar
 
+import hugr
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr.std.collections.array import EXTENSION
+from hugr.std.collections.value_array import EXTENSION
 
 from guppylang.compiler.core import (
     GlobalConstId,
@@ -47,9 +48,22 @@ def _instantiate_array_op(
 
 
 def array_type(elem_ty: ht.Type, length: ht.TypeArg) -> ht.ExtType:
-    """Returns the hugr type of a fixed length array."""
+    """Returns the hugr type of a fixed length array.
+
+    This is the copyable `value_array` type used by Guppy.
+    """
     elem_arg = ht.TypeTypeArg(elem_ty)
-    return EXTENSION.types["array"].instantiate([length, elem_arg])
+    return EXTENSION.types["value_array"].instantiate([length, elem_arg])
+
+
+def standard_array_type(elem_ty: ht.Type, length: ht.TypeArg) -> ht.ExtType:
+    """Returns the hugr type of a linear fixed length array.
+
+    This is the standard `array` type targeted by Hugr.
+    """
+    elem_arg = ht.TypeTypeArg(elem_ty)
+    defn = hugr.std.collections.array.EXTENSION.types["array"]
+    return defn.instantiate([length, elem_arg])
 
 
 def array_new(elem_ty: ht.Type, length: int) -> ops.ExtOp:
@@ -66,7 +80,7 @@ def array_get(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     assert elem_ty.type_bound() == ht.TypeBound.Copyable
     arr_ty = array_type(elem_ty, length)
     return _instantiate_array_op(
-        "get", elem_ty, length, [arr_ty, ht.USize()], [ht.Option(elem_ty)]
+        "get", elem_ty, length, [arr_ty, ht.USize()], [ht.Option(elem_ty), arr_ty]
     )
 
 
@@ -136,6 +150,30 @@ def array_repeat(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
         [length, ht.TypeTypeArg(elem_ty), ht.ExtensionsArg([])],
         ht.FunctionType(
             [ht.FunctionType([], [elem_ty])], [array_type(elem_ty, length)]
+        ),
+    )
+
+
+def array_convert_to_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array operation to convert the `value_array` type used by Guppy into
+    the regular linear `array` in Hugr.
+    """
+    return EXTENSION.get_op("to_array").instantiate(
+        [length, ht.TypeTypeArg(elem_ty)],
+        ht.FunctionType(
+            [array_type(elem_ty, length)], [standard_array_type(elem_ty, length)]
+        ),
+    )
+
+
+def array_convert_from_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array operation to convert the `array` type used by Hugr into the
+    `value_array` type used by Guppy.
+    """
+    return EXTENSION.get_op("from_array").instantiate(
+        [length, ht.TypeTypeArg(elem_ty)],
+        ht.FunctionType(
+            [standard_array_type(elem_ty, length)], [array_type(elem_ty, length)]
         ),
     )
 
@@ -270,7 +308,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
         # See https://github.com/CQCL/guppylang/issues/629
         elem_opt_ty = ht.Option(elem_ty)
         idx = func.add_op(convert_itousize(), func.inputs()[1])
-        result = func.add_op(
+        result, arr = func.add_op(
             array_get(elem_opt_ty, length),
             func.inputs()[0],
             idx,
@@ -279,7 +317,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
         elem = build_unwrap(func, elem_opt, "array.__getitem__: Internal error")
 
         # Return input array unmodified for consistency with linear implementation.
-        func.set_outputs(elem, func.inputs()[0])
+        func.set_outputs(elem, arr)
 
     def _build_linear_getitem(self, func: hf.Function) -> None:
         """Constructs function to call `array.__getitem__` for linear arrays."""
@@ -332,7 +370,9 @@ class ArrayGetitemCompiler(ArrayCompiler):
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [array, idx] = args
-        if self.elem_ty.type_bound() == ht.TypeBound.Any:
+        [elem_ty_arg, _] = self.type_args
+        assert isinstance(elem_ty_arg, TypeArg)
+        if not elem_ty_arg.ty.copyable:
             func_ty = self._getitem_ty(ht.TypeBound.Any)
             func, already_exists = self.ctx.declare_global_func(
                 ARRAY_GETITEM_LINEAR, func_ty

@@ -1,4 +1,5 @@
 //! This module provides a Python interface to compile and execute a Hugr program to LLVM IR.
+use hugr::algorithms::ComposablePass;
 use hugr::llvm::custom::CodegenExtsMap;
 use hugr::llvm::inkwell::{self, context::Context, module::Module, values::GenericValue};
 use hugr::llvm::utils::fat::FatExt;
@@ -6,6 +7,7 @@ use hugr::llvm::CodegenExtsBuilder;
 use hugr::package::Package;
 use hugr::Hugr;
 use hugr::{self, ops, std_extensions, HugrView};
+use hugr::llvm::utils::inline_constant_functions;
 use inkwell::types::BasicType;
 use inkwell::values::BasicMetadataValueEnum;
 use pyo3::exceptions::PyValueError;
@@ -45,7 +47,7 @@ fn find_funcdef_node<H: HugrView>(hugr: H, fn_name: &str) -> PyResult<H::Node> {
 }
 
 fn guppy_pass(hugr: &mut Hugr, entry_fn: &str) {
-    hugr::algorithms::MonomorphizePass::default()
+    hugr::algorithms::MonomorphizePass
         .run(hugr)
         .unwrap();
     hugr::algorithms::RemoveDeadFuncsPass::default()
@@ -54,6 +56,9 @@ fn guppy_pass(hugr: &mut Hugr, entry_fn: &str) {
         ])
         .run(hugr)
         .unwrap();
+    hugr::algorithms::LinearizeArrayPass::default().run(hugr).unwrap();
+    inline_constant_functions(hugr).unwrap();
+    hugr.validate().unwrap();
 }
 
 fn codegen_extensions() -> CodegenExtsMap<'static, Hugr> {
