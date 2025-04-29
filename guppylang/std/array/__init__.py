@@ -50,3 +50,20 @@ def zip(
         arrays at the same index.
     """
     return SizedIter(ArrayZipIter(a, b, 0))
+
+
+@guppy
+def enumerate(a: array[L, n] @ owned) -> SizedIter[ArrayZipIter[int, L, n], n]:
+    """
+    Enumerates the elements of an array, pairing each element with its index.
+
+    Args:
+        a: The input array of type `L` with size `n`.
+
+    Returns:
+        An iterator that yields tuples,
+        where each tuple contains an index (int) and the corresponding element
+        from the input array.
+    """
+
+    return zip(array(i for i in range(n)), a)
