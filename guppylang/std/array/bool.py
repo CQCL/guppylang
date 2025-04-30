@@ -108,6 +108,5 @@ def pack_bits_dlo(ar: array[bool, n]) -> int:
     out = 0
     for i in range(n):
         if ar[i]:
-            # TODO replace with 1 << after next eldarion release
             out += 1 << (n - 1 - i)
     return out
