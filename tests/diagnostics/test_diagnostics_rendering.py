@@ -221,3 +221,15 @@ def test_message_new_line(snapshot, request):
 
     diagnostic = MyError(None)
     run_test("", diagnostic, snapshot, request)
+
+
+def test_far_indented_label(snapshot, request):
+    @dataclass(frozen=True)
+    class MyDiagnostic(Error):
+        title: ClassVar[str] = "Can't compare apples with oranges"
+        span_label: ClassVar[str] = "Comparison attempted here. " * 20
+
+    source = "apple + " * 10 + "apple == orange"
+    span = Span(Loc(file, 1, 86), Loc(file, 1, 88))
+    diagnostic = MyDiagnostic(span)
+    run_test(source, diagnostic, snapshot, request)

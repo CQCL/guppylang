@@ -6,7 +6,7 @@ Error: Array comprehension with nonstatic size (at $FILE:13:9)
    |          ^^^^^^^^^^^^^^^^^^^^^ Cannot infer the size of this array comprehension ...
    | 
 13 |     array(i for i in range(n))
-   |                      -------- since the number of elements yielded by this iterator is
-   |                               not statically known
+   |                      -------- since the number of elements yielded by this iterator is not
+   |                               statically known
 
 Guppy compilation failed due to 1 previous error
