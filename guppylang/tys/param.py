@@ -101,9 +101,18 @@ class TypeParam(ParameterBase):
                 err = ExpectedError(loc, "a type", got=f"value of type `{const.ty}`")
                 raise GuppyTypeError(err)
             case TypeArg(ty):
-                if not self.can_be_linear and ty.linear:
+                if self.must_be_copyable and not ty.copyable:
                     err = ExpectedError(
-                        loc, "a non-linear type", got=f"value of type `{ty}`"
+                        loc,
+                        "a copyable type",
+                        got=f"type `{ty}` which is not implicitly copyable",
+                    )
+                    raise GuppyTypeError(err)
+                if self.must_be_droppable and not ty.droppable:
+                    err = ExpectedError(
+                        loc,
+                        "a droppable type",
+                        got=f"type `{ty}` which is not implicitly droppable",
                     )
                     raise GuppyTypeError(err)
                 return arg
