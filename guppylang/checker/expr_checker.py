@@ -1111,15 +1111,15 @@ def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
     """
     for param, arg in zip(func_ty.params, inst, strict=True):
         # Give a more informative error message for linearity issues
-        if (
-            isinstance(param, TypeParam)
-            and isinstance(arg, TypeArg)
-            and arg.ty.linear
-            and not param.can_be_linear
-        ):
-            raise GuppyTypeError(
-                NonLinearInstantiateError(node, param, func_ty, arg.ty)
-            )
+        if isinstance(param, TypeParam) and isinstance(arg, TypeArg):
+            if param.must_be_copyable and not arg.ty.copyable:
+                raise GuppyTypeError(
+                    NonLinearInstantiateError(node, param, func_ty, arg.ty)
+                )
+            if param.must_be_droppable and not arg.ty.droppable:
+                raise GuppyTypeError(
+                    NonLinearInstantiateError(node, param, func_ty, arg.ty)
+                )
         # For everything else, we fall back to the default checking implementation
         param.check_arg(arg, node)
 
