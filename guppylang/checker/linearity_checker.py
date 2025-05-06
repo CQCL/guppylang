@@ -58,6 +58,7 @@ from guppylang.nodes import (
     SubscriptAccessAndDrop,
     TensorCall,
 )
+from guppylang.tys.builtin import is_array_type
 from guppylang.tys.ty import (
     FuncInput,
     FunctionType,
@@ -244,7 +245,11 @@ class BBLinearityChecker(ast.NodeVisitor):
                 self.func_name,
             )
             arg_span = self.func_inputs[node.place.root.id].defined_at
-            err.add_sub_diagnostic(NotOwnedError.MakeOwned(arg_span))
+            err.add_sub_diagnostic(NotOwnedError.MakeOwned(arg_span, node.place, True))
+            # If the argument is a classical array, we can also suggest copying it.
+            arg_ty = node.place.ty
+            if is_array_type(arg_ty) and arg_ty.droppable:
+                err.add_sub_diagnostic(NotOwnedError.MakeCopy(node, node.place, False))
             raise GuppyError(err)
         # Places involving subscripts are handled differently since we ignore everything
         # after the subscript for the purposes of linearity checking.

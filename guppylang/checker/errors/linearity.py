@@ -151,10 +151,38 @@ class NotOwnedError(Error):
 
     @dataclass(frozen=True)
     class MakeOwned(Help):
-        span_label: ClassVar[str] = (
-            "Argument `{place.root.name}` is only borrowed. Consider taking ownership: "
-            "`{place.root.name}: {place.root.ty} @owned`"
-        )
+        place: Place
+        added_first: bool
+
+        @property
+        def rendered_span_label(self) -> str:
+            name = self.place.root.name
+            ty = self.place.root.ty
+            hint = f"`{name}: {ty} @owned`"
+            if self.added_first:
+                return (
+                    f"Argument `{name}` is only borrowed. "
+                    f"Consider taking ownership: {hint}"
+                )
+            else:
+                return f"Or consider taking ownership: {hint}"
+
+    @dataclass(frozen=True)
+    class MakeCopy(Help):
+        place: Place
+        added_first: bool
+
+        @property
+        def rendered_span_label(self) -> str:
+            name = self.place.root.name
+            hint = f"`{name}.copy()`"
+            if self.added_first:
+                return (
+                    f"Argument `{name}` is only borrowed. "
+                    f"Consider copying this argument: {hint}"
+                )
+            else:
+                return f"Or consider copying this argument: {hint}"
 
 
 @dataclass(frozen=True)
