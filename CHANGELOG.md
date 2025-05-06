@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.18.2](https://github.com/CQCL/guppylang/compare/v0.18.1...v0.18.2) (2025-05-06)
+
+
+### Bug Fixes
+
+* Fix resolution of generic lengths in array constructor ([#940](https://github.com/CQCL/guppylang/issues/940)) ([0f1d5db](https://github.com/CQCL/guppylang/commit/0f1d5dbaceaf94f60655231b0c9b5c9658f2ea29))
+* Fix too narrow rendering of indented diagnostic labels ([#933](https://github.com/CQCL/guppylang/issues/933)) ([94821aa](https://github.com/CQCL/guppylang/commit/94821aad35e2e690e07cccd8a365a03b472bf6fa)), closes [#916](https://github.com/CQCL/guppylang/issues/916)
+* Use correct copyable/droppable terminology for type arg errors ([#935](https://github.com/CQCL/guppylang/issues/935)) ([6a44a1c](https://github.com/CQCL/guppylang/commit/6a44a1c5d39ed6bc4ae29f8bc4d3a5d06c793c1c)), closes [#867](https://github.com/CQCL/guppylang/issues/867)
+
 ## [0.18.1](https://github.com/CQCL/guppylang/compare/v0.18.0...v0.18.1) (2025-04-26)
 
 
