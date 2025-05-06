@@ -35,6 +35,7 @@ class AlreadyUsedError(Error):
         span_label: ClassVar[str] = "since it was already {prev_kind.subjunctive} here"
         prev_kind: UseKind
 
+    @dataclass(frozen=True)
     class MakeCopy(Help):
         message: ClassVar[str] = (
             "Consider explicitly copying this value: `{place.root.name}.copy()`"
