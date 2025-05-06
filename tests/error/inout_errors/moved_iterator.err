@@ -1,16 +1,16 @@
-Error: Not owned (at $FILE:16:13)
+Error: Not owned (at $FILE:14:13)
    | 
-14 | @guppy(module)
-15 | def test(q: array[int, 3]) -> None:
-16 |     for i in q:
+12 | @guppy(module)
+13 | def test(q: array[int, 3]) -> None:
+14 |     for i in q:
    |              ^ Function `__iter__` wants to take ownership of this
    |                argument, but `test` doesn't own `q`
    | 
-15 | def test(q: array[int, 3]) -> None:
+13 | def test(q: array[int, 3]) -> None:
    |          ---------------- Argument `q` is only borrowed. Consider taking ownership:
    |                           `q: array[int, 3] @owned`
    | 
-16 |     for i in q:
+14 |     for i in q:
    |              - Or consider copying this argument: `q.copy()`
 
 Guppy compilation failed due to 1 previous error
