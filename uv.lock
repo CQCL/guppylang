@@ -611,7 +611,7 @@ requires-dist = [
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "tket2-exts", git = "https://github.com/CQCL/tket2?subdirectory=tket2-exts&branch=ts%2Fdebug-ext" },
+    { name = "tket2-exts", git = "https://github.com/CQCL/tket2?subdirectory=tket2-exts&branch=main" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
 provides-extras = ["pytket"]
@@ -630,7 +630,7 @@ dev = [
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0" },
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
-    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=ts%2Fdebug-ext" },
+    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=main" },
 ]
 docs = [
     { name = "sphinx", specifier = ">=7.2.6,<9" },
@@ -645,7 +645,7 @@ execution = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
-    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=ts%2Fdebug-ext" },
+    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=main" },
 ]
 lint = [
     { name = "mypy", specifier = "==1.10.0" },
@@ -660,7 +660,7 @@ pytket-integration = [
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0" },
-    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=ts%2Fdebug-ext" },
+    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=main" },
 ]
 test = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
@@ -669,7 +669,7 @@ test = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
-    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=ts%2Fdebug-ext" },
+    { name = "tket2", git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=main" },
 ]
 
 [[package]]
@@ -2410,7 +2410,7 @@ wheels = [
 [[package]]
 name = "tket2"
 version = "0.8.1"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=ts%2Fdebug-ext#3b15e1870df36dfa9243af9c2312416934cf29c3" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-py&branch=main#a8c573bc4452620fb81cc70ffca5fa1e946b6a7e" }
 dependencies = [
     { name = "hugr" },
     { name = "pytket" },
@@ -2421,12 +2421,12 @@ dependencies = [
 [[package]]
 name = "tket2-eccs"
 version = "0.3.0"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-eccs&branch=ts%2Fdebug-ext#3b15e1870df36dfa9243af9c2312416934cf29c3" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-eccs&branch=main#a8c573bc4452620fb81cc70ffca5fa1e946b6a7e" }
 
 [[package]]
 name = "tket2-exts"
 version = "0.6.0"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-exts&branch=ts%2Fdebug-ext#3b15e1870df36dfa9243af9c2312416934cf29c3" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-exts&branch=main#a8c573bc4452620fb81cc70ffca5fa1e946b6a7e" }
 dependencies = [
     { name = "hugr" },
 ]
