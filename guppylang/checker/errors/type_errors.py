@@ -8,7 +8,7 @@ from guppylang.diagnostic import Error, Help, Note
 if TYPE_CHECKING:
     from guppylang.definition.struct import StructField
     from guppylang.tys.const import Const
-    from guppylang.tys.param import Parameter
+    from guppylang.tys.param import TypeParam
     from guppylang.tys.ty import FunctionType, Type
 
 
@@ -65,12 +65,16 @@ class AssignSubscriptTypeMismatchError(Error):
 class NonLinearInstantiateError(Error):
     title: ClassVar[str] = "Not defined for linear argument"
     span_label: ClassVar[str] = (
-        "Cannot instantiate non-linear type parameter `{param.name}` in type "
-        "`{func_ty}` with linear type `{ty}`"
+        "Cannot instantiate {expected} type parameter `{param.name}` in type "
+        "`{func_ty}` with non-{expected} type `{ty}`"
     )
-    param: Parameter
+    param: TypeParam
     func_ty: FunctionType
     ty: Type
+
+    @property
+    def expected(self) -> str:
+        return "copyable" if self.param.must_be_copyable else "droppable"
 
 
 @dataclass(frozen=True)

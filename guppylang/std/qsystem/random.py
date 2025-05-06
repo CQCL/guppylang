@@ -12,10 +12,16 @@ from guppylang.std._internal.compiler.quantum import (
     RNGCONTEXT_T,
 )
 from guppylang.std._internal.util import external_op
-from guppylang.std.builtins import owned
+from guppylang.std.builtins import array, mem_swap, owned
 from guppylang.std.option import Option
 
 qsystem_random = GuppyModule("qsystem.random")
+
+
+SHUFFLE_N = guppy.nat_var("SHUFFLE_N", module=qsystem_random)
+SHUFFLE_T = guppy.type_var(
+    "SHUFFLE_T", copyable=False, droppable=False, module=qsystem_random
+)
 
 
 @guppy.hugr_op(
@@ -80,3 +86,16 @@ class RNG:
     @guppy.custom(RandomIntBoundedCompiler(), module=qsystem_random)
     @no_type_check
     def _random_int_bounded(self: "RNG", bound: int) -> int: ...
+
+    @guppy(qsystem_random)
+    @no_type_check
+    def shuffle(self: "RNG", array: array[SHUFFLE_T, SHUFFLE_N]) -> None:
+        """Randomly shuffle the elements of a possibly linear array in place.
+        Uses the Fisher-Yates algorithm."""
+        for k in range(SHUFFLE_N):
+            i = SHUFFLE_N - 1 - k
+            j = self.random_int_bounded(i + 1)
+            # TODO use array swap once lowering implemented
+            # https://github.com/CQCL/guppylang/issues/924
+            if i != j:
+                mem_swap(array[i], array[j])

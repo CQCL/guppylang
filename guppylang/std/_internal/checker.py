@@ -253,8 +253,12 @@ class NewArrayChecker(CustomCallChecker):
                                 )
                             )
                         subst |= ls
+                        type_args = [
+                            TypeArg(elem_ty.substitute(subst)),
+                            ConstValue(nat_type(), len(args)),
+                        ]
                         call = GlobalCall(
-                            def_id=self.func.id, args=args, type_args=ty.args
+                            def_id=self.func.id, args=args, type_args=type_args
                         )
                         return with_loc(self.node, call), subst
             case type_args:

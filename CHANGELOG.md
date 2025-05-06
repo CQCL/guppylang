@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.18.1](https://github.com/CQCL/guppylang/compare/v0.18.0...v0.18.1) (2025-04-26)
+
+
+### Features
+
+* Add bytecast ops to builtins ([#913](https://github.com/CQCL/guppylang/issues/913)) ([d3acd28](https://github.com/CQCL/guppylang/commit/d3acd28d83f83ceeffe74f9b3573ca06a933ee42)), closes [#782](https://github.com/CQCL/guppylang/issues/782)
+* Array results ([#910](https://github.com/CQCL/guppylang/issues/910)) ([ebb1f41](https://github.com/CQCL/guppylang/commit/ebb1f4182656a5ea73fe1c551e45fac7bbdfa9ef)), closes [#631](https://github.com/CQCL/guppylang/issues/631)
+* move qsys_result to hugr package ([#918](https://github.com/CQCL/guppylang/issues/918)) ([d39b51c](https://github.com/CQCL/guppylang/commit/d39b51c22384cd7534d9ba97334afa31b434d45a))
+* **std:** add array shuffling to rng module ([#925](https://github.com/CQCL/guppylang/issues/925)) ([3ec74d8](https://github.com/CQCL/guppylang/commit/3ec74d8c6c3bf178f7c70f50960f2fac2e9e7931))
+
+
+### Bug Fixes
+
+* add missing compilation for int __rshift__ ([#885](https://github.com/CQCL/guppylang/issues/885)) ([5cd9225](https://github.com/CQCL/guppylang/commit/5cd9225250abe4548f0fdc791e81682af6f8a41d)), closes [#886](https://github.com/CQCL/guppylang/issues/886)
+* Allow standalone compilation of pytket functions ([#903](https://github.com/CQCL/guppylang/issues/903)) ([6416513](https://github.com/CQCL/guppylang/commit/641651365a7ebf59a7d6861415ab509a19edd477))
+* deprecate zz_max and define in terms of zz_phase ([#917](https://github.com/CQCL/guppylang/issues/917)) ([85f5f6b](https://github.com/CQCL/guppylang/commit/85f5f6b109ffdc47fda4bf8b3599a5a457fc6df9)), closes [#914](https://github.com/CQCL/guppylang/issues/914)
+* Fix diagnostics spans for dynamically defined notebook functions ([#907](https://github.com/CQCL/guppylang/issues/907)) ([51b1b81](https://github.com/CQCL/guppylang/commit/51b1b81c06257e88583d68c245223c891dcc4e32)), closes [#906](https://github.com/CQCL/guppylang/issues/906)
+
 ## [0.18.0](https://github.com/CQCL/guppylang/compare/v0.17.1...v0.18.0) (2025-03-25)
 
 

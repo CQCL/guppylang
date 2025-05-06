@@ -4,8 +4,6 @@ Error: Copy violation (at $FILE:18:33)
 17 | def foo(xs: list[int], q: qubit @owned) -> list[int]:
 18 |     return [x for x in xs if bar(q)]
    |                                  ^ Variable `q` with non-copyable type `qubit` would be
-   |                                    consumed multiple times
-   |                                    when evaluating this
-   |                                    comprehension
+   |                                    consumed multiple times when evaluating this comprehension
 
 Guppy compilation failed due to 1 previous error
