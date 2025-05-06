@@ -128,7 +128,6 @@ def array_scan(
         ht.TypeTypeArg(elem_ty),
         ht.TypeTypeArg(new_elem_ty),
         ht.SequenceArg([ht.TypeTypeArg(acc) for acc in accumulators]),
-        ht.ExtensionsArg([]),
     ]
     ins = [
         array_type(elem_ty, length),
@@ -147,7 +146,7 @@ def array_map(elem_ty: ht.Type, length: ht.TypeArg, new_elem_ty: ht.Type) -> ops
 def array_repeat(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array `repeat` operation."""
     return EXTENSION.get_op("repeat").instantiate(
-        [length, ht.TypeTypeArg(elem_ty), ht.ExtensionsArg([])],
+        [length, ht.TypeTypeArg(elem_ty)],
         ht.FunctionType(
             [ht.FunctionType([], [elem_ty])], [array_type(elem_ty, length)]
         ),
