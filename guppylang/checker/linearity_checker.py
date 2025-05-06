@@ -58,13 +58,14 @@ from guppylang.nodes import (
     SubscriptAccessAndDrop,
     TensorCall,
 )
-from guppylang.tys.builtin import is_array_type
+from guppylang.tys.builtin import get_element_type, is_array_type
 from guppylang.tys.ty import (
     FuncInput,
     FunctionType,
     InputFlags,
     NoneType,
     StructType,
+    Type,
 )
 
 if TYPE_CHECKING:
@@ -247,8 +248,7 @@ class BBLinearityChecker(ast.NodeVisitor):
             arg_span = self.func_inputs[node.place.root.id].defined_at
             err.add_sub_diagnostic(NotOwnedError.MakeOwned(arg_span, node.place, True))
             # If the argument is a classical array, we can also suggest copying it.
-            arg_ty = node.place.ty
-            if is_array_type(arg_ty) and arg_ty.droppable:
+            if has_explicit_copy(node.place.ty):
                 err.add_sub_diagnostic(NotOwnedError.MakeCopy(node, node.place, False))
             raise GuppyError(err)
         # Places involving subscripts are handled differently since we ignore everything
@@ -275,6 +275,8 @@ class BBLinearityChecker(ast.NodeVisitor):
                     err.add_sub_diagnostic(
                         AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
                     )
+                    if has_explicit_copy(place.ty):
+                        err.add_sub_diagnostic(AlreadyUsedError.MakeCopy(None))
                     raise GuppyError(err)
                 self.scope.use(x, node, use_kind)
 
@@ -608,6 +610,16 @@ def is_inout_var(place: Place) -> TypeGuard[Variable]:
     return isinstance(place, Variable) and InputFlags.Inout in place.flags
 
 
+def has_explicit_copy(ty: Type) -> bool:
+    """Checks whether a type has an explicit copy function.
+
+    Currently, this is only the case for arrays with copyable elements."""
+    if not is_array_type(ty):
+        return False
+    elem_ty = get_element_type(ty)
+    return ty.droppable and elem_ty.copyable
+
+
 def check_cfg_linearity(
     cfg: "CheckedCFG[Variable]", func_name: str, globals: Globals
 ) -> "CheckedCFG[Place]":
@@ -697,6 +709,8 @@ def check_cfg_linearity(
                     err.add_sub_diagnostic(
                         AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
                     )
+                    if has_explicit_copy(place.ty):
+                        err.add_sub_diagnostic(AlreadyUsedError.MakeCopy(None))
                     raise GuppyError(err)
 
         # On the other hand, unused variables that are not droppable *must* be outputted

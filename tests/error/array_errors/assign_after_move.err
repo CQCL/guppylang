@@ -9,4 +9,6 @@ Error: Copy violation (at $FILE:13:3)
 12 |    ys = xs
    |         -- since it was already moved here
 
+Help: Consider explicitly copying this value: `xs.copy()`
+
 Guppy compilation failed due to 1 previous error

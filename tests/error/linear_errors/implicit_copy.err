@@ -1,0 +1,14 @@
+Error: Copy violation (at $FILE:15:8)
+   | 
+13 | def test(q: array[int, 3] @owned) -> None:
+14 |     p = q
+15 |     use(q)
+   |         ^ Variable `q` with non-copyable type `array[int, 3]` cannot
+   |           be consumed ...
+   | 
+14 |     p = q
+   |         - since it was already moved here
+
+Help: Consider explicitly copying this value: `q.copy()`
+
+Guppy compilation failed due to 1 previous error

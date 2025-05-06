@@ -10,9 +10,9 @@ def use(q: array[int, 3] @owned) -> None: ...
 
 
 @guppy(module)
-def test(q: array[int, 3]) -> None:
+def test(q: array[int, 3] @owned) -> None:
     for i in q:
-        use(q)
-
+        i + i
+    use(q)
 
 module.compile()
