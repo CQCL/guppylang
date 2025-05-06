@@ -4,7 +4,6 @@ Error: Copy violation (at $FILE:18:12)
 17 | def foo(xs: list[int], s: MyStruct @owned) -> list[MyStruct]:
 18 |     return [s for x in xs]
    |             ^ Field `s.q` with non-copyable type `qubit` would be moved
-   |               multiple times when evaluating this
-   |               comprehension
+   |               multiple times when evaluating this comprehension
 
 Guppy compilation failed due to 1 previous error
