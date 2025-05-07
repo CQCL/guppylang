@@ -607,7 +607,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "graphviz", specifier = ">=0.20.1,<0.21" },
-    { name = "hugr", git = "https://github.com/CQCL/hugr?subdirectory=hugr-py&rev=48c84de23" },
+    { name = "hugr", git = "https://github.com/CQCL/hugr?subdirectory=hugr-py&rev=147f43c" },
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
@@ -675,7 +675,7 @@ test = [
 [[package]]
 name = "hugr"
 version = "0.11.5"
-source = { git = "https://github.com/CQCL/hugr?subdirectory=hugr-py&rev=48c84de23#48c84de23f7fb2bbedc0d92c80b3689f5d38d7b9" }
+source = { git = "https://github.com/CQCL/hugr?subdirectory=hugr-py&rev=147f43c#147f43c7a5d085a5802f2b4a8c3b57fccc039a1f" }
 dependencies = [
     { name = "graphviz" },
     { name = "pydantic" },
