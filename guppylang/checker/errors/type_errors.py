@@ -304,3 +304,9 @@ class ArrayComprUnknownSizeError(Error):
             "since the number of elements yielded by this iterator is not statically "
             "known"
         )
+
+@dataclass(frozen=True)
+class WasmTypeConversionError(Error):
+    title: ClassVar[str] = "Can't convert type to WASM"
+    span_label: ClassVar[str] = "`{thing}` cannot be converted to WASM"
+    ty: Type

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 import hugr.std.float
 import hugr.std.int
 from hugr import tys as ht
+from tket2.extensions import wasm
 
 from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
@@ -605,7 +606,7 @@ class OpaqueType(ParametrizedTypeBase):
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
-        return self
+        return self # TODO: Update Type alias to include this
 
     def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
@@ -662,6 +663,29 @@ class StructType(ParametrizedTypeBase):
             [arg.transform(transformer) for arg in self.args], self.defn
         )
 
+@dataclass(frozen=True)
+class WasmModuleType(TypeBase):
+    defn: "WasmModule"
+
+    copyable: bool = False
+    droppable: bool = True
+    hugr_bound: ht.TypeBound = ht.TypeBound.Any
+
+    def cast(self) -> 'Type':
+        return self
+
+    def to_hugr(self) -> ht.Type:
+        ty = wasm().get_type('module')
+        return ty.instantiate([])
+
+    # TODO: I don't know what to write here
+    def transform(self, transformer: Transformer) -> "Type":
+        """Accepts a transformer on this type."""
+        return transformer.transform(self) # tell mypy it's fine
+
+    def visit(self, visitor: Visitor) -> None:
+        visitor.visit(self)
+
 
 #: The type of parametrized Guppy types.
 ParametrizedType: TypeAlias = (
@@ -678,7 +702,7 @@ ParametrizedType: TypeAlias = (
 #:   * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
 #:   * https://github.com/johnthagen/sealed-typing-pep
 Type: TypeAlias = (
-    BoundTypeVar | ExistentialTypeVar | NumericType | NoneType | ParametrizedType
+    BoundTypeVar | ExistentialTypeVar | NumericType | NoneType | ParametrizedType | WasmModuleType
 )
 
 #: An immutable row of Guppy types.
