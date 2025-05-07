@@ -539,7 +539,6 @@ dependencies = [
     { name = "hugr" },
     { name = "networkx" },
     { name = "pydantic" },
-    { name = "tket2-exts" },
     { name = "typing-extensions" },
 ]
 

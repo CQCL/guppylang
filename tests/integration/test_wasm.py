@@ -1,25 +1,38 @@
 from guppylang.decorator import guppy
 from guppylang.std.builtins import array
 from guppylang.std.wasm import new_wasm
-# all declared wasm signatures are treated as belonging to single wasm module
 
+def test_wasm(validate):
+    @guppy.wasm_module("../wasm_decoder.wasm", 42)
+    class MyWasm:
 
-@guppy.wasm
-def add_one(x: int) -> int: ...
+        @guppy.wasm
+        def add_one(self, x: int) -> int: ...
 
+        @guppy.wasm
+        def add_two(self, x: int) -> int: ...
 
-@guppy.wasm
-def add_syndrome(syndrome: array[bool, 3]) -> None: ...
+        #@guppy.wasm
+        #def add_syndrome(self, syndrome: array[bool, 3]) -> None: ...
+        #
+        #@guppy.wasm
+        #def decode(self) -> int: ...
+        #
+        #@guppy
+        #def other_method(self) -> int:
+        #    # Could even allow to define regular Guppy methods??
+        #    self.add_one(1)
+        #    self.add_one(10)
+        #    return self.decode()
 
+    @guppy
+    def main() -> int:
+        decoder1 = MyWasm()
+        #decoder2 = MyWasm()
+        #two = decoder1.add_one(1)
+        #four = decoder2.add_two(2)
+        #return two + four
+        return 42
 
-@guppy.wasm
-def decode() -> int: ...
-
-
-@guppy
-def main() -> None:
-    wasm1 = new_wasm()
-    wasm2 = new_wasm()
-    y = wasm1.add_one(42)  # all methods take WASMContext as inout
-    wasm2.add_syndrome(array(True, False, False))
-    decoded = wasm2.decode()
+    mod = guppy.compile_module()
+    validate(mod)

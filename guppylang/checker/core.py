@@ -18,7 +18,7 @@ from typing_extensions import assert_never
 from guppylang.ast_util import AstNode, name_nodes_in_ast
 from guppylang.cfg.bb import VId
 from guppylang.definition.common import DefId, Definition
-from guppylang.definition.ty import TypeDef
+from guppylang.definition.ty import TypeDef, WasmModule
 from guppylang.definition.value import CallableDef
 from guppylang.tys.builtin import (
     array_type_def,
@@ -48,6 +48,7 @@ from guppylang.tys.ty import (
     SumType,
     TupleType,
     Type,
+    WasmModuleType,
 )
 
 if TYPE_CHECKING:
@@ -314,6 +315,8 @@ class Globals:
                 type_defn = tuple_type_def
             case NoneType():
                 type_defn = none_type_def
+            case WasmModuleType() as ty:
+                type_defn = ty.defn
             case _:
                 return assert_never(ty)
 
