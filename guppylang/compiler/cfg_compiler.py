@@ -101,10 +101,10 @@ def compile_bb(
     if len(bb.successors) > 1:
         assert bb.branch_pred is not None
         branch_port = ExprCompiler(ctx).compile(bb.branch_pred, dfg)
-        # Convert the bool predicate into a sum for branching, unless it already is one.
+        # Convert the bool predicate into a sum for branching.
         pred_ty = builder.hugr.port_type(branch_port.out_port())
-        if pred_ty == OpaqueBool:
-            branch_port = dfg.builder.add_op(read_bool(), branch_port)
+        assert pred_ty == OpaqueBool
+        branch_port = dfg.builder.add_op(read_bool(), branch_port)
     else:
         # Even if we don't branch, we still have to add a `Sum(())` predicates
         branch_port = dfg.builder.add_op(ops.Tag(0, ht.UnitSum(1)))

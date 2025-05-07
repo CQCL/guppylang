@@ -49,3 +49,6 @@ class OpaqueBoolVal(hv.ExtensionValue):
 
     def __str__(self) -> str:
         return f"{self.v}"
+    
+OPAQUE_TRUE = OpaqueBoolVal(True)
+OPAQUE_FALSE = OpaqueBoolVal(False)
