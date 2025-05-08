@@ -2,7 +2,6 @@ from abc import ABC
 
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr import val as hv
 
 from guppylang.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
