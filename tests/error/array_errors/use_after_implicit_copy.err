@@ -9,6 +9,6 @@ Error: Copy violation (at $FILE:11:10)
 10 |    ys = xs
    |         -- since it was already moved here
 
-Help: Consider explicitly copying this value: `xs.copy()`
+Help: Consider copying `xs` instead of moving it: `xs.copy()`
 
 Guppy compilation failed due to 1 previous error

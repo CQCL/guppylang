@@ -246,10 +246,10 @@ class BBLinearityChecker(ast.NodeVisitor):
                 self.func_name,
             )
             arg_span = self.func_inputs[node.place.root.id].defined_at
-            err.add_sub_diagnostic(NotOwnedError.MakeOwned(arg_span, node.place, True))
+            err.add_sub_diagnostic(NotOwnedError.MakeOwned(arg_span))
             # If the argument is a classical array, we can also suggest copying it.
             if has_explicit_copy(node.place.ty):
-                err.add_sub_diagnostic(NotOwnedError.MakeCopy(node, node.place, False))
+                err.add_sub_diagnostic(NotOwnedError.MakeCopy(node))
             raise GuppyError(err)
         # Places involving subscripts are handled differently since we ignore everything
         # after the subscript for the purposes of linearity checking.
@@ -616,8 +616,7 @@ def has_explicit_copy(ty: Type) -> bool:
     Currently, this is only the case for arrays with copyable elements."""
     if not is_array_type(ty):
         return False
-    elem_ty = get_element_type(ty)
-    return ty.droppable and elem_ty.copyable
+    return get_element_type(ty).copyable
 
 
 def check_cfg_linearity(
