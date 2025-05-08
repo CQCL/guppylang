@@ -35,6 +35,12 @@ class AlreadyUsedError(Error):
         span_label: ClassVar[str] = "since it was already {prev_kind.subjunctive} here"
         prev_kind: UseKind
 
+    @dataclass(frozen=True)
+    class MakeCopy(Help):
+        message: ClassVar[str] = (
+            "Consider copying `{place}` instead of moving it: `{place}.copy()`"
+        )
+
 
 @dataclass(frozen=True)
 class ComprAlreadyUsedError(Error):
@@ -154,6 +160,12 @@ class NotOwnedError(Error):
         span_label: ClassVar[str] = (
             "Argument `{place.root.name}` is only borrowed. Consider taking ownership: "
             "`{place.root.name}: {place.root.ty} @owned`"
+        )
+
+    @dataclass(frozen=True)
+    class MakeCopy(Help):
+        span_label: ClassVar[str] = (
+            "Or consider copying this argument: `{place}.copy()`"
         )
 
 
