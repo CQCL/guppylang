@@ -2,12 +2,12 @@ from abc import ABC
 
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr import val as hv
 
 from guppylang.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
 from guppylang.std._internal.compiler.prelude import build_expect_none, build_unwrap
+from guppylang.std._internal.compiler.tket2_bool import OPAQUE_FALSE, OPAQUE_TRUE
 from guppylang.tys.arg import TypeArg
 
 
@@ -44,7 +44,7 @@ class OptionTestCompiler(OptionCompiler):
         cond = self.builder.add_conditional(opt)
         for i in [0, 1]:
             with cond.add_case(i) as case:
-                val = hv.TRUE if i == self.tag else hv.FALSE
+                val = OPAQUE_TRUE if i == self.tag else OPAQUE_FALSE
                 opt = case.add_op(ops.Tag(i, self.option_ty), *case.inputs())
                 case.set_outputs(case.load(val), opt)
         [res, opt] = cond.outputs()
