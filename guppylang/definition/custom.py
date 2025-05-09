@@ -7,8 +7,10 @@ from typing import TYPE_CHECKING, ClassVar
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.build.dfg import DfBase
+from hugr.std.int import IntVal
 from tket2.extension import ConstWasmModule
 from tket2.extensions import wasm
+import hugr.std
 
 from guppylang.ast_util import AstNode, get_type, has_empty_body, with_loc, with_type
 from guppylang.checker.core import Context, Globals
@@ -196,7 +198,7 @@ class CustomFunctionDef(CompiledCallableDef):
         has_signature: Whether the function has a declared signature.
     """
 
-    defined_at: AstNode
+    defined_at: AstNode | None
     ty: FunctionType
     call_checker: "CustomCallChecker"
     call_compiler: "CustomInoutCallCompiler"
@@ -340,17 +342,16 @@ class WasmCallChecker(CustomCallChecker):
         # - check that first arg is `self: ThisWasmModule`
         # - check that the args and tys are wasmable
         if not self.is_type_wasmable(ty):
-            raise GuppyTypeError(WasmTypeConversionError(ty))
-        for arg in args:
-            if isinstance(arg, ) and not self.is_type_wasmable(arg.ty):
-                raise GuppyTypeError(WasmTypeConversionError(arg.ty))
-
-        # TODO: Make this specific to the actual module we're defining
-        if not isinstance(args[0].ty, WasmModule):
-            GuppyTypeError("First argument to WASM function must be `self`")
+            raise GuppyTypeError(WasmTypeConversionError(self.node, ty))
 
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
+
+        # TODO:
+        # for arg in args:
+        #    if not self.is_type_wasmable(arg.ty):
+        #        raise GuppyTypeError(WasmTypeConversionError(arg, arg.ty))
+
         return GlobalCall(def_id=self.func.id, args=args, type_args=inst), subst
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
@@ -485,22 +486,50 @@ class CopyInoutCompiler(CustomInoutCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         return CallReturnWires(regular_returns=args, inout_returns=args)
 
+
 class WasmCompiler(CustomInoutCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         outs = 1
         ctx = 0
-        return CallReturnWires(regular_returns=args[outs:], inout_returns=[ctx])
+        return CallReturnWires(regular_returns=args[outs:], inout_returns=[args[ctx]])
+
 
 # Compiler for initialising WASM modules
 class WasmModuleCompiler(CustomInoutCallCompiler):
+    defn: WasmModule
+
+    def __init__(self, defn: WasmModule) -> None:
+        self.defn = defn
+
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         # Make a ConstWasmModule as a CustomConst
-        selfarg = args[0]
-        assert isinstance(selfarg, WasmModule)
-        # What's the hash??
-        module = ConstWasmModule(selfarg.wasm_file, selfarg.wasm_hash)
+        assert args == []
+        module = ConstWasmModule(self.defn.wasm_file, self.defn.wasm_hash)
         w = wasm()
-        w.get_op("get_context")
+        op = w.get_op("get_context").instantiate([])
+        val = IntVal(self.defn.ctx_id, NumericType.INT_WIDTH)
+        k = self.builder.add_const(val)
+        # hugr-py doesn't yet export a method to load a usize directly?
+        ctx_id_nat = self.builder.load(k)
+        convert_op = ops.ExtOp(
+            hugr.std.int.CONVERSIONS_EXTENSION.get_op("itousize"),
+            ht.FunctionType([hugr.std.int.int_t(NumericType.INT_WIDTH)], [ht.USize()]),
+        )
+        ctx_id_usize = self.builder.add_op(convert_op, ctx_id_nat)
 
+        # The return type should be an Option - how do we unpack that?
+        node = self.builder.add_op(op, ctx_id_usize)
+        ws: list[Wire] = list(node[:])
+        assert len(ws) == 1
+        return CallReturnWires(regular_returns=ws, inout_returns=[])
+
+
+# Compiler for initialising WASM modules
+class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         assert len(args) == 1
-        return CallReturnWires(regular_returns=args, inout_returns=[])
+        ctx = args[0]
+        w = wasm()
+        op = w.get_op("dispose_context").instantiate([])
+        self.builder.add_op(op, ctx)
+        return CallReturnWires(regular_returns=[], inout_returns=[])

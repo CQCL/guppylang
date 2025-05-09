@@ -19,7 +19,7 @@ from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
     from guppylang.definition.struct import CheckedStructDef, StructField
-    from guppylang.definition.ty import OpaqueTypeDef
+    from guppylang.definition.ty import OpaqueTypeDef, WasmModule
     from guppylang.tys.subst import Inst, Subst
 
 
@@ -606,7 +606,7 @@ class OpaqueType(ParametrizedTypeBase):
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
-        return self # TODO: Update Type alias to include this
+        return self  # TODO: Update Type alias to include this
 
     def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""
@@ -663,6 +663,7 @@ class StructType(ParametrizedTypeBase):
             [arg.transform(transformer) for arg in self.args], self.defn
         )
 
+
 @dataclass(frozen=True)
 class WasmModuleType(TypeBase):
     defn: "WasmModule"
@@ -671,17 +672,17 @@ class WasmModuleType(TypeBase):
     droppable: bool = True
     hugr_bound: ht.TypeBound = ht.TypeBound.Any
 
-    def cast(self) -> 'Type':
+    def cast(self) -> "Type":
         return self
 
     def to_hugr(self) -> ht.Type:
-        ty = wasm().get_type('module')
+        ty = wasm().get_type("module")
         return ty.instantiate([])
 
     # TODO: I don't know what to write here
     def transform(self, transformer: Transformer) -> "Type":
         """Accepts a transformer on this type."""
-        return transformer.transform(self) # tell mypy it's fine
+        return transformer.transform(self) or self
 
     def visit(self, visitor: Visitor) -> None:
         visitor.visit(self)
@@ -702,7 +703,12 @@ ParametrizedType: TypeAlias = (
 #:   * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
 #:   * https://github.com/johnthagen/sealed-typing-pep
 Type: TypeAlias = (
-    BoundTypeVar | ExistentialTypeVar | NumericType | NoneType | ParametrizedType | WasmModuleType
+    BoundTypeVar
+    | ExistentialTypeVar
+    | NumericType
+    | NoneType
+    | ParametrizedType
+    | WasmModuleType
 )
 
 #: An immutable row of Guppy types.

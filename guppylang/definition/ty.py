@@ -1,17 +1,15 @@
 from abc import abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from hugr import tys
-from tket2_exts import wasm
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
-from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
-from guppylang.tys.ty import FunctionType, OpaqueType, Type, WasmModuleType
+from guppylang.tys.ty import OpaqueType, Type, WasmModuleType
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -55,20 +53,25 @@ class OpaqueTypeDef(TypeDef, CompiledDef):
         check_all_args(self.params, args, self.name, loc)
         return OpaqueType(args, self)
 
+
 @dataclass(frozen=True)
-class WasmModule(TypeDef):
+class WasmModule(TypeDef, CompiledDef):
     wasm_file: str
     wasm_hash: int
     ctx_id: int
 
     def check_instantiate(
-        #self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        # self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self,
+        args: Sequence[Argument],
+        globals: "Globals",
+        loc: AstNode | None = None,
     ) -> WasmModuleType:
         assert args == []
         return WasmModuleType(self)
 
-#def wasm_context() -> OpaqueTypeDef:
+
+# def wasm_context() -> OpaqueTypeDef:
 #    def to_hugr(_args: Sequence[Argument]) -> tys.Type:
 #        return wasm().get_type("context").instantiate([])
 #

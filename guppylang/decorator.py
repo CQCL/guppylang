@@ -15,6 +15,7 @@ from typing_extensions import dataclass_transform
 
 import guppylang
 from guppylang.ast_util import annotate_location
+from guppylang.checker.core import Globals
 from guppylang.definition.common import DefId
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
@@ -28,6 +29,7 @@ from guppylang.definition.custom import (
     WasmCallChecker,
     WasmCompiler,
     WasmModuleCompiler,
+    WasmModuleDiscardCompiler,
 )
 from guppylang.definition.extern import RawExternDef
 from guppylang.definition.function import (
@@ -60,9 +62,17 @@ from guppylang.module import (
 from guppylang.span import Loc, SourceMap, Span
 from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.arg import Argument
+from guppylang.tys.builtin import option_type
 from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import FunctionType, NumericType
+from guppylang.tys.ty import (
+    FuncInput,
+    FunctionType,
+    InputFlags,
+    NoneType,
+    NumericType,
+    WasmModuleType,
+)
 
 S = TypeVar("S")
 T = TypeVar("T")
@@ -587,40 +597,59 @@ class _Guppy:
         mod.register_def(defn)
         return GuppyDefinition(defn)
 
-    def wasm_module(self, filename: str, filehash: int) -> Callable[[builtins.type[T]], builtins.type[T]]:
+    def wasm_module(
+        self, filename: str, filehash: int
+    ) -> Decorator[PyClass, GuppyDefinition]:
         # N.B. Only one module per file and vice-versa
         guppy_module = self.get_module()
-        def dec(cls: type[T]) -> type[T]:
         ctx_id = guppy_module._get_next_wasm_context()
-            wasm_module = WasmModule(DefId.fresh(guppy_module),
-                                     cls.__name__,
-                                     None,
-                                     filename,
-                                     filehash,
-                                     ctx_id,
-                                     )
-            #import pdb
-            #pdb.set_trace()
+
+        def dec(cls: PyClass) -> GuppyDefinition:
+            wasm_module = WasmModule(
+                DefId.fresh(guppy_module),
+                cls.__name__,
+                None,
+                filename,
+                filehash,
+                ctx_id,
+            )
+            wasm_module_ty = wasm_module.check_instantiate([], Globals.default(), None)
             guppy_module.register_def(wasm_module)
             # Add a __call__ to the class
-            call_method = CustomFunctionDef(DefId.fresh(guppy_module),
-                                            "__new__",
-                                            None,
-                                            FunctionType([], wasm_module.check_instantiate([], [], None)),
-                                            DefaultCallChecker,
-                                            WasmModuleCompiler,
-                                            False,
-                                            False
-                                            ) # TODO: Specify a custom WASM compiler
-
+            call_method = CustomFunctionDef(
+                DefId.fresh(guppy_module),
+                "__new__",
+                None,
+                FunctionType([], option_type(wasm_module_ty)),
+                DefaultCallChecker(),
+                WasmModuleCompiler(wasm_module),
+                False,
+                True,
+            )  # TODO: Specify a custom WASM compiler
+            discard = CustomFunctionDef(
+                DefId.fresh(guppy_module),
+                "discard",
+                None,
+                FunctionType([FuncInput(wasm_module_ty, InputFlags.Owned)], NoneType()),
+                DefaultCallChecker(),
+                WasmModuleDiscardCompiler(),
+                False,
+                True,
+            )
             guppy_module.register_def(call_method, wasm_module)
-            #guppy_module._register_buffered_instance_funcs(wasm_module)
+            guppy_module.register_def(discard, wasm_module)
+            # guppy_module._register_buffered_instance_funcs(wasm_module)
             return GuppyDefinition(wasm_module)
+
         return dec
 
-    def wasm(self, guppy_module: GuppyModule) -> Callable[[builtins.type[T]], builtins.type[T]]: # TODO: How do we work out what module we're in?
-        def dec(f: type[T]) -> type[T]:
-            #guppy_module = self.get_module()
+    def wasm(
+        self, guppy_module: GuppyModule
+    ) -> Decorator[
+        PyFunc, GuppyDefinition
+    ]: # TODO: How do we work out what WASM module we're in?
+        def dec(f: PyFunc) -> GuppyDefinition:
+            # guppy_module = self.get_module()
             call_checker = WasmCallChecker()
             func = RawCustomFunctionDef(
                 DefId.fresh(guppy_module),
@@ -634,9 +663,10 @@ class _Guppy:
             guppy_module.register_def(func)
             # We're pretending to return the function unchanged, but in fact we return
             # a `GuppyDefinition` that handles the comptime logic
-            return GuppyDefinition(func)  # type: ignore[return-value]
+            return GuppyDefinition(func)
 
         return dec
+
 
 class _GuppyDummy:
     """A dummy class with the same interface as `@guppy` that is used during sphinx
