@@ -517,7 +517,6 @@ class WasmModuleCompiler(CustomInoutCallCompiler):
         )
         ctx_id_usize = self.builder.add_op(convert_op, ctx_id_nat)
 
-        # The return type should be an Option - how do we unpack that?
         node = self.builder.add_op(op, ctx_id_usize)
         ws: list[Wire] = list(node[:])
         assert len(ws) == 1
