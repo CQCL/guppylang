@@ -33,7 +33,6 @@ from guppylang.definition.ty import TypeDef, WasmModule
 from guppylang.error import pretty_errors
 from guppylang.experimental import enable_experimental_features
 from guppylang.tracing.object import GuppyDefinition
-from guppylang.tys.ty import Type
 
 if TYPE_CHECKING:
     from hugr import Hugr, ops
@@ -264,7 +263,7 @@ class GuppyModule:
         for defn in buffer.values():
             self.register_def(defn, instance)
 
-    #def register_wasm_module(self, mod: WasmModule) -> None:
+    # def register_wasm_module(self, mod: WasmModule) -> None:
     #    # Make a new def id for the module
     #    assert self._instance_func_buffer is None
     #

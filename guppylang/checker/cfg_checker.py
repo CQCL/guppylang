@@ -77,7 +77,7 @@ def check_cfg(
     unreachable blocks. Note that the inputs/outputs are annotated in the form of
     *places* rather than just variables.
     """
-    #if func_name == 'main':
+    # if func_name == 'main':
     #    import pdb
     #    pdb.set_trace()
 

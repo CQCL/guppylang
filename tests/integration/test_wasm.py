@@ -27,11 +27,12 @@ def test_wasm(validate):
 
     @guppy
     def main() -> int:
-        decoder1 = MyWasm()
+        decoder1 = MyWasm().unwrap()
         #decoder2 = MyWasm()
         #two = decoder1.add_one(1)
         #four = decoder2.add_two(2)
         #return two + four
+        decoder1.discard()
         return 42
 
     mod = guppy.compile_module()

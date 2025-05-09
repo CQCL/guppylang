@@ -305,6 +305,7 @@ class ArrayComprUnknownSizeError(Error):
             "known"
         )
 
+
 @dataclass(frozen=True)
 class WasmTypeConversionError(Error):
     title: ClassVar[str] = "Can't convert type to WASM"
