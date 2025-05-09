@@ -833,6 +833,9 @@ def check_type_against(
     assert not act.unsolved_vars
     subst = unify(exp, act, {})
     if subst is None:
+        if exp == act:
+            return node, {}, []
+
         # Maybe we can implicitly coerce `act` to `exp`
         if coerced := try_coerce_to(act, exp, node, ctx):
             return coerced, {}, []
