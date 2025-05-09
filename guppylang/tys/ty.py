@@ -784,6 +784,11 @@ def unify(s: Type | Const, t: Type | Const, subst: "Subst | None") -> "Subst | N
             return _unify_args(s, t, subst)
         case StructType() as s, StructType() as t if s.defn == t.defn:
             return _unify_args(s, t, subst)
+        case WasmModuleType(defn=def0), WasmModuleType(defn=def1):
+            if def0 == def1:
+                return subst
+            else:
+                return None
         case _:
             return None
 
