@@ -103,6 +103,7 @@ class _Guppy:
     def __init__(self) -> None:
         self._modules = {}
         self._sources = SourceMap()
+        self._next_wasm_context = 0
 
     @overload
     def __call__(self, arg: F) -> F: ...
@@ -590,11 +591,13 @@ class _Guppy:
         # N.B. Only one module per file and vice-versa
         guppy_module = self.get_module()
         def dec(cls: type[T]) -> type[T]:
+        ctx_id = guppy_module._get_next_wasm_context()
             wasm_module = WasmModule(DefId.fresh(guppy_module),
                                      cls.__name__,
                                      None,
                                      filename,
                                      filehash,
+                                     ctx_id,
                                      )
             #import pdb
             #pdb.set_trace()

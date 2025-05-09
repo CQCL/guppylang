@@ -83,6 +83,9 @@ class GuppyModule:
     # Storage for source code that has been read by the compiler
     _sources: SourceMap
 
+    # Live WASM contexts
+    _next_wasm_context: int
+
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
         self._globals = Globals({}, {}, {}, {})
@@ -94,6 +97,7 @@ class GuppyModule:
         self._raw_defs = {}
         self._raw_type_defs = {}
         self._checked_defs = {}
+        self._next_wasm_context = 0
 
         from guppylang.decorator import guppy
 
@@ -290,6 +294,11 @@ class GuppyModule:
         if impls := self._globals.impls.pop(defn.id, None):
             for impl in impls.values():
                 self.unregister(self._globals[impl])
+
+    def _get_next_wasm_context(self) -> int:
+        n = self._next_wasm_context
+        self._next_wasm_context += 1
+        return n
 
     @property
     def checked(self) -> bool:

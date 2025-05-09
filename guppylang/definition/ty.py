@@ -59,6 +59,7 @@ class OpaqueTypeDef(TypeDef, CompiledDef):
 class WasmModule(TypeDef):
     wasm_file: str
     wasm_hash: int
+    ctx_id: int
 
     def check_instantiate(
         #self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
