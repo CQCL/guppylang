@@ -387,7 +387,14 @@ class DiagnosticsRenderer:
         return level.name.lower().capitalize()
 
 
-def wrap(text: str, width: int, **kwargs: Any) -> list[str]:
+def wrap(
+    text: str,
+    width: int,
+    /,
+    initial_indent: str = "",
+    subsequent_indent: str = "",
+    **kwargs: Any,
+) -> list[str]:
     """Custom version of `textwrap.wrap` that correctly handles text with line breaks.
 
     Even with `replace_whitespace=False`, the original version doesn't count line breaks
@@ -400,9 +407,15 @@ def wrap(text: str, width: int, **kwargs: Any) -> list[str]:
     xxxx xxxxxx xxxx xxxxx xxxxxxxx xxxxxxxxxxxx xxxxx xx
     xxxx xxxxxxx xxxxx xx xxxx xxxxxxx xxxx
     ```
+
+    Also ensures that the `initial_indent` and `subsequent_indent` are not taken into
+    account for the wrapping position.
     """
-    return [
+    [first, *rest] = [
         line
         for paragraph in text.splitlines()
         for line in (textwrap.wrap(paragraph, width, **kwargs) if paragraph else [""])
     ]
+    # Manually take care of `initial_indent` and `subsequent_indent` since we don't
+    # want them to count towards `width`
+    return [initial_indent + first, *(subsequent_indent + line for line in rest)]

@@ -3,8 +3,8 @@ Error: Not owned (at $FILE:15:20)
 13 | @guppy(module)
 14 | def test(q: qubit) -> MyStruct:
 15 |     return MyStruct(q)
-   |                     ^ Function `__new__` wants to take ownership of this
-   |                       argument, but `test` doesn't own `q`
+   |                     ^ Function `__new__` wants to take ownership of this argument,
+   |                       but `test` doesn't own `q`
    | 
 14 | def test(q: qubit) -> MyStruct:
    |          -------- Argument `q` is only borrowed. Consider taking ownership:

@@ -99,6 +99,21 @@ def test_new_array_infer_nested(validate):
     validate(main)
 
 
+def test_new_array_check_nested_length(validate):
+    module = GuppyModule("test")
+    n = guppy.nat_var("n", module=module)
+
+    @guppy(module)
+    def foo(xs: array[array[int, n], 1]) -> None:
+        pass
+
+    @guppy(module)
+    def main() -> None:
+        foo(array(array(1, 2, 3)))
+
+    validate(module.compile())
+
+
 def test_return_linear_array(validate):
     module = GuppyModule("test")
     module.load(qubit)
