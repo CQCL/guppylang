@@ -47,3 +47,22 @@ def test_py_message(validate):
         exit(py("I" + "exited" + "!"), 0)
 
     validate(main)
+
+def test_comptime_panic(validate):
+    module = GuppyModule("test")
+
+    @guppy.comptime(module)
+    def main() -> None:
+        panic("foo")
+
+    validate(module.compile())
+
+
+def test_comptime_exit(validate):
+    module = GuppyModule("test")
+
+    @guppy.comptime(module)
+    def main() -> None:
+        exit("foo", 1)
+
+    validate(module.compile())

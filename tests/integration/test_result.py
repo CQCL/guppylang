@@ -1,7 +1,7 @@
 import pytest
 
 from guppylang import GuppyModule, guppy
-from guppylang.std.builtins import result, nat, array, comptime
+from guppylang.std.builtins import result, nat, array, comptime, panic
 from tests.util import compile_guppy
 
 

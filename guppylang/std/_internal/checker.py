@@ -5,7 +5,7 @@ from typing import ClassVar, cast
 from typing_extensions import assert_never
 
 from guppylang.ast_util import get_type, with_loc, with_type
-from guppylang.checker.core import Context
+from guppylang.checker.core import ComptimeVariable, Context
 from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang.checker.errors.type_errors import (
     ArrayComprUnknownSizeError,
@@ -337,9 +337,18 @@ class ResultChecker(CustomCallChecker):
         check_num_args(2, len(args), self.node)
         [tag, value] = args
         tag, _ = ExprChecker(self.ctx).check(tag, string_type())
+        tag_value = ""
         if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
-            raise GuppyTypeError(ExpectedError(tag, "a string literal"))
-        if len(tag.value.encode("utf-8")) > TAG_MAX_LEN:
+            # Besides a constant it could be a comptime variable,
+            # which we can assume to be static
+            if hasattr(tag, "place") and isinstance(tag.place, ComptimeVariable):
+                assert tag.place.static_value is not None
+                tag_value = tag.place.static_value
+            else:
+                raise GuppyTypeError(ExpectedError(tag, "a string literal"))
+        else:
+            tag_value = tag.value
+        if len(tag_value.encode("utf-8")) > TAG_MAX_LEN:
             err: Error = ResultChecker.TooLongError(tag)
             err.add_sub_diagnostic(ResultChecker.TooLongError.Hint(None))
             raise GuppyTypeError(err)
@@ -360,7 +369,7 @@ class ResultChecker(CustomCallChecker):
             array_len = len_arg.const
         else:
             raise GuppyError(err)
-        node = ResultExpr(value, base_ty, array_len, tag.value)
+        node = ResultExpr(value, base_ty, array_len, tag_value)
         return with_loc(self.node, node), NoneType()
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
@@ -394,12 +403,19 @@ class PanicChecker(CustomCallChecker):
             case [msg, *rest]:
                 msg, _ = ExprChecker(self.ctx).check(msg, string_type())
                 if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
-                    raise GuppyTypeError(ExpectedError(msg, "a string literal"))
-
+                    if hasattr(msg, "place") and isinstance(
+                        msg.place, ComptimeVariable
+                    ):
+                        assert msg.place.static_value is not None
+                        msg_value = msg.place.static_value
+                    else:
+                        raise GuppyTypeError(ExpectedError(msg, "a string literal"))
+                else:
+                    msg_value = msg.value
                 vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
                 # TODO variable signals once default arguments are available
                 node = PanicExpr(
-                    kind=ExitKind.Panic, msg=msg.value, values=vals, signal=1
+                    kind=ExitKind.Panic, msg=msg_value, values=vals, signal=1
                 )
                 return with_loc(self.node, node), NoneType()
             case args:
@@ -449,20 +465,38 @@ class ExitChecker(CustomCallChecker):
             case [msg, signal, *rest]:
                 msg, _ = ExprChecker(self.ctx).check(msg, string_type())
                 if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
-                    raise GuppyTypeError(ExpectedError(msg, "a string literal"))
+                    if hasattr(msg, "place") and isinstance(
+                        msg.place, ComptimeVariable
+                    ):
+                        assert msg.place.static_value is not None
+                        msg_value = msg.place.static_value
+                    else:
+                        raise GuppyTypeError(ExpectedError(msg, "a string literal"))
+                else:
+                    msg_value = msg.value
                 # TODO allow variable signals after https://github.com/CQCL/hugr/issues/1863
                 signal, _ = ExprChecker(self.ctx).check(signal, int_type())
                 if not isinstance(signal, ast.Constant) or not isinstance(
                     signal.value, int
                 ):
-                    raise GuppyTypeError(ExpectedError(msg, "an integer literal"))
+                    if hasattr(signal, "place") and isinstance(
+                        signal.place, ComptimeVariable
+                    ):
+                        assert signal.place.static_value is not None
+                        signal_value = signal.place.static_value
+                    else:
+                        raise GuppyTypeError(
+                            ExpectedError(signal, "an integer literal")
+                        )
+                else:
+                    signal_value = signal.value
 
                 vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
                 node = PanicExpr(
                     kind=ExitKind.ExitShot,
-                    msg=msg.value,
+                    msg=msg_value,
                     values=vals,
-                    signal=signal.value,
+                    signal=signal_value,
                 )
                 return with_loc(self.node, node), NoneType()
             case args:
