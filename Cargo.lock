@@ -81,9 +81,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.97"
+version = "1.0.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcfed56ad506cb2c684a14971b8861fdc3baaaae314b9e5f9bb532cbe3ba7a4f"
+checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 
 [[package]]
 name = "approx"
@@ -231,9 +231,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.32"
+version = "4.5.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6088f3ae8c3608d19260cd7445411865a485688711b78b5be70d78cd96136f83"
+checksum = "ed93b9805f8ba930df42c2590f05453d5ec36cbb85d018868a5b24d31f6ac000"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -251,9 +251,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.32"
+version = "4.5.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22a7ef7f676155edfb82daa97f99441f3ebf4a58d5e32f295a56259f1b6facc8"
+checksum = "379026ff283facf611b0ea629334361c4211d1b12ee01024eec1591133b04120"
 dependencies = [
  "anstream",
  "anstyle",
@@ -341,9 +341,9 @@ dependencies = [
 
 [[package]]
 name = "delegate"
-version = "0.13.2"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "297806318ef30ad066b15792a8372858020ae3ca2e414ee6c2133b1eb9e9e945"
+checksum = "b9b6483c2bbed26f97861cf57651d4f2b731964a28cd2257f934a4b452480d21"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -532,9 +532,9 @@ dependencies = [
 
 [[package]]
 name = "hugr"
-version = "0.15.2"
+version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4ade13fa95ebd8d6ae071767a166f597b16505a56c011b9e21b9b09ef091eba"
+checksum = "a1f20daa8690d3cf3be6d7931d3c8e3802bf837e4bf75da26fd0ae5c7387ce47"
 dependencies = [
  "hugr-core",
  "hugr-llvm",
@@ -543,9 +543,9 @@ dependencies = [
 
 [[package]]
 name = "hugr-cli"
-version = "0.15.2"
+version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "686d6a2eba2d5918b5f4aca3c23ef2b199f1b6d4b36271536dace703cb647ce8"
+checksum = "759a3ec8a873f8d13e870ffc300f3c6a70b9e7697e3082e32ae8cd8973de81b2"
 dependencies = [
  "clap",
  "clap-verbosity-flag",
@@ -557,9 +557,9 @@ dependencies = [
 
 [[package]]
 name = "hugr-core"
-version = "0.15.2"
+version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b76e8761b2b58b4a4b533250efc289e6082e80e723383dd392d5192081ad7a8"
+checksum = "d9ac3773b8f9b88c336bc17078831a36304bf58d8caf06c357d7cc75435f908f"
 dependencies = [
  "cgmath",
  "delegate",
@@ -588,9 +588,9 @@ dependencies = [
 
 [[package]]
 name = "hugr-llvm"
-version = "0.15.2"
+version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc6df4f12a7a617e9647a0f3822bb7510620eeabbbd581be79701840fd1fb41d"
+checksum = "0ad19220cf10c0d935e75d051d6e49ed395e71ca9f2dd0acf1174986e92db3f2"
 dependencies = [
  "anyhow",
  "delegate",
@@ -605,11 +605,12 @@ dependencies = [
 
 [[package]]
 name = "hugr-passes"
-version = "0.15.2"
+version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d42ac5f02ce1e0c7d306ed20a5bc766409db09eada1c21fd9b308deda57110e"
+checksum = "35c0a8be1540b7c3a2a34ae5a6c07175901bde3214dc50186e871403abfa1385"
 dependencies = [
  "ascent",
+ "derive_more",
  "hugr-core",
  "itertools 0.14.0",
  "lazy_static",
@@ -621,9 +622,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.8.0"
+version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3954d50fe15b02142bf25d3b8bdadb634ec3948f103d04ffe3031bc8fe9d7058"
+checksum = "cea70ddb795996207ad57735b50c5982d8844f38ba9ee5f1aedcfb708a2aa11e"
 dependencies = [
  "equivalent",
  "hashbrown 0.15.2",
