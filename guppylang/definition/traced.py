@@ -11,6 +11,7 @@ from hugr.package import FuncDefnPointer
 
 from guppylang.ast_util import AstNode, with_loc
 from guppylang.checker.core import Context, Globals, PyScope
+from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.checker.expr_checker import (
     check_call,
     synthesize_call,
@@ -25,6 +26,7 @@ from guppylang.definition.common import (
 )
 from guppylang.definition.function import parse_py_func
 from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
+from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
@@ -44,6 +46,8 @@ class RawTracedFunctionDef(ParsableDef):
         """Parses and checks the user-provided signature of the function."""
         func_ast, _docstring = parse_py_func(self.python_func, sources)
         ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
+        if ty.parametrized:
+            raise GuppyError(UnsupportedError(func_ast, "Generic comptime functions"))
         return TracedFunctionDef(
             self.id, self.name, func_ast, ty, self.python_func, self.python_scope
         )
