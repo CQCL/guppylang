@@ -181,7 +181,12 @@ class _Guppy:
     @pretty_errors
     def comptime(self, arg: PyFunc | GuppyModule) -> FuncDecorator | GuppyDefinition:
         def dec(f: Callable[..., Any], module: GuppyModule) -> GuppyDefinition:
-            defn = RawTracedFunctionDef(DefId.fresh(module), f.__name__, None, f, {})
+            from guppylang.module import get_py_scope
+
+            py_scope = get_py_scope(f)
+            defn = RawTracedFunctionDef(
+                DefId.fresh(module), f.__name__, None, f, py_scope
+            )
             module.register_def(defn)
             return GuppyDefinition(defn)
 

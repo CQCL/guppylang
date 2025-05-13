@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.std.builtins import array, comptime
 
 from hugr import ops
 from hugr.std.int import IntVal
@@ -80,5 +81,21 @@ def test_load_func(validate):
     def test() -> Callable[[int], int]:
         return foo
 
+    validate(module.compile())
+
+
+def test_inner_scope(validate):
+    module = GuppyModule("test")
+
+    def make(n: int):
+        @guppy.comptime(module)
+        def foo() -> int:
+            return n
+
+        @guppy.comptime(module)
+        def bar(xs: array[int, comptime(n)]) -> None:
+            pass
+
+    make(42)
     validate(module.compile())
 
