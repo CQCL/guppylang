@@ -352,3 +352,19 @@ def test_shift(validate, run_int_fn) -> None:
     compiled = module.compile()
     validate(compiled)
     run_int_fn(compiled, 42)
+
+def test_divmod(validate, run_int_fn) -> None:
+    module = GuppyModule("test_divmod")
+
+    @guppy(module)
+    def quot() -> int:
+        return -1 // 4
+
+    @guppy(module)
+    def rem() -> int:
+        return -1 % 4
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, -1, "quot")
+    run_int_fn(compiled, 3, "rem")
