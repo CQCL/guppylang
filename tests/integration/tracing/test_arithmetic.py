@@ -1,6 +1,9 @@
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
+from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import nat
+
+from hugr.std.int import IntVal
 
 
 def test_int(validate, run_int_fn):
@@ -113,6 +116,37 @@ def test_float(validate, run_float_fn_approx):
     # run_float_fn_approx(compiled, ..., "pow", [...])
 
 
+def test_angle(validate):
+    module = GuppyModule("module")
+    module.load(angle, pi)
+
+    @guppy.comptime(module)
+    def neg(x: angle) -> angle:
+        return -x
+
+    @guppy.comptime(module)
+    def neg_pi() -> angle:
+        return -pi
+
+    @guppy.comptime(module)
+    def add(x: angle, y: float) -> angle:
+        return pi + (x + angle(y) + pi)
+
+    @guppy.comptime(module)
+    def sub(x: float, y: angle) -> angle:
+        return pi - (angle(x) - (y - pi))
+
+    @guppy.comptime(module)
+    def mul(x: float, y: angle) -> angle:
+        return 1.5 * (x * (y * 2))
+
+    @guppy.comptime(module)
+    def div(x: angle, y: float) -> angle:
+        return x / y
+
+    validate(module.compile())
+
+
 def test_dunder_coercions(validate):
     module = GuppyModule("module")
 
@@ -141,3 +175,30 @@ def test_dunder_coercions(validate):
         return x + y
 
     validate(module.compile())
+
+
+def test_const(validate):
+    module = GuppyModule("module")
+
+    x = guppy.constant("x", "int", IntVal(10, 6))
+
+    @guppy.comptime(module)
+    def test1() -> int:
+        return -x
+
+    @guppy.comptime(module)
+    def test2() -> int:
+        return 1 + x
+
+    @guppy.comptime(module)
+    def test2() -> int:
+        return x * 2
+
+    @guppy.comptime(module)
+    def test3() -> float:
+        return 1.5 - x
+
+    @guppy.comptime(module)
+    def test4() -> float:
+        return x / 0.5
+

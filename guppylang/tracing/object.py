@@ -1,7 +1,6 @@
 import functools
 import inspect
 import itertools
-from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
@@ -60,13 +59,15 @@ def unary_operation(f: UnaryDunderMethod) -> UnaryDunderMethod:
     @functools.wraps(f)
     @capture_guppy_errors
     def wrapped(self: "DunderMixin") -> Any:
+        from guppylang.tracing.state import get_tracing_state
+        from guppylang.tracing.unpacking import guppy_object_from_py
+
+        state = get_tracing_state()
+        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+
         with suppress(Exception):
             return f(self)
 
-        from guppylang.tracing.state import get_tracing_state
-
-        state = get_tracing_state()
-        assert isinstance(self, GuppyObject)
         raise GuppyTypeError(
             UnaryOperatorNotDefinedError(state.node, self._ty, unary_table[f.__name__])
         )
@@ -85,24 +86,27 @@ def binary_operation(f: BinaryDunderMethod) -> BinaryDunderMethod:
     @functools.wraps(f)
     @capture_guppy_errors
     def wrapped(self: "DunderMixin", other: Any) -> Any:
+        from guppylang.tracing.state import get_tracing_state
+        from guppylang.tracing.unpacking import guppy_object_from_py
+
+        state = get_tracing_state()
+        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+        other = guppy_object_from_py(other, state.dfg.builder, state.node)
+
+        # First try the method on `self`
         with suppress(Exception):
             return f(self, other)
+
+        # If that failed, try the reverse method on `other`
+        if f.__name__ in binary_table:
+            reverse_method, display_name = binary_table[f.__name__]
+            left_ty, right_ty = self._ty, other._ty
+        else:
+            reverse_method, display_name = reverse_binary_table[f.__name__]
+            left_ty, right_ty = other._ty, self._ty
         with suppress(Exception):
-            from guppylang.tracing.state import get_tracing_state
-            from guppylang.tracing.unpacking import guppy_object_from_py
+            return other.__getattr__(reverse_method)(self)
 
-            state = get_tracing_state()
-            obj = guppy_object_from_py(other, state.dfg.builder, state.node)
-
-            if f.__name__ in binary_table:
-                reverse_method, display_name = binary_table[f.__name__]
-                left_ty, right_ty = self._ty, obj._ty
-            else:
-                reverse_method, display_name = reverse_binary_table[f.__name__]
-                left_ty, right_ty = obj._ty, self._ty
-            return obj.__getattr__(reverse_method)(self)
-
-        assert isinstance(self, GuppyObject)
         raise GuppyTypeError(
             BinaryOperatorNotDefinedError(state.node, left_ty, right_ty, display_name)
         )
@@ -110,13 +114,13 @@ def binary_operation(f: BinaryDunderMethod) -> BinaryDunderMethod:
     return wrapped
 
 
-class DunderMixin(ABC):
+class DunderMixin:
     """Mixin class to allow `GuppyObject`s to be used in arithmetic expressions etc.
     via providing the corresponding dunder methods delegating to the objects impls.
     """
 
-    @abstractmethod
-    def __getattr__(self, item: Any) -> Any: ...
+    def __getattr__(self, item: Any) -> Any:
+        return super().__getattribute__(item)
 
     def __abs__(self) -> Any:
         return self.__getattr__("__abs__")()
@@ -476,7 +480,7 @@ class GuppyStructObject(DunderMixin):
 
 
 @dataclass(frozen=True)
-class GuppyDefinition:
+class GuppyDefinition(DunderMixin):
     """A top-level Guppy definition.
 
     This is the object that is returned to the users when they decorate a function or
