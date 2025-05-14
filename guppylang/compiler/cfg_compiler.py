@@ -137,12 +137,12 @@ def compile_bb(
             branch_port = choose_vars_for_tuple_sum(
                 unit_sum=branch_port,
                 output_vars=[
-                    [v for v in sort_vars(row) if not v.ty.linear]
+                    [v for v in sort_vars(row) if v.ty.droppable]
                     for row in bb.sig.output_rows
                 ],
                 dfg=dfg,
             )
-            outputs = [v for v in first if v.ty.linear]
+            outputs = [v for v in first if not v.ty.droppable]
 
     # If this is *not* a jump to the exit BB, we need to sort the outputs to make the
     # signature consistent with what the next BB expects
@@ -188,14 +188,25 @@ def choose_vars_for_tuple_sum(
     Given `unit_sum: Sum(*(), *(), ...)` and output variable rows `#s1, #s2, ...`,
     constructs a TupleSum value of type `Sum(#s1, #s2, ...)`.
     """
-    assert all(not v.ty.linear for var_row in output_vars for v in var_row)
+    assert all(v.ty.droppable for var_row in output_vars for v in var_row)
     tys = [[v.ty for v in var_row] for var_row in output_vars]
     sum_type = SumType([row_to_type(row) for row in tys]).to_hugr()
 
-    with dfg.builder.add_conditional(unit_sum) as conditional:
+    # Non-copyable types must be passed into the conditional since we can't use inter-
+    # graph edges to feed them in implicitly
+    non_copyable = {v.id: dfg[v] for var_row in output_vars for v in var_row}
+    non_copyable_wires = list(non_copyable.values())
+    non_copyable_idxs = {x: i for i, x in enumerate(non_copyable.keys())}
+
+    with dfg.builder.add_conditional(unit_sum, *non_copyable_wires) as conditional:
         for i, var_row in enumerate(output_vars):
             with conditional.add_case(i) as case:
-                tag = case.add_op(ops.Tag(i, sum_type), *(dfg[v] for v in var_row))
+                case_inputs = case.inputs()
+                outputs = [
+                    dfg[v] if v.ty.copyable else case_inputs[non_copyable_idxs[v.id]]
+                    for v in var_row
+                ]
+                tag = case.add_op(ops.Tag(i, sum_type), *outputs)
                 case.set_outputs(tag)
         return conditional
 
@@ -207,7 +218,7 @@ def compare_var(p1: Place, p2: Place) -> int:
     We need to output linear variables at the end, so we do a lexicographic ordering of
     linearity and name.
     """
-    return -1 if (p1.ty.linear, str(p1)) < (p2.ty.linear, str(p2)) else 1
+    return -1 if (not p1.ty.droppable, str(p1)) < (not p2.ty.droppable, str(p2)) else 1
 
 
 def sort_vars(row: Row[Place]) -> list[Place]:

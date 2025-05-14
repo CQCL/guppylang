@@ -1,0 +1,9 @@
+Error: Expected a copyable type (at $FILE:17:12)
+   | 
+15 | @guppy(module)
+16 | def main() -> None:
+17 |     f = foo[array[int, 10]]
+   |             ^^^^^^^^^^^^^^ Expected a copyable type, got type `array[int, 10]` which is
+   |                            not implicitly copyable
+
+Guppy compilation failed due to 1 previous error

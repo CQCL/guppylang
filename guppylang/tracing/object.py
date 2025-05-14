@@ -343,7 +343,7 @@ class GuppyObject(DunderMixin):
     @hide_trace
     def __bool__(self) -> Any:
         err = (
-            "Can't branch on a dynamic Guppy value since it's concrete value is not "
+            "Can't branch on a dynamic Guppy value since its concrete value is not "
             "known at comptime. Consider defining a regular Guppy function to perform "
             "dynamic branching."
         )

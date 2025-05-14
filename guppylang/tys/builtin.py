@@ -141,7 +141,7 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     elem_ty = ht.Option(ty_arg.ty.to_hugr())
     hugr_arg = len_arg.to_hugr()
 
-    return hugr.std.collections.array.Array(elem_ty, hugr_arg)
+    return hugr.std.collections.value_array.ValueArray(elem_ty, hugr_arg)
 
 
 def _frozenarray_to_hugr(args: Sequence[Argument]) -> ht.Type:

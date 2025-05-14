@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
-from hugr import Hugr, Wire, ops, val
+from hugr import Hugr, Wire, envelope, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
@@ -164,7 +164,10 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     Tk2Circuit,
                 )
 
-                circ = Hugr.load_json(Tk2Circuit(self.input_circuit).to_hugr_json())  # type: ignore[attr-defined, unused-ignore]
+                # TODO extract the correct entry point from the module
+                circ = envelope.read_envelope(
+                    Tk2Circuit(self.input_circuit).to_str()  # type: ignore[attr-defined, unused-ignore]
+                ).modules[0]
                 mapping = module.hugr.insert_hugr(circ)
                 hugr_func = mapping[circ.root]
 
