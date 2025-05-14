@@ -3,6 +3,7 @@ use hugr::algorithms::ComposablePass;
 use hugr::llvm::custom::CodegenExtsMap;
 use hugr::llvm::inkwell::{self, context::Context, module::Module, values::GenericValue};
 use hugr::llvm::utils::fat::FatExt;
+use hugr::llvm::utils::inline_constant_functions;
 use hugr::llvm::CodegenExtsBuilder;
 use hugr::package::Package;
 use hugr::Hugr;
@@ -53,6 +54,11 @@ fn guppy_pass(hugr: &mut Hugr, entry_fn: &str) {
         ])
         .run(hugr)
         .unwrap();
+    hugr::algorithms::LinearizeArrayPass::default()
+        .run(hugr)
+        .unwrap();
+    inline_constant_functions(hugr).unwrap();
+    hugr.validate().unwrap();
 }
 
 fn codegen_extensions() -> CodegenExtsMap<'static, Hugr> {
