@@ -26,12 +26,12 @@ pyo3 = "0.24.1"
 serde_json = "1.0.111"
 cargo_toml = "0.20.4"
 thiserror = "2.0.6"
-hugr = "0.15.4"
-hugr-cli = "0.15.4"
+hugr = "0.20.0-rc.0"
+hugr-cli = "0.20.0-rc.0"
 
 [patch.crates-io]
 
 # Uncomment these to test the latest dependency version during development
-#  hugr = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
-#  hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
-#  hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
+ hugr = { git = "https://github.com/CQCL/hugr", rev = "0280eb2" }
+ hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "0280eb2" }
+ hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "0280eb2" }
