@@ -71,7 +71,6 @@ from guppylang.tys.ty import (
     InputFlags,
     NoneType,
     NumericType,
-    WasmModuleType,
 )
 
 S = TypeVar("S")
@@ -603,6 +602,8 @@ class _Guppy:
         # N.B. Only one module per file and vice-versa
         guppy_module = self.get_module()
         ctx_id = guppy_module._get_next_wasm_context()
+        assert guppy_module._instance_func_buffer is None
+        guppy_module._instance_func_buffer = {}
 
         def dec(cls: PyClass) -> GuppyDefinition:
             wasm_module = WasmModule(
@@ -636,36 +637,33 @@ class _Guppy:
                 False,
                 True,
             )
-            guppy_module.register_def(call_method, wasm_module)
-            guppy_module.register_def(discard, wasm_module)
-            # guppy_module._register_buffered_instance_funcs(wasm_module)
+
+            assert guppy_module._instance_func_buffer is not None
+
+            guppy_module.register_def(wasm_module)
+            guppy_module._instance_func_buffer |= {
+                "__new__": call_method,
+                "discard": discard,
+            }
+
+            guppy_module._register_buffered_instance_funcs(wasm_module)
             return GuppyDefinition(wasm_module)
 
         return dec
 
-    def wasm(
-        self, guppy_module: GuppyModule
-    ) -> Decorator[
-        PyFunc, GuppyDefinition
-    ]: # TODO: How do we work out what WASM module we're in?
-        def dec(f: PyFunc) -> GuppyDefinition:
-            # guppy_module = self.get_module()
-            call_checker = WasmCallChecker()
-            func = RawCustomFunctionDef(
-                DefId.fresh(guppy_module),
-                f.__name__,
-                None,
-                f,
-                call_checker,
-                WasmCompiler(),
-                False,
-            )
-            guppy_module.register_def(func)
-            # We're pretending to return the function unchanged, but in fact we return
-            # a `GuppyDefinition` that handles the comptime logic
-            return GuppyDefinition(func)
-
-        return dec
+    def wasm(self, f: PyFunc) -> GuppyDefinition:
+        guppy_module = self.get_module()
+        func = RawCustomFunctionDef(
+            DefId.fresh(guppy_module),
+            f.__name__,
+            None,
+            f,
+            WasmCallChecker(),
+            WasmCompiler(),
+            True,
+        )
+        guppy_module.register_def(func)
+        return GuppyDefinition(func)
 
 
 class _GuppyDummy:

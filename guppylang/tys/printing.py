@@ -14,6 +14,7 @@ from guppylang.tys.ty import (
     SumType,
     TupleType,
     Type,
+    WasmModuleType,
 )
 from guppylang.tys.var import BoundVar, ExistentialVar, UniqueId
 
@@ -149,6 +150,10 @@ class TypePrinter:
     @_visit.register
     def _visit_ConstValue(self, c: ConstValue, inside_row: bool) -> str:
         return str(c.value)
+
+    @_visit.register
+    def _visit_WasmModuleType(self, w: WasmModuleType, inside_row: bool) -> str:
+        return f"WasmModuleType(defn={w.defn!s})"
 
 
 def _wrap(s: str, inside_row: bool) -> str:

@@ -4,17 +4,21 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
 
+import hugr.std
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.build.dfg import DfBase
 from hugr.std.int import IntVal
-from tket2.extension import ConstWasmModule
 from tket2.extensions import wasm
-import hugr.std
 
 from guppylang.ast_util import AstNode, get_type, has_empty_body, with_loc, with_type
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.errors.type_errors import WasmTypeConversionError
+from guppylang.checker.errors.wasm import (
+    FirstArgNotModule,
+    NonFunctionWasmType,
+    UnWasmableType,
+)
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompilerContext, DFContainer
@@ -22,7 +26,7 @@ from guppylang.definition.common import ParsableDef
 from guppylang.definition.ty import WasmModule
 from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.diagnostic import Error, Help
-from guppylang.error import GuppyError, InternalGuppyError, GuppyTypeError
+from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
@@ -33,6 +37,7 @@ from guppylang.tys.ty import (
     NoneType,
     NumericType,
     Type,
+    WasmModuleType,
     type_to_row,
 )
 
@@ -327,6 +332,27 @@ class CustomCallChecker(ABC):
 
 
 class WasmCallChecker(CustomCallChecker):
+    type_sanitised: bool = False
+
+    def sanitise_type(self) -> None:
+        if isinstance(self.func.ty, FunctionType):
+            match self.func.ty.inputs[0]:
+                case FuncInput(ty=ty, flags=InputFlags.Inout) if isinstance(
+                    ty, WasmModuleType
+                ):
+                    pass
+                case FuncInput(ty=ty):
+                    raise GuppyError(FirstArgNotModule(self.node, ty))
+            for inp in self.func.ty.inputs[1:]:
+                assert isinstance(inp, FuncInput)
+                if not self.is_type_wasmable(inp.ty):
+                    raise GuppyError(UnWasmableType(self.node, inp.ty))
+            if not self.is_type_wasmable(self.func.ty.output):
+                raise GuppyError(UnWasmableType(self.node, self.func.ty.output))
+        else:
+            raise GuppyError(NonFunctionWasmType(self.node, self.func.ty))
+        self.type_sanitised = True
+
     def is_type_wasmable(self, ty: Type) -> bool:
         match ty:
             case NumericType():
@@ -338,23 +364,18 @@ class WasmCallChecker(CustomCallChecker):
                 return False
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        # TODO:
-        # - check that first arg is `self: ThisWasmModule`
-        # - check that the args and tys are wasmable
         if not self.is_type_wasmable(ty):
             raise GuppyTypeError(WasmTypeConversionError(self.node, ty))
 
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
 
-        # TODO:
-        # for arg in args:
-        #    if not self.is_type_wasmable(arg.ty):
-        #        raise GuppyTypeError(WasmTypeConversionError(arg, arg.ty))
-
         return GlobalCall(def_id=self.func.id, args=args, type_args=inst), subst
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        if not self.type_sanitised:
+            self.sanitise_type()
+
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
         return GlobalCall(def_id=self.func.id, args=args, type_args=inst), ty
@@ -504,7 +525,6 @@ class WasmModuleCompiler(CustomInoutCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         # Make a ConstWasmModule as a CustomConst
         assert args == []
-        module = ConstWasmModule(self.defn.wasm_file, self.defn.wasm_hash)
         w = wasm()
         op = w.get_op("get_context").instantiate([])
         val = IntVal(self.defn.ctx_id, NumericType.INT_WIDTH)
