@@ -39,7 +39,8 @@ dependencies = [
     "pydantic >=2.7.0b1,<3",
     "typing-extensions >=4.9.0,<5",
     "hugr ~= 0.11.5",
-    "tket2-exts ~= 0.6.0",
+#    "tket2-exts ~= 0.6.0",
+#    "tket2>=0.8.1",
 ]
 
 [project.optional-dependencies]
@@ -86,8 +87,10 @@ execute-llvm = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "b6efb03" }
-# tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", rev = "309879e" }
-# tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", rev = "309879e" }
+#tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", branch = "feat/const-wasm-py" }
+#tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", branch = "feat/const-wasm-py" }
+tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", rev = "72489c6" }
+tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", rev = "72489c6" }
 
 
 [build-system]
@@ -117,4 +120,4 @@ exclude_also = [
 
 
 [tool.pytest.ini_options]
-addopts = "--benchmark-skip" # bencharks run explicitly with `just bench`
+addopts = "--benchmark-skip" # benchmarks run explicitly with `just bench`
