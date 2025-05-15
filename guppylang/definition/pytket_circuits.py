@@ -169,7 +169,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     Tk2Circuit(self.input_circuit).to_bytes(EnvelopeConfig.TEXT)
                 ).modules[0]
                 mapping = module.hugr.insert_hugr(circ)
-                hugr_func = mapping[circ.root]
+                hugr_func = mapping[circ.entrypoint]
 
                 func_type = self.ty.to_hugr_poly()
                 outer_func = module.define_function(
