@@ -7,10 +7,10 @@ def test_wasm(validate):
     class MyWasm:
 
         @guppy.wasm
-        def add_one(self, x: int) -> int: ...
+        def add_one(self: "MyWasm", x: int) -> int: ...
 
         @guppy.wasm
-        def add_two(self, x: int) -> int: ...
+        def add_two(self: "MyWasm", x: int) -> int: ...
 
         #@guppy.wasm
         #def add_syndrome(self, syndrome: array[bool, 3]) -> None: ...
@@ -28,12 +28,12 @@ def test_wasm(validate):
     @guppy
     def main() -> int:
         decoder1 = MyWasm().unwrap()
-        #decoder2 = MyWasm()
-        #two = decoder1.add_one(1)
-        #four = decoder2.add_two(2)
-        #return two + four
+        decoder2 = MyWasm().unwrap()
+        two = decoder1.add_one(1)
+        four = decoder2.add_two(2)
         decoder1.discard()
-        return 42
+        decoder2.discard()
+        return two + four
 
     mod = guppy.compile_module()
     validate(mod)

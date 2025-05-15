@@ -18,7 +18,7 @@ from typing_extensions import assert_never
 from guppylang.ast_util import AstNode, name_nodes_in_ast
 from guppylang.cfg.bb import VId
 from guppylang.definition.common import DefId, Definition
-from guppylang.definition.ty import TypeDef, WasmModule
+from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
 from guppylang.tys.builtin import (
     array_type_def,
