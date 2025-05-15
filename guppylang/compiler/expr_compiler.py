@@ -514,10 +514,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
             value_wire = self.builder.add_op(map_op, value_wire, unwrap)
-            # Turn `value_array` into regular linear `array`
-            value_wire = self.builder.add_op(
-                array_convert_to_std_array(base_ty, size_arg), value_wire
-            )
             if is_bool_type(node.base_ty):
                 # We need to coerce a read on all the array elements if they are bools.
                 array_read = array_read_bool(self.ctx)
@@ -525,6 +521,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 map_op = array_map(OpaqueBool, size_arg, ht.Bool)
                 value_wire = self.builder.add_op(map_op, value_wire, array_read)
                 base_ty = ht.Bool
+            # Turn `value_array` into regular linear `array`
+            value_wire = self.builder.add_op(
+                array_convert_to_std_array(base_ty, size_arg), value_wire
+            )
             hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
         else:
             if is_bool_type(node.base_ty):

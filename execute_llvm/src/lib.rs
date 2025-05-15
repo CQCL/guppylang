@@ -7,7 +7,7 @@ use hugr::llvm::utils::inline_constant_functions;
 use hugr::llvm::CodegenExtsBuilder;
 use hugr::package::Package;
 use hugr::Hugr;
-use hugr::{self, std_extensions, HugrView};
+use hugr::{std_extensions, HugrView};
 use inkwell::types::BasicType;
 use inkwell::values::BasicMetadataValueEnum;
 use pyo3::exceptions::PyValueError;

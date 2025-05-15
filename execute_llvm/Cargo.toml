@@ -17,7 +17,7 @@ crate-type = ["cdylib"]
 [dependencies]
 hugr = { workspace = true, features = ["llvm"] }
 anyhow = "1.0"
-inkwell = { version = "0.5.0", features = ["llvm14-0"] }
-tket2 = { version = "0.8.0" }
+inkwell = { version = "0.6.0", features = ["llvm14-0"] }
+tket2 = { version = "0.9.0" }
 pyo3.workspace = true
 serde_json.workspace = true
