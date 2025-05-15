@@ -34,6 +34,7 @@ from guppylang.nodes import (
     GlobalCall,
     MakeIter,
     PanicExpr,
+    PlaceNode,
     ResultExpr,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
@@ -337,17 +338,13 @@ class ResultChecker(CustomCallChecker):
         check_num_args(2, len(args), self.node)
         [tag, value] = args
         tag, _ = ExprChecker(self.ctx).check(tag, string_type())
-        tag_value = ""
-        if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
-            # Besides a constant it could be a comptime variable,
-            # which we can assume to be static
-            if hasattr(tag, "place") and isinstance(tag.place, ComptimeVariable):
-                assert tag.place.static_value is not None
-                tag_value = tag.place.static_value
-            else:
+        match tag:
+            case ast.Constant(value=str(v)):
+                tag_value = v
+            case PlaceNode(place=ComptimeVariable(static_value=str(v))):
+                tag_value = v
+            case _:
                 raise GuppyTypeError(ExpectedError(tag, "a string literal"))
-        else:
-            tag_value = tag.value
         if len(tag_value.encode("utf-8")) > TAG_MAX_LEN:
             err: Error = ResultChecker.TooLongError(tag)
             err.add_sub_diagnostic(ResultChecker.TooLongError.Hint(None))
@@ -402,16 +399,13 @@ class PanicChecker(CustomCallChecker):
                 raise GuppyTypeError(err)
             case [msg, *rest]:
                 msg, _ = ExprChecker(self.ctx).check(msg, string_type())
-                if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
-                    if hasattr(msg, "place") and isinstance(
-                        msg.place, ComptimeVariable
-                    ):
-                        assert msg.place.static_value is not None
-                        msg_value = msg.place.static_value
-                    else:
+                match msg:
+                    case ast.Constant(value=str(v)):
+                        msg_value = v
+                    case PlaceNode(place=ComptimeVariable(static_value=str(v))):
+                        msg_value = v
+                    case _:
                         raise GuppyTypeError(ExpectedError(msg, "a string literal"))
-                else:
-                    msg_value = msg.value
                 vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
                 # TODO variable signals once default arguments are available
                 node = PanicExpr(
@@ -464,33 +458,24 @@ class ExitChecker(CustomCallChecker):
                 raise GuppyTypeError(signal_err)
             case [msg, signal, *rest]:
                 msg, _ = ExprChecker(self.ctx).check(msg, string_type())
-                if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
-                    if hasattr(msg, "place") and isinstance(
-                        msg.place, ComptimeVariable
-                    ):
-                        assert msg.place.static_value is not None
-                        msg_value = msg.place.static_value
-                    else:
+                match msg:
+                    case ast.Constant(value=str(v)):
+                        msg_value = v
+                    case PlaceNode(place=ComptimeVariable(static_value=str(v))):
+                        msg_value = v
+                    case _:
                         raise GuppyTypeError(ExpectedError(msg, "a string literal"))
-                else:
-                    msg_value = msg.value
                 # TODO allow variable signals after https://github.com/CQCL/hugr/issues/1863
                 signal, _ = ExprChecker(self.ctx).check(signal, int_type())
-                if not isinstance(signal, ast.Constant) or not isinstance(
-                    signal.value, int
-                ):
-                    if hasattr(signal, "place") and isinstance(
-                        signal.place, ComptimeVariable
-                    ):
-                        assert signal.place.static_value is not None
-                        signal_value = signal.place.static_value
-                    else:
+                match signal:
+                    case ast.Constant(value=int(s)):
+                        signal_value = s
+                    case PlaceNode(place=ComptimeVariable(static_value=int(s))):
+                        signal_value = s
+                    case _:
                         raise GuppyTypeError(
                             ExpectedError(signal, "an integer literal")
                         )
-                else:
-                    signal_value = signal.value
-
                 vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
                 node = PanicExpr(
                     kind=ExitKind.ExitShot,

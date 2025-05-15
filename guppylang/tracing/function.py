@@ -154,7 +154,7 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     # Create dummy variables and bind the objects to them
     arg_vars: list[Variable] = [
         ComptimeVariable(next(tmp_vars), obj._ty, None, static_value=arg)
-        for (obj, arg) in zip(args_objs, args, strict=False)
+        for (obj, arg) in zip(args_objs, args, strict=True)
     ]
     locals = Locals({var.name: var for var in arg_vars})
     for obj, var in zip(args_objs, arg_vars, strict=True):
@@ -172,6 +172,8 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     ret_wire = ExprCompiler(state.ctx).compile(call_node, state.dfg)
 
     # Update inouts
+    # If the input types of the function aren't known, we can't check this.
+    # This is the case for functions with a custom checker and no type annotations.
     if len(func.ty.inputs) != 0:
         for inp, arg, var in zip(func.ty.inputs, args, arg_vars, strict=True):
             if InputFlags.Inout in inp.flags:

@@ -113,8 +113,8 @@ class Variable:
 class ComptimeVariable(Variable):
     """A place identifying a variable that is passed from a compile-time context."""
 
-    # If we expect the variable to be a constant, we can store its value here.
-    static_value: Any | None
+    # Store the static value of the variable.
+    static_value: Any
 
 
 @dataclass(frozen=True)
