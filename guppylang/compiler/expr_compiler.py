@@ -55,7 +55,11 @@ from guppylang.nodes import (
     TypeApply,
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
-from guppylang.std._internal.compiler.array import array_map, array_repeat
+from guppylang.std._internal.compiler.array import (
+    array_convert_to_std_array,
+    array_map,
+    array_repeat,
+)
 from guppylang.std._internal.compiler.list import (
     list_new,
 )
@@ -501,6 +505,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
             value_wire = self.builder.add_op(map_op, value_wire, unwrap)
+            # Turn `value_array` into regular linear `array`
+            value_wire = self.builder.add_op(
+                array_convert_to_std_array(base_ty, size_arg), value_wire
+            )
         else:
             op_name = f"result_{base_name}"
             hugr_ty = node.base_ty.to_hugr()

@@ -32,6 +32,6 @@ hugr-cli = "0.15.4"
 [patch.crates-io]
 
 # Uncomment these to test the latest dependency version during development
-#  hugr = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
-#  hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
-#  hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
+hugr = { git = "https://github.com/CQCL/hugr", rev = "53d7282" }
+hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "53d7282" }
+hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "53d7282" }
