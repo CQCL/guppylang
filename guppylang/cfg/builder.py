@@ -513,7 +513,7 @@ def desugar_comprehension(
             next_call=with_loc(it, IterNext(value=it)),
             target=g.target,
             ifs=g.ifs,
-            borrowed_outer_places=[],
+            used_outer_places=[],
         )
         gens.append(desugared)
 

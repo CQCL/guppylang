@@ -203,7 +203,7 @@ class DesugaredGenerator(ast.expr):
     target: ast.expr
     ifs: list[ast.expr]
 
-    borrowed_outer_places: "list[Place]"
+    used_outer_places: "list[Place]"
 
     _fields = (
         "iter_assign",
