@@ -7,11 +7,13 @@ use hugr::llvm::utils::inline_constant_functions;
 use hugr::llvm::CodegenExtsBuilder;
 use hugr::package::Package;
 use hugr::Hugr;
-use hugr::{self, std_extensions, HugrView};
+use hugr::{std_extensions, HugrView};
 use inkwell::types::BasicType;
 use inkwell::values::BasicMetadataValueEnum;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+
+mod bool;
 
 macro_rules! pyerr {
     ($fmt:literal $(,$arg:tt)*) => { PyValueError::new_err(format!($fmt, $($arg),*)) }
@@ -69,6 +71,7 @@ fn codegen_extensions() -> CodegenExtsMap<'static, Hugr> {
         .add_conversion_extensions()
         .add_logic_extensions()
         .add_default_array_extensions()
+        .add_extension(bool::BoolCodegenExtension)
         .finish()
 }
 

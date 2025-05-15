@@ -12,6 +12,7 @@ from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
+from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
@@ -174,7 +175,7 @@ bool_type_def = OpaqueTypeDef(
     params=[],
     never_copyable=False,
     never_droppable=False,
-    to_hugr=lambda _: ht.Bool,
+    to_hugr=lambda _: OpaqueBool,
 )
 nat_type_def = _NumericTypeDef(
     DefId.fresh(), "nat", None, NumericType(NumericType.Kind.Nat)
