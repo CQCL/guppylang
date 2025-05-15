@@ -12,7 +12,7 @@ from guppylang.std._internal.compiler.quantum import (
     RNGCONTEXT_T,
 )
 from guppylang.std._internal.util import external_op
-from guppylang.std.builtins import array, mem_swap, owned
+from guppylang.std.builtins import array, mem_swap, owned, panic
 from guppylang.std.option import Option
 
 qsystem_random = GuppyModule("qsystem.random")
@@ -22,6 +22,8 @@ SHUFFLE_N = guppy.nat_var("SHUFFLE_N", module=qsystem_random)
 SHUFFLE_T = guppy.type_var(
     "SHUFFLE_T", copyable=False, droppable=False, module=qsystem_random
 )
+
+DISCRETE_N = guppy.nat_var("DISCRETE_N", module=qsystem_random)
 
 
 @guppy.hugr_op(
@@ -99,3 +101,27 @@ class RNG:
             # https://github.com/CQCL/guppylang/issues/924
             if i != j:
                 mem_swap(array[i], array[j])
+
+    @guppy(qsystem_random)
+    @no_type_check
+    def discrete_rv(self: "RNG", weights: array[float, DISCRETE_N]) -> int:
+        """Sample from a generic discrete distribution, given as an array of weights
+        which represent probabilities. The weights need not be normalized, but must be
+        non-negative and not all zero. Returns an integer representing an index into the
+        array.
+        """
+        W = 0.0
+        for w in weights.copy():
+            if w < 0.0:
+                panic("Negative weight included in discrete distribution.")
+            W += w
+        if W == 0.0:
+            panic("No positive weights included in discrete distribution.")
+        x = self._random_float() * W
+        i = 0
+        s = 0.0
+        while True:
+            s += weights[i]
+            if s >= x:
+                return i
+            i += 1
