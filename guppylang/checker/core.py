@@ -109,6 +109,14 @@ class Variable:
         return replace(self, defined_at=node)
 
 
+@dataclass(frozen=True, kw_only=True)
+class ComptimeVariable(Variable):
+    """A place identifying a variable that is passed from a compile-time context."""
+
+    # Store the static value of the variable.
+    static_value: Any
+
+
 @dataclass(frozen=True)
 class FieldAccess:
     """A place identifying a field access on a local struct."""
