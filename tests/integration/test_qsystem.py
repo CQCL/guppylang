@@ -61,7 +61,7 @@ def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
     """Compile various operations from the qsystem random extension."""
 
     @compile_qsystem_guppy
-    def test() -> tuple[int, float, int]:
+    def test() -> tuple[int, float, int, int]:
         rng = RNG(42)
         rint = rng.random_int()
         rfloat = rng.random_float()
@@ -69,8 +69,9 @@ def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
         ar = array(qubit() for _ in range(5))
         rng.shuffle(ar)
         _ = measure_array(ar)
+        rint_discrete_rv = rng.discrete_rv(array(0.5, 0.3, 0.1, 0.0))
         rng.discard()
 
-        return rint, rfloat, rint_bnd
+        return rint, rfloat, rint_bnd, rint_discrete_rv
 
     validate(test)
