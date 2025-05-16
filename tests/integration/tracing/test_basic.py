@@ -88,6 +88,9 @@ def test_inner_scope(validate):
     module = GuppyModule("test")
 
     def make(n: int):
+        # Test that `n` is scope even if it is only defined in this function scope
+        # instead of globally:
+
         @guppy.comptime(module)
         def foo() -> int:
             return n
