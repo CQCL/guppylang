@@ -501,10 +501,6 @@ class GuppyDefinition(DunderMixin):
         return self.wrapped.id
 
     @hide_trace
-    def __getattr__(self, item: Any) -> Any:
-        return self.to_guppy_object().__getattr__(item)
-
-    @hide_trace
     def __call__(self, *args: Any) -> Any:
         from guppylang.tracing.function import trace_call
 
