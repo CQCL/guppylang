@@ -29,6 +29,8 @@ from guppylang.diagnostic import Error, Help
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
+from guppylang.tys.arg import TypeArg
+from guppylang.tys.builtin import array_type_def, string_type_def
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     FuncInput,
@@ -36,6 +38,8 @@ from guppylang.tys.ty import (
     InputFlags,
     NoneType,
     NumericType,
+    OpaqueType,
+    TupleType,
     Type,
     WasmModuleType,
     type_to_row,
@@ -359,7 +363,24 @@ class WasmCallChecker(CustomCallChecker):
                 return True
             case NoneType():
                 return True
-            # TODO: Catch strings, callables, bool
+            case TupleType(element_types=tys):
+                return all(self.is_type_wasmable(ty) for ty in tys)
+            case FunctionType() as f:
+                return self.is_type_wasmable(f.output) and all(
+                    self.is_type_wasmable(inp.ty) and inp.flags != InputFlags.Inout
+                    for inp in f.inputs
+                )
+            case OpaqueType(defn=defn) as ty:
+                if defn == string_type_def:
+                    return True
+                elif defn == array_type_def:
+                    return all(
+                        self.is_type_wasmable(arg.ty)
+                        for arg in ty.args
+                        if isinstance(arg, TypeArg)
+                    )
+                else:
+                    return False
             case _:
                 return False
 
