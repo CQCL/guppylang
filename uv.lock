@@ -457,7 +457,7 @@ name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749 }
 wheels = [
@@ -619,7 +619,7 @@ requires-dist = [
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "tket2-exts", specifier = "~=0.7.0" },
+    { name = "tket2-exts", git = "https://github.com/CQCL/tket2?subdirectory=tket2-exts&branch=ts%2Freplace-bool" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
 provides-extras = ["pytket"]
@@ -2574,13 +2574,9 @@ wheels = [
 [[package]]
 name = "tket2-exts"
 version = "0.7.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-exts&branch=ts%2Freplace-bool#17cee703a85b73c6ab20b3adccdbd054799b360a" }
 dependencies = [
     { name = "hugr" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/75/a1/513e18f7d13dc9d0d9fa1c15126f9e613f42792e822c5fb1a4ae5b21cb39/tket2_exts-0.7.0.tar.gz", hash = "sha256:b87897a04805010a6744d73848b26d34291c9bee0a364d01eb0d654d59c9ea81", size = 11933 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c5/5d/cb43a55b380b913f31316c22f7d402934a764f3af3d0afd916b37324e316/tket2_exts-0.7.0-py3-none-any.whl", hash = "sha256:3e8224eb34ac0948db9dfc742fc4e1de802c2943e3b3e0c190e3c3c0e5413da8", size = 18051 },
 ]
 
 [[package]]

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
-from hugr import Wire, envelope, envelope, ops, val
+from hugr import Wire, envelope, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.envelope import EnvelopeConfig

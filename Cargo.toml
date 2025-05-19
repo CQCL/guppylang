@@ -39,4 +39,3 @@ hugr-cli = "0.20.0"
 
 # Uncomment if latest tket2 dependency is needed for execute_llvm
 tket2 = { git = "https://github.com/CQCL/tket2.git", branch = "ts/replace-bool" }
-
