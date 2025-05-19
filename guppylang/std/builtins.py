@@ -737,7 +737,7 @@ class SizedIter:
 
 
 @guppy.custom(checker=ResultChecker(), higher_order_value=False)
-def result(tag, value):
+def result(tag: str, value):
     """Report a result with the given tag and value.
 
     This is the primary way to report results from the program back to the user.
@@ -752,7 +752,7 @@ def result(tag, value):
 
 
 @guppy.custom(checker=PanicChecker(), higher_order_value=False)
-def panic(msg, *args):
+def panic(msg: str, *args):
     """Panic, throwing an error with the given message, and immediately exit the
     program, aborting any subsequent shots.
 

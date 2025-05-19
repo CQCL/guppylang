@@ -3,9 +3,10 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
-from hugr import Hugr, Wire, envelope, ops, val
+from hugr import Wire, envelope, envelope, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
+from hugr.envelope import EnvelopeConfig
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals, PyScope
@@ -166,10 +167,10 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
                 # TODO extract the correct entry point from the module
                 circ = envelope.read_envelope(
-                    Tk2Circuit(self.input_circuit).to_str()  # type: ignore[attr-defined, unused-ignore]
+                    Tk2Circuit(self.input_circuit).to_bytes(EnvelopeConfig.TEXT)
                 ).modules[0]
                 mapping = module.hugr.insert_hugr(circ)
-                hugr_func = mapping[circ.root]
+                hugr_func = mapping[circ.entrypoint]
 
                 func_type = self.ty.to_hugr_poly()
                 outer_func = module.define_function(
