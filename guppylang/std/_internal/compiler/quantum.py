@@ -16,6 +16,7 @@ from tket2_exts import (
     quantum,
     result,
     rotation,
+    wasm,
 )
 
 from guppylang.definition.custom import CustomInoutCallCompiler
@@ -32,12 +33,20 @@ QSYSTEM_UTILS_EXTENSION = qsystem_utils()
 QUANTUM_EXTENSION = quantum()
 RESULT_EXTENSION = result()
 ROTATION_EXTENSION = rotation()
+WASM_EXTENSION = wasm()
 
 RNGCONTEXT_T_DEF = QSYSTEM_RANDOM_EXTENSION.get_type("context")
 RNGCONTEXT_T = ht.ExtType(RNGCONTEXT_T_DEF)
 
 ROTATION_T_DEF = ROTATION_EXTENSION.get_type("rotation")
 ROTATION_T = ht.ExtType(ROTATION_T_DEF)
+
+WASMCONTEXT_T_DEF = WASM_EXTENSION.get_type("context")
+WASMCONTEXT_T = ht.ExtType(WASMCONTEXT_T_DEF)
+WASMMODULE_T_DEF = WASM_EXTENSION.get_type("module")
+WASMMODULE_T = ht.ExtType(WASMMODULE_T_DEF)
+WASMFUNC_T_DEF = WASM_EXTENSION.get_type("func")
+WASMFUNC_T = ht.ExtType(WASMFUNC_T_DEF)
 
 TKET2_EXTENSIONS = [
     FUTURES_EXTENSION,
@@ -47,6 +56,7 @@ TKET2_EXTENSIONS = [
     QUANTUM_EXTENSION,
     RESULT_EXTENSION,
     ROTATION_EXTENSION,
+    WASM_EXTENSION,
 ]
 
 
