@@ -551,15 +551,19 @@ class BBLinearityChecker(ast.NodeVisitor):
             # Recursively check the remaining generators
             self._check_comprehension(gens, elt)
 
-            # Look for any linear variables that were borrowed from the outer scope
-            gen.borrowed_outer_places = []
+            # Look for any variables that are used from the outer scope. This is so we
+            # can feed them through the loop. Note that we could also use non-local
+            # edges, but we can't handle them in lower parts of the stack yet :/
+            # TODO: Reinstate use of non-local edges.
+            #  See https://github.com/CQCL/guppylang/issues/963
+            gen.used_outer_places = []
             for x, use in inner_scope.used_parent.items():
+                place = inner_scope[x]
+                gen.used_outer_places.append(place)
                 if use.kind == UseKind.BORROW:
                     # Since `x` was borrowed, we know that is now also assigned in the
                     # inner scope since it gets reassigned in the local scope after the
-                    # borrow expires
-                    place = inner_scope[x]
-                    gen.borrowed_outer_places.append(place)
+                    # borrow expires.
                     # Also mark this place as implicitly used so we don't complain about
                     # it later.
                     for leaf in leaf_places(place):
