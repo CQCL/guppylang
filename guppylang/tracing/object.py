@@ -97,7 +97,9 @@ def binary_operation(f: BinaryDunderMethod) -> BinaryDunderMethod:
         with suppress(Exception):
             return f(self, other)
 
-        # If that failed, try the reverse method on `other`
+        # If that failed, try the reverse method on `other`.
+        # NB: We know that `f.__name__` is in one of the tables since we make sure to
+        # only put this decorator on the correct dunder methods below
         if f.__name__ in binary_table:
             reverse_method, display_name = binary_table[f.__name__]
             left_ty, right_ty = self._ty, other._ty
