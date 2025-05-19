@@ -721,6 +721,12 @@ class _GuppyDummy:
     def get_module(self, *args: Any, **kwargs: Any) -> Any:
         return GuppyModule("dummy", import_builtins=False)
 
+    def wasm_module(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def wasm(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
 
 guppy = cast(_Guppy, _GuppyDummy()) if sphinx_running() else _Guppy()
 
