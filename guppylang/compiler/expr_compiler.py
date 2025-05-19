@@ -626,9 +626,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 assert isinstance(gen.iter, PlaceNode)
                 iter_ty = get_type(gen.iter)
                 inputs = [PlaceNode(place=var) for var in loop_vars]
-                inputs += [
-                    PlaceNode(place=place) for place in gen.borrowed_outer_places
-                ]
+                inputs += [PlaceNode(place=place) for place in gen.used_outer_places]
                 # Enter a new tail loop. Note that the iterator is a `just_input`, so
                 # will not be outputted by the loop
                 break_pred = PlaceNode(Variable(next(tmp_vars), bool_type(), gen.iter))
