@@ -187,6 +187,8 @@ def choose_vars_for_tuple_sum(
 
     # We pass all values into the conditional instead of relying on non-local edges.
     # This is because we can't handle them in lower parts of the stack yet :/
+    # TODO: Reinstate use of non-local edges.
+    #  See https://github.com/CQCL/guppylang/issues/963
     all_vars = {v.id: dfg[v] for var_row in output_vars for v in var_row}
     all_vars_wires = list(all_vars.values())
     all_vars_idxs = {x: i for i, x in enumerate(all_vars.keys())}
