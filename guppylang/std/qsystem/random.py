@@ -143,7 +143,8 @@ def make_discrete_distribution(
         panic("No positive weights included in discrete distribution.")
     sums = array(0.0 for _ in range(DISCRETE_N))
     s = 0.0
-    for i in range(DISCRETE_N):
+    for i in range(DISCRETE_N - 1):
         s += weights[i]
         sums[i] = s / W
+    sums[DISCRETE_N - 1] = 1.0
     return DiscreteDistribution(sums)
