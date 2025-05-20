@@ -12,11 +12,13 @@ from guppylang.std._internal.compiler.quantum import (
 )
 from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_RANDOM_EXTENSION
 from guppylang.std._internal.util import external_op
+from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import array, mem_swap, owned, panic
 from guppylang.std.option import Option
 
 qsystem_random = GuppyModule("qsystem.random")
 
+qsystem_random.load(angle, pi)  # type: ignore[arg-type]
 
 SHUFFLE_N = guppy.nat_var("SHUFFLE_N", module=qsystem_random)
 SHUFFLE_T = guppy.type_var(
@@ -66,6 +68,11 @@ class RNG:
             bound: The upper bound of the range, needs to less than 2^31.
         """
         return self._random_int_bounded(bound)
+
+    @guppy(qsystem_random)
+    def random_angle(self: "RNG") -> angle:
+        """Generate a random angle in the range [-pi, pi)."""
+        return (2.0 * self._random_float() - 1.0) * pi
 
     @guppy.hugr_op(
         external_op("DeleteRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION),
