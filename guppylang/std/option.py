@@ -49,11 +49,16 @@ class Option(Generic[L]):  # type: ignore[misc]
 
     @guppy(builtins_module)
     @no_type_check
+    def swap(self: "Option[L]", other: "Option[L]" @ owned) -> "Option[L]":
+        """Swaps the value of `self` with `other` and returns the original value."""
+        mem_swap(self, other)
+        return other
+
+    @guppy(builtins_module)
+    @no_type_check
     def take(self: "Option[L]") -> "Option[L]":
         """Swaps the value of `self` with `nothing` and returns the original value."""
-        n: Option[L] = nothing()  # type: ignore[type-arg, valid-type]
-        mem_swap(n, self)
-        return n
+        return self.swap(nothing())
 
 
 @guppy.custom(OptionConstructor(0), module=builtins_module)
