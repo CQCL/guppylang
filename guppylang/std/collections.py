@@ -15,9 +15,9 @@ MAX_SIZE = guppy.nat_var("MAX_SIZE")
 class Stack(Generic[T, MAX_SIZE]):  # type: ignore[misc]
     """A last-in-first-out (LIFO) growable collection of values.
 
-    To ensure static allocation, the stack maximum stack size must be specified in
-    advance and is tracked in the type. For example, the `Stack[int, 10]` is a stack
-    that can hold at most 10 integers.
+    To ensure static allocation, the maximum stack size must be specified in advance and
+    is tracked in the type. For example, the `Stack[int, 10]` is a stack that can hold
+    at most 10 integers.
 
     Use `empty_stack` to construct a new stack.
     """
