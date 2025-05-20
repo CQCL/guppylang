@@ -118,11 +118,16 @@ class DiscreteDistribution(Generic[DISCRETE_N]):  # type: ignore[misc]
     def sample(self: "DiscreteDistribution[DISCRETE_N]", rng: RNG) -> int:
         """Return a sample value from the distribution."""
         x = rng.random_float()
-        i = 0
-        while True:
+        # Use binary search to find the least i s.t. sums[i] >= x.
+        i_min = 0
+        i_max = DISCRETE_N - 1
+        while i_min < i_max:
+            i = (i_min + i_max) // 2
             if self.sums[i] >= x:
-                return i
-            i += 1
+                i_max = i
+            else:
+                i_min = i + 1
+        return i_min
 
 
 @guppy(qsystem_random)
