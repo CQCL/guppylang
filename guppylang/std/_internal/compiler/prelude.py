@@ -49,9 +49,7 @@ class ErrorVal(hv.ExtensionValue):
     def to_value(self) -> hv.Extension:
         name = "ConstError"
         payload = {"signal": self.signal, "message": self.message}
-        return hv.Extension(
-            name, typ=error_type(), val=payload, extensions=[hugr.std.PRELUDE.name]
-        )
+        return hv.Extension(name, typ=error_type(), val=payload)
 
     def __str__(self) -> str:
         return f"Error({self.signal}): {self.message}"
