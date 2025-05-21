@@ -1,3 +1,5 @@
+set shell := ["bash", "-uc"]
+
 # List the available commands
 help:
     @just --list --justfile {{justfile()}}
