@@ -57,6 +57,7 @@ from guppylang.nodes import (
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
 from guppylang.std._internal.compiler.array import (
+    array_convert_to_std_array,
     array_map,
     array_new,
     array_repeat,
@@ -508,6 +509,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
             value_wire = self.builder.add_op(map_op, value_wire, unwrap)
+            # Turn `value_array` into regular linear `array`
+            value_wire = self.builder.add_op(
+                array_convert_to_std_array(base_ty, size_arg), value_wire
+            )
         else:
             op_name = f"result_{base_name}"
             hugr_ty = node.base_ty.to_hugr()
@@ -672,9 +677,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 assert isinstance(gen.iter, PlaceNode)
                 iter_ty = get_type(gen.iter)
                 inputs = [PlaceNode(place=var) for var in loop_vars]
-                inputs += [
-                    PlaceNode(place=place) for place in gen.borrowed_outer_places
-                ]
+                inputs += [PlaceNode(place=place) for place in gen.used_outer_places]
                 # Enter a new tail loop. Note that the iterator is a `just_input`, so
                 # will not be outputted by the loop
                 break_pred = PlaceNode(Variable(next(tmp_vars), bool_type(), gen.iter))

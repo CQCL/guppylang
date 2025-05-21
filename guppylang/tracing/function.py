@@ -7,7 +7,7 @@ from hugr.build.dfg import DfBase
 
 from guppylang.ast_util import AstNode, with_loc, with_type
 from guppylang.cfg.builder import tmp_vars
-from guppylang.checker.core import Context, Locals, Variable
+from guppylang.checker.core import ComptimeVariable, Context, Locals, Variable
 from guppylang.checker.errors.type_errors import TypeMismatchError
 from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.compiler.expr_compiler import ExprCompiler
@@ -152,7 +152,10 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     ]
 
     # Create dummy variables and bind the objects to them
-    arg_vars = [Variable(next(tmp_vars), obj._ty, None) for obj in args_objs]
+    arg_vars: list[Variable] = [
+        ComptimeVariable(next(tmp_vars), obj._ty, None, static_value=arg)
+        for (obj, arg) in zip(args_objs, args, strict=True)
+    ]
     locals = Locals({var.name: var for var in arg_vars})
     for obj, var in zip(args_objs, arg_vars, strict=True):
         state.dfg[var] = obj._use_wire(func)
@@ -169,10 +172,15 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     ret_wire = ExprCompiler(state.ctx).compile(call_node, state.dfg)
 
     # Update inouts
-    for inp, arg, var in zip(func.ty.inputs, args, arg_vars, strict=True):
-        if InputFlags.Inout in inp.flags:
-            inout_wire = state.dfg[var]
-            update_packed_value(arg, GuppyObject(inp.ty, inout_wire), state.dfg.builder)
+    # If the input types of the function aren't known, we can't check this.
+    # This is the case for functions with a custom checker and no type annotations.
+    if len(func.ty.inputs) != 0:
+        for inp, arg, var in zip(func.ty.inputs, args, arg_vars, strict=True):
+            if InputFlags.Inout in inp.flags:
+                inout_wire = state.dfg[var]
+                update_packed_value(
+                    arg, GuppyObject(inp.ty, inout_wire), state.dfg.builder
+                )
 
     ret_obj = GuppyObject(ret_ty, ret_wire)
     return unpack_guppy_object(ret_obj, state.dfg.builder)

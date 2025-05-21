@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.18.2](https://github.com/CQCL/guppylang/compare/v0.18.1...v0.18.2) (2025-05-19)
+
+
+### Features
+
+* Add some explicit copy diagnostic hints ([#941](https://github.com/CQCL/guppylang/issues/941)) ([c99526e](https://github.com/CQCL/guppylang/commit/c99526efe837ef04fd5263e3670c8e5cff3a991a))
+
+
+### Bug Fixes
+
+* Better error message for unsupported generic comptime functions ([#951](https://github.com/CQCL/guppylang/issues/951)) ([35bfbcb](https://github.com/CQCL/guppylang/commit/35bfbcb35829933d457e950fd8c3ac61a79670a8)), closes [#944](https://github.com/CQCL/guppylang/issues/944)
+* Capture entire Python scope when defining comptime functions ([#952](https://github.com/CQCL/guppylang/issues/952)) ([898a033](https://github.com/CQCL/guppylang/commit/898a033da0458b8e92fde4b586453a4f69881a0c)), closes [#945](https://github.com/CQCL/guppylang/issues/945)
+* Fix `result` / `panic` /  `exit` calls in comptime functions ([#949](https://github.com/CQCL/guppylang/issues/949)) ([ac4a515](https://github.com/CQCL/guppylang/commit/ac4a515514a1263d261e1039f741839a7e078433))
+* Fix comptime angle arithmetic ([#950](https://github.com/CQCL/guppylang/issues/950)) ([dd0fdc3](https://github.com/CQCL/guppylang/commit/dd0fdc33b4c0e62df5c8a1418432743a5446753b))
+* Fix resolution of generic lengths in array constructor ([#940](https://github.com/CQCL/guppylang/issues/940)) ([0f1d5db](https://github.com/CQCL/guppylang/commit/0f1d5dbaceaf94f60655231b0c9b5c9658f2ea29))
+* Fix too narrow rendering of indented diagnostic labels ([#933](https://github.com/CQCL/guppylang/issues/933)) ([94821aa](https://github.com/CQCL/guppylang/commit/94821aad35e2e690e07cccd8a365a03b472bf6fa)), closes [#916](https://github.com/CQCL/guppylang/issues/916)
+* typo ([#947](https://github.com/CQCL/guppylang/issues/947)) ([d392ea4](https://github.com/CQCL/guppylang/commit/d392ea46f8285e97edd9f59708de96bdcf2e4a49))
+* Use correct copyable/droppable terminology for type arg errors ([#935](https://github.com/CQCL/guppylang/issues/935)) ([6a44a1c](https://github.com/CQCL/guppylang/commit/6a44a1c5d39ed6bc4ae29f8bc4d3a5d06c793c1c)), closes [#867](https://github.com/CQCL/guppylang/issues/867)
+
 ## [0.18.1](https://github.com/CQCL/guppylang/compare/v0.18.0...v0.18.1) (2025-04-26)
 
 

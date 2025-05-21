@@ -1,7 +1,7 @@
 import pytest
 
 from guppylang import GuppyModule, guppy
-from guppylang.std.builtins import result, nat, array
+from guppylang.std.builtins import result, nat, array, comptime, panic
 from tests.util import compile_guppy
 
 
@@ -70,9 +70,37 @@ def test_same_tag(validate):
 
     validate(main)
 
-def test_py_tag(validate):
+def test_comptime_tag_inside(validate):
     @compile_guppy
     def main(x: int) -> None:
-        result(py("a" + "b"), x)
+        result(comptime("a" + "b"), x)
 
     validate(main)
+
+
+def test_comptime_tag_outside1(validate):
+    module = GuppyModule("test")
+
+    EXAMPLE_RESULTS = [
+        ("boolean", False),
+        ("int", 123),
+    ]
+
+    @guppy.comptime(module)
+    def main() -> None:
+        for key, value in EXAMPLE_RESULTS:
+            result(key, value)
+
+    validate(module.compile())
+
+
+def test_comptime_tag_outside2(validate):
+    module = GuppyModule("test")
+
+    EXAMPLE_RESULT = ("boolean", False)
+
+    @guppy.comptime(module)
+    def main() -> None:
+        result(EXAMPLE_RESULT[0], EXAMPLE_RESULT[1])
+
+    validate(module.compile())

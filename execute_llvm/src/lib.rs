@@ -1,11 +1,13 @@
 //! This module provides a Python interface to compile and execute a Hugr program to LLVM IR.
+use hugr::algorithms::ComposablePass;
 use hugr::llvm::custom::CodegenExtsMap;
 use hugr::llvm::inkwell::{self, context::Context, module::Module, values::GenericValue};
 use hugr::llvm::utils::fat::FatExt;
+use hugr::llvm::utils::inline_constant_functions;
 use hugr::llvm::CodegenExtsBuilder;
 use hugr::package::Package;
 use hugr::Hugr;
-use hugr::{self, ops, std_extensions, HugrView};
+use hugr::{self, std_extensions, HugrView};
 use inkwell::types::BasicType;
 use inkwell::values::BasicMetadataValueEnum;
 use pyo3::exceptions::PyValueError;
@@ -24,16 +26,16 @@ fn parse_hugr(pkg_bytes: &[u8]) -> PyResult<hugr::Hugr> {
 
 // Find the FuncDefn node for the function we're trying to execute.
 fn find_funcdef_node<H: HugrView>(hugr: H, fn_name: &str) -> PyResult<H::Node> {
-    let root = hugr.root();
-    let mut fn_nodes = Vec::new();
-    for n in hugr.children(root) {
-        let op = hugr.get_optype(n);
-        if let ops::OpType::FuncDefn(ops::FuncDefn { name, .. }) = op {
-            if name == fn_name {
-                fn_nodes.push(n);
-            }
-        }
-    }
+    let root = hugr.module_root();
+    let fn_nodes: Vec<_> = hugr
+        .children(root)
+        .filter(|n| {
+            hugr.get_optype(*n)
+                .as_func_defn()
+                .is_some_and(|f_def| f_def.func_name() == fn_name)
+        })
+        .collect();
+
     match fn_nodes[..] {
         [] => Err(pyerr!("Couldn't find top level FuncDefn named {}", fn_name)),
         [x] => Ok(x),
@@ -45,15 +47,18 @@ fn find_funcdef_node<H: HugrView>(hugr: H, fn_name: &str) -> PyResult<H::Node> {
 }
 
 fn guppy_pass(hugr: &mut Hugr, entry_fn: &str) {
-    hugr::algorithms::MonomorphizePass::default()
-        .run(hugr)
-        .unwrap();
+    hugr::algorithms::MonomorphizePass.run(hugr).unwrap();
     hugr::algorithms::RemoveDeadFuncsPass::default()
         .with_module_entry_points([
             find_funcdef_node(&hugr, entry_fn).expect("entry point function error.")
         ])
         .run(hugr)
         .unwrap();
+    hugr::algorithms::LinearizeArrayPass::default()
+        .run(hugr)
+        .unwrap();
+    inline_constant_functions(hugr).unwrap();
+    hugr.validate().unwrap();
 }
 
 fn codegen_extensions() -> CodegenExtsMap<'static, Hugr> {

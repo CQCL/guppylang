@@ -3,6 +3,7 @@ from collections.abc import Callable
 from guppylang.decorator import guppy
 from guppylang.module import GuppyModule
 from guppylang.std.builtins import array, owned
+from guppylang.std.option import Option, nothing
 
 
 def test_id(validate):
@@ -141,3 +142,15 @@ def test_type_apply(validate):
 
     validate(module.compile())
 
+
+def test_custom_func_higher_order(validate):
+    # See https://github.com/CQCL/guppylang/issues/970
+    module = GuppyModule("test")
+    T = guppy.type_var("T", module=module)
+
+    @guppy(module)
+    def foo() -> Option[T]:
+        f = nothing[T]
+        return f()
+
+    validate(module.compile())
