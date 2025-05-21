@@ -38,7 +38,7 @@ dependencies = [
     "networkx >=3.2.1,<4",
     "pydantic >=2.7.0b1,<3",
     "typing-extensions >=4.9.0,<5",
-    "hugr ~= 0.12.0",
+    "hugr ~= 0.12.1",
     "tket2-exts ~= 0.7.0",
 ]
 
@@ -85,7 +85,7 @@ members = ["execute_llvm"]
 execute-llvm = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
-hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "7f233fa" }
+# hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "7f233fa" }
 # tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", rev = "652a7d0" }
 # tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", rev = "0c22d85" }
 
