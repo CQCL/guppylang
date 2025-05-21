@@ -13,6 +13,7 @@ from guppylang.checker.errors.generic import (
     UnexpectedError,
     UnsupportedError,
 )
+from guppylang.compiler.core import GlobalConstId
 from guppylang.definition.common import (
     CheckableDef,
     CompiledDef,
@@ -255,6 +256,7 @@ class CheckedStructDef(TypeDef, CompiledDef):
             call_checker=DefaultCallChecker(),
             call_compiler=ConstructorCompiler(),
             higher_order_value=True,
+            higher_order_func_id=GlobalConstId.fresh(f"{self.name}.__new__"),
             has_signature=True,
         )
         return [constructor_def]

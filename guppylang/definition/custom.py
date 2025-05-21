@@ -12,7 +12,7 @@ from guppylang.ast_util import AstNode, get_type, has_empty_body, with_loc, with
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
-from guppylang.compiler.core import CompilerContext, DFContainer
+from guppylang.compiler.core import CompilerContext, DFContainer, GlobalConstId
 from guppylang.definition.common import ParsableDef
 from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.diagnostic import Error, Help
@@ -127,6 +127,7 @@ class RawCustomFunctionDef(ParsableDef):
             self.call_checker,
             self.call_compiler,
             self.higher_order_value,
+            GlobalConstId.fresh(self.name),
             sig is not None,
         )
 
@@ -201,6 +202,7 @@ class CustomFunctionDef(CompiledCallableDef):
     call_checker: "CustomCallChecker"
     call_compiler: "CustomInoutCallCompiler"
     higher_order_value: bool
+    higher_order_func_id: GlobalConstId
     has_signature: bool
 
     description: str = field(default="function", init=False)
@@ -245,30 +247,22 @@ class CustomFunctionDef(CompiledCallableDef):
             raise GuppyError(NotHigherOrderError(node, self.name))
         assert len(self.ty.params) == len(type_args)
 
-        # We create a `FunctionDef` that takes some inputs, compiles a call to the
-        # function, and returns the results. If the function signature is polymorphic,
-        # we explicitly monomorphise here and invoke the call compiler with the
-        # inferred type args.
-        #
-        # TODO: Reuse compiled instances with the same type args?
-        # TODO: Why do we need to monomorphise here? Why not wait for `load_function`?
-        # See https://github.com/CQCL/guppylang/issues/393 for both issues.
-        fun_ty = self.ty.instantiate(type_args)
-        input_types = [inp.ty.to_hugr() for inp in fun_ty.inputs]
-        output_types = [fun_ty.output.to_hugr()]
-        func = dfg.builder.define_function(
-            self.name, input_types, output_types, type_params=[]
+        # We create a generic `FunctionDef` that takes some inputs, compiles a call to
+        # the function, and returns the results
+        func, already_defined = ctx.declare_global_func(
+            self.higher_order_func_id, self.ty.to_hugr_poly()
         )
+        if not already_defined:
+            func_dfg = DFContainer(func, dfg.locals.copy())
+            args: list[Wire] = list(func.inputs())
+            generic_ty_args = [param.to_bound() for param in self.ty.params]
+            returns = self.compile_call(args, generic_ty_args, func_dfg, ctx, node)
+            func.set_outputs(*returns.regular_returns, *returns.inout_returns)
 
-        func_dfg = DFContainer(func, dfg.locals.copy())
-        args: list[Wire] = list(func.inputs())
-        returns = self.compile_call(args, type_args, func_dfg, ctx, node)
-
-        func.set_outputs(*returns.regular_returns, *returns.inout_returns)
-
-        # Finally, load the function into the local DFG. We already monomorphised, so we
-        # don't need to give it type arguments.
-        return dfg.builder.load_function(func)
+        # Finally, load the function into the local DFG
+        mono_ty = self.ty.instantiate(type_args).to_hugr()
+        hugr_ty_args = [arg.to_hugr() for arg in type_args]
+        return dfg.builder.load_function(func, mono_ty, hugr_ty_args)
 
     def compile_call(
         self,
