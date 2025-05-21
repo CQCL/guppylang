@@ -57,11 +57,12 @@ from guppylang.nodes import (
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
 from guppylang.std._internal.compiler.array import (
+    array_convert_from_std_array,
     array_convert_to_std_array,
     array_map,
     array_new,
     array_repeat,
-    array_type,
+    standard_array_type,
     unpack_array,
 )
 from guppylang.std._internal.compiler.list import (
@@ -558,21 +559,32 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         )
         args = [ht.StringArg(node.tag), num_qubits_arg]
         sig = ht.FunctionType(
-            [array_type(ht.Qubit, num_qubits_arg)],
-            [array_type(ht.Qubit, num_qubits_arg)],
+            [standard_array_type(ht.Qubit, num_qubits_arg)],
+            [standard_array_type(ht.Qubit, num_qubits_arg)],
         )
         op = ops.Custom(
             op_name="StateResult", signature=sig, args=args, extension="tket2.debug"
         )
 
         if not node.array_len:
+            # If the input is a sequence of qubits, we pack them into an array.
             qubits_in = [self.visit(e) for e in node.args[1:]]
             qubit_arr_in = self.builder.add_op(
                 array_new(ht.Qubit, len(node.args) - 1), *qubits_in
             )
+            # Turn into standard array from value array.
+            qubit_arr_in = self.builder.add_op(
+                array_convert_to_std_array(ht.Qubit, num_qubits_arg), qubit_arr_in
+            )
+
             qubit_arr_out = self.builder.add_op(op, qubit_arr_in)
+
+            qubit_arr_out = self.builder.add_op(
+                array_convert_from_std_array(ht.Qubit, num_qubits_arg), qubit_arr_out
+            )
             qubits_out = unpack_array(self.builder, qubit_arr_out)
         else:
+            # If the input is an array of qubits, we need to unwrap the elements first.
             qubits_in = [self.visit(node.args[1])]
             unwrap = array_unwrap_elem(self.ctx)
             unwrap = self.builder.load_function(
@@ -583,7 +595,18 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             map_op = array_map(ht.Option(ht.Qubit), num_qubits_arg, ht.Qubit)
             unwrapped_qubit_arr = self.builder.add_op(map_op, qubits_in[0], unwrap)
 
+            # Turn into standard array from value array.
+            unwrapped_qubit_arr = self.builder.add_op(
+                array_convert_to_std_array(ht.Qubit, num_qubits_arg),
+                unwrapped_qubit_arr,
+            )
+
             qubit_arr_out = self.builder.add_op(op, unwrapped_qubit_arr)
+
+            # And back to a value array.
+            qubit_arr_out = self.builder.add_op(
+                array_convert_from_std_array(ht.Qubit, num_qubits_arg), qubit_arr_out
+            )
 
             wrap = array_wrap_elem(self.ctx)
             wrap = self.builder.load_function(
