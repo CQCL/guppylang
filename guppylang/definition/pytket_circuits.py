@@ -39,6 +39,7 @@ from guppylang.std._internal.compiler.array import (
     array_pop,
 )
 from guppylang.std._internal.compiler.prelude import build_unwrap
+from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, make_opaque
 from guppylang.tys.builtin import array_type, bool_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -225,6 +226,13 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     output_list[self.input_circuit.n_qubits :]
                     + output_list[: self.input_circuit.n_qubits]
                 )
+                # Convert hugr sum bools into the opaque bools that Guppy uses.
+                wires = [
+                    outer_func.add_op(make_opaque(), wire)
+                    if outer_func.hugr.port_type(wire.out_port()) == ht.Bool
+                    else wire
+                    for wire in wires
+                ]
 
                 if self.use_arrays:
 
@@ -243,7 +251,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                         array_wires.append(
                             pack(
                                 wires[wire_idx : wire_idx + c_reg.size],
-                                ht.Bool,
+                                OpaqueBool,
                                 c_reg.size,
                             )
                         )

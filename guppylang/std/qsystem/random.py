@@ -8,9 +8,9 @@ from guppylang.std._internal.compiler.qsystem import (
     RandomIntCompiler,
 )
 from guppylang.std._internal.compiler.quantum import (
-    QSYSTEM_RANDOM_EXTENSION,
     RNGCONTEXT_T,
 )
+from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_RANDOM_EXTENSION
 from guppylang.std._internal.util import external_op
 from guppylang.std.builtins import array, mem_swap, owned, panic
 from guppylang.std.option import Option

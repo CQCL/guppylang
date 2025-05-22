@@ -69,6 +69,12 @@ from guppylang.std._internal.compiler.prelude import (
     build_unwrap,
     panic,
 )
+from guppylang.std._internal.compiler.tket2_bool import (
+    OpaqueBool,
+    OpaqueBoolVal,
+    not_op,
+    read_bool,
+)
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     bool_type,
@@ -193,8 +199,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         """Builds a `Conditional`, returning context managers to build the `True` and
         `False` branch.
         """
+        cond_wire = self.visit(cond)
+        cond_ty = self.builder.hugr.port_type(cond_wire.out_port())
+        if cond_ty == OpaqueBool:
+            cond_wire = self.builder.add_op(read_bool(), cond_wire)
         conditional = self.builder.add_conditional(
-            self.visit(cond), *(self.visit(inp) for inp in inputs)
+            cond_wire, *(self.visit(inp) for inp in inputs)
         )
         only_true_inputs_ = only_true_inputs or []
         only_false_inputs_ = only_false_inputs or []
@@ -456,7 +466,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # since it is not implemented via a dunder method
         if isinstance(node.op, ast.Not):
             arg = self.visit(node.operand)
-            return self.builder.add_op(hugr.std.logic.Not, arg)
+            return self.builder.add_op(not_op(), arg)
 
         raise InternalGuppyError("Node should have been removed during type checking.")
 
@@ -495,7 +505,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             op_name = f"result_array_{base_name}"
             size_arg = node.array_len.to_arg().to_hugr()
             extra_args = [size_arg, *extra_args]
-            hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
             # Remove the option wrapping in the array
             unwrap = array_unwrap_elem(self.ctx)
             unwrap = self.builder.load_function(
@@ -505,13 +514,24 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
             value_wire = self.builder.add_op(map_op, value_wire, unwrap)
+            if is_bool_type(node.base_ty):
+                # We need to coerce a read on all the array elements if they are bools.
+                array_read = array_read_bool(self.ctx)
+                array_read = self.builder.load_function(array_read)
+                map_op = array_map(OpaqueBool, size_arg, ht.Bool)
+                value_wire = self.builder.add_op(map_op, value_wire, array_read)
+                base_ty = ht.Bool
             # Turn `value_array` into regular linear `array`
             value_wire = self.builder.add_op(
                 array_convert_to_std_array(base_ty, size_arg), value_wire
             )
+            hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
         else:
+            if is_bool_type(node.base_ty):
+                base_ty = ht.Bool
+                value_wire = self.builder.add_op(read_bool(), value_wire)
             op_name = f"result_{base_name}"
-            hugr_ty = node.base_ty.to_hugr()
+            hugr_ty = base_ty
         op = tket2_result_op(
             op_name=op_name,
             typ=hugr_ty,
@@ -689,7 +709,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
     """
     match v:
         case bool():
-            return hv.bool_value(v)
+            return OpaqueBoolVal(v)
         case str():
             return hugr.std.prelude.StringVal(v)
         case int():
@@ -745,6 +765,8 @@ ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(
 )
 ARRAY_UNWRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__unwrap_elem")
 
+ARRAY_READ_BOOL: Final[GlobalConstId] = GlobalConstId.fresh("array.__read_bool")
+
 
 def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
     """Returns the Hugr function that is used to initialise arrays elements before a
@@ -777,6 +799,19 @@ def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
     if not already_defined:
         msg = "Linear array element has already been used"
         func.set_outputs(build_unwrap(func, func.inputs()[0], msg))
+    return func
+
+
+def array_read_bool(ctx: CompilerContext) -> hf.Function:
+    """Returns the Hugr function that is used to unwrap the elements in an option array
+    to turn it into a regular array."""
+    sig = ht.PolyFuncType(
+        params=[],
+        body=ht.FunctionType([OpaqueBool], [ht.Bool]),
+    )
+    func, already_defined = ctx.declare_global_func(ARRAY_READ_BOOL, sig)
+    if not already_defined:
+        func.set_outputs(func.add_op(read_bool(), func.inputs()[0]))
     return func
 
 
