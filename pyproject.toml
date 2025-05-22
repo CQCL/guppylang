@@ -88,6 +88,7 @@ execute-llvm = { workspace = true }
 #hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "5032dd3e" }
 # tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", rev = "652a7d0" }
 # tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", rev = "0c22d85" }
+tket2 = { path = "../tket2/tket2-py" }
 
 
 [build-system]

@@ -27,8 +27,8 @@ from guppylang.definition.custom import (
     OpCompiler,
     RawCustomFunctionDef,
     WasmCallChecker,
-    WasmCompiler,
-    WasmModuleCompiler,
+    WasmModuleInitCompiler,
+    WasmModuleCallCompiler,
     WasmModuleDiscardCompiler,
 )
 from guppylang.definition.extern import RawExternDef
@@ -623,7 +623,7 @@ class _Guppy:
                 None,
                 FunctionType([], option_type(wasm_module_ty)),
                 DefaultCallChecker(),
-                WasmModuleCompiler(wasm_module),
+                WasmModuleInitCompiler(wasm_module),
                 False,
                 True,
             )  # TODO: Specify a custom WASM compiler
@@ -659,7 +659,7 @@ class _Guppy:
             None,
             f,
             WasmCallChecker(),
-            WasmCompiler(),
+            WasmModuleCallCompiler(f.__name__),
             True,
         )
         guppy_module.register_def(func)

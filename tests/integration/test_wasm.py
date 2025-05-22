@@ -1,9 +1,10 @@
 from guppylang.decorator import guppy
 from guppylang.std.builtins import array
 from guppylang.std.wasm import new_wasm
+from hugr.hugr.render import DotRenderer
 
-def test_wasm(validate):
-    @guppy.wasm_module("../wasm_decoder.wasm", 42)
+def test_wasm_functions(validate):
+    @guppy.wasm_module("", 42)
     class MyWasm:
 
         @guppy.wasm
@@ -11,29 +12,59 @@ def test_wasm(validate):
 
         @guppy.wasm
         def add_two(self: "MyWasm", x: int) -> int: ...
+    @guppy
+    def main() -> int:
+        mod1 = MyWasm().unwrap()
+        #mod2 = MyWasm().unwrap()
+        two = mod1.add_one(1)
+        #four = mod2.add_two(2)
+        mod1.discard()
+        #mod2.discard()
+        return two + two
 
-        #@guppy.wasm
-        #def add_syndrome(self, syndrome: array[bool, 3]) -> None: ...
-        #
-        #@guppy.wasm
-        #def decode(self) -> int: ...
-        #
-        #@guppy
-        #def other_method(self) -> int:
-        #    # Could even allow to define regular Guppy methods??
-        #    self.add_one(1)
-        #    self.add_one(10)
-        #    return self.decode()
+    with open("sus.hugr", 'w') as f:
+        f.write(guppy.compile_module().package.to_str())
+    mod = guppy.compile_module()
+    with open("debug.hugr", 'w') as f:
+        f.write(mod.package.to_str())
+    #print(mod.module.to_model())
+    #rr = DotRenderer().store(mod.module, "test")
+    #print(mod)
+    validate(mod)
+
+def test_wasm_methods(validate):
+    @guppy.wasm_module("", 2)
+    class MyWasm:
+        @guppy.wasm
+        def foo(self: "MyWasm") -> int: ...
+
+        @guppy
+        def bar(self: "MyWasm", x: int) -> int:
+            return x + 1
 
     @guppy
     def main() -> int:
-        decoder1 = MyWasm().unwrap()
-        decoder2 = MyWasm().unwrap()
-        two = decoder1.add_one(1)
-        four = decoder2.add_two(2)
-        decoder1.discard()
-        decoder2.discard()
-        return two + four
+        mod = MyWasm().unwrap()
+        x = mod.foo()
+        #y = mod.bar(x)
+        mod.discard()
+        return x
+
+    mod = guppy.compile_module()
+    validate(mod)
+
+def test_wasm_types(validate):
+    @guppy.wasm_module("", 3)
+    class MyWasm:
+        @guppy.wasm
+        def foo(self: "MyWasm", x: tuple[int, array[float]], y: bool) -> None: ...
+
+    @guppy
+    def main() -> None:
+        mod = MyWasm.unwrap()
+        MyWasm.foo((42, array(1.0)), False)
+        mod.discard()
+        return
 
     mod = guppy.compile_module()
     validate(mod)

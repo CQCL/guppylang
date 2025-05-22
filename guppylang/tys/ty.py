@@ -676,7 +676,7 @@ class WasmModuleType(TypeBase):
         return self
 
     def to_hugr(self) -> ht.Type:
-        ty = wasm().get_type("module")
+        ty = wasm().get_type("context")
         return ty.instantiate([])
 
     # TODO: I don't know what to write here
