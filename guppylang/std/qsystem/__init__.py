@@ -31,7 +31,7 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
 def zz_max(q1: qubit, q2: qubit) -> None:
     """Maximally entangling ZZPhase.
 
-    Equivalent to `zz_phase(q1, q2, pi/2).
+    Equivalent to `zz_phase(q1, q2, pi / 2)`.
     """
     zz_phase(q1, q2, pi / 2)
 
