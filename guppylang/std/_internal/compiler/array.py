@@ -371,20 +371,12 @@ class ArrayGetitemCompiler(ArrayCompiler):
         [array, idx] = args
         [elem_ty_arg, _] = self.type_args
         assert isinstance(elem_ty_arg, TypeArg)
-        if not elem_ty_arg.ty.copyable:
-            func_ty = self._getitem_ty(ht.TypeBound.Any)
-            func, already_exists = self.ctx.declare_global_func(
-                ARRAY_GETITEM_LINEAR, func_ty
-            )
-            if not already_exists:
-                self._build_linear_getitem(func)
-        else:
-            func_ty = self._getitem_ty(ht.TypeBound.Copyable)
-            func, already_exists = self.ctx.declare_global_func(
-                ARRAY_GETITEM_CLASSICAL, func_ty
-            )
-            if not already_exists:
-                self._build_classical_getitem(func)
+        func_ty = self._getitem_ty(ht.TypeBound.Any)
+        func, already_exists = self.ctx.declare_global_func(
+            ARRAY_GETITEM_LINEAR, func_ty
+        )
+        if not already_exists:
+            self._build_linear_getitem(func)
         return self._build_call_getitem(
             func=func,
             array=array,
