@@ -2,7 +2,7 @@ import ast
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, List
 
 import hugr.model
 import hugr.std
@@ -33,7 +33,7 @@ from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import GlobalCall, LocalCall
 from guppylang.span import SourceMap
 from guppylang.tys.arg import ConstArg, TypeArg
-from guppylang.tys.builtin import array_type_def, string_type, string_type_def
+from guppylang.tys.builtin import string_type, is_bool_type, is_array_type, is_string_type
 from guppylang.tys.const import ConstValue
 from guppylang.tys.constarg import ConstStringArg
 from guppylang.tys.subst import Inst, Subst
@@ -376,15 +376,17 @@ class WasmCallChecker(CustomCallChecker):
                     self.is_type_wasmable(inp.ty) and inp.flags != InputFlags.Inout
                     for inp in f.inputs
                 )
-            case OpaqueType(defn=defn) as ty:
-                if defn == string_type_def:
+            case OpaqueType() as ty:
+                if is_string_type(ty):
                     return True
-                elif defn == array_type_def:
+                elif is_array_type(ty):
                     return all(
                         self.is_type_wasmable(arg.ty)
                         for arg in ty.args
                         if isinstance(arg, TypeArg)
                     )
+                elif is_bool_type(ty):
+                    return True
                 else:
                     return False
             case _:
@@ -610,6 +612,7 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         print(f"Inputs {self.ty.input}")
         print(f"Outputs {self.ty.output}")
         # Function type without Inout context arg (for building)
+        assert(isinstance(self.node, GlobalCall))
         assert(self.node.cached_sig is not None)
         wasm_sig = FunctionType([inp for inp in self.node.cached_sig.inputs if inp.flags != InputFlags.Inout], self.node.cached_sig.output).to_hugr()
 
@@ -617,12 +620,15 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         output_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.output])
 
         func_ty = w.get_type("func").instantiate([inputs_row_arg, output_row_arg])
+        print(f"func ty: {func_ty}")
         # Why do we need the nested list in the instantiation?? seems weird
-        future_ty = fu.get_type("Future").instantiate([output_row_arg])
+        future_ty = fu.get_type("Future").instantiate([ht.Tuple(*wasm_sig.output).type_arg()])
+        print(f"future ty: {future_ty}")
 
         # We need to get the WASM module information from the type!
         assert isinstance(self.node, GlobalCall | LocalCall)
-        selfarg = self.node.args[0].place.ty
+        print(f"cached sig: {self.node.cached_sig.inputs}")
+        selfarg = self.node.cached_sig.inputs[0].ty
         assert isinstance(selfarg, WasmModuleType)
 
         # Make a ConstWasmModule so we can lookup WASM functions in it
@@ -634,19 +640,25 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         #pdb.set_trace()
         wasm_func = self.builder.add_op(wasm_opdef, wasm_module)
 
-        # Call the function
         call_op = w.get_op("call").instantiate([inputs_row_arg, output_row_arg], ht.FunctionType([ctx_ty, func_ty, *wasm_sig.input], [ctx_ty, future_ty]))
 
         #import pdb
         #pdb.set_trace()
         #print(call_op._op_def.signature)
 
-        ctx, future = self.builder.add_op(call_op, args[0], wasm_func, wasm_module, *args[1:])
+        # Call the function
+        #call_arg: Wire = self.builder.add_op(ops.MakeTuple(wasm_sig.input), *args[1:])
+        #ctx, future = self.builder.add_op(call_op, args[0], wasm_func, call_arg)
+        ctx, future = self.builder.add_op(call_op, args[0], wasm_func, *args[1:])
 
-        read_opdef = fu.get_op("Read").instantiate([output_row_arg], ht.FunctionType([future_ty], [*wasm_sig.output]))
+        read_opdef = fu.get_op("Read").instantiate([ht.Tuple(*wasm_sig.output).type_arg()], ht.FunctionType([future_ty], [ht.Tuple(*wasm_sig.output)]))
         result = self.builder.add_op(read_opdef, future)
+        ws: List[Wire] = list(result[:])
+        print(f"cached outputs {wasm_sig.output}")
+        node = self.builder.add_op(ops.UnpackTuple(wasm_sig.output), *ws)
+        ws = list(node[:])
 
-        return CallReturnWires(regular_returns=[result], inout_returns=[ctx])
+        return CallReturnWires(regular_returns=ws, inout_returns=[ctx])
 
 @dataclass(frozen=True)
 class ConstWasmModule(val.ExtensionValue):
