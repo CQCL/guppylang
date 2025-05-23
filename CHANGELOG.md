@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/CQCL/guppylang/compare/v0.19.0...v0.19.1) (2025-05-23)
+
+
+### Bug Fixes
+
+* Merge `Bool` and `bool` in builtins ([#977](https://github.com/CQCL/guppylang/issues/977)) ([5fa2e59](https://github.com/CQCL/guppylang/commit/5fa2e59be5929dc34d0ee3c03b2939cdf4b50eab))
+
 ## [0.19.0](https://github.com/CQCL/guppylang/compare/v0.18.2...v0.19.0) (2025-05-22)
 
 
