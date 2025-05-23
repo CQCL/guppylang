@@ -742,7 +742,7 @@ def result(tag: str, value):
     (tag, value).
 
     Args:
-        tag: The tag of the result. Must be a string literal
+        tag: The tag of the result. Must be a string literal.
         value: The value of the result. Currently supported value types are `int`,
         `nat`, `float`, and `bool`.
     """
