@@ -74,6 +74,11 @@ class RNG:
         """Generate a random angle in the range [-pi, pi)."""
         return (2.0 * self._random_float() - 1.0) * pi
 
+    @guppy(qsystem_random)
+    def random_clifford_angle(self: "RNG") -> angle:
+        """Generate a random Clifford angle (multiple of pi/2)."""
+        return self.random_int_bounded(4) * pi / 2
+
     @guppy.hugr_op(
         external_op("DeleteRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION),
         module=qsystem_random,
