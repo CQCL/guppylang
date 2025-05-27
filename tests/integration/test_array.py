@@ -726,7 +726,7 @@ def test_multiple_functions(validate, run_int_fn):
 
 
 # Verifies that the same index in a classical array can be accessed twice.
-def test_multiple_functions(validate, run_int_fn):
+def test_multiple_classical_accesses(validate, run_int_fn):
     module = GuppyModule("test")
 
     @guppy(module)
