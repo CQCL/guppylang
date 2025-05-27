@@ -725,6 +725,21 @@ def test_multiple_functions(validate, run_int_fn):
     run_int_fn(compiled, expected=3)
 
 
+# Verifies that the same index in a classical array can be accessed twice.
+def test_multiple_functions(validate, run_int_fn):
+    module = GuppyModule("test")
+
+    @guppy(module)
+    def main() -> int:
+        xs = array(1, 2)
+        return xs[0] + xs[0]
+
+
+    compiled = module.compile()
+    validate(compiled)
+    run_int_fn(compiled, expected=2)
+
+
 def test_assign_dataflow(validate):
     """Test that dataflow analysis considers subscript assignments as uses and correctly
     wires up the Hugr.
