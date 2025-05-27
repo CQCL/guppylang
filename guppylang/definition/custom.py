@@ -387,10 +387,7 @@ class WasmCallChecker(CustomCallChecker):
                         for arg in ty.args
                         if isinstance(arg, TypeArg)
                     )
-                elif is_bool_type(ty):
-                    return True
-                else:
-                    return False
+                return is_bool_type(ty)
             case _:
                 return False
 
@@ -411,8 +408,6 @@ class WasmCallChecker(CustomCallChecker):
 
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
-        # assert isinstance(self.func.ty.output, TupleType)
-        # self.wasm_sig = ht.FunctionType([inp.ty for inp in self.func.ty.inputs if inp.InputFlags != InputFlags.Inout], [out for out in self.func.ty.output.element_types[0]])
         return GlobalCall(
             def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty
         ), ty
@@ -611,12 +606,7 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         module_ty = w.get_type("module").instantiate([])
         ctx_ty = w.get_type("context").instantiate([])
 
-        # Worries:
-        # - Is it inefficient to lookup every time?
-        # - And to make the ConstWasmModule every time?
         fn_name_arg = ConstStringArg(ConstValue(string_type(), self.fn_name)).to_hugr()
-        print(f"Inputs {self.ty.input}")
-        print(f"Outputs {self.ty.output}")
         # Function type without Inout context arg (for building)
         assert isinstance(self.node, GlobalCall)
         assert self.node.cached_sig is not None
@@ -633,16 +623,12 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         output_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.output])
 
         func_ty = w.get_type("func").instantiate([inputs_row_arg, output_row_arg])
-        print(f"func ty: {func_ty}")
-        # Why do we need the nested list in the instantiation?? seems weird
         future_ty = fu.get_type("Future").instantiate(
             [ht.Tuple(*wasm_sig.output).type_arg()]
         )
-        print(f"future ty: {future_ty}")
 
-        # We need to get the WASM module information from the type!
+        # Get the WASM module information from the type
         assert isinstance(self.node, GlobalCall | LocalCall)
-        print(f"cached sig: {self.node.cached_sig.inputs}")
         selfarg = self.node.cached_sig.inputs[0].ty
         assert isinstance(selfarg, WasmModuleType)
 
@@ -663,13 +649,7 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
             ht.FunctionType([ctx_ty, func_ty, *wasm_sig.input], [ctx_ty, future_ty]),
         )
 
-        # import pdb
-        # pdb.set_trace()
-        # print(call_op._op_def.signature)
-
         # Call the function
-        # call_arg: Wire = self.builder.add_op(ops.MakeTuple(wasm_sig.input), *args[1:])
-        # ctx, future = self.builder.add_op(call_op, args[0], wasm_func, call_arg)
         ctx, future = self.builder.add_op(call_op, args[0], wasm_func, *args[1:])
 
         read_opdef = fu.get_op("Read").instantiate(
@@ -678,7 +658,6 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         )
         result = self.builder.add_op(read_opdef, future)
         ws: list[Wire] = list(result[:])
-        print(f"cached outputs {wasm_sig.output}")
         node = self.builder.add_op(ops.UnpackTuple(wasm_sig.output), *ws)
         ws: list[Wire] = list(node[:])
 
