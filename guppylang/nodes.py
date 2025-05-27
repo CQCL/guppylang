@@ -3,7 +3,7 @@
 import ast
 from collections.abc import Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from guppylang.ast_util import AstNode
 from guppylang.tys.const import Const
@@ -59,7 +59,7 @@ class GlobalCall(ast.expr):
     def_id: "DefId"
     args: list[ast.expr]
     type_args: Inst  # Inferred type arguments
-    cached_sig: Optional[FunctionType]
+    cached_sig: FunctionType | None
 
     _fields = (
         "def_id",
@@ -67,7 +67,6 @@ class GlobalCall(ast.expr):
         "type_args",
         "cached_sig",
     )
-
 
 
 class TensorCall(ast.expr):

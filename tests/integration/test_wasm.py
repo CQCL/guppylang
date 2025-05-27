@@ -52,7 +52,7 @@ def test_wasm_types(validate):
     @guppy.wasm_module("", 3)
     class MyWasm:
         @guppy.wasm
-        def foo(self: "MyWasm", x: tuple[int, array[float, n]], y: bool) -> None: ...
+        def foo(self: "MyWasm", x: tuple[int, Callable[float, int]], y: bool) -> None: ...
 
     @guppy
     def main() -> None:

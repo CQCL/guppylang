@@ -2,15 +2,13 @@ import ast
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar, List
+from typing import TYPE_CHECKING, ClassVar
 
 import hugr.model
 import hugr.std
 from hugr import Wire, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DfBase
-import hugr._serialization.ops as sops
-from hugr.std.prelude import StringVal
 from hugr.std.int import IntVal
 from tket2.extensions import futures, wasm
 
@@ -32,8 +30,13 @@ from guppylang.diagnostic import Error, Help
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import GlobalCall, LocalCall
 from guppylang.span import SourceMap
-from guppylang.tys.arg import ConstArg, TypeArg
-from guppylang.tys.builtin import string_type, is_bool_type, is_array_type, is_string_type
+from guppylang.tys.arg import TypeArg
+from guppylang.tys.builtin import (
+    is_array_type,
+    is_bool_type,
+    is_string_type,
+    string_type,
+)
 from guppylang.tys.const import ConstValue
 from guppylang.tys.constarg import ConstStringArg
 from guppylang.tys.subst import Inst, Subst
@@ -47,7 +50,6 @@ from guppylang.tys.ty import (
     TupleType,
     Type,
     WasmModuleType,
-    row_to_type,
     type_to_row,
 )
 
@@ -399,7 +401,9 @@ class WasmCallChecker(CustomCallChecker):
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
 
-        return GlobalCall(def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty), subst
+        return GlobalCall(
+            def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty
+        ), subst
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         if not self.type_sanitised:
@@ -407,9 +411,11 @@ class WasmCallChecker(CustomCallChecker):
 
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
-        #assert isinstance(self.func.ty.output, TupleType)
-        #self.wasm_sig = ht.FunctionType([inp.ty for inp in self.func.ty.inputs if inp.InputFlags != InputFlags.Inout], [out for out in self.func.ty.output.element_types[0]])
-        return GlobalCall(def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty), ty
+        # assert isinstance(self.func.ty.output, TupleType)
+        # self.wasm_sig = ht.FunctionType([inp.ty for inp in self.func.ty.inputs if inp.InputFlags != InputFlags.Inout], [out for out in self.func.ty.output.element_types[0]])
+        return GlobalCall(
+            def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty
+        ), ty
 
 
 class CustomInoutCallCompiler(ABC):
@@ -584,6 +590,7 @@ class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
         self.builder.add_op(op, ctx)
         return CallReturnWires(regular_returns=[], inout_returns=[])
 
+
 # Compiler for WASM calls
 # When a wasm method s called in guppy, we turn it into 2 tket2 ops:
 # - the lookup: wasmmodule -> wasmfunc
@@ -595,7 +602,6 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         self.fn_name = name
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
-
         # The arguments should be:
         # - a WASM context
         # - any args meant for the WASM function
@@ -612,9 +618,16 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         print(f"Inputs {self.ty.input}")
         print(f"Outputs {self.ty.output}")
         # Function type without Inout context arg (for building)
-        assert(isinstance(self.node, GlobalCall))
-        assert(self.node.cached_sig is not None)
-        wasm_sig = FunctionType([inp for inp in self.node.cached_sig.inputs if inp.flags != InputFlags.Inout], self.node.cached_sig.output).to_hugr()
+        assert isinstance(self.node, GlobalCall)
+        assert self.node.cached_sig is not None
+        wasm_sig = FunctionType(
+            [
+                inp
+                for inp in self.node.cached_sig.inputs
+                if inp.flags != InputFlags.Inout
+            ],
+            self.node.cached_sig.output,
+        ).to_hugr()
 
         inputs_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.input])
         output_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.output])
@@ -622,7 +635,9 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         func_ty = w.get_type("func").instantiate([inputs_row_arg, output_row_arg])
         print(f"func ty: {func_ty}")
         # Why do we need the nested list in the instantiation?? seems weird
-        future_ty = fu.get_type("Future").instantiate([ht.Tuple(*wasm_sig.output).type_arg()])
+        future_ty = fu.get_type("Future").instantiate(
+            [ht.Tuple(*wasm_sig.output).type_arg()]
+        )
         print(f"future ty: {future_ty}")
 
         # We need to get the WASM module information from the type!
@@ -636,29 +651,39 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         wasm_module = self.builder.load(const_module)
 
         # Lookup the function we want
-        wasm_opdef = w.get_op("lookup").instantiate([fn_name_arg, inputs_row_arg, output_row_arg], ht.FunctionType([module_ty], [func_ty]))
-        #pdb.set_trace()
+        wasm_opdef = w.get_op("lookup").instantiate(
+            [fn_name_arg, inputs_row_arg, output_row_arg],
+            ht.FunctionType([module_ty], [func_ty]),
+        )
+        # pdb.set_trace()
         wasm_func = self.builder.add_op(wasm_opdef, wasm_module)
 
-        call_op = w.get_op("call").instantiate([inputs_row_arg, output_row_arg], ht.FunctionType([ctx_ty, func_ty, *wasm_sig.input], [ctx_ty, future_ty]))
+        call_op = w.get_op("call").instantiate(
+            [inputs_row_arg, output_row_arg],
+            ht.FunctionType([ctx_ty, func_ty, *wasm_sig.input], [ctx_ty, future_ty]),
+        )
 
-        #import pdb
-        #pdb.set_trace()
-        #print(call_op._op_def.signature)
+        # import pdb
+        # pdb.set_trace()
+        # print(call_op._op_def.signature)
 
         # Call the function
-        #call_arg: Wire = self.builder.add_op(ops.MakeTuple(wasm_sig.input), *args[1:])
-        #ctx, future = self.builder.add_op(call_op, args[0], wasm_func, call_arg)
+        # call_arg: Wire = self.builder.add_op(ops.MakeTuple(wasm_sig.input), *args[1:])
+        # ctx, future = self.builder.add_op(call_op, args[0], wasm_func, call_arg)
         ctx, future = self.builder.add_op(call_op, args[0], wasm_func, *args[1:])
 
-        read_opdef = fu.get_op("Read").instantiate([ht.Tuple(*wasm_sig.output).type_arg()], ht.FunctionType([future_ty], [ht.Tuple(*wasm_sig.output)]))
+        read_opdef = fu.get_op("Read").instantiate(
+            [ht.Tuple(*wasm_sig.output).type_arg()],
+            ht.FunctionType([future_ty], [ht.Tuple(*wasm_sig.output)]),
+        )
         result = self.builder.add_op(read_opdef, future)
-        ws: List[Wire] = list(result[:])
+        ws: list[Wire] = list(result[:])
         print(f"cached outputs {wasm_sig.output}")
         node = self.builder.add_op(ops.UnpackTuple(wasm_sig.output), *ws)
-        ws = list(node[:])
+        ws: list[Wire] = list(node[:])
 
         return CallReturnWires(regular_returns=ws, inout_returns=[ctx])
+
 
 @dataclass(frozen=True)
 class ConstWasmModule(val.ExtensionValue):
@@ -666,16 +691,13 @@ class ConstWasmModule(val.ExtensionValue):
 
     defn: WasmModule
 
-
     def to_value(self) -> val.Extension:
         w = wasm()
         ty = w.get_type("module").instantiate([])
 
         name = "tket2.wasm.ConstWasmModule"
-        payload = { "name": self.defn.wasm_file, "hash": self.defn.wasm_hash }
-        return val.Extension(
-            name, typ=ty, val=payload, extensions=['tket2.wasm']
-        )
+        payload = {"name": self.defn.wasm_file, "hash": self.defn.wasm_hash}
+        return val.Extension(name, typ=ty, val=payload, extensions=["tket2.wasm"])
 
     def __str__(self) -> str:
         return str(self.defn)

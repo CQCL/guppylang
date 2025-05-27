@@ -27,9 +27,9 @@ from guppylang.definition.custom import (
     OpCompiler,
     RawCustomFunctionDef,
     WasmCallChecker,
-    WasmModuleInitCompiler,
     WasmModuleCallCompiler,
     WasmModuleDiscardCompiler,
+    WasmModuleInitCompiler,
 )
 from guppylang.definition.extern import RawExternDef
 from guppylang.definition.function import (
