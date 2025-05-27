@@ -5,7 +5,7 @@ from collections.abc import Callable, Iterator, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, ClassVar, NamedTuple, TypeAlias
+from typing import Any, ClassVar, NamedTuple, TypeAlias, TypeVar
 
 from hugr import Wire
 
@@ -16,14 +16,13 @@ from guppylang.checker.errors.type_errors import (
     UnaryOperatorNotDefinedError,
 )
 from guppylang.definition.common import DefId, Definition
-from guppylang.definition.function import RawFunctionDef
-from guppylang.definition.pytket_circuits import RawLoadPytketDef, RawPytketDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import (
     CallableDef,
     CompiledCallableDef,
     CompiledValueDef,
 )
+from guppylang.engine import DEF_STORE, ENGINE
 from guppylang.error import GuppyComptimeError, GuppyError, GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.tracing.state import get_tracing_state, tracing_active
@@ -512,27 +511,17 @@ class GuppyDefinition(DunderMixin):
                 "only be called in a Guppy context"
             )
 
-        # Check that the functions is loaded in the current module
         state = get_tracing_state()
-        globals = state.globals
-        if self.wrapped.id not in globals.defs:
-            assert self.wrapped.id.module is not None
-            err = (
-                f"{self.wrapped.description.capitalize()} `{self.wrapped.name}` is not "
-                f"available in this module, consider importing it from "
-                f"`{self.wrapped.id.module.name}`"
-            )
-            raise GuppyComptimeError(err)
-
-        defn = state.ctx.build_compiled_def(self.wrapped.id)
+        defn = ENGINE.get_checked(self.wrapped.id)
+        defn = state.ctx.build_compiled_def(defn.id)
         if isinstance(defn, CompiledCallableDef):
             return trace_call(defn, *args)
         elif (
             isinstance(defn, TypeDef)
-            and defn.id in globals.impls
-            and "__new__" in globals.impls[defn.id]
+            and defn.id in DEF_STORE.impls
+            and "__new__" in DEF_STORE.impls[defn.id]
         ):
-            constructor = globals.defs[globals.impls[defn.id]["__new__"]]
+            constructor = DEF_STORE.raw_defs[DEF_STORE.impls[defn.id]["__new__"]]
             return GuppyDefinition(constructor)(*args)
         err = f"{defn.description.capitalize()} `{defn.name}` is not callable"
         raise GuppyComptimeError(err)
@@ -566,17 +555,28 @@ class GuppyDefinition(DunderMixin):
             wire = defn.load(state.dfg, state.ctx, state.node)
             return GuppyObject(defn.ty, wire, None)
         elif isinstance(defn, TypeDef):
-            globals = state.globals
-            if defn.id in globals.impls and "__new__" in globals.impls[defn.id]:
-                constructor = globals.defs[globals.impls[defn.id]["__new__"]]
+            if defn.id in DEF_STORE.impls and "__new__" in DEF_STORE.impls[defn.id]:
+                constructor = DEF_STORE.raw_defs[DEF_STORE.impls[defn.id]["__new__"]]
                 return GuppyDefinition(constructor).to_guppy_object()
         err = f"{defn.description.capitalize()} `{defn.name}` is not a value"
         raise GuppyComptimeError(err)
 
     def compile(self) -> Any:
-        from guppylang.decorator import guppy
+        from guppylang.engine import ENGINE
 
-        assert isinstance(
-            self.wrapped, RawFunctionDef | RawLoadPytketDef | RawPytketDef
-        )
-        return guppy.compile_function(self.wrapped)
+        return ENGINE.compile(self.id)
+
+
+class TypeVarGuppyDefinition(  # type: ignore[misc, call-arg]
+    GuppyDefinition,
+    TypeVar,
+    # TypeVar inherits from `typing._Final` so we need to pretend to be the root
+    # definition in order to subclass it
+    _root=True,
+):
+    """A `GuppyDefinition` subclass that is also a subclass of `TypeVar`.
+
+    This is the object returned by `guppy.type_var`. The `TypeVar` inheritance is needed
+    since `typing.Generic[T]` has a runtime check that enforces that the passed `T` is
+    actually a `TypeVar`.
+    """

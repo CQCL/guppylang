@@ -2,8 +2,9 @@ import ast
 import copy
 import itertools
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass, field, replace
-from functools import cached_property
+from dataclasses import dataclass, replace
+from functools import cache, cached_property
+from types import FrameType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -11,28 +12,29 @@ from typing import (
     NamedTuple,
     TypeAlias,
     TypeVar,
+    cast,
+    overload,
 )
 
 from typing_extensions import assert_never
 
 from guppylang.ast_util import AstNode, name_nodes_in_ast
 from guppylang.cfg.bb import VId
-from guppylang.definition.common import DefId, Definition
+from guppylang.definition.common import (
+    DefId,
+    Definition,
+    ParsedDef,
+)
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef
+from guppylang.engine import BUILTIN_DEFS, DEF_STORE, ENGINE
+from guppylang.error import InternalGuppyError
 from guppylang.tys.builtin import (
-    array_type_def,
-    bool_type_def,
     callable_type_def,
     float_type_def,
-    frozenarray_type_def,
     int_type_def,
-    list_type_def,
     nat_type_def,
     none_type_def,
-    option_type_def,
-    sized_iter_type_def,
-    string_type_def,
     tuple_type_def,
 )
 from guppylang.tys.param import Parameter
@@ -244,44 +246,49 @@ def contains_subscript(place: Place) -> SubscriptAccess | None:
     return None
 
 
-PyScope = dict[str, Any]
-
-
 @dataclass(frozen=True)
-class Globals:
-    """Collection of definitions that are available on module-level.
+class PythonObject:
+    """Wrapper around an arbitrary Python object.
 
-    Stores a mapping from global ids to their definition together with a mapping of
-    user names to definition id and instance implementation id.
+    Used to distinguish between Guppy definitions and other values when looking up
+    object from the enclosing Python scope by name.
     """
 
-    defs: dict[DefId, Definition]
+    obj: Any
 
-    names: dict[str, DefId]
-    impls: dict[DefId, dict[str, DefId]]
-    python_scope: PyScope = field(repr=False)
+
+class Globals:
+    """Wrapper around a `DefinitionStore` that allows looking-up of definitions by
+    name based on which objects are in scope in a stack frame.
+
+    Additionally, keeps track of which definitions in the store have been used.
+    """
+
+    f_locals: dict[str, Any]
+    f_globals: dict[str, Any]
+    f_builtins: dict[str, Any]
+
+    def __init__(self, frame: FrameType | None) -> None:
+        if frame is not None:
+            self.f_locals = frame.f_locals
+            self.f_globals = frame.f_globals
+            self.f_builtins = frame.f_builtins
+        else:
+            self.f_locals = {}
+            self.f_globals = {}
+            self.f_builtins = {}
 
     @staticmethod
-    def default() -> "Globals":
-        """Generates a `Globals` instance that is populated with all core types"""
-        builtins: list[Definition] = [
-            callable_type_def,
-            tuple_type_def,
-            none_type_def,
-            bool_type_def,
-            nat_type_def,
-            int_type_def,
-            float_type_def,
-            string_type_def,
-            list_type_def,
-            array_type_def,
-            frozenarray_type_def,
-            sized_iter_type_def,
-            option_type_def,
-        ]
-        defs = {defn.id: defn for defn in builtins}
-        names = {defn.name: defn.id for defn in builtins}
-        return Globals(defs, names, {}, {})
+    @cache
+    def builtin_defs() -> dict[str, Definition]:
+        import guppylang.std.builtins
+        from guppylang.tracing.object import GuppyDefinition
+
+        return BUILTIN_DEFS | {
+            name: val.wrapped
+            for name, val in guppylang.std.builtins.__dict__.items()
+            if isinstance(val, GuppyDefinition)
+        }
 
     def get_instance_func(self, ty: Type | TypeDef, name: str) -> CallableDef | None:
         """Looks up an instance function with a given name for a type.
@@ -317,45 +324,67 @@ class Globals:
             case _:
                 return assert_never(ty)
 
-        if type_defn.id in self.impls and name in self.impls[type_defn.id]:
-            def_id = self.impls[type_defn.id][name]
-            defn = self.defs[def_id]
+        type_defn = cast(TypeDef, ENGINE.get_checked(type_defn.id))
+        if type_defn.id in DEF_STORE.impls and name in DEF_STORE.impls[type_defn.id]:
+            def_id = DEF_STORE.impls[type_defn.id][name]
+            defn = ENGINE.get_parsed(def_id)
             if isinstance(defn, CallableDef):
                 return defn
         return None
 
-    def with_python_scope(self, python_scope: PyScope) -> "Globals":
-        return Globals(
-            self.defs, self.names, self.impls, self.python_scope | python_scope
-        )
-
-    def __or__(self, other: "Globals") -> "Globals":
-        impls = {
-            def_id: self.impls.get(def_id, {}) | other.impls.get(def_id, {})
-            for def_id in self.impls.keys() | other.impls.keys()
-        }
-        return Globals(
-            {**self.defs, **other.defs},  # Can't use `|` since it's a Mapping
-            self.names | other.names,
-            impls,
-            self.python_scope | other.python_scope,
-        )
-
     def __contains__(self, item: DefId | str) -> bool:
         match item:
             case DefId() as def_id:
-                return def_id in self.defs
-            case str(name):
-                return name in self.names
+                return def_id in DEF_STORE.raw_defs
+            case str(x):
+                return (
+                    x in self.builtin_defs()
+                    or x in self.f_locals
+                    or x in self.f_globals
+                )
             case x:
                 return assert_never(x)
 
-    def __getitem__(self, item: DefId | str) -> Definition:
+    @overload
+    def __getitem__(self, item: DefId) -> ParsedDef: ...
+
+    @overload
+    def __getitem__(self, item: str) -> "ParsedDef | PythonObject": ...
+
+    def __getitem__(self, item: DefId | str) -> "ParsedDef | PythonObject":
+        from guppylang.tracing.object import GuppyDefinition
+
         match item:
             case DefId() as def_id:
-                return self.defs[def_id]
+                return ENGINE.get_parsed(def_id)
             case str(name):
-                return self.defs[self.names[name]]
+                if name in self.f_locals:
+                    val = self.f_locals[name]
+                    if isinstance(val, GuppyDefinition):
+                        return ENGINE.get_parsed(val.id)
+                    # Before falling back to returning the Python object, check if we
+                    # have defined the name as a builtin
+                    elif name in self.builtin_defs():
+                        defn = self.builtin_defs()[name]
+                        return ENGINE.get_parsed(defn.id)
+                    else:
+                        return PythonObject(val)
+                elif name in self.f_globals:
+                    val = self.f_globals[name]
+                    if isinstance(val, GuppyDefinition):
+                        return ENGINE.get_parsed(val.id)
+                    # Before falling back to returning the Python object, check if we
+                    # have defined the name as a builtin
+                    elif name in self.builtin_defs():
+                        defn = self.builtin_defs()[name]
+                        return ENGINE.get_parsed(defn.id)
+                    else:
+                        return PythonObject(val)
+                elif name in self.builtin_defs():
+                    defn = self.builtin_defs()[name]
+                    return ENGINE.get_parsed(defn.id)
+                else:
+                    raise InternalGuppyError(f"Cannot find definition `{name}`")
             case x:
                 return assert_never(x)
 
@@ -423,7 +452,7 @@ class Context(NamedTuple):
     generic_params: dict[str, Parameter]
 
 
-class DummyEvalDict(PyScope):
+class DummyEvalDict(dict[str, Any]):
     """A custom dict that can be passed to `eval` to give better error messages.
     This class is used to implement the `py(...)` expression. If the user tries to
     access a Guppy variable in the Python context, we give an informative error message.
@@ -440,7 +469,7 @@ class DummyEvalDict(PyScope):
         node: ast.Name | None
 
     def __init__(self, ctx: Context, node: ast.expr):
-        super().__init__(**ctx.globals.python_scope)
+        super().__init__(**(ctx.globals.f_globals | ctx.globals.f_locals))
         self.ctx = ctx
         self.node = node
 
