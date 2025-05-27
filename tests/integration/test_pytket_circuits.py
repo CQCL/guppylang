@@ -5,7 +5,6 @@ from importlib.util import find_spec
 import pytest
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std import quantum
 from guppylang.std.quantum import qubit, discard_array
 from guppylang.std.builtins import array
@@ -20,17 +19,14 @@ def test_single_qubit_circuit(validate):
     circ = Circuit(1)
     circ.H(0)
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    @guppy.pytket(circ, module)
+    @guppy.pytket(circ)
     def guppy_circ(q1: qubit) -> None: ...
 
-    @guppy(module)
+    @guppy
     def foo(q: qubit) -> None:
         guppy_circ(q)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -41,17 +37,14 @@ def test_multi_qubit_circuit(validate):
     circ.H(0)
     circ.CX(0, 1)
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    @guppy.pytket(circ, module)
+    @guppy.pytket(circ)
     def guppy_circ(q1: qubit, q2: qubit) -> None: ...
 
-    @guppy(module)
+    @guppy
     def foo(q1: qubit, q2: qubit) -> None:
         guppy_circ(q1, q2)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -62,17 +55,14 @@ def test_measure(validate):
     circ.H(0)
     circ.measure_all()
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    @guppy.pytket(circ, module)
+    @guppy.pytket(circ)
     def guppy_circ(q: qubit) -> bool: ...
 
-    @guppy(module)
+    @guppy
     def foo(q: qubit) -> bool:
         return guppy_circ(q)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -83,17 +73,14 @@ def test_measure_multiple(validate):
     circ.H(0)
     circ.measure_all()
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    @guppy.pytket(circ, module)
+    @guppy.pytket(circ)
     def guppy_circ(q1: qubit, q2: qubit) -> tuple[bool, bool]: ...
 
-    @guppy(module)
+    @guppy
     def foo(q1: qubit, q2: qubit) -> tuple[bool, bool]:
         return guppy_circ(q1, q2)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -105,17 +92,14 @@ def test_measure_not_last(validate):
     circ.measure_all()
     circ.X(0)
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    @guppy.pytket(circ, module)
+    @guppy.pytket(circ)
     def guppy_circ(q: qubit) -> bool: ...
 
-    @guppy(module)
+    @guppy
     def foo(q: qubit) -> bool:
         return guppy_circ(q)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -125,16 +109,13 @@ def test_load_circuit(validate):
     circ = Circuit(1)
     circ.H(0)
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
+    guppy_circ = guppy.load_pytket("guppy_circ", circ, use_arrays=False)
 
-    guppy.load_pytket("guppy_circ", circ, module, use_arrays=False)
-
-    @guppy(module)
+    @guppy
     def foo(q: qubit) -> None:
         guppy_circ(q)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -148,18 +129,15 @@ def test_load_circuits(validate):
     circ2.CX(0, 1)
     circ2.measure_all()
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
+    guppy_circ1 = guppy.load_pytket("guppy_circ1", circ1, use_arrays=False)
+    guppy_circ2 = guppy.load_pytket("guppy_circ2", circ2, use_arrays=False)
 
-    guppy.load_pytket("guppy_circ1", circ1, module, use_arrays=False)
-    guppy.load_pytket("guppy_circ2", circ2, module, use_arrays=False)
-
-    @guppy(module)
+    @guppy
     def foo(q1: qubit, q2: qubit, q3: qubit) -> tuple[bool, bool]:
         guppy_circ1(q1)
         return  guppy_circ2(q2, q3)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -170,16 +148,13 @@ def test_measure_some(validate):
     circ.CX(0, 1)
     circ.Measure(0, 0)
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
+    guppy_circ = guppy.load_pytket("guppy_circ", circ, use_arrays=False)
 
-    guppy.load_pytket("guppy_circ", circ, module, use_arrays=False)
-
-    @guppy(module)
+    @guppy
     def foo(q1: qubit, q2: qubit) -> bool:
         return  guppy_circ(q1, q2)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -188,17 +163,13 @@ def test_register_arrays_default(validate):
 
     circ = Circuit(2)
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
+    guppy_circ = guppy.load_pytket("guppy_circ", circ)
 
-    guppy.load_pytket("guppy_circ", circ, module)
-
-    @guppy(module)
+    @guppy
     def foo(default_reg: array[qubit, 2]) -> None:
         return guppy_circ(default_reg)
 
-    # print(module.compile_hugr().render_dot())
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -209,19 +180,16 @@ def test_register_arrays(validate):
     reg = circ.add_q_register("extra_reg", 3)
     circ.measure_register(reg, "extra_bits")
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
+    guppy_circ = guppy.load_pytket("guppy_circ", circ)
 
-    guppy.load_pytket("guppy_circ", circ, module)
-
-    @guppy(module)
+    @guppy
     def foo(default_reg: array[qubit, 2], 
             extra_reg: array[qubit, 3]) -> array[bool, 3]:
         # Note that the default_reg name is 'q' so it has to come after 'e...' 
         # lexicographically.
         return guppy_circ(extra_reg, default_reg)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -234,12 +202,9 @@ def test_register_arrays_multiple_measure(validate):
     circ.measure_register(reg1, "extra_bits1")
     circ.measure_register(reg2, "extra_bits2")
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
+    guppy_circ = guppy.load_pytket("guppy_circ", circ)
 
-    guppy.load_pytket("guppy_circ", circ, module)
-
-    @guppy(module)
+    @guppy
     def foo(default_reg: array[qubit, 2], 
             extra_reg1: array[qubit, 3]) -> tuple[array[bool, 3], array[bool, 2]]:
         extra_reg2 = array(qubit(), qubit())
@@ -249,7 +214,7 @@ def test_register_arrays_multiple_measure(validate):
         discard_array(extra_reg2) 
         return result
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -261,17 +226,14 @@ def test_register_arrays_mixed(validate):
     circ.measure_register(reg, "c2")
     circ.Measure(0, 0)
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
+    guppy_circ = guppy.load_pytket("guppy_circ", circ)
 
-    guppy.load_pytket("guppy_circ", circ, module)
-
-    @guppy(module)
+    @guppy
     def foo(q: array[qubit, 2], 
             q2: array[qubit, 3]) -> tuple[array[bool, 1], array[bool, 3]]:
         return guppy_circ(q, q2)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 @pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
@@ -281,10 +243,7 @@ def test_compile_sig(validate):
     circ = Circuit(1)
     circ.H(0)
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    @guppy.pytket(circ, module)
+    @guppy.pytket(circ)
     def guppy_circ(q1: qubit) -> None: ...
 
     validate(guppy_circ.compile())
@@ -297,9 +256,6 @@ def test_compile_load(validate):
     circ = Circuit(1)
     circ.H(0)
 
-    module = GuppyModule("test")
-    module.load_all(quantum)
-
-    pytket_func = guppy.load_pytket("guppy_circ", circ, module, use_arrays=False)
+    pytket_func = guppy.load_pytket("guppy_circ", circ, use_arrays=False)
 
     validate(pytket_func.compile())
