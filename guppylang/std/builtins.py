@@ -67,8 +67,6 @@ from guppylang.tys.builtin import (
     string_type_def,
 )
 
-guppy.init_module(import_builtins=False)
-
 T = guppy.type_var("T")
 L = guppy.type_var("L", copyable=False, droppable=False)
 
@@ -626,6 +624,11 @@ class array(builtins.list[_T], Generic[_T, _n]):
     @guppy.custom(NewArrayCompiler(), NewArrayChecker(), higher_order_value=False)
     def __new__(): ...
 
+    # `__new__` will be overwritten below to provide actual runtime behaviour for
+    # comptime. We still need to hold on to a reference to the Guppy function so
+    # `@guppy.extend_type` can find it
+    __new_guppy__ = __new__
+
     @guppy
     @no_type_check
     def __iter__(self: array[L, n] @ owned) -> SizedIter[ArrayIter[L, n], n]:
@@ -634,7 +637,7 @@ class array(builtins.list[_T], Generic[_T, _n]):
     @guppy.custom(CopyInoutCompiler(), ArrayCopyChecker())
     def copy(self: array[T, n]) -> array[T, n]: ...
 
-    def __new__(cls, *args: _T) -> builtins.list[_T]:  # type: ignore[no-redef]  # noqa: F811
+    def __new__(cls, *args: _T) -> builtins.list[_T]:  # type: ignore[no-redef]
         # Runtime array constructor that is used for comptime. We return an actual list
         # in line with the comptime unpacking logic that turns arrays into lists.
         return [*args]
