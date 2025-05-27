@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.19.1](https://github.com/CQCL/guppylang/compare/v0.19.0...v0.19.1) (2025-05-27)
+
+
+### Features
+
+* Add methods for generating random angles ([#979](https://github.com/CQCL/guppylang/issues/979)) ([129bc5d](https://github.com/CQCL/guppylang/commit/129bc5d50556141f5e48960e2e570464f58ef485))
+
+
+### Bug Fixes
+
+* Merge `Bool` and `bool` in builtins ([#977](https://github.com/CQCL/guppylang/issues/977)) ([5fa2e59](https://github.com/CQCL/guppylang/commit/5fa2e59be5929dc34d0ee3c03b2939cdf4b50eab))
+* Swap back copyable elements in `array.__getitem__` ([#982](https://github.com/CQCL/guppylang/issues/982)) ([a2b0255](https://github.com/CQCL/guppylang/commit/a2b02555336c35b1ad9f5e5115472cd2755dd02b)), closes [#980](https://github.com/CQCL/guppylang/issues/980)
+
 ## [0.19.0](https://github.com/CQCL/guppylang/compare/v0.18.2...v0.19.0) (2025-05-22)
 
 
