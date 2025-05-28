@@ -12,7 +12,11 @@ import hugr.std.int
 from typing_extensions import deprecated
 
 from guppylang.decorator import guppy
-from guppylang.definition.custom import CopyInoutCompiler, NoopCompiler
+from guppylang.definition.custom import (
+    BoolOpCompiler,
+    CopyInoutCompiler,
+    NoopCompiler,
+)
 from guppylang.std._internal.checker import (
     ArrayCopyChecker,
     BarrierChecker,
@@ -45,10 +49,10 @@ from guppylang.std._internal.compiler.prelude import (
     UnwrapOpCompiler,
 )
 from guppylang.std._internal.util import (
+    bool_logic_op,
     external_op,
     float_op,
     int_op,
-    logic_op,
     unsupported_op,
 )
 from guppylang.tys.builtin import (
@@ -105,13 +109,13 @@ class bool:
     ``False`` using the standard truth testing procedure.
     """
 
-    @guppy.hugr_op(logic_op("And"))
+    @guppy.hugr_op(bool_logic_op("and"))
     def __and__(self: bool, other: bool) -> bool: ...
 
     @guppy.custom(NoopCompiler())
     def __bool__(self: bool) -> bool: ...
 
-    @guppy.hugr_op(logic_op("Eq"))
+    @guppy.hugr_op(bool_logic_op("eq"))
     def __eq__(self: bool, other: bool) -> bool: ...
 
     @guppy
@@ -135,10 +139,10 @@ class bool:
     @guppy.custom(checker=DunderChecker("__bool__"), higher_order_value=False)
     def __new__(x): ...
 
-    @guppy.hugr_op(logic_op("Or"))
+    @guppy.hugr_op(bool_logic_op("or"))
     def __or__(self: bool, other: bool) -> bool: ...
 
-    @guppy.hugr_op(logic_op("Xor"))
+    @guppy.hugr_op(bool_logic_op("xor"))
     def __xor__(self: bool, other: bool) -> bool: ...
 
 
@@ -174,7 +178,7 @@ class nat:
     @guppy.hugr_op(int_op("idivmod_u", n_vars=2))
     def __divmod__(self: nat, other: nat) -> tuple[nat, nat]: ...
 
-    @guppy.hugr_op(int_op("ieq"))
+    @guppy.custom(BoolOpCompiler(int_op("ieq")))
     def __eq__(self: nat, other: nat) -> bool: ...
 
     @guppy.hugr_op(int_op("convert_u", hugr.std.int.CONVERSIONS_EXTENSION))
@@ -186,10 +190,10 @@ class nat:
     @guppy.hugr_op(int_op("idiv_u"))
     def __floordiv__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("ige_u"))
+    @guppy.custom(BoolOpCompiler(int_op("ige_u")))
     def __ge__(self: nat, other: nat) -> bool: ...
 
-    @guppy.hugr_op(int_op("igt_u"))
+    @guppy.custom(BoolOpCompiler(int_op("igt_u")))
     def __gt__(self: nat, other: nat) -> bool: ...
 
     # TODO: Use "iu_to_s" once we have lowering:
@@ -200,13 +204,13 @@ class nat:
     @guppy.hugr_op(int_op("inot"))
     def __invert__(self: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("ile_u"))
+    @guppy.custom(BoolOpCompiler(int_op("ile_u")))
     def __le__(self: nat, other: nat) -> bool: ...
 
     @guppy.hugr_op(int_op("ishl"))
     def __lshift__(self: nat, other: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("ilt_u"))
+    @guppy.custom(BoolOpCompiler(int_op("ilt_u")))
     def __lt__(self: nat, other: nat) -> bool: ...
 
     @guppy.hugr_op(int_op("imod_u", n_vars=2))
@@ -218,7 +222,7 @@ class nat:
     @guppy.custom(NoopCompiler())
     def __nat__(self: nat) -> nat: ...
 
-    @guppy.hugr_op(int_op("ine"))
+    @guppy.custom(BoolOpCompiler(int_op("ine")))
     def __ne__(self: nat, other: nat) -> bool: ...
 
     @guppy.custom(checker=DunderChecker("__nat__"), higher_order_value=False)
@@ -317,7 +321,7 @@ class int:
     @guppy.hugr_op(int_op("idivmod_s"))
     def __divmod__(self: int, other: int) -> tuple[int, int]: ...
 
-    @guppy.hugr_op(int_op("ieq"))
+    @guppy.custom(BoolOpCompiler(int_op("ieq")))
     def __eq__(self: int, other: int) -> bool: ...
 
     @guppy.hugr_op(int_op("convert_s", hugr.std.int.CONVERSIONS_EXTENSION))
@@ -329,10 +333,10 @@ class int:
     @guppy.hugr_op(int_op("idiv_s"))
     def __floordiv__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("ige_s"))
+    @guppy.custom(BoolOpCompiler(int_op("ige_s")))
     def __ge__(self: int, other: int) -> bool: ...
 
-    @guppy.hugr_op(int_op("igt_s"))
+    @guppy.custom(BoolOpCompiler(int_op("igt_s")))
     def __gt__(self: int, other: int) -> bool: ...
 
     @guppy.custom(NoopCompiler())
@@ -341,13 +345,13 @@ class int:
     @guppy.hugr_op(int_op("inot"))
     def __invert__(self: int) -> int: ...
 
-    @guppy.hugr_op(int_op("ile_s"))
+    @guppy.custom(BoolOpCompiler(int_op("ile_s")))
     def __le__(self: int, other: int) -> bool: ...
 
     @guppy.hugr_op(int_op("ishl"))  # TODO: RHS is unsigned
     def __lshift__(self: int, other: int) -> int: ...
 
-    @guppy.hugr_op(int_op("ilt_s"))
+    @guppy.custom(BoolOpCompiler(int_op("ilt_s")))
     def __lt__(self: int, other: int) -> bool: ...
 
     @guppy.hugr_op(int_op("imod_s"))
@@ -359,7 +363,7 @@ class int:
     @guppy.hugr_op(int_op("is_to_u"))  # TODO
     def __nat__(self: int) -> nat: ...
 
-    @guppy.hugr_op(int_op("ine"))
+    @guppy.custom(BoolOpCompiler(int_op("ine")))
     def __ne__(self: int, other: int) -> bool: ...
 
     @guppy.hugr_op(int_op("ineg"))
@@ -470,7 +474,7 @@ class float:
     def __divmod__(self: float, other: float) -> tuple[float, float]:
         return self // other, self.__mod__(other)
 
-    @guppy.hugr_op(float_op("feq"))
+    @guppy.custom(BoolOpCompiler(float_op("feq")))
     def __eq__(self: float, other: float) -> bool: ...
 
     @guppy.custom(NoopCompiler())
@@ -484,10 +488,10 @@ class float:
     def __floordiv__(self: float, other: float) -> float:
         return (self / other).__floor__()
 
-    @guppy.hugr_op(float_op("fge"))
+    @guppy.custom(BoolOpCompiler(float_op("fge")))
     def __ge__(self: float, other: float) -> bool: ...
 
-    @guppy.hugr_op(float_op("fgt"))
+    @guppy.custom(BoolOpCompiler(float_op("fgt")))
     def __gt__(self: float, other: float) -> bool: ...
 
     @guppy.custom(
@@ -498,10 +502,10 @@ class float:
     )
     def __int__(self: float) -> int: ...
 
-    @guppy.hugr_op(float_op("fle"))
+    @guppy.custom(BoolOpCompiler(float_op("fle")))
     def __le__(self: float, other: float) -> bool: ...
 
-    @guppy.hugr_op(float_op("flt"))
+    @guppy.custom(BoolOpCompiler(float_op("flt")))
     def __lt__(self: float, other: float) -> bool: ...
 
     @guppy
@@ -520,7 +524,7 @@ class float:
     )
     def __nat__(self: float) -> nat: ...
 
-    @guppy.hugr_op(float_op("fne"))
+    @guppy.custom(BoolOpCompiler(float_op("fne")))
     def __ne__(self: float, other: float) -> bool: ...
 
     @guppy.hugr_op(float_op("fneg"))

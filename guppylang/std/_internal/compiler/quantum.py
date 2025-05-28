@@ -8,56 +8,26 @@ from hugr import Wire, ops
 from hugr import ext as he
 from hugr import tys as ht
 from hugr.std.float import FLOAT_T
-from tket2_exts import (
-    futures,
-    qsystem,
-    qsystem_random,
-    qsystem_utils,
-    quantum,
-    result,
-    rotation,
-    wasm,
-)
 
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
+from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, make_opaque
+from guppylang.std._internal.compiler.tket2_exts import (
+    QSYSTEM_RANDOM_EXTENSION,
+    QUANTUM_EXTENSION,
+    ROTATION_EXTENSION,
+)
 
 # ----------------------------------------------
 # --------- tket2.* extensions -----------------
 # ----------------------------------------------
 
-FUTURES_EXTENSION = futures()
-QSYSTEM_EXTENSION = qsystem()
-QSYSTEM_RANDOM_EXTENSION = qsystem_random()
-QSYSTEM_UTILS_EXTENSION = qsystem_utils()
-QUANTUM_EXTENSION = quantum()
-RESULT_EXTENSION = result()
-ROTATION_EXTENSION = rotation()
-WASM_EXTENSION = wasm()
 
 RNGCONTEXT_T_DEF = QSYSTEM_RANDOM_EXTENSION.get_type("context")
 RNGCONTEXT_T = ht.ExtType(RNGCONTEXT_T_DEF)
 
 ROTATION_T_DEF = ROTATION_EXTENSION.get_type("rotation")
 ROTATION_T = ht.ExtType(ROTATION_T_DEF)
-
-WASMCONTEXT_T_DEF = WASM_EXTENSION.get_type("context")
-WASMCONTEXT_T = ht.ExtType(WASMCONTEXT_T_DEF)
-WASMMODULE_T_DEF = WASM_EXTENSION.get_type("module")
-WASMMODULE_T = ht.ExtType(WASMMODULE_T_DEF)
-WASMFUNC_T_DEF = WASM_EXTENSION.get_type("func")
-WASMFUNC_T = ht.ExtType(WASMFUNC_T_DEF)
-
-TKET2_EXTENSIONS = [
-    FUTURES_EXTENSION,
-    QSYSTEM_EXTENSION,
-    QSYSTEM_RANDOM_EXTENSION,
-    QSYSTEM_UTILS_EXTENSION,
-    QUANTUM_EXTENSION,
-    RESULT_EXTENSION,
-    ROTATION_EXTENSION,
-    WASM_EXTENSION,
-]
 
 
 def from_halfturns_unchecked() -> ops.ExtOp:
@@ -74,7 +44,7 @@ def from_halfturns_unchecked() -> ops.ExtOp:
 
 class InoutMeasureCompiler(CustomInoutCallCompiler):
     """Compiler for the measure functions with an inout qubit
-    such as the `project_z` function."""
+    such as the `project_z` function - requiring conversion to tket.bool."""
 
     opname: str
     ext: he.Extension
@@ -90,6 +60,31 @@ class InoutMeasureCompiler(CustomInoutCallCompiler):
         [q, bit] = self.builder.add_op(
             quantum_op(self.opname, ext=self.ext)(
                 ht.FunctionType([ht.Qubit], [ht.Qubit, ht.Bool]), []
+            ),
+            q,
+        )
+        bit = self.builder.add_op(make_opaque(), bit)
+        return CallReturnWires(regular_returns=[bit], inout_returns=[q])
+
+
+class InoutMeasureResetCompiler(CustomInoutCallCompiler):
+    """Compiler for the measure functions with an inout qubit
+    such as the `project_z` function."""
+
+    opname: str
+    ext: he.Extension
+
+    def __init__(self, opname: str | None = None, ext: he.Extension | None = None):
+        self.opname = opname or "Measure"
+        self.ext = ext or QUANTUM_EXTENSION
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        from guppylang.std._internal.util import quantum_op
+
+        [q] = args
+        [q, bit] = self.builder.add_op(
+            quantum_op(self.opname, ext=self.ext)(
+                ht.FunctionType([ht.Qubit], [ht.Qubit, OpaqueBool]), []
             ),
             q,
         )

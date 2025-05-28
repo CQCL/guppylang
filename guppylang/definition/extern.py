@@ -53,7 +53,6 @@ class ExternDef(RawExternDef, ValueDef, CompilableDef):
             name="ConstExternalSymbol",
             typ=self.ty.to_hugr(),
             val=custom_const,
-            extensions=["prelude"],
         )
         const_node = graph.add_const(value)
         return CompiledExternDef(

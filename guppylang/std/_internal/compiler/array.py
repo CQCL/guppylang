@@ -306,16 +306,28 @@ class ArrayGetitemCompiler(ArrayCompiler):
 
         # See https://github.com/CQCL/guppylang/issues/629
         elem_opt_ty = ht.Option(elem_ty)
+        none = func.add_op(ops.Tag(0, elem_opt_ty))
         idx = func.add_op(convert_itousize(), func.inputs()[1])
-        result, arr = func.add_op(
-            array_get(elem_opt_ty, length),
+        # As copyable elements can be used multiple times, we need to swap the element
+        # back after initially swapping it out for `None` to get the value.
+        initial_result = func.add_op(
+            array_set(elem_opt_ty, length),
             func.inputs()[0],
             idx,
+            none,
         )
-        elem_opt = build_unwrap(func, result, "Array index out of bounds")
+        elem_opt, arr = build_unwrap_right(
+            func, initial_result, "Array index out of bounds"
+        )
+        swapped_back = func.add_op(
+            array_set(elem_opt_ty, length),
+            arr,
+            idx,
+            elem_opt,
+        )
+        _, arr = build_unwrap_right(func, swapped_back, "Array index out of bounds")
         elem = build_unwrap(func, elem_opt, "array.__getitem__: Internal error")
 
-        # Return input array unmodified for consistency with linear implementation.
         func.set_outputs(elem, arr)
 
     def _build_linear_getitem(self, func: hf.Function) -> None:

@@ -16,6 +16,7 @@ from typing_extensions import dataclass_transform
 import guppylang
 from guppylang.ast_util import annotate_location
 from guppylang.checker.core import Globals
+from guppylang.compiler.core import GlobalConstId
 from guppylang.definition.common import DefId
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
@@ -625,8 +626,9 @@ class _Guppy:
                 DefaultCallChecker(),
                 WasmModuleInitCompiler(wasm_module),
                 False,
+                GlobalConstId.fresh(f"{cls.__name__}.__new__"),
                 True,
-            )  # TODO: Specify a custom WASM compiler
+            )
             discard = CustomFunctionDef(
                 DefId.fresh(guppy_module),
                 "discard",
@@ -635,6 +637,7 @@ class _Guppy:
                 DefaultCallChecker(),
                 WasmModuleDiscardCompiler(),
                 False,
+                GlobalConstId.fresh(f"{cls.__name__}.__discard__"),
                 True,
             )
 
