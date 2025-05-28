@@ -330,7 +330,6 @@ def check_not_recursive(
     #  get rid of this after resolving the todo in `ParsedStructDef.check_instantiate()`
 
     def dummy_check_instantiate(
-        self: ParsedStructDef,
         args: Sequence[Argument],
         loc: AstNode | None = None,
     ) -> Type:

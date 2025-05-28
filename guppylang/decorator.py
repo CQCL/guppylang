@@ -74,9 +74,6 @@ class ModuleIdentifier:
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
-    def __init__(self) -> None:
-        self._sources = SourceMap()
-
     def __call__(self, f: F) -> F:
         defn = RawFunctionDef(DefId.fresh(), f.__name__, None, f)
         DEF_STORE.register_def(defn, get_calling_frame())
@@ -237,7 +234,7 @@ class _Guppy:
     def constant(self, name: str, ty: str, value: hv.Value) -> T:  # type: ignore[type-var]  # Since we're returning a free type variable
         """Adds a constant to a module, backed by a `hugr.val.Value`."""
         type_ast = _parse_expr_string(
-            ty, f"Not a valid Guppy type: `{ty}`", self._sources
+            ty, f"Not a valid Guppy type: `{ty}`", DEF_STORE.sources
         )
         defn = RawConstDef(DefId.fresh(), name, None, type_ast, value)
         DEF_STORE.register_def(defn, get_calling_frame())
@@ -254,7 +251,7 @@ class _Guppy:
     ) -> T:  # type: ignore[type-var]  # Since we're returning a free type variable
         """Adds an extern symbol to a module."""
         type_ast = _parse_expr_string(
-            ty, f"Not a valid Guppy type: `{ty}`", self._sources
+            ty, f"Not a valid Guppy type: `{ty}`", DEF_STORE.sources
         )
         defn = RawExternDef(
             DefId.fresh(), name, None, symbol or name, constant, type_ast
@@ -263,6 +260,14 @@ class _Guppy:
         # We're pretending to return a free type variable, but in fact we return
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
+
+    def check(self, obj: Any) -> None:
+        """Compiles a Guppy definition to Hugr."""
+        from guppylang.engine import ENGINE
+
+        if not isinstance(obj, GuppyDefinition):
+            raise TypeError(f"Object is not a Guppy definition: {obj}")
+        return ENGINE.check(obj.id)
 
     def compile(self, obj: Any) -> ModulePointer:
         """Compiles a Guppy definition to Hugr."""
@@ -328,7 +333,7 @@ class _Guppy:
         except ImportError:
             raise TypeError(err_msg) from None
 
-        span = _find_load_call(self._sources)
+        span = _find_load_call(DEF_STORE.sources)
         defn = RawLoadPytketDef(
             DefId.fresh(), name, None, span, input_circuit, use_arrays
         )
@@ -340,8 +345,6 @@ class _GuppyDummy:
     """A dummy class with the same interface as `@guppy` that is used during sphinx
     builds to mock the decorator.
     """
-
-    _sources = SourceMap()
 
     def __call__(self, arg: Any) -> Any:
         return arg

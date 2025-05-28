@@ -354,6 +354,7 @@ def _signature_from_circuit(
         if isinstance(input_circuit, pytket.circuit.Circuit):
             try:
                 import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
+
                 from guppylang.std.quantum import qubit
 
                 assert isinstance(qubit, GuppyDefinition)
