@@ -33,7 +33,7 @@ class WasmModuleCompiler(CustomInoutCallCompiler):
         op = w.get_op("get_context").instantiate([])
         val = IntVal(self.defn.ctx_id, NumericType.INT_WIDTH)
         k = self.builder.add_const(val)
-        # hugr-py doesn't yet export a method to load a usize directly?
+        # hugr-py doesn't have a method to load a usize directly, so convert an int
         ctx_id_nat = self.builder.load(k)
         convert_op = ops.ExtOp(
             hugr.std.int.CONVERSIONS_EXTENSION.get_op("itousize"),

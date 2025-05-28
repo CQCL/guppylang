@@ -1,7 +1,5 @@
 from guppylang.decorator import guppy
-from guppylang.std.builtins import array
-from guppylang.std.wasm import new_wasm
-from hugr.hugr.render import DotRenderer
+from guppylang.std.builtins import nat
 
 def test_wasm_functions(validate):
     @guppy.wasm_module("", 42)
@@ -52,13 +50,12 @@ def test_wasm_types(validate):
     @guppy.wasm_module("", 3)
     class MyWasm:
         @guppy.wasm
-        def foo(self: "MyWasm", x: tuple[int, Callable[float, int]], y: bool) -> None: ...
+        def foo(self: "MyWasm", x: tuple[int, tuple[nat, float]], y: bool) -> None: ...
 
     @guppy
     def main() -> None:
         mod = MyWasm().unwrap()
-        arr: array[float, 1] = array(1.0)
-        MyWasm.foo((42, arr), False)
+        mod.foo((0, (1, 2.0)), False)
         mod.discard()
         return
 

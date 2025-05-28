@@ -217,7 +217,6 @@ class GuppyModule:
             if self.contains(defn.name):
                 self.unregister(self._globals[defn.name])
             if isinstance(defn, TypeDef | ParamDef):
-                # Why not adding to globals?
                 self._raw_type_defs[defn.id] = defn
                 if isinstance(defn, WasmModule):
                     self._globals.names[defn.name] = defn.id
@@ -262,20 +261,6 @@ class GuppyModule:
         self._instance_func_buffer = None
         for defn in buffer.values():
             self.register_def(defn, instance)
-
-    # def register_wasm_module(self, mod: WasmModule) -> None:
-    #    # Make a new def id for the module
-    #    assert self._instance_func_buffer is None
-    #
-    #    assert self._register_buffered_instance_funcs(mod.
-    #
-    #    # Check it?
-    #
-    #    # then call self._register_buffered_instance_funcs
-    #
-    #    assert self._instance_func_buffer is None
-    #
-    #    pass
 
     def unregister(self, defn: GuppyDefinition | Definition) -> None:
         """Removes a definition from this module.

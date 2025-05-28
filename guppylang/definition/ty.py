@@ -69,10 +69,3 @@ class WasmModule(TypeDef, CompiledDef):
     ) -> WasmModuleType:
         assert args == []
         return WasmModuleType(self)
-
-
-# def wasm_context() -> OpaqueTypeDef:
-#    def to_hugr(_args: Sequence[Argument]) -> tys.Type:
-#        return wasm().get_type("context").instantiate([])
-#
-#    return OpaqueTypeDef(id, name, defined_at, [], True, True, to_hugr)

@@ -606,7 +606,7 @@ class OpaqueType(ParametrizedTypeBase):
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
-        return self  # TODO: Update Type alias to include this
+        return self
 
     def to_hugr(self) -> ht.Type:
         """Computes the Hugr representation of the type."""

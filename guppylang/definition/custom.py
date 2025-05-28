@@ -652,11 +652,7 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         assert isinstance(self.node, GlobalCall)
         assert self.node.cached_sig is not None
         wasm_sig = FunctionType(
-            [
-                inp
-                for inp in self.node.cached_sig.inputs
-                if inp.flags != InputFlags.Inout
-            ],
+            self.node.cached_sig.inputs[1:],
             self.node.cached_sig.output,
         ).to_hugr()
 
@@ -682,15 +678,14 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
             [fn_name_arg, inputs_row_arg, output_row_arg],
             ht.FunctionType([module_ty], [func_ty]),
         )
-        # pdb.set_trace()
         wasm_func = self.builder.add_op(wasm_opdef, wasm_module)
 
+        # Call the function
         call_op = w.get_op("call").instantiate(
             [inputs_row_arg, output_row_arg],
             ht.FunctionType([ctx_ty, func_ty, *wasm_sig.input], [ctx_ty, future_ty]),
         )
 
-        # Call the function
         ctx, future = self.builder.add_op(call_op, args[0], wasm_func, *args[1:])
 
         read_opdef = fu.get_op("Read").instantiate(
