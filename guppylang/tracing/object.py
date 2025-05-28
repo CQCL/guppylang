@@ -567,16 +567,13 @@ class GuppyDefinition(DunderMixin):
         return ENGINE.compile(self.id)
 
 
-class TypeVarGuppyDefinition(  # type: ignore[misc, call-arg]
-    GuppyDefinition,
-    TypeVar,
-    # TypeVar inherits from `typing._Final` so we need to pretend to be the root
-    # definition in order to subclass it
-    _root=True,
-):
-    """A `GuppyDefinition` subclass that is also a subclass of `TypeVar`.
+class TypeVarGuppyDefinition(GuppyDefinition):
+    """A `GuppyDefinition` subclass that answers 'yes' to an instance check on
+    `typing.TypeVar`.
 
-    This is the object returned by `guppy.type_var`. The `TypeVar` inheritance is needed
-    since `typing.Generic[T]` has a runtime check that enforces that the passed `T` is
+    This is the object returned by `guppy.type_var`. The `TypeVar` hack is needed since
+    `typing.Generic[T]` has a runtime check that enforces that the passed `T` is
     actually a `TypeVar`.
     """
+
+    __class__ = TypeVar  # type: ignore[assignment]

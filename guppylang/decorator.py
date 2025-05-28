@@ -161,17 +161,17 @@ class _Guppy:
         """Creates a new type variable in a module."""
         defn = TypeVarDef(DefId.fresh(), name, None, copyable, droppable)
         DEF_STORE.register_def(defn, get_calling_frame())
-        # Return an actual Python `TypeVar` so it can be used as an actual type in code
-        # that is executed by interpreter before handing it to Guppy.
-        return TypeVarGuppyDefinition(defn)
+        # We're pretending to return a `typing.TypeVar`, but in fact we return a special
+        # `GuppyDefinition` that pretends to be a TypeVar at runtime
+        return TypeVarGuppyDefinition(defn)  # type: ignore[return-value]
 
     def nat_var(self, name: str) -> TypeVar:
         """Creates a new const nat variable in a module."""
         defn = ConstVarDef(DefId.fresh(), name, None, NumericType(NumericType.Kind.Nat))
         DEF_STORE.register_def(defn, get_calling_frame())
-        # Return an actual Python `TypeVar` so it can be used as an actual type in code
-        # that is executed by interpreter before handing it to Guppy.
-        return TypeVarGuppyDefinition(defn)
+        # We're pretending to return a `typing.TypeVar`, but in fact we return a special
+        # `GuppyDefinition` that pretends to be a TypeVar at runtime
+        return TypeVarGuppyDefinition(defn)  # type: ignore[return-value]
 
     def custom(
         self,
