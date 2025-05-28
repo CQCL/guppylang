@@ -842,8 +842,7 @@ def barrier(*args) -> None:
 # TODO: This is a temporary solution until https://github.com/CQCL/guppylang/issues/732
 #  is properly addressed.
 from guppylang.std.option import Option, nothing, some  # noqa: E402
-
-from guppylang.std.unsupported import *  # noqa: E402
+from guppylang.std.unsupported import *  # noqa: E402, F403
 
 
 # These should work equally well for signed integers if the need should arise
