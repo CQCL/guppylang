@@ -1,8 +1,8 @@
-Error: Signature mismatch (at $FILE:15:0)
+Error: Signature mismatch (at $FILE:11:0)
    | 
-13 | 
-14 | @guppy.pytket(circ, module)
-15 | def guppy_circ(q: qubit) -> None: ...
+ 9 | 
+10 | @guppy.pytket(circ)
+11 | def guppy_circ(q: qubit) -> None: ...
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Signature `guppy_circ` doesn't match provided circuit
 
 Note: Expected circuit signature is `(qubit, qubit) -> None`

@@ -1,11 +1,11 @@
-Error: Different types (at $FILE:14:11)
+Error: Different types (at $FILE:12:11)
    | 
-12 |     if b:
-13 |         x = 4
-14 |     return x
+10 |     if b:
+11 |         x = 4
+12 |     return x
    |            ^ Variable `x` may refer to different types
    | 
-13 |         x = 4
+11 |         x = 4
    |         - This is of type `int`
 
 Note: Variable `x` may be shadowing a global function definition of type `() ->

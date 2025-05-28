@@ -1,9 +1,9 @@
-Error: Invalid Result (at $FILE:14:18)
-   | 
-12 | @guppy(module)
-13 | def foo(q: qubit) -> None:
-14 |     result("foo", q)
-   |                   ^ Expression of type `qubit` is not a valid result.
+Error: Invalid Result (at $FILE:8:18)
+  | 
+6 | @guppy
+7 | def foo(q: qubit) -> None:
+8 |     result("foo", q)
+  |                   ^ Expression of type `qubit` is not a valid result.
 
 Note: Only numeric values or arrays thereof are allowed as results
 
