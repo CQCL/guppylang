@@ -567,6 +567,7 @@ class GuppyDefinition(DunderMixin):
         return ENGINE.compile(self.id)
 
 
+@dataclass(frozen=True)
 class TypeVarGuppyDefinition(GuppyDefinition):
     """A `GuppyDefinition` subclass that answers 'yes' to an instance check on
     `typing.TypeVar`.
@@ -576,4 +577,12 @@ class TypeVarGuppyDefinition(GuppyDefinition):
     actually a `TypeVar`.
     """
 
-    __class__ = TypeVar  # type: ignore[assignment]
+    __class__: ClassVar[type] = TypeVar
+
+    _ty_var: TypeVar
+
+    def __getattr__(self, name: str) -> Any:
+        # Pretend to be a `TypeVar` by providing all of its attributes
+        if hasattr(self._ty_var, name):
+            return getattr(self._ty_var, name)
+        return object.__getattribute__(self, name)
