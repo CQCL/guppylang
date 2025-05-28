@@ -1,3 +1,4 @@
+# mypy: disable-error-code="empty-body, no-untyped-def"
 """Python builtins that are not supported yet"""
 
 from pathlib import Path
