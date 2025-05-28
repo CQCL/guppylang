@@ -1,6 +1,13 @@
-# Python builtins that are not supported yet:
-from guppylang.decorator import guppy
+"""Python builtins that are not supported yet"""
+
+from pathlib import Path
+from guppylang.decorator import guppy, ModuleIdentifier
 from guppylang.std._internal.checker import UnsupportedChecker
+from guppylang.std import builtins
+
+builtins_module = guppy.get_module(
+    ModuleIdentifier(Path(builtins.__file__), "builtins", builtins)
+)
 
 
 @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
