@@ -1,5 +1,5 @@
 # Python builtins that are not supported yet:
-from guppylang import guppy
+from guppylang.decorator import guppy
 from guppylang.std._internal.checker import UnsupportedChecker
 
 
