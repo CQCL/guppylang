@@ -53,6 +53,12 @@ BUILTIN_DEFS = {defn.name: defn for defn in BUILTIN_DEFS_LIST}
 
 
 class DefinitionStore:
+    """Storage class holding references to all Guppy definitions created in the current
+     interpreter session.
+
+     See `DEF_STORE` for the singleton instance of this class.
+     """
+
     raw_defs: dict[DefId, RawDef]
     impls: defaultdict[DefId, dict[str, DefId]]
     frames: dict[DefId, FrameType]
@@ -82,6 +88,14 @@ DEF_STORE: DefinitionStore = DefinitionStore()
 
 
 class CompilationEngine:
+    """Main compiler driver handling checking and compiling of definitions.
+
+    The engine maintains a worklist of definitions that still need to be checked and
+    makes sure that all dependencies are compiled.
+
+    See `ENGINE` for the singleton instance of this class.
+    """
+
     parsed: dict[DefId, ParsedDef]
     checked: dict[DefId, CheckedDef]
     compiled: dict[DefId, CompiledDef]
