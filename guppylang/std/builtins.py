@@ -843,6 +843,8 @@ def barrier(*args) -> None:
 #  is properly addressed.
 from guppylang.std.option import Option, nothing, some  # noqa: E402
 
+from guppylang.std.unsupported import *  # noqa: E402
+
 
 # These should work equally well for signed integers if the need should arise
 @guppy.hugr_op(
