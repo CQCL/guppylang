@@ -29,7 +29,7 @@ from guppylang.definition.module import ModuleDef
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.pytket_circuits import RawPytketDef
 from guppylang.definition.struct import CheckedStructDef
-from guppylang.definition.ty import TypeDef
+from guppylang.definition.ty import TypeDef, WasmModule
 from guppylang.error import pretty_errors
 from guppylang.experimental import enable_experimental_features
 from guppylang.tracing.object import GuppyDefinition
@@ -82,6 +82,9 @@ class GuppyModule:
     # Storage for source code that has been read by the compiler
     _sources: SourceMap
 
+    # Live WASM contexts
+    _next_wasm_context: int
+
     def __init__(self, name: str, import_builtins: bool = True):
         self.name = name
         self._globals = Globals({}, {}, {}, {})
@@ -93,6 +96,7 @@ class GuppyModule:
         self._raw_defs = {}
         self._raw_type_defs = {}
         self._checked_defs = {}
+        self._next_wasm_context = 0
 
         from guppylang.decorator import guppy
 
@@ -214,6 +218,8 @@ class GuppyModule:
                 self.unregister(self._globals[defn.name])
             if isinstance(defn, TypeDef | ParamDef):
                 self._raw_type_defs[defn.id] = defn
+                if isinstance(defn, WasmModule):
+                    self._globals.names[defn.name] = defn.id
             else:
                 self._raw_defs[defn.id] = defn
             if instance is not None:
@@ -272,6 +278,11 @@ class GuppyModule:
         if impls := self._globals.impls.pop(defn.id, None):
             for impl in impls.values():
                 self.unregister(self._globals[impl])
+
+    def _get_next_wasm_context(self) -> int:
+        n = self._next_wasm_context
+        self._next_wasm_context += 1
+        return n
 
     @property
     def checked(self) -> bool:

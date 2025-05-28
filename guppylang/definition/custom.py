@@ -4,33 +4,57 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
 
-from hugr import Wire, ops
+import hugr.model
+import hugr.std
+from hugr import Wire, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DfBase
+from hugr.std.int import IntVal
+from tket2.extensions import futures, wasm
 
 from guppylang.ast_util import AstNode, get_type, has_empty_body, with_loc, with_type
 from guppylang.checker.core import Context, Globals
+from guppylang.checker.errors.type_errors import WasmTypeConversionError
+from guppylang.checker.errors.wasm import (
+    FirstArgNotModule,
+    NonFunctionWasmType,
+    UnWasmableType,
+)
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompilerContext, DFContainer, GlobalConstId
 from guppylang.definition.common import ParsableDef
+from guppylang.definition.ty import WasmModule
 from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.diagnostic import Error, Help
-from guppylang.error import GuppyError, InternalGuppyError
-from guppylang.nodes import GlobalCall
+from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
+from guppylang.nodes import GlobalCall, LocalCall
 from guppylang.span import SourceMap
 from guppylang.std._internal.compiler.tket2_bool import (
     OpaqueBool,
     make_opaque,
     read_bool,
 )
+from guppylang.tys.arg import TypeArg
+from guppylang.tys.builtin import (
+    is_array_type,
+    is_bool_type,
+    is_string_type,
+    string_type,
+)
+from guppylang.tys.const import ConstValue
+from guppylang.tys.constarg import ConstStringArg
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     FuncInput,
     FunctionType,
     InputFlags,
     NoneType,
+    NumericType,
+    OpaqueType,
+    TupleType,
     Type,
+    WasmModuleType,
     type_to_row,
 )
 
@@ -197,7 +221,7 @@ class CustomFunctionDef(CompiledCallableDef):
         has_signature: Whether the function has a declared signature.
     """
 
-    defined_at: AstNode
+    defined_at: AstNode | None
     ty: FunctionType
     call_checker: "CustomCallChecker"
     call_compiler: "CustomInoutCallCompiler"
@@ -316,6 +340,76 @@ class CustomCallChecker(ABC):
 
         Also returns a (possibly) transformed and annotated argument list.
         """
+
+
+class WasmCallChecker(CustomCallChecker):
+    type_sanitised: bool = False
+
+    def sanitise_type(self) -> None:
+        if isinstance(self.func.ty, FunctionType):
+            match self.func.ty.inputs[0]:
+                case FuncInput(ty=ty, flags=InputFlags.Inout) if isinstance(
+                    ty, WasmModuleType
+                ):
+                    pass
+                case FuncInput(ty=ty):
+                    raise GuppyError(FirstArgNotModule(self.node, ty))
+            for inp in self.func.ty.inputs[1:]:
+                assert isinstance(inp, FuncInput)
+                if not self.is_type_wasmable(inp.ty):
+                    raise GuppyError(UnWasmableType(self.node, inp.ty))
+            if not self.is_type_wasmable(self.func.ty.output):
+                raise GuppyError(UnWasmableType(self.node, self.func.ty.output))
+        else:
+            raise GuppyError(NonFunctionWasmType(self.node, self.func.ty))
+        self.type_sanitised = True
+
+    def is_type_wasmable(self, ty: Type) -> bool:
+        match ty:
+            case NumericType():
+                return True
+            case NoneType():
+                return True
+            case TupleType(element_types=tys):
+                return all(self.is_type_wasmable(ty) for ty in tys)
+            case FunctionType() as f:
+                return self.is_type_wasmable(f.output) and all(
+                    self.is_type_wasmable(inp.ty) and inp.flags != InputFlags.Inout
+                    for inp in f.inputs
+                )
+            case OpaqueType() as ty:
+                if is_string_type(ty):
+                    return True
+                elif is_array_type(ty):
+                    return all(
+                        self.is_type_wasmable(arg.ty)
+                        for arg in ty.args
+                        if isinstance(arg, TypeArg)
+                    )
+                return is_bool_type(ty)
+            case _:
+                return False
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        if not self.is_type_wasmable(ty):
+            raise GuppyTypeError(WasmTypeConversionError(self.node, ty))
+
+        # Use default implementation from the expression checker
+        args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
+
+        return GlobalCall(
+            def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty
+        ), subst
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        if not self.type_sanitised:
+            self.sanitise_type()
+
+        # Use default implementation from the expression checker
+        args, ty, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
+        return GlobalCall(
+            def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty
+        ), ty
 
 
 class CustomInoutCallCompiler(ABC):
@@ -485,3 +579,146 @@ class CopyInoutCompiler(CustomInoutCallCompiler):
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         return CallReturnWires(regular_returns=args, inout_returns=args)
+
+
+class WasmCompiler(CustomInoutCallCompiler):
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        outs = 1
+        ctx = 0
+        return CallReturnWires(regular_returns=args[outs:], inout_returns=[args[ctx]])
+
+
+# Compiler for initialising WASM modules
+class WasmModuleInitCompiler(CustomInoutCallCompiler):
+    defn: WasmModule
+
+    def __init__(self, defn: WasmModule) -> None:
+        self.defn = defn
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        # Make a ConstWasmModule as a CustomConst
+        assert args == []
+        w = wasm()
+        op = w.get_op("get_context").instantiate([])
+        val = IntVal(self.defn.ctx_id, NumericType.INT_WIDTH)
+        k = self.builder.add_const(val)
+        # hugr-py doesn't yet export a method to load a usize directly?
+        ctx_id_nat = self.builder.load(k)
+        convert_op = ops.ExtOp(
+            hugr.std.int.CONVERSIONS_EXTENSION.get_op("itousize"),
+            ht.FunctionType([hugr.std.int.int_t(NumericType.INT_WIDTH)], [ht.USize()]),
+        )
+        ctx_id_usize = self.builder.add_op(convert_op, ctx_id_nat)
+
+        node = self.builder.add_op(op, ctx_id_usize)
+        ws: list[Wire] = list(node[:])
+        assert len(ws) == 1
+        return CallReturnWires(regular_returns=ws, inout_returns=[])
+
+
+# Compiler for initialising WASM modules
+class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        assert len(args) == 1
+        ctx = args[0]
+        w = wasm()
+        op = w.get_op("dispose_context").instantiate([])
+        self.builder.add_op(op, ctx)
+        return CallReturnWires(regular_returns=[], inout_returns=[])
+
+
+# Compiler for WASM calls
+# When a wasm method s called in guppy, we turn it into 2 tket2 ops:
+# - the lookup: wasmmodule -> wasmfunc
+# - the call: wasmcontext * wasmfunc * inputs -> wasmcontext * output
+class WasmModuleCallCompiler(CustomInoutCallCompiler):
+    fn_name: str
+
+    def __init__(self, name: str) -> None:
+        self.fn_name = name
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        # The arguments should be:
+        # - a WASM context
+        # - any args meant for the WASM function
+        assert len(args) >= 1
+        w = wasm()
+        fu = futures()
+        module_ty = w.get_type("module").instantiate([])
+        ctx_ty = w.get_type("context").instantiate([])
+
+        fn_name_arg = ConstStringArg(ConstValue(string_type(), self.fn_name)).to_hugr()
+        # Function type without Inout context arg (for building)
+        assert isinstance(self.node, GlobalCall)
+        assert self.node.cached_sig is not None
+        wasm_sig = FunctionType(
+            self.node.cached_sig.inputs[1:],
+            self.node.cached_sig.output,
+        ).to_hugr()
+
+        inputs_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.input])
+        output_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.output])
+
+        func_ty = w.get_type("func").instantiate([inputs_row_arg, output_row_arg])
+        future_ty = fu.get_type("Future").instantiate(
+            [ht.Tuple(*wasm_sig.output).type_arg()]
+        )
+
+        # Get the WASM module information from the type
+        assert isinstance(self.node, GlobalCall | LocalCall)
+        selfarg = self.node.cached_sig.inputs[0].ty
+        assert isinstance(selfarg, WasmModuleType)
+
+        # Make a ConstWasmModule so we can lookup WASM functions in it
+        const_module = self.builder.add_const(ConstWasmModule(selfarg.defn))
+        wasm_module = self.builder.load(const_module)
+
+        # Lookup the function we want
+        wasm_opdef = w.get_op("lookup").instantiate(
+            [fn_name_arg, inputs_row_arg, output_row_arg],
+            ht.FunctionType([module_ty], [func_ty]),
+        )
+        wasm_func = self.builder.add_op(wasm_opdef, wasm_module)
+
+        # Call the function
+        call_op = w.get_op("call").instantiate(
+            [inputs_row_arg, output_row_arg],
+            ht.FunctionType([ctx_ty, func_ty, *wasm_sig.input], [ctx_ty, future_ty]),
+        )
+
+        ctx, future = self.builder.add_op(call_op, args[0], wasm_func, *args[1:])
+
+        read_opdef = fu.get_op("Read").instantiate(
+            [ht.Tuple(*wasm_sig.output).type_arg()],
+            ht.FunctionType([future_ty], [ht.Tuple(*wasm_sig.output)]),
+        )
+        result = self.builder.add_op(read_opdef, future)
+        ws: list[Wire] = list(result[:])
+        node = self.builder.add_op(ops.UnpackTuple(wasm_sig.output), *ws)
+        ws: list[Wire] = list(node[:])
+
+        return CallReturnWires(regular_returns=ws, inout_returns=[ctx])
+
+
+@dataclass(frozen=True)
+class ConstWasmModule(val.ExtensionValue):
+    """Python wrapper for the tket2 ConstWasmModule type"""
+
+    defn: WasmModule
+
+    def to_value(self) -> val.Extension:
+        w = wasm()
+        ty = w.get_type("module").instantiate([])
+
+        name = "tket2.wasm.ConstWasmModule"
+        payload = {"name": self.defn.wasm_file, "hash": self.defn.wasm_hash}
+        return val.Extension(name, typ=ty, val=payload, extensions=["tket2.wasm"])
+
+    def __str__(self) -> str:
+        return str(self.defn)
+
+    def to_model(self) -> hugr.model.Term:
+        file_tm = hugr.model.Literal(self.defn.wasm_file)
+        hash_tm = hugr.model.Literal(self.defn.wasm_hash)
+
+        return hugr.model.Apply("tket2.wasm.ConstWasmModule", [file_tm, hash_tm])

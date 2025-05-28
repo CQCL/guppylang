@@ -117,4 +117,4 @@ exclude_also = [
 
 
 [tool.pytest.ini_options]
-addopts = "--benchmark-skip" # bencharks run explicitly with `just bench`
+addopts = "--benchmark-skip" # benchmarks run explicitly with `just bench`
