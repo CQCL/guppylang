@@ -54,10 +54,10 @@ BUILTIN_DEFS = {defn.name: defn for defn in BUILTIN_DEFS_LIST}
 
 class DefinitionStore:
     """Storage class holding references to all Guppy definitions created in the current
-     interpreter session.
+    interpreter session.
 
-     See `DEF_STORE` for the singleton instance of this class.
-     """
+    See `DEF_STORE` for the singleton instance of this class.
+    """
 
     raw_defs: dict[DefId, RawDef]
     impls: defaultdict[DefId, dict[str, DefId]]
