@@ -5,8 +5,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Generic, TypeVar, no_type_check
 import builtins
+from typing import Any, Generic, TypeVar, no_type_check
 
 import hugr.std.int
 from typing_extensions import deprecated
