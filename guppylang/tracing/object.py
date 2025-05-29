@@ -581,6 +581,12 @@ class TypeVarGuppyDefinition(GuppyDefinition):
 
     _ty_var: TypeVar
 
+    def __eq__(self, other: object) -> bool:
+        # We need to compare as equal to an equivalent regular type var
+        if isinstance(other, TypeVar):
+            return self._ty_var == other
+        return object.__eq__(self, other)
+
     def __getattr__(self, name: str) -> Any:
         # Pretend to be a `TypeVar` by providing all of its attributes
         if hasattr(self._ty_var, name):
