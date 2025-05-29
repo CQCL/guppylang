@@ -269,5 +269,5 @@ def pq_peek(
 @no_type_check
 def empty_priority_queue() -> PriorityQueue[T, MAX_SIZE]:
     """Constructs a new empty priority queue."""
-    buf = array(nothing[tuple[int, T]]() for _ in range(MAX_SIZE))
+    buf = array(nothing[tuple[int, T]]() for _ in range(MAX_SIZE))  # type: ignore[valid-type]
     return PriorityQueue(buf, 0)
