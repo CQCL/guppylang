@@ -104,12 +104,18 @@ class CompilationEngine:
     to_check_worklist: dict[DefId, ParsedDef]
 
     def reset(self) -> None:
+        """Resets the compilation cache."""
         self.parsed = {}
         self.checked = {}
         self.to_check_worklist = {}
         self.types_to_check_worklist = {}
 
     def get_parsed(self, id: DefId) -> ParsedDef:
+        """Look up the parsed version of a definition by its id.
+
+        Parses the definition if it hasn't been parsed yet. Also makes sure that the
+        definition will be checked and compiled later on.
+        """
         from guppylang.checker.core import Globals
 
         if id in self.parsed:
@@ -125,6 +131,11 @@ class CompilationEngine:
         return defn
 
     def get_checked(self, id: DefId) -> CheckedDef:
+        """Look up the checked version of a definition by its id.
+
+        Parses and checks the definition if it hasn't been parsed/checked yet. Also
+        makes sure that the definition will be compiled to Hugr later on.
+        """
         from guppylang.checker.core import Globals
 
         if id in self.checked:
@@ -145,6 +156,10 @@ class CompilationEngine:
 
     @pretty_errors
     def check(self, id: DefId) -> None:
+        """Top-level function to kick of checking of a definition.
+
+        This is the main driver behind `guppy.check()`.
+        """
         from guppylang.checker.core import Globals
 
         # Clear previous compilation cache.
@@ -161,7 +176,9 @@ class CompilationEngine:
             )
         }
         while self.types_to_check_worklist or self.to_check_worklist:
-            # Types need to be checked first
+            # Types need to be checked first. This is because parsing e.g. a function
+            # definition requires instantiating the types in its signature which can
+            # only be done if the types have already been checked.
             if self.types_to_check_worklist:
                 id, _ = self.types_to_check_worklist.popitem()
             else:
@@ -170,6 +187,10 @@ class CompilationEngine:
 
     @pretty_errors
     def compile(self, id: DefId) -> ModulePointer:
+        """Top-level function to kick of Hugr compilation of a definition.
+
+        This is the main driver behind `guppy.compile()`.
+        """
         self.check(id)
 
         # Prepare Hugr for this module

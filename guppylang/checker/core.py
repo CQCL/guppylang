@@ -258,8 +258,8 @@ class PythonObject:
 
 
 class Globals:
-    """Wrapper around a `DefinitionStore` that allows looking-up of definitions by
-    name based on which objects are in scope in a stack frame.
+    """Wrapper around the `DEF_STORE` that allows looking-up of definitions by name
+    based on which objects are in scope in a stack frame.
 
     Additionally, keeps track of which definitions in the store have been used.
     """
