@@ -6,7 +6,7 @@ from guppylang.decorator import guppy
 from guppylang.std.builtins import array, owned, panic
 from guppylang.std.option import Option, nothing, some
 
-T = guppy.type_var("T", copyable=False, droppable=False)
+T = guppy.type_var("T", copyable=False, droppable=False)  # type: ignore[valid-type]
 TCopyable = guppy.type_var("TCopyable", copyable=True, droppable=False)
 MAX_SIZE = guppy.nat_var("MAX_SIZE")
 
