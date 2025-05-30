@@ -1,6 +1,6 @@
 import pytest
 
-from guppylang import GuppyModule, guppy
+from guppylang import guppy
 
 
 @pytest.mark.xfail
@@ -10,10 +10,8 @@ def test_hand(validate):
 
     See https://github.com/CQCL/guppylang/issues/569
     """
-    module = GuppyModule("test")
-
-    @guppy(module)
+    @guppy
     def test() -> int:
         return a  # Intentional use of an undefined variable
 
-    validate(module.compile())
+    validate(guppy.compile(test))

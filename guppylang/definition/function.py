@@ -9,11 +9,10 @@ import hugr.tys as ht
 from hugr import Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.hugr.node_port import ToNode
-from hugr.package import FuncDefnPointer
 
 from guppylang.ast_util import AstNode, annotate_location, with_loc, with_type
 from guppylang.checker.cfg_checker import CheckedCFG
-from guppylang.checker.core import Context, Globals, Place, PyScope
+from guppylang.checker.core import Context, Globals, Place
 from guppylang.checker.errors.generic import ExpectedError
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import (
@@ -53,26 +52,17 @@ class RawFunctionDef(ParsableDef):
         name: The name of the function.
         defined_at: The AST node where the function was defined.
         python_func: The Python function to be defined.
-        python_scope: The Python scope where the function was defined.
     """
 
     python_func: PyFunc
-    python_scope: PyScope = field(repr=False)
 
     description: str = field(default="function", init=False)
 
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func, sources)
-        ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
-        return ParsedFunctionDef(
-            self.id, self.name, func_ast, ty, self.python_scope, docstring
-        )
-
-    def compile(self) -> FuncDefnPointer:
-        from guppylang.decorator import guppy
-
-        return guppy.compile_function(self)
+        ty = check_signature(func_ast, globals)
+        return ParsedFunctionDef(self.id, self.name, func_ast, ty, docstring)
 
 
 @dataclass(frozen=True)
@@ -91,7 +81,6 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
         docstring: The docstring of the function.
     """
 
-    python_scope: PyScope = field(repr=False)
     defined_at: ast.FunctionDef
     ty: FunctionType
     docstring: str | None
@@ -101,14 +90,12 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
     def check(self, globals: Globals) -> "CheckedFunctionDef":
         """Type checks the body of the function."""
         # Add python variable scope to the globals
-        globals = globals.with_python_scope(self.python_scope)
         cfg = check_global_func_def(self.defined_at, self.ty, globals)
         return CheckedFunctionDef(
             self.id,
             self.name,
             self.defined_at,
             self.ty,
-            self.python_scope,
             self.docstring,
             cfg,
         )
@@ -167,7 +154,6 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
             self.name,
             self.defined_at,
             self.ty,
-            self.python_scope,
             self.docstring,
             self.cfg,
             func_def,

@@ -87,10 +87,10 @@ def pretty_errors(f: FuncT) -> FuncT:
     ) -> None:
         """Custom `excepthook` that intercepts `GuppyExceptions` for pretty printing."""
         if isinstance(err, GuppyError):
-            from guppylang.decorator import guppy
             from guppylang.diagnostic import DiagnosticsRenderer
+            from guppylang.engine import DEF_STORE
 
-            renderer = DiagnosticsRenderer(guppy._sources)
+            renderer = DiagnosticsRenderer(DEF_STORE.sources)
             renderer.render_diagnostic(err.error)
             sys.stderr.write("\n".join(renderer.buffer))
             sys.stderr.write("\n\nGuppy compilation failed due to 1 previous error\n")

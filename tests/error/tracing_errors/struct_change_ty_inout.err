@@ -1,10 +1,10 @@
-Error: Error in comptime function return (at $FILE:16:0)
+Error: Error in comptime function return (at $FILE:12:0)
    | 
-14 | 
-15 | @guppy.comptime(module)
-16 | def test(s: S) -> None:
+10 | 
+11 | @guppy.comptime
+12 | def test(s: S) -> None:
    | ^^^^^^^^^^^^^^^^^^^^^^^
-17 |     s.x = 1.0
+13 |     s.x = 1.0
    | ^^^^^^^^^^^^^
 
 Argument `s` is borrowed, so it is implicitly returned to the caller. Field `x`

@@ -9,13 +9,15 @@ from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.envelope import EnvelopeConfig
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc
-from guppylang.checker.core import Context, Globals, PyScope
+from guppylang.checker.core import Context, Globals
 from guppylang.checker.errors.comptime_errors import (
     PytketSignatureMismatch,
     Tket2NotInstalled,
 )
 from guppylang.checker.expr_checker import check_call, synthesize_call
-from guppylang.checker.func_checker import check_signature
+from guppylang.checker.func_checker import (
+    check_signature,
+)
 from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.definition.common import (
     CompilableDef,
@@ -40,6 +42,7 @@ from guppylang.std._internal.compiler.array import (
 )
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, make_opaque
+from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.builtin import array_type, bool_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -60,12 +63,10 @@ class RawPytketDef(ParsableDef):
         name: The name of the function stub.
         defined_at: The AST node where the stub was defined.
         python_func: The Python function stub.
-        python_scope: The Python scope where the function stub was defined.
         input_circuit: The user-provided pytket circuit.
     """
 
     python_func: PyFunc
-    python_scope: PyScope = field(repr=False)
     input_circuit: Any
 
     description: str = field(default="pytket circuit", init=False)
@@ -79,9 +80,7 @@ class RawPytketDef(ParsableDef):
         if not has_empty_body(func_ast):
             # Function stub should have empty body.
             raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
-        stub_signature = check_signature(
-            func_ast, globals.with_python_scope(self.python_scope)
-        )
+        stub_signature = check_signature(func_ast, globals)
 
         # Compare signatures.
         circuit_signature = _signature_from_circuit(
@@ -356,11 +355,14 @@ def _signature_from_circuit(
             try:
                 import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
-                qubit = cast(TypeDef, globals["qubit"]).check_instantiate([], globals)
+                from guppylang.std.quantum import qubit
+
+                assert isinstance(qubit, GuppyDefinition)
+                qubit_ty = cast(TypeDef, qubit.wrapped).check_instantiate([])
 
                 if use_arrays:
                     inputs = [
-                        FuncInput(array_type(qubit, q_reg.size), InputFlags.Inout)
+                        FuncInput(array_type(qubit_ty, q_reg.size), InputFlags.Inout)
                         for q_reg in input_circuit.q_registers
                     ]
                     outputs = [
@@ -373,7 +375,8 @@ def _signature_from_circuit(
                     )
                 else:
                     circuit_signature = FunctionType(
-                        [FuncInput(qubit, InputFlags.Inout)] * input_circuit.n_qubits,
+                        [FuncInput(qubit_ty, InputFlags.Inout)]
+                        * input_circuit.n_qubits,
                         row_to_type([bool_type()] * input_circuit.n_bits),
                     )
             except ImportError:

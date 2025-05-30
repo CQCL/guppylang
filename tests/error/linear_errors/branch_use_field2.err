@@ -1,12 +1,12 @@
-Error: Copy violation (at $FILE:22:11)
+Error: Copy violation (at $FILE:16:11)
    | 
-20 |     if b:
-21 |         measure(s.q2)
-22 |     return s
+14 |     if b:
+15 |         measure(s.q2)
+16 |     return s
    |            ^ Field `s.q2` with non-copyable type `qubit` cannot be
    |              returned ...
    | 
-21 |         measure(s.q2)
+15 |         measure(s.q2)
    |                 ---- since it was already consumed here
 
 Guppy compilation failed due to 1 previous error

@@ -2,21 +2,19 @@
 
 import hugr.tys as ht
 
-from guppylang import GuppyModule, guppy
-
-mod_a = GuppyModule("mod_a")
+from guppylang import guppy
 
 
-@guppy(mod_a)
+@guppy
 def f(x: int) -> int:
     return x + 1
 
 
-@guppy.declare(mod_a)
+@guppy.declare
 def g() -> int: ...
 
 
-@guppy.type(ht.Bool, module=mod_a)
+@guppy.type(ht.Bool)
 class MyType:
-    @guppy.declare(mod_a)
+    @guppy.declare
     def __neg__(self: "MyType") -> "MyType": ...

@@ -1,19 +1,16 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
-
-module = GuppyModule("test")
 
 
-T = guppy.type_var("T", module=module)
+T = guppy.type_var("T")
 
 
-@guppy.declare(module)
+@guppy.declare
 def foo(x: T) -> T: ...
 
 
-@guppy.comptime(module)
+@guppy.comptime
 def test() -> int:
     return foo[int](0)
 
 
-module.compile()
+guppy.compile(test)

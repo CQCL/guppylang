@@ -1,21 +1,17 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
-from guppylang.std.builtins import array
 
-module = GuppyModule("test")
-
-S = guppy.type_var("S", module=module)
-T = guppy.type_var("T", module=module)
+S = guppy.type_var("S")
+T = guppy.type_var("T")
 
 
-@guppy.declare(module)
+@guppy.declare
 def foo(x: S, y: T) -> None:
     ...
 
 
-@guppy(module)
+@guppy
 def main(x: int, y: float) -> None:
     foo[float, int](x, y)
 
 
-module.compile()
+guppy.compile(main)

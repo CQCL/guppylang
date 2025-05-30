@@ -25,6 +25,7 @@ import sys
 import traceback
 from contextlib import suppress
 from dataclasses import replace
+from types import ModuleType
 from typing import Any, NoReturn, cast
 
 from typing_extensions import assert_never
@@ -46,6 +47,7 @@ from guppylang.checker.core import (
     Globals,
     Locals,
     Place,
+    PythonObject,
     SetitemCall,
     SubscriptAccess,
     Variable,
@@ -74,7 +76,6 @@ from guppylang.checker.errors.type_errors import (
     WrongNumberOfArgsError,
 )
 from guppylang.definition.common import Definition
-from guppylang.definition.module import ModuleDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CallableDef, ValueDef
 from guppylang.error import (
@@ -408,8 +409,16 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 case _:
                     return assert_never(param)
         elif x in self.ctx.globals:
-            defn = self.ctx.globals[x]
-            return self._check_global(defn, x, node)
+            match self.ctx.globals[x]:
+                case Definition() as defn:
+                    return self._check_global(defn, x, node)
+                case PythonObject():
+                    from guppylang.checker.cfg_checker import VarNotDefinedError
+
+                    # TODO: Emit a hint that the variable could be accessed through a
+                    #  comptime expression
+                    raise GuppyError(VarNotDefinedError(node, node.id))
+
         raise InternalGuppyError(
             f"Variable `{x}` is not defined in `TypeSynthesiser`. This should have "
             "been caught by program analysis!"
@@ -433,19 +442,24 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 )
 
     def visit_Attribute(self, node: ast.Attribute) -> tuple[ast.expr, Type]:
+        from guppylang.engine import ENGINE
+        from guppylang.tracing.object import GuppyDefinition
+
         # A `value.attr` attribute access. Unfortunately, the `attr` is just a string,
         # not an AST node, so we have to compute its span by hand. This is fine since
         # linebreaks are not allowed in the identifier following the `.`
         span = to_span(node)
         attr_span = Span(span.end.shift_left(len(node.attr)), span.end)
-        if module_def := self._is_module_def(node.value):
-            if node.attr not in module_def.globals:
-                raise GuppyError(
-                    ModuleMemberNotFoundError(attr_span, module_def.name, node.attr)
-                )
-            defn = module_def.globals[node.attr]
-            qual_name = f"{module_def.name}.{defn.name}"
-            return self._check_global(defn, qual_name, node)
+        if module := self._is_python_module(node.value):
+            if node.attr in module.__dict__:
+                val = module.__dict__[node.attr]
+                if isinstance(val, GuppyDefinition):
+                    defn = ENGINE.get_parsed(val.id)
+                    qual_name = f"{module.__name__}.{defn.name}"
+                    return self._check_global(defn, qual_name, node)
+            raise GuppyError(
+                ModuleMemberNotFoundError(attr_span, module.__name__, node.attr)
+            )
         node.value, ty = self.synthesize(node.value)
         if isinstance(ty, StructType) and node.attr in ty.field_dict:
             field = ty.field_dict[node.attr]
@@ -474,12 +488,19 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             return with_loc(node, PartialApply(func=name, args=[node.value])), result_ty
         raise GuppyTypeError(AttributeNotFoundError(attr_span, ty, node.attr))
 
-    def _is_module_def(self, node: ast.expr) -> ModuleDef | None:
-        """Checks whether an AST node corresponds to a defined module."""
-        if isinstance(node, ast.Name) and node.id in self.ctx.globals:
-            defn = self.ctx.globals[node.id]
-            if isinstance(defn, ModuleDef):
-                return defn
+    def _is_python_module(self, node: ast.expr) -> ModuleType | None:
+        """Checks whether an AST node corresponds to a Python module in scope."""
+        if isinstance(node, ast.Name):
+            x = node.id
+            globals = self.ctx.globals
+            if x in globals.f_locals or x in globals.f_globals:
+                val = (
+                    globals.f_locals[x]
+                    if x in globals.f_locals
+                    else globals.f_globals[x]
+                )
+                if isinstance(val, ModuleType):
+                    return val
         return None
 
     def visit_Tuple(self, node: ast.Tuple) -> tuple[ast.expr, Type]:

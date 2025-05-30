@@ -1,19 +1,16 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
-
-module = GuppyModule("test")
 
 
-@guppy.struct(module)
+@guppy.struct
 class S:
     x: int
 
 
-@guppy.comptime(module)
+@guppy.comptime
 def test() -> S:
     s = S(1)
     s.x = 1.0
     return s
 
 
-module.compile()
+guppy.compile(test)

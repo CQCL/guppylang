@@ -1,15 +1,12 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
-
-
-module = GuppyModule("test")
 
 
 def build():
-    @guppy.struct(module)
+    @guppy.struct
     class Foo:
         x: "blah"
 
+    return Foo
 
-build()
-module.compile()
+
+guppy.compile(build())

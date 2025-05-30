@@ -1,15 +1,12 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std.builtins import array
 
 
-module = GuppyModule("test")
-
-@guppy.declare(module)
+@guppy.declare
 def foo() -> array[int, 10]: ...
 
-@guppy(module)
+@guppy
 def main() -> None:
     foo()[0] = 22
 
-module.compile()
+guppy.compile(main)

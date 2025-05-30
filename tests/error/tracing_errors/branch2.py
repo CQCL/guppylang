@@ -1,18 +1,15 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
-
-module = GuppyModule("test")
 
 
-@guppy.declare(module)
+@guppy.declare
 def foo() -> int: ...
 
 
-@guppy.comptime(module)
+@guppy.comptime
 def test() -> int:
     if foo() > 1:
         return 1
     return 0
 
 
-module.compile()
+guppy.compile(test)

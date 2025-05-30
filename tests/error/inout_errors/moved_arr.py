@@ -1,22 +1,19 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std.builtins import array, owned
 
-module = GuppyModule("test")
 
-
-@guppy.declare(module)
+@guppy.declare
 def foo(q: array[int, 3]) -> None: ...
 
 
-@guppy.declare(module)
+@guppy.declare
 def use(q: array[int, 3] @owned) -> None: ...
 
 
-@guppy(module)
+@guppy
 def test(q: array[int, 3]) -> None:
     foo(q)
     use(q)
 
 
-module.compile()
+guppy.compile(test)

@@ -2,7 +2,7 @@ import ast
 import itertools
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
 from hugr.build.dfg import DefinitionBuilder, OpVar
@@ -13,7 +13,6 @@ from guppylang.span import SourceMap
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
     from guppylang.compiler.core import CompilerContext
-    from guppylang.module import GuppyModule
 
 
 RawDef: TypeAlias = "ParsableDef | ParsedDef"
@@ -34,18 +33,12 @@ class DefId:
     """
 
     id: int
-    module: "GuppyModule | None" = field(compare=False, hash=False)
 
     _ids: ClassVar[Iterator[int]] = itertools.count()
 
     @classmethod
-    def fresh(cls, module: "GuppyModule | None" = None) -> "DefId":
-        return DefId(next(cls._ids), module)
-
-    def __str__(self) -> str:
-        if self.module is None:
-            return f"DefId({self.id}, None)"
-        return f"DefId({self.id}, {self.module.name})"
+    def fresh(cls) -> "DefId":
+        return DefId(next(cls._ids))
 
 
 @dataclass(frozen=True)

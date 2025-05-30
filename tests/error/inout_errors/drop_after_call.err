@@ -1,8 +1,8 @@
-Error: Drop violation (at $FILE:15:7)
+Error: Drop violation (at $FILE:11:7)
    | 
-13 | @guppy(module)
-14 | def test() -> None:
-15 |    foo(qubit())
+ 9 | @guppy
+10 | def test() -> None:
+11 |    foo(qubit())
    |        ^^^^^^^ Value with non-droppable type `qubit` would be leaked after
    |                `foo` returns
 

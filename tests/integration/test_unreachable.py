@@ -1,6 +1,6 @@
-from guppylang import GuppyModule, guppy, qubit
+from guppylang import guppy, qubit
 from guppylang.std import quantum
-from guppylang.std.quantum import discard
+from guppylang.std.quantum import discard, h
 from tests.util import compile_guppy
 
 
@@ -84,10 +84,7 @@ def test_unused_var_use2(validate):
 
 
 def test_unreachable_leak(validate):
-    module = GuppyModule("module")
-    module.load_all(quantum)
-
-    @guppy(module)
+    @guppy
     def test(b: bool) -> int:
         q = qubit()
         while True:
@@ -97,27 +94,21 @@ def test_unreachable_leak(validate):
         # This return would leak, but we don't complain since it's unreachable:
         return 0
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_unreachable_leak2(validate):
-    module = GuppyModule("module")
-    module.load_all(quantum)
-
-    @guppy(module)
+    @guppy
     def test() -> None:
         if False:
             # This would leak, but we don't complain since it's unreachable:
             q = qubit()
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_unreachable_copy(validate):
-    module = GuppyModule("module")
-    module.load_all(quantum)
-
-    @guppy(module)
+    @guppy
     def test() -> None:
         q = qubit()
         discard(q)
@@ -126,4 +117,4 @@ def test_unreachable_copy(validate):
             # unreachable:
             h(q)
 
-    validate(module.compile())
+    validate(guppy.compile(test))

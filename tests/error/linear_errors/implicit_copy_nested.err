@@ -1,12 +1,12 @@
-Error: Copy violation (at $FILE:20:8)
+Error: Copy violation (at $FILE:17:8)
    | 
-18 | def test(s: MyStruct) -> None:
-19 |     p = s.x
-20 |     use(s.x)
+15 | def test(s: MyStruct) -> None:
+16 |     p = s.x
+17 |     use(s.x)
    |         ^^^ Field `s.x` with non-copyable type `array[int, 1]` cannot be
    |             consumed ...
    | 
-19 |     p = s.x
+16 |     p = s.x
    |         --- since it was already moved here
 
 Help: Consider copying `s.x` instead of moving it: `s.x.copy()`

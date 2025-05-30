@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 from hugr import tys
 
@@ -10,9 +9,6 @@ from guppylang.definition.common import CompiledDef, Definition
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.ty import OpaqueType, Type
-
-if TYPE_CHECKING:
-    from guppylang.checker.core import Globals
 
 
 @dataclass(frozen=True)
@@ -23,7 +19,7 @@ class TypeDef(Definition):
 
     @abstractmethod
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> Type:
         """Checks if the type definition can be instantiated with the given arguments.
 
@@ -43,7 +39,7 @@ class OpaqueTypeDef(TypeDef, CompiledDef):
     bound: tys.TypeBound | None = None
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> OpaqueType:
         """Checks if the type definition can be instantiated with the given arguments.
 

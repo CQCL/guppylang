@@ -1,11 +1,8 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 
 
-module = GuppyModule("test")
-
-@guppy.custom(module=module)
+@guppy.custom()
 def foo(x): ...
 
 
-module.compile()
+guppy.compile(foo)

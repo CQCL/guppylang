@@ -1,21 +1,18 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std.builtins import array, owned
 
-module = GuppyModule("test")
 
-
-@guppy.struct(module)
+@guppy.struct
 class S:
     xs: array[int, 1]
 
 
-@guppy.comptime(module)
+@guppy.comptime
 def foo(s: S @ owned) -> None:
     s.xs.clear()
 
 
-@guppy.comptime(module)
+@guppy.comptime
 def main() -> None:
     s = S([0])
     foo(s)
@@ -23,4 +20,4 @@ def main() -> None:
     # provide this semantics, so the mutation in `foo` is rejected by the compiler.
 
 
-module.compile()
+guppy.compile(main)

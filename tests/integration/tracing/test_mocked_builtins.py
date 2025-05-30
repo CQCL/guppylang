@@ -4,14 +4,11 @@ import re
 import pytest
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std.builtins import array
 
 
 def test_float(validate):
-    module = GuppyModule("test")
-
-    @guppy.comptime(module)
+    @guppy.comptime
     def test(x: int) -> float:
         # Make sure that the mocked float is indistinguishable from the real deal
         assert isinstance(4.0, float)
@@ -40,13 +37,11 @@ def test_float(validate):
             builtins.float(x)
         return float(x)
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_int(validate):
-    module = GuppyModule("test")
-
-    @guppy.comptime(module)
+    @guppy.comptime
     def test(x: float) -> int:
         # Make sure that the mocked int is indistinguishable from the real deal
         assert isinstance(4, int)
@@ -76,21 +71,19 @@ def test_int(validate):
             builtins.int(x)
         return int(x)
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_len(validate):
-    module = GuppyModule("test")
-
-    @guppy.struct(module)
+    @guppy.struct
     class S:
         x: int
 
-        @guppy(module)
+        @guppy
         def __len__(self: "S") -> int:
             return self.x
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def test(xs: array[int, 10]) -> int:
         # Make sure that the mocked len is indistinguishable from the real deal
         assert len([1, 2, 3, 4, 5]) == 5
@@ -111,5 +104,5 @@ def test_len(validate):
             builtins.len(s)
         return len(s)
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 

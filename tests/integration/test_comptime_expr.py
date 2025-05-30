@@ -4,7 +4,6 @@ from importlib.util import find_spec
 
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std.builtins import py, comptime, array, frozenarray, nat, owned
 from tests.util import compile_guppy
 
@@ -14,21 +13,21 @@ tket2_installed = find_spec("tket2") is not None
 def test_basic(validate):
     x = 42
 
-    @compile_guppy
+    @guppy
     def foo() -> int:
         return comptime(x + 1)
 
-    validate(foo)
+    validate(guppy.compile(foo))
 
 
 def test_py_alias(validate):
     x = 42
 
-    @compile_guppy
+    @guppy
     def foo() -> int:
         return py(x + 1)
 
-    validate(foo)
+    validate(guppy.compile(foo))
 
 
 def test_builtin(validate):
@@ -42,25 +41,25 @@ def test_builtin(validate):
 def test_if(validate):
     b = True
 
-    @compile_guppy
+    @guppy
     def foo() -> int:
         if comptime(b or 1 > 6):
             return 0
         return 1
 
-    validate(foo)
+    validate(guppy.compile(foo))
 
 
 def test_redeclare_after(validate):
     x = 1
 
-    @compile_guppy
-    def foo() -> int:
+    @guppy
+    def foo() -> bool:
         return comptime(x)
 
     x = False
 
-    validate(foo)
+    validate(guppy.compile(foo))
 
 
 def test_tuple(validate):
@@ -133,18 +132,19 @@ def test_strings(validate):
 
 
 def test_func_type_arg(validate):
-    module = GuppyModule("test")
     n = 10
 
-    @guppy(module)
+    @guppy
     def foo(xs: array[int, comptime(n)] @ owned) -> array[int, comptime(n)]:
         return xs
 
-    @guppy.declare(module)
+    @guppy.declare
     def bar(xs: array[int, comptime(n)]) -> array[int, comptime(n)]: ...
 
-    @guppy.struct(module)
+    @guppy.struct
     class Baz:
         xs: array[int, comptime(n)]
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
+    validate(guppy.compile(bar))
+    validate(guppy.compile(Baz))

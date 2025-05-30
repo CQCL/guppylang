@@ -8,7 +8,7 @@ import ast
 import collections
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import ClassVar, Generic, TypeVar
+from typing import ClassVar, Generic, TypeVar, cast
 
 from guppylang.ast_util import line_col
 from guppylang.cfg.bb import BB
@@ -287,9 +287,9 @@ def check_rows_match(
     for x in map1.keys() | map2.keys():
         # If block signature lengths don't match but no undefined error was thrown, some
         # variables may be shadowing global variables.
-        v1 = map1.get(x) or globals[x]
+        v1 = map1.get(x) or cast(ValueDef, globals[x])
         assert isinstance(v1, Variable | ValueDef)
-        v2 = map2.get(x) or globals[x]
+        v2 = map2.get(x) or cast(ValueDef, globals[x])
         assert isinstance(v2, Variable | ValueDef)
         if v1.ty != v2.ty:
             # In the error message, we want to mention the variable that was first

@@ -1,18 +1,15 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
-
-module = GuppyModule("test")
 
 
-@guppy.struct(module)
+@guppy.struct
 class S:
     x: int
 
-    @guppy.declare(module)
+    @guppy.declare
     def __iter__(self: "S") -> int: ...
 
 
-@guppy.comptime(module)
+@guppy.comptime
 def test() -> None:
     s = S(1)
     s.x = 1.0
@@ -21,4 +18,4 @@ def test() -> None:
         pass
 
 
-module.compile()
+guppy.compile(test)

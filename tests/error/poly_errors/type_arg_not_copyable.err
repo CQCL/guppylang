@@ -1,8 +1,8 @@
-Error: Expected a copyable type (at $FILE:17:12)
+Error: Expected a copyable type (at $FILE:14:12)
    | 
-15 | @guppy(module)
-16 | def main() -> None:
-17 |     f = foo[array[int, 10]]
+12 | @guppy
+13 | def main() -> None:
+14 |     f = foo[array[int, 10]]
    |             ^^^^^^^^^^^^^^ Expected a copyable type, got type `array[int, 10]` which is
    |                            not implicitly copyable
 

@@ -51,11 +51,8 @@ def run_error_test(file, capsys, snapshot):
     snapshot.assert_match(err, file.with_suffix(".err").name)
 
 
-util = GuppyModule("test")
-
-
 @decorator.guppy.type(
-    tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable), module=util
+    tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable)
 )
 class NonBool:
     pass

@@ -1,5 +1,4 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from tests.util import compile_guppy
 
 
@@ -21,14 +20,12 @@ def test_basic_value(validate):
 
 
 def test_struct(validate):
-    module = GuppyModule("module")
-
-    @guppy.struct(module)
+    @guppy.struct
     class StringStruct:
         x: str
 
-    @guppy(module)
+    @guppy
     def main(s: StringStruct) -> None:
         StringStruct("Lorem Ipsum")
 
-    validate(module.compile())
+    validate(guppy.compile(main))

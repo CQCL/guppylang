@@ -7,7 +7,7 @@ from hugr.build import function as hf
 from hugr.build.dfg import DefinitionBuilder, OpVar
 
 from guppylang.ast_util import AstNode, has_empty_body, with_loc, with_type
-from guppylang.checker.core import Context, Globals, PyScope
+from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompilerContext, DFContainer
@@ -43,13 +43,12 @@ class RawFunctionDecl(ParsableDef):
     """
 
     python_func: PyFunc
-    python_scope: PyScope = field(repr=False)
     description: str = field(default="function", init=False)
 
     def parse(self, globals: Globals, sources: SourceMap) -> "CheckedFunctionDecl":
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func, sources)
-        ty = check_signature(func_ast, globals.with_python_scope(self.python_scope))
+        ty = check_signature(func_ast, globals)
         if not has_empty_body(func_ast):
             raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
         return CheckedFunctionDecl(
@@ -58,7 +57,6 @@ class RawFunctionDecl(ParsableDef):
             func_ast,
             ty,
             self.python_func,
-            self.python_scope,
             docstring,
         )
 
@@ -105,7 +103,6 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
             self.defined_at,
             self.ty,
             self.python_func,
-            self.python_scope,
             self.docstring,
             node,
         )
