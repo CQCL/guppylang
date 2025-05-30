@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.19.2](https://github.com/CQCL/guppylang/compare/v0.19.1...v0.19.2) (2025-05-30)
+
+
+### Features
+
+* `with_owned` std library function to temporarily take ownership of a borrowed value ([#994](https://github.com/CQCL/guppylang/issues/994)) ([7bf75df](https://github.com/CQCL/guppylang/commit/7bf75dff290b3b652c1939bffb86a915555207d2)), closes [#992](https://github.com/CQCL/guppylang/issues/992)
+* Add `Either` type to the standard library ([#993](https://github.com/CQCL/guppylang/issues/993)) ([75c1804](https://github.com/CQCL/guppylang/commit/75c18045747017aaacad74f92fc92d4e0cd78182)), closes [#991](https://github.com/CQCL/guppylang/issues/991)
+
 ## [0.19.1](https://github.com/CQCL/guppylang/compare/v0.19.0...v0.19.1) (2025-05-27)
 
 
