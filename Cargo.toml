@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["execute_llvm", "validator"]
+members = ["execute_llvm", "validator", "guppylang/miette-py",]
 
 # Building "execute_llvm" requires having LLVM14 installed
 default-members = ["validator"]
