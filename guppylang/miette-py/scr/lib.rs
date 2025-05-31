@@ -3,7 +3,7 @@ use miette::{GraphicalReportHandler, Diagnostic, LabeledSpan};
 use std::fmt;
 
 #[pyclass]
-#[derive(Clone, Debug)]  // 👈 AGREGAR Debug
+#[derive(Clone, Debug)]  // 
 struct PyDiagnostic {
     message: String,
     code: Option<String>,
@@ -66,7 +66,7 @@ fn render_report(diagnostic: PyDiagnostic) -> PyResult<String> {
     let handler = GraphicalReportHandler::new();
     
     let mut output = String::new();
-    handler.render_report(&mut output, &diagnostic as &dyn Diagnostic)  // 👈 CORREGIR
+    handler.render_report(&mut output, &diagnostic as &dyn Diagnostic)  // 
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
             format!("Failed to render: {}", e)
         ))?;
@@ -94,7 +94,7 @@ fn guppy_to_miette(
 }
 
 #[pymodule]
-fn miette_py(m: &Bound<'_, PyModule>) -> PyResult<()> {  // 👈 CORREGIR signature
+fn miette_py(m: &Bound<'_, PyModule>) -> PyResult<()> {  // 
     m.add_class::<PyDiagnostic>()?;
     m.add_function(wrap_pyfunction!(render_report, m)?)?;
     m.add_function(wrap_pyfunction!(guppy_to_miette, m)?)?;
