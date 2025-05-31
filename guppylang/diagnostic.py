@@ -385,8 +385,84 @@ class DiagnosticsRenderer:
     def level_str(level: DiagnosticLevel) -> str:
         """Returns the text used to identify the different kinds of diagnostics."""
         return level.name.lower().capitalize()
+        
+class MietteRenderer:
+    """Drop-in replacement for DiagnosticsRenderer using miette."""
+    
+    def __init__(self, source: SourceMap) -> None:
+        self.source = source
+        try:
+            from miette_py import guppy_to_miette, render_report
+            self._guppy_to_miette = guppy_to_miette
+            self._render_report = render_report
+        except ImportError:
+            raise ImportError(
+                "miette-py not available. Install with: pip install ./guppylang/miette-py/"
+            )
 
-
+    def render_diagnostic(self, diag: Diagnostic) -> str:
+        """Renders diagnostic using miette. Same interface as DiagnosticsRenderer."""
+        # Convert spans
+        spans = []
+        source_text = None
+        
+        if diag.span:
+            main_span = to_span(diag.span)
+            
+            # Get source text from the span
+            try:
+                # Use the existing method that DiagnosticsRenderer uses
+                source_lines = self.source.span_lines(main_span, 0)
+                source_text = '\n'.join(source_lines)
+            except Exception:
+                source_text = None
+            
+            # Calculate offset manually from line/column
+            # Since miette needs byte offsets, we'll use character positions
+            start_offset = self._calculate_offset(main_span.start, source_text)
+            end_offset = self._calculate_offset(main_span.end, source_text)
+            span_len = max(1, end_offset - start_offset)  # Ensure at least 1 char
+            
+            spans.append((start_offset, span_len, diag.rendered_span_label))
+        
+        # Add children spans
+        for child in diag.children:
+            if child.span:
+                child_span = to_span(child.span)
+                start_offset = self._calculate_offset(child_span.start, source_text)
+                end_offset = self._calculate_offset(child_span.end, source_text)
+                span_len = max(1, end_offset - start_offset)
+                spans.append((start_offset, span_len, child.rendered_span_label))
+        
+        # Convert and render
+        miette_diag = self._guppy_to_miette(
+            title=diag.rendered_title,
+            level=diag.level.name.lower(),
+            source_text=source_text,
+            spans=spans,
+            message=diag.rendered_message,
+            help_text=None,  # Could extract from help children
+        )
+        
+        return self._render_report(miette_diag)
+    
+    def _calculate_offset(self, loc: Loc, source_text: str | None) -> int:
+        """Calculate byte offset from line/column position."""
+        if source_text is None:
+            return 0
+        
+        lines = source_text.split('\n')
+        offset = 0
+        
+        # Add lengths of all lines before the target line
+        for i in range(min(loc.line - 1, len(lines) - 1)):
+            offset += len(lines[i]) + 1  # +1 for newline character
+        
+        # Add column offset within the target line
+        if loc.line - 1 < len(lines):
+            offset += min(loc.column, len(lines[loc.line - 1]))
+        
+        return offset
 def wrap(
     text: str,
     width: int,
