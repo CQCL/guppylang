@@ -7,8 +7,11 @@ from guppylang.std._internal.compiler.option import (
     OptionUnwrapCompiler,
     OptionUnwrapNothingCompiler,
 )
-from guppylang.std.builtins import L, mem_swap, owned
+from guppylang.std.lang import owned
+from guppylang.std.mem import mem_swap
 from guppylang.tys.builtin import option_type_def
+
+L = guppy.type_var("T", copyable=False, droppable=False)
 
 
 @guppy.extend_type(option_type_def)

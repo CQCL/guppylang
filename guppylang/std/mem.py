@@ -1,12 +1,29 @@
+"""Utilities for advanced usage of ownership and borrowing."""
+
 from collections.abc import Callable
 from typing import no_type_check
 
 from guppylang.decorator import guppy
+from guppylang.std._internal.checker import BarrierChecker
 from guppylang.std._internal.compiler.mem import WithOwnedCompiler
-from guppylang.std.builtins import owned
+from guppylang.std._internal.compiler.prelude import MemSwapCompiler
+from guppylang.std.lang import owned
 
 T = guppy.type_var("T", copyable=False, droppable=False)
 Out = guppy.type_var("Out", copyable=False, droppable=False)
+
+
+@guppy.custom(checker=BarrierChecker(), higher_order_value=False)
+@no_type_check
+def barrier(*args) -> None:
+    """Barrier to guarantee that all operations before the barrier are completed before
+    operations after the barrier are started."""
+
+
+@guppy.custom(MemSwapCompiler())
+@no_type_check
+def mem_swap(x: T, y: T) -> None:
+    """Swaps the values of two variables."""
 
 
 @guppy.custom(WithOwnedCompiler())
