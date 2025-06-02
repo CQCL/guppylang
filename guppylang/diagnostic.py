@@ -386,20 +386,15 @@ class DiagnosticsRenderer:
     def level_str(level: DiagnosticLevel) -> str:
         """Returns the text used to identify the different kinds of diagnostics."""
         return level.name.lower().capitalize()
-        
+from miette_py import guppy_to_miette, render_report
+
 class MietteRenderer:
     """Drop-in replacement for DiagnosticsRenderer using miette."""
     
     def __init__(self, source: SourceMap) -> None:
         self.source = source
-        try:
-            from miette_py import guppy_to_miette, render_report
-            self._guppy_to_miette: Callable[..., Any] = guppy_to_miette
-            self._render_report: Callable[[Any], str] = render_report
-        except ImportError:
-            raise ImportError(
-                "miette-py not available. Install with: pip install miette-py/"
-            )
+        self._guppy_to_miette: Callable[..., Any] = guppy_to_miette
+        self._render_report: Callable[[Any], str] = render_report
 
     def render_diagnostic(self, diag: Diagnostic) -> str:
         """Renders diagnostic using miette. Same interface as DiagnosticsRenderer."""
@@ -411,12 +406,8 @@ class MietteRenderer:
             main_span = to_span(diag.span)
             
             # Get source text from the span
-            try:
-                # Use the existing method that DiagnosticsRenderer uses
-                source_lines = self.source.span_lines(main_span, 0)
-                source_text = '\n'.join(source_lines)
-            except Exception:
-                source_text = None
+            source_lines = self.source.span_lines(main_span, 0)
+            source_text = '\n'.join(source_lines) if source_lines else None
             
             # Calculate offset manually from line/column
             # Since miette needs byte offsets, we'll use character positions
