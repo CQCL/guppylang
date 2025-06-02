@@ -7,6 +7,7 @@ from tket2_exts import (
     quantum,
     result,
     rotation,
+    wasm,
 )
 
 BOOL_EXTENSION = opaque_bool()
@@ -17,6 +18,7 @@ QSYSTEM_UTILS_EXTENSION = qsystem_utils()
 QUANTUM_EXTENSION = quantum()
 RESULT_EXTENSION = result()
 ROTATION_EXTENSION = rotation()
+WASM_EXTENSION = wasm()
 
 TKET2_EXTENSIONS = [
     BOOL_EXTENSION,
@@ -27,4 +29,5 @@ TKET2_EXTENSIONS = [
     QUANTUM_EXTENSION,
     RESULT_EXTENSION,
     ROTATION_EXTENSION,
+    WASM_EXTENSION,
 ]

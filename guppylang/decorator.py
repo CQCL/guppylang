@@ -15,15 +15,22 @@ from typing_extensions import dataclass_transform
 
 import guppylang
 from guppylang.ast_util import annotate_location
+from guppylang.checker.core import Globals
+from guppylang.compiler.core import GlobalConstId
 from guppylang.definition.common import DefId
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
     CustomCallChecker,
+    CustomFunctionDef,
     CustomInoutCallCompiler,
     DefaultCallChecker,
     NotImplementedCallCompiler,
     OpCompiler,
     RawCustomFunctionDef,
+    WasmCallChecker,
+    WasmModuleCallCompiler,
+    WasmModuleDiscardCompiler,
+    WasmModuleInitCompiler,
 )
 from guppylang.definition.extern import RawExternDef
 from guppylang.definition.function import (
@@ -38,7 +45,7 @@ from guppylang.definition.pytket_circuits import (
 )
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.traced import RawTracedFunctionDef
-from guppylang.definition.ty import OpaqueTypeDef, TypeDef
+from guppylang.definition.ty import OpaqueTypeDef, TypeDef, WasmModule
 from guppylang.error import MissingModuleError, pretty_errors
 from guppylang.ipython_inspect import (
     get_ipython_globals,
@@ -56,9 +63,16 @@ from guppylang.module import (
 from guppylang.span import Loc, SourceMap, Span
 from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.arg import Argument
+from guppylang.tys.builtin import option_type
 from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import NumericType
+from guppylang.tys.ty import (
+    FuncInput,
+    FunctionType,
+    InputFlags,
+    NoneType,
+    NumericType,
+)
 
 S = TypeVar("S")
 T = TypeVar("T")
@@ -99,6 +113,7 @@ class _Guppy:
     def __init__(self) -> None:
         self._modules = {}
         self._sources = SourceMap()
+        self._next_wasm_context = 0
 
     @overload
     def __call__(self, arg: F) -> F: ...
@@ -582,6 +597,77 @@ class _Guppy:
         mod.register_def(defn)
         return GuppyDefinition(defn)
 
+    def wasm_module(
+        self, filename: str, filehash: int
+    ) -> Decorator[PyClass, GuppyDefinition]:
+        # N.B. Only one module per file and vice-versa
+        guppy_module = self.get_module()
+        ctx_id = guppy_module._get_next_wasm_context()
+        assert guppy_module._instance_func_buffer is None
+        guppy_module._instance_func_buffer = {}
+
+        def dec(cls: PyClass) -> GuppyDefinition:
+            wasm_module = WasmModule(
+                DefId.fresh(guppy_module),
+                cls.__name__,
+                None,
+                filename,
+                filehash,
+                ctx_id,
+            )
+            wasm_module_ty = wasm_module.check_instantiate([], Globals.default(), None)
+            guppy_module.register_def(wasm_module)
+            # Add a __call__ to the class
+            call_method = CustomFunctionDef(
+                DefId.fresh(guppy_module),
+                "__new__",
+                None,
+                FunctionType([], option_type(wasm_module_ty)),
+                DefaultCallChecker(),
+                WasmModuleInitCompiler(wasm_module),
+                False,
+                GlobalConstId.fresh(f"{cls.__name__}.__new__"),
+                True,
+            )
+            discard = CustomFunctionDef(
+                DefId.fresh(guppy_module),
+                "discard",
+                None,
+                FunctionType([FuncInput(wasm_module_ty, InputFlags.Owned)], NoneType()),
+                DefaultCallChecker(),
+                WasmModuleDiscardCompiler(),
+                False,
+                GlobalConstId.fresh(f"{cls.__name__}.__discard__"),
+                True,
+            )
+
+            assert guppy_module._instance_func_buffer is not None
+
+            guppy_module.register_def(wasm_module)
+            guppy_module._instance_func_buffer |= {
+                "__new__": call_method,
+                "discard": discard,
+            }
+
+            guppy_module._register_buffered_instance_funcs(wasm_module)
+            return GuppyDefinition(wasm_module)
+
+        return dec
+
+    def wasm(self, f: PyFunc) -> GuppyDefinition:
+        guppy_module = self.get_module()
+        func = RawCustomFunctionDef(
+            DefId.fresh(guppy_module),
+            f.__name__,
+            None,
+            f,
+            WasmCallChecker(),
+            WasmModuleCallCompiler(f.__name__),
+            True,
+        )
+        guppy_module.register_def(func)
+        return GuppyDefinition(func)
+
 
 class _GuppyDummy:
     """A dummy class with the same interface as `@guppy` that is used during sphinx
@@ -637,6 +723,12 @@ class _GuppyDummy:
 
     def get_module(self, *args: Any, **kwargs: Any) -> Any:
         return GuppyModule("dummy", import_builtins=False)
+
+    def wasm_module(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
+
+    def wasm(self, *args: Any, **kwargs: Any) -> Any:
+        return lambda cls: cls
 
 
 guppy = cast(_Guppy, _GuppyDummy()) if sphinx_running() else _Guppy()
