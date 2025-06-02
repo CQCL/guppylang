@@ -608,6 +608,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
+        print(node.value.place)
+        print(isinstance(ty, TupleType))
         # Special case for subscripts on functions: Those are type applications
         if isinstance(ty, FunctionType):
             inst = check_type_apply(ty, node, self.ctx)

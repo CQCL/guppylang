@@ -65,6 +65,7 @@ from guppylang.tys.builtin import (
     nat_type_def,
     sized_iter_type_def,
     string_type_def,
+    tuple_type_def,
 )
 
 guppy.init_module(import_builtins=False)
@@ -731,6 +732,14 @@ class SizedIter:
     @guppy.custom(NoopCompiler())
     def __iter__(self: SizedIter[L, n] @ owned) -> SizedIter[L, n]:  # type: ignore[type-arg]
         """Dummy implementation making sized iterators iterable themselves."""
+
+
+@guppy.extend_type(tuple_type_def)
+class tuple(Generic[_T]):
+    @guppy.custom(ListGetitemCompiler())
+    def __getitem__(self: list[L], idx: int) -> L: ...
+
+
 
 
 @guppy.custom(checker=ResultChecker(), higher_order_value=False)
