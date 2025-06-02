@@ -11,6 +11,7 @@ from typing import (
     Protocol,
     overload,
     runtime_checkable,
+    Callable,
 )
 
 from typing_extensions import Self
@@ -393,8 +394,8 @@ class MietteRenderer:
         self.source = source
         try:
             from miette_py import guppy_to_miette, render_report
-            self._guppy_to_miette = guppy_to_miette
-            self._render_report = render_report
+            self._guppy_to_miette: Callable[..., Any] = guppy_to_miette
+            self._render_report: Callable[[Any], str] = render_report
         except ImportError:
             raise ImportError(
                 "miette-py not available. Install with: pip install miette-py/"
