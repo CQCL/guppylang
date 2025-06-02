@@ -17,6 +17,7 @@ from guppylang.checker.core import Context, Globals, Place, Variable
 from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.definition.common import DefId
 from guppylang.diagnostic import Error, Help, Note
+from guppylang.engine import DEF_STORE, ENGINE
 from guppylang.error import GuppyError
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
 from guppylang.tys.parsing import parse_function_io_types
@@ -134,13 +135,12 @@ def check_nested_func_def(
         if not captured:
             # If there are no captured vars, we treat the function like a global name
             from guppylang.definition.function import ParsedFunctionDef
+            from guppylang.tracing.object import GuppyDefinition
 
-            func = ParsedFunctionDef(
-                def_id, func_def.name, func_def, func_ty, globals.python_scope, None
-            )
-            globals = ctx.globals | Globals(
-                {func.id: func}, {func_def.name: func.id}, {}, {}
-            )
+            func = ParsedFunctionDef(def_id, func_def.name, func_def, func_ty, None)
+            DEF_STORE.register_def(func, None)
+            ENGINE.parsed[def_id] = func
+            globals.f_locals[func_def.name] = GuppyDefinition(func)
         else:
             # Otherwise, we treat it like a local name
             inputs.append(Variable(func_def.name, func_def.ty, func_def))

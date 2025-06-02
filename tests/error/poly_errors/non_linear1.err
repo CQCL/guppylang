@@ -1,8 +1,8 @@
-Error: Not defined for linear argument (at $FILE:21:4)
+Error: Not defined for linear argument (at $FILE:14:4)
    | 
-19 | @guppy(module)
-20 | def main(q: qubit) -> None:
-21 |     foo(q)
+12 | @guppy
+13 | def main(q: qubit) -> None:
+14 |     foo(q)
    |     ^^^^^^ Cannot instantiate copyable type parameter `T` in type
    |            `forall T. T -> None` with non-copyable type `qubit`
 

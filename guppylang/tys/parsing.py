@@ -1,5 +1,6 @@
 import ast
 from collections.abc import Sequence
+from types import ModuleType
 
 from guppylang.ast_util import (
     AstNode,
@@ -7,12 +8,12 @@ from guppylang.ast_util import (
     shift_loc,
 )
 from guppylang.cfg.builder import is_comptime_expression
-from guppylang.checker.core import Context, Globals, Locals
+from guppylang.checker.core import Context, Globals, Locals, PythonObject
 from guppylang.checker.errors.generic import ExpectedError
 from guppylang.definition.common import Definition
-from guppylang.definition.module import ModuleDef
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
+from guppylang.engine import ENGINE
 from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.builtin import CallableTypeDef
@@ -111,26 +112,30 @@ def arg_from_ast(
 def _try_parse_defn(node: AstNode, globals: Globals) -> Definition | None:
     """Tries to parse a (possibly qualified) name into a global definition."""
     from guppylang.checker.cfg_checker import VarNotDefinedError
+    from guppylang.tracing.object import GuppyDefinition
 
     match node:
         case ast.Name(id=x):
             if x not in globals:
                 raise GuppyError(VarNotDefinedError(node, x))
-            return globals[x]
+            defn = globals[x]
+            if isinstance(defn, PythonObject):
+                raise GuppyError(VarNotDefinedError(node, x))
+            return defn
         case ast.Attribute(value=ast.Name(id=module_name) as value, attr=x):
             if module_name not in globals:
                 raise GuppyError(VarNotDefinedError(value, module_name))
-            module_def = globals[module_name]
-            if not isinstance(module_def, ModuleDef):
-                err = ExpectedError(
-                    value,
-                    "a module",
-                    got=f"{module_def.description} `{module_def.name}`",
-                )
-                raise GuppyError(err)
-            if x not in module_def.globals:
-                raise GuppyError(ModuleMemberNotFoundError(node, module_def.name, x))
-            return module_def.globals[x]
+            match globals[module_name]:
+                case PythonObject(ModuleType() as module):
+                    if x in module.__dict__:
+                        val = module.__dict__[x]
+                        if isinstance(val, GuppyDefinition):
+                            return ENGINE.get_parsed(val.id)
+                    raise GuppyError(
+                        ModuleMemberNotFoundError(node, module.__name__, x)
+                    )
+                case _:
+                    raise GuppyError(ExpectedError(value, "a module"))
         case _:
             return None
 
@@ -158,7 +163,7 @@ def _arg_from_instantiated_defn(
                 arg_from_ast(arg_node, globals, param_var_mapping, allow_free_vars)
                 for arg_node in arg_nodes
             ]
-            ty = defn.check_instantiate(args, globals, node)
+            ty = defn.check_instantiate(args, node)
             return TypeArg(ty)
         # Or a parameter (e.g. `T`, `n`, ...)
         case ParamDef() as defn:

@@ -2,7 +2,6 @@
 from typing import Generic, no_type_check
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std._internal.compiler.qsystem import (
     RandomIntBoundedCompiler,
     RandomIntCompiler,
@@ -16,51 +15,42 @@ from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import array, mem_swap, owned, panic
 from guppylang.std.option import Option
 
-qsystem_random = GuppyModule("qsystem.random")
+SHUFFLE_N = guppy.nat_var("SHUFFLE_N")
+SHUFFLE_T = guppy.type_var("SHUFFLE_T", copyable=False, droppable=False)
 
-qsystem_random.load(angle, pi)  # type: ignore[arg-type]
-
-SHUFFLE_N = guppy.nat_var("SHUFFLE_N", module=qsystem_random)
-SHUFFLE_T = guppy.type_var(
-    "SHUFFLE_T", copyable=False, droppable=False, module=qsystem_random
-)
-
-DISCRETE_N = guppy.nat_var("DISCRETE_N", module=qsystem_random)
+DISCRETE_N = guppy.nat_var("DISCRETE_N")
 
 
-@guppy.hugr_op(
-    external_op("NewRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION),
-    module=qsystem_random,
-)
+@guppy.hugr_op(external_op("NewRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION))
 @no_type_check
 def _new_rng_context(seed: int) -> Option["RNG"]: ...
 
 
-@guppy.type(RNGCONTEXT_T, copyable=False, droppable=False, module=qsystem_random)
+@guppy.type(RNGCONTEXT_T, copyable=False, droppable=False)
 class RNG:
     """Random number generator."""
 
-    @guppy(qsystem_random)  # type: ignore[misc] # Unsupported decorated constructor type; Self argument missing for a non-static method (or an invalid type for self)
+    @guppy  # type: ignore[misc] # Unsupported decorated constructor type; Self argument missing for a non-static method (or an invalid type for self)
     def __new__(seed: int) -> "RNG":
         """Create a new random number generator using a seed."""
         return _new_rng_context(seed).unwrap()
 
-    @guppy(qsystem_random)
+    @guppy
     def discard(self: "RNG" @ owned) -> None:  # type: ignore[valid-type] # Invalid type comment or annotation
         """Discard the random number generator."""
         self._discard()
 
-    @guppy(qsystem_random)
+    @guppy
     def random_int(self: "RNG") -> int:
         """Generate a random 32-bit signed integer."""
         return self._random_int()
 
-    @guppy(qsystem_random)
+    @guppy
     def random_float(self: "RNG") -> float:
         """Generate a random floating point value in the range [0,1)."""
         return self._random_float()
 
-    @guppy(qsystem_random)
+    @guppy
     def random_int_bounded(self: "RNG", bound: int) -> int:
         """Generate a random 32-bit integer in the range [0, bound).
 
@@ -69,39 +59,33 @@ class RNG:
         """
         return self._random_int_bounded(bound)
 
-    @guppy(qsystem_random)
+    @guppy
     def random_angle(self: "RNG") -> angle:
         """Generate a random angle in the range [-pi, pi)."""
         return (2.0 * self._random_float() - 1.0) * pi
 
-    @guppy(qsystem_random)
+    @guppy
     def random_clifford_angle(self: "RNG") -> angle:
         """Generate a random Clifford angle (multiple of pi/2)."""
         return self.random_int_bounded(4) * pi / 2
 
-    @guppy.hugr_op(
-        external_op("DeleteRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION),
-        module=qsystem_random,
-    )
+    @guppy.hugr_op(external_op("DeleteRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION))
     @no_type_check
     def _discard(self: "RNG" @ owned) -> None: ...
 
-    @guppy.custom(RandomIntCompiler(), module=qsystem_random)
+    @guppy.custom(RandomIntCompiler())
     @no_type_check
     def _random_int(self: "RNG") -> int: ...
 
-    @guppy.hugr_op(
-        external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION),
-        module=qsystem_random,
-    )
+    @guppy.hugr_op(external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION))
     @no_type_check
     def _random_float(self: "RNG") -> float: ...
 
-    @guppy.custom(RandomIntBoundedCompiler(), module=qsystem_random)
+    @guppy.custom(RandomIntBoundedCompiler())
     @no_type_check
     def _random_int_bounded(self: "RNG", bound: int) -> int: ...
 
-    @guppy(qsystem_random)
+    @guppy
     @no_type_check
     def shuffle(self: "RNG", array: array[SHUFFLE_T, SHUFFLE_N]) -> None:
         """Randomly shuffle the elements of a possibly linear array in place.
@@ -115,7 +99,7 @@ class RNG:
                 mem_swap(array[i], array[j])
 
 
-@guppy.struct(qsystem_random)
+@guppy.struct
 class DiscreteDistribution(Generic[DISCRETE_N]):  # type: ignore[misc]
     """A generic probability distribution over the set {0, 1, 2, ... DISCRETE_N - 1}.
 
@@ -125,7 +109,7 @@ class DiscreteDistribution(Generic[DISCRETE_N]):  # type: ignore[misc]
 
     sums: array[float, DISCRETE_N]  # type: ignore[valid-type]
 
-    @guppy(qsystem_random)
+    @guppy
     @no_type_check
     def sample(self: "DiscreteDistribution[DISCRETE_N]", rng: RNG) -> int:
         """Return a sample value from the distribution."""
@@ -142,7 +126,7 @@ class DiscreteDistribution(Generic[DISCRETE_N]):  # type: ignore[misc]
         return i_min
 
 
-@guppy(qsystem_random)
+@guppy
 @no_type_check
 def make_discrete_distribution(
     weights: array[float, DISCRETE_N],

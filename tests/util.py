@@ -3,25 +3,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import guppylang
-from guppylang.module import GuppyModule
+from guppylang import guppy
 
 if TYPE_CHECKING:
     from hugr.package import FuncDefnPointer, PackagePointer
 
 
 def compile_guppy(fn) -> FuncDefnPointer:
-    """A decorator that combines @guppy with HUGR compilation.
-
-    Creates a temporary module that only contains the defined function.
-    """
-    assert not isinstance(
-        fn,
-        GuppyModule,
-    ), "`@compile_guppy` does not support extra arguments."
-
-    module = GuppyModule("module")
-    defn = guppylang.decorator.guppy(module)(fn)
-    return defn.compile()
+    """A decorator that combines @guppy with HUGR compilation."""
+    defn = guppylang.decorator.guppy(fn)
+    return guppy.compile(defn)
 
 
 def dump_llvm(package: PackagePointer):

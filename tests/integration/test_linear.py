@@ -1,66 +1,48 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std.builtins import owned
 from guppylang.std.option import Option
 from guppylang.std.quantum import qubit, measure
 
-import guppylang.std.quantum_functional as quantum_functional
 from guppylang.std.quantum_functional import cx, t, h, project_z
 from guppylang.tys.ty import NoneType
 
 
-
 def test_id(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def test(q: qubit @owned) -> qubit:
         return q
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_assign(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def test(q: qubit @owned) -> qubit:
         r = q
         s = r
         return s
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_linear_return_order(validate):
     # See https://github.com/CQCL-DEV/guppy/issues/35
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
 
-    @guppy(module)
+    @guppy
     def test(q: qubit @owned) -> tuple[qubit, bool]:
         return project_z(q)
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_interleave(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy.declare(module)
+    @guppy.declare
     def f(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]: ...
 
-    @guppy.declare(module)
+    @guppy.declare
     def g(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]: ...
 
-    @guppy(module)
+    @guppy
     def test(
         a: qubit @owned, b: qubit @owned, c: qubit @owned, d: qubit @owned
     ) -> tuple[qubit, qubit, qubit, qubit]:
@@ -69,93 +51,80 @@ def test_interleave(validate):
         b, c = g(b, c)
         return a, b, c, d
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_linear_struct(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy.struct(module)
+    @guppy.struct
     class MyStruct:
         q1: qubit
         q2: qubit
 
-    @guppy.declare(module)
+    @guppy.declare
     def f(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]: ...
 
-    @guppy.declare(module)
+    @guppy.declare
     def g(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]: ...
 
-    @guppy(module)
+    @guppy
     def construct(q1: qubit @owned, q2: qubit @owned) -> MyStruct:
         return MyStruct(q1, q2)
 
-    @guppy(module)
+    @guppy
     def test(s: MyStruct @owned, t: MyStruct @owned) -> tuple[qubit, qubit, qubit, qubit]:
         s.q1, s.q2 = f(s.q2, s.q1)
         t.q1, t.q2 = f(t.q1, t.q2)
         s.q2, t.q1 = g(t.q1, s.q2)
         return s.q1, s.q2, t.q1, t.q2
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_mixed_classical_linear_struct(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy.struct(module)
+    @guppy.struct
     class MyStruct:
         q: qubit
         x: int
         y: float
 
-    @guppy.declare(module)
+    @guppy.declare
     def f(q: qubit @owned) -> qubit: ...
 
-    @guppy(module)
+    @guppy
     def test1(s: MyStruct @owned) -> tuple[MyStruct, float]:
         a = s.x + s.y
         s.q = f(s.q)
         return s, a * s.x
 
-    @guppy(module)
+    @guppy
     def test2(s: MyStruct @owned) -> tuple[MyStruct, int, int, int]:
         t = s
         u = t
         u.q = f(u.q)
         return u, s.x, t.x, u.x
 
-    validate(module.compile())
+    validate(guppy.compile(test1))
+    validate(guppy.compile(test2))
 
 
 def test_drop_classical_field(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy.struct(module)
+    @guppy.struct
     class MyStruct:
         q: qubit
         x: int
 
-    @guppy.declare(module)
+    @guppy.declare
     def f() -> MyStruct: ...
 
-    @guppy(module)
+    @guppy
     def test() -> qubit:
         return f().q
 
+    validate(guppy.compile(test))
+
 
 def test_if(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def test(b: bool) -> qubit:
         if b:
             a = qubit()
@@ -164,15 +133,11 @@ def test_if(validate):
             q = qubit()
         return q
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_if_return(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def test(b: bool) -> qubit:
         if b:
             q = qubit()
@@ -181,50 +146,43 @@ def test_if_return(validate):
             q = qubit()
         return q
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_if_struct_rebuild(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy.struct(module)
+    @guppy.struct
     class MyStruct:
         q: qubit
 
-    @guppy(module)
+    @guppy
     def test1(s: MyStruct @owned, b: bool) -> MyStruct:
         if b:
             s = MyStruct(s.q)
         return s
 
-    @guppy(module)
+    @guppy
     def test2(s: MyStruct @owned, b: bool) -> MyStruct:
         if b:
             s.q = s.q
         return s
 
-    validate(module.compile())
+    validate(guppy.compile(test1))
+    validate(guppy.compile(test2))
 
 
 def test_struct_reassign(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy.struct(module)
+    @guppy.struct
     class MyStruct1:
         x: "MyStruct2"
 
-    @guppy.struct(module)
+    @guppy.struct
     class MyStruct2:
         q: qubit
 
-    @guppy.declare(module)
+    @guppy.declare
     def consume(s: MyStruct2 @owned) -> None: ...
 
-    @guppy(module)
+    @guppy
     def test(s: MyStruct2 @owned, b: bool) -> MyStruct2:
         consume(s)
         if b:
@@ -234,23 +192,22 @@ def test_struct_reassign(validate):
             s = MyStruct1(MyStruct2(qubit()))
         return s.x
 
+    validate(guppy.compile(test))
+
 
 def test_struct_reassign2(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy.struct(module)
+    @guppy.struct
     class MyStruct:
         q1: qubit
         q2: qubit
 
-    @guppy.declare(module)
+    @guppy.declare
     def use(q: qubit @owned) -> None: ...
 
-    @guppy(module)
+    @guppy
     def test(s: MyStruct @owned, b: bool) -> MyStruct:
         use(s.q1)
+        use(s.q2)
         if b:
             s.q1 = qubit()
         else:
@@ -258,56 +215,42 @@ def test_struct_reassign2(validate):
         s.q2 = qubit()
         return s
 
+    validate(guppy.compile(test))
+
 
 def test_measure(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit, measure)
-
-    @guppy(module)
+    @guppy
     def test(q: qubit @owned, x: int) -> int:
         b = measure(q)
         return x
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_return_call(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy.declare(module)
+    @guppy.declare
     def op(q: qubit @owned) -> qubit: ...
 
-    @guppy(module)
+    @guppy
     def test(q: qubit @owned) -> qubit:
         return op(q)
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_while(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def test(q: qubit @owned, i: int) -> qubit:
         while i > 0:
             i -= 1
             q = h(q)
         return q
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_while_break(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def test(q: qubit @owned, i: int) -> qubit:
         while i > 0:
             i -= 1
@@ -316,15 +259,11 @@ def test_while_break(validate):
                 break
         return q
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_while_continue(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def test(q: qubit @owned, i: int) -> qubit:
         while i > 0:
             i -= 1
@@ -333,16 +272,12 @@ def test_while_continue(validate):
             q = h(q)
         return q
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_while_reset(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
-    def foo(i: bool) -> bool:
+    @guppy
+    def foo(i: int) -> bool:
         b = False
         while True:
             q = qubit()
@@ -352,35 +287,29 @@ def test_while_reset(validate):
             i -= 1
         return b
 
+    validate(guppy.compile(foo))
+
 
 def test_while_move_back(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy.struct(module)
+    @guppy.struct
     class MyStruct:
         q: qubit
 
-    @guppy.declare(module)
+    @guppy.declare
     def use(q: qubit @owned) -> None: ...
 
-    @guppy(module)
+    @guppy
     def test(s: MyStruct @owned) -> MyStruct:
         use(s.q)
         while True:
             s.q = qubit()
             return s
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_for(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def test(qs: list[tuple[qubit, qubit]] @owned) -> list[qubit]:
         rs: list[qubit] = []
         for q1, q2 in qs:
@@ -389,30 +318,22 @@ def test_for(validate):
             rs.append(q2)
         return rs
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_for_measure(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit, measure)
-
-    @guppy(module)
+    @guppy
     def test(qs: list[qubit] @owned) -> bool:
         parity = False
         for q in qs:
             parity |= measure(q)
         return parity
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_for_continue(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit, measure)
-
-    @guppy(module)
+    @guppy
     def test(qs: list[qubit] @owned) -> int:
         x = 0
         for q in qs:
@@ -421,48 +342,40 @@ def test_for_continue(validate):
             x += 1
         return x
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_for_nonlinear_break(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy.type(NoneType().to_hugr(), module=module)
+    @guppy.type(NoneType().to_hugr())
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
-        @guppy.declare(module)
+        @guppy.declare
         def __next__(self: "MyIter") -> Option[tuple[qubit, "MyIter"]]: ...
 
 
-    @guppy.type(NoneType().to_hugr(), module=module)
+    @guppy.type(NoneType().to_hugr())
     class MyType:
         """Type that produces the iterator above."""
 
-        @guppy.declare(module)
+        @guppy.declare
         def __iter__(self: "MyType") -> MyIter: ...
 
-    @guppy.declare(module)
+    @guppy.declare
     def measure(q: qubit @owned) -> bool: ...
 
-    @guppy(module)
+    @guppy
     def test(mt: MyType, xs: list[int]) -> None:
         # We can break, since `mt` itself is not linear
         for q in mt:
             if measure(q):
                 break
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_rus(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit, measure)
-
-    @guppy(module)
+    @guppy
     def repeat_until_success(q: qubit @owned) -> qubit:
         while True:
             aux, q = cx(t(h(qubit())), q)
@@ -471,43 +384,33 @@ def test_rus(validate):
                 break
         return q
 
-    validate(module.compile())
+    validate(guppy.compile(repeat_until_success))
+
 
 def test_list_iter_arg(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def owned_arg(qs: list[qubit] @owned) -> list[qubit]:
         qs = [h(q) for q in qs]
         return qs
 
-    validate(module.compile())
+    validate(guppy.compile(owned_arg))
+
 
 def test_list_iter(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def owned_arg() -> list[qubit]:
         qs = [qubit() for _ in [0,1,2]]
         qs = [h(q) for q in qs]
         return qs
 
-    validate(module.compile())
+    validate(guppy.compile(owned_arg))
 
 
 def test_non_terminating(validate):
-    module = GuppyModule("test")
-    module.load_all(quantum_functional)
-    module.load(qubit)
-
-    @guppy(module)
+    @guppy
     def test() -> None:
         q = qubit()
         while True:
             q = h(q)
 
-    validate(module.compile())
+    validate(guppy.compile(test))

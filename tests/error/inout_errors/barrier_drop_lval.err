@@ -1,8 +1,8 @@
-Error: Drop violation (at $FILE:14:3)
+Error: Drop violation (at $FILE:10:3)
    | 
-12 | @no_type_check
-13 | def main() -> None:
-14 |    q = qubit()
+ 8 | @no_type_check
+ 9 | def main() -> None:
+10 |    q = qubit()
    |    ^ Variable `q` with non-droppable type `qubit` is leaked
 
 Help: Make sure that `q` is consumed or returned to avoid the leak
