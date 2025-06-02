@@ -67,6 +67,7 @@ test = [
     "ipykernel >=6.29.5,<7",
     "tket2 ~= 0.10.0",
     "pytest-benchmark>=5.1.0",
+    "miette-py",
 ]
 execution = [
     { include-group = "test" },

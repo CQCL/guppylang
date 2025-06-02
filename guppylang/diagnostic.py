@@ -392,6 +392,7 @@ class MietteRenderer:
     """Drop-in replacement for DiagnosticsRenderer using miette."""
 
     def __init__(self, source: SourceMap) -> None:
+        self.buffer: list[str] = []
         self.source = source
         try:
             from miette_py import guppy_to_miette, render_report
@@ -403,7 +404,7 @@ class MietteRenderer:
                 "miette-py not available. Install with: pip install miette-py/"
             )
 
-    def render_diagnostic(self, diag: Diagnostic) -> str:
+    def render_diagnostic(self, diag: Diagnostic) -> None:
         """Renders diagnostic using miette. Same interface as DiagnosticsRenderer."""
         # Convert spans
         spans = []
@@ -447,7 +448,8 @@ class MietteRenderer:
             help_text=None,  # Could extract from help children
         )
 
-        return self._render_report(miette_diag)
+        output = self._render_report(miette_diag)
+        self.buffer.extend(output.splitlines())
 
     def _calculate_offset(self, loc: Loc, source_text: str | None) -> int:
         """Calculate byte offset from line/column position."""
