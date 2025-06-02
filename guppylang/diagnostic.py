@@ -397,7 +397,7 @@ class MietteRenderer:
             self._render_report = render_report
         except ImportError:
             raise ImportError(
-                "miette-py not available. Install with: pip install ./guppylang/miette-py/"
+                "miette-py not available. Install with: pip install miette-py/"
             )
 
     def render_diagnostic(self, diag: Diagnostic) -> str:
