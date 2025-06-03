@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.20.0](https://github.com/CQCL/guppylang/compare/v0.19.1...v0.20.0) (2025-06-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* Explicit `GuppyModule` declarations are no longer possible. Instead, use the regular `@guppy` decorator everywhere without passing an explicit module. Compilation is now triggered via the `guppy.compile` function, passing the to-be-compiled function as an argument.
+
+### Features
+
+* `with_owned` std library function to temporarily take ownership of a borrowed value ([#994](https://github.com/CQCL/guppylang/issues/994)) ([7bf75df](https://github.com/CQCL/guppylang/commit/7bf75dff290b3b652c1939bffb86a915555207d2)), closes [#992](https://github.com/CQCL/guppylang/issues/992)
+* Add `Either` type to the standard library ([#993](https://github.com/CQCL/guppylang/issues/993)) ([75c1804](https://github.com/CQCL/guppylang/commit/75c18045747017aaacad74f92fc92d4e0cd78182)), closes [#991](https://github.com/CQCL/guppylang/issues/991)
+* Remove explicit Guppy modules ([#983](https://github.com/CQCL/guppylang/issues/983)) ([0b2e652](https://github.com/CQCL/guppylang/commit/0b2e652d5b4899785de13cb1e0568786777f40c0))
+
+
+### Documentation
+
+* remove wrappers on random docs, add doc to get_current_shot ([#1001](https://github.com/CQCL/guppylang/issues/1001)) ([4de4ef2](https://github.com/CQCL/guppylang/commit/4de4ef2d3cc8a06d87be0ea9921cdbaee18771f0))
+
 ## [0.19.1](https://github.com/CQCL/guppylang/compare/v0.19.0...v0.19.1) (2025-05-27)
 
 
