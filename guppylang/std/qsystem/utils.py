@@ -7,4 +7,5 @@ from guppylang.std._internal.util import external_op
 
 @guppy.hugr_op(external_op("GetCurrentShot", [], ext=QSYSTEM_UTILS_EXTENSION))
 @no_type_check
-def get_current_shot() -> int: ...
+def get_current_shot() -> int:
+    """Get the current shot number."""
