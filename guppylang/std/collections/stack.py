@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import Generic, no_type_check
+from typing import TYPE_CHECKING, Generic, no_type_check
 
 from guppylang.decorator import guppy
-from guppylang.std.builtins import array, owned, panic
+from guppylang.std.array import array
 from guppylang.std.option import Option, nothing, some
+from guppylang.std.platform import panic
+
+if TYPE_CHECKING:
+    from guppylang.std.lang import owned
 
 T = guppy.type_var("T", copyable=False, droppable=False)
 TCopyable = guppy.type_var("TCopyable", copyable=True, droppable=False)

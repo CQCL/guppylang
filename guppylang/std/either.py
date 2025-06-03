@@ -1,3 +1,8 @@
+"""Union of two types.
+
+Type `Either[L, R]` represents a value of either typr `L` ("left") or `R` ("right").
+"""
+
 from typing import Generic, no_type_check
 
 from guppylang.decorator import guppy

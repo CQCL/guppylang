@@ -13,7 +13,8 @@ from guppylang.std._internal.compiler.quantum import (
 )
 from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle, pi
-from guppylang.std.builtins import array, owned
+from guppylang.std.array import array
+from guppylang.std.lang import owned
 from guppylang.std.option import Option
 
 
