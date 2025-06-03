@@ -30,6 +30,7 @@ from guppylang.definition.function import (
     CompiledFunctionDef,
     RawFunctionDef,
 )
+from guppylang.definition.overloaded import OverloadedFunctionDef
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.pytket_circuits import (
     CompiledPytketDef,
@@ -45,12 +46,21 @@ from guppylang.tracing.object import GuppyDefinition, TypeVarGuppyDefinition
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import NumericType
+from guppylang.tys.ty import FunctionType, NoneType, NumericType
 
 S = TypeVar("S")
 T = TypeVar("T")
 F = TypeVar("F", bound=Callable[..., Any])
 Decorator = Callable[[S], T]
+
+AnyRawFunctionDef = (
+    RawFunctionDef,
+    RawCustomFunctionDef,
+    RawFunctionDecl,
+    RawPytketDef,
+    RawLoadPytketDef,
+    OverloadedFunctionDef,
+)
 
 
 _JUPYTER_NOTEBOOK_MODULE = "<jupyter-notebook>"
@@ -230,6 +240,72 @@ class _Guppy:
         # We're pretending to return the function unchanged, but in fact we return
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
+
+    def overload(self, *funcs: Any) -> Callable[[F], F]:
+        """Collects multiple function definitions into one overloaded function.
+
+        Consider the following example:
+
+        ```
+        @guppy.declare
+        def variant1(x: int, y: int) -> int: ...
+
+        @guppy.declare
+        def variant2(x: float) -> int: ...
+
+        @guppy.overload(variant1, variant2)
+        def combined(): ...
+        ```
+
+        Now, `combined` may be called with either one `float` or two `int` arguments,
+        delegating to the implementation with the matching signature:
+
+        ```
+        combined(4.2)  # Calls `variant1`
+        combined(42, 43)  # Calls `variant2`
+        ```
+
+        Note that the compiler will pick the *first* implementation with matching
+        signature and ignore all following ones, even if they would also match. For
+        example, if we added a third variant
+
+        ```
+        @guppy.declare
+        def variant3(x: int) -> int: ...
+
+        @guppy.overload(variant1, variant2, variant3)
+        def combined_new(): ...
+        ```
+
+        then a call `combined_new(42)` will still select the `variant1` implementation
+        `42` is a valid argument for `variant1` and `variant1` comes before `variant3`
+        in the `@guppy.overload` annotation.
+        """
+        funcs = list(funcs)
+        if len(funcs) < 2:
+            raise ValueError("Overload requires at least two functions")
+        func_ids = []
+        for func in funcs:
+            if not isinstance(func, GuppyDefinition):
+                raise TypeError(f"Not a Guppy definition: {func}")
+            if not isinstance(func.wrapped, AnyRawFunctionDef):
+                raise TypeError(
+                    f"Not a Guppy function definition: {func.wrapped.description} "
+                    f"`{func.wrapped.name}`"
+                )
+            func_ids.append(func.id)
+
+        def dec(f: F) -> F:
+            dummy_sig = FunctionType([], NoneType())
+            defn = OverloadedFunctionDef(
+                DefId.fresh(), f.__name__, None, dummy_sig, func_ids
+            )
+            DEF_STORE.register_def(defn, get_calling_frame())
+            # We're pretending to return the class unchanged, but in fact we return
+            # a `GuppyDefinition` that handles the comptime logic
+            return GuppyDefinition(defn)  # type: ignore[return-value]
+
+        return dec
 
     def constant(self, name: str, ty: str, value: hv.Value) -> T:  # type: ignore[type-var]  # Since we're returning a free type variable
         """Adds a constant to a module, backed by a `hugr.val.Value`."""

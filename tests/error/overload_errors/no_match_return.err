@@ -1,0 +1,9 @@
+Error: Invalid call of overloaded function (at $FILE:18:13)
+   | 
+16 | @guppy
+17 | def main() -> None:
+18 |     x: int = overloaded(42)
+   |              ^^^^^^^^^^^^^^ No variant of overloaded function `overloaded` takes a `int`
+   |                             argument and returns `int`
+
+Guppy compilation failed due to 1 previous error

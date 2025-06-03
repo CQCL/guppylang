@@ -144,7 +144,6 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
     handles inout arguments.
     """
     state = get_tracing_state()
-    assert func.defined_at is not None
 
     # Try to turn args into `GuppyObjects`
     args_objs = [
@@ -162,10 +161,10 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
 
     # Check call
     arg_exprs: list[ast.expr] = [
-        with_loc(func.defined_at, with_type(var.ty, PlaceNode(var))) for var in arg_vars
+        with_loc(state.node, with_type(var.ty, PlaceNode(var))) for var in arg_vars
     ]
     call_node, ret_ty = func.synthesize_call(
-        arg_exprs, func.defined_at, Context(state.globals, locals, {})
+        arg_exprs, state.node, Context(state.globals, locals, {})
     )
 
     # Compile call
