@@ -36,33 +36,9 @@ class RNG:
         return _new_rng_context(seed).unwrap()
 
     @guppy
-    def discard(self: "RNG" @ owned) -> None:  # type: ignore[valid-type] # Invalid type comment or annotation
-        """Discard the random number generator."""
-        self._discard()
-
-    @guppy
-    def random_int(self: "RNG") -> int:
-        """Generate a random 32-bit signed integer."""
-        return self._random_int()
-
-    @guppy
-    def random_float(self: "RNG") -> float:
-        """Generate a random floating point value in the range [0,1)."""
-        return self._random_float()
-
-    @guppy
-    def random_int_bounded(self: "RNG", bound: int) -> int:
-        """Generate a random 32-bit integer in the range [0, bound).
-
-        Args:
-            bound: The upper bound of the range, needs to less than 2^31.
-        """
-        return self._random_int_bounded(bound)
-
-    @guppy
     def random_angle(self: "RNG") -> angle:
         """Generate a random angle in the range [-pi, pi)."""
-        return (2.0 * self._random_float() - 1.0) * pi
+        return (2.0 * self.random_float() - 1.0) * pi
 
     @guppy
     def random_clifford_angle(self: "RNG") -> angle:
@@ -71,19 +47,27 @@ class RNG:
 
     @guppy.hugr_op(external_op("DeleteRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION))
     @no_type_check
-    def _discard(self: "RNG" @ owned) -> None: ...
+    def discard(self: "RNG" @ owned) -> None:
+        """Discard the random number generator."""
 
     @guppy.custom(RandomIntCompiler())
     @no_type_check
-    def _random_int(self: "RNG") -> int: ...
+    def random_int(self: "RNG") -> int:
+        """Generate a random 32-bit signed integer."""
 
     @guppy.hugr_op(external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION))
     @no_type_check
-    def _random_float(self: "RNG") -> float: ...
+    def random_float(self: "RNG") -> float:
+        """Generate a random floating point value in the range [0,1)."""
 
     @guppy.custom(RandomIntBoundedCompiler())
     @no_type_check
-    def _random_int_bounded(self: "RNG", bound: int) -> int: ...
+    def random_int_bounded(self: "RNG", bound: int) -> int:
+        """Generate a random 32-bit integer in the range [0, bound).
+
+        Args:
+            bound: The upper bound of the range, needs to less than 2^31.
+        """
 
     @guppy
     @no_type_check
