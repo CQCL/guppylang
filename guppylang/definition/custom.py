@@ -346,6 +346,9 @@ class WasmCallChecker(CustomCallChecker):
     type_sanitised: bool = False
 
     def sanitise_type(self) -> None:
+        # Place to highlight in error messages
+        loc = self.func.defined_at
+
         if isinstance(self.func.ty, FunctionType):
             match self.func.ty.inputs[0]:
                 case FuncInput(ty=ty, flags=InputFlags.Inout) if isinstance(
@@ -353,15 +356,14 @@ class WasmCallChecker(CustomCallChecker):
                 ):
                     pass
                 case FuncInput(ty=ty):
-                    raise GuppyError(FirstArgNotModule(self.node, ty))
+                    raise GuppyError(FirstArgNotModule(loc, ty))
             for inp in self.func.ty.inputs[1:]:
-                assert isinstance(inp, FuncInput)
                 if not self.is_type_wasmable(inp.ty):
-                    raise GuppyError(UnWasmableType(self.node, inp.ty))
+                    raise GuppyError(UnWasmableType(loc, inp.ty))
             if not self.is_type_wasmable(self.func.ty.output):
-                raise GuppyError(UnWasmableType(self.node, self.func.ty.output))
+                raise GuppyError(UnWasmableType(loc, self.func.ty.output))
         else:
-            raise GuppyError(NonFunctionWasmType(self.node, self.func.ty))
+            raise GuppyError(NonFunctionWasmType(loc, self.func.ty))
         self.type_sanitised = True
 
     def is_type_wasmable(self, ty: Type) -> bool:
