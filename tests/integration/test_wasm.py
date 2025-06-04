@@ -1,3 +1,4 @@
+from guppylang import GuppyModule
 from guppylang.decorator import guppy
 from guppylang.std.builtins import nat
 
@@ -58,6 +59,31 @@ def test_wasm_types(validate):
         mod.foo((0, (1, 2.0)), False)
         mod.discard()
         return
+
+    mod = guppy.compile_module()
+    validate(mod)
+
+def test_wasm_guppy_module(validate):
+    mod = GuppyModule("my_wasm")
+
+    @guppy.wasm_module("", 42, module = mod)
+    class MyWasm:
+
+        @guppy.wasm(mod)
+        def add_one(self: "MyWasm", x: int) -> int: ...
+
+        @guppy.wasm(mod)
+        def swap(self: "MyWasm", x: int, y: bool) -> tuple[bool, int]: ...
+
+    @guppy(mod)
+    def main() -> int:
+        mod1 = MyWasm().unwrap()
+        mod2 = MyWasm().unwrap()
+        two = mod1.add_one(1)
+        b, two2 = mod2.swap(two, True)
+        mod1.discard()
+        mod2.discard()
+        return two + two2
 
     mod = guppy.compile_module()
     validate(mod)

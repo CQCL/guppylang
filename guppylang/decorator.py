@@ -598,13 +598,15 @@ class _Guppy:
         return GuppyDefinition(defn)
 
     def wasm_module(
-        self, filename: str, filehash: int
+        self, filename: str, filehash: int, module: GuppyModule | None = None
     ) -> Decorator[PyClass, GuppyDefinition]:
         # N.B. Only one module per file and vice-versa
-        guppy_module = self.get_module()
+        guppy_module = module or self.get_module()
         ctx_id = guppy_module._get_next_wasm_context()
         assert guppy_module._instance_func_buffer is None
         guppy_module._instance_func_buffer = {}
+
+        """Decorator to declare functions"""
 
         def dec(cls: PyClass) -> GuppyDefinition:
             wasm_module = WasmModule(
@@ -654,19 +656,21 @@ class _Guppy:
 
         return dec
 
-    def wasm(self, f: PyFunc) -> GuppyDefinition:
-        guppy_module = self.get_module()
-        func = RawCustomFunctionDef(
-            DefId.fresh(guppy_module),
-            f.__name__,
-            None,
-            f,
-            WasmCallChecker(),
-            WasmModuleCallCompiler(f.__name__),
-            True,
-        )
-        guppy_module.register_def(func)
-        return GuppyDefinition(func)
+    def wasm(self, f: PyFunc | GuppyModule) -> Decorator[PyClass, GuppyDefinition]:
+        def dec(f: PyFunc, guppy_module: GuppyModule) -> GuppyDefinition:
+            func = RawCustomFunctionDef(
+                DefId.fresh(guppy_module),
+                f.__name__,
+                None,
+                f,
+                WasmCallChecker(),
+                WasmModuleCallCompiler(f.__name__),
+                True,
+            )
+            guppy_module.register_def(func)
+            return GuppyDefinition(func)
+
+        return self._with_optional_module(dec, f)
 
 
 class _GuppyDummy:
