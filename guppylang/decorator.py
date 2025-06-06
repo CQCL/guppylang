@@ -58,7 +58,7 @@ from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import NumericType
+from guppylang.tys.ty import FunctionType, NumericType
 
 S = TypeVar("S")
 T = TypeVar("T")
@@ -356,6 +356,7 @@ class _Guppy:
         higher_order_value: bool = True,
         name: str = "",
         module: GuppyModule | None = None,
+        signature: FunctionType | None = None,
     ) -> Callable[[F], F]:
         """Decorator to add custom typing or compilation behaviour to function decls.
 
@@ -375,6 +376,7 @@ class _Guppy:
                 call_checker,
                 compiler or NotImplementedCallCompiler(),
                 higher_order_value,
+                signature,
             )
             mod.register_def(func)
             # We're pretending to return the function unchanged, but in fact we return
@@ -390,6 +392,7 @@ class _Guppy:
         higher_order_value: bool = True,
         name: str = "",
         module: GuppyModule | None = None,
+        signature: FunctionType | None = None,
     ) -> Callable[[F], F]:
         """Decorator to annotate function declarations as HUGR ops.
 
@@ -402,7 +405,7 @@ class _Guppy:
                 value.
             name: The name of the function.
         """
-        return self.custom(OpCompiler(op), checker, higher_order_value, name, module)
+        return self.custom(OpCompiler(op), checker, higher_order_value, name, module, signature)
 
     @overload
     def declare(self, arg: GuppyModule) -> Callable[[F], F]: ...
