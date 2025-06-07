@@ -89,6 +89,17 @@ def empty_stack() -> Stack[T, MAX_SIZE]:
 
 @guppy.struct
 class PriorityQueue(Generic[T, MAX_SIZE]):  # type: ignore[misc]
+    """A queue of values ordered by priority.
+
+    Values with the lowest priority value will be popped from the queue first.
+    (e.g. Priority 1 will be returned before priority 2.) To ensure static
+    allocation, the maximum queue size must be specified in advance and
+    is tracked in the type. For example, the `PriorityQueue[int, 10]`
+    is a queue that can hold at most 10 prioritized integers.
+
+    Use `empty_priority_queue` to construct a new priority_queue.
+    """
+
     #: Underlying buffer holding the priority queue elements.
     #:
     #: INVARIANT: All array elements up to and including index `self.size - 1` are
