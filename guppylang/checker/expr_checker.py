@@ -26,7 +26,7 @@ import traceback
 from contextlib import suppress
 from dataclasses import replace
 from types import ModuleType
-from typing import Any, NoReturn, cast
+from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 from typing_extensions import assert_never
 
@@ -57,6 +57,7 @@ from guppylang.checker.errors.comptime_errors import (
     ComptimeExprIncoherentListError,
     ComptimeExprNotCPythonError,
     ComptimeExprNotStaticError,
+    ComptimeUnknownError,
     IllegalComptimeExpressionError,
 )
 from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
@@ -65,6 +66,7 @@ from guppylang.checker.errors.type_errors import (
     AttributeNotFoundError,
     BadProtocolError,
     BinaryOperatorNotDefinedError,
+    ConstMismatchError,
     IllegalConstant,
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
@@ -121,6 +123,7 @@ from guppylang.tys.builtin import (
     option_type,
     string_type,
 )
+from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.parsing import arg_from_ast
 from guppylang.tys.subst import Inst, Subst
@@ -140,6 +143,9 @@ from guppylang.tys.ty import (
     parse_function_tensor,
     unify,
 )
+
+if TYPE_CHECKING:
+    from guppylang.diagnostic import SubDiagnostic
 
 # Mapping from unary AST op to dunder method and display name
 unary_table: dict[type[ast.unaryop], tuple[str, str]] = {
@@ -951,14 +957,19 @@ def type_check_args(
     check_num_args(len(func_ty.inputs), len(inputs), node, func_ty)
 
     new_args: list[ast.expr] = []
+    comptime_args = iter(func_ty.comptime_args)
     for inp, func_inp in zip(inputs, func_ty.inputs, strict=True):
         a, s = ExprChecker(ctx).check(inp, func_inp.ty.substitute(subst), "argument")
         if InputFlags.Inout in func_inp.flags and isinstance(a, PlaceNode):
             a.place = check_place_assignable(
                 a.place, ctx, a, "able to borrow subscripted elements"
             )
+        if InputFlags.Comptime in func_inp.flags:
+            comptime_arg = next(comptime_args)
+            s = check_comptime_arg(a, comptime_arg.const, func_inp.ty, s)
         new_args.append(a)
         subst |= s
+    assert next(comptime_args, None) is None
 
     # If the argument check succeeded, this means that we must have found instantiations
     # for all unification variables occurring in the input types
@@ -1017,6 +1028,44 @@ def check_place_assignable(
                 True,
             )
             return replace(place, setitem_call=SetitemCall(setitem_call, tmp_var))
+
+
+def check_comptime_arg(
+    arg: ast.expr, exp_const: Const, ty: Type, subst: Subst | None
+) -> Subst:
+    """Checks that an expression can be passes as a valid `@comptime` argument.
+
+    Also checks that the value matches the provided constant. Returns a substitution
+    that solves any existential variables occurring in provided constant.
+    """
+    const: Const
+    match arg:
+        case ast.Constant(value=v):
+            const = ConstValue(ty, v)
+        case GenericParamValue(param=const_param):
+            const = const_param.to_bound().const
+        case arg:
+            # Anything else is considered unknown at comptime, but we can give some
+            # nicer error hints by inspecting in more detail
+            err = ComptimeUnknownError(arg, "argument")
+            s: SubDiagnostic
+            match arg:
+                case PlaceNode(place=place) if place.root.is_func_input:
+                    s = ComptimeUnknownError.InputHint(arg.place.defined_at, arg.place)
+                case PlaceNode(place=place):
+                    s = ComptimeUnknownError.VariableHint(
+                        arg.place.defined_at, arg.place
+                    )
+                case arg:
+                    s = ComptimeUnknownError.FallbackHint(arg)
+            err.add_sub_diagnostic(s)
+            err.add_sub_diagnostic(ComptimeUnknownError.Feedback(None))
+            raise GuppyError(err)
+    # Unify with expected constant to check and maybe infer some variables
+    subst = unify(exp_const, const, subst)
+    if subst is None:
+        raise GuppyError(ConstMismatchError(arg, exp_const, const))
+    return subst
 
 
 def synthesize_call(

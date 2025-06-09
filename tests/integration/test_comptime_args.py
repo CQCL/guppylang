@@ -1,0 +1,86 @@
+from guppylang.decorator import guppy
+from guppylang.std.builtins import nat, comptime, array
+
+
+def test_basic(validate):
+    @guppy
+    def foo(n: nat @ comptime) -> nat:
+        return nat(n + 1)
+
+    @guppy
+    def main() -> nat:
+        return foo(42)
+
+    validate(guppy.compile(main))
+
+
+def test_multiple(validate):
+    @guppy
+    def foo(
+        a: nat @ comptime, b: nat, c: nat @ comptime, d: nat, e: nat, f: nat @ comptime
+    ) -> nat:
+        return nat(a + b + c + d + e + f)
+
+    @guppy
+    def main() -> nat:
+        return foo(1, 2, 3, 4, 5, 6)
+
+    validate(guppy.compile(main))
+
+
+def test_comptime_expr(validate):
+    @guppy.declare
+    def foo(n: nat @ comptime) -> nat: ...
+
+    @guppy
+    def main() -> nat:
+        return foo(comptime(42 + 1))
+
+    validate(guppy.compile(main))
+
+
+def test_dependent(validate):
+    @guppy
+    def foo(n: nat @ comptime, xs: "array[int, n]") -> None:
+        pass
+
+    @guppy
+    def main() -> None:
+        foo(0, array())
+        foo(1, array(1))
+        foo(2, array(1, 2))
+
+    validate(guppy.compile(main))
+
+
+def test_dependent_generic(validate):
+    x = guppy.nat_var("x")
+
+    @guppy
+    def foo(n: nat @ comptime, xs: "array[int, n]") -> None:
+        pass
+
+    @guppy
+    def main(xs: array[int, x]) -> None:
+        foo(x, xs)
+
+    validate(guppy.compile(main))
+
+
+def test_type_apply(validate):
+    T = guppy.type_var("T")
+
+    @guppy
+    def foo(x: T, n: nat @ comptime) -> None:
+        pass
+
+    @guppy
+    def main(m: nat @ comptime) -> None:
+        foo[int, 43](42, 43)
+        f = foo[float, 44]
+        f(4.2, 44)
+        g = foo[nat, m]
+        g(42, m)
+
+    validate(guppy.compile(main))
+
