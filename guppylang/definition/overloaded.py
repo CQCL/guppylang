@@ -13,11 +13,12 @@ from guppylang.definition.common import (
     DefId,
 )
 from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
-from guppylang.diagnostic import Error
+from guppylang.diagnostic import Error, Note
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.span import Span, to_span
+from guppylang.tys.printing import signature_to_str
 from guppylang.tys.subst import Inst, Subst
-from guppylang.tys.ty import Type
+from guppylang.tys.ty import FunctionType, Type
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,18 @@ class OverloadNoMatchError(Error):
 
 
 @dataclass(frozen=True)
+class AvailableOverloadsHint(Note):
+    func_name: str
+    variants: list[FunctionType]
+
+    @property
+    def rendered_message(self) -> str:
+        return "Available overloads are:\n" + "\n".join(
+            f"  {signature_to_str(self.func_name, ty)}" for ty in self.variants
+        )
+
+
+@dataclass(frozen=True)
 class OverloadHigherOrderError(Error):
     title: ClassVar[str] = "Higher-order overloaded function"
     span_label: ClassVar[str] = (
@@ -63,28 +76,33 @@ class OverloadedFunctionDef(CompiledCallableDef, CallableDef):
     def check_call(
         self, args: list[ast.expr], ty: Type, node: AstNode, ctx: Context
     ) -> tuple[ast.expr, Subst]:
+        available_sigs: list[FunctionType] = []
         for def_id in self.func_ids:
             defn = ctx.globals[def_id]
             assert isinstance(defn, CallableDef)
+            available_sigs.append(defn.ty)
             with suppress(GuppyError):
                 return defn.check_call(args, ty, node, ctx)
-        return self._call_error(args, node, ctx, ty)
+        return self._call_error(args, node, ctx, available_sigs, ty)
 
     def synthesize_call(
         self, args: list[ast.expr], node: AstNode, ctx: "Context"
     ) -> tuple[ast.expr, Type]:
+        available_sigs: list[FunctionType] = []
         for def_id in self.func_ids:
             defn = ctx.globals[def_id]
             assert isinstance(defn, CallableDef)
+            available_sigs.append(defn.ty)
             with suppress(GuppyError):
                 return defn.synthesize_call(args, node, ctx)
-        return self._call_error(args, node, ctx)
+        return self._call_error(args, node, ctx, available_sigs)
 
     def _call_error(
         self,
         args: list[ast.expr],
         node: AstNode,
         ctx: "Context",
+        available_sigs: list[FunctionType],
         return_ty: Type | None = None,
     ) -> NoReturn:
         if args and not return_ty:
@@ -97,6 +115,7 @@ class OverloadedFunctionDef(CompiledCallableDef, CallableDef):
         synth = ExprSynthesizer(ctx)
         arg_tys = [synth.synthesize(arg)[1] for arg in args]
         err = OverloadNoMatchError(span, self.name, arg_tys, return_ty)
+        err.add_sub_diagnostic(AvailableOverloadsHint(None, self.name, available_sigs))
         raise GuppyError(err)
 
     def compile_call(
