@@ -206,8 +206,8 @@ class PriorityQueue(Generic[T, MAX_SIZE]):  # type: ignore[misc]
         """
         if self.size <= 0:
             panic("PriorityQueue.peek: priority queue is empty")
-        elem = self.buf[0].unwrap()
-        return elem[0], elem[1], PriorityQueue(self.buf, self.size)
+        prio, val = self.buf[0].unwrap()
+        return prio, val, PriorityQueue(self.buf, self.size)
 
 
 @guppy
