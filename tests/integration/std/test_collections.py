@@ -26,15 +26,21 @@ def test_priority_queue(validate, run_int_fn) -> None:
     def main() -> int:
         pq: PriorityQueue[int, 10] = empty_priority_queue()
         for i in range(10):
+            # values are in order, priority is reversed
             pq = pq.push(i, 9 - i)
         s = 0
         multiplier = 1
         while len(pq) > 0:
             priority, value, pq = pq.pop()
-            s = s + value * multiplier
-            multiplier = multiplier + 1
+            # use multiplier to ensure the correct order
+            s += value * multiplier
+            multiplier += 1
         return s
 
     compiled = guppy.compile(main)
     validate(compiled)
-    run_int_fn(compiled, sum(i * (i + 1) for i in range(10)))
+    run_int_fn(
+        compiled,
+        # multiplier * value for ordered values in priority queue
+        sum((m + 1) * v for m, v in enumerate(reversed(list(range(10)))))
+    )
