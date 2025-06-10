@@ -1051,11 +1051,9 @@ def check_comptime_arg(
             s: SubDiagnostic
             match arg:
                 case PlaceNode(place=place) if place.root.is_func_input:
-                    s = ComptimeUnknownError.InputHint(arg.place.defined_at, arg.place)
+                    s = ComptimeUnknownError.InputHint(place.defined_at, place)
                 case PlaceNode(place=place):
-                    s = ComptimeUnknownError.VariableHint(
-                        arg.place.defined_at, arg.place
-                    )
+                    s = ComptimeUnknownError.VariableHint(place.defined_at, place)
                 case arg:
                     s = ComptimeUnknownError.FallbackHint(arg)
             err.add_sub_diagnostic(s)
