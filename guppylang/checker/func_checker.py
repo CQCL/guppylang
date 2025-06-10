@@ -126,6 +126,8 @@ def check_nested_func_def(
         for i, (x, inp) in enumerate(
             zip(func_ty.input_names, func_ty.inputs, strict=True)
         )
+        # Comptime inputs are turned into generic args, so are not included here
+        if InputFlags.Comptime not in inp.flags
     ]
     def_id = DefId.fresh()
     globals = ctx.globals
