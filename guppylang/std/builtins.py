@@ -5,7 +5,7 @@ from guppylang.std.bool import bool
 from guppylang.std.iter import Range, SizedIter, range
 from guppylang.std.lang import comptime, owned, py
 from guppylang.std.list import list
-from guppylang.std.mem import barrier, mem_swap
+from guppylang.std.mem import mem_swap
 from guppylang.std.num import (
     abs,
     bytecast_float_to_nat,
@@ -19,7 +19,7 @@ from guppylang.std.num import (
     round,
 )
 from guppylang.std.option import Option, nothing, some
-from guppylang.std.platform import exit, panic, result
+from guppylang.std.platform import barrier, exit, panic, result
 from guppylang.std.quantum import qubit
 from guppylang.std.reflection import callable
 from guppylang.std.string import str

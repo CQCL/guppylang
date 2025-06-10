@@ -4,8 +4,15 @@
 
 from __future__ import annotations
 
+from typing import no_type_check
+
 from guppylang.decorator import guppy
-from guppylang.std._internal.checker import ExitChecker, PanicChecker, ResultChecker
+from guppylang.std._internal.checker import (
+    BarrierChecker,
+    ExitChecker,
+    PanicChecker,
+    ResultChecker,
+)
 
 
 @guppy.custom(checker=ResultChecker(), higher_order_value=False)
@@ -51,3 +58,10 @@ def exit(msg: str, signal: int, *args):
         args: Arbitrary extra inputs, will not affect the message. Only useful for
         consuming linear values.
     """
+
+
+@guppy.custom(checker=BarrierChecker(), higher_order_value=False)
+@no_type_check
+def barrier(*args) -> None:
+    """Barrier to guarantee that all operations before the barrier are completed before
+    operations after the barrier are started."""
