@@ -471,10 +471,40 @@ def _find_load_call(sources: SourceMap) -> Span | None:
     return None
 
 
+def custom_guppy_decorator(f: F) -> F:
+    """Decorator to mark user-defined decorators that wrap builtin `guppy` decorators.
+
+    Example:
+
+    ```
+    @custom_guppy_decorator
+    def my_guppy(f):
+        # Some custom logic here ...
+        return guppy(f)
+
+    @my_guppy
+    def main() -> int: ...
+    ```
+
+    If the `custom_guppy_decorator` were missing, then the `@my_guppy` annotation would
+    not produce a valid guppy definition.
+    """
+    object.__setattr__(f, "__custom_guppy_decorator__", True)
+    return f
+
+
 def get_calling_frame() -> FrameType:
     """Finds the first frame that called this function outside the compiler modules."""
     frame = inspect.currentframe()
     while frame:
+        # Skip frame if we're inside a user-defined decorator that wraps the `guppy`
+        # decorator. Those are functions that have a `__custom_guppy_decorator__` field.
+        # We can get a reference to the calling function by looking up the code function
+        # name in the frame globals:
+        func = frame.f_globals.get(frame.f_code.co_name)
+        if getattr(func, "__custom_guppy_decorator__", None) is True:
+            frame = frame.f_back
+            continue
         module = inspect.getmodule(frame)
         if module is None:
             return frame
