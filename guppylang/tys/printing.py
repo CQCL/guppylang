@@ -153,3 +153,14 @@ class TypePrinter:
 
 def _wrap(s: str, inside_row: bool) -> str:
     return f"({s})" if inside_row else s
+
+
+def signature_to_str(name: str, sig: FunctionType) -> str:
+    """Displays a function signature in Python syntax including the function name."""
+    assert sig.input_names is not None
+    s = f"def {name}("
+    s += ", ".join(
+        f"{name}: {inp.ty}{TypePrinter._print_flags(inp.flags)}"
+        for name, inp in zip(sig.input_names, sig.inputs, strict=True)
+    )
+    return s + ") -> " + str(sig.output)
