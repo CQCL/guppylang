@@ -1,24 +1,20 @@
 from hugr import tys
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 
 
-module = GuppyModule("test")
-
-
-@guppy.type(tys.Tuple(), module=module)
+@guppy.type(tys.Tuple())
 class T:
     pass
 
 
-@guppy.declare(module)
+@guppy.declare
 def foo(x: T) -> None: ...
 
 
-@guppy.comptime(module)
+@guppy.comptime
 def test() -> None:
     foo(T)
 
 
-module.compile()
+guppy.compile(test)

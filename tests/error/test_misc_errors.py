@@ -1,8 +1,7 @@
 import pathlib
 import pytest
 
-from guppylang import GuppyModule, guppy
-from guppylang.error import GuppyError
+from guppylang import guppy
 from tests.error.util import run_error_test
 
 path = pathlib.Path(__file__).parent.resolve() / "misc_errors"
@@ -25,7 +24,5 @@ def test_misc_errors(file, capsys, snapshot):
 
 
 def test_extern_bad_type_syntax():
-    module = GuppyModule("test")
-
     with pytest.raises(SyntaxError, match="Not a valid Guppy type: `foo bar`"):
-        guppy.extern(name="x", ty="foo bar", module=module)
+        guppy.extern(name="x", ty="foo bar")

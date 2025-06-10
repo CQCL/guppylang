@@ -1,8 +1,8 @@
-Error: Drop violation (at $FILE:14:11)
+Error: Drop violation (at $FILE:10:11)
    | 
-12 | @no_type_check
-13 | def main() -> None:
-14 |    barrier(qubit())
+ 8 | @no_type_check
+ 9 | def main() -> None:
+10 |    barrier(qubit())
    |            ^^^^^^^ Value with non-droppable type `qubit` would be leaked after
    |                    the function returns
 

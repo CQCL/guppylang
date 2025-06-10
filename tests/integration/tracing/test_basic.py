@@ -1,7 +1,6 @@
 from collections.abc import Callable
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std.builtins import array, comptime
 
 from hugr import ops
@@ -9,16 +8,14 @@ from hugr.std.int import IntVal
 
 
 def test_flat(validate):
-    module = GuppyModule("module")
-
-    @guppy.comptime(module)
+    @guppy.comptime
     def foo() -> int:
         x = 0
         for i in range(10):
             x += i
         return x
 
-    hugr = module.compile()
+    hugr = guppy.compile(foo)
     assert hugr.module.num_nodes() == 6
     [const] = [
         data.op for _, data in hugr.module.nodes() if isinstance(data.op, ops.Const)
@@ -29,76 +26,69 @@ def test_flat(validate):
 
 
 def test_inputs(validate):
-    module = GuppyModule("module")
-
-    @guppy.comptime(module)
+    @guppy.comptime
     def foo(x: int, y: float) -> tuple[int, float]:
         return x, y
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 def test_recursion(validate):
-    module = GuppyModule("module")
-
-    @guppy.comptime(module)
+    @guppy.comptime
     def foo(x: int) -> int:
         # `foo` doesn't terminate but the compiler should!
         return foo(x)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
 
 
 def test_calls(validate):
-    module = GuppyModule("module")
-
-    @guppy.comptime(module)
+    @guppy.comptime
     def comptime1(x: int) -> int:
         return regular1(x)
 
-    @guppy(module)
+    @guppy
     def regular1(x: int) -> int:
         return comptime2(x)
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def comptime2(x: int) -> int:
         return regular2(x)
 
-    @guppy(module)
+    @guppy
     def regular2(x: int) -> int:
         return comptime1(x)
 
-    validate(module.compile())
+    validate(guppy.compile(regular2))
 
 
 def test_load_func(validate):
-    module = GuppyModule("test")
-
-    @guppy.declare(module)
+    @guppy.declare
     def foo(x: int) -> int: ...
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def test() -> Callable[[int], int]:
         return foo
 
-    validate(module.compile())
+    validate(guppy.compile(test))
 
 
 def test_inner_scope(validate):
-    module = GuppyModule("test")
-
     def make(n: int):
         # Test that `n` is scope even if it is only defined in this function scope
         # instead of globally:
 
-        @guppy.comptime(module)
+        @guppy.comptime
         def foo() -> int:
             return n
 
-        @guppy.comptime(module)
+        @guppy.comptime
         def bar(xs: array[int, comptime(n)]) -> None:
             pass
 
-    make(42)
-    validate(module.compile())
+        return foo, bar
+
+    foo, bar = make(42)
+    validate(guppy.compile(foo))
+    validate(guppy.compile(bar))
 

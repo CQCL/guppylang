@@ -78,4 +78,4 @@ def t_state(timeout: int) -> Option[qubit]:
     return nothing()
 
 
-hugr = guppy.compile_module()
+hugr = guppy.compile(t_state)

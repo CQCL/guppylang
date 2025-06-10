@@ -1,13 +1,13 @@
 import ast
 import inspect
 from collections.abc import Sequence
-from dataclasses import dataclass, field, replace
-from typing import Any, ClassVar
+from dataclasses import dataclass
+from typing import ClassVar
 
 from hugr import Wire, ops
 
 from guppylang.ast_util import AstNode, annotate_location
-from guppylang.checker.core import Globals, PyScope
+from guppylang.checker.core import Globals
 from guppylang.checker.errors.generic import (
     ExpectedError,
     UnexpectedError,
@@ -30,6 +30,7 @@ from guppylang.definition.function import parse_source
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
 from guppylang.diagnostic import Error, Help
+from guppylang.engine import DEF_STORE
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.span import SourceMap
@@ -90,16 +91,6 @@ class RawStructDef(TypeDef, ParsableDef):
     """A raw struct type definition that has not been parsed yet."""
 
     python_class: type
-    python_scope: PyScope = field(repr=False)
-
-    def __getitem__(self, item: Any) -> "RawStructDef":
-        """Dummy implementation to enable subscripting in the Python runtime.
-
-        For example, if users write `MyStruct[int]` in a function signature, the
-        interpreter will try to execute the expression which would fail if this function
-        weren't implemented.
-        """
-        return self
 
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedStructDef":
         """Parses the raw class object into an AST and checks that it is well-formed."""
@@ -161,12 +152,10 @@ class RawStructDef(TypeDef, ParsableDef):
             x = overridden.pop()
             raise GuppyError(DuplicateFieldError(used_func_names[x], self.name, x))
 
-        return ParsedStructDef(
-            self.id, self.name, cls_def, params, fields, self.python_scope
-        )
+        return ParsedStructDef(self.id, self.name, cls_def, params, fields)
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> Type:
         raise InternalGuppyError("Tried to instantiate raw struct definition")
 
@@ -178,14 +167,12 @@ class ParsedStructDef(TypeDef, CheckableDef):
     defined_at: ast.ClassDef
     params: Sequence[Parameter]
     fields: Sequence[UncheckedStructField]
-    python_scope: PyScope = field(repr=False)
 
     def check(self, globals: Globals) -> "CheckedStructDef":
         """Checks that all struct fields have valid types."""
         # Before checking the fields, make sure that this definition is not recursive,
         # otherwise the code below would not terminate.
         # TODO: This is not ideal (see todo in `check_instantiate`)
-        globals = globals.with_python_scope(self.python_scope)
         param_var_mapping = {p.name: p for p in self.params}
         check_not_recursive(self, globals, param_var_mapping)
 
@@ -198,12 +185,13 @@ class ParsedStructDef(TypeDef, CheckableDef):
         )
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> Type:
         """Checks if the struct can be instantiated with the given arguments."""
         check_all_args(self.params, args, self.name, loc)
         # Obtain a checked version of this struct definition so we can construct a
         # `StructType` instance
+        globals = Globals(DEF_STORE.frames[self.id])
         # TODO: This is quite bad: If we have a cyclic definition this will not
         #  terminate, so we have to check for cycles in every call to `check`. The
         #  proper way to deal with this is changing `StructType` such that it only
@@ -222,7 +210,7 @@ class CheckedStructDef(TypeDef, CompiledDef):
     fields: Sequence[StructField]
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> Type:
         """Checks if the struct can be instantiated with the given arguments."""
         check_all_args(self.params, args, self.name, loc)
@@ -249,7 +237,7 @@ class CheckedStructDef(TypeDef, CompiledDef):
             params=self.params,
         )
         constructor_def = CustomFunctionDef(
-            id=DefId.fresh(self.id.module),
+            id=DefId.fresh(),
             name="__new__",
             defined_at=self.defined_at,
             ty=constructor_sig,
@@ -341,26 +329,14 @@ def check_not_recursive(
     #  structs. This is not great since it repeats the work done during checking. We can
     #  get rid of this after resolving the todo in `ParsedStructDef.check_instantiate()`
 
-    @dataclass(frozen=True)
-    class DummyStructDef(TypeDef):
-        """Dummy definition that throws an error when trying to instantiate it.
+    def dummy_check_instantiate(
+        args: Sequence[Argument],
+        loc: AstNode | None = None,
+    ) -> Type:
+        raise GuppyError(UnsupportedError(loc, "Recursive structs"))
 
-        By replacing the defn with this, we can detect recursive occurrences during
-        type parsing.
-        """
-
-        def check_instantiate(
-            self,
-            args: Sequence[Argument],
-            globals: "Globals",
-            loc: AstNode | None = None,
-        ) -> Type:
-            raise GuppyError(UnsupportedError(loc, "Recursive structs"))
-
-    dummy_defs = {
-        **globals.defs,
-        defn.id: DummyStructDef(defn.id, defn.name, defn.defined_at),
-    }
-    dummy_globals = replace(globals, defs=globals.defs | dummy_defs)
+    original = defn.check_instantiate
+    object.__setattr__(defn, "check_instantiate", dummy_check_instantiate)
     for fld in defn.fields:
-        type_from_ast(fld.type_ast, dummy_globals, param_var_mapping)
+        type_from_ast(fld.type_ast, globals, param_var_mapping)
+    object.__setattr__(defn, "check_instantiate", original)

@@ -1,14 +1,12 @@
 from guppylang import array
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 
-module = GuppyModule("test")
-n = guppy.nat_var("n", module)
+n = guppy.nat_var("n")
 
 
-@guppy.comptime(module)
+@guppy.comptime
 def test(xs: array[int, n]) -> None:
     pass
 
 
-module.compile()
+guppy.compile(test)

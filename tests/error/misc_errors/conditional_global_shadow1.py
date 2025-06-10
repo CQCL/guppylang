@@ -1,16 +1,14 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 
-mod = GuppyModule("test")
 
-@guppy(mod)
+@guppy
 def x() -> None:
     pass
 
-@guppy(mod)
+@guppy
 def bad(b: bool) -> int:
     if b:
         x = 4
     return x
 
-mod.compile()
+guppy.compile(bad)
