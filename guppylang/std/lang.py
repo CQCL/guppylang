@@ -12,6 +12,7 @@ class _Comptime:
         return tuple(args)
 
     def __rmatmul__(self, other: Any) -> Any:
+        # This method is to make the Python interpreter happy with @comptime at runtime
         return other
 
 

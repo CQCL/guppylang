@@ -80,6 +80,9 @@ class Variable:
     ty: Type
     defined_at: AstNode | None
     flags: InputFlags = InputFlags.NoFlags
+
+    # Remember if a variable is a function input. This way, we can e.g. suggest to add a
+    # `@comptime` annotation to users when appropriate
     is_func_input: bool = field(default=False, kw_only=True)
 
     @dataclass(frozen=True)
