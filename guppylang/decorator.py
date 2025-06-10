@@ -472,7 +472,7 @@ def _find_load_call(sources: SourceMap) -> Span | None:
 
 
 def custom_guppy_decorator(f: F) -> F:
-    """Decorator to mark user-defined decorators thag wrap builtin `guppy` decorators.
+    """Decorator to mark user-defined decorators that wrap builtin `guppy` decorators.
 
     Example:
 
