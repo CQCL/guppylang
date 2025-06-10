@@ -1,0 +1,25 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "miette_py" # Changed from miette-py to match lib.name
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dynamic = ["version"] # Add this line
+# version = "0.1.0" # Optionally, specify version here or let maturin infer it
+
+# Optional: if your Rust project is not in the root of this pyproject.toml
+# (e.g. if pyproject.toml is in guppylang/ and Cargo.toml is in guppylang/miette-py/)
+# [tool.maturin]
+# manifest-path = "miette-py/Cargo.toml" # Adjust if Cargo.toml is elsewhere relative to this file
+                                        # In our case, this pyproject.toml is *inside* miette-py,
+                                        # so maturin will find Cargo.toml in the same directory
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "miette_py"

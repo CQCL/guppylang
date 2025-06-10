@@ -1,0 +1,19 @@
+[package]
+name = "guppy-miette-bindings" # Changed from miette_py
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "miette_py"
+crate-type = ["cdylib"] # Compile for dynamic linking with Python
+
+[dependencies]
+pyo3 = { version = "0.21.0", features = ["extension-module"] } # Updated version
+miette = { version = "7.6.0", features = ["fancy"] } # Updated miette version
+thiserror = "1.0" # Add thiserror
+
+# Add other Rust dependencies as needed
+
+# Remove this line if miette-py is a standalone Rust crate for the extension
+# and not a member of a Rust workspace defined by a Cargo.toml in a parent directory.
+# [workspace]
