@@ -40,6 +40,7 @@ from guppylang.checker.errors.linearity import (
 )
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import CallableDef
+from guppylang.engine import DEF_STORE, ENGINE
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
     AnyCall,
@@ -359,11 +360,11 @@ class BBLinearityChecker(ast.NodeVisitor):
         if isinstance(node, LocalCall):
             return node.func.id if isinstance(node.func, ast.Name) else None
         elif isinstance(node, GlobalCall):
-            return self.globals[node.def_id].name
+            return DEF_STORE.raw_defs[node.def_id].name
         return None
 
     def visit_GlobalCall(self, node: GlobalCall) -> None:
-        func = self.globals[node.def_id]
+        func = ENGINE.get_parsed(node.def_id)
         assert isinstance(func, CallableDef)
         if isinstance(func, CustomFunctionDef) and not func.has_signature:
             func_ty = FunctionType(

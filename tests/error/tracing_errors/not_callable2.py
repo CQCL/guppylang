@@ -1,14 +1,11 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 
-module = GuppyModule("test")
-
-x = guppy.extern("x", "float", module=module)
+x = guppy.extern("x", "float")
 
 
-@guppy.comptime(module)
+@guppy.comptime
 def test() -> None:
     x(1)
 
 
-module.compile()
+guppy.compile(test)

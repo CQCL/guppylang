@@ -219,9 +219,7 @@ class NewArrayChecker(CustomCallChecker):
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         if not is_array_type(ty):
             dummy_array_ty = array_type_def.check_instantiate(
-                [p.to_existential()[0] for p in array_type_def.params],
-                self.ctx.globals,
-                self.node,
+                [p.to_existential()[0] for p in array_type_def.params], self.node
             )
             raise GuppyTypeError(TypeMismatchError(self.node, ty, dummy_array_ty))
         subst: Subst = {}
@@ -520,10 +518,11 @@ class RangeChecker(CustomCallChecker):
         return None
 
     def range_ty(self) -> StructType:
+        from guppylang.engine import ENGINE
         from guppylang.std.builtins import Range
 
         def_id = cast(RawStructDef, Range).id
-        range_type_def = self.ctx.globals.defs[def_id]
+        range_type_def = ENGINE.get_checked(def_id)
         assert isinstance(range_type_def, CheckedStructDef)
         return StructType([], range_type_def)
 

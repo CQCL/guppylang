@@ -19,6 +19,7 @@ from guppylang.checker.core import FieldAccess, Globals, Place, PlaceId, Variabl
 from guppylang.definition.common import CheckedDef, CompilableDef, CompiledDef, DefId
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef
+from guppylang.engine import ENGINE
 from guppylang.error import InternalGuppyError
 from guppylang.tys.ty import StructType, Type
 
@@ -50,7 +51,6 @@ class CompilerContext:
     """
 
     module: DefinitionBuilder[ops.Module]
-    checked: dict[DefId, CheckedDef]
     compiled: dict[DefId, CompiledDef]
     worklist: set[DefId]
 
@@ -60,16 +60,13 @@ class CompilerContext:
 
     def __init__(
         self,
-        checked: dict[DefId, CheckedDef],
         module: DefinitionBuilder[ops.Module],
-        checked_globals: Globals,
     ) -> None:
         self.module = module
-        self.checked = checked
         self.worklist = set()
         self.compiled = {}
         self.global_funcs = {}
-        self.checked_globals = checked_globals
+        self.checked_globals = Globals(None)
 
     def build_compiled_def(self, def_id: DefId) -> CompiledDef:
         """Returns the compiled definitions corresponding to the given ID.
@@ -77,7 +74,7 @@ class CompilerContext:
         Might mutate the current Hugr if this definition has never been compiled before.
         """
         if def_id not in self.compiled:
-            defn = self.checked[def_id]
+            defn = ENGINE.get_checked(def_id)
             self.compiled[def_id] = self._compile(defn)
             self.worklist.add(def_id)
         return self.compiled[def_id]
@@ -104,9 +101,12 @@ class CompilerContext:
     def get_instance_func(
         self, ty: Type | TypeDef, name: str
     ) -> CompiledCallableDef | None:
-        checked_func = self.checked_globals.get_instance_func(ty, name)
-        if checked_func is None:
+        from guppylang.engine import ENGINE
+
+        parsed_func = self.checked_globals.get_instance_func(ty, name)
+        if parsed_func is None:
             return None
+        checked_func = ENGINE.get_checked(parsed_func.id)
         compiled_func = self.build_compiled_def(checked_func.id)
         assert isinstance(compiled_func, CompiledCallableDef)
         return compiled_func

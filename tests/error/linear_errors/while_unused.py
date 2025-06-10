@@ -1,13 +1,9 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std.quantum import qubit
 from guppylang.std.quantum_functional import h
 
-module = GuppyModule("test")
-module.load(qubit, h)
 
-
-@guppy(module)
+@guppy
 def test(n: int) -> None:
     q = qubit()
     i = 0
@@ -16,4 +12,4 @@ def test(n: int) -> None:
         i += 1
 
 
-module.compile()
+guppy.compile(test)
