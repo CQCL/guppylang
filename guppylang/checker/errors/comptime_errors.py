@@ -69,13 +69,6 @@ class PytketSignatureMismatch(Error):
 
 
 @dataclass(frozen=True)
-class ComptimeCallableArgError(Error):
-    title: ClassVar[str] = "Invalid comptime an"
-    span_label: ClassVar[str] = "Value of this {thing} must be known at compile-time"
-    thing: str
-
-
-@dataclass(frozen=True)
 class ComptimeUnknownError(Error):
     title: ClassVar[str] = "Not known at compile-time"
     span_label: ClassVar[str] = "Value of this {thing} must be known at compile-time"
