@@ -502,7 +502,7 @@ def get_calling_frame() -> FrameType:
         # We can get a reference to the calling function by looking up the code function
         # name in the frame globals:
         func = frame.f_globals.get(frame.f_code.co_name)
-        if hasattr(func, "__custom_guppy_decorator__"):
+        if getattr(func, "__custom_guppy_decorator__", None) is True:
             frame = frame.f_back
             continue
         module = inspect.getmodule(frame)
