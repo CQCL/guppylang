@@ -79,7 +79,7 @@ def compile_local_func_def(
             func.cfg,
             func_builder,
         )
-        ctx.worklist.add(func.def_id)  # will compile the CFG later
+        ctx.worklist[func.def_id] = None  # will compile the CFG later
 
     # Finally, load the function into the local data-flow graph
     loaded = dfg.builder.load_function(func_builder, closure_ty)
