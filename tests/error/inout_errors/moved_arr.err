@@ -1,16 +1,16 @@
-Error: Not owned (at $FILE:19:8)
+Error: Not owned (at $FILE:16:8)
    | 
-17 | def test(q: array[int, 3]) -> None:
-18 |     foo(q)
-19 |     use(q)
+14 | def test(q: array[int, 3]) -> None:
+15 |     foo(q)
+16 |     use(q)
    |         ^ Function `use` wants to take ownership of this argument, but
    |           `test` doesn't own `q`
    | 
-17 | def test(q: array[int, 3]) -> None:
+14 | def test(q: array[int, 3]) -> None:
    |          ---------------- Argument `q` is only borrowed. Consider taking ownership:
    |                           `q: array[int, 3] @owned`
    | 
-19 |     use(q)
+16 |     use(q)
    |         - Or consider copying this argument: `q.copy()`
 
 Guppy compilation failed due to 1 previous error

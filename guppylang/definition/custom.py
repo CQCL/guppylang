@@ -1,6 +1,6 @@
 import ast
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
 
@@ -130,28 +130,6 @@ class RawCustomFunctionDef(ParsableDef):
             GlobalConstId.fresh(self.name),
             sig is not None,
         )
-
-    def compile_call(
-        self,
-        args: list[Wire],
-        type_args: Inst,
-        dfg: DFContainer,
-        ctx: CompilerContext,
-        node: AstNode,
-        function_ty: ht.FunctionType,
-    ) -> Sequence[Wire]:
-        """Compiles a call to the function."""
-        # Note: We have _compiled_ globals rather than `Globals` here,
-        # so we cannot use `self._get_signature()` to build a `CustomFunctionDef`.
-        self.call_compiler._setup(
-            type_args,
-            dfg,
-            ctx,
-            node,
-            function_ty,
-            None,
-        )
-        return self.call_compiler.compile_with_inouts(args).regular_returns
 
     def _get_signature(
         self, node: ast.FunctionDef, globals: Globals

@@ -344,7 +344,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert isinstance(func_ty, FunctionType)
         num_returns = len(type_to_row(func_ty.output))
 
-        args = [self.visit(arg) for arg in node.args]
+        args = self._compile_call_args(node.args, func_ty)
         call = self.builder.add_op(ops.CallIndirect(func_ty.to_hugr()), func, *args)
         regular_returns = list(call[:num_returns])
         inout_returns = call[num_returns:]
@@ -399,7 +399,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             input_len = len(func_ty.inputs)
             num_returns = len(type_to_row(func_ty.output))
             consumed_args, other_args = args[0:input_len], args[input_len:]
-            consumed_wires = [self.visit(arg) for arg in consumed_args]
+            consumed_wires = self._compile_call_args(consumed_args, func_ty)
             call = self.builder.add_op(
                 ops.CallIndirect(func_ty.to_hugr()), func, *consumed_wires
             )
@@ -414,8 +414,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         func = self.ctx.build_compiled_def(node.def_id)
         assert isinstance(func, CompiledCallableDef)
 
-        args = [self.visit(arg) for arg in node.args]
-        rets = func.compile_call(args, list(node.type_args), self.dfg, self.ctx, node)
         if isinstance(func, CustomFunctionDef) and not func.has_signature:
             func_ty = FunctionType(
                 [FuncInput(get_type(arg), InputFlags.NoFlags) for arg in node.args],
@@ -423,8 +421,26 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
         else:
             func_ty = func.ty.instantiate(node.type_args)
+
+        args = self._compile_call_args(node.args, func_ty)
+        rets = func.compile_call(args, list(node.type_args), self.dfg, self.ctx, node)
         self._update_inout_ports(node.args, iter(rets.inout_returns), func_ty)
         return self._pack_returns(rets.regular_returns, func_ty.output)
+
+    def _compile_call_args(
+        self, args: list[ast.expr], func_ty: FunctionType
+    ) -> list[Wire]:
+        """Helper function to compile arguments for function calls.
+
+        Takes care of filtering out comptime arguments that are provided via generic
+        args or monomorphization instead of wires.
+        """
+        return [
+            self.visit(arg)
+            for arg, inp in zip(args, func_ty.inputs, strict=True)
+            # Don't compile comptime args since we already include them as type args
+            if InputFlags.Comptime not in inp.flags
+        ]
 
     def visit_Call(self, node: ast.Call) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")

@@ -1,12 +1,12 @@
-Error: Copy violation (at $FILE:16:8)
+Error: Copy violation (at $FILE:13:8)
    | 
-14 |     for i in q:
-15 |         i + i
-16 |     use(q)
+11 |     for i in q:
+12 |         i + i
+13 |     use(q)
    |         ^ Variable `q` with non-copyable type `array[int, 3]` cannot
    |           be consumed ...
    | 
-14 |     for i in q:
+11 |     for i in q:
    |              - since it was already consumed here
 
 Help: Consider copying `q` instead of moving it: `q.copy()`

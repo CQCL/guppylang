@@ -1,8 +1,8 @@
-Error: Type signature missing (at $FILE:8:0)
+Error: Type signature missing (at $FILE:5:0)
   | 
-6 | 
-7 | @guppy.custom(module=module)
-8 | def foo(x): ...
+3 | 
+4 | @guppy.custom()
+5 | def foo(x): ...
   | ^^^^^^^^^^^^^^^ Custom function `foo` requires a type signature
 
 Help: Annotate the type signature of `foo` or disallow the use of `foo` as a

@@ -1,14 +1,11 @@
 from collections.abc import Callable
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
-
-module = GuppyModule("test")
 
 
-@guppy.comptime(module)
+@guppy.comptime
 def test(f: Callable[[], int]) -> int:
     return f()
 
 
-module.compile()
+guppy.compile(test)

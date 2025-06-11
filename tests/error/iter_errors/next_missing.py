@@ -1,37 +1,33 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.tys.ty import NoneType
 
 
-module = GuppyModule("test")
-
-
-@guppy.type(NoneType().to_hugr(), module=module)
+@guppy.type(NoneType().to_hugr())
 class MyIter:
     """An iterator that is missing the `__next__` method."""
 
-    @guppy.declare(module)
+    @guppy.declare
     def __hasnext__(self: "MyIter") -> tuple[bool, "MyIter"]:
         ...
 
-    @guppy.declare(module)
+    @guppy.declare
     def __end__(self: "MyIter") -> None:
         ...
 
 
-@guppy.type(NoneType().to_hugr(), module=module)
+@guppy.type(NoneType().to_hugr())
 class MyType:
     """Type that produces the iterator above."""
 
-    @guppy.declare(module)
+    @guppy.declare
     def __iter__(self: "MyType") -> MyIter:
         ...
 
 
-@guppy(module)
+@guppy
 def test(x: MyType) -> None:
     for _ in x:
         pass
 
 
-module.compile()
+guppy.compile(test)
