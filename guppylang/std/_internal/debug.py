@@ -1,6 +1,6 @@
 import ast
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, cast
 
 from guppylang.ast_util import with_loc
 from guppylang.checker.errors.generic import ExpectedError
@@ -12,6 +12,7 @@ from guppylang.diagnostic import Error
 from guppylang.error import GuppyTypeError
 from guppylang.nodes import StateResultExpr
 from guppylang.std._internal.checker import TAG_MAX_LEN, TooLongError
+from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.builtin import (
     get_array_length,
     get_element_type,
@@ -46,9 +47,8 @@ class StateResultChecker(CustomCallChecker):
 
         from guppylang.std.quantum import qubit
 
-        qubit_defn = self.ctx.globals[qubit.id]
-        assert isinstance(qubit_defn, TypeDef)
-        qubit_ty = qubit_defn.check_instantiate([], self.ctx.globals)
+        assert isinstance(qubit, GuppyDefinition)
+        qubit_ty = cast(TypeDef, qubit.wrapped).check_instantiate([])
 
         array_len = None
         arg, ty = ExprSynthesizer(self.ctx).synthesize(args[1])
