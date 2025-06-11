@@ -133,6 +133,14 @@ class SubscriptAccessAndDrop(ast.expr):
     _fields = ("item", "item_expr", "getitem_expr", "original_expr")
 
 
+class TupleAccessAndDrop(ast.expr):
+    """A subscript element access on a tuple, dropping all the remaining items."""
+
+    value: ast.expr
+
+    _fields = "value"
+
+
 class MakeIter(ast.expr):
     """Creates an iterator using the `__iter__` magic method.
 

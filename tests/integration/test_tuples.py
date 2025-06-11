@@ -1,25 +1,26 @@
 from tests.util import compile_guppy
+from guppylang.decorator import guppy
 
 import pytest
 
-@pytest.mark.skip()
 def test_index1(validate):
     @compile_guppy
-    def foo(t: tuple[int, int]) -> int:
+    def foo(t: tuple[int, float]) -> int:
         return t[0]
 
     validate(foo)
 
-def test_index2(validate):
-    @compile_guppy
-    def foo() -> int:
-        t = (1, 2, 3)
+def test_index2(validate, run_int_fn):
+    @guppy
+    def main() -> int:
+        t = (1, 2, 2.2)
         x = t[1]
         return x
 
-    validate(foo)
+    compiled = guppy.compile(main)
+    validate(compiled)
+    run_int_fn(compiled, 2)
 
-@pytest.mark.skip()
 def test_index3(validate):
     @compile_guppy
     def foo() -> int:
@@ -27,7 +28,6 @@ def test_index3(validate):
 
     validate(foo)
 
-@pytest.mark.skip()
 def test_index_dynamic(validate):
     @compile_guppy
     def foo(x: int) -> int:
@@ -35,32 +35,15 @@ def test_index_dynamic(validate):
 
     validate(foo)
 
-from guppylang.std.builtins import array
-from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 
-@pytest.mark.skip()
-def test_array(validate):
-    @compile_guppy
-    def foo() -> int:
-        xs = array(1, 2, 3)
-        i = 2
-        x = xs[2]
-        return x
-
-    validate(foo)
-
-@pytest.mark.skip()
 def test_comptime(validate):
-    module = GuppyModule("module")
-
-    @guppy.comptime(module)
+    @guppy.comptime
     def bar(t: tuple[int, int]) -> int:
         return t[0]
 
-    @guppy(module)
+    @guppy
     def foo() -> int:
         t = (2, 2)
         return bar(t)
 
-    validate(module.compile())
+    validate(guppy.compile(foo))

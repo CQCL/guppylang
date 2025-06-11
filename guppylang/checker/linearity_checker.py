@@ -20,6 +20,7 @@ from guppylang.checker.core import (
     Place,
     PlaceId,
     SubscriptAccess,
+    TupleAccess,
     Variable,
     contains_subscript,
 )
@@ -66,6 +67,7 @@ from guppylang.tys.ty import (
     InputFlags,
     NoneType,
     StructType,
+    TupleType,
     Type,
 )
 
@@ -605,6 +607,11 @@ def leaf_places(place: Place) -> Iterator[Place]:
         if isinstance(place.ty, StructType):
             stack += [
                 FieldAccess(place, field, place.defined_at) for field in place.ty.fields
+            ]
+        elif isinstance(place.ty, TupleType):
+            stack += [
+                TupleAccess(place, elem_ty, idx)
+                for idx, elem_ty in enumerate(place.ty.element_types)
             ]
         else:
             yield place

@@ -251,6 +251,55 @@ def contains_subscript(place: Place) -> SubscriptAccess | None:
 
 
 @dataclass(frozen=True)
+class TupleAccess:
+    """A place identifying an index access on a tuple."""
+
+    parent: Place
+    elem_ty: Type
+    index: int
+
+    @dataclass(frozen=True)
+    class Id:
+        """Identifier for tuple places."""
+
+        parent: PlaceId
+        index: int
+
+    @cached_property
+    def id(self) -> "TupleAccess.Id":
+        """The unique `PlaceId` identifier for this place."""
+        return TupleAccess.Id(self.parent.id, self.index)
+
+    @cached_property
+    def root(self) -> "Variable":
+        """The root variable of this place."""
+        return self.parent.root
+
+    @property
+    def ty(self) -> Type:
+        """The type of this place."""
+        return self.elem_ty
+
+    @cached_property
+    def defined_at(self) -> AstNode | None:
+        """Optional location where this place was last assigned to."""
+        return self.parent.defined_at
+
+    @cached_property
+    def describe(self) -> str:
+        """A human-readable description of this place for error messages."""
+        return f"Tuple `{self}`"
+
+    def __str__(self) -> str:
+        """String representation of this place."""
+        return f"{self.parent}[{self.index}]"
+
+    def replace_defined_at(self, node: AstNode | None) -> "TupleAccess":
+        """Returns a new `TupleAccess` instance with an updated definition location."""
+        return replace(self, exact_defined_at=node)
+
+
+@dataclass(frozen=True)
 class PythonObject:
     """Wrapper around an arbitrary Python object.
 

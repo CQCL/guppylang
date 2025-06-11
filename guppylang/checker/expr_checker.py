@@ -50,6 +50,7 @@ from guppylang.checker.core import (
     PythonObject,
     SetitemCall,
     SubscriptAccess,
+    TupleAccess,
     Variable,
 )
 from guppylang.checker.errors.comptime_errors import (
@@ -104,6 +105,7 @@ from guppylang.nodes import (
     PlaceNode,
     SubscriptAccessAndDrop,
     TensorCall,
+    TupleAccessAndDrop,
     TypeApply,
 )
 from guppylang.span import Span, to_span
@@ -635,14 +637,29 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
 
     def visit_Subscript(self, node: ast.Subscript) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
-        print(node.value.place)
-        print(isinstance(ty, TupleType))
         # Special case for subscripts on functions: Those are type applications
         if isinstance(ty, FunctionType):
             inst = check_type_apply(ty, node, self.ctx)
             return instantiate_poly(node.value, ty, inst), ty.instantiate(inst)
-        # Otherwise, it's a regular __getitem__ subscript
         item_expr, item_ty = self.synthesize(node.slice)
+        # Special case for tuples: Index needs to be statically known for element type
+        if isinstance(ty, TupleType):
+            match item_expr:
+                case ast.Constant(value=int(idx)):
+                    if 0 <= idx < len(ty.element_types):
+                        result_ty = ty.element_types[idx]
+                        expr: ast.expr
+                        if isinstance(node.value, PlaceNode):
+                            place = TupleAccess(node.value.place, result_ty, idx)
+                            expr = PlaceNode(place=place)
+                        else:
+                            expr = TupleAccessAndDrop(node.value)
+                        return with_loc(node, expr), result_ty
+                    else:
+                        raise InternalGuppyError("TODO Not within range")
+                case _:
+                    raise InternalGuppyError("TODO Not constant index")
+        # Otherwise, it's a regular __getitem__ subscript
         # Give the item a unique name so we can refer to it later in case we also want
         # to compile a call to `__setitem__`
         item = Variable(next(tmp_vars), item_ty, item_expr)
