@@ -9,7 +9,7 @@ from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
-from guppylang.tys.ty import OpaqueType, Type, WasmModuleType
+from guppylang.tys.ty import OpaqueType, Type
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
@@ -52,20 +52,3 @@ class OpaqueTypeDef(TypeDef, CompiledDef):
         """
         check_all_args(self.params, args, self.name, loc)
         return OpaqueType(args, self)
-
-
-@dataclass(frozen=True)
-class WasmModule(TypeDef, CompiledDef):
-    wasm_file: str
-    wasm_hash: int
-    ctx_id: int
-
-    def check_instantiate(
-        # self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
-        self,
-        args: Sequence[Argument],
-        globals: "Globals",
-        loc: AstNode | None = None,
-    ) -> WasmModuleType:
-        assert args == []
-        return WasmModuleType(self)

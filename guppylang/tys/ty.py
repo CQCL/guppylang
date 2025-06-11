@@ -19,7 +19,7 @@ from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
     from guppylang.definition.struct import CheckedStructDef, StructField
-    from guppylang.definition.ty import OpaqueTypeDef, WasmModule
+    from guppylang.definition.ty import OpaqueTypeDef
     from guppylang.tys.subst import Inst, Subst
 
 
@@ -664,30 +664,6 @@ class StructType(ParametrizedTypeBase):
         )
 
 
-@dataclass(frozen=True)
-class WasmModuleType(TypeBase):
-    defn: "WasmModule"
-
-    copyable: bool = False
-    droppable: bool = True
-    hugr_bound: ht.TypeBound = ht.TypeBound.Any
-
-    def cast(self) -> "Type":
-        return self
-
-    def to_hugr(self) -> ht.Type:
-        ty = wasm().get_type("context")
-        return ty.instantiate([])
-
-    # TODO: I don't know what to write here
-    def transform(self, transformer: Transformer) -> "Type":
-        """Accepts a transformer on this type."""
-        return transformer.transform(self) or self
-
-    def visit(self, visitor: Visitor) -> None:
-        visitor.visit(self)
-
-
 #: The type of parametrized Guppy types.
 ParametrizedType: TypeAlias = (
     FunctionType | TupleType | SumType | OpaqueType | StructType
@@ -703,12 +679,7 @@ ParametrizedType: TypeAlias = (
 #:   * https://peps.python.org/pep-0622/#sealed-classes-as-algebraic-data-types
 #:   * https://github.com/johnthagen/sealed-typing-pep
 Type: TypeAlias = (
-    BoundTypeVar
-    | ExistentialTypeVar
-    | NumericType
-    | NoneType
-    | ParametrizedType
-    | WasmModuleType
+    BoundTypeVar | ExistentialTypeVar | NumericType | NoneType | ParametrizedType
 )
 
 #: An immutable row of Guppy types.
@@ -784,11 +755,6 @@ def unify(s: Type | Const, t: Type | Const, subst: "Subst | None") -> "Subst | N
             return _unify_args(s, t, subst)
         case StructType() as s, StructType() as t if s.defn == t.defn:
             return _unify_args(s, t, subst)
-        case WasmModuleType(defn=def0), WasmModuleType(defn=def1):
-            if def0 == def1:
-                return subst
-            else:
-                return None
         case _:
             return None
 

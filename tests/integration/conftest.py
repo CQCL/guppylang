@@ -73,7 +73,12 @@ class LLVMException(Exception):
 
 
 def _run_fn(run_fn_name: str):
-    def f(module: PackagePointer, expected: Any, fn_name: str = "main", args: list[Any] | None = None):
+    def f(
+        module: PackagePointer,
+        expected: Any,
+        fn_name: str = "main",
+        args: list[Any] | None = None,
+    ):
         try:
             import execute_llvm
 

@@ -1,19 +1,20 @@
 from guppylang import GuppyModule
 from guppylang.decorator import guppy
 from guppylang.std.builtins import nat
+from guppylang.std.qsystem.wasm import spawn_wasm_contexts, WasmModule
 
 def test_wasm_functions(validate):
     @guppy.wasm_module("", 42)
     class MyWasm:
-
         @guppy.wasm
         def add_one(self: "MyWasm", x: int) -> int: ...
 
         @guppy.wasm
         def swap(self: "MyWasm", x: int, y: bool) -> tuple[bool, int]: ...
+
     @guppy
     def main() -> int:
-        mod1 = MyWasm().unwrap()
+        [mod1, mod2] = spawn_wasm_contexts[2](MyWasm)
         mod2 = MyWasm().unwrap()
         two = mod1.add_one(1)
         b, two2 = mod2.swap(two, True)
@@ -23,6 +24,7 @@ def test_wasm_functions(validate):
 
     mod = guppy.compile_module()
     validate(mod)
+
 
 def test_wasm_methods(validate):
     @guppy.wasm_module("", 2)
@@ -45,6 +47,7 @@ def test_wasm_methods(validate):
     mod = guppy.compile_module()
     validate(mod)
 
+
 def test_wasm_types(validate):
     n = guppy.nat_var("n")
 
@@ -63,12 +66,12 @@ def test_wasm_types(validate):
     mod = guppy.compile_module()
     validate(mod)
 
+
 def test_wasm_guppy_module(validate):
     mod = GuppyModule("my_wasm")
 
-    @guppy.wasm_module("", 42, module = mod)
+    @guppy.wasm_module("", 42, module=mod)
     class MyWasm:
-
         @guppy.wasm(mod)
         def add_one(self: "MyWasm", x: int) -> int: ...
 

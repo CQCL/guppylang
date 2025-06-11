@@ -21,7 +21,9 @@ sqrt_e_div = math.sqrt((math.e - 1) / math.e)
 @guppy
 def random_walk_phase_estimation(
     eigenstate: Callable[[], qubit],
-    controlled_oracle: Callable[[qubit @owned, qubit @owned, float], tuple[qubit, qubit]],
+    controlled_oracle: Callable[
+        [qubit @ owned, qubit @ owned, float], tuple[qubit, qubit]
+    ],
     num_iters: int,
     reset_rate: int,
     mu: float,
@@ -62,7 +64,9 @@ def random_walk_phase_estimation(
 
 
 @guppy
-def example_controlled_oracle(q1: qubit @owned, q2: qubit @owned, t: float) -> tuple[qubit, qubit]:
+def example_controlled_oracle(
+    q1: qubit @ owned, q2: qubit @ owned, t: float
+) -> tuple[qubit, qubit]:
     """A controlled e^itH gate for the example Hamiltonian H = -0.5 * Z"""
     # This is just a controlled rz gate
     a = angle(-0.5 * t)

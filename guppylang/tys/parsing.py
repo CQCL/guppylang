@@ -115,6 +115,7 @@ def _try_parse_defn(node: AstNode, globals: Globals) -> Definition | None:
     match node:
         case ast.Name(id=x):
             if x not in globals:
+                print(list(globals.names.keys()))
                 raise GuppyError(VarNotDefinedError(node, x))
             return globals[x]
         case ast.Attribute(value=ast.Name(id=module_name) as value, attr=x):

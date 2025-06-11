@@ -45,7 +45,7 @@ from guppylang.definition.pytket_circuits import (
 )
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.traced import RawTracedFunctionDef
-from guppylang.definition.ty import OpaqueTypeDef, TypeDef, WasmModule
+from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import MissingModuleError, pretty_errors
 from guppylang.ipython_inspect import (
     get_ipython_globals,
@@ -63,8 +63,10 @@ from guppylang.module import (
 from guppylang.span import Loc, SourceMap, Span
 from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.arg import Argument
-from guppylang.tys.builtin import option_type
-from guppylang.tys.param import Parameter
+from guppylang.tys.builtin import option_type, wasm_module_to_hugr, int_type, string_type
+from guppylang.tys.const import ConstValue
+from guppylang.tys.constarg import const_string_arg
+from guppylang.tys.param import Parameter, ConstParam
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     FuncInput,
@@ -602,31 +604,41 @@ class _Guppy:
     ) -> Decorator[PyClass, GuppyDefinition]:
         # N.B. Only one module per file and vice-versa
         guppy_module = module or self.get_module()
-        ctx_id = guppy_module._get_next_wasm_context()
         assert guppy_module._instance_func_buffer is None
         guppy_module._instance_func_buffer = {}
 
         """Decorator to declare functions"""
 
         def dec(cls: PyClass) -> GuppyDefinition:
-            wasm_module = WasmModule(
+            wasm_module = OpaqueTypeDef(
                 DefId.fresh(guppy_module),
                 cls.__name__,
                 None,
-                filename,
-                filehash,
-                ctx_id,
+                [ConstParam(0, "filename", string_type()), ConstParam(1, "filehash", int_type())],
+                True,
+                True,
+                wasm_module_to_hugr,
             )
-            wasm_module_ty = wasm_module.check_instantiate([], Globals.default(), None)
+            #wasm_module = WasmModule(
+            #    DefId.fresh(guppy_module),
+            #    cls.__name__,
+            #    None,
+            #    filename,
+            #    filehash,
+            #    ctx_id,
+            #)
+            type_args = [const_string_arg(filename), ConstValue(NumericType(NumericType.Kind.Int), filehash).to_arg()]
+
+            wasm_module_ty = wasm_module.check_instantiate(type_args, Globals.default(), None)
             guppy_module.register_def(wasm_module)
             # Add a __call__ to the class
             call_method = CustomFunctionDef(
                 DefId.fresh(guppy_module),
                 "__new__",
                 None,
-                FunctionType([], option_type(wasm_module_ty)),
+                FunctionType([FuncInput(NumericType(NumericType.Kind.Nat), flags=InputFlags.Owned)], option_type(wasm_module_ty)),
                 DefaultCallChecker(),
-                WasmModuleInitCompiler(wasm_module),
+                WasmModuleInitCompiler(),
                 False,
                 GlobalConstId.fresh(f"{cls.__name__}.__new__"),
                 True,

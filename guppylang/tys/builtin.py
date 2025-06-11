@@ -7,6 +7,8 @@ import hugr.std.collections.array
 import hugr.std.collections.list
 from hugr import tys as ht
 
+from tket2.extensions import wasm
+
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
@@ -15,6 +17,7 @@ from guppylang.experimental import check_lists_enabled
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import Const, ConstValue
+#from guppylang.tys.constarg import const_string_arg
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
@@ -28,6 +31,7 @@ from guppylang.tys.ty import (
 
 if TYPE_CHECKING:
     from guppylang.checker.core import Globals
+    from guppylang.definition.wasm import WasmModule
 
 
 @dataclass(frozen=True)
@@ -104,6 +108,22 @@ class _NumericTypeDef(TypeDef):
         return self.ty
 
 
+def wasm_module_to_hugr(opaq: OpaqueTypeDef, args: Sequence[TypeArg | ConstArg], /) -> ht.Type:
+    assert args == []
+    ty = wasm().get_type("context")
+    return ty.instantiate([])
+
+
+#class WasmModuleTypeDef(OpaqueTypeDef):
+#    wasm_file: str
+#    wasm_hash: int
+#
+#    def to_hugr(self, args: Sequence[TypeArg | ConstArg], /) -> ht.Type:
+#        assert args == []
+#        ty = wasm().get_type("context")
+#        return ty.instantiate([])
+
+
 @dataclass(frozen=True)
 class _ListTypeDef(OpaqueTypeDef):
     """Type definition associated with the builtin `list` type.
@@ -163,6 +183,14 @@ def _option_to_hugr(args: Sequence[Argument]) -> ht.Type:
     [arg] = args
     assert isinstance(arg, TypeArg)
     return ht.Option(arg.ty.to_hugr())
+
+
+def wasm_module_to_hugr(args: Sequence[Argument]) -> ht.Type:
+    [filename, filehash] = args
+    assert isinstance(filename, ConstArg)
+    assert isinstance(filehash, ConstArg)
+    ty = wasm().get_type("context")
+    return ty.instantiate([])
 
 
 callable_type_def = CallableTypeDef(DefId.fresh(), None)
@@ -271,6 +299,20 @@ def string_type() -> OpaqueType:
     return OpaqueType([], string_type_def)
 
 
+wasm_module_type_def = OpaqueTypeDef(
+    id=DefId.fresh(),
+    name="WasmModule",
+    defined_at=None,
+    params=[
+        ConstParam(0, "filename", string_type()),
+        ConstParam(1, "filehash", int_type()),
+    ],
+    never_copyable=True,
+    never_droppable=True,
+    to_hugr=wasm_module_to_hugr,
+)
+
+
 def list_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], list_type_def)
 
@@ -297,6 +339,21 @@ def option_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], option_type_def)
 
 
+def wasm_module_type(module: "WasmModule") -> OpaqueType:
+    return OpaqueType(
+        [
+            const_string_arg(module.wasm_file),
+            ConstArg(
+                ConstValue(
+                    NumericType(NumericType.Kind.Int),
+                    hugr.std.int.IntVal(module.wasm_hash),
+                )
+            ),
+        ],
+        wasm_module_type_def,
+    )
+
+
 def is_bool_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == bool_type_def
 
@@ -319,6 +376,10 @@ def is_frozenarray_type(ty: Type) -> TypeGuard[OpaqueType]:
 
 def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
     return isinstance(ty, OpaqueType) and ty.defn == sized_iter_type_def
+
+
+def is_wasm_module_type(ty: Type) -> TypeGuard[OpaqueType]:
+    return isinstance(ty, OpaqueType) and ty.defn == wasm_module_type_def
 
 
 def get_element_type(ty: Type) -> Type:
@@ -350,3 +411,16 @@ def get_iter_size(ty: Type) -> Const:
             return const
         case _:
             raise InternalGuppyError("Unexpected type args")
+
+class ConstStringArg(ConstArg):
+
+    def to_hugr(self) -> ht.TypeArg:
+        match self.const:
+            case ConstValue(value=v, ty=ty) if is_string_type(ty):
+                assert isinstance(v, str)
+                return ht.StringArg(v)
+            case _:
+                return super().to_hugr()
+
+def const_string_arg(s: str) -> ConstStringArg:
+    return ConstStringArg(ConstValue(string_type(), s))

@@ -29,7 +29,7 @@ from guppylang.definition.module import ModuleDef
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.pytket_circuits import RawPytketDef
 from guppylang.definition.struct import CheckedStructDef
-from guppylang.definition.ty import TypeDef, WasmModule
+from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import pretty_errors
 from guppylang.experimental import enable_experimental_features
 from guppylang.tracing.object import GuppyDefinition
@@ -218,8 +218,10 @@ class GuppyModule:
                 self.unregister(self._globals[defn.name])
             if isinstance(defn, TypeDef | ParamDef):
                 self._raw_type_defs[defn.id] = defn
-                if isinstance(defn, WasmModule):
+                if isinstance(defn, OpaqueTypeDef):
                     self._globals.names[defn.name] = defn.id
+                else:
+                    print(f"aOAOAJO: {defn}")
             else:
                 self._raw_defs[defn.id] = defn
             if instance is not None:
@@ -260,6 +262,7 @@ class GuppyModule:
         buffer = self._instance_func_buffer
         self._instance_func_buffer = None
         for defn in buffer.values():
+            print(f"Registered {defn.name} to {instance.name}")
             self.register_def(defn, instance)
 
     def unregister(self, defn: GuppyDefinition | Definition) -> None:
