@@ -745,7 +745,7 @@ def check_cfg_linearity(
                     raise GuppyError(err)
 
         def live_places_row(
-            bb: BB, original_row: Row[Variable], parent_scope: Scope | None
+            bb: BB, original_row: Row[Variable], pred_scope: Scope | None
         ) -> Row[Place]:
             """Construct a row of all places that are live at the start of a given BB.
 
@@ -754,8 +754,8 @@ def check_cfg_linearity(
             """
             if bb in (cfg.entry_bb, cfg.exit_bb):
                 return original_row
-            assert parent_scope is not None
-            return [parent_scope[x] for x in live_before[bb]]
+            assert pred_scope is not None
+            return [pred_scope[x] for x in live_before[bb]]
 
         assert isinstance(bb, CheckedBB)
         sig = Signature(
