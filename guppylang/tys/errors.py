@@ -124,6 +124,36 @@ class NonLinearOwnedError(Error):
 
 
 @dataclass(frozen=True)
+class LinearComptimeError(Error):
+    title: ClassVar[str] = "Invalid annotation"
+    span_label: ClassVar[str] = (
+        "Non-{thing} type `{ty}` is not allowed as a comptime argument"
+    )
+    ty: "Type"
+
+    @property
+    def thing(self) -> str:
+        return "copyable" if not self.ty.copyable else "droppable"
+
+
+@dataclass(frozen=True)
+class CallableComptimeError(Error):
+    title: ClassVar[str] = "Invalid annotation"
+    span_label: ClassVar[str] = (
+        "Comptime annotations are only allowed for named top-level function arguments"
+    )
+
+
+@dataclass(frozen=True)
+class ComptimeArgShadowError(Error):
+    title: ClassVar[str] = "Shadowed type parameter"
+    span_label: ClassVar[str] = (
+        "Comptime argument `{arg}` shadows previously used parameter with the same name"
+    )
+    arg: str
+
+
+@dataclass(frozen=True)
 class InvalidFlagError(Error):
     title: ClassVar[str] = "Invalid annotation"
     span_label: ClassVar[str] = "Invalid type annotation"
