@@ -1,8 +1,8 @@
-Error: Tag too long (at $FILE:15:17)
+Error: Tag too long (at $FILE:11:17)
    | 
-13 | def main() -> None:
-14 |     q1 = qubit()
-15 |     state_result(comptime("a" * (TAG_MAX_LEN + 1)), q1)
+ 9 | def main() -> None:
+10 |     q1 = qubit()
+11 |     state_result(comptime("a" * (TAG_MAX_LEN + 1)), q1)
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Result tag is too long
 
 Note: Result tags are limited to 200 bytes

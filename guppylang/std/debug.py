@@ -7,11 +7,9 @@ from guppylang.module import GuppyModule
 from guppylang.std import quantum
 from guppylang.std._internal.debug import StateResultChecker
 
-debug = GuppyModule("debug")
-debug.load(quantum)
 
 
-@guppy.custom(checker=StateResultChecker(), higher_order_value=False, module=debug)
+@guppy.custom(checker=StateResultChecker(), higher_order_value=False)
 def state_result(tag, *args) -> None:
     """Report the quantum state of the specified qubits.
 
