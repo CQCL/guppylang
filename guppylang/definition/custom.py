@@ -104,11 +104,12 @@ class RawCustomFunctionDef(ParsableDef):
     description: str = field(default="function", init=False)
 
     def parse(self, globals: "Globals", sources: SourceMap) -> "CustomFunctionDef":
-        """Parses and checks the user-annotated signature of the custom function.
+        """Parses and checks the signature of the custom function.
 
         The signature is optional if custom type checking logic is provided by the user.
-        However, note that the signature annotation is required, if we want to use the
-        function as a higher-order value.
+        However, note that a signature must be provided by either annotation or as an
+        argument, if we want to use the function as a higher-order value. If a signature
+        is provided as an argument, this will override any annotation.
 
         If no signature is provided, we fill in the dummy signature `() -> ()`. This
         type will never be inspected, since we rely on the provided custom checking
