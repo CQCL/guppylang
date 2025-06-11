@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from hugr import Wire, ops
 from hugr import tys as ht
 
+from guppylang.compiler.core import CompilerContext
 from guppylang.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
@@ -16,11 +17,11 @@ from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.ty import type_to_row
 
 
-def either_to_hugr(type_args: Sequence[Argument]) -> ht.Either:
+def either_to_hugr(type_args: Sequence[Argument], ctx: CompilerContext) -> ht.Either:
     match type_args:
         case [TypeArg(left_ty), TypeArg(right_ty)]:
-            left_tys = [ty.to_hugr() for ty in type_to_row(left_ty)]
-            right_tys = [ty.to_hugr() for ty in type_to_row(right_ty)]
+            left_tys = [ty.to_hugr(ctx) for ty in type_to_row(left_ty)]
+            right_tys = [ty.to_hugr(ctx) for ty in type_to_row(right_ty)]
             return ht.Either(left_tys, right_tys)
         case _:
             raise InternalGuppyError("Invalid type args for Either type")
@@ -33,7 +34,7 @@ class EitherCompiler(CustomInoutCallCompiler, ABC):
     def left_tys(self) -> list[ht.Type]:
         match self.type_args:
             case [TypeArg(left_ty), TypeArg()]:
-                return [ty.to_hugr() for ty in type_to_row(left_ty)]
+                return [ty.to_hugr(self.ctx) for ty in type_to_row(left_ty)]
             case _:
                 raise InternalGuppyError("Invalid type args for Either op")
 
@@ -41,13 +42,13 @@ class EitherCompiler(CustomInoutCallCompiler, ABC):
     def right_tys(self) -> list[ht.Type]:
         match self.type_args:
             case [TypeArg(), TypeArg(right_ty)]:
-                return [ty.to_hugr() for ty in type_to_row(right_ty)]
+                return [ty.to_hugr(self.ctx) for ty in type_to_row(right_ty)]
             case _:
                 raise InternalGuppyError("Invalid type args for Either op")
 
     @property
     def either_ty(self) -> ht.Either:
-        return either_to_hugr(self.type_args)
+        return either_to_hugr(self.type_args, self.ctx)
 
 
 class EitherConstructor(EitherCompiler, CustomCallCompiler):

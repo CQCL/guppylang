@@ -202,14 +202,14 @@ def test_linear_consume_in_iter(validate):
 
 
 def test_linear_next_nonlinear_iter(validate):
-    @guppy.type(NoneType().to_hugr())
+    @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
         @guppy.declare
         def __next__(self: "MyIter") -> Option[tuple[qubit, "MyIter"]]: ...
 
-    @guppy.type(NoneType().to_hugr())
+    @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyType:
         """Type that produces the iterator above."""
 
@@ -236,7 +236,7 @@ def test_nonlinear_next_linear_iter(validate):
         @guppy.declare
         def __next__(self: "MyIter" @owned) -> Option[tuple[int, "MyIter"]]: ...
 
-    @guppy.type(NoneType().to_hugr())
+    @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyType:
         """Type that produces the iterator above."""
 

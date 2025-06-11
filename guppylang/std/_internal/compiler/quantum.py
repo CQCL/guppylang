@@ -59,7 +59,7 @@ class InoutMeasureCompiler(CustomInoutCallCompiler):
         [q] = args
         [q, bit] = self.builder.add_op(
             quantum_op(self.opname, ext=self.ext)(
-                ht.FunctionType([ht.Qubit], [ht.Qubit, ht.Bool]), []
+                ht.FunctionType([ht.Qubit], [ht.Qubit, ht.Bool]), [], self.ctx
             ),
             q,
         )
@@ -84,7 +84,7 @@ class InoutMeasureResetCompiler(CustomInoutCallCompiler):
         [q] = args
         [q, bit] = self.builder.add_op(
             quantum_op(self.opname, ext=self.ext)(
-                ht.FunctionType([ht.Qubit], [ht.Qubit, OpaqueBool]), []
+                ht.FunctionType([ht.Qubit], [ht.Qubit, OpaqueBool]), [], self.ctx
             ),
             q,
         )
@@ -110,6 +110,7 @@ class RotationCompiler(CustomInoutCallCompiler):
                     [ht.Qubit for _ in qs] + [ROTATION_T], [ht.Qubit for _ in qs]
                 ),
                 [],
+                self.ctx,
             ),
             *qs,
             rotation,

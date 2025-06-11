@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
+
+if TYPE_CHECKING:
+    from guppylang.compiler.core import CompilerContext
 
 T = TypeVar("T")
 
@@ -8,7 +11,7 @@ class ToHugr(ABC, Generic[T]):
     """Abstract base class for objects that have a Hugr representation."""
 
     @abstractmethod
-    def to_hugr(self) -> T:
+    def to_hugr(self, ctx: "CompilerContext") -> T:
         """Computes the Hugr representation of the object."""
 
 

@@ -346,7 +346,7 @@ def test_for_continue(validate):
 
 
 def test_for_nonlinear_break(validate):
-    @guppy.type(NoneType().to_hugr())
+    @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
@@ -354,7 +354,7 @@ def test_for_nonlinear_break(validate):
         def __next__(self: "MyIter") -> Option[tuple[qubit, "MyIter"]]: ...
 
 
-    @guppy.type(NoneType().to_hugr())
+    @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyType:
         """Type that produces the iterator above."""
 

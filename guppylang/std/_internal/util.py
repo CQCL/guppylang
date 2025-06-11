@@ -15,6 +15,7 @@ from hugr import ext as he
 from hugr import ops
 from hugr import tys as ht
 
+from guppylang.compiler.core import CompilerContext
 from guppylang.compiler.hugr_extension import UnsupportedOp
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
 from guppylang.std._internal.compiler.tket2_exts import (
@@ -41,6 +42,7 @@ def type_arg(idx: int = 0, bound: ht.TypeBound = ht.TypeBound.Any) -> ht.TypeArg
 def make_concrete_arg(
     arg: ht.TypeArg,
     inst: Inst,
+    ctx: CompilerContext,
     variable_remap: dict[int, int] | None = None,
 ) -> ht.TypeArg:
     """Makes a concrete hugr type argument using a guppy instantiation.
@@ -55,7 +57,7 @@ def make_concrete_arg(
 
     if isinstance(arg, ht.VariableArg) and remap.get(arg.idx, arg.idx) < len(inst):
         concrete_arg: Argument = inst[remap.get(arg.idx, arg.idx)]
-        return concrete_arg.to_hugr()
+        return concrete_arg.to_hugr(ctx)
     return arg
 
 
@@ -65,7 +67,7 @@ def external_op(
     ext: he.Extension,
     *,
     variable_remap: dict[int, int] | None = None,
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+) -> Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]:
     """Custom hugr operation
 
     Args:
@@ -81,8 +83,10 @@ def external_op(
     """
     op_def = ext.get_op(name)
 
-    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
-        concrete_args = [make_concrete_arg(arg, inst, variable_remap) for arg in args]
+    def op(ty: ht.FunctionType, inst: Inst, ctx: CompilerContext) -> ops.DataflowOp:
+        concrete_args = [
+            make_concrete_arg(arg, inst, ctx, variable_remap) for arg in args
+        ]
         return op_def.instantiate(concrete_args, ty)
 
     return op
@@ -91,7 +95,7 @@ def external_op(
 def float_op(
     op_name: str,
     ext: he.Extension = hugr.std.float.FLOAT_OPS_EXTENSION,
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+) -> Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]:
     """Utility method to create Hugr float arithmetic ops.
 
     Args:
@@ -109,7 +113,7 @@ def int_op(
     op_name: str,
     ext: he.Extension = hugr.std.int.INT_OPS_EXTENSION,
     n_vars: int = 1,
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+) -> Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]:
     """Utility method to create Hugr integer arithmetic ops.
 
     Args:
@@ -141,7 +145,7 @@ def logic_op(
     op_name: str,
     parametric_size: bool = False,
     ext: he.Extension = hugr.std.logic.EXTENSION,
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+) -> Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]:
     """Utility method to create Hugr logic ops.
 
     If `parametric_size` is True, the generated operations has a single argument
@@ -158,7 +162,7 @@ def logic_op(
     """
     op_def = ext.get_op(op_name)
 
-    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
+    def op(ty: ht.FunctionType, inst: Inst, ctx: CompilerContext) -> ops.DataflowOp:
         args = [int_arg(len(ty.input))] if parametric_size else []
         return ops.ExtOp(
             op_def,
@@ -172,7 +176,7 @@ def logic_op(
 def list_op(
     op_name: str,
     ext: he.Extension = hugr.std.collections.list.EXTENSION,
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+) -> Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]:
     """Utility method to create Hugr list ops.
 
     Args:
@@ -185,11 +189,11 @@ def list_op(
     """
     op_def = ext.get_op(op_name)
 
-    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
+    def op(ty: ht.FunctionType, inst: Inst, ctx: CompilerContext) -> ops.DataflowOp:
         return ops.ExtOp(
             op_def,
             ty,
-            [arg.to_hugr() for arg in inst],
+            [arg.to_hugr(ctx) for arg in inst],
         )
 
     return op
@@ -198,7 +202,7 @@ def list_op(
 def quantum_op(
     op_name: str,
     ext: he.Extension = QUANTUM_EXTENSION,
-) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+) -> Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]:
     """Utility method to create Hugr quantum ops.
 
     args:
@@ -211,7 +215,7 @@ def quantum_op(
     """
     op_def = ext.get_op(op_name)
 
-    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
+    def op(ty: ht.FunctionType, inst: Inst, ctx: CompilerContext) -> ops.DataflowOp:
         return ops.ExtOp(
             op_def,
             ty,
@@ -221,7 +225,9 @@ def quantum_op(
     return op
 
 
-def unsupported_op(op_name: str) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+def unsupported_op(
+    op_name: str,
+) -> Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]:
     """Utility method to define not-yet-implemented operations.
 
     Args:
@@ -232,7 +238,7 @@ def unsupported_op(op_name: str) -> Callable[[ht.FunctionType, Inst], ops.Datafl
         the inferred input and output types and returns a concrete HUGR op.
     """
 
-    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
+    def op(ty: ht.FunctionType, inst: Inst, ctx: CompilerContext) -> ops.DataflowOp:
         return UnsupportedOp(
             op_name=op_name,
             inputs=ty.input,
@@ -242,7 +248,9 @@ def unsupported_op(op_name: str) -> Callable[[ht.FunctionType, Inst], ops.Datafl
     return op
 
 
-def bool_logic_op(op_name: str) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
+def bool_logic_op(
+    op_name: str,
+) -> Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]:
     """Utility method to create binary `tket2.bool` logic ops.
 
     args:
@@ -253,7 +261,7 @@ def bool_logic_op(op_name: str) -> Callable[[ht.FunctionType, Inst], ops.Dataflo
         a concrete HUGR op.
     """
 
-    def op(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
+    def op(ty: ht.FunctionType, inst: Inst, ctx: CompilerContext) -> ops.DataflowOp:
         return ops.ExtOp(
             BOOL_EXTENSION.get_op(op_name),
             ht.FunctionType([OpaqueBool, OpaqueBool], [OpaqueBool]),
