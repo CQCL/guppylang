@@ -72,6 +72,8 @@ from guppylang.checker.errors.type_errors import (
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
     NotCallableError,
+    TupleIndexNotStaticError,
+    TupleIndexOutOfBoundsError,
     TypeApplyNotGenericError,
     TypeInferenceError,
     TypeMismatchError,
@@ -642,7 +644,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             inst = check_type_apply(ty, node, self.ctx)
             return instantiate_poly(node.value, ty, inst), ty.instantiate(inst)
         item_expr, item_ty = self.synthesize(node.slice)
-        # Special case for tuples: Index needs to be statically known for element type
+        # Special case for tuples: Index needs to be known statically in order to infer
+        # element type of subscript
         if isinstance(ty, TupleType):
             match item_expr:
                 case ast.Constant(value=int(idx)):
@@ -650,15 +653,21 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                         result_ty = ty.element_types[idx]
                         expr: ast.expr
                         if isinstance(node.value, PlaceNode):
-                            place = TupleAccess(node.value.place, result_ty, idx)
-                            expr = PlaceNode(place=place)
+                            tuple_place = TupleAccess(
+                                node.value.place, result_ty, idx, None
+                            )
+                            expr = PlaceNode(place=tuple_place)
                         else:
-                            expr = TupleAccessAndDrop(node.value)
+                            expr = TupleAccessAndDrop(node.value, ty, idx)
                         return with_loc(node, expr), result_ty
                     else:
-                        raise InternalGuppyError("TODO Not within range")
+                        raise GuppyError(
+                            TupleIndexOutOfBoundsError(
+                                item_expr, idx, len(ty.element_types)
+                            )
+                        )
                 case _:
-                    raise InternalGuppyError("TODO Not constant index")
+                    raise GuppyError(TupleIndexNotStaticError(item_expr))
         # Otherwise, it's a regular __getitem__ subscript
         # Give the item a unique name so we can refer to it later in case we also want
         # to compile a call to `__setitem__`
@@ -678,7 +687,6 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             node.value, [item_node], "__getitem__", "subscriptable", exp_sig
         )
         # Subscripting a place is itself a place
-        expr: ast.expr
         if isinstance(node.value, PlaceNode):
             place = SubscriptAccess(
                 node.value.place, item, result_ty, item_expr, getitem_expr
@@ -1047,6 +1055,8 @@ def check_place_assignable(
                 True,
             )
             return replace(place, setitem_call=SetitemCall(setitem_call, tmp_var))
+        case TupleAccess(_, _, _):
+            return place
 
 
 def check_comptime_arg(

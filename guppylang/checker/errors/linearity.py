@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from guppylang.definition.struct import StructField
     from guppylang.tys.ty import (
         StructType,
+        TupleType,
         Type,
     )
 
@@ -125,6 +126,21 @@ class UnnamedSubscriptNotUsedError(Error):
     @dataclass(frozen=True)
     class SubscriptHint(Note):
         span_label: ClassVar[str] = "since only this subscript is used"
+
+    @dataclass(frozen=True)
+    class Fix(Help):
+        message: ClassVar[str] = (
+            "Consider assigning this value to a local variable before subscripting it"
+        )
+
+
+@dataclass(frozen=True)
+class UnnamedTupleNotUsedError(Error):
+    title: ClassVar[str] = "Drop violation"
+    span_label: ClassVar[str] = (
+        "Non-droppable items of expression with type `{container_ty}` are leaked ..."
+    )
+    tuple_ty: TupleType
 
     @dataclass(frozen=True)
     class Fix(Help):

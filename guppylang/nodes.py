@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from guppylang.ast_util import AstNode
 from guppylang.tys.const import Const
 from guppylang.tys.subst import Inst
-from guppylang.tys.ty import FunctionType, StructType, Type
+from guppylang.tys.ty import FunctionType, StructType, TupleType, Type
 
 if TYPE_CHECKING:
     from guppylang.cfg.cfg import CFG
@@ -137,8 +137,10 @@ class TupleAccessAndDrop(ast.expr):
     """A subscript element access on a tuple, dropping all the remaining items."""
 
     value: ast.expr
+    tuple_ty: TupleType
+    index: int
 
-    _fields = "value"
+    _fields = ("value", "tuple_ty", "index")
 
 
 class MakeIter(ast.expr):

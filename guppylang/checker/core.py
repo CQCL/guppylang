@@ -66,10 +66,12 @@ if TYPE_CHECKING:
 #:
 #: All places are equipped with a unique id, a type and an optional definition AST
 #: location. During linearity checking, they are tracked separately.
-Place: TypeAlias = "Variable | FieldAccess | SubscriptAccess"
+Place: TypeAlias = "Variable | FieldAccess | SubscriptAccess | TupleAccess"
 
 #: Unique identifier for a `Place`.
-PlaceId: TypeAlias = "Variable.Id | FieldAccess.Id | SubscriptAccess.Id"
+PlaceId: TypeAlias = (
+    "Variable.Id | FieldAccess.Id | SubscriptAccess.Id | TupleAccess.Id"
+)
 
 
 @dataclass(frozen=True)
@@ -257,6 +259,7 @@ class TupleAccess:
     parent: Place
     elem_ty: Type
     index: int
+    exact_defined_at: AstNode | None
 
     @dataclass(frozen=True)
     class Id:
@@ -283,7 +286,7 @@ class TupleAccess:
     @cached_property
     def defined_at(self) -> AstNode | None:
         """Optional location where this place was last assigned to."""
-        return self.parent.defined_at
+        return self.exact_defined_at or self.parent.defined_at
 
     @cached_property
     def describe(self) -> str:

@@ -38,6 +38,7 @@ from guppylang.checker.errors.linearity import (
     UnnamedExprNotUsedError,
     UnnamedFieldNotUsedError,
     UnnamedSubscriptNotUsedError,
+    UnnamedTupleNotUsedError,
 )
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import CallableDef
@@ -59,6 +60,7 @@ from guppylang.nodes import (
     ResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
+    TupleAccessAndDrop,
 )
 from guppylang.tys.builtin import get_element_type, is_array_type
 from guppylang.tys.ty import (
@@ -427,6 +429,17 @@ class BBLinearityChecker(ast.NodeVisitor):
         self.scope.assign(node.item)
         self.visit(node.getitem_expr)
 
+    def visit_TupleAccessAndDrop(self, node: TupleAccessAndDrop) -> None:
+        # A tuple access on a value that is not a place. This means the value can no
+        # longer be accessed after the element has been projected out. Thus, this is
+        # only legal if there are no remaining linear elements in the tuple
+        self.visit(node.value)
+        for elem_ty in node.tuple_ty.element_types:
+            if not elem_ty.droppable:
+                err = UnnamedTupleNotUsedError(node.value, node.tuple_ty)
+                err.add_sub_diagnostic(UnnamedTupleNotUsedError.Fix(None))
+                raise GuppyError(err)
+
     def visit_BarrierExpr(self, node: BarrierExpr) -> None:
         self._visit_call_args(node.func_ty, node)
         self._reassign_inout_args(node.func_ty, node)
@@ -610,7 +623,7 @@ def leaf_places(place: Place) -> Iterator[Place]:
             ]
         elif isinstance(place.ty, TupleType):
             stack += [
-                TupleAccess(place, elem_ty, idx)
+                TupleAccess(place, elem_ty, idx, None)
                 for idx, elem_ty in enumerate(place.ty.element_types)
             ]
         else:

@@ -170,29 +170,31 @@ class DFContainer:
         # First check, if we already have a wire for this place
         if place.id in self.locals:
             return self.locals[place.id]
-        # Otherwise, our only hope is that it's a struct or tuple value that we can rebuild by
-        # packing the wires of its constituting fields
+        # Otherwise, our only hope is that it's a struct or tuple value that we can
+        # rebuild by packing the wires of its constituting fields
         elif isinstance(place.ty, StructType):
-            children = [FieldAccess(place, field, None) for field in place.ty.fields]
-            child_types = [child.ty.to_hugr() for child in children]
-            child_wires = [self[child] for child in children]
+            field_children = [
+                FieldAccess(place, field, None) for field in place.ty.fields
+            ]
+            child_types = [child.ty.to_hugr() for child in field_children]
+            child_wires = [self[child] for child in field_children]
             wire = self.builder.add_op(ops.MakeTuple(child_types), *child_wires)[0]
-            for child in children:
-                if child.ty.linear:
-                    self.locals.pop(child.id)
+            for f_child in field_children:
+                if f_child.ty.linear:
+                    self.locals.pop(f_child.id)
             self.locals[place.id] = wire
             return wire
         elif isinstance(place.ty, TupleType):
-            children = [
-                TupleAccess(place, elem, idx)
+            tuple_children = [
+                TupleAccess(place, elem, idx, None)
                 for idx, elem in enumerate(place.ty.element_types)
             ]
-            child_types = [elem.elem_ty.to_hugr() for elem in children]
-            child_wires = [self[child] for child in children]
+            child_types = [child.elem_ty.to_hugr() for child in tuple_children]
+            child_wires = [self[child] for child in tuple_children]
             wire = self.builder.add_op(ops.MakeTuple(child_types), *child_wires)[0]
-            for child in children:
-                if child.elem_ty.linear:
-                    self.locals.pop(child.id)
+            for t_child in tuple_children:
+                if t_child.elem_ty.linear:
+                    self.locals.pop(t_child.id)
             self.locals[place.id] = wire
             return wire
         else:
@@ -212,14 +214,14 @@ class DFContainer:
             # Otherwise, we might use this old value when looking up the place later
             self.locals.pop(place.id, None)
         # Same for tuples.
-        if isinstance(place.ty, TupleType) and not is_return:
+        elif isinstance(place.ty, TupleType) and not is_return:
             unpack = self.builder.add_op(
                 ops.UnpackTuple([ty.to_hugr() for ty in place.ty.element_types]), port
             )
             for idx, (elem, elem_port) in enumerate(
                 zip(place.ty.element_types, unpack, strict=True)
             ):
-                self[TupleAccess(place, elem, idx)] = elem_port
+                self[TupleAccess(place, elem, idx, None)] = elem_port
             self.locals.pop(place.id, None)
         else:
             self.locals[place.id] = port
