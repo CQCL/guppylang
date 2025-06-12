@@ -19,7 +19,8 @@ file = "<unknown>"
 def run_miette_test(source: str, diagnostic: Diagnostic, snapshot, request):
     """Helper function to run miette rendering tests with snapshots."""
     try:
-        import miette_py  # noqa: F401
+        import miette_py  # type: ignore[import-untyped]  # noqa: F401
+
     except ImportError:
         pytest.skip("miette-py not available")
     

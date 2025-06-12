@@ -1,0 +1,10 @@
+  x Optional longer message describing the error.
+   ,-[1:9]
+ 1 | ,-> def hello():
+ 2 | |->     return 'world'
+   : `---- Sub-diagnostic label for additional context
+ 3 |     
+ 4 |     def foo(x: blah) -> None:
+   :                ^^|^
+   :                  `-- Primary label giving some source-dependent context
+   `----
