@@ -386,8 +386,6 @@ class DiagnosticsRenderer:
     def level_str(level: DiagnosticLevel) -> str:
         """Returns the text used to identify the different kinds of diagnostics."""
         return level.name.lower().capitalize()
-
-
 class MietteRenderer:
     """Drop-in replacement for DiagnosticsRenderer using miette."""
 
@@ -406,70 +404,84 @@ class MietteRenderer:
 
     def render_diagnostic(self, diag: Diagnostic) -> None:
         """Renders diagnostic using miette. Same interface as DiagnosticsRenderer."""
-        # Convert spans
         spans = []
         source_text = None
 
         if diag.span:
             main_span = to_span(diag.span)
 
-            # Get source text from the span
             try:
-                # Use the existing method that DiagnosticsRenderer uses
-                source_lines = self.source.span_lines(main_span, 0)
+                context_lines = 10
+                source_lines = self.source.span_lines(main_span, context_lines)
                 source_text = "\n".join(source_lines)
             except Exception:
                 source_text = None
 
-            # Calculate offset manually from line/column
-            # Since miette needs byte offsets, we'll use character positions
-            start_offset = self._calculate_offset(main_span.start, source_text)
-            end_offset = self._calculate_offset(main_span.end, source_text)
-            span_len = max(1, end_offset - start_offset)  # Ensure at least 1 char
-
-            spans.append((start_offset, span_len, diag.rendered_span_label))
+            if source_text:
+                # Calculate offset for main span
+                start_offset = self._calculate_offset(main_span.start, source_text)
+                end_offset = self._calculate_offset(main_span.end, source_text)
+                span_len = max(1, end_offset - start_offset)
+                
+                if start_offset < len(source_text) and end_offset <= len(source_text):
+                    spans.append((start_offset, span_len, diag.rendered_span_label))
 
         # Add children spans
         for child in diag.children:
-            if child.span:
+            if child.span and source_text:
                 child_span = to_span(child.span)
                 start_offset = self._calculate_offset(child_span.start, source_text)
                 end_offset = self._calculate_offset(child_span.end, source_text)
                 span_len = max(1, end_offset - start_offset)
-                spans.append((start_offset, span_len, child.rendered_span_label))
+                
+                if start_offset < len(source_text) and end_offset <= len(source_text):
+                    spans.append((start_offset, span_len, child.rendered_span_label))
 
         # Convert and render
-        miette_diag = self._guppy_to_miette(
-            title=diag.rendered_title,
-            level=diag.level.name.lower(),
-            source_text=source_text,
-            spans=spans,
-            message=diag.rendered_message,
-            help_text=None,  # Could extract from help children
-        )
+        try:
+            miette_diag = self._guppy_to_miette(
+                title=diag.rendered_title,
+                level=diag.level.name.lower(),
+                source_text=source_text,
+                spans=spans,
+                message=diag.rendered_message,
+                help_text=None,
+            )
+            
+            output = self._render_report(miette_diag)
+            self.buffer.extend(output.splitlines())
+            
+        except Exception as e:
+            # Fallback to basic error message if miette fails
+            self.buffer.append(f"Error rendering with miette: {e}")
 
-        output = self._render_report(miette_diag)
-        self.buffer.extend(output.splitlines())
-
-    def _calculate_offset(self, loc: Loc, source_text: str | None) -> int:
+    def _calculate_offset(self, loc: Loc, source_text: str) -> int:
         """Calculate byte offset from line/column position."""
-        if source_text is None:
-            return 0
-
         lines = source_text.split("\n")
+        
+        # Convert to 0-based index
+        target_line_idx = loc.line - 1
+        
+        # If we have fewer lines than the target line, try to find by content
+        if target_line_idx >= len(lines):
+            # Search for the line by content matching
+            for i, line in enumerate(lines):
+                # This is a heuristic - look for lines that might contain our target
+                if loc.column < len(line):
+                    target_line_idx = i
+                    break
+            else:
+                return 0
+        
+        # Calculate offset: sum of all previous lines + newlines + column
         offset = 0
-
-        # Add lengths of all lines before the target line
-        for i in range(min(loc.line - 1, len(lines) - 1)):
-            offset += len(lines[i]) + 1  # +1 for newline character
-
-        # Add column offset within the target line
-        if loc.line - 1 < len(lines):
-            offset += min(loc.column, len(lines[loc.line - 1]))
-
-        return offset
-
-
+        for i in range(target_line_idx):
+            offset += len(lines[i]) + 1  # +1 for newline
+        
+        # Add column offset
+        final_offset = offset + loc.column
+        
+        return final_offset
 def wrap(
     text: str,
     width: int,

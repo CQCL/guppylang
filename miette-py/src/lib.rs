@@ -1,9 +1,9 @@
 use pyo3::prelude::*;
-use miette::{GraphicalReportHandler, Diagnostic, LabeledSpan};
+use miette::{GraphicalReportHandler, Diagnostic, LabeledSpan, Severity};
 use std::fmt;
 
 #[pyclass]
-#[derive(Clone, Debug)]  // 
+#[derive(Clone, Debug)]
 struct PyDiagnostic {
     message: String,
     code: Option<String>,
@@ -41,6 +41,15 @@ impl Diagnostic for PyDiagnostic {
         self.code.as_ref().map(|c| Box::new(c) as Box<dyn fmt::Display>)
     }
 
+    fn severity(&self) -> Option<Severity> {
+        match self.severity.as_str() {
+            "error" => Some(Severity::Error),
+            "warning" => Some(Severity::Warning),
+            "note" | "help" | "advice" => Some(Severity::Advice),
+            _ => Some(Severity::Error),
+        }
+    }
+
     fn source_code(&self) -> Option<&dyn miette::SourceCode> {
         self.source.as_ref().map(|s| s as &dyn miette::SourceCode)
     }
@@ -62,11 +71,10 @@ impl Diagnostic for PyDiagnostic {
 
 #[pyfunction]
 fn render_report(diagnostic: PyDiagnostic) -> PyResult<String> {
-    // 👈 CAMBIAR: Usar miette::Report::new() directamente
     let handler = GraphicalReportHandler::new();
     
     let mut output = String::new();
-    handler.render_report(&mut output, &diagnostic as &dyn Diagnostic)  // 
+    handler.render_report(&mut output, &diagnostic as &dyn Diagnostic)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
             format!("Failed to render: {}", e)
         ))?;
@@ -94,7 +102,7 @@ fn guppy_to_miette(
 }
 
 #[pymodule]
-fn miette_py(m: &Bound<'_, PyModule>) -> PyResult<()> {  // 
+fn miette_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyDiagnostic>()?;
     m.add_function(wrap_pyfunction!(render_report, m)?)?;
     m.add_function(wrap_pyfunction!(guppy_to_miette, m)?)?;
