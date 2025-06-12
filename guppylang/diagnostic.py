@@ -1,6 +1,6 @@
 import string
 import textwrap
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import (
@@ -11,7 +11,6 @@ from typing import (
     Protocol,
     overload,
     runtime_checkable,
-    Callable,
 )
 
 from typing_extensions import Self
@@ -402,7 +401,7 @@ class MietteRenderer:
         except ImportError:
             raise ImportError(
                 "miette-py not available. Install with: pip install miette-py/"
-            )
+            ) from None
 
     def render_diagnostic(self, diag: Diagnostic) -> None:
         """Renders diagnostic using miette. Same interface as DiagnosticsRenderer."""
@@ -416,7 +415,7 @@ class MietteRenderer:
                 context_lines = 10
                 source_lines = self.source.span_lines(main_span, context_lines)
                 source_text = "\n".join(source_lines)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 source_text = None
 
             if source_text:
@@ -453,7 +452,7 @@ class MietteRenderer:
             output = self._render_report(miette_diag)
             self.buffer.extend(output.splitlines())
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             # Fallback to basic error message if miette fails
             self.buffer.append(f"Error rendering with miette: {e}")
 
