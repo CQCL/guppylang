@@ -308,6 +308,16 @@ class NewArrayChecker(CustomCallChecker):
 TAG_MAX_LEN = 200
 
 
+@dataclass(frozen=True)
+class TooLongError(Error):
+    title: ClassVar[str] = "Tag too long"
+    span_label: ClassVar[str] = "Result tag is too long"
+
+    @dataclass(frozen=True)
+    class Hint(Note):
+        message: ClassVar[str] = f"Result tags are limited to {TAG_MAX_LEN} bytes"
+
+
 class ResultChecker(CustomCallChecker):
     """Call checker for the `result` function."""
 
@@ -323,15 +333,6 @@ class ResultChecker(CustomCallChecker):
                 "Only numeric values or arrays thereof are allowed as results"
             )
 
-    @dataclass(frozen=True)
-    class TooLongError(Error):
-        title: ClassVar[str] = "Tag too long"
-        span_label: ClassVar[str] = "Result tag is too long"
-
-        @dataclass(frozen=True)
-        class Hint(Note):
-            message: ClassVar[str] = f"Result tags are limited to {TAG_MAX_LEN} bytes"
-
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(2, len(args), self.node)
         [tag, value] = args
@@ -344,8 +345,8 @@ class ResultChecker(CustomCallChecker):
             case _:
                 raise GuppyTypeError(ExpectedError(tag, "a string literal"))
         if len(tag_value.encode("utf-8")) > TAG_MAX_LEN:
-            err: Error = ResultChecker.TooLongError(tag)
-            err.add_sub_diagnostic(ResultChecker.TooLongError.Hint(None))
+            err: Error = TooLongError(tag)
+            err.add_sub_diagnostic(TooLongError.Hint(None))
             raise GuppyTypeError(err)
         value, ty = ExprSynthesizer(self.ctx).synthesize(value)
         # We only allow numeric values or vectors of numeric values
