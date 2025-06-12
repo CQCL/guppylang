@@ -386,6 +386,8 @@ class DiagnosticsRenderer:
     def level_str(level: DiagnosticLevel) -> str:
         """Returns the text used to identify the different kinds of diagnostics."""
         return level.name.lower().capitalize()
+
+
 class MietteRenderer:
     """Drop-in replacement for DiagnosticsRenderer using miette."""
 
@@ -422,7 +424,7 @@ class MietteRenderer:
                 start_offset = self._calculate_offset(main_span.start, source_text)
                 end_offset = self._calculate_offset(main_span.end, source_text)
                 span_len = max(1, end_offset - start_offset)
-                
+
                 if start_offset < len(source_text) and end_offset <= len(source_text):
                     spans.append((start_offset, span_len, diag.rendered_span_label))
 
@@ -433,7 +435,7 @@ class MietteRenderer:
                 start_offset = self._calculate_offset(child_span.start, source_text)
                 end_offset = self._calculate_offset(child_span.end, source_text)
                 span_len = max(1, end_offset - start_offset)
-                
+
                 if start_offset < len(source_text) and end_offset <= len(source_text):
                     spans.append((start_offset, span_len, child.rendered_span_label))
 
@@ -447,10 +449,10 @@ class MietteRenderer:
                 message=diag.rendered_message,
                 help_text=None,
             )
-            
+
             output = self._render_report(miette_diag)
             self.buffer.extend(output.splitlines())
-            
+
         except Exception as e:
             # Fallback to basic error message if miette fails
             self.buffer.append(f"Error rendering with miette: {e}")
@@ -458,10 +460,10 @@ class MietteRenderer:
     def _calculate_offset(self, loc: Loc, source_text: str) -> int:
         """Calculate byte offset from line/column position."""
         lines = source_text.split("\n")
-        
+
         # Convert to 0-based index
         target_line_idx = loc.line - 1
-        
+
         # If we have fewer lines than the target line, try to find by content
         if target_line_idx >= len(lines):
             # Search for the line by content matching
@@ -472,16 +474,18 @@ class MietteRenderer:
                     break
             else:
                 return 0
-        
+
         # Calculate offset: sum of all previous lines + newlines + column
         offset = 0
         for i in range(target_line_idx):
             offset += len(lines[i]) + 1  # +1 for newline
-        
+
         # Add column offset
         final_offset = offset + loc.column
-        
+
         return final_offset
+
+
 def wrap(
     text: str,
     width: int,
