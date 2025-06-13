@@ -52,7 +52,7 @@ class CompilerContext:
 
     module: DefinitionBuilder[ops.Module]
     compiled: dict[DefId, CompiledDef]
-    worklist: set[DefId]
+    worklist: dict[DefId, None]  # use dict over set for deterministic iteration order
 
     global_funcs: dict[GlobalConstId, hf.Function]
 
@@ -63,7 +63,7 @@ class CompilerContext:
         module: DefinitionBuilder[ops.Module],
     ) -> None:
         self.module = module
-        self.worklist = set()
+        self.worklist = {}
         self.compiled = {}
         self.global_funcs = {}
         self.checked_globals = Globals(None)
@@ -76,7 +76,7 @@ class CompilerContext:
         if def_id not in self.compiled:
             defn = ENGINE.get_checked(def_id)
             self.compiled[def_id] = self._compile(defn)
-            self.worklist.add(def_id)
+            self.worklist[def_id] = None
         return self.compiled[def_id]
 
     def _compile(self, defn: CheckedDef) -> CompiledDef:
@@ -91,9 +91,9 @@ class CompilerContext:
             return
 
         self.compiled[defn.id] = self._compile(defn)
-        self.worklist.add(defn.id)
+        self.worklist[defn.id] = None
         while self.worklist:
-            next_id = self.worklist.pop()
+            next_id = self.worklist.popitem()[0]
             with track_hugr_side_effects():
                 next_def = self.build_compiled_def(next_id)
                 next_def.compile_inner(self)
