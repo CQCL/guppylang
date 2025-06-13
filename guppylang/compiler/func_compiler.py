@@ -36,13 +36,13 @@ def compile_local_func_def(
 
     # Pick an order for the captured variables
     captured = list(func.captured.values())
-    captured_types = [v.ty.to_hugr() for v, _ in captured]
+    captured_types = [v.ty.to_hugr(ctx) for v, _ in captured]
 
     # Whether the function calls itself recursively.
     recursive = func.name in func.cfg.live_before[func.cfg.entry_bb]
 
     # Prepend captured variables to the function arguments
-    func_ty = func.ty.to_hugr()
+    func_ty = func.ty.to_hugr(ctx)
     closure_ty = ht.FunctionType([*captured_types, *func_ty.input], func_ty.output)
     func_builder = dfg.builder.define_function(
         func.name, closure_ty.input, closure_ty.output

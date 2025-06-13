@@ -125,7 +125,9 @@ class CompilableDef(Definition):
     """
 
     @abstractmethod
-    def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledDef":
+    def compile_outer(
+        self, module: DefinitionBuilder[OpVar], ctx: "CompilerContext"
+    ) -> "CompiledDef":
         """Adds a Hugr node for the definition to the provided Hugr module.
 
         Note that is not required to fill in the contents of the node. At this point,

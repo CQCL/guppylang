@@ -39,7 +39,9 @@ class RawConstDef(ParsableDef):
 class ConstDef(RawConstDef, ValueDef, CompilableDef):
     """A constant with a checked type."""
 
-    def compile_outer(self, graph: DefinitionBuilder[OpVar]) -> "CompiledConstDef":
+    def compile_outer(
+        self, graph: DefinitionBuilder[OpVar], ctx: CompilerContext
+    ) -> "CompiledConstDef":
         const_node = graph.add_const(self.value)
         return CompiledConstDef(
             self.id,

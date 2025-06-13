@@ -62,7 +62,7 @@ def unary_operation(f: UnaryDunderMethod) -> UnaryDunderMethod:
         from guppylang.tracing.unpacking import guppy_object_from_py
 
         state = get_tracing_state()
-        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+        self = guppy_object_from_py(self, state.dfg.builder, state.node, state.ctx)
 
         with suppress(Exception):
             return f(self)
@@ -89,8 +89,8 @@ def binary_operation(f: BinaryDunderMethod) -> BinaryDunderMethod:
         from guppylang.tracing.unpacking import guppy_object_from_py
 
         state = get_tracing_state()
-        self = guppy_object_from_py(self, state.dfg.builder, state.node)
-        other = guppy_object_from_py(other, state.dfg.builder, state.node)
+        self = guppy_object_from_py(self, state.dfg.builder, state.node, state.ctx)
+        other = guppy_object_from_py(other, state.dfg.builder, state.node, state.ctx)
 
         # First try the method on `self`
         with suppress(Exception):
@@ -126,7 +126,7 @@ class DunderMixin:
         from guppylang.tracing.unpacking import guppy_object_from_py
 
         state = get_tracing_state()
-        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+        self = guppy_object_from_py(self, state.dfg.builder, state.node, state.ctx)
         return self.__getattr__(name)
 
     def __abs__(self) -> Any:
