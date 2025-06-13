@@ -94,7 +94,7 @@ def test_different_severity_levels(snapshot, request):
     class WarningDiag(Error):
         title: ClassVar[str] = "Warning message"
         span_label: ClassVar[str] = "Warning here"
-        level: ClassVar = type('MockLevel', (), {'name': 'WARNING'})()
+        level: ClassVar[DiagnosticLevel] = DiagnosticLevel.WARNING
 
     source = "suspicious_code()"
     span = Span(Loc(file, 1, 0), Loc(file, 1, 15))
