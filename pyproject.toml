@@ -91,8 +91,8 @@ execute-llvm = { workspace = true }
 
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.5,<2.0"] # Changed from hatchling
+build-backend = "maturin" # Changed from hatchling.build
 
 
 [tool.mypy]
@@ -118,3 +118,9 @@ exclude_also = [
 
 [tool.pytest.ini_options]
 addopts = "--benchmark-skip" # bencharks run explicitly with `just bench`
+
+[tool.maturin]
+manifest-path = "guppylang/miette-py/Cargo.toml"
+# This tells maturin to build the Rust library defined in miette-py's Cargo.toml
+# (which is miette_py) and include it in the guppylang wheel.
+# The module will be importable as `from miette_py import ...` when guppylang is installed.
