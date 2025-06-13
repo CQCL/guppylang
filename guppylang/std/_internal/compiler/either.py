@@ -4,7 +4,6 @@ from collections.abc import Sequence
 from hugr import Wire, ops
 from hugr import tys as ht
 
-from guppylang.compiler.core import CompilerContext
 from guppylang.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
@@ -14,10 +13,11 @@ from guppylang.std._internal.compiler.prelude import (
 )
 from guppylang.std._internal.compiler.tket2_bool import OPAQUE_FALSE, OPAQUE_TRUE
 from guppylang.tys.arg import Argument, TypeArg
+from guppylang.tys.common import ToHugrContext
 from guppylang.tys.ty import type_to_row
 
 
-def either_to_hugr(type_args: Sequence[Argument], ctx: CompilerContext) -> ht.Either:
+def either_to_hugr(type_args: Sequence[Argument], ctx: ToHugrContext) -> ht.Either:
     match type_args:
         case [TypeArg(left_ty), TypeArg(right_ty)]:
             left_tys = [ty.to_hugr(ctx) for ty in type_to_row(left_ty)]

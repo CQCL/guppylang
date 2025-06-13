@@ -1,18 +1,15 @@
 from abc import abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 from hugr import tys
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
 from guppylang.tys.arg import Argument
+from guppylang.tys.common import ToHugrContext
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.ty import OpaqueType, Type
-
-if TYPE_CHECKING:
-    from guppylang.compiler.core import CompilerContext
 
 
 @dataclass(frozen=True)
@@ -39,7 +36,7 @@ class OpaqueTypeDef(TypeDef, CompiledDef):
     params: Sequence[Parameter]
     never_copyable: bool
     never_droppable: bool
-    to_hugr: Callable[[Sequence[Argument], "CompilerContext"], tys.Type]
+    to_hugr: Callable[[Sequence[Argument], ToHugrContext], tys.Type]
     bound: tys.TypeBound | None = None
 
     def check_instantiate(

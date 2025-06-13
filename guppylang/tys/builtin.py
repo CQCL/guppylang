@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, TypeGuard
+from typing import Literal, TypeGuard
 
 import hugr.std
 import hugr.std.collections.array
@@ -14,6 +14,7 @@ from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.common import ToHugrContext
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
 from guppylang.tys.param import ConstParam, TypeParam
@@ -25,9 +26,6 @@ from guppylang.tys.ty import (
     TupleType,
     Type,
 )
-
-if TYPE_CHECKING:
-    from guppylang.compiler.core import CompilerContext
 
 
 @dataclass(frozen=True)
@@ -119,7 +117,7 @@ class _ListTypeDef(OpaqueTypeDef, CompiledDef):
         return super().check_instantiate(args, loc)
 
 
-def _list_to_hugr(args: Sequence[Argument], ctx: "CompilerContext") -> ht.Type:
+def _list_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     # Type checker ensures that we get a single arg of kind type
     [arg] = args
     assert isinstance(arg, TypeArg)
@@ -129,7 +127,7 @@ def _list_to_hugr(args: Sequence[Argument], ctx: "CompilerContext") -> ht.Type:
     return hugr.std.collections.list.List(elem_ty)
 
 
-def _array_to_hugr(args: Sequence[Argument], ctx: "CompilerContext") -> ht.Type:
+def _array_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     # Type checker ensures that we get a two args
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
@@ -144,7 +142,7 @@ def _array_to_hugr(args: Sequence[Argument], ctx: "CompilerContext") -> ht.Type:
     return hugr.std.collections.value_array.ValueArray(elem_ty, hugr_arg)
 
 
-def _frozenarray_to_hugr(args: Sequence[Argument], ctx: "CompilerContext") -> ht.Type:
+def _frozenarray_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     # Type checker ensures that we get a two args
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
@@ -152,14 +150,14 @@ def _frozenarray_to_hugr(args: Sequence[Argument], ctx: "CompilerContext") -> ht
     return hugr.std.collections.static_array.StaticArray(ty_arg.ty.to_hugr(ctx))
 
 
-def _sized_iter_to_hugr(args: Sequence[Argument], ctx: "CompilerContext") -> ht.Type:
+def _sized_iter_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
     assert isinstance(len_arg, ConstArg)
     return ty_arg.ty.to_hugr(ctx)
 
 
-def _option_to_hugr(args: Sequence[Argument], ctx: "CompilerContext") -> ht.Type:
+def _option_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     [arg] = args
     assert isinstance(arg, TypeArg)
     return ht.Option(arg.ty.to_hugr(ctx))

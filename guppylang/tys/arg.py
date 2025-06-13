@@ -5,12 +5,17 @@ from typing import TYPE_CHECKING, TypeAlias
 from hugr import tys as ht
 
 from guppylang.error import InternalGuppyError
-from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
+from guppylang.tys.common import (
+    ToHugr,
+    ToHugrContext,
+    Transformable,
+    Transformer,
+    Visitor,
+)
 from guppylang.tys.const import BoundConstVar, Const, ConstValue, ExistentialConstVar
 from guppylang.tys.var import ExistentialVar
 
 if TYPE_CHECKING:
-    from guppylang.compiler.core import CompilerContext
     from guppylang.tys.ty import Type
 
 
@@ -48,7 +53,7 @@ class TypeArg(ArgumentBase):
         """The existential type variables contained in this argument."""
         return self.ty.unsolved_vars
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.TypeTypeArg:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.TypeTypeArg:
         """Computes the Hugr representation of the argument."""
         ty: ht.Type = self.ty.to_hugr(ctx)
         return ty.type_arg()
@@ -74,7 +79,7 @@ class ConstArg(ArgumentBase):
         """The existential const variables contained in this argument."""
         return self.const.unsolved_vars
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.TypeArg:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.TypeArg:
         """Computes the Hugr representation of this argument."""
         from guppylang.tys.ty import NumericType
 

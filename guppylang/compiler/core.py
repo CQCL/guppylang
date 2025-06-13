@@ -21,6 +21,7 @@ from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef
 from guppylang.engine import ENGINE
 from guppylang.error import InternalGuppyError
+from guppylang.tys.common import ToHugrContext
 from guppylang.tys.ty import StructType, Type
 
 CompiledLocals = dict[PlaceId, Wire]
@@ -42,7 +43,7 @@ class GlobalConstId:
         return f"{self.base_name}.{self.id}"
 
 
-class CompilerContext:
+class CompilerContext(ToHugrContext):
     """Compilation context containing all available definitions.
 
     Maintains a `worklist` of definitions which have been used by other compiled code

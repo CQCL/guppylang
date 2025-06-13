@@ -11,13 +11,18 @@ from hugr import tys as ht
 
 from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
-from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
+from guppylang.tys.common import (
+    ToHugr,
+    ToHugrContext,
+    Transformable,
+    Transformer,
+    Visitor,
+)
 from guppylang.tys.const import Const, ConstValue, ExistentialConstVar
 from guppylang.tys.param import ConstParam, Parameter
 from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
-    from guppylang.compiler.core import CompilerContext
     from guppylang.definition.struct import CheckedStructDef, StructField
     from guppylang.definition.ty import OpaqueTypeDef
     from guppylang.tys.subst import Inst, Subst
@@ -194,7 +199,7 @@ class BoundTypeVar(TypeBase, BoundVar):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.Variable:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.Variable:
         """Computes the Hugr representation of the type."""
         return ht.Variable(idx=self.idx, bound=self.hugr_bound)
 
@@ -249,7 +254,7 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.Type:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.Type:
         """Computes the Hugr representation of the type."""
         raise InternalGuppyError(
             "Tried to convert unsolved existential type variable to Hugr"
@@ -281,7 +286,7 @@ class NoneType(TypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.Tuple:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.Tuple:
         """Computes the Hugr representation of the type."""
         return ht.Tuple()
 
@@ -327,7 +332,7 @@ class NumericType(TypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.ExtType:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.ExtType:
         """Computes the Hugr representation of the type."""
         match self.kind:
             case NumericType.Kind.Nat | NumericType.Kind.Int:
@@ -424,7 +429,7 @@ class FunctionType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.FunctionType:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.FunctionType:
         """Computes the Hugr representation of the type."""
         if self.parametrized:
             raise InternalGuppyError(
@@ -433,14 +438,14 @@ class FunctionType(ParametrizedTypeBase):
             )
         return self._to_hugr_function_type(ctx)
 
-    def to_hugr_poly(self, ctx: "CompilerContext") -> ht.PolyFuncType:
+    def to_hugr_poly(self, ctx: ToHugrContext) -> ht.PolyFuncType:
         """Computes the Hugr `PolyFuncType` representation of the type."""
         func_ty = self._to_hugr_function_type(ctx)
         return ht.PolyFuncType(
             params=[p.to_hugr(ctx) for p in self.params], body=func_ty
         )
 
-    def _to_hugr_function_type(self, ctx: "CompilerContext") -> ht.FunctionType:
+    def _to_hugr_function_type(self, ctx: ToHugrContext) -> ht.FunctionType:
         """Helper method to compute the Hugr `FunctionType` representation of the type.
 
         The resulting `FunctionType` can then be embedded into a Hugr `Type` or a Hugr
@@ -551,7 +556,7 @@ class TupleType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.Tuple:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.Tuple:
         """Computes the Hugr representation of the type."""
         return ht.Tuple(*row_to_hugr(self.element_types, ctx))
 
@@ -592,7 +597,7 @@ class SumType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.Sum:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.Sum:
         """Computes the Hugr representation of the type."""
         rows = [type_to_row(ty) for ty in self.element_types]
         if all(len(row) == 0 for row in rows):
@@ -640,7 +645,7 @@ class OpaqueType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.Type:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.Type:
         """Computes the Hugr representation of the type."""
         return self.defn.to_hugr(self.args, ctx)
 
@@ -685,7 +690,7 @@ class StructType(ParametrizedTypeBase):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self, ctx: "CompilerContext") -> ht.Tuple:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.Tuple:
         """Computes the Hugr representation of the type."""
         return ht.Tuple(*(f.ty.to_hugr(ctx) for f in self.fields))
 
@@ -737,12 +742,12 @@ def type_to_row(ty: Type) -> TypeRow:
     return [ty]
 
 
-def row_to_hugr(row: TypeRow, ctx: "CompilerContext") -> ht.TypeRow:
+def row_to_hugr(row: TypeRow, ctx: ToHugrContext) -> ht.TypeRow:
     """Computes the Hugr representation of a type row."""
     return [ty.to_hugr(ctx) for ty in row]
 
 
-def rows_to_hugr(rows: Sequence[TypeRow], ctx: "CompilerContext") -> list[ht.TypeRow]:
+def rows_to_hugr(rows: Sequence[TypeRow], ctx: ToHugrContext) -> list[ht.TypeRow]:
     """Computes the Hugr representation of a sequence of rows."""
     return [row_to_hugr(row, ctx) for row in rows]
 
