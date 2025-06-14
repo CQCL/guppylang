@@ -439,8 +439,6 @@ class MietteRenderer:
                     spans.append((start_offset, span_len, child.rendered_span_label))
 
             if child.rendered_message:
-                from guppylang.diagnostic import Help
-
                 if isinstance(child, Help):
                     help_messages.append(child.rendered_message)
                 else:
