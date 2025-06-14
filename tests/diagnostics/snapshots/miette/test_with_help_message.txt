@@ -4,3 +4,4 @@
    :       ^|
    :        `-- Comparison attempted here
    `----
+  help: Additional sub-diagnostic message without span

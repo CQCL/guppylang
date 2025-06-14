@@ -10,6 +10,7 @@ from guppylang.diagnostic import (
     MietteRenderer,
     Error,
     Note,
+    DiagnosticLevel
 )
 from guppylang.span import Loc, SourceMap, Span
 

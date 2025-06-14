@@ -411,12 +411,9 @@ class MietteRenderer:
         if diag.span:
             main_span = to_span(diag.span)
 
-            try:
-                context_lines = 10
-                source_lines = self.source.span_lines(main_span, context_lines)
-                source_text = "\n".join(source_lines)
-            except Exception:  # noqa: BLE001
-                source_text = None
+            # Get entire file directly from sources
+            full_file_lines = self.source.sources[main_span.file]
+            source_text = "\n".join(full_file_lines)
 
             if source_text:
                 # Calculate offset for main span
@@ -427,7 +424,10 @@ class MietteRenderer:
                 if start_offset < len(source_text) and end_offset <= len(source_text):
                     spans.append((start_offset, span_len, diag.rendered_span_label))
 
-        # Add children spans
+        # Add children spans and collect messages
+        help_messages = []
+        other_messages = []
+
         for child in diag.children:
             if child.span and source_text:
                 child_span = to_span(child.span)
@@ -438,23 +438,35 @@ class MietteRenderer:
                 if start_offset < len(source_text) and end_offset <= len(source_text):
                     spans.append((start_offset, span_len, child.rendered_span_label))
 
+            if child.rendered_message:
+                from guppylang.diagnostic import Help
+
+                if isinstance(child, Help):
+                    help_messages.append(child.rendered_message)
+                else:
+                    other_messages.append(
+                        f"{child.level.name.lower()}: {child.rendered_message}"
+                    )
+
+        help_text = " ".join(help_messages) if help_messages else None
+
         # Convert and render
-        try:
-            miette_diag = self._guppy_to_miette(
-                title=diag.rendered_title,
-                level=diag.level.name.lower(),
-                source_text=source_text,
-                spans=spans,
-                message=diag.rendered_message,
-                help_text=None,
-            )
+        miette_diag = self._guppy_to_miette(
+            title=diag.rendered_title,
+            level=diag.level.name.lower(),
+            source_text=source_text,
+            spans=spans,
+            message=diag.rendered_message,
+            help_text=help_text,
+        )
 
-            output = self._render_report(miette_diag)
-            self.buffer.extend(output.splitlines())
+        output = self._render_report(miette_diag)
+        self.buffer.extend(output.splitlines())
 
-        except Exception as e:  # noqa: BLE001
-            # Fallback to basic error message if miette fails
-            self.buffer.append(f"Error rendering with miette: {e}")
+        # Add other sub-diagnostic messages that don't fit in help_text
+        for msg in other_messages:
+            self.buffer.append("")
+            self.buffer.append(msg)
 
     def _calculate_offset(self, loc: Loc, source_text: str) -> int:
         """Calculate byte offset from line/column position."""
@@ -463,16 +475,10 @@ class MietteRenderer:
         # Convert to 0-based index
         target_line_idx = loc.line - 1
 
-        # If we have fewer lines than the target line, try to find by content
         if target_line_idx >= len(lines):
-            # Search for the line by content matching
-            for i, line in enumerate(lines):
-                # This is a heuristic - look for lines that might contain our target
-                if loc.column < len(line):
-                    target_line_idx = i
-                    break
-            else:
-                return 0
+            raise ValueError(
+                f"Line {loc.line} not found in source text with {len(lines)} lines"
+            )
 
         # Calculate offset: sum of all previous lines + newlines + column
         offset = 0
