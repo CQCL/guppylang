@@ -889,7 +889,7 @@ def apply_array_op_with_conversions(
     convert_bool: bool = False,
 ) -> Wire:
     """Applies common transformations to a Guppy array input before it can be passed to
-    a Hugr op operating on a standard Hugr array, and then reverses them again on the 
+    a Hugr op operating on a standard Hugr array, and then reverses them again on the
     output array.
 
     Transformations:

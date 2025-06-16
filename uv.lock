@@ -10,6 +10,7 @@ resolution-markers = [
 members = [
     "execute-llvm",
     "guppylang",
+    "miette-py",
 ]
 
 [[package]]
@@ -564,6 +565,7 @@ pytket = [
 dev = [
     { name = "ipykernel" },
     { name = "maturin" },
+    { name = "miette-py" },
     { name = "mypy" },
     { name = "pip" },
     { name = "pre-commit" },
@@ -584,6 +586,7 @@ docs = [
 execution = [
     { name = "ipykernel" },
     { name = "maturin" },
+    { name = "miette-py" },
     { name = "pip" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
@@ -599,6 +602,7 @@ lint = [
 ]
 pytket-integration = [
     { name = "ipykernel" },
+    { name = "miette-py" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
@@ -609,6 +613,7 @@ pytket-integration = [
 ]
 test = [
     { name = "ipykernel" },
+    { name = "miette-py" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
@@ -633,6 +638,7 @@ provides-extras = ["pytket"]
 dev = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "maturin", specifier = ">=1.7.7,<2" },
+    { name = "miette-py", editable = "miette-py" },
     { name = "mypy", specifier = "==1.10.0" },
     { name = "pip", specifier = ">=24" },
     { name = "pre-commit", specifier = ">=3.6.0,<4" },
@@ -652,6 +658,7 @@ docs = [
 execution = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "maturin", specifier = ">=1.7.7,<2" },
+    { name = "miette-py", editable = "miette-py" },
     { name = "pip", specifier = ">=24" },
     { name = "pytest", specifier = ">=8.3.2,<9" },
     { name = "pytest-benchmark", specifier = ">=5.1.0" },
@@ -667,6 +674,7 @@ lint = [
 ]
 pytket-integration = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
+    { name = "miette-py", editable = "miette-py" },
     { name = "pytest", specifier = ">=8.3.2,<9" },
     { name = "pytest-benchmark", specifier = ">=5.1.0" },
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
@@ -677,6 +685,7 @@ pytket-integration = [
 ]
 test = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
+    { name = "miette-py", editable = "miette-py" },
     { name = "pytest", specifier = ">=8.3.2,<9" },
     { name = "pytest-benchmark", specifier = ">=5.1.0" },
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
@@ -1148,6 +1157,10 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/53/1e/efc95e4cab8fbbede2f8d28481bae44eee4a43cfe456e78854ef9952ec6b/maturin-1.8.7-py3-none-win_amd64.whl", hash = "sha256:ef44ade7b2401ebbd4b0d268e4b953b4256295c827a21e806a51d29f629ab638", size = 8300461 },
     { url = "https://files.pythonhosted.org/packages/17/2b/270b772f31844aae4297f178e81d5890c259973dedc68a48084a36c34ec1/maturin-1.8.7-py3-none-win_arm64.whl", hash = "sha256:20813b2262661a403fc0c695e3d4836257f992927fa2234928eb3510b13de2cd", size = 6973691 },
 ]
+
+[[package]]
+name = "miette-py"
+source = { editable = "miette-py" }
 
 [[package]]
 name = "mistune"
