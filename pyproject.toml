@@ -51,7 +51,7 @@ homepage = "https://github.com/CQCL/guppylang"
 repository = "https://github.com/CQCL/guppylang"
 
 [dependency-groups]
-docs = ["sphinx >=7.2.6,<9", "sphinx-book-theme >=1.1.2,<2"]
+docs = ["furo>=2024.8.6", "sphinx >=7.2.6,<9"]
 dev = [
     { include-group = "lint" },
     { include-group = "test" },
