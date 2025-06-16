@@ -50,6 +50,7 @@ from guppylang.nodes import (
     PartialApply,
     PlaceNode,
     ResultExpr,
+    StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
     TypeApply,
@@ -59,7 +60,10 @@ from guppylang.std._internal.compiler.array import (
     array_convert_from_std_array,
     array_convert_to_std_array,
     array_map,
+    array_new,
     array_repeat,
+    standard_array_type,
+    unpack_array,
 )
 from guppylang.std._internal.compiler.list import (
     list_new,
@@ -586,6 +590,51 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         barrier_n = self.builder.add_op(op, *(self.visit(e) for e in node.args))
 
         self._update_inout_ports(node.args, iter(barrier_n), node.func_ty)
+        return self._pack_returns([], NoneType())
+
+    def visit_StateResultExpr(self, node: StateResultExpr) -> Wire:
+        num_qubits_arg = (
+            node.array_len.to_arg().to_hugr()
+            if node.array_len
+            else ht.BoundedNatArg(len(node.args) - 1)
+        )
+        args = [ht.StringArg(node.tag), num_qubits_arg]
+        sig = ht.FunctionType(
+            [standard_array_type(ht.Qubit, num_qubits_arg)],
+            [standard_array_type(ht.Qubit, num_qubits_arg)],
+        )
+        op = ops.Custom(
+            op_name="StateResult", signature=sig, args=args, extension="tket2.debug"
+        )
+
+        if not node.array_len:
+            # If the input is a sequence of qubits, we pack them into an array.
+            qubits_in = [self.visit(e) for e in node.args[1:]]
+            qubit_arr_in = self.builder.add_op(
+                array_new(ht.Qubit, len(node.args) - 1), *qubits_in
+            )
+            # Turn into standard array from value array.
+            qubit_arr_in = self.builder.add_op(
+                array_convert_to_std_array(ht.Qubit, num_qubits_arg), qubit_arr_in
+            )
+
+            qubit_arr_out = self.builder.add_op(op, qubit_arr_in)
+
+            qubit_arr_out = self.builder.add_op(
+                array_convert_from_std_array(ht.Qubit, num_qubits_arg), qubit_arr_out
+            )
+            qubits_out = unpack_array(self.builder, qubit_arr_out)
+        else:
+            # If the input is an array of qubits, we need to unwrap the elements first,
+            # and then convert to a value array and back.
+            qubits_in = [self.visit(node.args[1])]
+            qubits_out = [
+                apply_array_op_with_conversions(
+                    self.ctx, self.builder, op, ht.Qubit, num_qubits_arg, qubits_in[0]
+                )
+            ]
+
+        self._update_inout_ports(node.args, iter(qubits_out), node.func_ty)
         return self._pack_returns([], NoneType())
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> Wire:
