@@ -7,7 +7,7 @@ from types import GenericAlias, UnionType
 import guppylang
 
 project = "Guppy Compiler"
-copyright = "2024, Quantinuum"
+copyright = "2025, Quantinuum"
 author = "Quantinuum"
 
 extensions = [
@@ -19,22 +19,13 @@ extensions = [
     "sphinx.ext.intersphinx",
 ]
 
-html_theme = "sphinx_book_theme"
+html_theme = "furo"
 
 html_title = "Guppy compiler development docs"
 
-html_theme_options = {
-    "repository_url": "https://github.com/CQCL/guppylang",
-    "use_repository_button": True,
-    "navigation_with_keys": True,
-    "logo": {
-        "image_light": "_static/Quantinuum_logo_black.png",
-        "image_dark": "_static/Quantinuum_logo_white.png",
-    },
-}
+html_theme_options = {}
 
-html_static_path = ["../_static"]
-html_css_files = ["custom.css"]
+html_static_path = []
 
 autosummary_generate = True
 
