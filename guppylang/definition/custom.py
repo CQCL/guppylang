@@ -1,6 +1,6 @@
 import ast
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
 
@@ -88,6 +88,7 @@ class RawCustomFunctionDef(ParsableDef):
         call_checker: The custom call checker.
         call_compiler: The custom call compiler.
         higher_order_value: Whether the function may be used as a higher-order value.
+        signature: User-provided signature.
     """
 
     python_func: "PyFunc"
@@ -98,14 +99,17 @@ class RawCustomFunctionDef(ParsableDef):
     # if a static type for the function is provided.
     higher_order_value: bool
 
+    signature: FunctionType | None
+
     description: str = field(default="function", init=False)
 
     def parse(self, globals: "Globals", sources: SourceMap) -> "CustomFunctionDef":
-        """Parses and checks the user-provided signature of the custom function.
+        """Parses and checks the signature of the custom function.
 
         The signature is optional if custom type checking logic is provided by the user.
-        However, note that the signature annotation is required, if we want to use the
-        function as a higher-order value.
+        However, note that a signature must be provided by either annotation or as an
+        argument, if we want to use the function as a higher-order value. If a signature
+        is provided as an argument, this will override any annotation.
 
         If no signature is provided, we fill in the dummy signature `() -> ()`. This
         type will never be inspected, since we rely on the provided custom checking
@@ -117,7 +121,7 @@ class RawCustomFunctionDef(ParsableDef):
         func_ast, docstring = parse_py_func(self.python_func, sources)
         if not has_empty_body(func_ast):
             raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
-        sig = self._get_signature(func_ast, globals)
+        sig = self.signature or self._get_signature(func_ast, globals)
         ty = sig or FunctionType([], NoneType())
         return CustomFunctionDef(
             self.id,
@@ -130,28 +134,6 @@ class RawCustomFunctionDef(ParsableDef):
             GlobalConstId.fresh(self.name),
             sig is not None,
         )
-
-    def compile_call(
-        self,
-        args: list[Wire],
-        type_args: Inst,
-        dfg: DFContainer,
-        ctx: CompilerContext,
-        node: AstNode,
-        function_ty: ht.FunctionType,
-    ) -> Sequence[Wire]:
-        """Compiles a call to the function."""
-        # Note: We have _compiled_ globals rather than `Globals` here,
-        # so we cannot use `self._get_signature()` to build a `CustomFunctionDef`.
-        self.call_compiler._setup(
-            type_args,
-            dfg,
-            ctx,
-            node,
-            function_ty,
-            None,
-        )
-        return self.call_compiler.compile_with_inouts(args).regular_returns
 
     def _get_signature(
         self, node: ast.FunctionDef, globals: Globals

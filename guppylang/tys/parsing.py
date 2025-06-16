@@ -9,7 +9,7 @@ from guppylang.ast_util import (
 )
 from guppylang.cfg.builder import is_comptime_expression
 from guppylang.checker.core import Context, Globals, Locals, PythonObject
-from guppylang.checker.errors.generic import ExpectedError
+from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang.definition.common import Definition
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
@@ -19,6 +19,8 @@ from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.builtin import CallableTypeDef
 from guppylang.tys.const import ConstValue
 from guppylang.tys.errors import (
+    CallableComptimeError,
+    ComptimeArgShadowError,
     FlagNotAllowedError,
     FreeTypeVarError,
     HigherKindedTypeVarError,
@@ -27,10 +29,11 @@ from guppylang.tys.errors import (
     InvalidFlagError,
     InvalidTypeArgError,
     InvalidTypeError,
+    LinearComptimeError,
     ModuleMemberNotFoundError,
     NonLinearOwnedError,
 )
-from guppylang.tys.param import Parameter, TypeParam
+from guppylang.tys.param import ConstParam, Parameter, TypeParam
 from guppylang.tys.ty import (
     FuncInput,
     FunctionType,
@@ -49,11 +52,19 @@ def arg_from_ast(
     allow_free_vars: bool = False,
 ) -> Argument:
     """Turns an AST expression into an argument."""
+    from guppylang.checker.cfg_checker import VarNotDefinedError
+
     # A single (possibly qualified) identifier
     if defn := _try_parse_defn(node, globals):
         return _arg_from_instantiated_defn(
             defn, [], globals, node, param_var_mapping, allow_free_vars
         )
+
+    # An identifier referring to a quantified variable
+    if isinstance(node, ast.Name):
+        if node.id in param_var_mapping:
+            return param_var_mapping[node.id].to_bound()
+        raise GuppyError(VarNotDefinedError(node, node.id))
 
     # A parametrised type, e.g. `list[??]`
     if isinstance(node, ast.Subscript) and (
@@ -117,10 +128,10 @@ def _try_parse_defn(node: AstNode, globals: Globals) -> Definition | None:
     match node:
         case ast.Name(id=x):
             if x not in globals:
-                raise GuppyError(VarNotDefinedError(node, x))
+                return None
             defn = globals[x]
             if isinstance(defn, PythonObject):
-                raise GuppyError(VarNotDefinedError(node, x))
+                return None
             return defn
         case ast.Attribute(value=ast.Name(id=module_name) as value, attr=x):
             if module_name not in globals:
@@ -214,7 +225,7 @@ def _parse_callable_type(
     if not isinstance(inputs, ast.List):
         raise GuppyError(err)
     inouts, output = parse_function_io_types(
-        inputs.elts, output, loc, globals, param_var_mapping, allow_free_vars
+        inputs.elts, output, None, loc, globals, param_var_mapping, allow_free_vars
     )
     return FunctionType(inouts, output)
 
@@ -222,6 +233,7 @@ def _parse_callable_type(
 def parse_function_io_types(
     input_nodes: list[ast.expr],
     output_node: ast.expr,
+    input_names: list[str] | None,
     loc: AstNode,
     globals: Globals,
     param_var_mapping: dict[str, Parameter],
@@ -234,7 +246,7 @@ def parse_function_io_types(
     Returns the parsed input and output types.
     """
     inputs = []
-    for inp in input_nodes:
+    for i, inp in enumerate(input_nodes):
         ty, flags = type_with_flags_from_ast(
             inp, globals, param_var_mapping, allow_free_vars
         )
@@ -242,6 +254,25 @@ def parse_function_io_types(
             raise GuppyError(NonLinearOwnedError(loc, ty))
         if not ty.copyable and InputFlags.Owned not in flags:
             flags |= InputFlags.Inout
+        if InputFlags.Comptime in flags:
+            if input_names is None:
+                raise GuppyError(CallableComptimeError(inp))
+            name = input_names[i]
+
+            # Make sure we're not shadowing a type variable with the same name that was
+            # already used on the left. E.g
+            #
+            #    n = guppy.type_var("n")
+            #    def foo(xs: array[int, n], n: nat @comptime)
+            #
+            # TODO: In principle we could lift this restriction by tracking multiple
+            #  params refering to the same name in `param_var_mapping`, but not sure if
+            #  this would be worth it...
+            if name in param_var_mapping:
+                raise GuppyError(ComptimeArgShadowError(inp, name))
+            param_var_mapping[name] = ConstParam(
+                len(param_var_mapping), name, ty, from_comptime_arg=True
+            )
 
         inputs.append(FuncInput(ty, flags))
     output = type_from_ast(output_node, globals, param_var_mapping, allow_free_vars)
@@ -266,6 +297,21 @@ def type_with_flags_from_ast(
                 if ty.copyable:
                     raise GuppyError(NonLinearOwnedError(node.right, ty))
                 flags |= InputFlags.Owned
+            case ast.Name(id="comptime"):
+                flags |= InputFlags.Comptime
+                if not ty.copyable or not ty.droppable:
+                    raise GuppyError(LinearComptimeError(node.right, ty))
+
+                # TODO: For now we can only do `nat` comptime args since they lower to
+                #  Hugr bounded nats. Extend to arbitrary types via monomorphization.
+                #  See https://github.com/CQCL/guppylang/issues/1008
+                if (
+                    not isinstance(ty, NumericType)
+                    or not ty.kind == NumericType.Kind.Nat
+                ):
+                    raise GuppyError(
+                        UnsupportedError(node.right, f"`{ty}` comptime arguments")
+                    )
             case _:
                 raise GuppyError(InvalidFlagError(node.right))
         return ty, flags

@@ -126,6 +126,19 @@ def test_if_expr_double_type_change(validate):
     validate(foo)
 
 
+def test_if_use_reassign(validate):
+    # See https://github.com/CQCL/guppylang/issues/1023
+
+    @compile_guppy
+    def foo(b: bool) -> None:
+        a = 1
+        if b:
+            a
+            a = 1.0
+
+    validate(foo)
+
+
 def test_if_return(validate):
     @compile_guppy
     def foo(x: bool, y: int) -> int:

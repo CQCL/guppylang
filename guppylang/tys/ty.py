@@ -13,7 +13,7 @@ from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
 from guppylang.tys.const import Const, ConstValue, ExistentialConstVar
-from guppylang.tys.param import Parameter
+from guppylang.tys.param import ConstParam, Parameter
 from guppylang.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
@@ -357,6 +357,7 @@ class InputFlags(Flag):
     NoFlags = 0
     Inout = auto()
     Owned = auto()
+    Comptime = auto()
 
 
 @dataclass(frozen=True)
@@ -375,6 +376,7 @@ class FunctionType(ParametrizedTypeBase):
     output: "Type"
     params: Sequence[Parameter]
     input_names: Sequence[str] | None
+    comptime_args: Sequence[ConstArg]
 
     args: Sequence[Argument] = field(init=False)
     copyable: bool = field(default=True, init=True)
@@ -389,15 +391,28 @@ class FunctionType(ParametrizedTypeBase):
         output: "Type",
         input_names: Sequence[str] | None = None,
         params: Sequence[Parameter] | None = None,
+        comptime_args: Sequence[ConstArg] | None = None,
     ) -> None:
         # We need a custom __init__ to set the args
-        args = [TypeArg(inp.ty) for inp in inputs]
+        args: list[Argument] = [TypeArg(inp.ty) for inp in inputs]
         args.append(TypeArg(output))
+
+        # If no explicit comptime args are provided, assume that all of them are bound
+        params = params or []
+        if comptime_args is None:
+            comptime_args = [
+                param.to_bound()
+                for param in params
+                if isinstance(param, ConstParam) and param.from_comptime_arg
+            ]
+        args += comptime_args
+
         object.__setattr__(self, "args", args)
+        object.__setattr__(self, "comptime_args", comptime_args)
         object.__setattr__(self, "inputs", inputs)
         object.__setattr__(self, "output", output)
         object.__setattr__(self, "input_names", input_names or [])
-        object.__setattr__(self, "params", params or [])
+        object.__setattr__(self, "params", params)
 
     @property
     def parametrized(self) -> bool:
@@ -428,7 +443,12 @@ class FunctionType(ParametrizedTypeBase):
         The resulting `FunctionType` can then be embedded into a Hugr `Type` or a Hugr
         `PolyFuncType`.
         """
-        ins = [inp.ty.to_hugr() for inp in self.inputs]
+        ins = [
+            inp.ty.to_hugr()
+            for inp in self.inputs
+            # Comptime inputs are turned into generic args, so are not included here
+            if InputFlags.Comptime not in inp.flags
+        ]
         outs = [
             *(t.to_hugr() for t in type_to_row(self.output)),
             # We might have additional borrowed args that will be also outputted
@@ -478,6 +498,12 @@ class FunctionType(ParametrizedTypeBase):
             [FuncInput(inp.ty.transform(inst), inp.flags) for inp in self.inputs],
             self.output.transform(inst),
             self.input_names,
+            # Function is now unquantified, so no parameters
+            params=[],
+            # Comptime type arguments also need to be instantiated
+            comptime_args=[
+                cast(ConstArg, arg.transform(inst)) for arg in self.comptime_args
+            ],
         )
 
     def unquantified(self) -> tuple["FunctionType", Sequence[ExistentialVar]]:

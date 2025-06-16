@@ -2,7 +2,7 @@ import ast
 import copy
 import itertools
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from functools import cache, cached_property
 from types import FrameType
 from typing import (
@@ -80,6 +80,10 @@ class Variable:
     ty: Type
     defined_at: AstNode | None
     flags: InputFlags = InputFlags.NoFlags
+
+    # Remember if a variable is a function input. This way, we can e.g. suggest to add a
+    # `@comptime` annotation to users when appropriate
+    is_func_input: bool = field(default=False, kw_only=True)
 
     @dataclass(frozen=True)
     class Id:
