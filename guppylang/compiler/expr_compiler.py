@@ -888,10 +888,11 @@ def apply_array_op_with_conversions(
     input_array: Wire,
     convert_bool: bool = False,
 ) -> Wire:
-    """Applies common transformations to a Guppy array before  it can be passed to a
-    Hugr op operating on an array and reverses them on the output array.
+    """Applies common transformations to a Guppy array input before it can be passed to
+    a Hugr op operating on a standard Hugr array, and then reverses them again on the 
+    output array.
 
-    Transformation:
+    Transformations:
     1. Unwraps / wraps elements in options.
     3. (Optional) Converts from / to opaque bool to / from Hugr bool.
     2. Converts from / to value array to / from standard Hugr array.
