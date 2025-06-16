@@ -77,11 +77,13 @@ from guppylang.std._internal.compiler.prelude import (
 from guppylang.std._internal.compiler.tket2_bool import (
     OpaqueBool,
     OpaqueBoolVal,
+    make_opaque,
     not_op,
     read_bool,
 )
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
+    array_type,
     bool_type,
     get_element_type,
     int_type,
@@ -349,7 +351,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert isinstance(func_ty, FunctionType)
         num_returns = len(type_to_row(func_ty.output))
 
-        args = [self.visit(arg) for arg in node.args]
+        args = self._compile_call_args(node.args, func_ty)
         call = self.builder.add_op(ops.CallIndirect(func_ty.to_hugr()), func, *args)
         regular_returns = list(call[:num_returns])
         inout_returns = call[num_returns:]
@@ -404,7 +406,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             input_len = len(func_ty.inputs)
             num_returns = len(type_to_row(func_ty.output))
             consumed_args, other_args = args[0:input_len], args[input_len:]
-            consumed_wires = [self.visit(arg) for arg in consumed_args]
+            consumed_wires = self._compile_call_args(consumed_args, func_ty)
             call = self.builder.add_op(
                 ops.CallIndirect(func_ty.to_hugr()), func, *consumed_wires
             )
@@ -419,8 +421,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         func = self.ctx.build_compiled_def(node.def_id)
         assert isinstance(func, CompiledCallableDef)
 
-        args = [self.visit(arg) for arg in node.args]
-        rets = func.compile_call(args, list(node.type_args), self.dfg, self.ctx, node)
         if isinstance(func, CustomFunctionDef) and not func.has_signature:
             func_ty = FunctionType(
                 [FuncInput(get_type(arg), InputFlags.NoFlags) for arg in node.args],
@@ -428,8 +428,26 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
         else:
             func_ty = func.ty.instantiate(node.type_args)
+
+        args = self._compile_call_args(node.args, func_ty)
+        rets = func.compile_call(args, list(node.type_args), self.dfg, self.ctx, node)
         self._update_inout_ports(node.args, iter(rets.inout_returns), func_ty)
         return self._pack_returns(rets.regular_returns, func_ty.output)
+
+    def _compile_call_args(
+        self, args: list[ast.expr], func_ty: FunctionType
+    ) -> list[Wire]:
+        """Helper function to compile arguments for function calls.
+
+        Takes care of filtering out comptime arguments that are provided via generic
+        args or monomorphization instead of wires.
+        """
+        return [
+            self.visit(arg)
+            for arg, inp in zip(args, func_ty.inputs, strict=True)
+            # Don't compile comptime args since we already include them as type args
+            if InputFlags.Comptime not in inp.flags
+        ]
 
     def visit_Call(self, node: ast.Call) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
@@ -506,44 +524,47 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             # The only other valid base type is bool
             assert is_bool_type(node.base_ty)
             base_name = "bool"
+        # Handle array results separately.
         if node.array_len is not None:
             op_name = f"result_array_{base_name}"
             size_arg = node.array_len.to_arg().to_hugr()
             extra_args = [size_arg, *extra_args]
-            # Remove the option wrapping in the array
-            unwrap = array_unwrap_elem(self.ctx)
-            unwrap = self.builder.load_function(
-                unwrap,
-                instantiation=ht.FunctionType([ht.Option(base_ty)], [base_ty]),
-                type_args=[ht.TypeTypeArg(base_ty)],
+            is_bool = is_bool_type(node.base_ty)
+            op_base_ty = ht.Bool if is_bool else base_ty
+            hugr_ty: ht.Type = hugr.std.collections.array.Array(op_base_ty, size_arg)
+            op = tket2_result_op(
+                op_name=op_name,
+                typ=hugr_ty,
+                tag=node.tag,
+                extra_args=extra_args,
+                return_input=True,
             )
-            map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
-            value_wire = self.builder.add_op(map_op, value_wire, unwrap)
-            if is_bool_type(node.base_ty):
-                # We need to coerce a read on all the array elements if they are bools.
-                array_read = array_read_bool(self.ctx)
-                array_read = self.builder.load_function(array_read)
-                map_op = array_map(OpaqueBool, size_arg, ht.Bool)
-                value_wire = self.builder.add_op(map_op, value_wire, array_read)
-                base_ty = ht.Bool
-            # Turn `value_array` into regular linear `array`
-            value_wire = self.builder.add_op(
-                array_convert_to_std_array(base_ty, size_arg), value_wire
+            arr_wire = apply_array_op_with_conversions(
+                self.ctx, self.builder, op, base_ty, size_arg, value_wire, is_bool
             )
-            hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
+            # Update the inout ports for the array result.
+            func_ty = FunctionType(
+                [
+                    FuncInput(
+                        array_type(node.base_ty, node.array_len), InputFlags.Inout
+                    ),
+                ],
+                NoneType(),
+            )
+            self._update_inout_ports(node.args, iter([arr_wire]), func_ty)
         else:
             if is_bool_type(node.base_ty):
                 base_ty = ht.Bool
                 value_wire = self.builder.add_op(read_bool(), value_wire)
             op_name = f"result_{base_name}"
             hugr_ty = base_ty
-        op = tket2_result_op(
-            op_name=op_name,
-            typ=hugr_ty,
-            tag=node.tag,
-            extra_args=extra_args,
-        )
-        self.builder.add_op(op, value_wire)
+            op = tket2_result_op(
+                op_name=op_name,
+                typ=hugr_ty,
+                tag=node.tag,
+                extra_args=extra_args,
+            )
+            self.builder.add_op(op, value_wire)
         return self._pack_returns([], NoneType())
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
@@ -816,15 +837,17 @@ def tket2_result_op(
     typ: ht.Type,
     tag: str,
     extra_args: Iterable[ht.TypeArg],
+    return_input: bool = False,
 ) -> ops.DataflowOp:
-    """Creates a dummy operation for constructing a list."""
+    """Creates a tket2.result op."""
     args = [
         ht.StringArg(tag),
         *extra_args,
     ]
+    output = [typ] if return_input else []
     sig = ht.FunctionType(
         input=[typ],
-        output=[],
+        output=output,
     )
     return ops.Custom(
         extension="tket2.result",
@@ -837,10 +860,14 @@ def tket2_result_op(
 ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(
     "array.__comprehension.init"
 )
+
 ARRAY_UNWRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__unwrap_elem")
 ARRAY_WRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__wrap_elem")
 
 ARRAY_READ_BOOL: Final[GlobalConstId] = GlobalConstId.fresh("array.__read_bool")
+ARRAY_MAKE_OPAQUE_BOOL: Final[GlobalConstId] = GlobalConstId.fresh(
+    "array.__make_opaque_bool"
+)
 
 
 def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
@@ -904,9 +931,83 @@ def array_read_bool(ctx: CompilerContext) -> hf.Function:
     return func
 
 
+def array_make_opaque_bool(ctx: CompilerContext) -> hf.Function:
+    """Returns the Hugr function that is used to unwrap the elements in an option array
+    to turn it into a regular array."""
+    sig = ht.PolyFuncType(
+        params=[],
+        body=ht.FunctionType([ht.Bool], [OpaqueBool]),
+    )
+    func, already_defined = ctx.declare_global_func(ARRAY_MAKE_OPAQUE_BOOL, sig)
+    if not already_defined:
+        func.set_outputs(func.add_op(make_opaque(), func.inputs()[0]))
+    return func
+
+
 T = TypeVar("T")
 
 
 def doesnt_contain_none(xs: list[T | None]) -> TypeGuard[list[T]]:
     """Checks if a list contains `None`."""
     return all(x is not None for x in xs)
+
+
+def apply_array_op_with_conversions(
+    ctx: CompilerContext,
+    builder: DfBase[ops.DfParentOp],
+    op: ops.DataflowOp,
+    elem_ty: ht.Type,
+    size_arg: ht.TypeArg,
+    input_array: Wire,
+    convert_bool: bool = False,
+) -> Wire:
+    """Applies common transformations to a Guppy array input before it can be passed to
+    a Hugr op operating on a standard Hugr array, and then reverses them again on the
+    output array.
+
+    Transformations:
+    1. Unwraps / wraps elements in options.
+    3. (Optional) Converts from / to opaque bool to / from Hugr bool.
+    2. Converts from / to value array to / from standard Hugr array.
+    """
+    unwrap = array_unwrap_elem(ctx)
+    unwrap = builder.load_function(
+        unwrap,
+        instantiation=ht.FunctionType([ht.Option(elem_ty)], [elem_ty]),
+        type_args=[ht.TypeTypeArg(elem_ty)],
+    )
+    map_op = array_map(ht.Option(elem_ty), size_arg, elem_ty)
+    unwrapped_array = builder.add_op(map_op, input_array, unwrap)
+
+    if convert_bool:
+        array_read = array_read_bool(ctx)
+        array_read = builder.load_function(array_read)
+        map_op = array_map(OpaqueBool, size_arg, ht.Bool)
+        unwrapped_array = builder.add_op(map_op, unwrapped_array, array_read)
+        elem_ty = ht.Bool
+
+    unwrapped_array = builder.add_op(
+        array_convert_to_std_array(elem_ty, size_arg), unwrapped_array
+    )
+
+    result_array = builder.add_op(op, unwrapped_array)
+
+    result_array = builder.add_op(
+        array_convert_from_std_array(elem_ty, size_arg), result_array
+    )
+
+    if convert_bool:
+        array_make_opaque = array_make_opaque_bool(ctx)
+        array_make_opaque = builder.load_function(array_make_opaque)
+        map_op = array_map(ht.Bool, size_arg, OpaqueBool)
+        result_array = builder.add_op(map_op, result_array, array_make_opaque)
+        elem_ty = OpaqueBool
+
+    wrap = array_wrap_elem(ctx)
+    wrap = builder.load_function(
+        wrap,
+        instantiation=ht.FunctionType([elem_ty], [ht.Option(elem_ty)]),
+        type_args=[ht.TypeTypeArg(elem_ty)],
+    )
+    map_op = array_map(elem_ty, size_arg, ht.Option(elem_ty))
+    return builder.add_op(map_op, result_array, wrap)

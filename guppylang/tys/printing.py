@@ -77,6 +77,8 @@ class TypePrinter:
         s = ""
         if InputFlags.Owned in flags:
             s += " @owned"
+        if InputFlags.Comptime in flags:
+            s += " @comptime"
         return s
 
     @_visit.register
@@ -94,7 +96,13 @@ class TypePrinter:
             inputs = f"({inputs})"
         output = self._visit(ty.output, True)
         if ty.parametrized:
-            quantified = ", ".join([self._visit(param, False) for param in ty.params])
+            params = [
+                self._visit(param, False)
+                for param in ty.params
+                # Don't print out implicit parameters generated for comptime arguments
+                if not isinstance(param, ConstParam) or not param.from_comptime_arg
+            ]
+            quantified = ", ".join(params)
             del self.bound_names[: -len(ty.params)]
             return _wrap(f"forall {quantified}. {inputs} -> {output}", inside_row)
         return _wrap(f"{inputs} -> {output}", inside_row)

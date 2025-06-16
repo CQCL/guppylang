@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["execute_llvm", "validator"]
+members = ["execute_llvm", "validator", "miette-py"]
 
 # Building "execute_llvm" requires having LLVM14 installed
 default-members = ["validator"]
@@ -28,7 +28,7 @@ cargo_toml = "0.20.4"
 thiserror = "2.0.6"
 hugr = "0.20.1"
 hugr-cli = "0.20.1"
-tket2 = { version = "0.11.1" }
+tket2 = { version = "0.12.0" }
 
 [patch.crates-io]
 

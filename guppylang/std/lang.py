@@ -5,12 +5,21 @@ from typing import Any
 from typing_extensions import deprecated
 
 
-def comptime(*args: Any) -> Any:
-    """Function to tag compile-time evaluated Python expressions in a Guppy context.
+class _Comptime:
+    """Dummy class to support `@comptime` annotations and `comptime(...)` expressions"""
 
-    This function acts like the identity when execute in a Python context.
-    """
-    return tuple(args)
+    def __call__(self, *args: Any) -> Any:
+        return tuple(args)
+
+    def __rmatmul__(self, other: Any) -> Any:
+        # This method is to make the Python interpreter happy with @comptime at runtime
+        return other
+
+
+#: Function to tag compile-time evaluated Python expressions in a Guppy context.
+#:
+#: This function acts like the identity when execute in a Python context.
+comptime = _Comptime()
 
 
 #: Deprecated alias for `comptime` expressions

@@ -103,10 +103,7 @@ def check_cfg(
     while len(queue) > 0:
         pred, num_output, bb = queue.popleft()
         pred_outputs = [*pred.sig.output_rows, *pred.sig.dummy_output_rows]
-        input_row = [
-            Variable(v.name, v.ty, v.defined_at, v.flags)
-            for v in pred_outputs[num_output]
-        ]
+        input_row = pred_outputs[num_output]
 
         if bb in compiled:
             # If the BB was already compiled, we just have to check that the signatures
@@ -222,7 +219,11 @@ def check_bb(
     if bb == cfg.entry_bb:
         assert len(bb.predecessors) == 0
         for x, use in bb.vars.used.items():
-            if x not in cfg.ass_before[bb] and x not in globals:
+            if (
+                x not in cfg.ass_before[bb]
+                and x not in globals
+                and x not in generic_params
+            ):
                 raise GuppyError(VarNotDefinedError(use, x))
 
     # Check the basic block
@@ -238,7 +239,11 @@ def check_bb(
     for succ in bb.successors + bb.dummy_successors:
         for x, use_bb in cfg.live_before[succ].items():
             # Check that the variables requested by the successor are defined
-            if x not in ctx.locals and x not in ctx.globals:
+            if (
+                x not in ctx.locals
+                and x not in ctx.globals
+                and x not in ctx.generic_params
+            ):
                 # If the variable is defined on *some* paths, we can give a more
                 # informative error message
                 if x in cfg.maybe_ass_before[use_bb]:
