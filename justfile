@@ -49,7 +49,7 @@ coverage:
 build-docs:
     cd docs && ./build.sh
 
-# Serve sphinx docs locallt (needs npm installed)
+# Serve sphinx docs locally (needs npm installed)
 serve-docs: build-docs
     npm exec serve docs/build/api-docs
 
