@@ -1,12 +1,14 @@
-Error: Copy violation (at $FILE:13:3)
-   | 
-11 |    xs = array(1, 2, 3)
-12 |    ys = xs
-13 |    xs[0] = 0
-   |    ^^^^^ Variable `xs` with non-copyable type `array[int, 3]` cannot
-   |          be borrowed ...
-   | 
-12 |    ys = xs
-   |         -- since it was already moved here
+Error: Copy violation (at $FILE:9:3)
+  | 
+7 |    xs = array(1, 2, 3)
+8 |    ys = xs
+9 |    xs[0] = 0
+  |    ^^^^^ Variable `xs` with non-copyable type `array[int, 3]` cannot
+  |          be borrowed ...
+  | 
+8 |    ys = xs
+  |         -- since it was already moved here
+
+Help: Consider copying `xs` instead of moving it: `xs.copy()`
 
 Guppy compilation failed due to 1 previous error

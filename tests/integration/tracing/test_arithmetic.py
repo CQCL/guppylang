@@ -1,48 +1,49 @@
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
+from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import nat
+
+from hugr.std.int import IntVal
 
 
 def test_int(validate, run_int_fn):
-    module = GuppyModule("module")
-
-    @guppy.comptime(module)
+    @guppy.comptime
     def pos(x: int) -> int:
         return +x
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def neg(x: int) -> int:
         return -x
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def add(x: int, y: int) -> int:
         return 1 + (x + (y + 2))
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def sub(x: int, y: int) -> int:
         return 1 - (x - (y - 2))
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def mul(x: int, y: int) -> int:
         return 1 * (x * (y * 2))
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def div(x: int, y: int) -> int:
         return 100 // (x // (y // 2))
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def mod(x: int, y: int) -> int:
         return 15 % (x % (y % 10))
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def pow(x: int, y: int) -> int:
         return 4 ** (x ** (y ** 0))
 
-    @guppy(module)
+    @guppy
     def main() -> None:
         """Dummy main function"""
+        pos, neg, add, sub, mul, div, mod, pow
 
-    compiled = module.compile()
+    compiled = guppy.compile(main)
     validate(compiled)
 
     run_int_fn(compiled, 10, "pos", [10])
@@ -56,47 +57,46 @@ def test_int(validate, run_int_fn):
 
 
 def test_float(validate, run_float_fn_approx):
-    module = GuppyModule("module")
-
-    @guppy.comptime(module)
+    @guppy.comptime
     def pos(x: float) -> float:
         return +x
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def neg(x: float) -> float:
         return -x
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def add(x: float, y: float) -> float:
         return 1 + (x + (y + 2))
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def sub(x: float, y: float) -> float:
         return 1 - (x - (y - 2))
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def mul(x: float, y: float) -> float:
         return 1 * (x * (y * 2))
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def div(x: float, y: float) -> float:
         return 100 / (x / (y / 2))
 
     # TODO: Requires lowering of `ffloor` op: https://github.com/CQCL/hugr/issues/1905
-    # @guppy.comptime(module)
+    # @guppy.comptime
     # def floordiv(x: float, y: float) -> float:
     #     return 100 // (x // (y // 2))
 
     # TODO: Requires lowering of `fpow` op: https://github.com/CQCL/hugr/issues/1905
-    # @guppy.comptime(module)
+    # @guppy.comptime
     # def pow(x: float, y: float) -> float:
     #     return 4 ** (x ** (y ** 0.5))
 
-    @guppy(module)
+    @guppy
     def main() -> None:
         """Dummy main function"""
+        pos, neg, add, sub, mul, div
 
-    compiled = module.compile()
+    compiled = guppy.compile(main)
     validate(compiled)
 
     run_float_fn_approx(compiled, 10.5, "pos", [10.5])
@@ -113,31 +113,97 @@ def test_float(validate, run_float_fn_approx):
     # run_float_fn_approx(compiled, ..., "pow", [...])
 
 
-def test_dunder_coercions(validate):
-    module = GuppyModule("module")
+def test_angle(validate):
+    @guppy.comptime
+    def neg(x: angle) -> angle:
+        return -x
 
-    @guppy.comptime(module)
+    @guppy.comptime
+    def neg_pi() -> angle:
+        return -pi
+
+    @guppy.comptime
+    def add(x: angle, y: float) -> angle:
+        return pi + (x + angle(y) + pi)
+
+    @guppy.comptime
+    def sub(x: float, y: angle) -> angle:
+        return pi - (angle(x) - (y - pi))
+
+    @guppy.comptime
+    def mul(x: float, y: angle) -> angle:
+        return 1.5 * (x * (y * 2))
+
+    @guppy.comptime
+    def div(x: angle, y: float) -> angle:
+        return x / y
+
+    @guppy
+    def main() -> None:
+        """Dummy main function"""
+        add, sub, mul, div
+
+    validate(guppy.compile(main))
+
+
+def test_dunder_coercions(validate):
+    @guppy.comptime
     def test1(x: int) -> float:
         return 1.0 + x
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def test2(x: int) -> float:
         return x + 1.0
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def test3(x: float) -> float:
         return 1 + x
 
-    @guppy.comptime(module)
+    @guppy.comptime
     def test4(x: float) -> float:
         return x + 1
 
-    @guppy.comptime(module)
-    def test4(x: int, y: float) -> float:
+    @guppy.comptime
+    def test5(x: int, y: float) -> float:
         return x + y
 
-    @guppy.comptime(module)
-    def test5(x: float, y: int) -> float:
+    @guppy.comptime
+    def test6(x: float, y: int) -> float:
         return x + y
 
-    validate(module.compile())
+    validate(guppy.compile(test1))
+    validate(guppy.compile(test2))
+    validate(guppy.compile(test3))
+    validate(guppy.compile(test4))
+    validate(guppy.compile(test5))
+    validate(guppy.compile(test6))
+
+
+
+def test_const(validate):
+    x = guppy.constant("x", "int", IntVal(10, 6))
+
+    @guppy.comptime
+    def test1() -> int:
+        return -x
+
+    @guppy.comptime
+    def test2() -> int:
+        return 1 + x
+
+    @guppy.comptime
+    def test2() -> int:
+        return x * 2
+
+    @guppy.comptime
+    def test3() -> float:
+        return 1.5 - x
+
+    @guppy.comptime
+    def test4() -> float:
+        return x / 0.5
+
+    validate(guppy.compile(test1))
+    validate(guppy.compile(test2))
+    validate(guppy.compile(test3))
+    validate(guppy.compile(test4))

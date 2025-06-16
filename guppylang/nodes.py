@@ -203,7 +203,7 @@ class DesugaredGenerator(ast.expr):
     target: ast.expr
     ifs: list[ast.expr]
 
-    borrowed_outer_places: "list[Place]"
+    used_outer_places: "list[Place]"
 
     _fields = (
         "iter_assign",
@@ -302,7 +302,20 @@ class BarrierExpr(ast.expr):
     _fields = ("args", "func_ty")
 
 
-AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr | ResultExpr
+class StateResultExpr(ast.expr):
+    """A `state_result(tag, *args)` expression."""
+
+    tag: str
+    args: list[ast.expr]
+    func_ty: FunctionType
+    #: Array length in case this is an array result, otherwise `None`
+    array_len: Const | None
+    _fields = ("tag", "args", "func_ty", "has_array_input")
+
+
+AnyCall = (
+    LocalCall | GlobalCall | TensorCall | BarrierExpr | ResultExpr | StateResultExpr
+)
 
 
 class InoutReturnSentinel(ast.expr):

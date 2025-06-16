@@ -6,8 +6,7 @@ from hugr import ops, Hugr, Node
 from hugr.std import PRELUDE
 
 from guppylang import guppy
-from guppylang.module import GuppyModule
-from guppylang.std._internal.compiler.quantum import RESULT_EXTENSION, QUANTUM_EXTENSION
+from guppylang.std._internal.compiler.tket2_exts import RESULT_EXTENSION, QUANTUM_EXTENSION
 from guppylang.std.builtins import result, array, owned, panic
 from guppylang.std.quantum import qubit, discard, measure
 
@@ -52,9 +51,7 @@ def check_order(hugr: Hugr, nodes: list[Node]) -> None:
 
 
 def test_result_panic(validate):
-    module = GuppyModule("test")
-
-    @guppy(module)
+    @guppy
     def test() -> None:
         result("a", True)
         result("b", 10)
@@ -62,7 +59,7 @@ def test_result_panic(validate):
         exit("Foo!", 1)
         result("c", 10.5)
 
-    compiled = module.compile()
+    compiled = guppy.compile(test)
     validate(compiled)
 
     # Check that we have the expected order edges between the results
@@ -76,17 +73,14 @@ def test_result_panic(validate):
 
 
 def test_qalloc_qfree(validate):
-    module = GuppyModule("test")
-    module.load(qubit, discard, measure)
-
-    @guppy(module)
+    @guppy
     def test() -> None:
         q1 = qubit()
         discard(q1)
         q2 = qubit()
         measure(q2)
 
-    compiled = module.compile()
+    compiled = guppy.compile(test)
     validate(compiled)
 
     # Check that we have the expected order edges between the allocations and frees
@@ -100,14 +94,11 @@ def test_qalloc_qfree(validate):
 
 
 def test_call(validate):
-    module = GuppyModule("test")
-    module.load(qubit, discard)
-
-    @guppy(module)
+    @guppy
     def my_discard(q: qubit @ owned) -> None:
         discard(q)
 
-    @guppy(module)
+    @guppy
     def test() -> None:
         q1 = qubit()
         my_discard(q1)
@@ -115,7 +106,7 @@ def test_call(validate):
         f = my_discard
         f(q2)
 
-    compiled = module.compile()
+    compiled = guppy.compile(test)
     validate(compiled)
 
     # Check that we have the expected order edges between the allocations and calls
@@ -129,17 +120,14 @@ def test_call(validate):
 
 
 def test_nested(validate):
-    module = GuppyModule("test")
-    module.load(qubit, discard, measure)
-
-    @guppy(module)
+    @guppy
     def test() -> None:
         qs1 = array(qubit() for _ in range(10))
         array(measure(q) for q in qs1)
         qs2 = array(qubit() for _ in range(10))
         array(discard(q) for q in qs2)
 
-    compiled = module.compile()
+    compiled = guppy.compile(test)
     validate(compiled)
 
     # Check that we have the expected order edges between the comprehension tail loops

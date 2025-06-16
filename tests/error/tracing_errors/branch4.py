@@ -1,14 +1,9 @@
 from guppylang import qubit
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
-from guppylang.std.builtins import array
 from guppylang.std.qsystem import measure
 
-module = GuppyModule("test")
-module.load(qubit, measure)
 
-
-@guppy.comptime(module)
+@guppy.comptime
 def test() -> int:
     q = qubit()
     if measure(q):
@@ -16,4 +11,4 @@ def test() -> int:
     return 0
 
 
-module.compile()
+guppy.compile(test)

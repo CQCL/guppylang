@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, TypeGuard
+from typing import Literal, TypeGuard
 
 import hugr.std
 import hugr.std.collections.array
@@ -8,10 +8,11 @@ import hugr.std.collections.list
 from hugr import tys as ht
 
 from guppylang.ast_util import AstNode
-from guppylang.definition.common import DefId
+from guppylang.definition.common import CompiledDef, DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
+from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
@@ -25,12 +26,9 @@ from guppylang.tys.ty import (
     Type,
 )
 
-if TYPE_CHECKING:
-    from guppylang.checker.core import Globals
-
 
 @dataclass(frozen=True)
-class CallableTypeDef(TypeDef):
+class CallableTypeDef(TypeDef, CompiledDef):
     """Type definition associated with the builtin `Callable` type.
 
     Any impls on functions can be registered with this definition.
@@ -39,14 +37,14 @@ class CallableTypeDef(TypeDef):
     name: Literal["Callable"] = field(default="Callable", init=False)
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> FunctionType:
         # Callable types are constructed using special logic in the type parser
         raise InternalGuppyError("Tried to `Callable` type via `check_instantiate`")
 
 
 @dataclass(frozen=True)
-class _TupleTypeDef(TypeDef):
+class _TupleTypeDef(TypeDef, CompiledDef):
     """Type definition associated with the builtin `tuple` type.
 
     Any impls on tuples can be registered with this definition.
@@ -55,7 +53,7 @@ class _TupleTypeDef(TypeDef):
     name: Literal["tuple"] = field(default="tuple", init=False)
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> TupleType:
         # We accept any number of arguments. If users just write `tuple`, we give them
         # the empty tuple type. We just have to make sure that the args are of kind type
@@ -70,7 +68,7 @@ class _TupleTypeDef(TypeDef):
 
 
 @dataclass(frozen=True)
-class _NoneTypeDef(TypeDef):
+class _NoneTypeDef(TypeDef, CompiledDef):
     """Type definition associated with the builtin `None` type.
 
     Any impls on None can be registered with this definition.
@@ -79,7 +77,7 @@ class _NoneTypeDef(TypeDef):
     name: Literal["None"] = field(default="None", init=False)
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> NoneType:
         if args:
             raise GuppyError(WrongNumberOfTypeArgsError(loc, 0, len(args), "None"))
@@ -87,7 +85,7 @@ class _NoneTypeDef(TypeDef):
 
 
 @dataclass(frozen=True)
-class _NumericTypeDef(TypeDef):
+class _NumericTypeDef(TypeDef, CompiledDef):
     """Type definition associated with the builtin numeric types.
 
     Any impls on numerics can be registered with these definitions.
@@ -96,7 +94,7 @@ class _NumericTypeDef(TypeDef):
     ty: NumericType
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> NumericType:
         if args:
             raise GuppyError(WrongNumberOfTypeArgsError(loc, 0, len(args), self.name))
@@ -104,7 +102,7 @@ class _NumericTypeDef(TypeDef):
 
 
 @dataclass(frozen=True)
-class _ListTypeDef(OpaqueTypeDef):
+class _ListTypeDef(OpaqueTypeDef, CompiledDef):
     """Type definition associated with the builtin `list` type.
 
     We have a custom definition to disable usage of lists unless experimental features
@@ -112,10 +110,10 @@ class _ListTypeDef(OpaqueTypeDef):
     """
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> OpaqueType:
         check_lists_enabled(loc)
-        return super().check_instantiate(args, globals, loc)
+        return super().check_instantiate(args, loc)
 
 
 def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
@@ -140,7 +138,7 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     elem_ty = ht.Option(ty_arg.ty.to_hugr())
     hugr_arg = len_arg.to_hugr()
 
-    return hugr.std.collections.array.Array(elem_ty, hugr_arg)
+    return hugr.std.collections.value_array.ValueArray(elem_ty, hugr_arg)
 
 
 def _frozenarray_to_hugr(args: Sequence[Argument]) -> ht.Type:
@@ -174,7 +172,7 @@ bool_type_def = OpaqueTypeDef(
     params=[],
     never_copyable=False,
     never_droppable=False,
-    to_hugr=lambda _: ht.Bool,
+    to_hugr=lambda _: OpaqueBool,
 )
 nat_type_def = _NumericTypeDef(
     DefId.fresh(), "nat", None, NumericType(NumericType.Kind.Nat)

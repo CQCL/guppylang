@@ -17,6 +17,7 @@ from guppylang.checker.core import Context, Globals, Place, Variable
 from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.definition.common import DefId
 from guppylang.diagnostic import Error, Help, Note
+from guppylang.engine import DEF_STORE, ENGINE
 from guppylang.error import GuppyError
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
 from guppylang.tys.parsing import parse_function_io_types
@@ -71,8 +72,10 @@ def check_global_func_def(
 
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
     inputs = [
-        Variable(x, inp.ty, loc, inp.flags)
+        Variable(x, inp.ty, loc, inp.flags, is_func_input=True)
         for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
+        # Comptime inputs are turned into generic args, so are not included here
+        if InputFlags.Comptime not in inp.flags
     ]
     generic_params = {
         param.name: param.with_idx(i) for i, param in enumerate(ty.params)
@@ -119,10 +122,12 @@ def check_nested_func_def(
 
     # Construct inputs for checking the body CFG
     inputs = [v for v, _ in captured.values()] + [
-        Variable(x, inp.ty, func_def.args.args[i], inp.flags)
+        Variable(x, inp.ty, func_def.args.args[i], inp.flags, is_func_input=True)
         for i, (x, inp) in enumerate(
             zip(func_ty.input_names, func_ty.inputs, strict=True)
         )
+        # Comptime inputs are turned into generic args, so are not included here
+        if InputFlags.Comptime not in inp.flags
     ]
     def_id = DefId.fresh()
     globals = ctx.globals
@@ -134,13 +139,12 @@ def check_nested_func_def(
         if not captured:
             # If there are no captured vars, we treat the function like a global name
             from guppylang.definition.function import ParsedFunctionDef
+            from guppylang.tracing.object import GuppyDefinition
 
-            func = ParsedFunctionDef(
-                def_id, func_def.name, func_def, func_ty, globals.python_scope, None
-            )
-            globals = ctx.globals | Globals(
-                {func.id: func}, {func_def.name: func.id}, {}, {}
-            )
+            func = ParsedFunctionDef(def_id, func_def.name, func_def, func_ty, None)
+            DEF_STORE.register_def(func, None)
+            ENGINE.parsed[def_id] = func
+            globals.f_locals[func_def.name] = GuppyDefinition(func)
         else:
             # Otherwise, we treat it like a local name
             inputs.append(Variable(func_def.name, func_def.ty, func_def))
@@ -200,7 +204,13 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
         input_nodes.append(ty_ast)
         input_names.append(inp.arg)
     inputs, output = parse_function_io_types(
-        input_nodes, func_def.returns, func_def, globals, param_var_mapping, True
+        input_nodes,
+        func_def.returns,
+        input_names,
+        func_def,
+        globals,
+        param_var_mapping,
+        True,
     )
     return FunctionType(
         inputs,

@@ -1,12 +1,11 @@
 import functools
 import inspect
 import itertools
-from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, ClassVar, NamedTuple, TypeAlias
+from typing import Any, ClassVar, NamedTuple, TypeAlias, TypeVar
 
 from hugr import Wire
 
@@ -17,14 +16,13 @@ from guppylang.checker.errors.type_errors import (
     UnaryOperatorNotDefinedError,
 )
 from guppylang.definition.common import DefId, Definition
-from guppylang.definition.function import RawFunctionDef
-from guppylang.definition.pytket_circuits import RawLoadPytketDef, RawPytketDef
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import (
     CallableDef,
     CompiledCallableDef,
     CompiledValueDef,
 )
+from guppylang.engine import DEF_STORE, ENGINE
 from guppylang.error import GuppyComptimeError, GuppyError, GuppyTypeError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.tracing.state import get_tracing_state, tracing_active
@@ -60,13 +58,15 @@ def unary_operation(f: UnaryDunderMethod) -> UnaryDunderMethod:
     @functools.wraps(f)
     @capture_guppy_errors
     def wrapped(self: "DunderMixin") -> Any:
+        from guppylang.tracing.state import get_tracing_state
+        from guppylang.tracing.unpacking import guppy_object_from_py
+
+        state = get_tracing_state()
+        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+
         with suppress(Exception):
             return f(self)
 
-        from guppylang.tracing.state import get_tracing_state
-
-        state = get_tracing_state()
-        assert isinstance(self, GuppyObject)
         raise GuppyTypeError(
             UnaryOperatorNotDefinedError(state.node, self._ty, unary_table[f.__name__])
         )
@@ -85,24 +85,29 @@ def binary_operation(f: BinaryDunderMethod) -> BinaryDunderMethod:
     @functools.wraps(f)
     @capture_guppy_errors
     def wrapped(self: "DunderMixin", other: Any) -> Any:
+        from guppylang.tracing.state import get_tracing_state
+        from guppylang.tracing.unpacking import guppy_object_from_py
+
+        state = get_tracing_state()
+        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+        other = guppy_object_from_py(other, state.dfg.builder, state.node)
+
+        # First try the method on `self`
         with suppress(Exception):
             return f(self, other)
+
+        # If that failed, try the reverse method on `other`.
+        # NB: We know that `f.__name__` is in one of the tables since we make sure to
+        # only put this decorator on the correct dunder methods below
+        if f.__name__ in binary_table:
+            reverse_method, display_name = binary_table[f.__name__]
+            left_ty, right_ty = self._ty, other._ty
+        else:
+            reverse_method, display_name = reverse_binary_table[f.__name__]
+            left_ty, right_ty = other._ty, self._ty
         with suppress(Exception):
-            from guppylang.tracing.state import get_tracing_state
-            from guppylang.tracing.unpacking import guppy_object_from_py
+            return other.__getattr__(reverse_method)(self)
 
-            state = get_tracing_state()
-            obj = guppy_object_from_py(other, state.dfg.builder, state.node)
-
-            if f.__name__ in binary_table:
-                reverse_method, display_name = binary_table[f.__name__]
-                left_ty, right_ty = self._ty, obj._ty
-            else:
-                reverse_method, display_name = reverse_binary_table[f.__name__]
-                left_ty, right_ty = obj._ty, self._ty
-            return obj.__getattr__(reverse_method)(self)
-
-        assert isinstance(self, GuppyObject)
         raise GuppyTypeError(
             BinaryOperatorNotDefinedError(state.node, left_ty, right_ty, display_name)
         )
@@ -110,169 +115,175 @@ def binary_operation(f: BinaryDunderMethod) -> BinaryDunderMethod:
     return wrapped
 
 
-class DunderMixin(ABC):
-    """Mixin class to allow `GuppyObject`s to be used in arithmetic expressions etc.
-    via providing the corresponding dunder methods delegating to the objects impls.
+class DunderMixin:
+    """Mixin class to allow `GuppyObject`s and `GuppyDefinition`s to be used in
+    arithmetic expressions etc. via providing the corresponding dunder methods
+    delegating to the objects impls.
     """
 
-    @abstractmethod
-    def __getattr__(self, item: Any) -> Any: ...
+    def _get_method(self, name: str) -> Any:
+        from guppylang.tracing.state import get_tracing_state
+        from guppylang.tracing.unpacking import guppy_object_from_py
+
+        state = get_tracing_state()
+        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+        return self.__getattr__(name)
 
     def __abs__(self) -> Any:
-        return self.__getattr__("__abs__")()
+        return self._get_method("__abs__")()
 
     @binary_operation
     def __add__(self, other: Any) -> Any:
-        return self.__getattr__("__add__")(other)
+        return self._get_method("__add__")(other)
 
     @binary_operation
     def __and__(self, other: Any) -> Any:
-        return self.__getattr__("__and__")(other)
+        return self._get_method("__and__")(other)
 
     def __bool__(self: Any) -> Any:
-        return self.__getattr__("__bool__")()
+        return self._get_method("__bool__")()
 
     def __ceil__(self: Any) -> Any:
-        return self.__getattr__("__ceil__")()
+        return self._get_method("__ceil__")()
 
     def __divmod__(self, other: Any) -> Any:
-        return self.__getattr__("__divmod__")(other)
+        return self._get_method("__divmod__")(other)
 
     @binary_operation
     def __eq__(self, other: object) -> Any:
-        return self.__getattr__("__eq__")(other)
+        return self._get_method("__eq__")(other)
 
     def __float__(self) -> Any:
-        return self.__getattr__("__float__")()
+        return self._get_method("__float__")()
 
     def __floor__(self) -> Any:
-        return self.__getattr__("__floor__")()
+        return self._get_method("__floor__")()
 
     @binary_operation
     def __floordiv__(self, other: Any) -> Any:
-        return self.__getattr__("__floordiv__")(other)
+        return self._get_method("__floordiv__")(other)
 
     @binary_operation
     def __ge__(self, other: Any) -> Any:
-        return self.__getattr__("__ge__")(other)
+        return self._get_method("__ge__")(other)
 
     @binary_operation
     def __gt__(self, other: Any) -> Any:
-        return self.__getattr__("__gt__")(other)
+        return self._get_method("__gt__")(other)
 
     def __int__(self) -> Any:
-        return self.__getattr__("__int__")()
+        return self._get_method("__int__")()
 
     @unary_operation
     def __invert__(self) -> Any:
-        return self.__getattr__("__invert__")()
+        return self._get_method("__invert__")()
 
     @binary_operation
     def __le__(self, other: Any) -> Any:
-        return self.__getattr__("__le__")(other)
+        return self._get_method("__le__")(other)
 
     @binary_operation
     def __lshift__(self, other: Any) -> Any:
-        return self.__getattr__("__lshift__")(other)
+        return self._get_method("__lshift__")(other)
 
     @binary_operation
     def __lt__(self, other: Any) -> Any:
-        return self.__getattr__("__lt__")(other)
+        return self._get_method("__lt__")(other)
 
     @binary_operation
     def __mod__(self, other: Any) -> Any:
-        return self.__getattr__("__mod__")(other)
+        return self._get_method("__mod__")(other)
 
     @binary_operation
     def __mul__(self, other: Any) -> Any:
-        return self.__getattr__("__mul__")(other)
+        return self._get_method("__mul__")(other)
 
     @binary_operation
     def __ne__(self, other: object) -> Any:
-        return self.__getattr__("__ne__")(other)
+        return self._get_method("__ne__")(other)
 
     @unary_operation
     def __neg__(self) -> Any:
-        return self.__getattr__("__neg__")()
+        return self._get_method("__neg__")()
 
     @binary_operation
     def __or__(self, other: Any) -> Any:
-        return self.__getattr__("__or__")(other)
+        return self._get_method("__or__")(other)
 
     @unary_operation
     def __pos__(self) -> Any:
-        return self.__getattr__("__pos__")()
+        return self._get_method("__pos__")()
 
     @binary_operation
     def __pow__(self, other: Any) -> Any:
-        return self.__getattr__("__pow__")(other)
+        return self._get_method("__pow__")(other)
 
     @binary_operation
     def __radd__(self, other: Any) -> Any:
-        return self.__getattr__("__radd__")(other)
+        return self._get_method("__radd__")(other)
 
     @binary_operation
     def __rand__(self, other: Any) -> Any:
-        return self.__getattr__("__rand__")(other)
+        return self._get_method("__rand__")(other)
 
     @binary_operation
     def __rfloordiv__(self, other: Any) -> Any:
-        return self.__getattr__("__rfloordiv__")(other)
+        return self._get_method("__rfloordiv__")(other)
 
     @binary_operation
     def __rlshift__(self, other: Any) -> Any:
-        return self.__getattr__("__rlshift__")(other)
+        return self._get_method("__rlshift__")(other)
 
     @binary_operation
     def __rmod__(self, other: Any) -> Any:
-        return self.__getattr__("__rmod__")(other)
+        return self._get_method("__rmod__")(other)
 
     @binary_operation
     def __rmul__(self, other: Any) -> Any:
-        return self.__getattr__("__rmul__")(other)
+        return self._get_method("__rmul__")(other)
 
     @binary_operation
     def __ror__(self, other: Any) -> Any:
-        return self.__getattr__("__ror__")(other)
+        return self._get_method("__ror__")(other)
 
     @binary_operation
     def __rpow__(self, other: Any) -> Any:
-        return self.__getattr__("__rpow__")(other)
+        return self._get_method("__rpow__")(other)
 
     @binary_operation
     def __rrshift__(self, other: Any) -> Any:
-        return self.__getattr__("__pow__")(other)
+        return self._get_method("__pow__")(other)
 
     @binary_operation
     def __rshift__(self, other: Any) -> Any:
-        return self.__getattr__("__rshift__")(other)
+        return self._get_method("__rshift__")(other)
 
     @binary_operation
     def __rsub__(self, other: Any) -> Any:
-        return self.__getattr__("__rsub__")(other)
+        return self._get_method("__rsub__")(other)
 
     @binary_operation
     def __rtruediv__(self, other: Any) -> Any:
-        return self.__getattr__("__rtruediv__")(other)
+        return self._get_method("__rtruediv__")(other)
 
     @binary_operation
     def __rxor__(self, other: Any) -> Any:
-        return self.__getattr__("__rxor__")(other)
+        return self._get_method("__rxor__")(other)
 
     @binary_operation
     def __sub__(self, other: Any) -> Any:
-        return self.__getattr__("__sub__")(other)
+        return self._get_method("__sub__")(other)
 
     @binary_operation
     def __truediv__(self, other: Any) -> Any:
-        return self.__getattr__("__truediv__")(other)
+        return self._get_method("__truediv__")(other)
 
     def __trunc__(self) -> Any:
-        return self.__getattr__("__trunc__")()
+        return self._get_method("__trunc__")()
 
     @binary_operation
     def __xor__(self, other: Any) -> Any:
-        return self.__getattr__("__xor__")(other)
+        return self._get_method("__xor__")(other)
 
 
 class ObjectUse(NamedTuple):
@@ -343,7 +354,7 @@ class GuppyObject(DunderMixin):
     @hide_trace
     def __bool__(self) -> Any:
         err = (
-            "Can't branch on a dynamic Guppy value since it's concrete value is not "
+            "Can't branch on a dynamic Guppy value since its concrete value is not "
             "known at comptime. Consider defining a regular Guppy function to perform "
             "dynamic branching."
         )
@@ -476,7 +487,7 @@ class GuppyStructObject(DunderMixin):
 
 
 @dataclass(frozen=True)
-class GuppyDefinition:
+class GuppyDefinition(DunderMixin):
     """A top-level Guppy definition.
 
     This is the object that is returned to the users when they decorate a function or
@@ -500,27 +511,17 @@ class GuppyDefinition:
                 "only be called in a Guppy context"
             )
 
-        # Check that the functions is loaded in the current module
         state = get_tracing_state()
-        globals = state.globals
-        if self.wrapped.id not in globals.defs:
-            assert self.wrapped.id.module is not None
-            err = (
-                f"{self.wrapped.description.capitalize()} `{self.wrapped.name}` is not "
-                f"available in this module, consider importing it from "
-                f"`{self.wrapped.id.module.name}`"
-            )
-            raise GuppyComptimeError(err)
-
-        defn = state.ctx.build_compiled_def(self.wrapped.id)
+        defn = ENGINE.get_checked(self.wrapped.id)
+        defn = state.ctx.build_compiled_def(defn.id)
         if isinstance(defn, CompiledCallableDef):
             return trace_call(defn, *args)
         elif (
             isinstance(defn, TypeDef)
-            and defn.id in globals.impls
-            and "__new__" in globals.impls[defn.id]
+            and defn.id in DEF_STORE.impls
+            and "__new__" in DEF_STORE.impls[defn.id]
         ):
-            constructor = globals.defs[globals.impls[defn.id]["__new__"]]
+            constructor = DEF_STORE.raw_defs[DEF_STORE.impls[defn.id]["__new__"]]
             return GuppyDefinition(constructor)(*args)
         err = f"{defn.description.capitalize()} `{defn.name}` is not callable"
         raise GuppyComptimeError(err)
@@ -554,17 +555,40 @@ class GuppyDefinition:
             wire = defn.load(state.dfg, state.ctx, state.node)
             return GuppyObject(defn.ty, wire, None)
         elif isinstance(defn, TypeDef):
-            globals = state.globals
-            if defn.id in globals.impls and "__new__" in globals.impls[defn.id]:
-                constructor = globals.defs[globals.impls[defn.id]["__new__"]]
+            if defn.id in DEF_STORE.impls and "__new__" in DEF_STORE.impls[defn.id]:
+                constructor = DEF_STORE.raw_defs[DEF_STORE.impls[defn.id]["__new__"]]
                 return GuppyDefinition(constructor).to_guppy_object()
         err = f"{defn.description.capitalize()} `{defn.name}` is not a value"
         raise GuppyComptimeError(err)
 
     def compile(self) -> Any:
-        from guppylang.decorator import guppy
+        from guppylang.engine import ENGINE
 
-        assert isinstance(
-            self.wrapped, RawFunctionDef | RawLoadPytketDef | RawPytketDef
-        )
-        return guppy.compile_function(self.wrapped)
+        return ENGINE.compile(self.id)
+
+
+@dataclass(frozen=True)
+class TypeVarGuppyDefinition(GuppyDefinition):
+    """A `GuppyDefinition` subclass that answers 'yes' to an instance check on
+    `typing.TypeVar`.
+
+    This is the object returned by `guppy.type_var`. The `TypeVar` hack is needed since
+    `typing.Generic[T]` has a runtime check that enforces that the passed `T` is
+    actually a `TypeVar`.
+    """
+
+    __class__: ClassVar[type] = TypeVar
+
+    _ty_var: TypeVar
+
+    def __eq__(self, other: object) -> bool:
+        # We need to compare as equal to an equivalent regular type var
+        if isinstance(other, TypeVar):
+            return self._ty_var == other
+        return object.__eq__(self, other)
+
+    def __getattr__(self, name: str) -> Any:
+        # Pretend to be a `TypeVar` by providing all of its attributes
+        if hasattr(self._ty_var, name):
+            return getattr(self._ty_var, name)
+        return object.__getattribute__(self, name)

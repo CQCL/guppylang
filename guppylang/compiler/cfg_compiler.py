@@ -1,5 +1,6 @@
 import functools
 from collections.abc import Sequence
+from typing import cast
 
 from hugr import Wire, ops
 from hugr import tys as ht
@@ -17,6 +18,7 @@ from guppylang.compiler.core import (
 )
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
+from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, read_bool
 from guppylang.tys.ty import SumType, row_to_type, type_to_row
 
 
@@ -100,6 +102,11 @@ def compile_bb(
     if len(bb.successors) > 1:
         assert bb.branch_pred is not None
         branch_port = ExprCompiler(ctx).compile(bb.branch_pred, dfg)
+        # Convert the bool predicate into a sum for branching.
+        pred_ty = builder.hugr.port_type(branch_port.out_port())
+        assert pred_ty == OpaqueBool
+        branch_port = dfg.builder.add_op(read_bool(), branch_port)
+        branch_port = cast(Wire, branch_port)
     else:
         # Even if we don't branch, we still have to add a `Sum(())` predicates
         branch_port = dfg.builder.add_op(ops.Tag(0, ht.UnitSum(1)))
@@ -130,12 +137,12 @@ def compile_bb(
             branch_port = choose_vars_for_tuple_sum(
                 unit_sum=branch_port,
                 output_vars=[
-                    [v for v in sort_vars(row) if not v.ty.linear]
+                    [v for v in sort_vars(row) if v.ty.droppable]
                     for row in bb.sig.output_rows
                 ],
                 dfg=dfg,
             )
-            outputs = [v for v in first if v.ty.linear]
+            outputs = [v for v in first if not v.ty.droppable]
 
     # If this is *not* a jump to the exit BB, we need to sort the outputs to make the
     # signature consistent with what the next BB expects
@@ -181,14 +188,24 @@ def choose_vars_for_tuple_sum(
     Given `unit_sum: Sum(*(), *(), ...)` and output variable rows `#s1, #s2, ...`,
     constructs a TupleSum value of type `Sum(#s1, #s2, ...)`.
     """
-    assert all(not v.ty.linear for var_row in output_vars for v in var_row)
+    assert all(v.ty.droppable for var_row in output_vars for v in var_row)
     tys = [[v.ty for v in var_row] for var_row in output_vars]
     sum_type = SumType([row_to_type(row) for row in tys]).to_hugr()
 
-    with dfg.builder.add_conditional(unit_sum) as conditional:
+    # We pass all values into the conditional instead of relying on non-local edges.
+    # This is because we can't handle them in lower parts of the stack yet :/
+    # TODO: Reinstate use of non-local edges.
+    #  See https://github.com/CQCL/guppylang/issues/963
+    all_vars = {v.id: dfg[v] for var_row in output_vars for v in var_row}
+    all_vars_wires = list(all_vars.values())
+    all_vars_idxs = {x: i for i, x in enumerate(all_vars.keys())}
+
+    with dfg.builder.add_conditional(unit_sum, *all_vars_wires) as conditional:
         for i, var_row in enumerate(output_vars):
             with conditional.add_case(i) as case:
-                tag = case.add_op(ops.Tag(i, sum_type), *(dfg[v] for v in var_row))
+                case_inputs = case.inputs()
+                outputs = [case_inputs[all_vars_idxs[v.id]] for v in var_row]
+                tag = case.add_op(ops.Tag(i, sum_type), *outputs)
                 case.set_outputs(tag)
         return conditional
 
@@ -200,7 +217,7 @@ def compare_var(p1: Place, p2: Place) -> int:
     We need to output linear variables at the end, so we do a lexicographic ordering of
     linearity and name.
     """
-    return -1 if (p1.ty.linear, str(p1)) < (p2.ty.linear, str(p2)) else 1
+    return -1 if (not p1.ty.droppable, str(p1)) < (not p2.ty.droppable, str(p2)) else 1
 
 
 def sort_vars(row: Row[Place]) -> list[Place]:

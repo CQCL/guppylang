@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["execute_llvm", "validator"]
+members = ["execute_llvm", "validator", "miette-py"]
 
 # Building "execute_llvm" requires having LLVM14 installed
 default-members = ["validator"]
@@ -22,16 +22,21 @@ missing_docs = "warn"
 debug_assert_with_mut_call = "warn"
 
 [workspace.dependencies]
-pyo3 = "0.23.3"
+pyo3 = "0.24.1"
 serde_json = "1.0.111"
 cargo_toml = "0.20.4"
 thiserror = "2.0.6"
-hugr = "0.15.2"
-hugr-cli = "0.15.2"
+hugr = "0.20.1"
+hugr-cli = "0.20.1"
+tket2 = { version = "0.12.0" }
 
 [patch.crates-io]
 
 # Uncomment these to test the latest dependency version during development
-#  hugr = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
-#  hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
-#  hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "6bd76659" }
+# hugr = { git = "https://github.com/CQCL/hugr", rev = "42ce05d" }
+# hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "42ce05d" }
+# hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "42ce05d" }
+# hugr-passes = { git = "https://github.com/CQCL/hugr", rev = "42ce05d" }
+
+# Uncomment if latest tket2 dependency is needed for execute_llvm
+# tket2 = { git = "https://github.com/CQCL/tket2.git", branch = "ts/replace-bool" }

@@ -1,0 +1,10 @@
+Error: Invalid Result (at $FILE:8:18)
+  | 
+6 | @guppy
+7 | def foo(q: qubit) -> None:
+8 |     result("foo", q)
+  |                   ^ Expression of type `qubit` is not a valid result.
+
+Note: Only numeric values or arrays thereof are allowed as results
+
+Guppy compilation failed due to 1 previous error

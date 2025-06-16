@@ -5,7 +5,7 @@ from typing import ClassVar, cast
 from typing_extensions import assert_never
 
 from guppylang.ast_util import get_type, with_loc, with_type
-from guppylang.checker.core import Context
+from guppylang.checker.core import ComptimeVariable, Context
 from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang.checker.errors.type_errors import (
     ArrayComprUnknownSizeError,
@@ -34,6 +34,7 @@ from guppylang.nodes import (
     GlobalCall,
     MakeIter,
     PanicExpr,
+    PlaceNode,
     ResultExpr,
 )
 from guppylang.tys.arg import ConstArg, TypeArg
@@ -218,9 +219,7 @@ class NewArrayChecker(CustomCallChecker):
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         if not is_array_type(ty):
             dummy_array_ty = array_type_def.check_instantiate(
-                [p.to_existential()[0] for p in array_type_def.params],
-                self.ctx.globals,
-                self.node,
+                [p.to_existential()[0] for p in array_type_def.params], self.node
             )
             raise GuppyTypeError(TypeMismatchError(self.node, ty, dummy_array_ty))
         subst: Subst = {}
@@ -253,8 +252,12 @@ class NewArrayChecker(CustomCallChecker):
                                 )
                             )
                         subst |= ls
+                        type_args = [
+                            TypeArg(elem_ty.substitute(subst)),
+                            ConstValue(nat_type(), len(args)),
+                        ]
                         call = GlobalCall(
-                            def_id=self.func.id, args=args, type_args=ty.args
+                            def_id=self.func.id, args=args, type_args=type_args
                         )
                         return with_loc(self.node, call), subst
             case type_args:
@@ -305,6 +308,16 @@ class NewArrayChecker(CustomCallChecker):
 TAG_MAX_LEN = 200
 
 
+@dataclass(frozen=True)
+class TooLongError(Error):
+    title: ClassVar[str] = "Tag too long"
+    span_label: ClassVar[str] = "Result tag is too long"
+
+    @dataclass(frozen=True)
+    class Hint(Note):
+        message: ClassVar[str] = f"Result tags are limited to {TAG_MAX_LEN} bytes"
+
+
 class ResultChecker(CustomCallChecker):
     """Call checker for the `result` function."""
 
@@ -320,24 +333,20 @@ class ResultChecker(CustomCallChecker):
                 "Only numeric values or arrays thereof are allowed as results"
             )
 
-    @dataclass(frozen=True)
-    class TooLongError(Error):
-        title: ClassVar[str] = "Tag too long"
-        span_label: ClassVar[str] = "Result tag is too long"
-
-        @dataclass(frozen=True)
-        class Hint(Note):
-            message: ClassVar[str] = f"Result tags are limited to {TAG_MAX_LEN} bytes"
-
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         check_num_args(2, len(args), self.node)
         [tag, value] = args
         tag, _ = ExprChecker(self.ctx).check(tag, string_type())
-        if not isinstance(tag, ast.Constant) or not isinstance(tag.value, str):
-            raise GuppyTypeError(ExpectedError(tag, "a string literal"))
-        if len(tag.value.encode("utf-8")) > TAG_MAX_LEN:
-            err: Error = ResultChecker.TooLongError(tag)
-            err.add_sub_diagnostic(ResultChecker.TooLongError.Hint(None))
+        match tag:
+            case ast.Constant(value=str(v)):
+                tag_value = v
+            case PlaceNode(place=ComptimeVariable(static_value=str(v))):
+                tag_value = v
+            case _:
+                raise GuppyTypeError(ExpectedError(tag, "a string literal"))
+        if len(tag_value.encode("utf-8")) > TAG_MAX_LEN:
+            err: Error = TooLongError(tag)
+            err.add_sub_diagnostic(TooLongError.Hint(None))
             raise GuppyTypeError(err)
         value, ty = ExprSynthesizer(self.ctx).synthesize(value)
         # We only allow numeric values or vectors of numeric values
@@ -356,7 +365,7 @@ class ResultChecker(CustomCallChecker):
             array_len = len_arg.const
         else:
             raise GuppyError(err)
-        node = ResultExpr(value, base_ty, array_len, tag.value)
+        node = ResultExpr(value, base_ty, array_len, tag_value)
         return with_loc(self.node, node), NoneType()
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
@@ -389,13 +398,17 @@ class PanicChecker(CustomCallChecker):
                 raise GuppyTypeError(err)
             case [msg, *rest]:
                 msg, _ = ExprChecker(self.ctx).check(msg, string_type())
-                if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
-                    raise GuppyTypeError(ExpectedError(msg, "a string literal"))
-
+                match msg:
+                    case ast.Constant(value=str(v)):
+                        msg_value = v
+                    case PlaceNode(place=ComptimeVariable(static_value=str(v))):
+                        msg_value = v
+                    case _:
+                        raise GuppyTypeError(ExpectedError(msg, "a string literal"))
                 vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
                 # TODO variable signals once default arguments are available
                 node = PanicExpr(
-                    kind=ExitKind.Panic, msg=msg.value, values=vals, signal=1
+                    kind=ExitKind.Panic, msg=msg_value, values=vals, signal=1
                 )
                 return with_loc(self.node, node), NoneType()
             case args:
@@ -444,21 +457,30 @@ class ExitChecker(CustomCallChecker):
                 raise GuppyTypeError(signal_err)
             case [msg, signal, *rest]:
                 msg, _ = ExprChecker(self.ctx).check(msg, string_type())
-                if not isinstance(msg, ast.Constant) or not isinstance(msg.value, str):
-                    raise GuppyTypeError(ExpectedError(msg, "a string literal"))
+                match msg:
+                    case ast.Constant(value=str(v)):
+                        msg_value = v
+                    case PlaceNode(place=ComptimeVariable(static_value=str(v))):
+                        msg_value = v
+                    case _:
+                        raise GuppyTypeError(ExpectedError(msg, "a string literal"))
                 # TODO allow variable signals after https://github.com/CQCL/hugr/issues/1863
                 signal, _ = ExprChecker(self.ctx).check(signal, int_type())
-                if not isinstance(signal, ast.Constant) or not isinstance(
-                    signal.value, int
-                ):
-                    raise GuppyTypeError(ExpectedError(msg, "an integer literal"))
-
+                match signal:
+                    case ast.Constant(value=int(s)):
+                        signal_value = s
+                    case PlaceNode(place=ComptimeVariable(static_value=int(s))):
+                        signal_value = s
+                    case _:
+                        raise GuppyTypeError(
+                            ExpectedError(signal, "an integer literal")
+                        )
                 vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
                 node = PanicExpr(
                     kind=ExitKind.ExitShot,
-                    msg=msg.value,
+                    msg=msg_value,
                     values=vals,
-                    signal=signal.value,
+                    signal=signal_value,
                 )
                 return with_loc(self.node, node), NoneType()
             case args:
@@ -496,10 +518,11 @@ class RangeChecker(CustomCallChecker):
         return None
 
     def range_ty(self) -> StructType:
+        from guppylang.engine import ENGINE
         from guppylang.std.builtins import Range
 
         def_id = cast(RawStructDef, Range).id
-        range_type_def = self.ctx.globals.defs[def_id]
+        range_type_def = ENGINE.get_checked(def_id)
         assert isinstance(range_type_def, CheckedStructDef)
         return StructType([], range_type_def)
 

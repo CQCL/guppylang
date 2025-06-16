@@ -19,6 +19,7 @@ from guppylang.checker.core import FieldAccess, Globals, Place, PlaceId, Variabl
 from guppylang.definition.common import CheckedDef, CompilableDef, CompiledDef, DefId
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef
+from guppylang.engine import ENGINE
 from guppylang.error import InternalGuppyError
 from guppylang.tys.ty import StructType, Type
 
@@ -50,9 +51,8 @@ class CompilerContext:
     """
 
     module: DefinitionBuilder[ops.Module]
-    checked: dict[DefId, CheckedDef]
     compiled: dict[DefId, CompiledDef]
-    worklist: set[DefId]
+    worklist: dict[DefId, None]  # use dict over set for deterministic iteration order
 
     global_funcs: dict[GlobalConstId, hf.Function]
 
@@ -60,16 +60,13 @@ class CompilerContext:
 
     def __init__(
         self,
-        checked: dict[DefId, CheckedDef],
         module: DefinitionBuilder[ops.Module],
-        checked_globals: Globals,
     ) -> None:
         self.module = module
-        self.checked = checked
-        self.worklist = set()
+        self.worklist = {}
         self.compiled = {}
         self.global_funcs = {}
-        self.checked_globals = checked_globals
+        self.checked_globals = Globals(None)
 
     def build_compiled_def(self, def_id: DefId) -> CompiledDef:
         """Returns the compiled definitions corresponding to the given ID.
@@ -77,9 +74,9 @@ class CompilerContext:
         Might mutate the current Hugr if this definition has never been compiled before.
         """
         if def_id not in self.compiled:
-            defn = self.checked[def_id]
+            defn = ENGINE.get_checked(def_id)
             self.compiled[def_id] = self._compile(defn)
-            self.worklist.add(def_id)
+            self.worklist[def_id] = None
         return self.compiled[def_id]
 
     def _compile(self, defn: CheckedDef) -> CompiledDef:
@@ -94,9 +91,9 @@ class CompilerContext:
             return
 
         self.compiled[defn.id] = self._compile(defn)
-        self.worklist.add(defn.id)
+        self.worklist[defn.id] = None
         while self.worklist:
-            next_id = self.worklist.pop()
+            next_id = self.worklist.popitem()[0]
             with track_hugr_side_effects():
                 next_def = self.build_compiled_def(next_id)
                 next_def.compile_inner(self)
@@ -104,9 +101,12 @@ class CompilerContext:
     def get_instance_func(
         self, ty: Type | TypeDef, name: str
     ) -> CompiledCallableDef | None:
-        checked_func = self.checked_globals.get_instance_func(ty, name)
-        if checked_func is None:
+        from guppylang.engine import ENGINE
+
+        parsed_func = self.checked_globals.get_instance_func(ty, name)
+        if parsed_func is None:
             return None
+        checked_func = ENGINE.get_checked(parsed_func.id)
         compiled_func = self.build_compiled_def(checked_func.id)
         assert isinstance(compiled_func, CompiledCallableDef)
         return compiled_func
@@ -228,6 +228,7 @@ def is_return_var(x: str) -> bool:
 
 QUANTUM_EXTENSION = tket2_exts.quantum()
 RESULT_EXTENSION = tket2_exts.result()
+DEBUG_EXTENSION = tket2_exts.debug()
 
 #: List of extension ops that have side-effects, identified by their qualified name
 EXTENSION_OPS_WITH_SIDE_EFFECTS: list[str] = [
@@ -235,6 +236,7 @@ EXTENSION_OPS_WITH_SIDE_EFFECTS: list[str] = [
     *(op_def.qualified_name() for op_def in RESULT_EXTENSION.operations.values()),
     PRELUDE.get_op("panic").qualified_name(),
     PRELUDE.get_op("exit").qualified_name(),
+    DEBUG_EXTENSION.get_op("StateResult").qualified_name(),
     # Qubit allocation and deallocation have the side-effect of changing the number of
     # available free qubits
     QUANTUM_EXTENSION.get_op("QAlloc").qualified_name(),

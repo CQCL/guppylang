@@ -1,4 +1,4 @@
-from guppylang import GuppyModule, guppy
+from guppylang import guppy
 from guppylang.std.builtins import panic, exit
 from tests.util import compile_guppy
 
@@ -23,21 +23,21 @@ def test_discard(validate):
 
 
 def test_value(validate):
-    module = GuppyModule("test")
-
-    @guppy(module)
+    @guppy
     def foo() -> int:
         return exit("I exited!", 1)
 
-    @guppy(module)
+    @guppy
     def bar() -> tuple[int, float]:
         return panic("I panicked!")
 
-    @guppy(module)
+    @guppy
     def baz() -> None:
         return panic("I panicked!")
 
-    validate(module.compile())
+    validate(guppy.compile(foo))
+    validate(guppy.compile(bar))
+    validate(guppy.compile(baz))
 
 
 def test_py_message(validate):
@@ -47,3 +47,19 @@ def test_py_message(validate):
         exit(py("I" + "exited" + "!"), 0)
 
     validate(main)
+
+
+def test_comptime_panic(validate):
+    @guppy.comptime
+    def main() -> None:
+        panic("foo")
+
+    validate(guppy.compile(main))
+
+
+def test_comptime_exit(validate):
+    @guppy.comptime
+    def main() -> None:
+        exit("foo", 1)
+
+    validate(guppy.compile(main))

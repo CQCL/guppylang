@@ -1,7 +1,5 @@
-import pytest
-
-from guppylang import GuppyModule, guppy
-from guppylang.std.builtins import result, nat, array
+from guppylang import guppy
+from guppylang.std.builtins import result, nat, array, comptime, panic
 from tests.util import compile_guppy
 
 
@@ -38,10 +36,9 @@ def test_array(validate):
 
 
 def test_array_generic(validate):
-    module = GuppyModule("test")
-    n = guppy.nat_var("n", module=module)
+    n = guppy.nat_var("n")
 
-    @guppy(module)
+    @guppy
     def main(
         w: array[nat, n], x: array[int, n], y: array[float, n], z: array[bool, n]
     ) -> None:
@@ -50,7 +47,7 @@ def test_array_generic(validate):
         result("c", y)
         result("d", z)
 
-    validate(module.compile())
+    validate(guppy.compile(main))
 
 
 def test_array_drop_after_result(validate):
@@ -70,9 +67,33 @@ def test_same_tag(validate):
 
     validate(main)
 
-def test_py_tag(validate):
+def test_comptime_tag_inside(validate):
     @compile_guppy
     def main(x: int) -> None:
-        result(py("a" + "b"), x)
+        result(comptime("a" + "b"), x)
 
     validate(main)
+
+
+def test_comptime_tag_outside1(validate):
+    EXAMPLE_RESULTS = [
+        ("boolean", False),
+        ("int", 123),
+    ]
+
+    @guppy.comptime
+    def main() -> None:
+        for key, value in EXAMPLE_RESULTS:
+            result(key, value)
+
+    validate(guppy.compile(main))
+
+
+def test_comptime_tag_outside2(validate):
+    EXAMPLE_RESULT = ("boolean", False)
+
+    @guppy.comptime
+    def main() -> None:
+        result(EXAMPLE_RESULT[0], EXAMPLE_RESULT[1])
+
+    validate(guppy.compile(main))

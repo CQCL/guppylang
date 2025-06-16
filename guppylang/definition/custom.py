@@ -1,6 +1,6 @@
 import ast
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
 
@@ -12,13 +12,18 @@ from guppylang.ast_util import AstNode, get_type, has_empty_body, with_loc, with
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
-from guppylang.compiler.core import CompilerContext, DFContainer
+from guppylang.compiler.core import CompilerContext, DFContainer, GlobalConstId
 from guppylang.definition.common import ParsableDef
 from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.diagnostic import Error, Help
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
+from guppylang.std._internal.compiler.tket2_bool import (
+    OpaqueBool,
+    make_opaque,
+    read_bool,
+)
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     FuncInput,
@@ -83,6 +88,7 @@ class RawCustomFunctionDef(ParsableDef):
         call_checker: The custom call checker.
         call_compiler: The custom call compiler.
         higher_order_value: Whether the function may be used as a higher-order value.
+        signature: User-provided signature.
     """
 
     python_func: "PyFunc"
@@ -93,14 +99,17 @@ class RawCustomFunctionDef(ParsableDef):
     # if a static type for the function is provided.
     higher_order_value: bool
 
+    signature: FunctionType | None
+
     description: str = field(default="function", init=False)
 
     def parse(self, globals: "Globals", sources: SourceMap) -> "CustomFunctionDef":
-        """Parses and checks the user-provided signature of the custom function.
+        """Parses and checks the signature of the custom function.
 
         The signature is optional if custom type checking logic is provided by the user.
-        However, note that the signature annotation is required, if we want to use the
-        function as a higher-order value.
+        However, note that a signature must be provided by either annotation or as an
+        argument, if we want to use the function as a higher-order value. If a signature
+        is provided as an argument, this will override any annotation.
 
         If no signature is provided, we fill in the dummy signature `() -> ()`. This
         type will never be inspected, since we rely on the provided custom checking
@@ -112,7 +121,7 @@ class RawCustomFunctionDef(ParsableDef):
         func_ast, docstring = parse_py_func(self.python_func, sources)
         if not has_empty_body(func_ast):
             raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
-        sig = self._get_signature(func_ast, globals)
+        sig = self.signature or self._get_signature(func_ast, globals)
         ty = sig or FunctionType([], NoneType())
         return CustomFunctionDef(
             self.id,
@@ -122,30 +131,9 @@ class RawCustomFunctionDef(ParsableDef):
             self.call_checker,
             self.call_compiler,
             self.higher_order_value,
+            GlobalConstId.fresh(self.name),
             sig is not None,
         )
-
-    def compile_call(
-        self,
-        args: list[Wire],
-        type_args: Inst,
-        dfg: DFContainer,
-        ctx: CompilerContext,
-        node: AstNode,
-        function_ty: ht.FunctionType,
-    ) -> Sequence[Wire]:
-        """Compiles a call to the function."""
-        # Note: We have _compiled_ globals rather than `Globals` here,
-        # so we cannot use `self._get_signature()` to build a `CustomFunctionDef`.
-        self.call_compiler._setup(
-            type_args,
-            dfg,
-            ctx,
-            node,
-            function_ty,
-            None,
-        )
-        return self.call_compiler.compile_with_inouts(args).regular_returns
 
     def _get_signature(
         self, node: ast.FunctionDef, globals: Globals
@@ -196,6 +184,7 @@ class CustomFunctionDef(CompiledCallableDef):
     call_checker: "CustomCallChecker"
     call_compiler: "CustomInoutCallCompiler"
     higher_order_value: bool
+    higher_order_func_id: GlobalConstId
     has_signature: bool
 
     description: str = field(default="function", init=False)
@@ -240,30 +229,22 @@ class CustomFunctionDef(CompiledCallableDef):
             raise GuppyError(NotHigherOrderError(node, self.name))
         assert len(self.ty.params) == len(type_args)
 
-        # We create a `FunctionDef` that takes some inputs, compiles a call to the
-        # function, and returns the results. If the function signature is polymorphic,
-        # we explicitly monomorphise here and invoke the call compiler with the
-        # inferred type args.
-        #
-        # TODO: Reuse compiled instances with the same type args?
-        # TODO: Why do we need to monomorphise here? Why not wait for `load_function`?
-        # See https://github.com/CQCL/guppylang/issues/393 for both issues.
-        fun_ty = self.ty.instantiate(type_args)
-        input_types = [inp.ty.to_hugr() for inp in fun_ty.inputs]
-        output_types = [fun_ty.output.to_hugr()]
-        func = dfg.builder.define_function(
-            self.name, input_types, output_types, type_params=[]
+        # We create a generic `FunctionDef` that takes some inputs, compiles a call to
+        # the function, and returns the results
+        func, already_defined = ctx.declare_global_func(
+            self.higher_order_func_id, self.ty.to_hugr_poly()
         )
+        if not already_defined:
+            func_dfg = DFContainer(func, dfg.locals.copy())
+            args: list[Wire] = list(func.inputs())
+            generic_ty_args = [param.to_bound() for param in self.ty.params]
+            returns = self.compile_call(args, generic_ty_args, func_dfg, ctx, node)
+            func.set_outputs(*returns.regular_returns, *returns.inout_returns)
 
-        func_dfg = DFContainer(func, dfg.locals.copy())
-        args: list[Wire] = list(func.inputs())
-        returns = self.compile_call(args, type_args, func_dfg, ctx, node)
-
-        func.set_outputs(*returns.regular_returns, *returns.inout_returns)
-
-        # Finally, load the function into the local DFG. We already monomorphised, so we
-        # don't need to give it type arguments.
-        return dfg.builder.load_function(func)
+        # Finally, load the function into the local DFG
+        mono_ty = self.ty.instantiate(type_args).to_hugr()
+        hugr_ty_args = [arg.to_hugr() for arg in type_args]
+        return dfg.builder.load_function(func, mono_ty, hugr_ty_args)
 
     def compile_call(
         self,
@@ -429,6 +410,48 @@ class OpCompiler(CustomInoutCallCompiler):
         return CallReturnWires(
             regular_returns=list(node[:num_returns]),
             inout_returns=list(node[num_returns:]),
+        )
+
+
+class BoolOpCompiler(CustomInoutCallCompiler):
+    """Call compiler for functions that are directly implemented via Hugr ops but need
+    input and/or output conversions from hugr sum bools to the opaque bools Guppy is
+    using.
+
+    args:
+        op: A function that takes an instantiation of the type arguments as well as
+            the monomorphic function type, and returns a concrete HUGR op.
+    """
+
+    op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]
+
+    def __init__(self, op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]) -> None:
+        self.op = op
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        converted_in = [ht.Bool if inp == OpaqueBool else inp for inp in self.ty.input]
+        converted_out = [
+            ht.Bool if out == OpaqueBool else out for out in self.ty.output
+        ]
+        hugr_op_ty = ht.FunctionType(converted_in, converted_out)
+        op = self.op(hugr_op_ty, self.type_args)
+        converted_args = [
+            self.builder.add_op(read_bool(), arg)
+            if self.builder.hugr.port_type(arg.out_port()) == OpaqueBool
+            else arg
+            for arg in args
+        ]
+        node = self.builder.add_op(op, *converted_args)
+        result = list(node.outputs())
+        converted_result = [
+            self.builder.add_op(make_opaque(), res)
+            if self.builder.hugr.port_type(res.out_port()) == ht.Bool
+            else res
+            for res in result
+        ]
+        return CallReturnWires(
+            regular_returns=converted_result,
+            inout_returns=[],
         )
 
 

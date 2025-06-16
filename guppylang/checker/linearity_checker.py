@@ -40,6 +40,7 @@ from guppylang.checker.errors.linearity import (
 )
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import CallableDef
+from guppylang.engine import DEF_STORE, ENGINE
 from guppylang.error import GuppyError, GuppyTypeError
 from guppylang.nodes import (
     AnyCall,
@@ -55,15 +56,18 @@ from guppylang.nodes import (
     PartialApply,
     PlaceNode,
     ResultExpr,
+    StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
 )
+from guppylang.tys.builtin import get_element_type, is_array_type
 from guppylang.tys.ty import (
     FuncInput,
     FunctionType,
     InputFlags,
     NoneType,
     StructType,
+    Type,
 )
 
 if TYPE_CHECKING:
@@ -245,6 +249,9 @@ class BBLinearityChecker(ast.NodeVisitor):
             )
             arg_span = self.func_inputs[node.place.root.id].defined_at
             err.add_sub_diagnostic(NotOwnedError.MakeOwned(arg_span))
+            # If the argument is a classical array, we can also suggest copying it.
+            if has_explicit_copy(node.place.ty):
+                err.add_sub_diagnostic(NotOwnedError.MakeCopy(node))
             raise GuppyError(err)
         # Places involving subscripts are handled differently since we ignore everything
         # after the subscript for the purposes of linearity checking.
@@ -270,6 +277,8 @@ class BBLinearityChecker(ast.NodeVisitor):
                     err.add_sub_diagnostic(
                         AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
                     )
+                    if has_explicit_copy(place.ty):
+                        err.add_sub_diagnostic(AlreadyUsedError.MakeCopy(None))
                     raise GuppyError(err)
                 self.scope.use(x, node, use_kind)
 
@@ -351,11 +360,11 @@ class BBLinearityChecker(ast.NodeVisitor):
         if isinstance(node, LocalCall):
             return node.func.id if isinstance(node.func, ast.Name) else None
         elif isinstance(node, GlobalCall):
-            return self.globals[node.def_id].name
+            return DEF_STORE.raw_defs[node.def_id].name
         return None
 
     def visit_GlobalCall(self, node: GlobalCall) -> None:
-        func = self.globals[node.def_id]
+        func = ENGINE.get_parsed(node.def_id)
         assert isinstance(func, CallableDef)
         if isinstance(func, CustomFunctionDef) and not func.has_signature:
             func_ty = FunctionType(
@@ -427,6 +436,10 @@ class BBLinearityChecker(ast.NodeVisitor):
         func_ty = FunctionType([FuncInput(ty, flag)], NoneType())
         self._visit_call_args(func_ty, node)
         self._reassign_inout_args(func_ty, node)
+
+    def visit_StateResultExpr(self, node: StateResultExpr) -> None:
+        self._visit_call_args(node.func_ty, node)
+        self._reassign_inout_args(node.func_ty, node)
 
     def visit_Expr(self, node: ast.Expr) -> None:
         # An expression statement where the return value is discarded
@@ -544,15 +557,19 @@ class BBLinearityChecker(ast.NodeVisitor):
             # Recursively check the remaining generators
             self._check_comprehension(gens, elt)
 
-            # Look for any linear variables that were borrowed from the outer scope
-            gen.borrowed_outer_places = []
+            # Look for any variables that are used from the outer scope. This is so we
+            # can feed them through the loop. Note that we could also use non-local
+            # edges, but we can't handle them in lower parts of the stack yet :/
+            # TODO: Reinstate use of non-local edges.
+            #  See https://github.com/CQCL/guppylang/issues/963
+            gen.used_outer_places = []
             for x, use in inner_scope.used_parent.items():
+                place = inner_scope[x]
+                gen.used_outer_places.append(place)
                 if use.kind == UseKind.BORROW:
                     # Since `x` was borrowed, we know that is now also assigned in the
                     # inner scope since it gets reassigned in the local scope after the
-                    # borrow expires
-                    place = inner_scope[x]
-                    gen.borrowed_outer_places.append(place)
+                    # borrow expires.
                     # Also mark this place as implicitly used so we don't complain about
                     # it later.
                     for leaf in leaf_places(place):
@@ -601,6 +618,15 @@ def leaf_places(place: Place) -> Iterator[Place]:
 def is_inout_var(place: Place) -> TypeGuard[Variable]:
     """Checks whether a place is a borrowed variable."""
     return isinstance(place, Variable) and InputFlags.Inout in place.flags
+
+
+def has_explicit_copy(ty: Type) -> bool:
+    """Checks whether a type has an explicit copy function.
+
+    Currently, this is only the case for arrays with copyable elements."""
+    if not is_array_type(ty):
+        return False
+    return get_element_type(ty).copyable
 
 
 def check_cfg_linearity(
@@ -692,6 +718,8 @@ def check_cfg_linearity(
                     err.add_sub_diagnostic(
                         AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
                     )
+                    if has_explicit_copy(place.ty):
+                        err.add_sub_diagnostic(AlreadyUsedError.MakeCopy(None))
                     raise GuppyError(err)
 
         # On the other hand, unused variables that are not droppable *must* be outputted
@@ -721,7 +749,9 @@ def check_cfg_linearity(
                     err.add_sub_diagnostic(PlaceNotUsedError.Fix(None))
                     raise GuppyError(err)
 
-        def live_places_row(bb: BB, original_row: Row[Variable]) -> Row[Place]:
+        def live_places_row(
+            bb: BB, original_row: Row[Variable], pred_scope: Scope | None
+        ) -> Row[Place]:
             """Construct a row of all places that are live at the start of a given BB.
 
             The only exception are input and exit BBs whose signature should not be
@@ -729,15 +759,14 @@ def check_cfg_linearity(
             """
             if bb in (cfg.entry_bb, cfg.exit_bb):
                 return original_row
-            # N.B. we can ignore lint B023. The use of loop variable `scope` below is
-            # safe since we don't call this function outside the loop.
-            return [scope[x] for x in live_before[bb]]  # noqa: B023
+            assert pred_scope is not None
+            return [pred_scope[x] for x in live_before[bb]]
 
         assert isinstance(bb, CheckedBB)
         sig = Signature(
-            input_row=live_places_row(bb, bb.sig.input_row),
+            input_row=live_places_row(bb, bb.sig.input_row, scope.parent_scope),
             output_rows=[
-                live_places_row(succ, output_row)
+                live_places_row(succ, output_row, scope)
                 for succ, output_row in zip(
                     bb.successors, bb.sig.output_rows, strict=True
                 )
