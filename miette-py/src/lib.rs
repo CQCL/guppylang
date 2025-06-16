@@ -1,5 +1,5 @@
+use miette::{Diagnostic, GraphicalReportHandler, LabeledSpan, Severity};
 use pyo3::prelude::*;
-use miette::{GraphicalReportHandler, Diagnostic, LabeledSpan, Severity};
 use std::fmt;
 
 #[pyclass]
@@ -24,7 +24,14 @@ impl PyDiagnostic {
         spans: Vec<(usize, usize, Option<String>)>,
         help_text: Option<String>,
     ) -> Self {
-        Self { message, code, severity, source, spans, help_text }
+        Self {
+            message,
+            code,
+            severity,
+            source,
+            spans,
+            help_text,
+        }
     }
 }
 
@@ -38,7 +45,9 @@ impl std::error::Error for PyDiagnostic {}
 
 impl Diagnostic for PyDiagnostic {
     fn code<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
-        self.code.as_ref().map(|c| Box::new(c) as Box<dyn fmt::Display>)
+        self.code
+            .as_ref()
+            .map(|c| Box::new(c) as Box<dyn fmt::Display>)
     }
 
     fn severity(&self) -> Option<Severity> {
@@ -65,20 +74,23 @@ impl Diagnostic for PyDiagnostic {
     }
 
     fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
-        self.help_text.as_ref().map(|h| Box::new(h) as Box<dyn fmt::Display>)
+        self.help_text
+            .as_ref()
+            .map(|h| Box::new(h) as Box<dyn fmt::Display>)
     }
 }
 
 #[pyfunction]
 fn render_report(diagnostic: PyDiagnostic) -> PyResult<String> {
     let handler = GraphicalReportHandler::new();
-    
+
     let mut output = String::new();
-    handler.render_report(&mut output, &diagnostic as &dyn Diagnostic)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-            format!("Failed to render: {}", e)
-        ))?;
-    
+    handler
+        .render_report(&mut output, &diagnostic as &dyn Diagnostic)
+        .map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to render: {}", e))
+        })?;
+
     Ok(output)
 }
 

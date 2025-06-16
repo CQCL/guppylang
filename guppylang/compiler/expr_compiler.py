@@ -625,38 +625,14 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             qubits_out = unpack_array(self.builder, qubit_arr_out)
         else:
-            # If the input is an array of qubits, we need to unwrap the elements first.
+            # If the input is an array of qubits, we need to unwrap the elements first,
+            # and then convert to a value array and back.
             qubits_in = [self.visit(node.args[1])]
-            unwrap = array_unwrap_elem(self.ctx)
-            unwrap = self.builder.load_function(
-                unwrap,
-                instantiation=ht.FunctionType([ht.Option(ht.Qubit)], [ht.Qubit]),
-                type_args=[ht.TypeTypeArg(ht.Qubit)],
-            )
-            map_op = array_map(ht.Option(ht.Qubit), num_qubits_arg, ht.Qubit)
-            unwrapped_qubit_arr = self.builder.add_op(map_op, qubits_in[0], unwrap)
-
-            # Turn into standard array from value array.
-            unwrapped_qubit_arr = self.builder.add_op(
-                array_convert_to_std_array(ht.Qubit, num_qubits_arg),
-                unwrapped_qubit_arr,
-            )
-
-            qubit_arr_out = self.builder.add_op(op, unwrapped_qubit_arr)
-
-            # And back to a value array.
-            qubit_arr_out = self.builder.add_op(
-                array_convert_from_std_array(ht.Qubit, num_qubits_arg), qubit_arr_out
-            )
-
-            wrap = array_wrap_elem(self.ctx)
-            wrap = self.builder.load_function(
-                wrap,
-                instantiation=ht.FunctionType([ht.Qubit], [ht.Option(ht.Qubit)]),
-                type_args=[ht.TypeTypeArg(ht.Qubit)],
-            )
-            map_op = array_map(ht.Qubit, num_qubits_arg, ht.Option(ht.Qubit))
-            qubits_out = [self.builder.add_op(map_op, qubit_arr_out, wrap)]
+            qubits_out = [
+                apply_array_op_with_conversions(
+                    self.ctx, self.builder, op, ht.Qubit, num_qubits_arg, qubits_in[0]
+                )
+            ]
 
         self._update_inout_ports(node.args, iter(qubits_out), node.func_ty)
         return self._pack_returns([], NoneType())

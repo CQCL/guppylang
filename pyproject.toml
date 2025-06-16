@@ -80,11 +80,11 @@ execution = [
 pytket_integration = [{ include-group = "test" }, "pytket >=1.34.0"]
 
 [tool.uv.workspace]
-members = ["execute_llvm", "miette-py"]  
+members = ["execute_llvm", "miette-py"]
 
 [tool.uv.sources]
 execute-llvm = { workspace = true }
-miette-py = { workspace = true }  
+miette-py = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "7f233fa" }
