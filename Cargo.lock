@@ -1782,9 +1782,9 @@ dependencies = [
 
 [[package]]
 name = "tket-json-rs"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a0ede5d508ef83219fafeb7a81aa15ac98b1fd62d7762afea194889f129cc8b"
+checksum = "fc84d7bd6b104cea080d51fb23ce5ec7c583fa1f676842c3c46a50ccd0e2000e"
 dependencies = [
  "derive_more 1.0.0",
  "serde",
@@ -1795,9 +1795,9 @@ dependencies = [
 
 [[package]]
 name = "tket2"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6db3dbd8a468491ad33652bf46adaa2e8260b4ec35db324cccbb105f8b247f3"
+checksum = "5cabc0e6b8276c2c7be034083a46a64cac42166a70871fd18b43d0b348fb44b4"
 dependencies = [
  "bytemuck",
  "cgmath",
@@ -1991,6 +1991,7 @@ version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cf4199d1e5d15ddd86a694e4d0dffa9c323ce759fea589f00fef9d81cc1931d"
 dependencies = [
+ "getrandom",
  "js-sys",
  "serde",
  "wasm-bindgen",
