@@ -30,10 +30,12 @@ from guppylang.compiler.core import (
 from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import (
+    CallableDef,
     CallReturnWires,
     CompiledCallableDef,
     CompiledValueDef,
 )
+from guppylang.engine import ENGINE
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
     BarrierExpr,
@@ -75,7 +77,7 @@ from guppylang.std._internal.compiler.tket2_bool import (
     not_op,
     read_bool,
 )
-from guppylang.tys.arg import Argument
+from guppylang.tys.arg import Argument, ConstArg
 from guppylang.tys.builtin import (
     bool_type,
     get_element_type,
@@ -83,6 +85,7 @@ from guppylang.tys.builtin import (
     is_bool_type,
     is_frozenarray_type,
 )
+from guppylang.tys.const import ConstValue
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
@@ -251,7 +254,15 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self.dfg[node.place]
 
     def visit_GlobalName(self, node: GlobalName) -> Wire:
-        defn = self.ctx.build_compiled_def(node.def_id)
+        defn = ENGINE.get_checked(node.def_id)
+        if isinstance(defn, CallableDef) and defn.ty.parametrized:
+            # TODO: This should be caught during checking
+            err = UnsupportedError(
+                node, "Polymorphic functions as dynamic higher-order values"
+            )
+            raise GuppyError(err)
+
+        defn = self.ctx.build_compiled_def(node.def_id, type_args=[])
         assert isinstance(defn, CompiledValueDef)
         if isinstance(defn, CompiledCallableDef) and defn.ty.parametrized:
             # TODO: This should be caught during checking
@@ -270,8 +281,16 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 )
                 usize = self.builder.add_op(load_nat)
                 return self.builder.add_op(convert_ifromusize(), usize)
-            case _:
-                raise NotImplementedError
+            case ty:
+                # Look up monomorphization
+                assert self.ctx.current_mono_args is not None
+                match self.ctx.current_mono_args[node.param.idx]:
+                    case ConstArg(const=ConstValue(value=v)):
+                        val = python_value_to_hugr(v, ty, self.ctx)
+                        assert val is not None
+                        return self.builder.load(val)
+                    case _:
+                        raise InternalGuppyError("Monomorphized const is not a value")
 
     def visit_Name(self, node: ast.Name) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
@@ -413,7 +432,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
     def visit_GlobalCall(self, node: GlobalCall) -> Wire:
-        func = self.ctx.build_compiled_def(node.def_id)
+        func = self.ctx.build_compiled_def(node.def_id, node.type_args)
         assert isinstance(func, CompiledCallableDef)
 
         if isinstance(func, CustomFunctionDef) and not func.has_signature:
@@ -462,7 +481,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # For now, we can only TypeApply global FunctionDefs/Decls.
         if not isinstance(node.value, GlobalName):
             raise InternalGuppyError("Dynamic TypeApply not supported yet!")
-        defn = self.ctx.build_compiled_def(node.value.def_id)
+        defn = self.ctx.build_compiled_def(node.value.def_id, node.inst)
         assert isinstance(defn, CompiledCallableDef)
 
         # We have to be very careful here: If we instantiate `foo: forall T. T -> T`
@@ -642,9 +661,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         args: list[Wire],
         type_args: Sequence[Argument] | None = None,
     ) -> CallReturnWires:
-        func = self.ctx.get_instance_func(ty, method)
+        type_args = type_args or []
+        func = self.ctx.get_instance_func(ty, method, type_args)
         assert func is not None
-        return func.compile_call(args, type_args or [], self.dfg, self.ctx, node)
+        return func.compile_call(args, type_args, self.dfg, self.ctx, node)
 
     @contextmanager
     def _build_generators(

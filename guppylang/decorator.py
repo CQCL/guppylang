@@ -14,8 +14,8 @@ from hugr.package import FuncDefnPointer, ModulePointer
 from typing_extensions import dataclass_transform
 
 from guppylang.ast_util import annotate_location
-from guppylang.compiler.core import CompilerContext
-from guppylang.definition.common import DefId
+from guppylang.compiler.core import CompilerContext, PartiallyMonomorphizedArgs
+from guppylang.definition.common import DefId, MonomorphizableDef
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
     CustomCallChecker,
@@ -380,7 +380,15 @@ class _Guppy:
         if not isinstance(obj, GuppyDefinition):
             raise TypeError(f"Object is not a Guppy definition: {obj}")
         compiled_module = ENGINE.compile(obj.id)
-        compiled_def = ENGINE.compiled[obj.id]
+
+        # Look up how many generic params the function has so we can create an empty
+        # partial monomorphization to look up in the context
+        checked_def = ENGINE.checked[obj.id]
+        mono_args: PartiallyMonomorphizedArgs | None = None
+        if isinstance(checked_def, MonomorphizableDef):
+            mono_args = tuple(None for _ in checked_def.params)
+
+        compiled_def = ENGINE.compiled[obj.id, mono_args]
         assert isinstance(compiled_def, CompiledFunctionDef | CompiledPytketDef)
         node = compiled_def.func_def.parent_node
         return FuncDefnPointer(

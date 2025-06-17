@@ -148,6 +148,10 @@ class TypeParam(ParameterBase):
             bound=ht.TypeBound.Any if self.can_be_linear else ht.TypeBound.Copyable
         )
 
+    def __str__(self) -> str:
+        """User-facing string representation of the parameter."""
+        return self.name
+
 
 @dataclass(frozen=True)
 class ConstParam(ParameterBase):
@@ -212,8 +216,14 @@ class ConstParam(ParameterBase):
             case NumericType(kind=NumericType.Kind.Nat):
                 return ht.BoundedNatParam(upper_bound=None)
             case _:
-                assert isinstance(self.ty.to_hugr(ctx), ht.ExtType)
-                return ht.StringParam()
+                raise InternalGuppyError(
+                    "Tried to convert non-nat const type parameter to Hugr. This "
+                    "should have been erased."
+                )
+
+    def __str__(self) -> str:
+        """User-facing string representation of the parameter."""
+        return f"{self.name}: {self.ty}"
 
 
 def check_all_args(

@@ -1,8 +1,8 @@
 import ast
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import hugr.build.function as hf
 import hugr.tys as ht
@@ -20,11 +20,17 @@ from guppylang.checker.func_checker import (
     check_signature,
     parse_function_with_docstring,
 )
-from guppylang.compiler.core import CompilerContext, DFContainer
+from guppylang.compiler.core import (
+    CompilerContext,
+    DFContainer,
+    PartiallyMonomorphizedArgs,
+    requires_monomorphization,
+)
 from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import (
     CheckableDef,
-    CompilableDef,
+    MonomorphizableDef,
+    MonomorphizedDef,
     ParsableDef,
     UnknownSourceError,
 )
@@ -35,6 +41,9 @@ from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type, type_to_row
+
+if TYPE_CHECKING:
+    from guppylang.tys.param import Parameter
 
 PyFunc = Callable[..., Any]
 
@@ -120,7 +129,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
 
 
 @dataclass(frozen=True)
-class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
+class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
     """Type checked version of a user-defined function that is ready to be compiled.
 
     In particular, this means that we have a constructed and type checked a control-flow
@@ -138,23 +147,33 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
 
     cfg: CheckedCFG[Place]
 
-    def compile_outer(
-        self, module: DefinitionBuilder[OpVar], ctx: CompilerContext
+    @property
+    def params(self) -> "Sequence[Parameter]":
+        """Generic parameters of this function."""
+        return self.ty.params
+
+    def monomorphize(
+        self,
+        module: DefinitionBuilder[OpVar],
+        mono_args: "PartiallyMonomorphizedArgs",
+        ctx: "CompilerContext",
     ) -> "CompiledFunctionDef":
-        """Adds a Hugr `FuncDefn` node for this function to the Hugr.
+        """Adds a Hugr `FuncDefn` node for the (partially) monomorphized function to the
+        Hugr.
 
         Note that we don't compile the function body at this point since we don't have
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        func_type = self.ty.to_hugr_poly(ctx)
+        mono_ty = self.ty.instantiate_partial(mono_args).to_hugr_poly(ctx)
         func_def = module.define_function(
-            self.name, func_type.body.input, func_type.body.output, func_type.params
+            self.name, mono_ty.body.input, mono_ty.body.output, mono_ty.params
         )
         return CompiledFunctionDef(
             self.id,
             self.name,
             self.defined_at,
+            mono_args,
             self.ty,
             self.docstring,
             self.cfg,
@@ -163,13 +182,14 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
 
 
 @dataclass(frozen=True)
-class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
+class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef, MonomorphizedDef):
     """A function definition with a corresponding Hugr node.
 
     Args:
         id: The unique definition identifier.
         name: The name of the function.
         defined_at: The AST node where the function was defined.
+        mono_args: Partial monomorphization of the generic type parameters.
         ty: The type of the function.
         python_scope: The Python scope where the function was defined.
         docstring: The docstring of the function.
@@ -213,7 +233,11 @@ def load_with_args(
 ) -> Wire:
     """Loads the function as a value into a local Hugr dataflow graph."""
     func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
-    type_args: list[ht.TypeArg] = [arg.to_hugr(dfg.ctx) for arg in type_args]
+    type_args: list[ht.TypeArg] = [
+        arg.to_hugr(dfg.ctx)
+        for param, arg in zip(ty.params, type_args, strict=True)
+        if not requires_monomorphization(param)
+    ]
     return dfg.builder.load_function(func, func_ty, type_args)
 
 
@@ -226,7 +250,11 @@ def compile_call(
 ) -> CallReturnWires:
     """Compiles a call to the function."""
     func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
-    type_args: list[ht.TypeArg] = [arg.to_hugr(dfg.ctx) for arg in type_args]
+    type_args: list[ht.TypeArg] = [
+        arg.to_hugr(dfg.ctx)
+        for param, arg in zip(ty.params, type_args, strict=True)
+        if not requires_monomorphization(param)
+    ]
     num_returns = len(type_to_row(ty.output))
     call = dfg.builder.call(func, *args, instantiation=func_ty, type_args=type_args)
     return CallReturnWires(

@@ -11,7 +11,7 @@ from guppylang.checker.core import ComptimeVariable, Context, Locals, Variable
 from guppylang.checker.errors.type_errors import TypeMismatchError
 from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.compiler.expr_compiler import ExprCompiler
-from guppylang.definition.value import CompiledCallableDef
+from guppylang.definition.value import CallableDef
 from guppylang.diagnostic import Error
 from guppylang.error import GuppyComptimeError, GuppyError, exception_hook
 from guppylang.nodes import PlaceNode
@@ -137,7 +137,7 @@ def trace_function(
 
 
 @capture_guppy_errors
-def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
+def trace_call(func: CallableDef, *args: Any) -> Any:
     """Handles calls to Guppy functions during tracing.
 
     Checks that the passed arguments match the signature of the function and also
