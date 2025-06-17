@@ -1054,8 +1054,10 @@ def check_place_assignable(
                 True,
             )
             return replace(place, setitem_call=SetitemCall(setitem_call, tmp_var))
-        case TupleAccess(_, _, _):
-            return place
+        case TupleAccess(parent=parent):
+            return replace(
+                place, parent=check_place_assignable(parent, ctx, node, reason)
+            )
 
 
 def check_comptime_arg(
