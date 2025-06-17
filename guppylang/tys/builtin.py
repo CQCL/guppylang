@@ -14,6 +14,7 @@ from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
+from guppylang.tys.common import ToHugrContext
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
 from guppylang.tys.param import ConstParam, TypeParam
@@ -116,17 +117,17 @@ class _ListTypeDef(OpaqueTypeDef, CompiledDef):
         return super().check_instantiate(args, loc)
 
 
-def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
+def _list_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     # Type checker ensures that we get a single arg of kind type
     [arg] = args
     assert isinstance(arg, TypeArg)
     # Linear elements are turned into an optional to enable unsafe indexing.
     # See `ListGetitemCompiler` for details.
-    elem_ty = ht.Option(arg.ty.to_hugr()) if arg.ty.linear else arg.ty.to_hugr()
+    elem_ty = ht.Option(arg.ty.to_hugr(ctx)) if arg.ty.linear else arg.ty.to_hugr(ctx)
     return hugr.std.collections.list.List(elem_ty)
 
 
-def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
+def _array_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     # Type checker ensures that we get a two args
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
@@ -135,31 +136,31 @@ def _array_to_hugr(args: Sequence[Argument]) -> ht.Type:
     # Linear elements are turned into an optional to enable unsafe indexing.
     # See `ArrayGetitemCompiler` for details.
     # Same also for classical arrays, see https://github.com/CQCL/guppylang/issues/629
-    elem_ty = ht.Option(ty_arg.ty.to_hugr())
-    hugr_arg = len_arg.to_hugr()
+    elem_ty = ht.Option(ty_arg.ty.to_hugr(ctx))
+    hugr_arg = len_arg.to_hugr(ctx)
 
     return hugr.std.collections.value_array.ValueArray(elem_ty, hugr_arg)
 
 
-def _frozenarray_to_hugr(args: Sequence[Argument]) -> ht.Type:
+def _frozenarray_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     # Type checker ensures that we get a two args
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
     assert isinstance(len_arg, ConstArg)
-    return hugr.std.collections.static_array.StaticArray(ty_arg.ty.to_hugr())
+    return hugr.std.collections.static_array.StaticArray(ty_arg.ty.to_hugr(ctx))
 
 
-def _sized_iter_to_hugr(args: Sequence[Argument]) -> ht.Type:
+def _sized_iter_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     [ty_arg, len_arg] = args
     assert isinstance(ty_arg, TypeArg)
     assert isinstance(len_arg, ConstArg)
-    return ty_arg.ty.to_hugr()
+    return ty_arg.ty.to_hugr(ctx)
 
 
-def _option_to_hugr(args: Sequence[Argument]) -> ht.Type:
+def _option_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     [arg] = args
     assert isinstance(arg, TypeArg)
-    return ht.Option(arg.ty.to_hugr())
+    return ht.Option(arg.ty.to_hugr(ctx))
 
 
 callable_type_def = CallableTypeDef(DefId.fresh(), None)
@@ -172,7 +173,7 @@ bool_type_def = OpaqueTypeDef(
     params=[],
     never_copyable=False,
     never_droppable=False,
-    to_hugr=lambda _: OpaqueBool,
+    to_hugr=lambda args, ctx: OpaqueBool,
 )
 nat_type_def = _NumericTypeDef(
     DefId.fresh(), "nat", None, NumericType(NumericType.Kind.Nat)
@@ -190,7 +191,7 @@ string_type_def = OpaqueTypeDef(
     params=[],
     never_copyable=False,
     never_droppable=False,
-    to_hugr=lambda _: hugr.std.PRELUDE.get_type("string").instantiate([]),
+    to_hugr=lambda args, ctx: hugr.std.PRELUDE.get_type("string").instantiate([]),
 )
 list_type_def = _ListTypeDef(
     id=DefId.fresh(),

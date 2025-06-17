@@ -11,7 +11,7 @@ from guppylang.checker.errors.generic import ExpectedError
 from guppylang.checker.errors.type_errors import TypeMismatchError
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
-from guppylang.tys.common import ToHugr
+from guppylang.tys.common import ToHugr, ToHugrContext
 from guppylang.tys.const import BoundConstVar, ExistentialConstVar
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
 from guppylang.tys.var import ExistentialVar
@@ -142,7 +142,7 @@ class TypeParam(ParameterBase):
             BoundTypeVar(self.name, idx, self.must_be_copyable, self.must_be_droppable)
         )
 
-    def to_hugr(self) -> ht.TypeParam:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.TypeParam:
         """Computes the Hugr representation of the parameter."""
         return ht.TypeTypeParam(
             bound=ht.TypeBound.Any if self.can_be_linear else ht.TypeBound.Copyable
@@ -204,7 +204,7 @@ class ConstParam(ParameterBase):
             idx = self.idx
         return ConstArg(BoundConstVar(self.ty, self.name, idx))
 
-    def to_hugr(self) -> ht.TypeParam:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.TypeParam:
         """Computes the Hugr representation of the parameter."""
         from guppylang.tys.ty import NumericType
 
@@ -212,7 +212,7 @@ class ConstParam(ParameterBase):
             case NumericType(kind=NumericType.Kind.Nat):
                 return ht.BoundedNatParam(upper_bound=None)
             case _:
-                assert isinstance(self.ty.to_hugr(), ht.ExtType)
+                assert isinstance(self.ty.to_hugr(ctx), ht.ExtType)
                 return ht.StringParam()
 
 

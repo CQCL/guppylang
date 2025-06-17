@@ -14,6 +14,7 @@ from hugr.package import FuncDefnPointer, ModulePointer
 from typing_extensions import dataclass_transform
 
 from guppylang.ast_util import annotate_location
+from guppylang.compiler.core import CompilerContext
 from guppylang.definition.common import DefId
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
@@ -112,7 +113,7 @@ class _Guppy:
 
     def type(
         self,
-        hugr_ty: ht.Type | Callable[[Sequence[Argument]], ht.Type],
+        hugr_ty: ht.Type | Callable[[Sequence[Argument], CompilerContext], ht.Type],
         name: str = "",
         copyable: bool = True,
         droppable: bool = True,
@@ -129,7 +130,9 @@ class _Guppy:
         For generic types, a callable may be passed that takes the type arguments of a
         concrete instantiation.
         """
-        mk_hugr_ty = (lambda _: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
+        mk_hugr_ty = (
+            (lambda args, ctx: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
+        )
 
         def dec(c: type[T]) -> type[T]:
             defn = OpaqueTypeDef(
@@ -220,7 +223,7 @@ class _Guppy:
 
     def hugr_op(
         self,
-        op: Callable[[ht.FunctionType, Inst], ops.DataflowOp],
+        op: Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp],
         checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",

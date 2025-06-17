@@ -56,7 +56,7 @@ class FrozenarrayGetitemCompiler(CustomCallCompiler):
     def compile(self, args: list[Wire]) -> list[Wire]:
         [ty_arg, _] = self.type_args
         assert isinstance(ty_arg, TypeArg)
-        elem_ty = ty_arg.ty.to_hugr()
+        elem_ty = ty_arg.ty.to_hugr(self.ctx)
         inst = ht.FunctionType([StaticArray(elem_ty), INT_T], [elem_ty])
         type_args = [ht.TypeTypeArg(elem_ty)]
         elem = self.builder.call(

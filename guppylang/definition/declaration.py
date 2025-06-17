@@ -89,14 +89,16 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
         node = with_loc(node, GlobalCall(def_id=self.id, args=args, type_args=inst))
         return with_type(ty, node), ty
 
-    def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledFunctionDecl":
+    def compile_outer(
+        self, module: DefinitionBuilder[OpVar], ctx: CompilerContext
+    ) -> "CompiledFunctionDecl":
         """Adds a Hugr `FuncDecl` node for this function to the Hugr."""
         assert isinstance(
             module, hf.Module
         ), "Functions can only be declared in modules"
         module: hf.Module = module
 
-        node = module.declare_function(self.name, self.ty.to_hugr_poly())
+        node = module.declare_function(self.name, self.ty.to_hugr_poly(ctx))
         return CompiledFunctionDecl(
             self.id,
             self.name,

@@ -21,6 +21,7 @@ from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef
 from guppylang.engine import ENGINE
 from guppylang.error import InternalGuppyError
+from guppylang.tys.common import ToHugrContext
 from guppylang.tys.ty import StructType, Type
 
 CompiledLocals = dict[PlaceId, Wire]
@@ -42,7 +43,7 @@ class GlobalConstId:
         return f"{self.base_name}.{self.id}"
 
 
-class CompilerContext:
+class CompilerContext(ToHugrContext):
     """Compilation context containing all available definitions.
 
     Maintains a `worklist` of definitions which have been used by other compiled code
@@ -81,7 +82,7 @@ class CompilerContext:
 
     def _compile(self, defn: CheckedDef) -> CompiledDef:
         if isinstance(defn, CompilableDef):
-            return defn.compile_outer(self.module)
+            return defn.compile_outer(self.module, self)
         return defn
 
     def compile(self, defn: CheckedDef) -> None:
@@ -143,15 +144,20 @@ class DFContainer:
     """
 
     builder: DfBase[ops.DfParentOp]
+    ctx: CompilerContext
     locals: CompiledLocals = field(default_factory=dict)
 
     def __init__(
-        self, builder: DfBase[DP], locals: CompiledLocals | None = None
+        self,
+        builder: DfBase[DP],
+        ctx: CompilerContext,
+        locals: CompiledLocals | None = None,
     ) -> None:
         generic_builder = cast(DfBase[ops.DfParentOp], builder)
         if locals is None:
             locals = {}
         self.builder = generic_builder
+        self.ctx = ctx
         self.locals = locals
 
     def __getitem__(self, place: Place) -> Wire:
@@ -168,7 +174,7 @@ class DFContainer:
         if not isinstance(place.ty, StructType):
             raise InternalGuppyError(f"Couldn't obtain a port for `{place}`")
         children = [FieldAccess(place, field, None) for field in place.ty.fields]
-        child_types = [child.ty.to_hugr() for child in children]
+        child_types = [child.ty.to_hugr(self.ctx) for child in children]
         child_wires = [self[child] for child in children]
         wire = self.builder.add_op(ops.MakeTuple(child_types), *child_wires)[0]
         for child in children:
@@ -183,7 +189,7 @@ class DFContainer:
         is_return = isinstance(place, Variable) and is_return_var(place.name)
         if isinstance(place.ty, StructType) and not is_return:
             unpack = self.builder.add_op(
-                ops.UnpackTuple([t.ty.to_hugr() for t in place.ty.fields]), port
+                ops.UnpackTuple([t.ty.to_hugr(self.ctx) for t in place.ty.fields]), port
             )
             for field, field_port in zip(place.ty.fields, unpack, strict=True):
                 self[FieldAccess(place, field, None)] = field_port
@@ -199,7 +205,7 @@ class DFContainer:
     def __copy__(self) -> "DFContainer":
         # Make a copy of the var map so that mutating the copy doesn't
         # mutate our variable mapping
-        return DFContainer(self.builder, self.locals.copy())
+        return DFContainer(self.builder, self.ctx, self.locals.copy())
 
 
 class CompilerBase(ABC):

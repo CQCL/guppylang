@@ -56,7 +56,7 @@ def trace_function(
     Invokes the passed Python callable and constructs the corresponding Hugr using the
     passed builder.
     """
-    state = TracingState(ctx, DFContainer(builder, {}), node)
+    state = TracingState(ctx, DFContainer(builder, ctx, {}), node)
     with set_tracing_state(state):
         inputs = [
             unpack_guppy_object(
@@ -75,7 +75,7 @@ def trace_function(
             py_out = python_func(*inputs)
 
         try:
-            out_obj = guppy_object_from_py(py_out, builder, node)
+            out_obj = guppy_object_from_py(py_out, builder, node, ctx)
         except GuppyComptimeError as err:
             # Error in the return statement. For example, this happens if users
             # try to return a struct with invalid field values or there is a linearity
@@ -109,7 +109,7 @@ def trace_function(
                     f"the caller. "
                 )
                 try:
-                    obj = guppy_object_from_py(inout_obj, builder, node)
+                    obj = guppy_object_from_py(inout_obj, builder, node, ctx)
                     inout_returns.append(obj._use_wire(None))
                 except GuppyComptimeError as err:
                     msg = str(err)
@@ -147,7 +147,8 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
 
     # Try to turn args into `GuppyObjects`
     args_objs = [
-        guppy_object_from_py(arg, state.dfg.builder, state.node) for arg in args
+        guppy_object_from_py(arg, state.dfg.builder, state.node, state.ctx)
+        for arg in args
     ]
 
     # Create dummy variables and bind the objects to them

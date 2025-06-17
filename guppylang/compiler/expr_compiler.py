@@ -142,7 +142,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert len({inp.place.id for inp in inputs}) == len(
             inputs
         ), "Inputs are not unique"
-        self.dfg = DFContainer(builder, self.dfg.locals.copy())
+        self.dfg = DFContainer(builder, self.ctx, self.dfg.locals.copy())
         hugr_input = builder.input_node
         for input_node, wire in zip(inputs, hugr_input, strict=True):
             self.dfg[input_node.place] = wire
@@ -246,7 +246,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             yield
 
     def visit_Constant(self, node: ast.Constant) -> Wire:
-        if value := python_value_to_hugr(node.value, get_type(node)):
+        if value := python_value_to_hugr(node.value, get_type(node), self.ctx):
             return self.builder.load(value)
         raise InternalGuppyError("Unsupported constant expression in compiler")
 
@@ -271,7 +271,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def visit_GenericParamValue(self, node: GenericParamValue) -> Wire:
         match node.param.ty:
             case NumericType(NumericType.Kind.Nat):
-                arg = node.param.to_bound().to_hugr()
+                arg = node.param.to_bound().to_hugr(self.ctx)
                 load_nat = hugr.std.PRELUDE.get_op("load_nat").instantiate(
                     [arg], ht.FunctionType([], [ht.USize()])
                 )
@@ -293,16 +293,16 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         inputs = [self.visit(e) for e in node.elts]
         list_ty = get_type(node)
         elem_ty = get_element_type(list_ty)
-        return list_new(self.builder, elem_ty.to_hugr(), inputs)
+        return list_new(self.builder, elem_ty.to_hugr(self.ctx), inputs)
 
     def _unpack_tuple(self, wire: Wire, types: Sequence[Type]) -> Sequence[Wire]:
         """Add a tuple unpack operation to the graph"""
-        types = [t.to_hugr() for t in types]
+        types = [t.to_hugr(self.ctx) for t in types]
         return list(self.builder.add_op(ops.UnpackTuple(types), wire))
 
     def _pack_tuple(self, wires: Sequence[Wire], types: Sequence[Type]) -> Wire:
         """Add a tuple pack operation to the graph"""
-        types = [t.to_hugr() for t in types]
+        types = [t.to_hugr(self.ctx) for t in types]
         return self.builder.add_op(ops.MakeTuple(types), *wires)
 
     def _pack_returns(self, returns: Sequence[Wire], return_ty: Type) -> Wire:
@@ -352,7 +352,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         num_returns = len(type_to_row(func_ty.output))
 
         args = self._compile_call_args(node.args, func_ty)
-        call = self.builder.add_op(ops.CallIndirect(func_ty.to_hugr()), func, *args)
+        call = self.builder.add_op(
+            ops.CallIndirect(func_ty.to_hugr(self.ctx)), func, *args
+        )
         regular_returns = list(call[:num_returns])
         inout_returns = call[num_returns:]
         self._update_inout_ports(node.args, inout_returns, func_ty)
@@ -408,7 +410,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             consumed_args, other_args = args[0:input_len], args[input_len:]
             consumed_wires = self._compile_call_args(consumed_args, func_ty)
             call = self.builder.add_op(
-                ops.CallIndirect(func_ty.to_hugr()), func, *consumed_wires
+                ops.CallIndirect(func_ty.to_hugr(self.ctx)), func, *consumed_wires
             )
             regular_returns: list[Wire] = list(call[:num_returns])
             inout_returns = call[num_returns:]
@@ -456,7 +458,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
         op = PartialOp.from_closure(
-            func_ty.to_hugr(), [get_type(arg).to_hugr() for arg in node.args]
+            func_ty.to_hugr(self.ctx),
+            [get_type(arg).to_hugr(self.ctx) for arg in node.args],
         )
         return self.builder.add_op(
             op, self.visit(node.func), *(self.visit(arg) for arg in node.args)
@@ -506,7 +509,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
         value_wire = self.visit(node.value)
-        base_ty = node.base_ty.to_hugr()
+        base_ty = node.base_ty.to_hugr(self.ctx)
         extra_args: list[ht.TypeArg] = []
         if isinstance(node.base_ty, NumericType):
             match node.base_ty.kind:
@@ -527,7 +530,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # Handle array results separately.
         if node.array_len is not None:
             op_name = f"result_array_{base_name}"
-            size_arg = node.array_len.to_arg().to_hugr()
+            size_arg = node.array_len.to_arg().to_hugr(self.ctx)
             extra_args = [size_arg, *extra_args]
             is_bool = is_bool_type(node.base_ty)
             op_base_ty = ht.Bool if is_bool else base_ty
@@ -569,8 +572,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
         err = build_error(self.builder, node.signal, node.msg)
-        in_tys = [get_type(e).to_hugr() for e in node.values]
-        out_tys = [ty.to_hugr() for ty in type_to_row(get_type(node))]
+        in_tys = [get_type(e).to_hugr(self.ctx) for e in node.values]
+        out_tys = [ty.to_hugr(self.ctx) for ty in type_to_row(get_type(node))]
         args = [self.visit(e) for e in node.values]
         match node.kind:
             case ExitKind.Panic:
@@ -581,7 +584,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._pack_returns(list(h_node.outputs()), get_type(node))
 
     def visit_BarrierExpr(self, node: BarrierExpr) -> Wire:
-        hugr_tys = [get_type(e).to_hugr() for e in node.args]
+        hugr_tys = [get_type(e).to_hugr(self.ctx) for e in node.args]
         op = hugr.std.prelude.PRELUDE_EXTENSION.get_op("Barrier").instantiate(
             [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in hugr_tys])],
             ht.FunctionType.endo(hugr_tys),
@@ -643,7 +646,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert isinstance(list_ty, OpaqueType)
         elem_ty = get_element_type(list_ty)
         list_place = Variable(next(tmp_vars), list_ty, node)
-        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])
+        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(self.ctx), [])
         with self._build_generators(node.generators, [list_place]):
             elt_port = self.visit(node.elt)
             list_port = self.dfg[list_place]
@@ -659,16 +662,16 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         array_var = Variable(next(tmp_vars), array_ty, node)
         count_var = Variable(next(tmp_vars), int_type(), node)
         # See https://github.com/CQCL/guppylang/issues/629
-        hugr_elt_ty = ht.Option(node.elt_ty.to_hugr())
+        hugr_elt_ty = ht.Option(node.elt_ty.to_hugr(self.ctx))
         # Initialise array with `None`s
         make_none = array_comprehension_init_func(self.ctx)
         make_none = self.builder.load_function(
             make_none,
             instantiation=ht.FunctionType([], [hugr_elt_ty]),
-            type_args=[ht.TypeTypeArg(node.elt_ty.to_hugr())],
+            type_args=[ht.TypeTypeArg(node.elt_ty.to_hugr(self.ctx))],
         )
         self.dfg[array_var] = self.builder.add_op(
-            array_repeat(hugr_elt_ty, node.length.to_arg().to_hugr()), make_none
+            array_repeat(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx)), make_none
         )
         self.dfg[count_var] = self.builder.load(
             hugr.std.int.IntVal(0, width=NumericType.INT_WIDTH)
@@ -732,7 +735,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                     outputs=[break_pred, *inputs],
                 )
                 # In the "no" case, we set the break predicate to true
-                break_pred_hugr_ty = ht.Either([iter_ty.to_hugr()], [])
+                break_pred_hugr_ty = ht.Either([iter_ty.to_hugr(self.ctx)], [])
                 with stop_case:
                     self.dfg[break_pred.place] = self.dfg.builder.add_op(
                         ops.Tag(1, break_pred_hugr_ty)
@@ -773,7 +776,7 @@ def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
     return False
 
 
-def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
+def python_value_to_hugr(v: Any, exp_ty: Type, ctx: CompilerContext) -> hv.Value | None:
     """Turns a Python value into a Hugr value.
 
     Returns None if the Python value cannot be represented in Guppy.
@@ -790,7 +793,7 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
         case tuple(elts):
             assert isinstance(exp_ty, TupleType)
             vs = [
-                python_value_to_hugr(elt, ty)
+                python_value_to_hugr(elt, ty, ctx)
                 for elt, ty in zip(elts, exp_ty.element_types, strict=True)
             ]
             if doesnt_contain_none(vs):
@@ -798,10 +801,10 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
         case list(elts):
             assert is_frozenarray_type(exp_ty)
             elem_ty = get_element_type(exp_ty)
-            vs = [python_value_to_hugr(elt, elem_ty) for elt in elts]
+            vs = [python_value_to_hugr(elt, elem_ty, ctx) for elt in elts]
             if doesnt_contain_none(vs):
                 return hugr.std.collections.static_array.StaticArrayVal(
-                    vs, elem_ty.to_hugr(), name=f"static_pyarray.{next(tmp_vars)}"
+                    vs, elem_ty.to_hugr(ctx), name=f"static_pyarray.{next(tmp_vars)}"
                 )
         case _:
             return None

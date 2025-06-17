@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from hugr.build import function as hf
     from hugr.build.dfg import DfBase
 
+    from guppylang.tys.common import ToHugrContext
     from guppylang.tys.subst import Inst
 
 
@@ -226,9 +227,11 @@ class UnwrapOpCompiler(CustomInoutCallCompiler):
         op: A HUGR operation that outputs an Either<error, result> value.
     """
 
-    op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]
+    op: Callable[[ht.FunctionType, Inst, ToHugrContext], ops.DataflowOp]
 
-    def __init__(self, op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]):
+    def __init__(
+        self, op: Callable[[ht.FunctionType, Inst, ToHugrContext], ops.DataflowOp]
+    ):
         self.op = op
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
@@ -239,7 +242,7 @@ class UnwrapOpCompiler(CustomInoutCallCompiler):
             input=self.ty.input,
             output=[ht.Either([error_type()], self.ty.output)],
         )
-        op = self.op(opt_func_type, self.type_args)
+        op = self.op(opt_func_type, self.type_args, self.ctx)
         either = self.builder.add_op(op, *args)
         result = unwrap_result(self.builder, self.ctx, either)
         return CallReturnWires(regular_returns=[result], inout_returns=[])

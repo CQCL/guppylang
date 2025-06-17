@@ -214,7 +214,7 @@ class ArrayCompiler(CustomCallCompiler):
         """The element type for the array op that is being compiled."""
         match self.type_args:
             case [TypeArg(ty=elem_ty), _]:
-                return elem_ty.to_hugr()
+                return elem_ty.to_hugr(self.ctx)
             case _:
                 raise InternalGuppyError("Invalid array type args")
 
@@ -223,7 +223,7 @@ class ArrayCompiler(CustomCallCompiler):
         """The length for the array op that is being compiled."""
         match self.type_args:
             case [_, ConstArg(const)]:  # Const includes both literals and variables
-                return const.to_arg().to_hugr()
+                return const.to_arg().to_hugr(self.ctx)
             case _:
                 raise InternalGuppyError("Invalid array type args")
 
@@ -287,7 +287,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
                         ht.Option(ht.Variable(0, bound)),
                         ht.VariableArg(1, length_param),
                     ),
-                    int_type().to_hugr(),
+                    int_type().to_hugr(self.ctx),
                 ],
                 output=[
                     ht.Variable(0, bound),
@@ -361,7 +361,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
         concrete_func_ty = ht.FunctionType(
             input=[
                 array_type(ht.Option(self.elem_ty), self.length),
-                int_type().to_hugr(),
+                int_type().to_hugr(self.ctx),
             ],
             output=[self.elem_ty, array_type(ht.Option(self.elem_ty), self.length)],
         )
@@ -423,7 +423,7 @@ class ArraySetitemCompiler(ArrayCompiler):
                         ht.Option(ht.Variable(0, bound)),
                         ht.VariableArg(1, length_param),
                     ),
-                    int_type().to_hugr(),
+                    int_type().to_hugr(self.ctx),
                     ht.Variable(0, bound),
                 ],
                 output=[
@@ -485,7 +485,7 @@ class ArraySetitemCompiler(ArrayCompiler):
         concrete_func_ty = ht.FunctionType(
             input=[
                 array_type(ht.Option(self.elem_ty), self.length),
-                int_type().to_hugr(),
+                int_type().to_hugr(self.ctx),
                 self.elem_ty,
             ],
             output=[array_type(ht.Option(self.elem_ty), self.length)],

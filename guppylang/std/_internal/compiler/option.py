@@ -18,7 +18,7 @@ class OptionCompiler(CustomInoutCallCompiler, ABC):
     def option_ty(self) -> ht.Option:
         match self.type_args:
             case [TypeArg(ty)]:
-                return ht.Option(ty.to_hugr())
+                return ht.Option(ty.to_hugr(self.ctx))
             case _:
                 raise InternalGuppyError("Invalid type args for Option op")
 
