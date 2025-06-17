@@ -1,12 +1,12 @@
-Error: Copy violation (at $FILE:23:8)
+Error: Copy violation (at $FILE:17:8)
    | 
-21 | @guppy(module)
-22 | def foo(s: Struct @owned) -> Struct:
-23 |     f = s.foo
+15 | @guppy
+16 | def foo(s: Struct @owned) -> Struct:
+17 |     f = s.foo
    |         ^^^^^ This expression implicitly constructs a closure that
    |               captures a non-copyable value
    | 
-23 |     f = s.foo
+17 |     f = s.foo
    |         - This expression with non-copyable type `Struct` is
    |           implicitly captured
 

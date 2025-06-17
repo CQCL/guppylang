@@ -40,6 +40,15 @@ class TypeMismatchError(Error):
 
 
 @dataclass(frozen=True)
+class ConstMismatchError(Error):
+    title: ClassVar[str] = "Value mismatch"
+    span_label: ClassVar[str] = "Expected constant `{expected}`, got `{actual}`"
+
+    expected: Const
+    actual: Const
+
+
+@dataclass(frozen=True)
 class AssignFieldTypeMismatchError(Error):
     title: ClassVar[str] = "Type mismatch"
     span_label: ClassVar[str] = (

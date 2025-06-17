@@ -1,23 +1,24 @@
+import ast
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, TypeGuard
+from typing import Literal, TypeGuard
 
 import hugr.std
 import hugr.std.collections.array
 import hugr.std.collections.list
 from hugr import tys as ht
-
 from tket2.extensions import wasm
 
 from guppylang.ast_util import AstNode
-from guppylang.definition.common import DefId
+from guppylang.definition.common import CompiledDef, DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import Const, ConstValue
-#from guppylang.tys.constarg import const_string_arg
+
+# from guppylang.tys.constarg import const_string_arg
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
@@ -29,13 +30,9 @@ from guppylang.tys.ty import (
     Type,
 )
 
-if TYPE_CHECKING:
-    from guppylang.checker.core import Globals
-    from guppylang.definition.wasm import WasmModule
-
 
 @dataclass(frozen=True)
-class CallableTypeDef(TypeDef):
+class CallableTypeDef(TypeDef, CompiledDef):
     """Type definition associated with the builtin `Callable` type.
 
     Any impls on functions can be registered with this definition.
@@ -44,14 +41,14 @@ class CallableTypeDef(TypeDef):
     name: Literal["Callable"] = field(default="Callable", init=False)
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> FunctionType:
         # Callable types are constructed using special logic in the type parser
         raise InternalGuppyError("Tried to `Callable` type via `check_instantiate`")
 
 
 @dataclass(frozen=True)
-class _TupleTypeDef(TypeDef):
+class _TupleTypeDef(TypeDef, CompiledDef):
     """Type definition associated with the builtin `tuple` type.
 
     Any impls on tuples can be registered with this definition.
@@ -60,7 +57,7 @@ class _TupleTypeDef(TypeDef):
     name: Literal["tuple"] = field(default="tuple", init=False)
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> TupleType:
         # We accept any number of arguments. If users just write `tuple`, we give them
         # the empty tuple type. We just have to make sure that the args are of kind type
@@ -75,7 +72,7 @@ class _TupleTypeDef(TypeDef):
 
 
 @dataclass(frozen=True)
-class _NoneTypeDef(TypeDef):
+class _NoneTypeDef(TypeDef, CompiledDef):
     """Type definition associated with the builtin `None` type.
 
     Any impls on None can be registered with this definition.
@@ -84,7 +81,7 @@ class _NoneTypeDef(TypeDef):
     name: Literal["None"] = field(default="None", init=False)
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> NoneType:
         if args:
             raise GuppyError(WrongNumberOfTypeArgsError(loc, 0, len(args), "None"))
@@ -92,7 +89,7 @@ class _NoneTypeDef(TypeDef):
 
 
 @dataclass(frozen=True)
-class _NumericTypeDef(TypeDef):
+class _NumericTypeDef(TypeDef, CompiledDef):
     """Type definition associated with the builtin numeric types.
 
     Any impls on numerics can be registered with these definitions.
@@ -101,31 +98,37 @@ class _NumericTypeDef(TypeDef):
     ty: NumericType
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> NumericType:
         if args:
             raise GuppyError(WrongNumberOfTypeArgsError(loc, 0, len(args), self.name))
         return self.ty
 
 
-def wasm_module_to_hugr(opaq: OpaqueTypeDef, args: Sequence[TypeArg | ConstArg], /) -> ht.Type:
-    assert args == []
-    ty = wasm().get_type("context")
-    return ty.instantiate([])
+class WasmModuleTypeDef(OpaqueTypeDef):
+    wasm_file: str
+    wasm_hash: int
 
+    def __init__(
+        self,
+        id: DefId,
+        name: str,
+        defined_at: ast.AST | None,
+        wasm_file: str,
+        wasm_hash: int,
+    ) -> None:
+        super().__init__(id, name, defined_at, [], True, True, self.to_hugr)
+        self.wasm_file = wasm_file
+        self.wasm_hash = wasm_hash
 
-#class WasmModuleTypeDef(OpaqueTypeDef):
-#    wasm_file: str
-#    wasm_hash: int
-#
-#    def to_hugr(self, args: Sequence[TypeArg | ConstArg], /) -> ht.Type:
-#        assert args == []
-#        ty = wasm().get_type("context")
-#        return ty.instantiate([])
+    def to_hugr(self, args: Sequence[TypeArg | ConstArg], /) -> ht.Type:
+        assert args == []
+        ty = wasm().get_type("context")
+        return ty.instantiate([])
 
 
 @dataclass(frozen=True)
-class _ListTypeDef(OpaqueTypeDef):
+class _ListTypeDef(OpaqueTypeDef, CompiledDef):
     """Type definition associated with the builtin `list` type.
 
     We have a custom definition to disable usage of lists unless experimental features
@@ -133,10 +136,10 @@ class _ListTypeDef(OpaqueTypeDef):
     """
 
     def check_instantiate(
-        self, args: Sequence[Argument], globals: "Globals", loc: AstNode | None = None
+        self, args: Sequence[Argument], loc: AstNode | None = None
     ) -> OpaqueType:
         check_lists_enabled(loc)
-        return super().check_instantiate(args, globals, loc)
+        return super().check_instantiate(args, loc)
 
 
 def _list_to_hugr(args: Sequence[Argument]) -> ht.Type:
@@ -186,9 +189,10 @@ def _option_to_hugr(args: Sequence[Argument]) -> ht.Type:
 
 
 def wasm_module_to_hugr(args: Sequence[Argument]) -> ht.Type:
-    [filename, filehash] = args
-    assert isinstance(filename, ConstArg)
-    assert isinstance(filehash, ConstArg)
+    assert args == []
+    # [filename, filehash] = args
+    # assert isinstance(filename, ConstArg)
+    # assert isinstance(filehash, ConstArg)
     ty = wasm().get_type("context")
     return ty.instantiate([])
 
@@ -339,19 +343,19 @@ def option_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], option_type_def)
 
 
-def wasm_module_type(module: "WasmModule") -> OpaqueType:
-    return OpaqueType(
-        [
-            const_string_arg(module.wasm_file),
-            ConstArg(
-                ConstValue(
-                    NumericType(NumericType.Kind.Int),
-                    hugr.std.int.IntVal(module.wasm_hash),
-                )
-            ),
-        ],
-        wasm_module_type_def,
-    )
+# def wasm_module_type(module: "WasmModule") -> OpaqueType:
+#    return OpaqueType(
+#        [
+#            const_string_arg(module.wasm_file),
+#            ConstArg(
+#                ConstValue(
+#                    NumericType(NumericType.Kind.Int),
+#                    hugr.std.int.IntVal(module.wasm_hash),
+#                )
+#            ),
+#        ],
+#        wasm_module_type_def,
+#    )
 
 
 def is_bool_type(ty: Type) -> bool:
@@ -412,8 +416,8 @@ def get_iter_size(ty: Type) -> Const:
         case _:
             raise InternalGuppyError("Unexpected type args")
 
-class ConstStringArg(ConstArg):
 
+class ConstStringArg(ConstArg):
     def to_hugr(self) -> ht.TypeArg:
         match self.const:
             case ConstValue(value=v, ty=ty) if is_string_type(ty):
@@ -421,6 +425,7 @@ class ConstStringArg(ConstArg):
                 return ht.StringArg(v)
             case _:
                 return super().to_hugr()
+
 
 def const_string_arg(s: str) -> ConstStringArg:
     return ConstStringArg(ConstValue(string_type(), s))

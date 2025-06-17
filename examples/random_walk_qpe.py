@@ -101,4 +101,4 @@ def main() -> int:
     return 0
 
 
-hugr = guppy.compile_module()
+hugr = guppy.compile(main)

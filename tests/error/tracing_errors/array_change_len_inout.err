@@ -1,11 +1,11 @@
-Error: Error in comptime function return (at $FILE:9:0)
-   | 
- 7 | 
- 8 | @guppy.comptime(module)
- 9 | def test(xs: array[int, 10]) -> None:
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-10 |     xs.pop()
-   | ^^^^^^^^^^^^
+Error: Error in comptime function return (at $FILE:6:0)
+  | 
+4 | 
+5 | @guppy.comptime
+6 | def test(xs: array[int, 10]) -> None:
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+7 |     xs.pop()
+  | ^^^^^^^^^^^^
 
 Argument `xs` is borrowed, so it is implicitly returned to the caller. Expected
 it to have type `array[int, 10]`, but got `array[int, 9]`.

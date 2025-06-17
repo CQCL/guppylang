@@ -8,7 +8,7 @@ import ast
 import collections
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import ClassVar, Generic, TypeVar
+from typing import ClassVar, Generic, TypeVar, cast
 
 from guppylang.ast_util import line_col
 from guppylang.cfg.bb import BB
@@ -103,10 +103,7 @@ def check_cfg(
     while len(queue) > 0:
         pred, num_output, bb = queue.popleft()
         pred_outputs = [*pred.sig.output_rows, *pred.sig.dummy_output_rows]
-        input_row = [
-            Variable(v.name, v.ty, v.defined_at, v.flags)
-            for v in pred_outputs[num_output]
-        ]
+        input_row = pred_outputs[num_output]
 
         if bb in compiled:
             # If the BB was already compiled, we just have to check that the signatures
@@ -222,7 +219,11 @@ def check_bb(
     if bb == cfg.entry_bb:
         assert len(bb.predecessors) == 0
         for x, use in bb.vars.used.items():
-            if x not in cfg.ass_before[bb] and x not in globals:
+            if (
+                x not in cfg.ass_before[bb]
+                and x not in globals
+                and x not in generic_params
+            ):
                 raise GuppyError(VarNotDefinedError(use, x))
 
     # Check the basic block
@@ -238,7 +239,11 @@ def check_bb(
     for succ in bb.successors + bb.dummy_successors:
         for x, use_bb in cfg.live_before[succ].items():
             # Check that the variables requested by the successor are defined
-            if x not in ctx.locals and x not in ctx.globals:
+            if (
+                x not in ctx.locals
+                and x not in ctx.globals
+                and x not in ctx.generic_params
+            ):
                 # If the variable is defined on *some* paths, we can give a more
                 # informative error message
                 if x in cfg.maybe_ass_before[use_bb]:
@@ -287,9 +292,9 @@ def check_rows_match(
     for x in map1.keys() | map2.keys():
         # If block signature lengths don't match but no undefined error was thrown, some
         # variables may be shadowing global variables.
-        v1 = map1.get(x) or globals[x]
+        v1 = map1.get(x) or cast(ValueDef, globals[x])
         assert isinstance(v1, Variable | ValueDef)
-        v2 = map2.get(x) or globals[x]
+        v2 = map2.get(x) or cast(ValueDef, globals[x])
         assert isinstance(v2, Variable | ValueDef)
         if v1.ty != v2.ty:
             # In the error message, we want to mention the variable that was first

@@ -19,3 +19,13 @@ def test_generic_function_type():
         output=ty_param.to_bound(0).ty,
     )
     assert str(ty) == "forall T, n: nat. array[T, n] -> T"
+
+
+def test_comptime_function_type():
+    ty_param = TypeParam(0, "T", must_be_copyable=False, must_be_droppable=False)
+    ty = FunctionType(
+        inputs=[FuncInput(NumericType(NumericType.Kind.Nat), InputFlags.Comptime)],
+        output=ty_param.to_bound(0).ty,
+        params=[ty_param]
+    )
+    assert str(ty) == "forall T. nat @comptime -> T"

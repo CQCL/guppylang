@@ -1,28 +1,46 @@
 from guppylang import GuppyModule
 from guppylang.decorator import guppy
-from guppylang.std.builtins import nat
+from guppylang.std.builtins import nat, array
 from guppylang.std.qsystem.wasm import spawn_wasm_contexts, WasmModule
 
 def test_wasm_functions(validate):
+#    @guppy.wasm_module("", 42)
+#    class MyWasm:
+#        @guppy.wasm
+#        def add_one(self: "MyWasm", x: int) -> int: ...
+#
+#        @guppy.wasm
+#        def swap(self: "MyWasm", x: int, y: bool) -> tuple[bool, int]: ...
+#
+#    @guppy
+#    def main() -> int:
+#        [mod1, mod2] = spawn_wasm_contexts[2](MyWasm)
+#        mod2 = MyWasm().unwrap()
+#        two = mod1.add_one(1)
+#        b, two2 = mod2.swap(two, True)
+#        mod1.discard()
+#        mod2.discard()
+#        return two + two2
+
     @guppy.wasm_module("", 42)
     class MyWasm:
-        @guppy.wasm
-        def add_one(self: "MyWasm", x: int) -> int: ...
+        pass
 
-        @guppy.wasm
-        def swap(self: "MyWasm", x: int, y: bool) -> tuple[bool, int]: ...
+    T = guppy.type_var('T')
 
     @guppy
-    def main() -> int:
-        [mod1, mod2] = spawn_wasm_contexts[2](MyWasm)
-        mod2 = MyWasm().unwrap()
-        two = mod1.add_one(1)
-        b, two2 = mod2.swap(two, True)
-        mod1.discard()
-        mod2.discard()
-        return two + two2
+    def one(xs: array(T, 1)) -> T:
+        [x] = xs
+        return x
 
-    mod = guppy.compile_module()
+    @guppy
+    def main() -> None:
+        ctxs = spawn_wasm_contexts(MyWasm)
+        x = one(ctxs)
+        x.discard()
+        return
+
+    mod = guppy.compile(main)
     validate(mod)
 
 

@@ -75,7 +75,6 @@ def compile_local_func_def(
             func.name,
             func,
             func.ty,
-            {},
             None,
             func.cfg,
             func_builder,
