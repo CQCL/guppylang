@@ -1,9 +1,5 @@
-from guppylang.std.builtins import result, py
+from guppylang.std.builtins import result
 from tests.util import compile_guppy
-
-# TODO use this once https://github.com/CQCL/guppylang/issues/599 lands
-# from guppylang.prelude._internal.checker import TAG_MAX_LEN
-# BIG_TAG = "a" * (TAG_MAX_LEN + 1)
 
 @compile_guppy
 def foo(y: bool) -> None:

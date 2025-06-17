@@ -1,6 +1,6 @@
 import string
 import textwrap
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import (
@@ -385,6 +385,108 @@ class DiagnosticsRenderer:
     def level_str(level: DiagnosticLevel) -> str:
         """Returns the text used to identify the different kinds of diagnostics."""
         return level.name.lower().capitalize()
+
+
+class MietteRenderer:
+    """Drop-in replacement for DiagnosticsRenderer using miette."""
+
+    def __init__(self, source: SourceMap) -> None:
+        self.buffer: list[str] = []
+        self.source = source
+        try:
+            from miette_py import guppy_to_miette, render_report
+
+            self._guppy_to_miette: Callable[..., Any] = guppy_to_miette
+            self._render_report: Callable[[Any], str] = render_report
+        except ImportError:
+            raise ImportError(
+                "miette-py not available. Install with: pip install miette-py/"
+            ) from None
+
+    def render_diagnostic(self, diag: Diagnostic) -> None:
+        """Renders diagnostic using miette. Same interface as DiagnosticsRenderer."""
+        spans = []
+        source_text = None
+
+        if diag.span:
+            main_span = to_span(diag.span)
+
+            # Get entire file directly from sources
+            full_file_lines = self.source.sources[main_span.file]
+            source_text = "\n".join(full_file_lines)
+
+            if source_text:
+                # Calculate offset for main span
+                start_offset = self._calculate_offset(main_span.start, source_text)
+                end_offset = self._calculate_offset(main_span.end, source_text)
+                span_len = max(1, end_offset - start_offset)
+
+                if start_offset < len(source_text) and end_offset <= len(source_text):
+                    spans.append((start_offset, span_len, diag.rendered_span_label))
+
+        # Add children spans and collect messages
+        help_messages = []
+        other_messages = []
+
+        for child in diag.children:
+            if child.span and source_text:
+                child_span = to_span(child.span)
+                start_offset = self._calculate_offset(child_span.start, source_text)
+                end_offset = self._calculate_offset(child_span.end, source_text)
+                span_len = max(1, end_offset - start_offset)
+
+                if start_offset < len(source_text) and end_offset <= len(source_text):
+                    spans.append((start_offset, span_len, child.rendered_span_label))
+
+            if child.rendered_message:
+                if isinstance(child, Help):
+                    help_messages.append(child.rendered_message)
+                else:
+                    other_messages.append(
+                        f"{child.level.name.lower()}: {child.rendered_message}"
+                    )
+
+        help_text = " ".join(help_messages) if help_messages else None
+
+        # Convert and render
+        miette_diag = self._guppy_to_miette(
+            title=diag.rendered_title,
+            level=diag.level.name.lower(),
+            source_text=source_text,
+            spans=spans,
+            message=diag.rendered_message,
+            help_text=help_text,
+        )
+
+        output = self._render_report(miette_diag)
+        self.buffer.extend(output.splitlines())
+
+        # Add other sub-diagnostic messages that don't fit in help_text
+        for msg in other_messages:
+            self.buffer.append("")
+            self.buffer.append(msg)
+
+    def _calculate_offset(self, loc: Loc, source_text: str) -> int:
+        """Calculate byte offset from line/column position."""
+        lines = source_text.split("\n")
+
+        # Convert to 0-based index
+        target_line_idx = loc.line - 1
+
+        if target_line_idx >= len(lines):
+            raise ValueError(
+                f"Line {loc.line} not found in source text with {len(lines)} lines"
+            )
+
+        # Calculate offset: sum of all previous lines + newlines + column
+        offset = 0
+        for i in range(target_line_idx):
+            offset += len(lines[i]) + 1  # +1 for newline
+
+        # Add column offset
+        final_offset = offset + loc.column
+
+        return final_offset
 
 
 def wrap(

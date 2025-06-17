@@ -5,7 +5,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import FrameType, ModuleType
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from hugr import ops
 from hugr import tys as ht
@@ -40,6 +40,7 @@ from guppylang.definition.pytket_circuits import (
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.traced import RawTracedFunctionDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
+from guppylang.dummy_decorator import _DummyGuppy, sphinx_running
 from guppylang.engine import DEF_STORE
 from guppylang.span import Loc, SourceMap, Span
 from guppylang.tracing.object import GuppyDefinition, TypeVarGuppyDefinition
@@ -189,6 +190,7 @@ class _Guppy:
         checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
+        signature: FunctionType | None = None,
     ) -> Callable[[F], F]:
         """Decorator to add custom typing or compilation behaviour to function decls.
 
@@ -207,6 +209,7 @@ class _Guppy:
                 call_checker,
                 compiler or NotImplementedCallCompiler(),
                 higher_order_value,
+                signature,
             )
             DEF_STORE.register_def(func, get_calling_frame())
             # We're pretending to return the function unchanged, but in fact we return
@@ -221,6 +224,7 @@ class _Guppy:
         checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
+        signature: FunctionType | None = None,
     ) -> Callable[[F], F]:
         """Decorator to annotate function declarations as HUGR ops.
 
@@ -232,7 +236,7 @@ class _Guppy:
                 value.
             name: The name of the function.
         """
-        return self.custom(OpCompiler(op), checker, higher_order_value, name)
+        return self.custom(OpCompiler(op), checker, higher_order_value, name, signature)
 
     def declare(self, f: F) -> F:
         defn = RawFunctionDecl(DefId.fresh(), f.__name__, None, f)
@@ -514,4 +518,4 @@ def get_calling_frame() -> FrameType:
     raise RuntimeError("Couldn't obtain stack frame for definition")
 
 
-guppy = _Guppy()
+guppy = cast(_Guppy, _DummyGuppy()) if sphinx_running() else _Guppy()

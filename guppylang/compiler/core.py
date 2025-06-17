@@ -261,6 +261,7 @@ def is_return_var(x: str) -> bool:
 
 QUANTUM_EXTENSION = tket2_exts.quantum()
 RESULT_EXTENSION = tket2_exts.result()
+DEBUG_EXTENSION = tket2_exts.debug()
 
 #: List of extension ops that have side-effects, identified by their qualified name
 EXTENSION_OPS_WITH_SIDE_EFFECTS: list[str] = [
@@ -268,6 +269,7 @@ EXTENSION_OPS_WITH_SIDE_EFFECTS: list[str] = [
     *(op_def.qualified_name() for op_def in RESULT_EXTENSION.operations.values()),
     PRELUDE.get_op("panic").qualified_name(),
     PRELUDE.get_op("exit").qualified_name(),
+    DEBUG_EXTENSION.get_op("StateResult").qualified_name(),
     # Qubit allocation and deallocation have the side-effect of changing the number of
     # available free qubits
     QUANTUM_EXTENSION.get_op("QAlloc").qualified_name(),

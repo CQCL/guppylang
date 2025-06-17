@@ -24,6 +24,7 @@ def with_owned(val: T, f: Callable[[T @ owned], tuple[Out, T]]) -> Out:
     """Runs a closure where the borrowed argument is promoted to an owned one.
 
     The closure should return two values:
+
     * A generic return value that will be passed through.
     * Another value of type `T` that is written back into the borrowed place. This can
       either be the original passed value, or a new value of the same type that was

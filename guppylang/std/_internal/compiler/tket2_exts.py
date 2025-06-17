@@ -1,4 +1,5 @@
 from tket2_exts import (
+    debug,
     futures,
     opaque_bool,
     qsystem,
@@ -17,6 +18,7 @@ QSYSTEM_UTILS_EXTENSION = qsystem_utils()
 QUANTUM_EXTENSION = quantum()
 RESULT_EXTENSION = result()
 ROTATION_EXTENSION = rotation()
+DEBUG_EXTENSION = debug()
 
 TKET2_EXTENSIONS = [
     BOOL_EXTENSION,
@@ -27,4 +29,5 @@ TKET2_EXTENSIONS = [
     QUANTUM_EXTENSION,
     RESULT_EXTENSION,
     ROTATION_EXTENSION,
+    DEBUG_EXTENSION,
 ]
