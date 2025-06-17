@@ -72,7 +72,6 @@ from guppylang.checker.errors.type_errors import (
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
     NotCallableError,
-    TupleIndexNotStaticError,
     TupleIndexOutOfBoundsError,
     TypeApplyNotGenericError,
     TypeInferenceError,
@@ -667,7 +666,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                             )
                         )
                 case _:
-                    raise GuppyError(TupleIndexNotStaticError(item_expr))
+                    raise GuppyTypeError(ExpectedError(item_expr, "an integer literal"))
         # Otherwise, it's a regular __getitem__ subscript
         # Give the item a unique name so we can refer to it later in case we also want
         # to compile a call to `__setitem__`

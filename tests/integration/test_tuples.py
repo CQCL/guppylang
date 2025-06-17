@@ -1,6 +1,6 @@
-from tests.util import compile_guppy
 from guppylang.decorator import guppy
-from guppylang.std.builtins import array
+from guppylang.std.builtins import array, owned
+from guppylang.std.quantum import qubit
 
 
 def test_indexing(validate, run_int_fn):
@@ -56,3 +56,16 @@ def test_indexing_struct(validate, run_int_fn):
     compiled = guppy.compile(main)
     validate(compiled)
     run_int_fn(compiled, 2)
+
+
+def test_rest_after_use(validate):
+    @guppy.declare
+    def use(x: qubit @ owned) -> None: ...
+
+    @guppy
+    def main() -> int:
+        t = (1, qubit())
+        use(t[1])
+        return t[0]
+
+    validate(guppy.compile(main))

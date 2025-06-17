@@ -291,7 +291,7 @@ class TupleAccess:
     @cached_property
     def describe(self) -> str:
         """A human-readable description of this place for error messages."""
-        return f"Tuple `{self}`"
+        return f"Tuple index `{self}`"
 
     def __str__(self) -> str:
         """String representation of this place."""

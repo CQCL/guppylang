@@ -138,7 +138,7 @@ class UnnamedSubscriptNotUsedError(Error):
 class UnnamedTupleNotUsedError(Error):
     title: ClassVar[str] = "Drop violation"
     span_label: ClassVar[str] = (
-        "Non-droppable items of expression with type `{container_ty}` are leaked ..."
+        "Non-droppable items inside expression of type `{tuple_ty}` are leaked"
     )
     tuple_ty: TupleType
 

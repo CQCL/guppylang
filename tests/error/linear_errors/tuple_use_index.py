@@ -9,7 +9,9 @@ def use(x: qubit @ owned) -> qubit:
 
 @compile_guppy
 def foo() -> None:
-    t = (qubit(), qubit(), qubit())
-    use(t[1])
-    discard(t[0])
-    discard(t[2])
+    t = (11, qubit(), 22)
+    q1 = use(t[1])
+    q2 = use(t[1])
+    discard(q1)
+    discard(q2)
+

@@ -316,12 +316,6 @@ class ArrayComprUnknownSizeError(Error):
 
 
 @dataclass(frozen=True)
-class TupleIndexNotStaticError(Error):
-    title: ClassVar[str] = "Non-static tuple index"
-    span_label: ClassVar[str] = "Tuple indices must be statically known integers"
-
-
-@dataclass(frozen=True)
 class TupleIndexOutOfBoundsError(Error):
     title: ClassVar[str] = "Tuple index out of bounds"
     span_label: ClassVar[str] = (
