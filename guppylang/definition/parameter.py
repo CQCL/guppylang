@@ -1,9 +1,29 @@
+import ast
 from abc import abstractmethod
 from dataclasses import dataclass, field
+from typing import ClassVar
 
-from guppylang.definition.common import CompiledDef, Definition
+from guppylang.checker.core import Globals
+from guppylang.definition.common import CompiledDef, Definition, ParsableDef
+from guppylang.diagnostic import Error
+from guppylang.error import GuppyError, InternalGuppyError
+from guppylang.span import SourceMap
 from guppylang.tys.param import ConstParam, Parameter, TypeParam
 from guppylang.tys.ty import Type
+
+
+@dataclass(frozen=True)
+class LinearConstVarError(Error):
+    title: ClassVar[str] = "Invalid const variable"
+    span_label: ClassVar[str] = (
+        "Const variable `{name}` is not allowed have {thing} type `{ty}`"
+    )
+    name: str
+    ty: Type
+
+    @property
+    def thing(self) -> str:
+        return "non-copyable" if not self.ty.copyable else "non-droppable"
 
 
 class ParamDef(Definition):
@@ -26,6 +46,27 @@ class TypeVarDef(ParamDef, CompiledDef):
     def to_param(self, idx: int) -> TypeParam:
         """Creates a parameter from this definition."""
         return TypeParam(idx, self.name, self.must_be_copyable, self.must_be_droppable)
+
+
+@dataclass(frozen=True)
+class RawConstVarDef(ParamDef, ParsableDef):
+    """A constant variable definition whose type is not parsed yet."""
+
+    type_ast: ast.expr
+    description: str = field(default="const variable", init=False)
+
+    def parse(self, globals: Globals, sources: SourceMap) -> "ConstVarDef":
+        from guppylang.tys.parsing import type_from_ast
+
+        ty = type_from_ast(self.type_ast, globals, {})
+        if not ty.copyable or not ty.droppable:
+            raise GuppyError(LinearConstVarError(self.type_ast, self.name, ty))
+        return ConstVarDef(self.id, self.name, self.defined_at, ty)
+
+    def to_param(self, idx: int) -> Parameter:
+        raise InternalGuppyError(
+            "RawConstVarDef.to_param: Parameter conversion only possible after parsing"
+        )
 
 
 @dataclass(frozen=True)

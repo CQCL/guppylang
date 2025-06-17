@@ -32,7 +32,7 @@ from guppylang.definition.function import (
     RawFunctionDef,
 )
 from guppylang.definition.overloaded import OverloadedFunctionDef
-from guppylang.definition.parameter import ConstVarDef, TypeVarDef
+from guppylang.definition.parameter import ConstVarDef, RawConstVarDef, TypeVarDef
 from guppylang.definition.pytket_circuits import (
     CompiledPytketDef,
     RawLoadPytketDef,
@@ -181,6 +181,17 @@ class _Guppy:
     def nat_var(self, name: str) -> TypeVar:
         """Creates a new const nat variable in a module."""
         defn = ConstVarDef(DefId.fresh(), name, None, NumericType(NumericType.Kind.Nat))
+        DEF_STORE.register_def(defn, get_calling_frame())
+        # We're pretending to return a `typing.TypeVar`, but in fact we return a special
+        # `GuppyDefinition` that pretends to be a TypeVar at runtime
+        return TypeVarGuppyDefinition(defn, TypeVar(name))  # type: ignore[return-value]
+
+    def const_var(self, name: str, ty: str) -> TypeVar:
+        """Creates a new const type variable."""
+        type_ast = _parse_expr_string(
+            ty, f"Not a valid Guppy type: `{ty}`", DEF_STORE.sources
+        )
+        defn = RawConstVarDef(DefId.fresh(), name, None, type_ast)
         DEF_STORE.register_def(defn, get_calling_frame())
         # We're pretending to return a `typing.TypeVar`, but in fact we return a special
         # `GuppyDefinition` that pretends to be a TypeVar at runtime

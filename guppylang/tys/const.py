@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 from guppylang.error import InternalGuppyError
@@ -20,7 +20,7 @@ class ConstBase(Transformable["Const"], ABC):
     we could have struct constants etc.
     """
 
-    ty: "Type"
+    ty: "Type" = field(hash=False)  # Types are not hashable
 
     def __post_init__(self) -> None:
         if self.ty.unsolved_vars:
