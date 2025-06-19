@@ -57,6 +57,7 @@ from guppylang.nodes import (
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
 from guppylang.std._internal.compiler.array import (
+    array_convert_from_std_array,
     array_convert_to_std_array,
     array_map,
     array_new,
@@ -76,6 +77,7 @@ from guppylang.std._internal.compiler.prelude import (
 from guppylang.std._internal.compiler.tket2_bool import (
     OpaqueBool,
     OpaqueBoolVal,
+    make_opaque,
     not_op,
     read_bool,
 )
@@ -828,9 +830,14 @@ def tket2_result_op(
 ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(
     "array.__comprehension.init"
 )
+
 ARRAY_UNWRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__unwrap_elem")
+ARRAY_WRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__wrap_elem")
 
 ARRAY_READ_BOOL: Final[GlobalConstId] = GlobalConstId.fresh("array.__read_bool")
+ARRAY_MAKE_OPAQUE_BOOL: Final[GlobalConstId] = GlobalConstId.fresh(
+    "array.__make_opaque_bool"
+)
 
 
 def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
@@ -867,6 +874,20 @@ def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
     return func
 
 
+def array_wrap_elem(ctx: CompilerContext) -> hf.Function:
+    """Returns the Hugr function that is used to wrap the elements in an regular array
+    to turn it into a option array."""
+    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Any))
+    sig = ht.PolyFuncType(
+        params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+        body=ht.FunctionType([v], [ht.Option(v)]),
+    )
+    func, already_defined = ctx.declare_global_func(ARRAY_WRAP_ELEM, sig)
+    if not already_defined:
+        func.set_outputs(func.add_op(ops.Tag(1, ht.Option(v)), func.inputs()[0]))
+    return func
+
+
 def array_read_bool(ctx: CompilerContext) -> hf.Function:
     """Returns the Hugr function that is used to unwrap the elements in an option array
     to turn it into a regular array."""
@@ -880,9 +901,83 @@ def array_read_bool(ctx: CompilerContext) -> hf.Function:
     return func
 
 
+def array_make_opaque_bool(ctx: CompilerContext) -> hf.Function:
+    """Returns the Hugr function that is used to unwrap the elements in an option array
+    to turn it into a regular array."""
+    sig = ht.PolyFuncType(
+        params=[],
+        body=ht.FunctionType([ht.Bool], [OpaqueBool]),
+    )
+    func, already_defined = ctx.declare_global_func(ARRAY_MAKE_OPAQUE_BOOL, sig)
+    if not already_defined:
+        func.set_outputs(func.add_op(make_opaque(), func.inputs()[0]))
+    return func
+
+
 T = TypeVar("T")
 
 
 def doesnt_contain_none(xs: list[T | None]) -> TypeGuard[list[T]]:
     """Checks if a list contains `None`."""
     return all(x is not None for x in xs)
+
+
+def apply_array_op_with_conversions(
+    ctx: CompilerContext,
+    builder: DfBase[ops.DfParentOp],
+    op: ops.DataflowOp,
+    elem_ty: ht.Type,
+    size_arg: ht.TypeArg,
+    input_array: Wire,
+    convert_bool: bool = False,
+) -> Wire:
+    """Applies common transformations to a Guppy array input before it can be passed to
+    a Hugr op operating on a standard Hugr array, and then reverses them again on the
+    output array.
+
+    Transformations:
+    1. Unwraps / wraps elements in options.
+    3. (Optional) Converts from / to opaque bool to / from Hugr bool.
+    2. Converts from / to value array to / from standard Hugr array.
+    """
+    unwrap = array_unwrap_elem(ctx)
+    unwrap = builder.load_function(
+        unwrap,
+        instantiation=ht.FunctionType([ht.Option(elem_ty)], [elem_ty]),
+        type_args=[ht.TypeTypeArg(elem_ty)],
+    )
+    map_op = array_map(ht.Option(elem_ty), size_arg, elem_ty)
+    unwrapped_array = builder.add_op(map_op, input_array, unwrap)
+
+    if convert_bool:
+        array_read = array_read_bool(ctx)
+        array_read = builder.load_function(array_read)
+        map_op = array_map(OpaqueBool, size_arg, ht.Bool)
+        unwrapped_array = builder.add_op(map_op, unwrapped_array, array_read)
+        elem_ty = ht.Bool
+
+    unwrapped_array = builder.add_op(
+        array_convert_to_std_array(elem_ty, size_arg), unwrapped_array
+    )
+
+    result_array = builder.add_op(op, unwrapped_array)
+
+    result_array = builder.add_op(
+        array_convert_from_std_array(elem_ty, size_arg), result_array
+    )
+
+    if convert_bool:
+        array_make_opaque = array_make_opaque_bool(ctx)
+        array_make_opaque = builder.load_function(array_make_opaque)
+        map_op = array_map(ht.Bool, size_arg, OpaqueBool)
+        result_array = builder.add_op(map_op, result_array, array_make_opaque)
+        elem_ty = OpaqueBool
+
+    wrap = array_wrap_elem(ctx)
+    wrap = builder.load_function(
+        wrap,
+        instantiation=ht.FunctionType([elem_ty], [ht.Option(elem_ty)]),
+        type_args=[ht.TypeTypeArg(elem_ty)],
+    )
+    map_op = array_map(elem_ty, size_arg, ht.Option(elem_ty))
+    return builder.add_op(map_op, result_array, wrap)
