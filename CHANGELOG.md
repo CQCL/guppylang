@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/CQCL/guppylang/compare/v0.20.0...v0.20.1) (2025-06-19)
+
+
+### Documentation
+
+* replace `compile_module` usage in README ([#1041](https://github.com/CQCL/guppylang/issues/1041)) ([03ccf3a](https://github.com/CQCL/guppylang/commit/03ccf3a27d8f7f1f186483acec0573d57c2cc1c0))
+
 ## [0.20.0](https://github.com/CQCL/guppylang/compare/v0.19.1...v0.20.0) (2025-06-19)
 
 
