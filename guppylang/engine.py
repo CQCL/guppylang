@@ -196,6 +196,7 @@ class CompilationEngine:
         # Prepare Hugr for this module
         graph = hf.Module()
         graph.metadata["name"] = "__main__"
+        graph.metadata["guppy_version"] = guppylang.__version__
 
         # Lower definitions to Hugr
         from guppylang.compiler.core import CompilerContext
