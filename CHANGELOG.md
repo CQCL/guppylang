@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.20.0](https://github.com/CQCL/guppylang/compare/v0.19.1...v0.20.0) (2025-06-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* Explicit `GuppyModule` declarations are no longer possible. Instead, use the regular `@guppy` decorator everywhere without passing an explicit module. Compilation is now triggered via the `guppy.compile` function, passing the to-be-compiled function as an argument.
+
+### Features
+
+* `with_owned` std library function to temporarily take ownership of a borrowed value ([#994](https://github.com/CQCL/guppylang/issues/994)) ([7bf75df](https://github.com/CQCL/guppylang/commit/7bf75dff290b3b652c1939bffb86a915555207d2)), closes [#992](https://github.com/CQCL/guppylang/issues/992)
+* Add `Either` type to the standard library ([#993](https://github.com/CQCL/guppylang/issues/993)) ([75c1804](https://github.com/CQCL/guppylang/commit/75c18045747017aaacad74f92fc92d4e0cd78182)), closes [#991](https://github.com/CQCL/guppylang/issues/991)
+* Add debug module with `state_result` function ([#905](https://github.com/CQCL/guppylang/issues/905)) ([2217bbc](https://github.com/CQCL/guppylang/commit/2217bbc63d910a29b5a4f732d0c3224617ca8dcf))
+* Add optional signature argument to RawCustomFunctionDef ([#1005](https://github.com/CQCL/guppylang/issues/1005)) ([79e2d5b](https://github.com/CQCL/guppylang/commit/79e2d5b77acd09645f02755de2e6e4a40ce49b10)), closes [#1003](https://github.com/CQCL/guppylang/issues/1003)
+* Add PriorityQueue to standard library ([#1006](https://github.com/CQCL/guppylang/issues/1006)) ([4e609f0](https://github.com/CQCL/guppylang/commit/4e609f08933f4e0f4f459cf10f2ecca9079bb7aa))
+* Allow users to wrap `guppy` in their own decorator ([#1017](https://github.com/CQCL/guppylang/issues/1017)) ([f047c9b](https://github.com/CQCL/guppylang/commit/f047c9bd16fdb26e757365c0ae8d2ec019f0aa06))
+* Comptime `nat` arguments ([#1015](https://github.com/CQCL/guppylang/issues/1015)) ([d2a9a07](https://github.com/CQCL/guppylang/commit/d2a9a0736c7466f943f886040865216892e6d3f9))
+* **diagnostics:** add miette bindings for enhanced error rendering ([#998](https://github.com/CQCL/guppylang/issues/998)) ([c8f2724](https://github.com/CQCL/guppylang/commit/c8f2724c17ed2d7e7523c9c9564417d7962a62f9))
+* Function overloading via static dispatch ([#1000](https://github.com/CQCL/guppylang/issues/1000)) ([6f523d6](https://github.com/CQCL/guppylang/commit/6f523d6c1f5c207fbc8e256ef12c6600e7999d12))
+* Remove explicit Guppy modules ([#983](https://github.com/CQCL/guppylang/issues/983)) ([0b2e652](https://github.com/CQCL/guppylang/commit/0b2e652d5b4899785de13cb1e0568786777f40c0))
+
+
+### Bug Fixes
+
+* deterministic worklist iteration order ([#1025](https://github.com/CQCL/guppylang/issues/1025)) ([effa51b](https://github.com/CQCL/guppylang/commit/effa51b7b582690be9ca617a66376b448f986da2)), closes [#1024](https://github.com/CQCL/guppylang/issues/1024)
+* Fix invalid Hugr when reassigning a used variable ([#1026](https://github.com/CQCL/guppylang/issues/1026)) ([8dd0bc4](https://github.com/CQCL/guppylang/commit/8dd0bc4544d62886a73af935e7e7736ea137aacc))
+* Make array results borrow array instead of copying implicitly ([#1020](https://github.com/CQCL/guppylang/issues/1020)) ([0d4625d](https://github.com/CQCL/guppylang/commit/0d4625d7b8fbbf287fb7a4a907bc32ec2c2d8d9f))
+
+
+### Reverts
+
+* borrowing array result ([#1020](https://github.com/CQCL/guppylang/issues/1020)) ([#1040](https://github.com/CQCL/guppylang/issues/1040)) ([0c390ff](https://github.com/CQCL/guppylang/commit/0c390ff0ef118322c58b331b220faa27d0aa2387))
+
+
+### Documentation
+
+* Fix sphinx autodoc for Guppy functions ([#1028](https://github.com/CQCL/guppylang/issues/1028)) ([62f6234](https://github.com/CQCL/guppylang/commit/62f6234e47e4457791752bd37b9e2f202d3016af))
+* remove wrappers on random docs, add doc to get_current_shot ([#1001](https://github.com/CQCL/guppylang/issues/1001)) ([4de4ef2](https://github.com/CQCL/guppylang/commit/4de4ef2d3cc8a06d87be0ea9921cdbaee18771f0))
+* use the sphinx furo theme for guppy compiler docs ([#1031](https://github.com/CQCL/guppylang/issues/1031)) ([e0a767b](https://github.com/CQCL/guppylang/commit/e0a767b07f25ad651bbca85dc3fac4d9b0fc8d39))
+
 ## [0.19.1](https://github.com/CQCL/guppylang/compare/v0.19.0...v0.19.1) (2025-05-27)
 
 
