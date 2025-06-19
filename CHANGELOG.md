@@ -25,12 +25,6 @@
 
 * deterministic worklist iteration order ([#1025](https://github.com/CQCL/guppylang/issues/1025)) ([effa51b](https://github.com/CQCL/guppylang/commit/effa51b7b582690be9ca617a66376b448f986da2)), closes [#1024](https://github.com/CQCL/guppylang/issues/1024)
 * Fix invalid Hugr when reassigning a used variable ([#1026](https://github.com/CQCL/guppylang/issues/1026)) ([8dd0bc4](https://github.com/CQCL/guppylang/commit/8dd0bc4544d62886a73af935e7e7736ea137aacc))
-* Make array results borrow array instead of copying implicitly ([#1020](https://github.com/CQCL/guppylang/issues/1020)) ([0d4625d](https://github.com/CQCL/guppylang/commit/0d4625d7b8fbbf287fb7a4a907bc32ec2c2d8d9f))
-
-
-### Reverts
-
-* borrowing array result ([#1020](https://github.com/CQCL/guppylang/issues/1020)) ([#1040](https://github.com/CQCL/guppylang/issues/1040)) ([0c390ff](https://github.com/CQCL/guppylang/commit/0c390ff0ef118322c58b331b220faa27d0aa2387))
 
 
 ### Documentation
