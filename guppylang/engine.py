@@ -3,6 +3,7 @@ from types import FrameType
 
 import hugr.build.function as hf
 from hugr.package import ModulePointer, Package
+from hugr.ext import Extension
 
 import guppylang
 from guppylang.definition.common import (
@@ -99,6 +100,7 @@ class CompilationEngine:
     parsed: dict[DefId, ParsedDef]
     checked: dict[DefId, CheckedDef]
     compiled: dict[DefId, CompiledDef]
+    additional_extensions: set[Extension]
 
     types_to_check_worklist: dict[DefId, ParsedDef]
     to_check_worklist: dict[DefId, ParsedDef]
@@ -107,8 +109,14 @@ class CompilationEngine:
         """Resets the compilation cache."""
         self.parsed = {}
         self.checked = {}
+        self.compiled = {}
+        self.additional_extensions = set()
         self.to_check_worklist = {}
         self.types_to_check_worklist = {}
+
+    @pretty_errors
+    def register_extension(self, extension: Extension) -> None:
+        self.additional_extensions.add(extension)
 
     def get_parsed(self, id: DefId) -> ParsedDef:
         """Look up the parsed version of a definition by its id.
@@ -185,6 +193,7 @@ class CompilationEngine:
                 id, _ = self.to_check_worklist.popitem()
             self.checked[id] = self.get_checked(id)
 
+
     @pretty_errors
     def compile(self, id: DefId) -> ModulePointer:
         """Top-level function to kick of Hugr compilation of a definition.
@@ -207,14 +216,18 @@ class CompilationEngine:
             ctx.compile(defn)
         self.compiled = ctx.compiled
 
-        # TODO: Currently we just include a hardcoded list of extensions. We should
-        #  compute this dynamically from the imported dependencies instead.
+        # TODO: Currently the list of extensions is manually managed by the user.
+        #  We should compute this dynamically from the imported dependencies instead.
         #
         # The hugr prelude and std_extensions are implicit.
         from guppylang.std._internal.compiler.tket2_exts import TKET2_EXTENSIONS
 
-        extensions = [*TKET2_EXTENSIONS, guppylang.compiler.hugr_extension.EXTENSION]
-        return ModulePointer(Package(modules=[graph.hugr], extensions=extensions), 0)
+        default_extensions = {
+            *TKET2_EXTENSIONS,
+            guppylang.compiler.hugr_extension.EXTENSION
+        }
+        all_extensions = default_extensions | self.additional_extensions
+        return ModulePointer(Package(modules=[graph.hugr], extensions=list(all_extensions)), 0)
 
 
 ENGINE: CompilationEngine = CompilationEngine()
