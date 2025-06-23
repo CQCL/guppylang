@@ -10,11 +10,11 @@ from hugr.build.dfg import DfBase
 
 from guppylang.ast_util import AstNode, get_type, has_empty_body, with_loc, with_type
 from guppylang.checker.core import Context, Globals
-from guppylang.checker.errors.type_errors import WasmTypeConversionError
 from guppylang.checker.errors.wasm import (
     FirstArgNotModule,
     NonFunctionWasmType,
     UnWasmableType,
+    WasmTypeConversionError,
 )
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature

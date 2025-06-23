@@ -10,12 +10,12 @@ from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang.checker.errors.type_errors import (
     ArrayComprUnknownSizeError,
     TypeMismatchError,
-    WasmTypeConversionError,
 )
 from guppylang.checker.errors.wasm import (
     FirstArgNotModule,
     NonFunctionWasmType,
     UnWasmableType,
+    WasmTypeConversionError,
 )
 from guppylang.checker.expr_checker import (
     ExprChecker,

@@ -5,6 +5,7 @@ from guppylang.diagnostic import Error
 from guppylang.tys.ty import Type
 
 
+@dataclass(frozen=True)
 class WasmError(Error):
     title: ClassVar[str] = "WASM signature error"
 
@@ -31,4 +32,11 @@ class NonFunctionWasmType(WasmError):
     span_label: ClassVar[str] = (
         "WASM function didn't have a function type, instead found {ty}"
     )
+    ty: Type
+
+
+@dataclass(frozen=True)
+class WasmTypeConversionError(Error):
+    title: ClassVar[str] = "Can't convert type to WASM"
+    span_label: ClassVar[str] = "`{thing}` cannot be converted to WASM"
     ty: Type
