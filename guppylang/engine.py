@@ -2,8 +2,8 @@ from collections import defaultdict
 from types import FrameType
 
 import hugr.build.function as hf
-from hugr.package import ModulePointer, Package
 from hugr.ext import Extension
+from hugr.package import ModulePointer, Package
 
 import guppylang
 from guppylang.definition.common import (
@@ -100,7 +100,7 @@ class CompilationEngine:
     parsed: dict[DefId, ParsedDef]
     checked: dict[DefId, CheckedDef]
     compiled: dict[DefId, CompiledDef]
-    additional_extensions: set[Extension]
+    additional_extensions: list[Extension]
 
     types_to_check_worklist: dict[DefId, ParsedDef]
     to_check_worklist: dict[DefId, ParsedDef]
@@ -110,13 +110,13 @@ class CompilationEngine:
         self.parsed = {}
         self.checked = {}
         self.compiled = {}
-        self.additional_extensions = set()
+        self.additional_extensions = []
         self.to_check_worklist = {}
         self.types_to_check_worklist = {}
 
     @pretty_errors
     def register_extension(self, extension: Extension) -> None:
-        self.additional_extensions.add(extension)
+        self.additional_extensions.append(extension)
 
     def get_parsed(self, id: DefId) -> ParsedDef:
         """Look up the parsed version of a definition by its id.
@@ -193,7 +193,6 @@ class CompilationEngine:
                 id, _ = self.to_check_worklist.popitem()
             self.checked[id] = self.get_checked(id)
 
-
     @pretty_errors
     def compile(self, id: DefId) -> ModulePointer:
         """Top-level function to kick of Hugr compilation of a definition.
@@ -222,12 +221,14 @@ class CompilationEngine:
         # The hugr prelude and std_extensions are implicit.
         from guppylang.std._internal.compiler.tket2_exts import TKET2_EXTENSIONS
 
-        default_extensions = {
+        all_extensions = [
             *TKET2_EXTENSIONS,
-            guppylang.compiler.hugr_extension.EXTENSION
-        }
-        all_extensions = default_extensions | self.additional_extensions
-        return ModulePointer(Package(modules=[graph.hugr], extensions=list(all_extensions)), 0)
+            guppylang.compiler.hugr_extension.EXTENSION,
+            *self.additional_extensions,
+        ]
+        return ModulePointer(
+            Package(modules=[graph.hugr], extensions=all_extensions), 0
+        )
 
 
 ENGINE: CompilationEngine = CompilationEngine()
