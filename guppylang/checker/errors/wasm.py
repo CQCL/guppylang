@@ -22,7 +22,7 @@ class FirstArgNotModule(WasmError):
 @dataclass(frozen=True)
 class UnWasmableType(WasmError):
     span_label: ClassVar[str] = (
-        "WASM function signature contained an unsupported type: {ty}"
+        "WASM function signature contained an unsupported type: `{ty}`"
     )
     ty: Type
 
