@@ -10,10 +10,17 @@ from guppylang.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang.checker.errors.type_errors import (
     ArrayComprUnknownSizeError,
     TypeMismatchError,
+    WasmTypeConversionError,
+)
+from guppylang.checker.errors.wasm import (
+    FirstArgNotModule,
+    NonFunctionWasmType,
+    UnWasmableType,
 )
 from guppylang.checker.expr_checker import (
     ExprChecker,
     ExprSynthesizer,
+    check_call,
     check_num_args,
     check_type_against,
     synthesize_call,
@@ -48,9 +55,11 @@ from guppylang.tys.builtin import (
     is_array_type,
     is_bool_type,
     is_sized_iter_type,
+    is_string_type,
     nat_type,
     sized_iter_type,
     string_type,
+    wasm_module_info,
 )
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.subst import Subst
@@ -60,7 +69,9 @@ from guppylang.tys.ty import (
     InputFlags,
     NoneType,
     NumericType,
+    OpaqueType,
     StructType,
+    TupleType,
     Type,
     unify,
 )
@@ -556,3 +567,75 @@ class BarrierChecker(CustomCallChecker):
         assert len(inst) == 0, "func_ty is not generic"
         node = BarrierExpr(args=args, func_ty=func_ty)
         return with_loc(self.node, node), ret_ty
+
+
+class WasmCallChecker(CustomCallChecker):
+    type_sanitised: bool = False
+
+    def sanitise_type(self) -> None:
+        # Place to highlight in error messages
+        loc = self.func.defined_at
+
+        if isinstance(self.func.ty, FunctionType):
+            match self.func.ty.inputs[0]:
+                case FuncInput(ty=ty, flags=InputFlags.Inout) if wasm_module_info(
+                    ty
+                ) is not None:
+                    pass
+                case FuncInput(ty=ty):
+                    raise GuppyError(FirstArgNotModule(loc, ty))
+            for inp in self.func.ty.inputs[1:]:
+                if not self.is_type_wasmable(inp.ty):
+                    raise GuppyError(UnWasmableType(loc, inp.ty))
+            if not self.is_type_wasmable(self.func.ty.output):
+                raise GuppyError(UnWasmableType(loc, self.func.ty.output))
+        else:
+            raise GuppyError(NonFunctionWasmType(loc, self.func.ty))
+        self.type_sanitised = True
+
+    def is_type_wasmable(self, ty: Type) -> bool:
+        match ty:
+            case NumericType():
+                return True
+            case NoneType():
+                return True
+            case TupleType(element_types=tys):
+                return all(self.is_type_wasmable(ty) for ty in tys)
+            case FunctionType() as f:
+                return self.is_type_wasmable(f.output) and all(
+                    self.is_type_wasmable(inp.ty) and inp.flags != InputFlags.Inout
+                    for inp in f.inputs
+                )
+            case OpaqueType() as ty:
+                if is_string_type(ty):
+                    return True
+                elif is_array_type(ty):
+                    return all(
+                        self.is_type_wasmable(arg.ty)
+                        for arg in ty.args
+                        if isinstance(arg, TypeArg)
+                    )
+                return is_bool_type(ty)
+            case _:
+                return False
+
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        if not self.is_type_wasmable(ty):
+            raise GuppyTypeError(WasmTypeConversionError(self.node, ty))
+
+        # Use default implementation from the expression checker
+        args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
+
+        return GlobalCall(
+            def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty
+        ), subst
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        if not self.type_sanitised:
+            self.sanitise_type()
+
+        # Use default implementation from the expression checker
+        args, ty, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
+        return GlobalCall(
+            def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty
+        ), ty

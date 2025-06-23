@@ -188,15 +188,6 @@ def _option_to_hugr(args: Sequence[Argument]) -> ht.Type:
     return ht.Option(arg.ty.to_hugr())
 
 
-def wasm_module_to_hugr(args: Sequence[Argument]) -> ht.Type:
-    assert args == []
-    # [filename, filehash] = args
-    # assert isinstance(filename, ConstArg)
-    # assert isinstance(filehash, ConstArg)
-    ty = wasm().get_type("context")
-    return ty.instantiate([])
-
-
 callable_type_def = CallableTypeDef(DefId.fresh(), None)
 tuple_type_def = _TupleTypeDef(DefId.fresh(), None)
 none_type_def = _NoneTypeDef(DefId.fresh(), None)
@@ -303,20 +294,6 @@ def string_type() -> OpaqueType:
     return OpaqueType([], string_type_def)
 
 
-wasm_module_type_def = OpaqueTypeDef(
-    id=DefId.fresh(),
-    name="WasmModule",
-    defined_at=None,
-    params=[
-        ConstParam(0, "filename", string_type()),
-        ConstParam(1, "filehash", int_type()),
-    ],
-    never_copyable=True,
-    never_droppable=True,
-    to_hugr=wasm_module_to_hugr,
-)
-
-
 def list_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], list_type_def)
 
@@ -382,8 +359,10 @@ def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
     return isinstance(ty, OpaqueType) and ty.defn == sized_iter_type_def
 
 
-def is_wasm_module_type(ty: Type) -> TypeGuard[OpaqueType]:
-    return isinstance(ty, OpaqueType) and ty.defn == wasm_module_type_def
+def wasm_module_info(ty: Type) -> tuple[str, int] | None:
+    if isinstance(ty, OpaqueType) and isinstance(ty.defn, WasmModuleTypeDef):
+        return ty.defn.wasm_file, ty.defn.wasm_hash
+    return None
 
 
 def get_element_type(ty: Type) -> Type:

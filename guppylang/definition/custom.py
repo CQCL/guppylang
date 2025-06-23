@@ -37,7 +37,7 @@ from guppylang.tys.builtin import (
     is_array_type,
     is_bool_type,
     is_string_type,
-    is_wasm_module_type,
+    wasm_module_info,
 )
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -323,9 +323,9 @@ class WasmCallChecker(CustomCallChecker):
 
         if isinstance(self.func.ty, FunctionType):
             match self.func.ty.inputs[0]:
-                case FuncInput(ty=ty, flags=InputFlags.Inout) if is_wasm_module_type(
+                case FuncInput(ty=ty, flags=InputFlags.Inout) if wasm_module_info(
                     ty
-                ):
+                ) is not None:
                     pass
                 case FuncInput(ty=ty):
                     raise GuppyError(FirstArgNotModule(loc, ty))

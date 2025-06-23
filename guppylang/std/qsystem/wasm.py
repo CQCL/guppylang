@@ -8,7 +8,6 @@ from guppylang.decorator import guppy
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.std.builtins import array, comptime, nat
-from guppylang.tys.builtin import wasm_module_to_hugr
 
 
 class WasmCompiler(CustomInoutCallCompiler):
@@ -29,20 +28,10 @@ class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
         return CallReturnWires(regular_returns=[], inout_returns=[])
 
 
-# @guppy.extend_type(wasm_module_type_def)
-@guppy.type(wasm_module_to_hugr, copyable=False, droppable=False)
-class WasmModule:
-    pass
-
-
 T = guppy.type_var("T", copyable=False, droppable=False)
-
-# @guppy
-# def goo(w: WasmModule) -> WasmModule:
-#    return w
 
 
 @guppy
 @no_type_check
-def spawn_wasm_contexts(n: nat @ comptime, spawn: Callable[[nat], T]) -> "array[T, n]":
+def spawn_wasm_contexts(n: nat @ comptime, spawn: Callable[[nat], T]) -> "array[T, n]":  # noqa: F821
     return array(spawn(nat(ix)) for ix in range(n))

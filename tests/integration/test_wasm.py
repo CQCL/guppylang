@@ -1,46 +1,28 @@
 from guppylang import GuppyModule
 from guppylang.decorator import guppy
 from guppylang.std.builtins import nat, array
-from guppylang.std.qsystem.wasm import spawn_wasm_contexts, WasmModule
+from guppylang.std.qsystem.wasm import spawn_wasm_contexts
 
 def test_wasm_functions(validate):
-#    @guppy.wasm_module("", 42)
-#    class MyWasm:
-#        @guppy.wasm
-#        def add_one(self: "MyWasm", x: int) -> int: ...
-#
-#        @guppy.wasm
-#        def swap(self: "MyWasm", x: int, y: bool) -> tuple[bool, int]: ...
-#
-#    @guppy
-#    def main() -> int:
-#        [mod1, mod2] = spawn_wasm_contexts[2](MyWasm)
-#        mod2 = MyWasm().unwrap()
-#        two = mod1.add_one(1)
-#        b, two2 = mod2.swap(two, True)
-#        mod1.discard()
-#        mod2.discard()
-#        return two + two2
-
     @guppy.wasm_module("", 42)
     class MyWasm:
-        pass
+        @guppy.wasm
+        def add_one(self: "MyWasm", x: int) -> int: ...
 
-    T = guppy.type_var('T')
-
-    @guppy
-    def one(xs: array(T, 1)) -> T:
-        [x] = xs
-        return x
+        @guppy.wasm
+        def swap(self: "MyWasm", x: int, y: bool) -> tuple[bool, int]: ...
 
     @guppy
-    def main() -> None:
-        ctxs = spawn_wasm_contexts(MyWasm)
-        x = one(ctxs)
-        x.discard()
-        return
+    def main() -> int:
+        [mod1, mod2] = spawn_wasm_contexts(2, MyWasm)
+        two = mod1.add_one(1)
+        b, two2 = mod2.swap(two, True)
+        mod1.discard()
+        mod2.discard()
+        return two + two2
+        return 2
 
-    mod = guppy.compile(main)
+    mod = main.compile()
     validate(mod)
 
 
@@ -56,13 +38,13 @@ def test_wasm_methods(validate):
 
     @guppy
     def main() -> int:
-        mod = MyWasm().unwrap()
+        mod = MyWasm(0)
         x = mod.foo()
         y = mod.bar(x)
         mod.discard()
         return x
 
-    mod = guppy.compile_module()
+    mod = main.compile()
     validate(mod)
 
 
@@ -76,35 +58,32 @@ def test_wasm_types(validate):
 
     @guppy
     def main() -> None:
-        mod = MyWasm().unwrap()
+        mod = MyWasm(0)
         mod.foo((0, (1, 2.0)), False)
         mod.discard()
         return
 
-    mod = guppy.compile_module()
+    mod = main.compile()
     validate(mod)
 
 
 def test_wasm_guppy_module(validate):
-    mod = GuppyModule("my_wasm")
-
-    @guppy.wasm_module("", 42, module=mod)
+    @guppy.wasm_module("", 42)
     class MyWasm:
-        @guppy.wasm(mod)
+        @guppy.wasm
         def add_one(self: "MyWasm", x: int) -> int: ...
 
-        @guppy.wasm(mod)
+        @guppy.wasm
         def swap(self: "MyWasm", x: int, y: bool) -> tuple[bool, int]: ...
 
-    @guppy(mod)
+    @guppy
     def main() -> int:
-        mod1 = MyWasm().unwrap()
-        mod2 = MyWasm().unwrap()
+        [mod1, mod2] = spawn_wasm_contexts(2, MyWasm)
         two = mod1.add_one(1)
         b, two2 = mod2.swap(two, True)
         mod1.discard()
         mod2.discard()
         return two + two2
 
-    mod = guppy.compile_module()
+    mod = main.compile()
     validate(mod)

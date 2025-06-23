@@ -45,8 +45,8 @@ from guppylang.definition.traced import RawTracedFunctionDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.engine import DEF_STORE
 from guppylang.span import Loc, SourceMap, Span
+from guppylang.std._internal.checker import WasmCallChecker
 from guppylang.std._internal.compiler.wasm import (
-    WasmCallChecker,
     WasmModuleCallCompiler,
     WasmModuleDiscardCompiler,
     WasmModuleInitCompiler,
@@ -56,8 +56,6 @@ from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     WasmModuleTypeDef,
 )
-from guppylang.tys.const import ConstValue
-from guppylang.tys.constarg import const_string_arg
 from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
@@ -448,21 +446,8 @@ class _Guppy:
                 filename,
                 filehash,
             )
-            # wasm_module = WasmModule(
-            #    DefId.fresh(guppy_module),
-            #    cls.__name__,
-            #    None,
-            #    filename,
-            #    filehash,
-            #    ctx_id,
-            # )
-            type_args = [
-                const_string_arg(filename),
-                ConstValue(NumericType(NumericType.Kind.Int), filehash).to_arg(),
-            ]
 
             wasm_module_ty = wasm_module.check_instantiate([], None)
-            # wasm_module_ty = wasm_module.check_instantiate(type_args, None)
 
             DEF_STORE.register_def(wasm_module, get_calling_frame())
             for val in cls.__dict__.values():
@@ -473,7 +458,6 @@ class _Guppy:
                 DefId.fresh(),
                 "__new__",
                 None,
-                # TODO: Make this match the compiler implementation!
                 FunctionType(
                     [
                         FuncInput(
@@ -482,7 +466,6 @@ class _Guppy:
                     ],
                     wasm_module_ty,
                 ),
-                # FunctionType([FuncInput(NumericType(NumericType.Kind.Nat), flags=InputFlags.Owned)], option_type(wasm_module_ty)),
                 DefaultCallChecker(),
                 WasmModuleInitCompiler(),
                 True,
