@@ -127,7 +127,7 @@ def test_mem_swap(validate):
 
 import pytest
 
-pytest.mark.skip("TODO: Fix")
+@pytest.mark.skip("TODO: Fix")
 def test_non_terminating(validate):
     @guppy
     def foo() -> None:
