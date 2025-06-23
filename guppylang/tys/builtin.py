@@ -320,21 +320,6 @@ def option_type(element_ty: Type) -> OpaqueType:
     return OpaqueType([TypeArg(element_ty)], option_type_def)
 
 
-# def wasm_module_type(module: "WasmModule") -> OpaqueType:
-#    return OpaqueType(
-#        [
-#            const_string_arg(module.wasm_file),
-#            ConstArg(
-#                ConstValue(
-#                    NumericType(NumericType.Kind.Int),
-#                    hugr.std.int.IntVal(module.wasm_hash),
-#                )
-#            ),
-#        ],
-#        wasm_module_type_def,
-#    )
-
-
 def is_bool_type(ty: Type) -> bool:
     return isinstance(ty, OpaqueType) and ty.defn == bool_type_def
 
