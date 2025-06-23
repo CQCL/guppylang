@@ -6,4 +6,5 @@ def test_metadata():
         pass
 
     hugr = foo.compile().module
-    assert hugr.entrypoint.metadata['guppy_version'] == __version__
+    assert hugr.module_root.metadata["__generator"]["name"] == "guppy"
+    assert hugr.module_root.metadata["__generator"]["version"] == __version__
