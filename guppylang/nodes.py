@@ -59,13 +59,11 @@ class GlobalCall(ast.expr):
     def_id: "DefId"
     args: list[ast.expr]
     type_args: Inst  # Inferred type arguments
-    cached_sig: FunctionType | None
 
     _fields = (
         "def_id",
         "args",
         "type_args",
-        "cached_sig",
     )
 
 

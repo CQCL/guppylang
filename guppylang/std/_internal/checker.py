@@ -627,9 +627,7 @@ class WasmCallChecker(CustomCallChecker):
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
 
-        return GlobalCall(
-            def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty
-        ), subst
+        return GlobalCall(def_id=self.func.id, args=args, type_args=inst), subst
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
         if not self.type_sanitised:
@@ -637,6 +635,4 @@ class WasmCallChecker(CustomCallChecker):
 
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
-        return GlobalCall(
-            def_id=self.func.id, args=args, type_args=inst, cached_sig=self.func.ty
-        ), ty
+        return GlobalCall(def_id=self.func.id, args=args, type_args=inst), ty

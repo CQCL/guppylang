@@ -77,10 +77,10 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         fn_name_arg = ConstStringArg(ConstValue(string_type(), self.fn_name)).to_hugr()
         # Function type without Inout context arg (for building)
         assert isinstance(self.node, GlobalCall)
-        assert self.node.cached_sig is not None
+        assert self.func is not None
         wasm_sig = FunctionType(
-            self.node.cached_sig.inputs[1:],
-            self.node.cached_sig.output,
+            self.func.ty.inputs[1:],
+            self.func.ty.output,
         ).to_hugr()
 
         inputs_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.input])
@@ -95,7 +95,7 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
 
         # Get the WASM module information from the type
         assert isinstance(self.node, GlobalCall | LocalCall)
-        selfarg = self.node.cached_sig.inputs[0].ty
+        selfarg = self.func.ty.inputs[0].ty
         if info := wasm_module_info(selfarg):
             const_module = self.builder.add_const(ConstWasmModule(*info))
         else:
