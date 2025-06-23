@@ -4,7 +4,6 @@ import hugr.model
 import hugr.std
 from hugr import Wire, ops, val
 from hugr import tys as ht
-from tket2.extensions import futures, wasm
 
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
@@ -12,6 +11,10 @@ from guppylang.error import InternalGuppyError
 from guppylang.nodes import GlobalCall, LocalCall
 from guppylang.std._internal.compiler.arithmetic import convert_itousize
 from guppylang.std._internal.compiler.prelude import build_unwrap
+from guppylang.std._internal.compiler.tket2_exts import (
+    FUTURES_EXTENSION,
+    WASM_EXTENSION,
+)
 from guppylang.tys.builtin import (
     string_type,
     wasm_module_info,
@@ -28,21 +31,19 @@ class WasmModuleInitCompiler(CustomInoutCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         # Make a ConstWasmModule as a CustomConst
         assert len(args) == 1
-        w = wasm()
         ctx_arg = args[0]
         ctx_wire = self.builder.add_op(convert_itousize(), ctx_arg)
 
-        ctx_ty = w.get_type("context").instantiate([])
+        ctx_ty = WASM_EXTENSION.get_type("context").instantiate([])
         get_ctx_op = ops.ExtOp(
-            w.get_op("get_context"),
+            WASM_EXTENSION.get_op("get_context"),
             ht.FunctionType([ht.USize()], [ht.Option(ctx_ty)]),
         )
         node = self.builder.add_op(get_ctx_op, ctx_wire)
         opt_w: Wire = node[0]
         err = "Failed to spawn WASM context"
-        ws: list[Wire] = list(build_unwrap(self.builder, opt_w, err))
-        assert len(ws) == 1
-        return CallReturnWires(regular_returns=ws, inout_returns=[])
+        out_node = build_unwrap(self.builder, opt_w, err)
+        return CallReturnWires(regular_returns=[out_node], inout_returns=[])
 
 
 # Compiler for initialising WASM modules
@@ -50,8 +51,7 @@ class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         assert len(args) == 1
         ctx = args[0]
-        w = wasm()
-        op = w.get_op("dispose_context").instantiate([])
+        op = WASM_EXTENSION.get_op("dispose_context").instantiate([])
         self.builder.add_op(op, ctx)
         return CallReturnWires(regular_returns=[], inout_returns=[])
 
@@ -71,10 +71,8 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         # - a WASM context
         # - any args meant for the WASM function
         assert len(args) >= 1
-        w = wasm()
-        fu = futures()
-        module_ty = w.get_type("module").instantiate([])
-        ctx_ty = w.get_type("context").instantiate([])
+        module_ty = WASM_EXTENSION.get_type("module").instantiate([])
+        ctx_ty = WASM_EXTENSION.get_type("context").instantiate([])
 
         fn_name_arg = ConstStringArg(ConstValue(string_type(), self.fn_name)).to_hugr()
         # Function type without Inout context arg (for building)
@@ -88,8 +86,10 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         inputs_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.input])
         output_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.output])
 
-        func_ty = w.get_type("func").instantiate([inputs_row_arg, output_row_arg])
-        future_ty = fu.get_type("Future").instantiate(
+        func_ty = WASM_EXTENSION.get_type("func").instantiate(
+            [inputs_row_arg, output_row_arg]
+        )
+        future_ty = FUTURES_EXTENSION.get_type("Future").instantiate(
             [ht.Tuple(*wasm_sig.output).type_arg()]
         )
 
@@ -106,21 +106,21 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         wasm_module = self.builder.load(const_module)
 
         # Lookup the function we want
-        wasm_opdef = w.get_op("lookup").instantiate(
+        wasm_opdef = WASM_EXTENSION.get_op("lookup").instantiate(
             [fn_name_arg, inputs_row_arg, output_row_arg],
             ht.FunctionType([module_ty], [func_ty]),
         )
         wasm_func = self.builder.add_op(wasm_opdef, wasm_module)
 
         # Call the function
-        call_op = w.get_op("call").instantiate(
+        call_op = WASM_EXTENSION.get_op("call").instantiate(
             [inputs_row_arg, output_row_arg],
             ht.FunctionType([ctx_ty, func_ty, *wasm_sig.input], [ctx_ty, future_ty]),
         )
 
         ctx, future = self.builder.add_op(call_op, args[0], wasm_func, *args[1:])
 
-        read_opdef = fu.get_op("Read").instantiate(
+        read_opdef = FUTURES_EXTENSION.get_op("Read").instantiate(
             [ht.Tuple(*wasm_sig.output).type_arg()],
             ht.FunctionType([future_ty], [ht.Tuple(*wasm_sig.output)]),
         )
@@ -140,8 +140,7 @@ class ConstWasmModule(val.ExtensionValue):
     wasm_hash: int
 
     def to_value(self) -> val.Extension:
-        w = wasm()
-        ty = w.get_type("module").instantiate([])
+        ty = WASM_EXTENSION.get_type("module").instantiate([])
 
         name = "tket2.wasm.ConstWasmModule"
         payload = {"name": self.wasm_file, "hash": self.wasm_hash}

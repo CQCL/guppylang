@@ -7,7 +7,6 @@ import hugr.std
 import hugr.std.collections.array
 import hugr.std.collections.list
 from hugr import tys as ht
-from tket2.extensions import wasm
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, DefId
@@ -15,6 +14,7 @@ from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
+from guppylang.std._internal.compiler.tket2_exts import WASM_EXTENSION
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import Const, ConstValue
 
@@ -123,7 +123,7 @@ class WasmModuleTypeDef(OpaqueTypeDef):
 
     def to_hugr(self, args: Sequence[TypeArg | ConstArg], /) -> ht.Type:
         assert args == []
-        ty = wasm().get_type("context")
+        ty = WASM_EXTENSION.get_type("context")
         return ty.instantiate([])
 
 
