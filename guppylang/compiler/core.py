@@ -52,7 +52,7 @@ class CompilerContext:
 
     module: DefinitionBuilder[ops.Module]
     compiled: dict[DefId, CompiledDef]
-    worklist: set[DefId]
+    worklist: dict[DefId, None]  # use dict over set for deterministic iteration order
 
     global_funcs: dict[GlobalConstId, hf.Function]
 
@@ -63,7 +63,7 @@ class CompilerContext:
         module: DefinitionBuilder[ops.Module],
     ) -> None:
         self.module = module
-        self.worklist = set()
+        self.worklist = {}
         self.compiled = {}
         self.global_funcs = {}
         self.checked_globals = Globals(None)
@@ -76,7 +76,7 @@ class CompilerContext:
         if def_id not in self.compiled:
             defn = ENGINE.get_checked(def_id)
             self.compiled[def_id] = self._compile(defn)
-            self.worklist.add(def_id)
+            self.worklist[def_id] = None
         return self.compiled[def_id]
 
     def _compile(self, defn: CheckedDef) -> CompiledDef:
@@ -91,9 +91,9 @@ class CompilerContext:
             return
 
         self.compiled[defn.id] = self._compile(defn)
-        self.worklist.add(defn.id)
+        self.worklist[defn.id] = None
         while self.worklist:
-            next_id = self.worklist.pop()
+            next_id = self.worklist.popitem()[0]
             with track_hugr_side_effects():
                 next_def = self.build_compiled_def(next_id)
                 next_def.compile_inner(self)
@@ -228,6 +228,7 @@ def is_return_var(x: str) -> bool:
 
 QUANTUM_EXTENSION = tket2_exts.quantum()
 RESULT_EXTENSION = tket2_exts.result()
+DEBUG_EXTENSION = tket2_exts.debug()
 
 #: List of extension ops that have side-effects, identified by their qualified name
 EXTENSION_OPS_WITH_SIDE_EFFECTS: list[str] = [
@@ -235,6 +236,7 @@ EXTENSION_OPS_WITH_SIDE_EFFECTS: list[str] = [
     *(op_def.qualified_name() for op_def in RESULT_EXTENSION.operations.values()),
     PRELUDE.get_op("panic").qualified_name(),
     PRELUDE.get_op("exit").qualified_name(),
+    DEBUG_EXTENSION.get_op("StateResult").qualified_name(),
     # Qubit allocation and deallocation have the side-effect of changing the number of
     # available free qubits
     QUANTUM_EXTENSION.get_op("QAlloc").qualified_name(),

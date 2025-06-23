@@ -1,6 +1,6 @@
 [project]
 name = "guppylang"
-version = "0.19.1"
+version = "0.20.0"
 requires-python = ">=3.10,<4"
 description = "Pythonic quantum-classical programming language"
 license = { file = "LICENCE" }
@@ -39,7 +39,7 @@ dependencies = [
     "pydantic >=2.7.0b1,<3",
     "typing-extensions >=4.9.0,<5",
     "hugr ~= 0.12.1",
-    "tket2-exts ~= 0.8.0",
+    "tket2-exts ~= 0.9.1",
 ]
 
 [project.optional-dependencies]
@@ -51,7 +51,7 @@ homepage = "https://github.com/CQCL/guppylang"
 repository = "https://github.com/CQCL/guppylang"
 
 [dependency-groups]
-docs = ["sphinx >=7.2.6,<9", "sphinx-book-theme >=1.1.2,<2"]
+docs = ["furo>=2024.8.6", "sphinx >=7.2.6,<9"]
 dev = [
     { include-group = "lint" },
     { include-group = "test" },
@@ -65,8 +65,9 @@ test = [
     "pytest-notebook >=0.10.0,<0.11",
     "pytest-snapshot >=0.9.0,<1",
     "ipykernel >=6.29.5,<7",
-    "tket2 ~= 0.10.0",
+    "tket2 ~= 0.11.0",
     "pytest-benchmark>=5.1.0",
+    "miette-py",
 ]
 execution = [
     { include-group = "test" },
@@ -79,10 +80,11 @@ execution = [
 pytket_integration = [{ include-group = "test" }, "pytket >=1.34.0"]
 
 [tool.uv.workspace]
-members = ["execute_llvm"]
+members = ["execute_llvm", "miette-py"]
 
 [tool.uv.sources]
 execute-llvm = { workspace = true }
+miette-py = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "7f233fa" }
@@ -99,6 +101,9 @@ build-backend = "hatchling.build"
 plugins = ["pydantic.mypy"]
 strict = true
 allow_redefinition = true
+
+[[tool.mypy.overrides]]
+module = ["miette_py"]
 
 
 [tool.coverage.report]

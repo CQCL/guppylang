@@ -56,6 +56,7 @@ from guppylang.nodes import (
     PartialApply,
     PlaceNode,
     ResultExpr,
+    StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
 )
@@ -436,6 +437,10 @@ class BBLinearityChecker(ast.NodeVisitor):
         self._visit_call_args(func_ty, node)
         self._reassign_inout_args(func_ty, node)
 
+    def visit_StateResultExpr(self, node: StateResultExpr) -> None:
+        self._visit_call_args(node.func_ty, node)
+        self._reassign_inout_args(node.func_ty, node)
+
     def visit_Expr(self, node: ast.Expr) -> None:
         # An expression statement where the return value is discarded
         self.visit(node.value)
@@ -744,7 +749,9 @@ def check_cfg_linearity(
                     err.add_sub_diagnostic(PlaceNotUsedError.Fix(None))
                     raise GuppyError(err)
 
-        def live_places_row(bb: BB, original_row: Row[Variable]) -> Row[Place]:
+        def live_places_row(
+            bb: BB, original_row: Row[Variable], pred_scope: Scope | None
+        ) -> Row[Place]:
             """Construct a row of all places that are live at the start of a given BB.
 
             The only exception are input and exit BBs whose signature should not be
@@ -752,15 +759,14 @@ def check_cfg_linearity(
             """
             if bb in (cfg.entry_bb, cfg.exit_bb):
                 return original_row
-            # N.B. we can ignore lint B023. The use of loop variable `scope` below is
-            # safe since we don't call this function outside the loop.
-            return [scope[x] for x in live_before[bb]]  # noqa: B023
+            assert pred_scope is not None
+            return [pred_scope[x] for x in live_before[bb]]
 
         assert isinstance(bb, CheckedBB)
         sig = Signature(
-            input_row=live_places_row(bb, bb.sig.input_row),
+            input_row=live_places_row(bb, bb.sig.input_row, scope.parent_scope),
             output_rows=[
-                live_places_row(succ, output_row)
+                live_places_row(succ, output_row, scope)
                 for succ, output_row in zip(
                     bb.successors, bb.sig.output_rows, strict=True
                 )

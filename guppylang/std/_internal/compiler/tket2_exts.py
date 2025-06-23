@@ -1,4 +1,5 @@
 from tket2_exts import (
+    debug,
     futures,
     opaque_bool,
     qsystem,
@@ -11,6 +12,7 @@ from tket2_exts import (
 )
 
 BOOL_EXTENSION = opaque_bool()
+DEBUG_EXTENSION = debug()
 FUTURES_EXTENSION = futures()
 QSYSTEM_EXTENSION = qsystem()
 QSYSTEM_RANDOM_EXTENSION = qsystem_random()
@@ -22,6 +24,7 @@ WASM_EXTENSION = wasm()
 
 TKET2_EXTENSIONS = [
     BOOL_EXTENSION,
+    DEBUG_EXTENSION,
     FUTURES_EXTENSION,
     QSYSTEM_EXTENSION,
     QSYSTEM_RANDOM_EXTENSION,
