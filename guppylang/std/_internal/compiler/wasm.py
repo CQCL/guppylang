@@ -1,8 +1,4 @@
-from dataclasses import dataclass
-
-import hugr.model
-import hugr.std
-from hugr import Wire, ops, val
+from hugr import Wire, ops
 from hugr import tys as ht
 
 from guppylang.definition.custom import CustomInoutCallCompiler
@@ -14,6 +10,7 @@ from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.std._internal.compiler.tket2_exts import (
     FUTURES_EXTENSION,
     WASM_EXTENSION,
+    ConstWasmModule,
 )
 from guppylang.tys.builtin import (
     string_type,
@@ -130,29 +127,3 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         ws: list[Wire] = list(node[:])
 
         return CallReturnWires(regular_returns=ws, inout_returns=[ctx])
-
-
-@dataclass(frozen=True)
-class ConstWasmModule(val.ExtensionValue):
-    """Python wrapper for the tket2 ConstWasmModule type"""
-
-    wasm_file: str
-    wasm_hash: int
-
-    def to_value(self) -> val.Extension:
-        ty = WASM_EXTENSION.get_type("module").instantiate([])
-
-        name = "tket2.wasm.ConstWasmModule"
-        payload = {"name": self.wasm_file, "hash": self.wasm_hash}
-        return val.Extension(name, typ=ty, val=payload, extensions=["tket2.wasm"])
-
-    def __str__(self) -> str:
-        return (
-            f"ConstWasmModule(wasm_file={self.wasm_file}, wasm_hash={self.wasm_hash})"
-        )
-
-    def to_model(self) -> hugr.model.Term:
-        file_tm = hugr.model.Literal(self.wasm_file)
-        hash_tm = hugr.model.Literal(self.wasm_hash)
-
-        return hugr.model.Apply("tket2.wasm.ConstWasmModule", [file_tm, hash_tm])
