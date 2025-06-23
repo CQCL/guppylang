@@ -17,8 +17,6 @@ from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
 from guppylang.std._internal.compiler.tket2_exts import WASM_EXTENSION
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import Const, ConstValue
-
-# from guppylang.tys.constarg import const_string_arg
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
 from guppylang.tys.param import ConstParam, TypeParam
 from guppylang.tys.ty import (
