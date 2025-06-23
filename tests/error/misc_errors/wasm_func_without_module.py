@@ -8,9 +8,9 @@ class Foo:
 
 @guppy
 def main() -> None:
-    mod = Foo().unwrap()
+    mod = Foo(0)
     mod.foo(42)
     mod.discard()
     return
 
-guppy.compile_module()
+main.compile()

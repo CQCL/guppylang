@@ -9,9 +9,9 @@ class Foo:
 
 @guppy
 def main() -> qubit:
-    mod = Foo().unwrap()
+    mod = Foo(0)
     q = mod.foo(qubit())
     mod.discard
     return q
 
-guppy.compile_module()
+main.compile()
