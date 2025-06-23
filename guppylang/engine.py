@@ -2,6 +2,11 @@ from collections import defaultdict
 from types import FrameType
 
 import hugr.build.function as hf
+import hugr.std.collections.array
+import hugr.std.float
+import hugr.std.int
+import hugr.std.logic
+import hugr.std.prelude
 from hugr.package import ModulePointer, Package
 
 import guppylang
@@ -195,7 +200,7 @@ class CompilationEngine:
 
         # Prepare Hugr for this module
         graph = hf.Module()
-        graph.metadata["name"] = "__main__"
+        graph.metadata["name"] = "__main__"  # entrypoint metadata
 
         # Lower definitions to Hugr
         from guppylang.compiler.core import CompilerContext
@@ -214,6 +219,24 @@ class CompilationEngine:
         from guppylang.std._internal.compiler.tket2_exts import TKET2_EXTENSIONS
 
         extensions = [*TKET2_EXTENSIONS, guppylang.compiler.hugr_extension.EXTENSION]
+        # TODO replace with computed extensions after https://github.com/CQCL/guppylang/issues/550
+        all_used_extensions = [
+            *extensions,
+            hugr.std.prelude.PRELUDE_EXTENSION,
+            hugr.std.collections.array.EXTENSION,
+            hugr.std.float.FLOAT_OPS_EXTENSION,
+            hugr.std.float.FLOAT_TYPES_EXTENSION,
+            hugr.std.int.INT_OPS_EXTENSION,
+            hugr.std.int.INT_TYPES_EXTENSION,
+            hugr.std.logic.EXTENSION,
+        ]
+        graph.hugr.module_root.metadata["__used_extensions"] = [
+            {
+                "name": ext.name,
+                "version": str(ext.version),
+            }
+            for ext in all_used_extensions
+        ]
         return ModulePointer(Package(modules=[graph.hugr], extensions=extensions), 0)
 
 
