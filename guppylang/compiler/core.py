@@ -173,32 +173,24 @@ class DFContainer:
         # Otherwise, our only hope is that it's a struct or tuple value that we can
         # rebuild by packing the wires of its constituting fields
         elif isinstance(place.ty, StructType):
-            field_children = [
+            children: list[Place] = [
                 FieldAccess(place, field, None) for field in place.ty.fields
             ]
-            child_types = [child.ty.to_hugr() for child in field_children]
-            child_wires = [self[child] for child in field_children]
-            wire = self.builder.add_op(ops.MakeTuple(child_types), *child_wires)[0]
-            for f_child in field_children:
-                if f_child.ty.linear:
-                    self.locals.pop(f_child.id)
-            self.locals[place.id] = wire
-            return wire
         elif isinstance(place.ty, TupleType):
-            tuple_children = [
+            children = [
                 TupleAccess(place, elem, idx, None)
                 for idx, elem in enumerate(place.ty.element_types)
             ]
-            child_types = [child.elem_ty.to_hugr() for child in tuple_children]
-            child_wires = [self[child] for child in tuple_children]
-            wire = self.builder.add_op(ops.MakeTuple(child_types), *child_wires)[0]
-            for t_child in tuple_children:
-                if t_child.elem_ty.linear:
-                    self.locals.pop(t_child.id)
-            self.locals[place.id] = wire
-            return wire
         else:
             raise InternalGuppyError(f"Couldn't obtain a port for `{place}`")
+        child_types = [child.ty.to_hugr() for child in children]
+        child_wires = [self[child] for child in children]
+        wire = self.builder.add_op(ops.MakeTuple(child_types), *child_wires)[0]
+        for child in children:
+            if child.ty.linear:
+                self.locals.pop(child.id)
+        self.locals[place.id] = wire
+        return wire
 
     def __setitem__(self, place: Place, port: Wire) -> None:
         # When assigning a struct value, we immediately unpack it recursively and only

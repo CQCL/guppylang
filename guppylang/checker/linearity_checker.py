@@ -435,8 +435,8 @@ class BBLinearityChecker(ast.NodeVisitor):
         # longer be accessed after the element has been projected out. Thus, this is
         # only legal if there are no remaining linear elements in the tuple
         self.visit(node.value)
-        for elem_ty in node.tuple_ty.element_types:
-            if not elem_ty.droppable:
+        for idx, elem_ty in enumerate(node.tuple_ty.element_types):
+            if idx != node.index and not elem_ty.droppable:
                 err = UnnamedTupleNotUsedError(node.value, node.tuple_ty)
                 err.add_sub_diagnostic(UnnamedTupleNotUsedError.Fix(None))
                 raise GuppyError(err)

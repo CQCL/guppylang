@@ -1,10 +1,10 @@
-Error: Drop violation (at $FILE:7:11)
+Error: Drop violation (at $FILE:6:11)
   | 
-5 | @compile_guppy
-6 | def foo() -> qubit:
-7 |     return (1, qubit(), array(1, 2))[1]
-  |            ^^^^^^^^^^^^^^^^^^^^^^^^^ Non-droppable items inside expression of type `(int, qubit,
-  |                                      array[int, 2])` are leaked
+4 | @compile_guppy
+5 | def foo() -> qubit:
+6 |     return (1, qubit(), qubit())[1]
+  |            ^^^^^^^^^^^^^^^^^^^^^ Non-droppable items inside expression of type `(int, qubit,
+  |                                  qubit)` are leaked
 
 Help: Consider assigning this value to a local variable before subscripting it
 
