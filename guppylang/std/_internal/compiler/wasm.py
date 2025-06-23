@@ -10,6 +10,7 @@ from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
 from guppylang.nodes import GlobalCall, LocalCall
+from guppylang.std._internal.compiler.arithmetic import convert_itousize
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.tys.builtin import (
     string_type,
@@ -19,7 +20,6 @@ from guppylang.tys.const import ConstValue
 from guppylang.tys.constarg import ConstStringArg
 from guppylang.tys.ty import (
     FunctionType,
-    NumericType,
 )
 
 
@@ -30,12 +30,7 @@ class WasmModuleInitCompiler(CustomInoutCallCompiler):
         assert len(args) == 1
         w = wasm()
         ctx_arg = args[0]
-        # hugr-py doesn't yet export a method to load a usize directly?
-        convert_op = ops.ExtOp(
-            hugr.std.int.CONVERSIONS_EXTENSION.get_op("itousize"),
-            ht.FunctionType([hugr.std.int.int_t(NumericType.INT_WIDTH)], [ht.USize()]),
-        )
-        ctx_wire = self.builder.add_op(convert_op, ctx_arg)
+        ctx_wire = self.builder.add_op(convert_itousize(), ctx_arg)
 
         ctx_ty = w.get_type("context").instantiate([])
         get_ctx_op = ops.ExtOp(
