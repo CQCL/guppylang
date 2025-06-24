@@ -444,6 +444,10 @@ def partially_monomorphize_args(
                     inst = ctx.current_mono_args[idx]
                     assert inst is not None
                     mono_args.append(inst)
+                case TypeArg():
+                    # TODO: Once we also have type args that require monomorphization,
+                    #  we'll need to downshift de Bruijn indices here as well
+                    raise NotImplementedError
                 case arg:
                     mono_args.append(arg)
         else:
