@@ -557,14 +557,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             op_name = f"result_{base_name}"
             hugr_ty = base_ty
 
-        sig = ht.FunctionType(
-            input=[hugr_ty],
-            output=[],
-        )
-        args = [
-            ht.StringArg(node.tag),
-            *extra_args,
-        ]
+        sig = ht.FunctionType(input=[hugr_ty], output=[])
+        args = [ht.StringArg(node.tag), *extra_args]
         op = ops.ExtOp(RESULT_EXTENSION.get_op(op_name), signature=sig, args=args)
 
         self.builder.add_op(op, value_wire)
