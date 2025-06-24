@@ -15,8 +15,6 @@ from guppylang.checker.func_checker import check_signature
 from guppylang.compiler.core import CompilerContext, DFContainer, GlobalConstId
 from guppylang.definition.common import ParsableDef
 from guppylang.definition.value import CallReturnWires, CompiledCallableDef
-
-# from guppylang.definition.wasm import WasmModule
 from guppylang.diagnostic import Error, Help
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall

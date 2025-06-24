@@ -23,8 +23,12 @@ from guppylang.tys.ty import (
 )
 
 
-# Compiler for initialising WASM modules
 class WasmModuleInitCompiler(CustomInoutCallCompiler):
+    """Compiler for initialising WASM modules.
+    Calls tket2's "get_context" and unwraps the `Option` result.
+    Returns a `tket2.wasm.context` wire.
+    """
+
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         # Make a ConstWasmModule as a CustomConst
         assert len(args) == 1
@@ -43,8 +47,9 @@ class WasmModuleInitCompiler(CustomInoutCallCompiler):
         return CallReturnWires(regular_returns=[out_node], inout_returns=[])
 
 
-# Compiler for initialising WASM modules
 class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
+    """Compiler for discarding WASM contexts."""
+
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         assert len(args) == 1
         ctx = args[0]
@@ -53,11 +58,16 @@ class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
         return CallReturnWires(regular_returns=[], inout_returns=[])
 
 
-# Compiler for WASM calls
-# When a wasm method s called in guppy, we turn it into 2 tket2 ops:
-# - the lookup: wasmmodule -> wasmfunc
-# - the call: wasmcontext * wasmfunc * inputs -> wasmcontext * output
 class WasmModuleCallCompiler(CustomInoutCallCompiler):
+    """Compiler for WASM calls
+    When a wasm method is called in guppy, we turn it into 2 tket2 ops:
+    * lookup: wasm.module -> wasm.func
+    * call: wasm.context * wasm.func * inputs -> wasm.context * output
+
+    For the wasm.module that we use in lookup, a constant is created for each
+    call, using the wasm file information embedded in method's `self` argument.
+    """
+
     fn_name: str
 
     def __init__(self, name: str) -> None:

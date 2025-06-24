@@ -457,7 +457,7 @@ class _Guppy:
             for val in cls.__dict__.values():
                 if isinstance(val, GuppyDefinition):
                     DEF_STORE.register_impl(wasm_module.id, val.wrapped.name, val.id)
-            # Add a __call__ to the class
+            # Add a constructor to the class
             call_method = CustomFunctionDef(
                 DefId.fresh(),
                 "__new__",
