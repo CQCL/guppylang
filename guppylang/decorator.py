@@ -43,6 +43,7 @@ from guppylang.definition.pytket_circuits import (
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.traced import RawTracedFunctionDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
+from guppylang.definition.wasm import RawWasmFunctionDef
 from guppylang.dummy_decorator import _DummyGuppy, sphinx_running
 from guppylang.engine import DEF_STORE
 from guppylang.span import Loc, SourceMap, Span
@@ -497,7 +498,7 @@ class _Guppy:
         return dec
 
     def wasm(self, f: PyFunc) -> GuppyDefinition:
-        func = RawCustomFunctionDef(
+        func = RawWasmFunctionDef(
             DefId.fresh(),
             f.__name__,
             None,

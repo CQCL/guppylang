@@ -11,11 +11,6 @@ from guppylang.checker.errors.type_errors import (
     ArrayComprUnknownSizeError,
     TypeMismatchError,
 )
-from guppylang.checker.errors.wasm import (
-    FirstArgNotModule,
-    NonFunctionWasmType,
-    UnWasmableType,
-)
 from guppylang.checker.expr_checker import (
     ExprChecker,
     ExprSynthesizer,
@@ -57,7 +52,6 @@ from guppylang.tys.builtin import (
     nat_type,
     sized_iter_type,
     string_type,
-    wasm_module_info,
 )
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.subst import Subst
@@ -68,7 +62,6 @@ from guppylang.tys.ty import (
     NoneType,
     NumericType,
     StructType,
-    TupleType,
     Type,
     unify,
 )
@@ -568,55 +561,13 @@ class BarrierChecker(CustomCallChecker):
 
 
 class WasmCallChecker(CustomCallChecker):
-    type_sanitised: bool = False
-
-    def sanitise_type(self) -> None:
-        # Place to highlight in error messages
-        loc = self.func.defined_at
-
-        if isinstance(self.func.ty, FunctionType):
-            match self.func.ty.inputs[0]:
-                case FuncInput(ty=ty, flags=InputFlags.Inout) if wasm_module_info(
-                    ty
-                ) is not None:
-                    pass
-                case FuncInput(ty=ty):
-                    raise GuppyError(FirstArgNotModule(loc, ty))
-            for inp in self.func.ty.inputs[1:]:
-                if not self.is_type_wasmable(inp.ty):
-                    raise GuppyError(UnWasmableType(loc, inp.ty))
-            if not self.is_type_wasmable(self.func.ty.output):
-                match self.func.ty.output:
-                    case NoneType():
-                        pass
-                    case _:
-                        raise GuppyError(UnWasmableType(loc, self.func.ty.output))
-        else:
-            raise GuppyError(NonFunctionWasmType(loc, self.func.ty))
-        self.type_sanitised = True
-
-    def is_type_wasmable(self, ty: Type) -> bool:
-        match ty:
-            case NumericType():
-                return True
-            case TupleType(element_types=tys):
-                return all(self.is_type_wasmable(ty) for ty in tys)
-
-        return False
-
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        if not self.type_sanitised:
-            self.sanitise_type()
-
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
 
         return GlobalCall(def_id=self.func.id, args=args, type_args=inst), subst
 
     def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        if not self.type_sanitised:
-            self.sanitise_type()
-
         # Use default implementation from the expression checker
         args, ty, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
         return GlobalCall(def_id=self.func.id, args=args, type_args=inst), ty
