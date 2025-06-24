@@ -125,13 +125,10 @@ def test_mem_swap(validate):
 
     validate(guppy.compile(foo))
 
-import pytest
 
-@pytest.mark.skip("TODO: Fix")
 def test_non_terminating(validate):
     @guppy
-    def foo() -> None:
-        t = (qubit(), qubit(), 0)
+    def foo(t: tuple[qubit, qubit, int]) -> None:
         while True:
             x(t[0])
 
