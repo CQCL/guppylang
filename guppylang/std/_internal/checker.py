@@ -15,7 +15,6 @@ from guppylang.checker.errors.wasm import (
     FirstArgNotModule,
     NonFunctionWasmType,
     UnWasmableType,
-    WasmTypeConversionError,
 )
 from guppylang.checker.expr_checker import (
     ExprChecker,
@@ -606,8 +605,8 @@ class WasmCallChecker(CustomCallChecker):
         return False
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
-        if not self.is_type_wasmable(ty):
-            raise GuppyTypeError(WasmTypeConversionError(self.node, ty))
+        if not self.type_sanitised:
+            self.sanitise_type()
 
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
