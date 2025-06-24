@@ -1,6 +1,6 @@
 """Provides Python objects for builtin language keywords."""
 
-from typing import Any
+from typing import Any, Protocol
 
 from typing_extensions import deprecated
 
@@ -34,3 +34,11 @@ class _Owned:
 
 
 owned = _Owned()
+
+
+class Copy(Protocol):
+    """Bound to mark generic type parameters as being implicitly copyable."""
+
+
+class Drop(Protocol):
+    """Bound to mark generic type parameters as being implicitly droppable."""
