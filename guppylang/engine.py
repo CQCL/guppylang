@@ -237,6 +237,10 @@ class CompilationEngine:
             }
             for ext in all_used_extensions
         ]
+        graph.hugr.module_root.metadata["__generator"] = {
+            "name": "guppylang",
+            "version": guppylang.__version__,
+        }
         return ModulePointer(Package(modules=[graph.hugr], extensions=extensions), 0)
 
 
