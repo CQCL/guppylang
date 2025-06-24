@@ -264,12 +264,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
         defn = self.ctx.build_compiled_def(node.def_id, type_args=[])
         assert isinstance(defn, CompiledValueDef)
-        if isinstance(defn, CompiledCallableDef) and defn.ty.parametrized:
-            # TODO: This should be caught during checking
-            err = UnsupportedError(
-                node, "Polymorphic functions as dynamic higher-order values"
-            )
-            raise GuppyError(err)
         return defn.load(self.dfg, self.ctx, node)
 
     def visit_GenericParamValue(self, node: GenericParamValue) -> Wire:
