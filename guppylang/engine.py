@@ -253,9 +253,7 @@ class CompilationEngine:
             "name": "guppylang",
             "version": guppylang.__version__,
         }
-        return ModulePointer(
-            Package(modules=[graph.hugr], extensions=extensions), 0
-        )
+        return ModulePointer(Package(modules=[graph.hugr], extensions=extensions), 0)
 
 
 ENGINE: CompilationEngine = CompilationEngine()
