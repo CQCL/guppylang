@@ -30,7 +30,7 @@ class UnWasmableType(WasmError):
 @dataclass(frozen=True)
 class NonFunctionWasmType(WasmError):
     span_label: ClassVar[str] = (
-        "WASM function didn't have a function type, instead found {ty}"
+        "WASM function didn't have a function type, instead found `{ty}`"
     )
     ty: Type
 
