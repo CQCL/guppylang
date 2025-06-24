@@ -87,3 +87,23 @@ def test_wasm_guppy_module(validate):
 
     mod = main.compile()
     validate(mod)
+
+def test_comptime(validate):
+    @guppy.wasm_module("", 42)
+    class Foo:
+        @guppy.wasm
+        def goo(self: "Foo") -> int: ...
+
+    def hoo(x: int) -> int:
+        return x * x
+
+    @guppy.comptime
+    def ioo(x: int) -> int:
+        y = hoo(x)
+        foo = Foo(0)
+        z = foo.goo(y)
+        return hoo(z)
+
+    @guppy
+    def main() -> int:
+        comptime(ioo(42))
