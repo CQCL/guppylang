@@ -13,11 +13,8 @@ from guppylang.std._internal.compiler.tket2_exts import (
     ConstWasmModule,
 )
 from guppylang.tys.builtin import (
-    string_type,
     wasm_module_info,
 )
-from guppylang.tys.const import ConstValue
-from guppylang.tys.constarg import ConstStringArg
 from guppylang.tys.ty import (
     FunctionType,
 )
@@ -81,7 +78,7 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         module_ty = WASM_EXTENSION.get_type("module").instantiate([])
         ctx_ty = WASM_EXTENSION.get_type("context").instantiate([])
 
-        fn_name_arg = ConstStringArg(ConstValue(string_type(), self.fn_name)).to_hugr()
+        fn_name_arg = ht.StringArg(self.fn_name)
         # Function type without Inout context arg (for building)
         assert isinstance(self.node, GlobalCall)
         assert self.func is not None

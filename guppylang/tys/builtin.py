@@ -377,17 +377,3 @@ def get_iter_size(ty: Type) -> Const:
             return const
         case _:
             raise InternalGuppyError("Unexpected type args")
-
-
-class ConstStringArg(ConstArg):
-    def to_hugr(self) -> ht.TypeArg:
-        match self.const:
-            case ConstValue(value=v, ty=ty) if is_string_type(ty):
-                assert isinstance(v, str)
-                return ht.StringArg(v)
-            case _:
-                return super().to_hugr()
-
-
-def const_string_arg(s: str) -> ConstStringArg:
-    return ConstStringArg(ConstValue(string_type(), s))
