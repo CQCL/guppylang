@@ -44,7 +44,20 @@ CompiledLocals = dict[PlaceId, Wire]
 
 #: Partial instantiation of generic type parameters for monomorphization.
 #:
-#: Note that this is required to be a tuple to ensure hashability.
+#: When compiling polymorphic definitions to Hugr, some of their generic parameters will
+#: need to be monomorphized (e.g. to support language features that cannot be encoded
+#: in Hugr, see `requires_monomorphization` for details). However, other generic
+#: parameters can be faithfully captured in Hugr. Thus, we want to perform a *partial*
+#: monomorphization when compiling to Hugr.
+#:
+#: A `mono_args: PartiallyMonomorphizedArgs` represents such a partial monomorphization
+#: of generic parameters as a sequence of `Argument | None`. Concretely,
+#: `mono_args[i] == None` means that the argument with index `i` is not part of the
+#: monomorphization. Otherwise, `mono_args[i]` specifies the monomorphic instantiation
+#: for parameter `i`. For example, a function with 3 generic parameters where no
+#: monomorphization is required at all, will have mono_args = `(None, None, None)`.
+#:
+#: Finally, note that this sequence is required to be a tuple to ensure hashability.
 PartiallyMonomorphizedArgs = tuple["Argument | None", ...]
 
 
@@ -64,7 +77,17 @@ class GlobalConstId:
         return f"{self.base_name}.{self.id}"
 
 
-#: Unique identifier for a partially monomorphized definition
+#: Unique identifier for a partially monomorphized definition.
+#:
+#: If the `DefId` corresponds to a `MonomorphizableDef`, then the second tuple entry
+#: should hold the corresponding partial monomorphization. Otherwise, the second entry
+#: should be `None`.
+#:
+#: Note the following subtlety: Functions are instances of `MonomorphizableDef`, even if
+#: they aren't actually generic! This means that for non-generic function definitions we
+#: will have an empty tuple `()` as `PartiallyMonomorphizedArgs`, but never `None`.
+#: `None` only shows up for kinds of definitions that are never monomorphized (e.g.
+#: definitions of constants).
 MonoDefId = tuple[DefId, PartiallyMonomorphizedArgs | None]
 
 #: Unique identifier for global Hugr constants and functions with optional monomorphized
@@ -92,6 +115,10 @@ class CompilerContext(ToHugrContext):
     """
 
     module: DefinitionBuilder[ops.Module]
+
+    #: The definitions compiled so far. For `MonomorphizableDef`s, their id can occur
+    #: multiple times here with respectively different partial monomorphizations. See
+    #: `MonoDefId` and `PartiallyMonomorphizedArgs` for details.
     compiled: dict[MonoDefId, CompiledDef]
 
     # use dict over set for deterministic iteration order
