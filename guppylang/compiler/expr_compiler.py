@@ -55,6 +55,7 @@ from guppylang.nodes import (
     StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
+    TupleAccessAndDrop,
     TypeApply,
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
@@ -504,6 +505,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def visit_SubscriptAccessAndDrop(self, node: SubscriptAccessAndDrop) -> Wire:
         self.dfg[node.item] = self.visit(node.item_expr)
         return self.visit(node.getitem_expr)
+
+    def visit_TupleAccessAndDrop(self, node: TupleAccessAndDrop) -> Wire:
+        tuple_port = self.visit(node.value)
+        return self._unpack_tuple(tuple_port, node.tuple_ty.element_types)[node.index]
 
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
         value_wire = self.visit(node.value)
