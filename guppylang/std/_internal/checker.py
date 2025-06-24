@@ -55,7 +55,6 @@ from guppylang.tys.builtin import (
     is_array_type,
     is_bool_type,
     is_sized_iter_type,
-    is_string_type,
     nat_type,
     sized_iter_type,
     string_type,
@@ -69,7 +68,6 @@ from guppylang.tys.ty import (
     InputFlags,
     NoneType,
     NumericType,
-    OpaqueType,
     StructType,
     TupleType,
     Type,
@@ -589,7 +587,11 @@ class WasmCallChecker(CustomCallChecker):
                 if not self.is_type_wasmable(inp.ty):
                     raise GuppyError(UnWasmableType(loc, inp.ty))
             if not self.is_type_wasmable(self.func.ty.output):
-                raise GuppyError(UnWasmableType(loc, self.func.ty.output))
+                match self.func.ty.output:
+                    case NoneType():
+                        pass
+                    case _:
+                        raise GuppyError(UnWasmableType(loc, self.func.ty.output))
         else:
             raise GuppyError(NonFunctionWasmType(loc, self.func.ty))
         self.type_sanitised = True
@@ -598,27 +600,10 @@ class WasmCallChecker(CustomCallChecker):
         match ty:
             case NumericType():
                 return True
-            case NoneType():
-                return True
             case TupleType(element_types=tys):
                 return all(self.is_type_wasmable(ty) for ty in tys)
-            case FunctionType() as f:
-                return self.is_type_wasmable(f.output) and all(
-                    self.is_type_wasmable(inp.ty) and inp.flags != InputFlags.Inout
-                    for inp in f.inputs
-                )
-            case OpaqueType() as ty:
-                if is_string_type(ty):
-                    return True
-                elif is_array_type(ty):
-                    return all(
-                        self.is_type_wasmable(arg.ty)
-                        for arg in ty.args
-                        if isinstance(arg, TypeArg)
-                    )
-                return is_bool_type(ty)
-            case _:
-                return False
+
+        return False
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         if not self.is_type_wasmable(ty):

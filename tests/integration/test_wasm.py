@@ -10,13 +10,13 @@ def test_wasm_functions(validate):
         def add_one(self: "MyWasm", x: int) -> int: ...
 
         @guppy.wasm
-        def swap(self: "MyWasm", x: int, y: bool) -> tuple[bool, int]: ...
+        def swap(self: "MyWasm", x: int, y: float) -> tuple[float, int]: ...
 
     @guppy
     def main() -> int:
         [mod1, mod2] = spawn_wasm_contexts(2, MyWasm)
         two = mod1.add_one(1)
-        b, two2 = mod2.swap(two, True)
+        _, two2 = mod2.swap(two, 3.0)
         mod1.discard()
         mod2.discard()
         return two + two2
@@ -54,12 +54,12 @@ def test_wasm_types(validate):
     @guppy.wasm_module("", 3)
     class MyWasm:
         @guppy.wasm
-        def foo(self: "MyWasm", x: tuple[int, tuple[nat, float]], y: bool) -> None: ...
+        def foo(self: "MyWasm", x: tuple[int, tuple[nat, float]], y: int) -> None: ...
 
     @guppy
     def main() -> None:
         mod = MyWasm(0)
-        mod.foo((0, (1, 2.0)), False)
+        mod.foo((0, (1, 2.0)), 3)
         mod.discard()
         return
 
@@ -74,13 +74,13 @@ def test_wasm_guppy_module(validate):
         def add_one(self: "MyWasm", x: int) -> int: ...
 
         @guppy.wasm
-        def swap(self: "MyWasm", x: int, y: bool) -> tuple[bool, int]: ...
+        def swap(self: "MyWasm", x: int, y: float) -> tuple[float, int]: ...
 
     @guppy
     def main() -> int:
         [mod1, mod2] = spawn_wasm_contexts(2, MyWasm)
         two = mod1.add_one(1)
-        b, two2 = mod2.swap(two, True)
+        _, two2 = mod2.swap(two, 3.0)
         mod1.discard()
         mod2.discard()
         return two + two2
