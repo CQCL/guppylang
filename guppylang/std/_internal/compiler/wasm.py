@@ -4,7 +4,7 @@ from hugr import tys as ht
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
-from guppylang.nodes import GlobalCall, LocalCall
+from guppylang.nodes import GlobalCall
 from guppylang.std._internal.compiler.arithmetic import convert_itousize
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.std._internal.compiler.tket2_exts import (
@@ -98,7 +98,6 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         )
 
         # Get the WASM module information from the type
-        assert isinstance(self.node, GlobalCall | LocalCall)
         selfarg = self.func.ty.inputs[0].ty
         if info := wasm_module_info(selfarg):
             const_module = self.builder.add_const(ConstWasmModule(*info))
