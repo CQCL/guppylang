@@ -1,4 +1,5 @@
 from collections import defaultdict
+from enum import Enum
 from types import FrameType
 
 import hugr.build.function as hf
@@ -56,6 +57,13 @@ BUILTIN_DEFS_LIST: list[RawDef] = [
 ]
 
 BUILTIN_DEFS = {defn.name: defn for defn in BUILTIN_DEFS_LIST}
+
+
+class CoreMetadataKeys(Enum):
+    """Core HUGR metadata keys used by Guppy."""
+
+    USED_EXTENSIONS = "core.used_extensions"
+    GENERATOR = "core.generator"
 
 
 class DefinitionStore:
@@ -242,14 +250,14 @@ class CompilationEngine:
             hugr.std.int.INT_TYPES_EXTENSION,
             hugr.std.logic.EXTENSION,
         ]
-        graph.hugr.module_root.metadata["__used_extensions"] = [
+        graph.hugr.module_root.metadata[CoreMetadataKeys.USED_EXTENSIONS.value] = [
             {
                 "name": ext.name,
                 "version": str(ext.version),
             }
             for ext in all_used_extensions
         ]
-        graph.hugr.module_root.metadata["__generator"] = {
+        graph.hugr.module_root.metadata[CoreMetadataKeys.GENERATOR.value] = {
             "name": "guppylang",
             "version": guppylang.__version__,
         }
