@@ -1,7 +1,7 @@
 import itertools
 from abc import ABC
 from collections import defaultdict
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -169,44 +169,52 @@ class CompilerContext(ToHugrContext):
         if (def_id, ()) in self.compiled:
             return self.compiled[def_id, ()]
 
-        defn = ENGINE.get_checked(def_id)
         mono_args: PartiallyMonomorphizedArgs | None = None
-        if isinstance(defn, MonomorphizableDef):
-            assert type_args is not None
-            mono_args = partially_monomorphize_args(defn.params, type_args, self)
+        compile_outer: Callable[[], CompiledDef]
+        match ENGINE.get_checked(def_id):
+            case MonomorphizableDef(params=params) as monomorphizable:
+                assert type_args is not None
+                mono_args = partially_monomorphize_args(params, type_args, self)
+                compile_outer = lambda: monomorphizable.monomorphize(  # noqa: E731 (assign-lambda)
+                    self.module, mono_args, self
+                )
+            case CompilableDef() as compilable:
+                compile_outer = lambda: compilable.compile_outer(self.module, self)  # noqa: E731
+            case CompiledDef() as compiled_defn:
+                compile_outer = lambda: compiled_defn  # noqa: E731
+            case defn:
+                compile_outer = assert_never(defn)
+
         if (def_id, mono_args) not in self.compiled:
-            self.compiled[def_id, mono_args] = self._compile(defn, mono_args)
+            self.compiled[def_id, mono_args] = compile_outer()
             self.worklist[def_id, mono_args] = None
         return self.compiled[def_id, mono_args]
-
-    def _compile(
-        self, defn: CheckedDef, mono_args: PartiallyMonomorphizedArgs | None
-    ) -> CompiledDef:
-        if isinstance(defn, CompilableDef):
-            assert mono_args is None
-            return defn.compile_outer(self.module, self)
-        if isinstance(defn, MonomorphizableDef):
-            assert mono_args is not None
-            return defn.monomorphize(self.module, mono_args, self)
-        return defn
 
     def compile(self, defn: CheckedDef) -> None:
         """Compiles the given definition and all of its dependencies into the current
         Hugr."""
         # Check and compile the entry point
-        checked = ENGINE.get_checked(defn.id)
-        mono_args: PartiallyMonomorphizedArgs | None = None
-        if isinstance(checked, MonomorphizableDef):
-            # Make sure that the entry point doesn't require monomorphization
-            for param in checked.params:
-                if requires_monomorphization(param):
-                    err = EntryMonomorphizeError(
-                        checked.defined_at, checked.name, param
-                    )
-                    raise GuppyError(err)
-            mono_args = tuple(None for _ in checked.params)
-        self.compiled[defn.id, mono_args] = self._compile(checked, mono_args)
-        self.worklist[defn.id, mono_args] = None
+        entry_mono_args: PartiallyMonomorphizedArgs | None = None
+        entry_compiled: CompiledDef
+        match ENGINE.get_checked(defn.id):
+            case MonomorphizableDef(params=params) as defn:
+                # Entry point is not allowed to require monomorphization
+                for param in params:
+                    if requires_monomorphization(param):
+                        err = EntryMonomorphizeError(defn.defined_at, defn.name, param)
+                        raise GuppyError(err)
+                # Thus, the partial monomorphization for the entry point is always empty
+                entry_mono_args = tuple(None for _ in params)
+                entry_compiled = defn.monomorphize(self.module, entry_mono_args, self)
+            case CompilableDef() as defn:
+                entry_compiled = defn.compile_outer(self.module, self)
+            case CompiledDef() as defn:
+                entry_compiled = defn
+            case defn:
+                entry_compiled = assert_never(defn)
+
+        self.compiled[defn.id, entry_mono_args] = entry_compiled
+        self.worklist[defn.id, entry_mono_args] = None
 
         # Compile definition bodies
         while self.worklist:
