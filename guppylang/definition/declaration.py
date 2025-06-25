@@ -10,7 +10,11 @@ from guppylang.ast_util import AstNode, has_empty_body, with_loc, with_type
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
-from guppylang.compiler.core import CompilerContext, DFContainer
+from guppylang.compiler.core import (
+    CompilerContext,
+    DFContainer,
+    requires_monomorphization,
+)
 from guppylang.definition.common import CompilableDef, ParsableDef
 from guppylang.definition.function import (
     PyFunc,
@@ -23,6 +27,7 @@ from guppylang.diagnostic import Error
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
+from guppylang.tys.param import Parameter
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import Type
 
@@ -32,6 +37,16 @@ class BodyNotEmptyError(Error):
     title: ClassVar[str] = "Unexpected function body"
     span_label: ClassVar[str] = "Body of declared function `{name}` must be empty"
     name: str
+
+
+@dataclass(frozen=True)
+class MonomorphizeError(Error):
+    title: ClassVar[str] = "Invalid function declaration"
+    span_label: ClassVar[str] = (
+        "Function declaration `{name}` is not allowed to be generic over `{param}`"
+    )
+    name: str
+    param: Parameter
 
 
 @dataclass(frozen=True)
@@ -51,6 +66,10 @@ class RawFunctionDecl(ParsableDef):
         ty = check_signature(func_ast, globals)
         if not has_empty_body(func_ast):
             raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
+        # Make sure we won't need monomorphization to compile this declaration
+        for param in ty.params:
+            if requires_monomorphization(param):
+                raise GuppyError(MonomorphizeError(func_ast, self.name, param))
         return CheckedFunctionDecl(
             self.id,
             self.name,
