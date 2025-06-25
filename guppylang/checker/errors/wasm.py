@@ -14,7 +14,7 @@ class WasmError(Error):
 class FirstArgNotModule(WasmError):
     span_label: ClassVar[str] = (
         "First argument to WASM function should be a reference to a WASM module."
-        " Found {ty} instead"
+        " Found `{ty}` instead"
     )
     ty: Type
 

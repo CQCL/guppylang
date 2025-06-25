@@ -4,6 +4,6 @@ Error: WASM signature error (at $FILE:7:4)
 6 |     @guppy.wasm
 7 |     def foo(x: int) -> None: ...
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ First argument to WASM function should be a reference to a
-  |                                  WASM module. Found int instead
+  |                                  WASM module. Found `int` instead
 
 Guppy compilation failed due to 1 previous error
