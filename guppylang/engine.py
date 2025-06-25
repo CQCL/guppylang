@@ -193,7 +193,7 @@ class CompilationEngine:
     def compile(self, id: DefId) -> ModulePointer:
         """Top-level function to kick of Hugr compilation of a definition.
 
-        This is the main driver behind `guppy.compile()`.
+        This is the function that is invoked by `guppy.compile`.
         """
         self.check(id)
 
