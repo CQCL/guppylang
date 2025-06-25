@@ -417,7 +417,7 @@ def requires_monomorphization(param: Parameter) -> bool:
         case TypeParam():
             return False
         case ConstParam(ty=ty):
-            return not isinstance(ty, NumericType) or ty.kind != NumericType.Kind.Nat
+            return ty != NumericType(NumericType.Kind.Nat)
         case x:
             return assert_never(x)
 
