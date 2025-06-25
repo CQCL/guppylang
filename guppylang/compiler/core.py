@@ -277,10 +277,10 @@ class CompilerContext(ToHugrContext):
                 return ty.to_hugr(self)
             # ... or we're still want to be generic in Hugr
             case None:
-                # But in that case we'll have to down-shift the de-Bruijn index to
+                # But in that case we'll have to down-shift the de Bruijn index to
                 # account for earlier params that have been monomorphized away
-                down_shift = sum(1 for arg in self.current_mono_args[: var.idx] if arg)
-                return ht.Variable(var.idx - down_shift, var.hugr_bound)
+                hugr_idx = compile_de_bruijn_idx(var.idx, self.current_mono_args)
+                return ht.Variable(hugr_idx, var.hugr_bound)
             case _:
                 raise InternalGuppyError("Invalid monomorphization")
 
@@ -308,10 +308,10 @@ class CompilerContext(ToHugrContext):
                 return ht.BoundedNatArg(n=v)
             # ... or we're still want to be generic in Hugr
             case None:
-                # But in that case we'll have to down-shift the de-Bruijn index to
+                # But in that case we'll have to down-shift the de Bruijn index to
                 # account for earlier params that have been monomorphized away
-                down_shift = sum(1 for arg in self.current_mono_args[: var.idx] if arg)
-                return ht.VariableArg(var.idx - down_shift, param)
+                hugr_idx = compile_de_bruijn_idx(var.idx, self.current_mono_args)
+                return ht.VariableArg(hugr_idx, param)
             case _:
                 raise InternalGuppyError("Invalid monomorphization")
 
@@ -475,6 +475,17 @@ def compile_non_monomorphized_args(
         for i, arg in enumerate(inst)
         if mono_args is None or mono_args[i] is None
     ]
+
+
+def compile_de_bruijn_idx(idx: int, mono_args: PartiallyMonomorphizedArgs) -> int:
+    """Returns the Hugr de Bruijn index for a variable.
+
+    Takes care of shifting down Guppy's indices to account for the current partial
+    monomorphization. This avoids gaps in Hugr indices due to the fact that not all
+    Guppy parameters are lowered to Hugr (some are monomorphized away).
+    """
+    assert mono_args[idx] is None, "Should not compile monomorphized index"
+    return sum(1 for arg in mono_args[:idx] if arg is None)
 
 
 QUANTUM_EXTENSION = tket2_exts.quantum()
