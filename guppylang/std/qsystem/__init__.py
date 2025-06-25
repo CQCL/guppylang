@@ -108,6 +108,7 @@ def _rz(q: qubit, angle: float) -> None:
     accepts angle parameters.
     """
 
+
 @guppy.hugr_op(quantum_op("LazyMeasureLeaked", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def measure_leaked(q: qubit @ owned) -> int:
