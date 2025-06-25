@@ -193,8 +193,9 @@ class MonomorphizedDef(CompiledDef):
 
     Args:
         id: The unique definition identifier.
-        name: The name of the definition.
-        defined_at: The AST node where the definition was defined.
+        name: The name of the definition. This will be the same for all monomorphized
+            variants of the definition.
+        defined_at: The AST node where the original polymorphic definition was defined.
         mono_args: Partial monomorphization of the generic parameters.
     """
 
