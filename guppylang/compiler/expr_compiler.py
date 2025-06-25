@@ -269,6 +269,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def visit_GenericParamValue(self, node: GenericParamValue) -> Wire:
         match node.param.ty:
             case NumericType(NumericType.Kind.Nat):
+                # Generic nat parameters are encoded using Hugr bounded nat parameters,
+                # so they are not monomorphized when compiling to Hugr
                 arg = node.param.to_bound().to_hugr(self.ctx)
                 load_nat = hugr.std.PRELUDE.get_op("load_nat").instantiate(
                     [arg], ht.FunctionType([], [ht.USize()])
