@@ -633,7 +633,7 @@ requires-dist = [
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "tket2-exts", specifier = "~=0.9.1" },
+    { name = "tket2-exts", git = "https://github.com/CQCL/tket2?subdirectory=tket2-exts&branch=905-measure-leaked" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
 provides-extras = ["pytket"]
@@ -2648,13 +2648,9 @@ wheels = [
 [[package]]
 name = "tket2-exts"
 version = "0.9.1"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket2-exts&branch=905-measure-leaked#1fb17989f380de01b6337999ae3c7d85d7df6f21" }
 dependencies = [
     { name = "hugr" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1e/e3/d00691b4d0754bdde56c13822e326fb89fc13ac45cfbb1ae358b24a4f406/tket2_exts-0.9.1.tar.gz", hash = "sha256:31ff8cf833545ac2de466446180581aacd010e298538e49ece0c517b3ad5dfb9", size = 12410 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/e0/0c8477db1aab499cef96bee9761c138b9d634f7b4826317c77a5273b475e/tket2_exts-0.9.1-py3-none-any.whl", hash = "sha256:5aea9fa9fbdeded4bc93b7e87f4a9ff56b348ef6c961e11dd9e1163c78880aa6", size = 18282 },
 ]
 
 [[package]]
