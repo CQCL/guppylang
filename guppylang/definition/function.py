@@ -24,7 +24,7 @@ from guppylang.compiler.core import (
     CompilerContext,
     DFContainer,
     PartiallyMonomorphizedArgs,
-    requires_monomorphization,
+    compile_non_monomorphized_args,
 )
 from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import (
@@ -207,7 +207,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef, Monomorphized
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        return load_with_args(type_args, dfg, self.ty, self.func_def)
+        return load_with_args(type_args, dfg, self.ty, self.func_def, self.mono_args)
 
     def compile_call(
         self,
@@ -218,7 +218,9 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef, Monomorphized
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
-        return compile_call(args, type_args, dfg, self.ty, self.func_def)
+        return compile_call(
+            args, type_args, dfg, self.ty, self.func_def, self.mono_args
+        )
 
     def compile_inner(self, globals: CompilerContext) -> None:
         """Compiles the body of the function."""
@@ -230,14 +232,11 @@ def load_with_args(
     dfg: DFContainer,
     ty: FunctionType,
     func: ToNode,
+    mono_args: PartiallyMonomorphizedArgs | None = None,
 ) -> Wire:
     """Loads the function as a value into a local Hugr dataflow graph."""
     func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
-    type_args: list[ht.TypeArg] = [
-        arg.to_hugr(dfg.ctx)
-        for param, arg in zip(ty.params, type_args, strict=True)
-        if not requires_monomorphization(param)
-    ]
+    type_args = compile_non_monomorphized_args(type_args, mono_args, dfg.ctx)
     return dfg.builder.load_function(func, func_ty, type_args)
 
 
@@ -247,14 +246,11 @@ def compile_call(
     dfg: DFContainer,
     ty: FunctionType,
     func: ToNode,
+    mono_args: PartiallyMonomorphizedArgs | None = None,
 ) -> CallReturnWires:
     """Compiles a call to the function."""
     func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
-    type_args: list[ht.TypeArg] = [
-        arg.to_hugr(dfg.ctx)
-        for param, arg in zip(ty.params, type_args, strict=True)
-        if not requires_monomorphization(param)
-    ]
+    type_args = compile_non_monomorphized_args(type_args, mono_args, dfg.ctx)
     num_returns = len(type_to_row(ty.output))
     call = dfg.builder.call(func, *args, instantiation=func_ty, type_args=type_args)
     return CallReturnWires(

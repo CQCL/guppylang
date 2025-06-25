@@ -455,6 +455,20 @@ def partially_monomorphize_args(
     return tuple(mono_args)
 
 
+def compile_non_monomorphized_args(
+    inst: Inst, mono_args: PartiallyMonomorphizedArgs | None, ctx: CompilerContext
+) -> list[ht.TypeArg]:
+    """Lowers a type parameter instantiation to Hugr, ignoring all type arguments that
+    shouldn't be present in Hugr due to the provided partial monomorphization.
+    """
+    assert mono_args is None or len(mono_args) == len(inst)
+    return [
+        arg.to_hugr(ctx)
+        for i, arg in enumerate(inst)
+        if mono_args is None or mono_args[i] is None
+    ]
+
+
 QUANTUM_EXTENSION = tket2_exts.quantum()
 RESULT_EXTENSION = tket2_exts.result()
 

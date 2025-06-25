@@ -16,8 +16,8 @@ from guppylang.compiler.core import (
     CompilerContext,
     DFContainer,
     GlobalConstId,
+    compile_non_monomorphized_args,
     partially_monomorphize_args,
-    requires_monomorphization,
 )
 from guppylang.definition.common import ParsableDef
 from guppylang.definition.value import CallReturnWires, CompiledCallableDef
@@ -255,11 +255,7 @@ class CustomFunctionDef(CompiledCallableDef):
 
         # Finally, load the function into the local DFG
         mono_ty = self.ty.instantiate(type_args).to_hugr(ctx)
-        hugr_ty_args = [
-            arg.to_hugr(ctx)
-            for param, arg in zip(self.ty.params, type_args, strict=True)
-            if not requires_monomorphization(param)
-        ]
+        hugr_ty_args = compile_non_monomorphized_args(type_args, mono_args, ctx)
         return dfg.builder.load_function(func, mono_ty, hugr_ty_args)
 
     def compile_call(
