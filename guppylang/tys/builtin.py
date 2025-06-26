@@ -1,3 +1,4 @@
+import ast
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Literal, TypeGuard
@@ -13,6 +14,7 @@ from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
+from guppylang.std._internal.compiler.tket2_exts import WASM_EXTENSION
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.const import Const, ConstValue
 from guppylang.tys.errors import WrongNumberOfTypeArgsError
@@ -99,6 +101,28 @@ class _NumericTypeDef(TypeDef, CompiledDef):
         if args:
             raise GuppyError(WrongNumberOfTypeArgsError(loc, 0, len(args), self.name))
         return self.ty
+
+
+class WasmModuleTypeDef(OpaqueTypeDef):
+    wasm_file: str
+    wasm_hash: int
+
+    def __init__(
+        self,
+        id: DefId,
+        name: str,
+        defined_at: ast.AST | None,
+        wasm_file: str,
+        wasm_hash: int,
+    ) -> None:
+        super().__init__(id, name, defined_at, [], True, True, self.to_hugr)
+        self.wasm_file = wasm_file
+        self.wasm_hash = wasm_hash
+
+    def to_hugr(self, args: Sequence[TypeArg | ConstArg], /) -> ht.Type:
+        assert args == []
+        ty = WASM_EXTENSION.get_type("context")
+        return ty.instantiate([])
 
 
 @dataclass(frozen=True)
@@ -316,6 +340,12 @@ def is_frozenarray_type(ty: Type) -> TypeGuard[OpaqueType]:
 
 def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
     return isinstance(ty, OpaqueType) and ty.defn == sized_iter_type_def
+
+
+def wasm_module_info(ty: Type) -> tuple[str, int] | None:
+    if isinstance(ty, OpaqueType) and isinstance(ty.defn, WasmModuleTypeDef):
+        return ty.defn.wasm_file, ty.defn.wasm_hash
+    return None
 
 
 def get_element_type(ty: Type) -> Type:

@@ -179,7 +179,7 @@ class CustomFunctionDef(CompiledCallableDef):
         has_signature: Whether the function has a declared signature.
     """
 
-    defined_at: AstNode
+    defined_at: AstNode | None
     ty: FunctionType
     call_checker: "CustomCallChecker"
     call_compiler: "CustomInoutCallCompiler"
