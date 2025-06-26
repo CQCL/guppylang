@@ -1,5 +1,5 @@
 import ast
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Iterator, Sequence
 from contextlib import AbstractContextManager, ExitStack, contextmanager
 from typing import Any, Final, TypeGuard, TypeVar
 
@@ -22,6 +22,8 @@ from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import Variable, contains_subscript
 from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.compiler.core import (
+    DEBUG_EXTENSION,
+    RESULT_EXTENSION,
     CompilerBase,
     CompilerContext,
     DFContainer,
@@ -53,6 +55,7 @@ from guppylang.nodes import (
     StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
+    TupleAccessAndDrop,
     TypeApply,
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
@@ -503,6 +506,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         self.dfg[node.item] = self.visit(node.item_expr)
         return self.visit(node.getitem_expr)
 
+    def visit_TupleAccessAndDrop(self, node: TupleAccessAndDrop) -> Wire:
+        tuple_port = self.visit(node.value)
+        return self._unpack_tuple(tuple_port, node.tuple_ty.element_types)[node.index]
+
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
         value_wire = self.visit(node.value)
         base_ty = node.base_ty.to_hugr()
@@ -554,12 +561,11 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 value_wire = self.builder.add_op(read_bool(), value_wire)
             op_name = f"result_{base_name}"
             hugr_ty = base_ty
-        op = tket2_result_op(
-            op_name=op_name,
-            typ=hugr_ty,
-            tag=node.tag,
-            extra_args=extra_args,
-        )
+
+        sig = ht.FunctionType(input=[hugr_ty], output=[])
+        args = [ht.StringArg(node.tag), *extra_args]
+        op = ops.ExtOp(RESULT_EXTENSION.get_op(op_name), signature=sig, args=args)
+
         self.builder.add_op(op, value_wire)
         return self._pack_returns([], NoneType())
 
@@ -599,9 +605,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             [standard_array_type(ht.Qubit, num_qubits_arg)],
             [standard_array_type(ht.Qubit, num_qubits_arg)],
         )
-        op = ops.Custom(
-            op_name="StateResult", signature=sig, args=args, extension="tket2.debug"
-        )
+
+        op = ops.ExtOp(DEBUG_EXTENSION.get_op("StateResult"), signature=sig, args=args)
 
         if not node.array_len:
             # If the input is a sequence of qubits, we pack them into an array.
@@ -802,29 +807,6 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
         case _:
             return None
     return None
-
-
-def tket2_result_op(
-    op_name: str,
-    typ: ht.Type,
-    tag: str,
-    extra_args: Iterable[ht.TypeArg],
-) -> ops.DataflowOp:
-    """Creates a dummy operation for constructing a list."""
-    args = [
-        ht.StringArg(tag),
-        *extra_args,
-    ]
-    sig = ht.FunctionType(
-        input=[typ],
-        output=[],
-    )
-    return ops.Custom(
-        extension="tket2.result",
-        op_name=op_name,
-        args=args,
-        signature=sig,
-    )
 
 
 ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(

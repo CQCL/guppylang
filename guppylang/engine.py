@@ -1,7 +1,14 @@
 from collections import defaultdict
+from enum import Enum
 from types import FrameType
 
 import hugr.build.function as hf
+import hugr.std.collections.array
+import hugr.std.float
+import hugr.std.int
+import hugr.std.logic
+import hugr.std.prelude
+from hugr.ext import Extension
 from hugr.package import ModulePointer, Package
 
 import guppylang
@@ -52,6 +59,13 @@ BUILTIN_DEFS_LIST: list[RawDef] = [
 BUILTIN_DEFS = {defn.name: defn for defn in BUILTIN_DEFS_LIST}
 
 
+class CoreMetadataKeys(Enum):
+    """Core HUGR metadata keys used by Guppy."""
+
+    USED_EXTENSIONS = "core.used_extensions"
+    GENERATOR = "core.generator"
+
+
 class DefinitionStore:
     """Storage class holding references to all Guppy definitions created in the current
     interpreter session.
@@ -99,6 +113,7 @@ class CompilationEngine:
     parsed: dict[DefId, ParsedDef]
     checked: dict[DefId, CheckedDef]
     compiled: dict[DefId, CompiledDef]
+    additional_extensions: list[Extension]
 
     types_to_check_worklist: dict[DefId, ParsedDef]
     to_check_worklist: dict[DefId, ParsedDef]
@@ -107,8 +122,14 @@ class CompilationEngine:
         """Resets the compilation cache."""
         self.parsed = {}
         self.checked = {}
+        self.compiled = {}
+        self.additional_extensions = []
         self.to_check_worklist = {}
         self.types_to_check_worklist = {}
+
+    @pretty_errors
+    def register_extension(self, extension: Extension) -> None:
+        self.additional_extensions.append(extension)
 
     def get_parsed(self, id: DefId) -> ParsedDef:
         """Look up the parsed version of a definition by its id.
@@ -195,7 +216,7 @@ class CompilationEngine:
 
         # Prepare Hugr for this module
         graph = hf.Module()
-        graph.metadata["name"] = "__main__"
+        graph.metadata["name"] = "__main__"  # entrypoint metadata
 
         # Lower definitions to Hugr
         from guppylang.compiler.core import CompilerContext
@@ -207,13 +228,39 @@ class CompilationEngine:
             ctx.compile(defn)
         self.compiled = ctx.compiled
 
-        # TODO: Currently we just include a hardcoded list of extensions. We should
-        #  compute this dynamically from the imported dependencies instead.
+        # TODO: Currently the list of extensions is manually managed by the user.
+        #  We should compute this dynamically from the imported dependencies instead.
         #
         # The hugr prelude and std_extensions are implicit.
         from guppylang.std._internal.compiler.tket2_exts import TKET2_EXTENSIONS
 
-        extensions = [*TKET2_EXTENSIONS, guppylang.compiler.hugr_extension.EXTENSION]
+        extensions = [
+            *TKET2_EXTENSIONS,
+            guppylang.compiler.hugr_extension.EXTENSION,
+            *self.additional_extensions,
+        ]
+        # TODO replace with computed extensions after https://github.com/CQCL/guppylang/issues/550
+        all_used_extensions = [
+            *extensions,
+            hugr.std.prelude.PRELUDE_EXTENSION,
+            hugr.std.collections.array.EXTENSION,
+            hugr.std.float.FLOAT_OPS_EXTENSION,
+            hugr.std.float.FLOAT_TYPES_EXTENSION,
+            hugr.std.int.INT_OPS_EXTENSION,
+            hugr.std.int.INT_TYPES_EXTENSION,
+            hugr.std.logic.EXTENSION,
+        ]
+        graph.hugr.module_root.metadata[CoreMetadataKeys.USED_EXTENSIONS.value] = [
+            {
+                "name": ext.name,
+                "version": str(ext.version),
+            }
+            for ext in all_used_extensions
+        ]
+        graph.hugr.module_root.metadata[CoreMetadataKeys.GENERATOR.value] = {
+            "name": "guppylang",
+            "version": guppylang.__version__,
+        }
         return ModulePointer(Package(modules=[graph.hugr], extensions=extensions), 0)
 
 

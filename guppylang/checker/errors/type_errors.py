@@ -313,3 +313,13 @@ class ArrayComprUnknownSizeError(Error):
             "since the number of elements yielded by this iterator is not statically "
             "known"
         )
+
+
+@dataclass(frozen=True)
+class TupleIndexOutOfBoundsError(Error):
+    title: ClassVar[str] = "Tuple index out of bounds"
+    span_label: ClassVar[str] = (
+        "Tuple index `{index}` is out of bounds for tuple of size `{size}`"
+    )
+    index: int
+    size: int

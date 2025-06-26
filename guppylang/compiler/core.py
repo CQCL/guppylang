@@ -15,13 +15,20 @@ from hugr.hugr.base import OpVarCov
 from hugr.hugr.node_port import ToNode
 from hugr.std import PRELUDE
 
-from guppylang.checker.core import FieldAccess, Globals, Place, PlaceId, Variable
+from guppylang.checker.core import (
+    FieldAccess,
+    Globals,
+    Place,
+    PlaceId,
+    TupleAccess,
+    Variable,
+)
 from guppylang.definition.common import CheckedDef, CompilableDef, CompiledDef, DefId
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import CompiledCallableDef
 from guppylang.engine import ENGINE
 from guppylang.error import InternalGuppyError
-from guppylang.tys.ty import StructType, Type
+from guppylang.tys.ty import StructType, TupleType, Type
 
 CompiledLocals = dict[PlaceId, Wire]
 
@@ -163,11 +170,19 @@ class DFContainer:
         # First check, if we already have a wire for this place
         if place.id in self.locals:
             return self.locals[place.id]
-        # Otherwise, our only hope is that it's a struct value that we can rebuild by
-        # packing the wires of its constituting fields
-        if not isinstance(place.ty, StructType):
+        # Otherwise, our only hope is that it's a struct or tuple value that we can
+        # rebuild by packing the wires of its constituting fields
+        elif isinstance(place.ty, StructType):
+            children: list[Place] = [
+                FieldAccess(place, field, None) for field in place.ty.fields
+            ]
+        elif isinstance(place.ty, TupleType):
+            children = [
+                TupleAccess(place, elem, idx, None)
+                for idx, elem in enumerate(place.ty.element_types)
+            ]
+        else:
             raise InternalGuppyError(f"Couldn't obtain a port for `{place}`")
-        children = [FieldAccess(place, field, None) for field in place.ty.fields]
         child_types = [child.ty.to_hugr() for child in children]
         child_wires = [self[child] for child in children]
         wire = self.builder.add_op(ops.MakeTuple(child_types), *child_wires)[0]
@@ -189,6 +204,16 @@ class DFContainer:
                 self[FieldAccess(place, field, None)] = field_port
             # If we had a previous wire assigned to this place, we need forget about it.
             # Otherwise, we might use this old value when looking up the place later
+            self.locals.pop(place.id, None)
+        # Same for tuples.
+        elif isinstance(place.ty, TupleType) and not is_return:
+            unpack = self.builder.add_op(
+                ops.UnpackTuple([ty.to_hugr() for ty in place.ty.element_types]), port
+            )
+            for idx, (elem, elem_port) in enumerate(
+                zip(place.ty.element_types, unpack, strict=True)
+            ):
+                self[TupleAccess(place, elem, idx, None)] = elem_port
             self.locals.pop(place.id, None)
         else:
             self.locals[place.id] = port
