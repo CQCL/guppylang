@@ -39,7 +39,7 @@ from guppylang_internals.ipython_inspect import is_running_ipython
 from guppylang_internals.span import SourceMap, Span, to_span
 from guppylang_internals.tys.arg import Argument
 from guppylang_internals.tys.param import Parameter, check_all_args
-from guppylang_internals.tys.parsing import type_from_ast
+from guppylang_internals.tys.parsing import TypeParsingCtx, type_from_ast
 from guppylang_internals.tys.ty import (
     FuncInput,
     FunctionType,
@@ -211,15 +211,16 @@ class ParsedStructDef(TypeDef, CheckableDef):
 
     def check(self, globals: Globals) -> "CheckedStructDef":
         """Checks that all struct fields have valid types."""
+        param_var_mapping = {p.name: p for p in self.params}
+        ctx = TypeParsingCtx(globals, param_var_mapping)
+
         # Before checking the fields, make sure that this definition is not recursive,
         # otherwise the code below would not terminate.
         # TODO: This is not ideal (see todo in `check_instantiate`)
-        param_var_mapping = {p.name: p for p in self.params}
-        check_not_recursive(self, globals, param_var_mapping)
+        check_not_recursive(self, ctx)
 
         fields = [
-            StructField(f.name, type_from_ast(f.type_ast, globals, param_var_mapping))
-            for f in self.fields
+            StructField(f.name, type_from_ast(f.type_ast, ctx)) for f in self.fields
         ]
         return CheckedStructDef(
             self.id, self.name, self.defined_at, self.params, fields
@@ -370,9 +371,7 @@ def params_from_ast(nodes: Sequence[ast.expr], globals: Globals) -> list[Paramet
     return params
 
 
-def check_not_recursive(
-    defn: ParsedStructDef, globals: Globals, param_var_mapping: dict[str, Parameter]
-) -> None:
+def check_not_recursive(defn: ParsedStructDef, ctx: TypeParsingCtx) -> None:
     """Throws a user error if the given struct definition is recursive."""
 
     # TODO: The implementation below hijacks the type parsing logic to detect recursive
@@ -388,5 +387,5 @@ def check_not_recursive(
     original = defn.check_instantiate
     object.__setattr__(defn, "check_instantiate", dummy_check_instantiate)
     for fld in defn.fields:
-        type_from_ast(fld.type_ast, globals, param_var_mapping)
+        type_from_ast(fld.type_ast, ctx)
     object.__setattr__(defn, "check_instantiate", original)

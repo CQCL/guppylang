@@ -22,7 +22,7 @@ from guppylang_internals.engine import DEF_STORE, ENGINE
 from guppylang_internals.error import GuppyError
 from guppylang_internals.experimental import check_capturing_closures_enabled
 from guppylang_internals.nodes import CheckedNestedFunctionDef, NestedFunctionDef
-from guppylang_internals.tys.parsing import parse_function_io_types
+from guppylang_internals.tys.parsing import TypeParsingCtx, parse_function_io_types
 from guppylang_internals.tys.ty import FunctionType, InputFlags, NoneType
 
 if sys.version_info >= (3, 12):
@@ -219,14 +219,9 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
             raise GuppyError(MissingArgAnnotationError(inp))
         input_nodes.append(ty_ast)
         input_names.append(inp.arg)
+    ctx = TypeParsingCtx(globals, param_var_mapping, allow_free_vars=True)
     inputs, output = parse_function_io_types(
-        input_nodes,
-        func_def.returns,
-        input_names,
-        func_def,
-        globals,
-        param_var_mapping,
-        True,
+        input_nodes, func_def.returns, input_names, func_def, ctx
     )
     return FunctionType(
         inputs,
