@@ -28,14 +28,6 @@ class UnWasmableType(WasmError):
 
 
 @dataclass(frozen=True)
-class NonFunctionWasmType(WasmError):
-    span_label: ClassVar[str] = (
-        "WASM function didn't have a function type, instead found `{ty}`"
-    )
-    ty: Type
-
-
-@dataclass(frozen=True)
 class WasmTypeConversionError(Error):
     title: ClassVar[str] = "Can't convert type to WASM"
     span_label: ClassVar[str] = "`{thing}` cannot be converted to WASM"

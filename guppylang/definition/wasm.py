@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 from guppylang.ast_util import AstNode
 from guppylang.checker.errors.wasm import (
     FirstArgNotModule,
-    NonFunctionWasmType,
     UnWasmableType,
 )
 from guppylang.definition.custom import CustomFunctionDef, RawCustomFunctionDef
@@ -55,9 +54,5 @@ class RawWasmFunctionDef(RawCustomFunctionDef):
 
     def parse(self, globals: "Globals", sources: SourceMap) -> "CustomFunctionDef":
         parsed = super().parse(globals, sources)
-        if isinstance(parsed.ty, FunctionType):
-            self.sanitise_type(parsed.defined_at, parsed.ty)
-        else:
-            raise GuppyError(NonFunctionWasmType(parsed.defined_at, self.func.ty))
-
+        self.sanitise_type(parsed.defined_at, parsed.ty)
         return parsed
