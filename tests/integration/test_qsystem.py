@@ -65,7 +65,7 @@ def test_measure_leaked(validate):  # type: ignore[no-untyped-def]
     """Compile the measure_leaked operation."""
 
     @guppy
-    def test(q: qubit @ owned) -> bool:
+    def test(q: qubit @ owned) -> int:
         q = qubit()
         m = measure_leaked(q)
         return m
