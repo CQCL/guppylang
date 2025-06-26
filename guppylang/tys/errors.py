@@ -124,6 +124,19 @@ class NonLinearOwnedError(Error):
 
 
 @dataclass(frozen=True)
+class LinearConstParamError(Error):
+    title: ClassVar[str] = "Invalid parameter"
+    span_label: ClassVar[str] = (
+        "Non-{thing} type `{ty}` is not allowed as a generic parameter"
+    )
+    ty: "Type"
+
+    @property
+    def thing(self) -> str:
+        return "copyable" if not self.ty.copyable else "droppable"
+
+
+@dataclass(frozen=True)
 class LinearComptimeError(Error):
     title: ClassVar[str] = "Invalid annotation"
     span_label: ClassVar[str] = (
