@@ -75,6 +75,15 @@ def array_new(elem_ty: ht.Type, length: int) -> ops.ExtOp:
     )
 
 
+def array_unpack(elem_ty: ht.Type, length: int) -> ops.ExtOp:
+    """Returns an operation that unpacks a fixed length array."""
+    length_arg = ht.BoundedNatArg(length)
+    arr_ty = array_type(elem_ty, length_arg)
+    return _instantiate_array_op(
+        "unpack", elem_ty, length_arg, [arr_ty], [elem_ty] * length
+    )
+
+
 def array_get(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array `get` operation."""
     assert elem_ty.type_bound() == ht.TypeBound.Copyable
@@ -186,22 +195,13 @@ P = TypeVar("P", bound=ops.DfParentOp)
 
 
 def unpack_array(builder: DfBase[P], array: Wire) -> list[Wire]:
-    """ """
-    # TODO: This should be an op
+    """Unpacks a fixed length array into its elements."""
     array_ty = builder.hugr.port_type(array.out_port())
     assert isinstance(array_ty, ht.ExtType)
-    err = "Internal error: array unpacking failed"
     match array_ty.args:
         case [ht.BoundedNatArg(length), ht.TypeTypeArg(elem_ty)]:
-            elems: list[Wire] = []
-            for i in range(length):
-                res = builder.add_op(
-                    array_pop(elem_ty, length - i, from_left=True), array
-                )
-                elem, array = build_unwrap(builder, res, err)
-                elems.append(elem)
-            builder.add_op(array_discard_empty(elem_ty), array)
-            return elems
+            res = builder.add_op(array_unpack(elem_ty, length), array)
+            return [res[i] for i in range(length)]
         case _:
             raise InternalGuppyError("Invalid array type args")
 
