@@ -66,6 +66,7 @@ fn compile_module<'a>(
 
     let emitter =
         hugr::llvm::emit::EmitHugr::new(ctx, llvm_module, namer.into(), extensions.into());
+    // TODO use hugr.fat_root after hugr 0.20.2
     let hugr_module = hugr.try_fat(hugr.module_root()).unwrap();
     let emitter = emitter
         .emit_module(hugr_module)
