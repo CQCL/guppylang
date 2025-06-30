@@ -1,5 +1,6 @@
 //! This module provides a Python interface to compile and execute a Hugr program to LLVM IR.
 use hugr::algorithms::ComposablePass;
+use hugr::hugr::hugrmut::HugrMut;
 use hugr::llvm::custom::CodegenExtsMap;
 use hugr::llvm::inkwell::{self, context::Context, module::Module, values::GenericValue};
 use hugr::llvm::utils::fat::FatExt;
@@ -26,34 +27,13 @@ fn parse_hugr(pkg_bytes: &[u8]) -> PyResult<hugr::Hugr> {
     Ok(hugr)
 }
 
-// Find the FuncDefn node for the function we're trying to execute.
-fn find_funcdef_node<H: HugrView>(hugr: H, fn_name: &str) -> PyResult<H::Node> {
-    let root = hugr.module_root();
-    let fn_nodes: Vec<_> = hugr
-        .children(root)
-        .filter(|n| {
-            hugr.get_optype(*n)
-                .as_func_defn()
-                .is_some_and(|f_def| f_def.func_name() == fn_name)
-        })
-        .collect();
+fn guppy_pass(hugr: &mut Hugr) {
+    let fn_entry = hugr.entrypoint();
+    let hugr = &mut hugr.with_entrypoint_mut(hugr.module_root());
 
-    match fn_nodes[..] {
-        [] => Err(pyerr!("Couldn't find top level FuncDefn named {}", fn_name)),
-        [x] => Ok(x),
-        _ => Err(pyerr!(
-            "Found multiple top level FuncDefn nodes named {}",
-            fn_name
-        )),
-    }
-}
-
-fn guppy_pass(hugr: &mut Hugr, entry_fn: &str) {
     hugr::algorithms::MonomorphizePass.run(hugr).unwrap();
     hugr::algorithms::RemoveDeadFuncsPass::default()
-        .with_module_entry_points([
-            find_funcdef_node(&hugr, entry_fn).expect("entry point function error.")
-        ])
+        .with_module_entry_points([fn_entry])
         .run(hugr)
         .unwrap();
     hugr::algorithms::LinearizeArrayPass::default()
@@ -86,7 +66,8 @@ fn compile_module<'a>(
 
     let emitter =
         hugr::llvm::emit::EmitHugr::new(ctx, llvm_module, namer.into(), extensions.into());
-    let hugr_module = hugr.fat_root().unwrap();
+    // TODO use hugr.fat_root after hugr 0.20.2
+    let hugr_module = hugr.try_fat(hugr.module_root()).unwrap();
     let emitter = emitter
         .emit_module(hugr_module)
         .map_err(|e| pyerr!("Error compiling to llvm: {}", e))?;
@@ -96,17 +77,21 @@ fn compile_module<'a>(
 
 fn run_function<T: Clone>(
     pkg_bytes: &[u8],
-    fn_name: &str,
     args: &[T],
     encode_arg: impl Fn(&Context, T) -> BasicMetadataValueEnum,
     parse_result: impl FnOnce(&Context, GenericValue) -> PyResult<T>,
 ) -> PyResult<T> {
     let mut hugr = parse_hugr(pkg_bytes)?;
-    guppy_pass(&mut hugr, fn_name);
+    guppy_pass(&mut hugr);
     let ctx = Context::create();
 
     let namer = hugr::llvm::emit::Namer::default();
-    let funcdefn_node = find_funcdef_node(&hugr, fn_name)?;
+    let funcdefn_node = hugr.entrypoint();
+    let fn_name = hugr
+        .get_optype(funcdefn_node)
+        .as_func_defn()
+        .ok_or(pyerr!("Expected entrypoint to be a FuncDefn"))?
+        .func_name();
     let mangled_name = namer.name_func(fn_name, funcdefn_node);
 
     let module = compile_module(&hugr, &ctx, namer)?;
@@ -153,17 +138,16 @@ mod execute_llvm {
         let mut hugr = parse_hugr(pkg_bytes)?;
         let ctx = Context::create();
 
-        guppy_pass(&mut hugr, "main");
+        guppy_pass(&mut hugr);
         let module = compile_module(&hugr, &ctx, Default::default())?;
 
         Ok(module.print_to_string().to_str().unwrap().to_string())
     }
 
     #[pyfunction]
-    fn run_int_function(pkg_bytes: &[u8], fn_name: &str, args: Vec<i64>) -> PyResult<i64> {
+    fn run_int_function(pkg_bytes: &[u8], args: Vec<i64>) -> PyResult<i64> {
         run_function::<i64>(
             pkg_bytes,
-            fn_name,
             &args,
             |ctx, i| ctx.i64_type().const_int(i as u64, true).into(),
             |_, llvm_val| {
@@ -176,10 +160,9 @@ mod execute_llvm {
     }
 
     #[pyfunction]
-    fn run_float_function(pkg_bytes: &[u8], fn_name: &str, args: Vec<f64>) -> PyResult<f64> {
+    fn run_float_function(pkg_bytes: &[u8], args: Vec<f64>) -> PyResult<f64> {
         run_function::<f64>(
             pkg_bytes,
-            fn_name,
             &args,
             |ctx, f| ctx.f64_type().const_float(f).into(),
             |ctx, llvm_val| Ok(llvm_val.as_float(&ctx.f64_type())),
