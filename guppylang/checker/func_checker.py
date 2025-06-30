@@ -20,6 +20,7 @@ from guppylang.definition.common import DefId
 from guppylang.diagnostic import Error, Help, Note
 from guppylang.engine import DEF_STORE, ENGINE
 from guppylang.error import GuppyError
+from guppylang.experimental import check_capturing_closures_enabled
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
 from guppylang.tys.parsing import parse_function_io_types
 from guppylang.tys.ty import FunctionType, InputFlags, NoneType
@@ -114,6 +115,12 @@ def check_nested_func_def(
         for x, using_bb in cfg.live_before[cfg.entry_bb].items()
         if x not in func_ty.input_names and x in ctx.locals
     }
+
+    # Capturing closures are an experimental features since they aren't supported
+    # further down the stack yet
+    if captured:
+        _, loc = captured[next(iter(captured.keys()))]
+        check_capturing_closures_enabled(loc)
 
     # Captured variables may never be assigned to
     for bb in cfg.bbs:
