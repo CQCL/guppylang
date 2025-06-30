@@ -259,12 +259,7 @@ class CFGBuilder(AstVisitor[BB | None]):
             cfg,
             func_ty,
             docstring=docstring,
-            name=node.name,
-            args=node.args,
-            body=node.body,
-            decorator_list=node.decorator_list,
-            returns=node.returns,
-            type_comment=node.type_comment,
+            **dict(ast.iter_fields(node)),
         )
         set_location_from(new_node, node)
         bb.statements.append(new_node)
