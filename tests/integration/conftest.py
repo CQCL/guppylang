@@ -88,13 +88,14 @@ def _run_fn(run_fn_name: str):
                 pytest.skip("Skipping llvm execution")
 
             # set the module entrypoint to the one specified by `fn_name`
-            for mod in module.package.modules:
-                for n in mod.children(mod.module_root):
-                    op = mod[n].op
-                    if isinstance(op, ops.FuncDefn):
-                        if op.f_name == fn_name:
-                            mod.entrypoint = n
-                            break
+            assert len(module.package.modules) == 1, "Expected exactly one module"
+            mod = module.package.modules[0]
+            for n in mod.children(mod.module_root):
+                op = mod[n].op
+                if isinstance(op, ops.FuncDefn):
+                    if op.f_name == fn_name:
+                        mod.entrypoint = n
+                        break
 
             package_bytes = module.package.to_bytes()
             res = fn(package_bytes, args or [])
