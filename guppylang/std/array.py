@@ -9,6 +9,7 @@ See `frozenarray[T, n]` for an immutable version of the `array[T, n]` type.
 from __future__ import annotations
 
 import builtins
+from types import GeneratorType
 from typing import TYPE_CHECKING, Generic, TypeVar, no_type_check
 
 from guppylang.decorator import guppy
@@ -71,6 +72,8 @@ class array(builtins.list[_T], Generic[_T, _n]):
     def __new__(cls, *args: _T) -> builtins.list[_T]:  # type: ignore[no-redef]
         # Runtime array constructor that is used for comptime. We return an actual list
         # in line with the comptime unpacking logic that turns arrays into lists.
+        if len(args) == 1 and isinstance(args[0], GeneratorType):
+            return list(args[0])
         return [*args]
 
 
