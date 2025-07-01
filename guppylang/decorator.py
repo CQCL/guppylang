@@ -74,8 +74,6 @@ from guppylang.tys.ty import (
     NumericType,
 )
 
-from .emulator import EmulatorBuilder, EmulatorInstance
-
 S = TypeVar("S")
 T = TypeVar("T")
 F = TypeVar("F", bound=Callable[..., Any])
@@ -395,17 +393,6 @@ class _Guppy:
         if not isinstance(obj, GuppyDefinition):
             raise TypeError(f"Object is not a Guppy definition: {obj}")
         return ENGINE.compile(obj.id)
-
-    def build_emulator(
-        self, obj: Any, n_qubits: int, builder: EmulatorBuilder | None = None
-    ) -> EmulatorInstance:
-        mod = self.compile_to_hugr(obj)
-
-        builder = builder or EmulatorBuilder()
-        return builder.build(mod, n_qubits)
-
-    def compile_to_hugr(self, obj: Any) -> ModulePointer:
-        return self.compile(obj)
 
     def compile_function(self, obj: GuppyFunctionDefinition[P, T]) -> FuncDefnPointer:
         """Compiles a single function definition."""

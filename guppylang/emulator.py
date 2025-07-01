@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
     from pathlib import Path
 
-    from hugr.package import PackagePointer
+    from hugr.package import Package
     from hugr.qsystem.result import TaggedResult
     from selene_core import BuildPlanner, QuantumInterface, Utility
     from selene_core.error_model import ErrorModel
@@ -143,7 +143,7 @@ class EmulatorBuilder(Config):
     strict: bool = False
     save_planner: bool = False
 
-    def build(self, package: PackagePointer, n_qubits: int) -> EmulatorInstance:
+    def build(self, package: Package, n_qubits: int) -> EmulatorInstance:
         """Build an EmulatorInstance from a compiled package."""
 
         instance = selene_sim.build(  # type: ignore[attr-defined]

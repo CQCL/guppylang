@@ -9,7 +9,7 @@ def test_basic_emulation() -> None:
     def main() -> None:
         result("c", measure(qubit()))
 
-    em = guppy.build_emulator(main, n_qubits=1)
+    em = main.build_emulator(n_qubits=1)
     res = em.run_statevector()
     expected = QsysResult([[("c", False)]])
     assert res._qsys_result == expected
@@ -20,7 +20,7 @@ def test_basic_emulation() -> None:
         h(q)
         result("c", measure(q))
 
-    em = guppy.build_emulator(main, n_qubits=1)
+    em = main.build_emulator(n_qubits=1)
     em.set_seed(42)
     res = em.run_statevector()
     expected = QsysResult([[("c", True)]])

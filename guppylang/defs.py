@@ -7,10 +7,12 @@ with the compiler-internal definition objects in the `definitions` module.
 from dataclasses import dataclass
 from typing import Any, ClassVar, Generic, ParamSpec, TypeVar, cast
 
-from hugr.package import FuncDefnPointer, ModulePointer
+from hugr.package import Package
 
 from guppylang.tracing.object import TracingDefMixin
 from guppylang.tracing.util import hide_trace
+
+from .emulator import EmulatorBuilder, EmulatorInstance
 
 P = ParamSpec("P")
 Out = TypeVar("Out")
@@ -20,10 +22,10 @@ Out = TypeVar("Out")
 class GuppyDefinition(TracingDefMixin):
     """A general Guppy definition."""
 
-    def compile(self) -> ModulePointer:
+    def compile(self) -> Package:
         from guppylang.decorator import guppy
 
-        return guppy.compile(self)
+        return guppy.compile(self).package
 
 
 @dataclass(frozen=True)
@@ -34,10 +36,18 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> Out:
         return cast(Out, super().__call__(*args, **kwargs))
 
-    def compile(self) -> FuncDefnPointer:
+    def compile(self) -> Package:
         from guppylang.decorator import guppy
 
-        return guppy.compile_function(self)
+        return guppy.compile_function(self).package
+
+    def build_emulator(
+        self, n_qubits: int, builder: EmulatorBuilder | None = None
+    ) -> EmulatorInstance:
+        mod = self.compile()
+
+        builder = builder or EmulatorBuilder()
+        return builder.build(mod, n_qubits)
 
 
 @dataclass(frozen=True)
