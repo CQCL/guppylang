@@ -7,4 +7,4 @@ def main(xs: "array[int, num]", num: nat @comptime) -> None:
     pass
 
 
-main.compile()
+main.compile(entrypoint=False)

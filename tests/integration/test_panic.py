@@ -35,9 +35,9 @@ def test_value(validate):
     def baz() -> None:
         return panic("I panicked!")
 
-    validate(foo.compile())
-    validate(bar.compile())
-    validate(baz.compile())
+    validate(foo.compile(entrypoint=False))
+    validate(bar.compile(entrypoint=False))
+    validate(baz.compile(entrypoint=False))
 
 
 def test_py_message(validate):
@@ -54,7 +54,7 @@ def test_comptime_panic(validate):
     def main() -> None:
         panic("foo")
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_comptime_exit(validate):
@@ -62,4 +62,4 @@ def test_comptime_exit(validate):
     def main() -> None:
         exit("foo", 1)
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))

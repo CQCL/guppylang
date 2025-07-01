@@ -165,7 +165,7 @@ def test_angle(validate):
         """Dummy main function"""
         add, sub, mul, div
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_dunder_coercions(validate):
@@ -201,14 +201,14 @@ def test_dunder_coercions(validate):
     def test8(x: float, y: nat) -> float:
         return x + y
 
-    validate(test1.compile())
-    validate(test2.compile())
-    validate(test3.compile())
-    validate(test4.compile())
-    validate(test5.compile())
-    validate(test6.compile())
-    validate(test7.compile())
-    validate(test8.compile())
+    validate(test1.compile(entrypoint=False))
+    validate(test2.compile(entrypoint=False))
+    validate(test3.compile(entrypoint=False))
+    validate(test4.compile(entrypoint=False))
+    validate(test5.compile(entrypoint=False))
+    validate(test6.compile(entrypoint=False))
+    validate(test7.compile(entrypoint=False))
+    validate(test8.compile(entrypoint=False))
 
 
 def test_const(validate):
@@ -234,7 +234,7 @@ def test_const(validate):
     def test4() -> float:
         return x / 0.5
 
-    validate(test1.compile())
-    validate(test2.compile())
-    validate(test3.compile())
-    validate(test4.compile())
+    validate(test1.compile(entrypoint=False))
+    validate(test2.compile(entrypoint=False))
+    validate(test3.compile(entrypoint=False))
+    validate(test4.compile(entrypoint=False))

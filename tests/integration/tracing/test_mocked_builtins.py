@@ -37,7 +37,7 @@ def test_float(validate):
             builtins.float(x)
         return float(x)
 
-    validate(test.compile())
+    validate(test.compile(entrypoint=False))
 
     # Outside the function, we have the regular builtin
     assert float is builtins.float
@@ -75,7 +75,7 @@ def test_int(validate):
             builtins.int(x)
         return int(x)
 
-    validate(test.compile())
+    validate(test.compile(entrypoint=False))
 
     # Outside the function, we have the regular builtin
     assert int is builtins.int
@@ -111,7 +111,7 @@ def test_len(validate):
             builtins.len(s)
         return len(s)
 
-    validate(test.compile())
+    validate(test.compile(entrypoint=False))
 
     # Outside the function, we have the regular builtin
     assert len is builtins.len

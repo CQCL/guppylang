@@ -30,7 +30,7 @@ def test_custom_signature_success(validate):
     def test_func() -> None:
         fake_iadd(1, 1)
 
-    validate(test_func.compile())
+    validate(test_func.compile(entrypoint=False))
 
 
 def test_custom_signature_fail(validate):
@@ -39,6 +39,6 @@ def test_custom_signature_fail(validate):
         fake_iadd(1.0, 1.0)
 
     try:
-        validate(test_func_fail.compile())
+        validate(test_func_fail.compile(entrypoint=False))
     except GuppyTypeError as e:
         assert True

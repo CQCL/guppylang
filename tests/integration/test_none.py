@@ -14,5 +14,5 @@ def test_none(validate, run_int_fn):
     def main() -> int:
         return bar(foo(), 42)
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
     run_int_fn(main, expected=42)

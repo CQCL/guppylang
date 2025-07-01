@@ -17,7 +17,7 @@ def test_basic(validate):
     def foo() -> int:
         return comptime(x + 1)
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_py_alias(validate):
@@ -27,7 +27,7 @@ def test_py_alias(validate):
     def foo() -> int:
         return py(x + 1)
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_builtin(validate):
@@ -47,7 +47,7 @@ def test_if(validate):
             return 0
         return 1
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_redeclare_after(validate):
@@ -59,7 +59,7 @@ def test_redeclare_after(validate):
 
     x = False
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_tuple(validate):
@@ -156,6 +156,6 @@ def test_func_type_arg(validate):
     class Baz:
         xs: array[int, comptime(n)]
 
-    validate(foo.compile())
-    validate(bar.compile())
-    validate(Baz.compile())
+    validate(foo.compile(entrypoint=False))
+    validate(bar.compile(entrypoint=False))
+    validate(Baz.compile(entrypoint=False))

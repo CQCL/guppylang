@@ -18,7 +18,7 @@ def test_indexing_input(validate):
     def main(t: tuple[int, float]) -> int:
         return t[0]
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_indexing_drop(run_int_fn):
@@ -34,7 +34,7 @@ def test_indexing_drop2(validate):
     def main() -> qubit:
         return (1, 2, qubit())[2]
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_indexing_nesting(run_int_fn):
@@ -69,7 +69,7 @@ def test_rest_after_use(validate):
         use(t[1])
         return t[0]
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_control_flow(validate):
@@ -83,7 +83,7 @@ def test_control_flow(validate):
         discard(t[0])
         discard(t[1])
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_control_flow2(validate):
@@ -96,7 +96,7 @@ def test_control_flow2(validate):
             discard(q1)
             discard(q2)
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_mem_swap(validate):
@@ -115,7 +115,7 @@ def test_mem_swap(validate):
         discard(t[0])
         discard(t[1])
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_non_terminating(validate):
@@ -124,4 +124,4 @@ def test_non_terminating(validate):
         while True:
             x(t[0])
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))

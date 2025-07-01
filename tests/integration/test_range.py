@@ -42,7 +42,7 @@ def test_static_size(validate):
     def negative() -> SizedIter[Range, 10]:
         return range(10)
 
-    validate(negative.compile())
+    validate(negative.compile(entrypoint=False))
 
 
 def test_py_size(validate):
@@ -52,7 +52,7 @@ def test_py_size(validate):
     def negative() -> SizedIter[Range, 10]:
         return range(py(n))
 
-    validate(negative.compile())
+    validate(negative.compile(entrypoint=False))
 
 
 def test_static_generic_size(validate):
@@ -62,4 +62,4 @@ def test_static_generic_size(validate):
     def negative() -> SizedIter[Range, n]:
         return range(n)
 
-    validate(negative.compile())
+    validate(negative.compile(entrypoint=False))

@@ -36,7 +36,7 @@ def test_basic_defs(validate):
         TwoMemberStruct((True, 0), 1.0)
         DocstringStruct(-1)
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_backward_ref(validate):
@@ -52,7 +52,7 @@ def test_backward_ref(validate):
     def main(a: StructA, b: StructB) -> None:
         StructB(a)
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_forward_ref(validate):
@@ -68,7 +68,7 @@ def test_forward_ref(validate):
     def main(a: StructA, b: StructB) -> None:
         StructA(b)
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_generic(validate):
@@ -98,7 +98,7 @@ def test_generic(validate):
         StructB(x, a)
         StructC(y, StructA((0, [])), StructB(42.0, StructA((4, b))))
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_methods(validate):
@@ -123,7 +123,7 @@ def test_methods(validate):
     def main(a: StructA, b: StructB) -> tuple[int, float]:
         return a.foo(1), b.bar(a)
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_higher_order(validate):
@@ -141,7 +141,7 @@ def test_higher_order(validate):
     def main() -> None:
         factory(Struct, 42)
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_wiring(validate):
@@ -157,7 +157,7 @@ def test_wiring(validate):
         s = MyStruct(42)
         return s
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_field_access_and_drop(validate):
@@ -173,7 +173,7 @@ def test_field_access_and_drop(validate):
         # dropping all the other fields
         return MyStruct(42, 3.14, (1, 2)).y
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_redefine(validate):
@@ -191,4 +191,4 @@ def test_redefine(validate):
     def foo() -> MyStruct:
         return MyStruct()
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))

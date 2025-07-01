@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 def compile_guppy(fn) -> Package:
     """A decorator that combines @guppy with HUGR compilation."""
     defn: GuppyFunctionDefinition = guppy(fn)
-    return defn.compile()
+    return defn.compile(entrypoint=False)
 
 
 def dump_llvm(package: PackagePointer):

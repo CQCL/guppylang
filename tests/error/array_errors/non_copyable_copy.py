@@ -8,4 +8,4 @@ def main(xs: array[qubit, 2] @ owned) -> array[int, 2]:
    ys = xs.copy()
    return ys
 
-main.compile()
+main.compile(entrypoint=False)

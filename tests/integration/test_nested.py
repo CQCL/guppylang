@@ -208,7 +208,7 @@ def test_capture_recurse_nested(validate):
 
         return bar(x, 0)
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_capture_while(validate):

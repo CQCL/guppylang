@@ -10,7 +10,7 @@ def test_unpack_array(validate):
         q1, q2, q3 = qs
         return q1, q2, q3
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_unpack_starred(validate):
@@ -24,7 +24,7 @@ def test_unpack_starred(validate):
         [*qs] = qs
         return q1, q2, q3, q4, q5, q6, qs
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_unpack_starred_empty(validate):
@@ -33,7 +33,7 @@ def test_unpack_starred_empty(validate):
         q1, *empty, q2 = qs
         return q1, empty, q2
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_unpack_big_iterable(validate):
@@ -44,7 +44,7 @@ def test_unpack_big_iterable(validate):
         q1, *qs, q2 = qs
         return q1, qs, q2
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_unpack_range(run_int_fn):
@@ -62,7 +62,7 @@ def test_unpack_tuple_starred(validate):
         x, *ys, z = 1, 2, 3, 4
         return ys
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_unpack_nested(validate):
@@ -80,7 +80,7 @@ def test_unpack_nested(validate):
         (x, [y, *z, _], *a), *b, c = xs
         return x, y, z, a, b, c
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_left_to_right(run_int_fn):

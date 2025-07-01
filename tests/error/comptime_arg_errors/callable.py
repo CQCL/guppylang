@@ -9,4 +9,4 @@ def main(f: Callable[[nat @comptime], None]) -> None:
     pass
 
 
-main.compile()
+main.compile(entrypoint=False)

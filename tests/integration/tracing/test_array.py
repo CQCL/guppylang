@@ -65,4 +65,4 @@ def test_comprehension(validate):
         assert xs == [0, 1, 2, 3, 4]
         return xs
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))

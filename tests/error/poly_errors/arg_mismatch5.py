@@ -6,4 +6,4 @@ def main(x: list[42]) -> None:
     pass
 
 
-main.compile()
+main.compile(entrypoint=False)

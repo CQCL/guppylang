@@ -23,7 +23,7 @@ def test_wasm_functions(validate):
         return two + two2
         return 2
 
-    mod = main.compile()
+    mod = main.compile(entrypoint=False)
     validate(mod)
 
 
@@ -45,7 +45,7 @@ def test_wasm_methods(validate):
         mod.discard()
         return x
 
-    mod = main.compile()
+    mod = main.compile(entrypoint=False)
     validate(mod)
 
 
@@ -64,7 +64,7 @@ def test_wasm_types(validate):
         mod.discard()
         return
 
-    mod = main.compile()
+    mod = main.compile(entrypoint=False)
     validate(mod)
 
 
@@ -86,7 +86,7 @@ def test_wasm_guppy_module(validate):
         mod2.discard()
         return two + two2
 
-    mod = main.compile()
+    mod = main.compile(entrypoint=False)
     validate(mod)
 
 
@@ -105,7 +105,7 @@ def test_lookup_by_id(validate):
         c.discard()
         return x
 
-    mod = main.compile()
+    mod = main.compile(entrypoint=False)
     validate(mod)
 
     ops = set()
@@ -135,7 +135,7 @@ def test_lookup_by_name(validate):
         c.discard()
         return x
 
-    mod = main.compile()
+    mod = main.compile(entrypoint=False)
     validate(mod)
 
     ops = set()

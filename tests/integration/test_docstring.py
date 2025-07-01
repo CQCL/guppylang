@@ -31,6 +31,6 @@ def test_docstring(validate):
             string.
             """
 
-    validate(f.compile())
-    validate(g.compile())
-    validate(nested.compile())
+    validate(f.compile(entrypoint=False))
+    validate(g.compile(entrypoint=False))
+    validate(nested.compile(entrypoint=False))

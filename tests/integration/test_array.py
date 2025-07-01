@@ -15,7 +15,7 @@ def test_len_execute(validate, run_int_fn):
     def main(xs: array[float, 42]) -> int:
         return len(xs)
 
-    compiled = main.compile()
+    compiled = main.compile(entrypoint=False)
     validate(compiled)
     if run_int_fn is not None:
         run_int_fn(compiled, expected=42)
@@ -30,7 +30,7 @@ def test_len_linear(validate):
     def main(qs: array[qubit, 42]) -> int:
         return len(qs)
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_len_generic(validate):
@@ -43,7 +43,7 @@ def test_len_generic(validate):
                 return True
         return False
 
-    package = main.compile()
+    package = main.compile(entrypoint=False)
     validate(package)
 
     hg = package.modules[0]
@@ -100,7 +100,7 @@ def test_new_array_check_nested_length(validate):
     def main() -> None:
         foo(array(array(1, 2, 3)))
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_return_linear_array(validate):
@@ -109,7 +109,7 @@ def test_return_linear_array(validate):
         a = array(qubit(), qubit())
         return a
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_subscript_drop_rest(validate):
@@ -120,7 +120,7 @@ def test_subscript_drop_rest(validate):
     def main() -> int:
         return foo()[0]
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_linear_subscript(validate):
@@ -132,7 +132,7 @@ def test_linear_subscript(validate):
         foo(qs[i])
         return qs
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_inout_subscript(validate):
@@ -143,7 +143,7 @@ def test_inout_subscript(validate):
     def main(qs: array[qubit, 42], i: int) -> None:
         foo(qs[i])
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_multi_subscripts(validate):
@@ -156,7 +156,7 @@ def test_multi_subscripts(validate):
         foo(qs[0], qs[0])  # Will panic at runtime
         return qs
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_struct_array(validate):
@@ -176,7 +176,7 @@ def test_struct_array(validate):
         foo(ss[0].q1, ss[0].q2)
         return ss
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_nested_subscripts(validate):
@@ -195,7 +195,7 @@ def test_nested_subscripts(validate):
         bar(qs[0][0], qs[0][1], qs[1][0], qs[1][1])
         return qs
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_struct_nested_subscript(validate):
@@ -223,7 +223,7 @@ def test_struct_nested_subscript(validate):
         foo(a.xs[i].ys[j][k].c)
         return a
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_generic_function(validate):
@@ -240,7 +240,7 @@ def test_generic_function(validate):
         ys = array(qubit(), qubit())
         return foo(xs), foo(ys)
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_linear_for_loop(validate):
@@ -250,7 +250,7 @@ def test_linear_for_loop(validate):
         for q in qs:
             discard(q)
 
-    validate(main.compile())
+    validate(main.compile(entrypoint=False))
 
 
 def test_exec_array(run_int_fn):
@@ -289,7 +289,7 @@ def test_mem_swap(validate):
         foo(a[0], a[1])
         return a
 
-    package = main.compile()
+    package = main.compile(entrypoint=False)
     validate(package)
 
 
@@ -618,5 +618,5 @@ def test_assign_dataflow(validate):
         for i in range(2):
             ys[xs[i]] = 0
 
-    test1.compile()
-    test2.compile()
+    test1.compile(entrypoint=False)
+    test2.compile(entrypoint=False)

@@ -14,4 +14,4 @@ def main(xs: array[int, 42]) -> None:
     foo[43](xs)
 
 
-main.compile()
+main.compile(entrypoint=False)

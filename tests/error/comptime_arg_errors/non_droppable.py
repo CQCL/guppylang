@@ -10,4 +10,4 @@ def main(q: T @comptime) -> None:
     pass
 
 
-main.compile()
+main.compile(entrypoint=False)

@@ -4,11 +4,17 @@ These are the objects returned by the `@guppy` decorator. They should not be con
 with the compiler-internal definition objects in the `definitions` module.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, Generic, ParamSpec, TypeVar, cast
 
 import guppylang_internals
+from guppylang_internals.definition.function import CheckedFunctionDef
+from guppylang_internals.definition.value import CompiledCallableDef
+from guppylang_internals.diagnostic import Error
 from guppylang_internals.engine import ENGINE, CoreMetadataKeys
+from guppylang_internals.error import GuppyError
+from guppylang_internals.span import Span, to_span
 from guppylang_internals.tracing.object import TracingDefMixin
 from guppylang_internals.tracing.util import hide_trace
 from hugr.hugr import Hugr
@@ -36,10 +42,22 @@ def _update_generator_metadata(hugr: Hugr[Any]) -> None:
 
 
 @dataclass(frozen=True)
+class EntrypointArgsError(Error):
+    title: ClassVar[str] = "Entrypoint function has arguments"
+    span_label: ClassVar[str] = "Entrypoint function has arguments: {input_names}."
+    args: Sequence[str]
+
+    @property
+    def input_names(self) -> str:
+        """Returns a comma-separated list of input names."""
+        return ", ".join(f"`{x}`" for x in self.args)
+
+
+@dataclass(frozen=True)
 class GuppyDefinition(TracingDefMixin):
     """A general Guppy definition."""
 
-    def compile(self) -> Package:
+    def compile(self, *, entrypoint: bool = True) -> Package:
         """Compile a Guppy definition to HUGR."""
         package: Package = ENGINE.compile(self.id).package
         for mod in package.modules:
@@ -78,10 +96,48 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         Returns:
             An `EmulatorInstance` that can be used to run the function in an emulator.
         """
-        mod = self.compile()
+        mod = self.compile(entrypoint=True)
 
         builder = builder or EmulatorBuilder()
         return builder.build(mod, n_qubits=n_qubits)
+
+    def compile(self, *, entrypoint: bool = True) -> Package:
+        """
+        Compiles a function definition to a HUGR package.
+
+        If `entrypoint` is True, checks that the entrypoint does not have any arguments.
+
+        Args:
+            entrypoint (bool, optional): Whether to treat this definition
+              as the entrypoint. Defaults to True.
+
+        Returns:
+            Package: The compiled package object.
+        Raises:
+            GuppyError: If the entrypoint has arguments.
+        """
+
+        pack = super().compile(entrypoint=entrypoint)
+        # entrypoint cannot be polymorphic
+        monomorphized_id = (self.id, ())
+        compiled_def = ENGINE.compiled.get(monomorphized_id)
+        if (
+            entrypoint
+            and isinstance(compiled_def, CompiledCallableDef)
+            and len(compiled_def.ty.inputs) > 0
+        ):
+            # Check if the entrypoint being has arguments
+            checked = cast(CheckedFunctionDef, ENGINE.checked[self.id])
+            start = to_span(checked.defined_at.args.args[0])
+            end = to_span(checked.defined_at.args.args[-1])
+            span = Span(start=start.start, end=end.end)
+            raise GuppyError(
+                EntrypointArgsError(
+                    span=span,
+                    args=compiled_def.ty.input_names or "",
+                )
+            )
+        return pack
 
 
 @dataclass(frozen=True)

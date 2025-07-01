@@ -13,4 +13,4 @@ def main(x: float) -> None:
     foo[int](x)
 
 
-main.compile()
+main.compile(entrypoint=False)

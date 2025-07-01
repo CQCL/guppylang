@@ -15,4 +15,4 @@ def main(_: Struct[X]) -> None:
     pass
 
 
-main.compile()
+main.compile(entrypoint=False)

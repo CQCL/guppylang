@@ -25,7 +25,7 @@ def test_basic_linear(validate):
     def test() -> array[qubit, 42]:
         return array(qubit() for _ in range(42))
 
-    validate(test.compile())
+    validate(test.compile(entrypoint=False))
 
 
 def test_zero_length(run_int_fn):
@@ -66,7 +66,7 @@ def test_capture_struct(validate):
     def test(s: MyStruct) -> array[int, 42]:
         return array(i + s.x for i in range(42))
 
-    validate(test.compile())
+    validate(test.compile(entrypoint=False))
 
 
 def test_scope(validate):
@@ -102,7 +102,7 @@ def test_generic_size(validate):
     def test(xs: array[int, n] @ owned) -> array[int, n]:
         return array(x + 1 for x in xs)
 
-    validate(test.compile())
+    validate(test.compile(entrypoint=False))
 
 
 def test_generic_elem(validate):
@@ -112,7 +112,7 @@ def test_generic_elem(validate):
     def foo(x: T) -> array[T, 10]:
         return array(x for _ in range(10))
 
-    validate(foo.compile())
+    validate(foo.compile(entrypoint=False))
 
 
 def test_borrow(validate):
@@ -125,7 +125,7 @@ def test_borrow(validate):
     def test(q: qubit) -> array[int, n]:
         return array(foo(q) for _ in range(n))
 
-    validate(test.compile())
+    validate(test.compile(entrypoint=False))
 
 
 def test_borrow_twice(validate):
@@ -138,7 +138,7 @@ def test_borrow_twice(validate):
     def test(q: qubit) -> array[int, n]:
         return array(foo(q) + foo(q) for _ in range(n))
 
-    validate(test.compile())
+    validate(test.compile(entrypoint=False))
 
 
 def test_borrow_struct(validate):
@@ -156,7 +156,7 @@ def test_borrow_struct(validate):
     def test(s: MyStruct) -> array[int, n]:
         return array(foo(s) for _ in range(n))
 
-    validate(test.compile())
+    validate(test.compile(entrypoint=False))
 
 
 def test_borrow_and_consume(validate):
@@ -172,4 +172,4 @@ def test_borrow_and_consume(validate):
     def test(qs: array[qubit, n] @ owned) -> array[int, n]:
         return array(foo(q) + bar(q) for q in qs)
 
-    validate(test.compile())
+    validate(test.compile(entrypoint=False))

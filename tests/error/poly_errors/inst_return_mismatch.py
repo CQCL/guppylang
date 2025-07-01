@@ -13,4 +13,4 @@ def main(x: bool) -> None:
     y: None = foo(x)
 
 
-main.compile()
+main.compile(entrypoint=False)
