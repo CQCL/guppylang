@@ -4,6 +4,7 @@ from types import TracebackType
 from typing import ClassVar
 
 from guppylang.ast_util import AstNode
+from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.diagnostic import Error, Help
 from guppylang.error import GuppyError
 
@@ -84,3 +85,8 @@ def check_function_tensors_enabled(node: expr | None = None) -> None:
 def check_lists_enabled(loc: AstNode | None = None) -> None:
     if not EXPERIMENTAL_FEATURES_ENABLED:
         raise GuppyError(ExperimentalFeatureError(loc, "Lists"))
+
+
+def check_capturing_closures_enabled(loc: AstNode | None = None) -> None:
+    if not EXPERIMENTAL_FEATURES_ENABLED:
+        raise GuppyError(UnsupportedError(loc, "Capturing closures"))
