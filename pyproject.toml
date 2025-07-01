@@ -45,6 +45,7 @@ dependencies = [
 [project.optional-dependencies]
 # pytket = ["pytket >=1.30.0,<2", "tket2 >=0.4.1,<0.5"]
 pytket = ["pytket>=1.34"]
+emulator = ["selene-sim>=0.2.0a4"]
 
 [project.urls]
 homepage = "https://github.com/CQCL/guppylang"
@@ -68,6 +69,7 @@ test = [
     "tket2 ~= 0.11.0",
     "pytest-benchmark>=5.1.0",
     "miette-py",
+    "guppylang[emulator]"
 ]
 execution = [
     { include-group = "test" },

@@ -5,7 +5,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import FrameType, ModuleType
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar, cast, TYPE_CHECKING
 
 from hugr import ops
 from hugr import tys as ht
@@ -67,6 +67,8 @@ from guppylang.tys.ty import (
     NoneType,
     NumericType,
 )
+
+from .emulator import EmulatorInstance, EmulatorBuilder
 
 S = TypeVar("S")
 T = TypeVar("T")
@@ -375,6 +377,17 @@ class _Guppy:
         if not isinstance(obj, GuppyDefinition):
             raise TypeError(f"Object is not a Guppy definition: {obj}")
         return ENGINE.compile(obj.id)
+
+    def build_emulator(
+        self, obj: Any, n_qubits: int, builder: EmulatorBuilder | None = None
+    ) -> EmulatorInstance:
+        mod = self.compile_to_hugr(obj)
+
+        builder = builder or EmulatorBuilder()
+        return builder.build(mod, n_qubits)
+
+    def compile_to_hugr(self, obj: Any) -> ModulePointer:
+        return self.compile(obj)
 
     def compile_function(
         self,
