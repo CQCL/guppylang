@@ -65,3 +65,12 @@ def test_mutate(validate, run_int_fn):
     validate(compiled)
     run_int_fn(compiled, 100)
 
+
+def test_comprehension(validate):
+    @guppy.comptime
+    def main() -> array[int, 5]:
+        xs = array(i for i in range(5))
+        assert xs == [0, 1, 2, 3, 4]
+        return xs
+
+    validate(guppy.compile(main))
