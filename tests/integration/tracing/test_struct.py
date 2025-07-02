@@ -4,7 +4,7 @@ from typing import Generic
 from guppylang.decorator import guppy
 
 
-def test_create(validate, run_int_fn):
+def test_create(run_int_fn):
     @guppy.struct
     class S:
         x: int
@@ -15,12 +15,10 @@ def test_create(validate, run_int_fn):
         s = S(x, 2)
         return s.x + s.y
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 42, args=[40])
+    run_int_fn(main, 42, args=[40])
 
 
-def test_argument(validate, run_int_fn):
+def test_argument(run_int_fn):
     @guppy.struct
     class S:
         x: int
@@ -34,12 +32,10 @@ def test_argument(validate, run_int_fn):
     def main() -> int:
         return foo(S(40, 2))
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 42)
+    run_int_fn(main, 42)
 
 
-def test_write(validate, run_int_fn):
+def test_write(run_int_fn):
     @guppy.struct
     class S:
         x: int
@@ -52,12 +48,10 @@ def test_write(validate, run_int_fn):
         t.y += 1
         return s.x + s.y
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 42, args=[1])
+    run_int_fn(main, 42, args=[1])
 
 
-def test_method(validate, run_int_fn):
+def test_method(run_int_fn):
     @guppy.struct
     class S:
         x: int
@@ -76,9 +70,7 @@ def test_method(validate, run_int_fn):
         s = S(x, y)
         return s.get_x() + s.get_y()
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 42, args=[40, 2])
+    run_int_fn(main, 42, args=[40, 2])
 
 
 def test_generic_nested(validate, run_float_fn_approx):
@@ -113,9 +105,7 @@ def test_generic_nested(validate, run_float_fn_approx):
         a, b = bar(1, 10, 100, 1000, 10000)
         return foo(a, b)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_float_fn_approx(compiled, 11111)
+    run_float_fn_approx(main, 11111)
 
 
 def test_load_constructor(validate):

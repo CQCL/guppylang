@@ -2,7 +2,7 @@ from guppylang import guppy
 from guppylang.std.builtins import frozenarray, panic, py
 
 
-def test_len(validate, run_int_fn):
+def test_len(validate):
     @guppy
     def foo(xs: frozenarray[int, 42]) -> int:
         return len(xs)
@@ -16,10 +16,10 @@ def test_len(validate, run_int_fn):
     validate(compiled)
     # TODO: Enable execution test once LLVM lowering is done:
     #  https://github.com/CQCL/hugr/issues/1973
-    # run_int_fn(compiled, 42)
+    # emulate_int_fn(compiled, 42)
 
 
-def test_subscript(validate, run_int_fn):
+def test_subscript(validate):
     @guppy
     def foo(xs: frozenarray[int, 42]) -> int:
         return xs[10] + xs[10]
@@ -33,7 +33,7 @@ def test_subscript(validate, run_int_fn):
     validate(compiled)
     # TODO: Enable execution test once LLVM lowering is done:
     #  https://github.com/CQCL/hugr/issues/1973
-    # run_int_fn(compiled, 20)
+    # emulate_int_fn(compiled, 20)
 
 
 def test_iter(validate):
@@ -53,7 +53,7 @@ def test_iter(validate):
     validate(compiled)
     # TODO: Enable execution test once LLVM lowering is done:
     #  https://github.com/CQCL/hugr/issues/1973
-    # run_int_fn(compiled, sum(range(42)))
+    # emulate_int_fn(compiled, sum(range(42)))
 
 
 def test_alias(validate):
@@ -71,7 +71,7 @@ def test_alias(validate):
     validate(compiled)
     # TODO: Enable execution test once LLVM lowering is done:
     #  https://github.com/CQCL/hugr/issues/1973
-    # run_int_fn(compiled, 1)
+    # emulate_int_fn(compiled, 1)
 
 
 def test_mutable_copy(validate):
@@ -95,7 +95,7 @@ def test_mutable_copy(validate):
     validate(compiled)
     # TODO: Enable execution test once LLVM lowering is done:
     #  https://github.com/CQCL/hugr/issues/1973
-    # run_int_fn(compiled, 2 * sum(range(42))
+    # emulate_int_fn(compiled, 2 * sum(range(42))
 
 
 def test_nested_subscript(validate):
@@ -112,7 +112,7 @@ def test_nested_subscript(validate):
     validate(compiled)
     # TODO: Enable execution test once LLVM lowering is done:
     #  https://github.com/CQCL/hugr/issues/1973
-    # run_int_fn(compiled, 1 + 2 + 3 + 4)
+    # emulate_int_fn(compiled, 1 + 2 + 3 + 4)
 
 
 def test_nested_iter(validate):
@@ -134,7 +134,7 @@ def test_nested_iter(validate):
     validate(compiled)
     # TODO: Enable execution test once LLVM lowering is done:
     #  https://github.com/CQCL/hugr/issues/1973
-    # run_int_fn(compiled, sum([sum(xs) for xs in xss]))
+    # emulate_int_fn(compiled, sum([sum(xs) for xs in xss]))
 
 
 def test_nested_struct(validate):

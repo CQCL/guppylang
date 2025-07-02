@@ -4,17 +4,15 @@ from guppylang.std.builtins import nat
 from tests.util import compile_guppy
 
 
-def test_negative(validate, run_int_fn):
+def test_negative(run_int_fn):
     @guppy
     def negative() -> int:
         return 2 - 42
 
-    compiled = guppy.compile(negative)
-    validate(compiled)
-    run_int_fn(compiled, expected=-40, fn_name="negative")
+    run_int_fn(negative, expected=-40)
 
 
-def test_arith_basic(validate, run_int_fn):
+def test_arith_basic(run_int_fn):
     @guppy
     def add(x: int, y: int) -> int:
         return x + y
@@ -23,9 +21,7 @@ def test_arith_basic(validate, run_int_fn):
     def main() -> int:
         return add(40, 2)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 42)
+    run_int_fn(main, 42)
 
 
 def test_constant(validate):
@@ -44,7 +40,7 @@ def test_nat_literal(validate):
     validate(const)
 
 
-def test_aug_assign(validate, run_int_fn):
+def test_aug_assign(run_int_fn):
     @guppy
     def add(x: int) -> int:
         x += 1
@@ -54,9 +50,7 @@ def test_aug_assign(validate, run_int_fn):
     def main() -> int:
         return add(5)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 6)
+    run_int_fn(main, 6)
 
 
 def test_nat(validate):
@@ -196,7 +190,7 @@ def test_shortcircuit_assign4(validate):
     validate(foo)
 
 
-def test_supported_ops(validate, run_int_fn):
+def test_supported_ops(run_int_fn):
     @guppy
     def double_add(x: int) -> int:
         return x + x
@@ -235,22 +229,13 @@ def test_supported_ops(validate, run_int_fn):
     def run_rem() -> int:
         return 11 % 3
 
-    @guppy
-    def main() -> None:
-        run_quad()
-        run_neg()
-        run_div()
-        run_rem()
-
-    hugr = guppy.compile(main)
-    validate(hugr)
-    run_int_fn(hugr, expected=168, fn_name="run_quad")
-    run_int_fn(hugr, expected=-42, fn_name="run_neg")
-    run_int_fn(hugr, expected=-2, fn_name="run_div")
-    run_int_fn(hugr, expected=2, fn_name="run_rem")
+    run_int_fn(run_quad, expected=168)
+    run_int_fn(run_neg, expected=-42)
+    run_int_fn(run_div, expected=-2)
+    run_int_fn(run_rem, expected=2)
 
 
-def test_angle_exec(validate, run_float_fn_approx):
+def test_angle_exec(run_float_fn_approx):
     @guppy
     def main() -> float:
         a1 = pi
@@ -260,72 +245,59 @@ def test_angle_exec(validate, run_float_fn_approx):
         a3 += 2 * a1
         return float(a3)
 
-    hugr = guppy.compile(main)
-    validate(hugr)
     import math
 
-    run_float_fn_approx(hugr, expected=-6 * math.pi)
+    run_float_fn_approx(main, expected=-6 * math.pi)
 
 
-def test_xor(validate, run_int_fn):
+def test_xor(run_int_fn):
     @guppy
-    def main() -> int:
+    def main1() -> int:
         return int(True ^ False ^ False)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 1)
+    run_int_fn(main1, 1)
 
     @guppy
-    def main() -> int:
+    def main2() -> int:
         return int(True ^ False ^ False ^ True)
 
-    compiled = main.compile()
-    run_int_fn(compiled, 0)
+    run_int_fn(main2, 0)
 
 
-def test_pow(validate, run_int_fn) -> None:
+def test_pow(run_int_fn) -> None:
     @guppy
     def main() -> int:
         return -(3**3) + 4**2
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, -11)
+    run_int_fn(main, -11)
 
 
-def test_float_to_int(validate, run_int_fn) -> None:
+def test_float_to_int(run_int_fn) -> None:
     @guppy
     def main() -> int:
         return int(-2.75)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, -2)
+    run_int_fn(main, -2)
 
 
-def test_float_to_nat(validate, run_int_fn) -> None:
+def test_float_to_nat(run_int_fn) -> None:
     @guppy
     def main() -> nat:
         return nat(2.75)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 2)
+    run_int_fn(main, 2)
 
 
-def test_shift(validate, run_int_fn) -> None:
+def test_shift(run_int_fn) -> None:
     @guppy
     def main() -> int:
         nats = (nat(7) << nat(2)) - (nat(1) << nat(3))
         return int(nats) + (2 << 3) + (53 >> 3)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 42)
+    run_int_fn(main, 42)
 
 
-def test_divmod(validate, run_int_fn) -> None:
+def test_divmod(run_int_fn) -> None:
     @guppy
     def quot() -> int:
         return -1 // 4
@@ -334,12 +306,5 @@ def test_divmod(validate, run_int_fn) -> None:
     def rem() -> int:
         return -1 % 4
 
-    @guppy
-    def main() -> None:
-        quot()
-        rem()
-
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, -1, "quot")
-    run_int_fn(compiled, 3, "rem")
+    run_int_fn(quot, -1)
+    run_int_fn(rem, 3)

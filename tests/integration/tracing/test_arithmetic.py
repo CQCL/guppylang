@@ -5,7 +5,7 @@ from guppylang.std.builtins import nat
 from hugr.std.int import IntVal
 
 
-def test_int(validate, run_int_fn):
+def test_int(run_int_fn):
     @guppy.comptime
     def pos(x: int) -> int:
         return +x
@@ -38,22 +38,14 @@ def test_int(validate, run_int_fn):
     def pow(x: int, y: int) -> int:
         return 4 ** (x ** (y**0))
 
-    @guppy
-    def main() -> None:
-        """Dummy main function"""
-        pos, neg, add, sub, mul, div, mod, pow
-
-    compiled = guppy.compile(main)
-    validate(compiled)
-
-    run_int_fn(compiled, 10, "pos", [10])
-    run_int_fn(compiled, -10, "neg", [10])
-    run_int_fn(compiled, 2, "add", [3, -4])
-    run_int_fn(compiled, -8, "sub", [3, -4])
-    run_int_fn(compiled, -24, "mul", [3, -4])
-    run_int_fn(compiled, 20, "div", [25, 10])
-    run_int_fn(compiled, 7, "mod", [8, 9])
-    run_int_fn(compiled, 16, "pow", [2, 100])
+    run_int_fn(pos, 10, [10])
+    run_int_fn(neg, -10, [10])
+    run_int_fn(add, 2, [3, -4])
+    run_int_fn(sub, -8, [3, -4])
+    run_int_fn(mul, -24, [3, -4])
+    run_int_fn(div, 20, [25, 10])
+    run_int_fn(mod, 7, [8, 9])
+    run_int_fn(pow, 16, [2, 100])
 
 
 def test_float(validate, run_float_fn_approx):
@@ -91,26 +83,18 @@ def test_float(validate, run_float_fn_approx):
     # def pow(x: float, y: float) -> float:
     #     return 4 ** (x ** (y ** 0.5))
 
-    @guppy
-    def main() -> None:
-        """Dummy main function"""
-        pos, neg, add, sub, mul, div
-
-    compiled = guppy.compile(main)
-    validate(compiled)
-
-    run_float_fn_approx(compiled, 10.5, "pos", [10.5])
-    run_float_fn_approx(compiled, -10.5, "neg", [10.5])
-    run_float_fn_approx(compiled, 1.5, "add", [3, -4.5])
-    run_float_fn_approx(compiled, -8.5, "sub", [3, -4.5])
-    run_float_fn_approx(compiled, -27.0, "mul", [3, -4.5])
-    run_float_fn_approx(compiled, 400.0, "div", [0.5, 4])
+    run_float_fn_approx(pos, 10.5, [10.5])
+    run_float_fn_approx(neg, -10.5, [10.5])
+    run_float_fn_approx(add, 1.5, [3, -4.5])
+    run_float_fn_approx(sub, -8.5, [3, -4.5])
+    run_float_fn_approx(mul, -27.0, [3, -4.5])
+    run_float_fn_approx(div, 400.0, [0.5, 4])
 
     # TODO: Requires lowering of `ffloor` op: https://github.com/CQCL/hugr/issues/1905
-    # run_float_fn_approx(compiled, ... "div", [...])
+    # emulate_float_fn_approx(div, ..., [...])
 
     # TODO: Requires lowering of `fpow` op: https://github.com/CQCL/hugr/issues/1905
-    # run_float_fn_approx(compiled, ..., "pow", [...])
+    # emulate_float_fn_approx(pow, ..., [...])
 
 
 def test_angle(validate):

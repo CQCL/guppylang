@@ -4,7 +4,7 @@ from guppylang.std.option import Option, nothing, some
 from guppylang.std.quantum import qubit
 
 
-def test_none(validate, run_int_fn):
+def test_none(run_int_fn):
     @guppy
     @no_type_check
     def main() -> int:
@@ -13,12 +13,10 @@ def test_none(validate, run_int_fn):
         is_some = 1 if x.is_some() else 0
         return is_none + is_some
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=10)
+    run_int_fn(main, expected=10)
 
 
-def test_some_unwrap(validate, run_int_fn):
+def test_some_unwrap(run_int_fn):
     @guppy
     @no_type_check
     def main() -> int:
@@ -27,12 +25,10 @@ def test_some_unwrap(validate, run_int_fn):
         is_some = x.unwrap() if x.is_some() else 0
         return is_none + is_some
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=42)
+    run_int_fn(main, expected=42)
 
 
-def test_nothing_unwrap(validate, run_int_fn):
+def test_nothing_unwrap(run_int_fn):
     @guppy
     @no_type_check
     def main() -> int:
@@ -40,12 +36,10 @@ def test_nothing_unwrap(validate, run_int_fn):
         x.unwrap_nothing()  # linearity error without this line
         return 1
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=1)
+    run_int_fn(main, expected=1)
 
 
-def test_take(validate, run_int_fn):
+def test_take(run_int_fn):
     @guppy
     @no_type_check
     def main() -> int:
@@ -54,6 +48,4 @@ def test_take(validate, run_int_fn):
         is_none = 1 if x.is_nothing() else 0
         return y + is_none
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=43)
+    run_int_fn(main, expected=43)

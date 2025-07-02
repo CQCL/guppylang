@@ -1,12 +1,13 @@
 from hugr import Hugr
 from hugr.package import Package, PackagePointer
-from hugr import ops
 
 from pathlib import Path
 import pytest
 from typing import Any
 
 from selene_hugr_qis_compiler import check_hugr
+
+from guppylang.tracing.object import GuppyDefinition
 
 
 @pytest.fixture(scope="session")
@@ -53,59 +54,55 @@ class LLVMException(Exception):
     pass
 
 
-def _run_fn(run_fn_name: str):
-    def f(
-        module: PackagePointer,
-        expected: Any,
-        fn_name: str = "main",
-        args: list[Any] | None = None,
-    ):
-        try:
-            import execute_llvm
+def _emulate_fn(is_flt: bool = False):
+    from guppylang.decorator import guppy
+    from guppylang.std.builtins import result
+    from selene_sim.build import build
+    from selene_sim.backends.bundled_simulators import Coinflip
 
-            fn = getattr(execute_llvm, run_fn_name)
-            if not fn:
-                pytest.skip("Skipping llvm execution")
+    def f(f: GuppyDefinition, expected: Any, args: list[Any] | None = None):
+        args = args or []
 
-            # set the module entrypoint to the one specified by `fn_name`
-            assert len(module.package.modules) == 1, "Expected exactly one module"
-            mod = module.package.modules[0]
-            for n in mod.children(mod.module_root):
-                op = mod[n].op
-                if isinstance(op, ops.FuncDefn):
-                    if op.f_name == fn_name:
-                        mod.entrypoint = n
-                        break
+        @guppy.comptime
+        def int_entry() -> None:
+            o: int = f(*args)
+            result("_test_output", o)
 
-            package_bytes = module.package.to_bytes()
-            res = fn(package_bytes, args or [])
-            if res != expected:
-                raise LLVMException(
-                    f"Expected value ({expected}) doesn't match actual value ({res})"
-                )
-        except AttributeError:
-            pytest.skip("Skipping llvm execution")
-        except ImportError:
-            pytest.skip("Skipping llvm execution")
+        @guppy.comptime
+        def flt_entry() -> None:
+            o: float = f(*args)
+            result("_test_output", o)
+
+        entry = flt_entry if is_flt else int_entry
+
+        # em = guppy.build_emulator(entry, n_qubits=1)
+        em = guppy.compile(entry)
+        instance = build(em)
+        res = instance.run(Coinflip(42), n_qubits=0)
+        num = next(v for k, v in res if k == "_test_output")
+        if num != expected:
+            raise LLVMException(
+                f"Expected value ({expected}) doesn't match actual value ({num})"
+            )
 
     return f
 
 
 @pytest.fixture
 def run_int_fn():
-    return _run_fn("run_int_function")
+    """Emulate an integer function using the Guppy emulator."""
+    return _emulate_fn(is_flt=False)
 
 
 @pytest.fixture
 def run_float_fn_approx():
     """Like run_int_fn, but takes optional additional parameters `rel`, `abs` and `nan_ok`
     as per `pytest.approx`."""
-    run_fn = _run_fn("run_float_function")
+    run_fn = _emulate_fn(is_flt=True)
 
     def run_approx(
-        hugr: PackagePointer,
+        f: GuppyDefinition,
         expected: float,
-        fn_name: str = "main",
         args: list[Any] | None = None,
         *,
         rel: float | None = None,
@@ -113,9 +110,8 @@ def run_float_fn_approx():
         nan_ok: bool = False,
     ):
         return run_fn(
-            hugr,
+            f,
             pytest.approx(expected, rel=rel, abs=abs, nan_ok=nan_ok),
-            fn_name,
             args,
         )
 
