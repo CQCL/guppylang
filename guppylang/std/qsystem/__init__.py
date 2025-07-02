@@ -43,7 +43,7 @@ def zz_max(q1: qubit, q2: qubit) -> None:
     This is a special case of the ZZPhase operation with angle = pi/2
 
     .. math::
-        \mathrm{zz\_max}(q_1,q_2)=\mathrm{zz\_max}(q_2,q_1)=
+        \mathrm{zz\_max}(q_1,q_2)=\mathrm{zz\_phase}(q_2,q_1,\pi/2)=
         \exp(\frac{- i \pi}{4}\big(Z \otimes Z \big))=
           \begin{pmatrix}
             e^{\frac{-i \pi}{4}} & 0 & 0 & 0 \\
@@ -51,14 +51,6 @@ def zz_max(q1: qubit, q2: qubit) -> None:
             0 & 0 & e^{\frac{i \pi}{4}} & 0 \\
             0 & 0 & 0 & e^{\frac{-i \pi}{4}}
         \end{pmatrix}
-    >>> @guppy
-    ... def qsystem_cx(q1: qubit, q2: qubit) -> None:
-    ...     phased_x(angle(3/2), angle(-1/2), q2)
-    ...     zz_max(q1, q2)
-    ...     rz(angle(5/2), q1)
-    ...     phasedx(angle(-3/2), q1)
-    ...     rz(angle(3/2), q2)
-    >>> qsystem_cx.compile()
     """
     zz_phase(q1, q2, pi / 2)
 
@@ -69,7 +61,7 @@ def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
     r"""zz_phase gate command.
 
     .. math::
-        \mathrm{zz\_phase}(q_1,q_2,\theta)=\mathrm{zz\_phase}(q_2,q_1,\theta)=
+        \mathrm{zz\_phase}(q_1,q_2,\theta)=
         \exp(\frac{- i \pi \theta}{2}\big(Z \otimes Z \big))=
           \begin{pmatrix}
             e^{\frac{-i \pi \theta}{2}} & 0 & 0 & 0 \\
@@ -77,6 +69,14 @@ def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
             0 & 0 & e^{\frac{i \pi \theta}{2}} & 0 \\
             0 & 0 & 0 & e^{\frac{-i \pi \theta}{2}}
         \end{pmatrix}
+    >>> @guppy
+    ... def qsystem_cx(q1: qubit, q2: qubit) -> None:
+    ...     phased_x(angle(3/2), angle(-1/2), q2)
+    ...     zz_phase(q1, q2, angle(1/2))
+    ...     rz(angle(5/2), q1)
+    ...     phasedx(angle(-3/2), q1)
+    ...     rz(angle(3/2), q2)
+    >>> guppy.compile(qsystem_cx)
     """
     f = float(angle)
     _zz_phase(q1, q2, f)
