@@ -262,42 +262,61 @@ def ry(q: qubit, angle: angle) -> None:
 @guppy.custom(RotationCompiler("CRz"))
 @no_type_check
 def crz(control: qubit, target: qubit, angle: angle) -> None:
-    r"""crz gate command.
+    r"""Controlled-Rz gate command.
 
     .. math::
         \mathrm{crz}(q_1,q_2,\theta)=
           \begin{pmatrix}
-            e^{\frac{-i \pi \theta}{2}} & 0 & 0 & 0 \\
-            0 & e^{\frac{i \pi \theta}{2}} & 0 & 0 \\
-            0 & 0 & e^{\frac{i \pi \theta}{2}} & 0 \\
-            0 & 0 & 0 & e^{\frac{-i \pi \theta}{2}}
+            1 & 0 & 0 & 0 \\
+            0 & 1 & 0 & 0 \\
+            0 & 0 & e^{-\frac{1}{2}i \pi \theta} & 0 \\
+            0 & 0 & 0 & e^{\frac{1}{2}i \pi \theta}
         \end{pmatrix}
     """
 
 
 @guppy.hugr_op(quantum_op("Toffoli"))
 @no_type_check
-def toffoli(control1: qubit, control2: qubit, target: qubit) -> None: ...
+def toffoli(control1: qubit, control2: qubit, target: qubit) -> None:
+    r"""A Toffoli gate command. Also sometimes known as a CCX gate.
+
+    .. math::
+        \mathrm{Toffoli}(q_1,q_2,q_3)=
+          \begin{pmatrix}
+            1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+            0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+            0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+            0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
+            0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\
+            0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+            0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\
+            0 & 0 & 0 & 0 & 0 & 0 & 1 & 0
+          \end{pmatrix}
+    """
 
 
 @guppy.custom(InoutMeasureCompiler())
 @no_type_check
-def project_z(q: qubit) -> bool: ...
+def project_z(q: qubit) -> bool:
+    """Project a single qubit into the Z-basis (a non-destructive measurement)."""
 
 
 @guppy.hugr_op(quantum_op("QFree"))
 @no_type_check
-def discard(q: qubit @ owned) -> None: ...
+def discard(q: qubit @ owned) -> None:
+    """Discard a single qubit."""
 
 
 @guppy.hugr_op(quantum_op("MeasureFree"))
 @no_type_check
-def measure(q: qubit @ owned) -> bool: ...
+def measure(q: qubit @ owned) -> bool:
+    """Measure a single qubit destructively."""
 
 
 @guppy.hugr_op(quantum_op("Reset"))
 @no_type_check
-def reset(q: qubit) -> None: ...
+def reset(q: qubit) -> None:
+    """Reset a single qubit to the |0> state."""
 
 
 N = guppy.nat_var("N")
@@ -324,6 +343,17 @@ def discard_array(qubits: array[qubit, N] @ owned) -> None:
 @guppy
 @no_type_check
 def ch(control: qubit, target: qubit) -> None:
+    r"""Controlled-H gate command.
+
+    .. math::
+        \mathrm{CH}(q_1,q_2)= \frac{1}{\sqrt{2}}
+          \begin{pmatrix}
+            1 & 0 & 0 & 0 \\
+            0 & 1} & 0 & 0 \\
+            0 & 0 & 1 & 1 \\
+            0 & 0 & 1 & -1
+        \end{pmatrix}
+    """
     # based on https://quantumcomputing.stackexchange.com/a/15737
     ry(target, -pi / 4)
     cz(control, target)
