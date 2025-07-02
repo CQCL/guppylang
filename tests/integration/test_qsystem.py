@@ -5,6 +5,7 @@ from guppylang.std.angles import angle
 from guppylang.std.builtins import owned, array
 from guppylang.std.qsystem.random import make_discrete_distribution, RNG
 
+from guppylang.std.qsystem import measure_leaked
 from guppylang.std.qsystem.utils import get_current_shot
 from guppylang.std.quantum import qubit, measure_array
 from guppylang.std.qsystem.functional import (
@@ -66,8 +67,12 @@ def test_measure_leaked(validate):  # type: ignore[no-untyped-def]
 
     @guppy
     def test(q: qubit @ owned) -> int:
-        q = qubit()
         m = measure_leaked(q)
+        # if m == 2:
+        #     q1 = qubit()
+        #     m1 = measure(q1)
+        #     qfree(q1)
+        #     return m1
         return m
 
     validate(guppy.compile(test))
