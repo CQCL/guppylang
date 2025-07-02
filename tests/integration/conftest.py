@@ -1,5 +1,6 @@
 from hugr import Hugr
 from hugr.package import Package, PackagePointer
+from hugr import ops
 
 from pathlib import Path
 import pytest
@@ -73,7 +74,12 @@ class LLVMException(Exception):
 
 
 def _run_fn(run_fn_name: str):
-    def f(module: PackagePointer, expected: Any, fn_name: str = "main", args: list[Any] | None = None):
+    def f(
+        module: PackagePointer,
+        expected: Any,
+        fn_name: str = "main",
+        args: list[Any] | None = None,
+    ):
         try:
             import execute_llvm
 
@@ -81,8 +87,18 @@ def _run_fn(run_fn_name: str):
             if not fn:
                 pytest.skip("Skipping llvm execution")
 
+            # set the module entrypoint to the one specified by `fn_name`
+            assert len(module.package.modules) == 1, "Expected exactly one module"
+            mod = module.package.modules[0]
+            for n in mod.children(mod.module_root):
+                op = mod[n].op
+                if isinstance(op, ops.FuncDefn):
+                    if op.f_name == fn_name:
+                        mod.entrypoint = n
+                        break
+
             package_bytes = module.package.to_bytes()
-            res = fn(package_bytes, fn_name, args or [])
+            res = fn(package_bytes, args or [])
             if res != expected:
                 raise LLVMException(
                     f"Expected value ({expected}) doesn't match actual value ({res})"

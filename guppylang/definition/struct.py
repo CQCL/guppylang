@@ -1,5 +1,6 @@
 import ast
 import inspect
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import ClassVar
@@ -29,16 +30,19 @@ from guppylang.definition.custom import (
 from guppylang.definition.function import parse_source
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
-from guppylang.diagnostic import Error, Help
+from guppylang.diagnostic import Error, Help, Note
 from guppylang.engine import DEF_STORE
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
-from guppylang.span import SourceMap
+from guppylang.span import SourceMap, Span, to_span
 from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, StructType, Type
+
+if sys.version_info >= (3, 12):
+    from guppylang.tys.parsing import parse_parameter
 
 
 @dataclass(frozen=True)
@@ -55,6 +59,19 @@ class StructField:
 
     name: str
     ty: Type
+
+
+@dataclass(frozen=True)
+class RedundantParamsError(Error):
+    title: ClassVar[str] = "Generic parameters already specified"
+    span_label: ClassVar[str] = "Duplicate specification of generic parameters"
+    struct_name: str
+
+    @dataclass(frozen=True)
+    class PrevSpec(Note):
+        span_label: ClassVar[str] = (
+            "Parameters of `{struct_name}` are already specified here"
+        )
 
 
 @dataclass(frozen=True)
@@ -98,18 +115,32 @@ class RawStructDef(TypeDef, ParsableDef):
         if cls_def.keywords:
             raise GuppyError(UnexpectedError(cls_def.keywords[0], "keyword"))
 
-        # The only base we allow is `Generic[...]` to specify generic parameters
-        # TODO: This will become obsolete once we have Python 3.12 style generic classes
-        params: list[Parameter]
+        # Look for generic parameters from Python 3.12 style syntax
+        params = []
+        params_span: Span | None = None
+        if sys.version_info >= (3, 12):
+            if cls_def.type_params:
+                first, last = cls_def.type_params[0], cls_def.type_params[-1]
+                params_span = Span(to_span(first).start, to_span(last).end)
+                params = [
+                    parse_parameter(node, idx, globals)
+                    for idx, node in enumerate(cls_def.type_params)
+                ]
+
+        # The only base we allow is `Generic[...]` to specify generic parameters with
+        # the legacy syntax
         match cls_def.bases:
             case []:
-                params = []
+                pass
             case [base] if elems := try_parse_generic_base(base):
+                # Complain if we already have Python 3.12 generic params
+                if params_span is not None:
+                    err: Error = RedundantParamsError(base, self.name)
+                    err.add_sub_diagnostic(RedundantParamsError.PrevSpec(params_span))
+                    raise GuppyError(err)
                 params = params_from_ast(elems, globals)
             case bases:
-                err: Error = UnsupportedError(
-                    bases[0], "Struct inheritance", singular=True
-                )
+                err = UnsupportedError(bases[0], "Struct inheritance", singular=True)
                 raise GuppyError(err)
 
         fields: list[UncheckedStructField] = []

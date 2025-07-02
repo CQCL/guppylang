@@ -6,6 +6,7 @@ node straight from the Python AST. We build a CFG, check it, and return a
 """
 
 import ast
+import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
@@ -19,9 +20,13 @@ from guppylang.definition.common import DefId
 from guppylang.diagnostic import Error, Help, Note
 from guppylang.engine import DEF_STORE, ENGINE
 from guppylang.error import GuppyError
+from guppylang.experimental import check_capturing_closures_enabled
 from guppylang.nodes import CheckedNestedFunctionDef, NestedFunctionDef
 from guppylang.tys.parsing import parse_function_io_types
 from guppylang.tys.ty import FunctionType, InputFlags, NoneType
+
+if sys.version_info >= (3, 12):
+    from guppylang.tys.parsing import parse_parameter
 
 if TYPE_CHECKING:
     from guppylang.tys.param import Parameter
@@ -111,6 +116,12 @@ def check_nested_func_def(
         if x not in func_ty.input_names and x in ctx.locals
     }
 
+    # Capturing closures are an experimental features since they aren't supported
+    # further down the stack yet
+    if captured:
+        _, loc = captured[next(iter(captured.keys()))]
+        check_capturing_closures_enabled(loc)
+
     # Captured variables may never be assigned to
     for bb in cfg.bbs:
         for v, _ in captured.values():
@@ -193,8 +204,13 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
             )
         raise GuppyError(err)
 
-    # TODO: Prepopulate mapping when using Python 3.12 style generic functions
+    # Prepopulate parameter mapping when using Python 3.12 style generic syntax
     param_var_mapping: dict[str, Parameter] = {}
+    if sys.version_info >= (3, 12):
+        for i, param_node in enumerate(func_def.type_params):
+            param = parse_parameter(param_node, i, globals)
+            param_var_mapping[param.name] = param
+
     input_nodes = []
     input_names = []
     for inp in func_def.args.args:

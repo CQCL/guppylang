@@ -228,6 +228,13 @@ class CompilationEngine:
             ctx.compile(defn)
         self.compiled = ctx.compiled
 
+        compiled_def = self.compiled.get(id)
+        from guppylang.definition.function import CompiledFunctionDef
+
+        if isinstance(compiled_def, CompiledFunctionDef):
+            # if compiling a function set it as the HUGR entrypoint
+            graph.hugr.entrypoint = compiled_def.func_def.parent_node
+
         # TODO: Currently the list of extensions is manually managed by the user.
         #  We should compute this dynamically from the imported dependencies instead.
         #
