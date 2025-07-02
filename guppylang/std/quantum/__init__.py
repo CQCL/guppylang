@@ -49,77 +49,230 @@ def maybe_qubit() -> Option[qubit]:
 
 @guppy.hugr_op(quantum_op("H"))
 @no_type_check
-def h(q: qubit) -> None: ...
+def h(q: qubit) -> None:
+    r"""Hadamard gate command
+
+    .. math::
+        \mathrm{H}(q)= \frac{1}{\sqrt{2}}
+          \begin{pmatrix}
+            1 & 1 \\
+            1 & -1
+          \end{pmatrix}
+    """
 
 
 @guppy.hugr_op(quantum_op("CZ"))
 @no_type_check
-def cz(control: qubit, target: qubit) -> None: ...
+def cz(control: qubit, target: qubit) -> None:
+    r"""Controlled-Z gate command.
+
+    .. math::
+        \mathrm{cz}(q_1,q_2)=
+          \begin{pmatrix}
+            1 & 0 & 0 & 0 \\
+            0 & 1 & 0 & 0 \\
+            0 & 0 & 1 & 0 \\
+            0 & 0 & 0 & -1
+          \end{pmatrix}
+    """
 
 
 @guppy.hugr_op(quantum_op("CY"))
 @no_type_check
-def cy(control: qubit, target: qubit) -> None: ...
+def cy(control: qubit, target: qubit) -> None:
+    r"""Controlled-Y gate command.
+
+    .. math::
+        \mathrm{cy}(q_1,q_2)=
+          \begin{pmatrix}
+            1 & 0 & 0 & 0 \\
+            0 & 1 & 0 & 0 \\
+            0 & 0 & 0 & -i \\
+            0 & 0 & i & 0
+          \end{pmatrix}
+    """
 
 
 @guppy.hugr_op(quantum_op("CX"))
 @no_type_check
-def cx(control: qubit, target: qubit) -> None: ...
+def cx(control: qubit, target: qubit) -> None:
+    r"""Controlled-X gate command.
+
+    .. math::
+        \mathrm{cx}(q_1,q_2)=
+          \begin{pmatrix}
+            1 & 0 & 0 & 0 \\
+            0 & 1 & 0 & 0 \\
+            0 & 0 & 0 & 1 \\
+            0 & 0 & 1 & 0
+          \end{pmatrix}
+    """
 
 
 @guppy.hugr_op(quantum_op("T"))
 @no_type_check
-def t(q: qubit) -> None: ...
+def t(q: qubit) -> None:
+    r"""T gate.
+
+    .. math::
+        \mathrm{T}(q)=
+          \begin{pmatrix}
+            1 & 0 \\
+            0 & e^{i \frac{\pi}{4}}
+           \end{pmatrix}
+
+    """
 
 
 @guppy.hugr_op(quantum_op("S"))
 @no_type_check
-def s(q: qubit) -> None: ...
+def s(q: qubit) -> None:
+    r"""S gate.
+
+    .. math::
+        \mathrm{S}(q)=
+          \begin{pmatrix}
+            1 & 0 \\
+            0 & e^{i \frac{\pi}{2}}
+           \end{pmatrix}
+
+    """
 
 
 @guppy.hugr_op(quantum_op("X"))
 @no_type_check
-def x(q: qubit) -> None: ...
+def x(q: qubit) -> None:
+    r"""X gate.
+
+    .. math::
+        \mathrm{X}(q)=
+          \begin{pmatrix}
+            0 & 1 \\
+            1 & 0
+           \end{pmatrix}
+
+    """
 
 
 @guppy.hugr_op(quantum_op("Y"))
 @no_type_check
-def y(q: qubit) -> None: ...
+def y(q: qubit) -> None:
+    r"""Y gate.
+
+    .. math::
+        \mathrm{Y}(q)=
+          \begin{pmatrix}
+            0 & -i \\
+            i & 0
+           \end{pmatrix}
+
+    """
 
 
 @guppy.hugr_op(quantum_op("Z"))
 @no_type_check
-def z(q: qubit) -> None: ...
+def z(q: qubit) -> None:
+    r"""Z gate.
+
+    .. math::
+        \mathrm{Z}(q)=
+          \begin{pmatrix}
+            1 & 0 \\
+            0 & -1
+           \end{pmatrix}
+
+    """
 
 
 @guppy.hugr_op(quantum_op("Tdg"))
 @no_type_check
-def tdg(q: qubit) -> None: ...
+def tdg(q: qubit) -> None:
+    r"""Tdg gate.
+
+    .. math::
+        \mathrm{T}^\dagger(q)=
+          \begin{pmatrix}
+            1 & 0 \\
+            0 & e^{-i \frac{\pi}{4}}
+           \end{pmatrix}
+
+    """
 
 
 @guppy.hugr_op(quantum_op("Sdg"))
 @no_type_check
-def sdg(q: qubit) -> None: ...
+def sdg(q: qubit) -> None:
+    r"""Sdg gate.
+
+    .. math::
+        \mathrm{S}^\dagger(q)=
+          \begin{pmatrix}
+            1 & 0 \\
+            0 & e^{-i \frac{\pi}{2}}
+           \end{pmatrix}
+
+    """
 
 
 @guppy.custom(RotationCompiler("Rz"))
 @no_type_check
-def rz(q: qubit, angle: angle) -> None: ...
+def rz(q: qubit, angle: angle) -> None:
+    r"""Rz gate.
+
+    .. math::
+        \mathrm{Rz}(q, \theta)=
+          \begin{pmatrix}
+            e^{-\frac{1}{2}i \pi \theta} & 0 \\
+            0 & e^{\frac{1}{2}i \pi \theta}
+           \end{pmatrix}
+
+    """
 
 
 @guppy.custom(RotationCompiler("Rx"))
 @no_type_check
-def rx(q: qubit, angle: angle) -> None: ...
+def rx(q: qubit, angle: angle) -> None:
+    r"""Rx gate.
+
+    .. math::
+        \mathrm{Rx}(q, \theta)=
+          \begin{pmatrix}
+            \cos(\frac{\pi \theta}{2}) & -i\sin(\frac{\pi \theta}{2}) \\
+            -i\sin(\frac{\pi \theta}{2}) & \cos(\frac{\pi \theta}{2})
+           \end{pmatrix}
+
+    """
 
 
 @guppy.custom(RotationCompiler("Ry"))
 @no_type_check
-def ry(q: qubit, angle: angle) -> None: ...
+def ry(q: qubit, angle: angle) -> None:
+    r"""Ry gate.
+
+    .. math::
+        \mathrm{Ry}(q, \theta)=
+          \begin{pmatrix}
+            \cos(\frac{\pi \theta}{2}) & \sin(\frac{\pi \theta}{2}) \\
+            \sin(\frac{\pi \theta}{2}) & \cos(\frac{\pi \theta}{2})
+           \end{pmatrix}
+
+    """
 
 
 @guppy.custom(RotationCompiler("CRz"))
 @no_type_check
-def crz(control: qubit, target: qubit, angle: angle) -> None: ...
+def crz(control: qubit, target: qubit, angle: angle) -> None:
+    r"""crz gate command.
+
+    .. math::
+        \mathrm{crz}(q_1,q_2,\theta)=
+          \begin{pmatrix}
+            e^{\frac{-i \pi \theta}{2}} & 0 & 0 & 0 \\
+            0 & e^{\frac{i \pi \theta}{2}} & 0 & 0 \\
+            0 & 0 & e^{\frac{i \pi \theta}{2}} & 0 \\
+            0 & 0 & 0 & e^{\frac{-i \pi \theta}{2}}
+        \end{pmatrix}
+    """
 
 
 @guppy.hugr_op(quantum_op("Toffoli"))
