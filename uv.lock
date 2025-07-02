@@ -584,6 +584,7 @@ dev = [
     { name = "pytest-snapshot" },
     { name = "pytket" },
     { name = "ruff" },
+    { name = "selene-hugr-qis-compiler" },
     { name = "tket2" },
 ]
 docs = [
@@ -602,6 +603,7 @@ execution = [
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
+    { name = "selene-hugr-qis-compiler" },
     { name = "tket2" },
 ]
 lint = [
@@ -619,6 +621,7 @@ pytket-integration = [
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
     { name = "pytket" },
+    { name = "selene-hugr-qis-compiler" },
     { name = "tket2" },
 ]
 test = [
@@ -630,6 +633,7 @@ test = [
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
+    { name = "selene-hugr-qis-compiler" },
     { name = "tket2" },
 ]
 
@@ -662,6 +666,7 @@ dev = [
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0" },
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
+    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0a4" },
     { name = "tket2", specifier = "~=0.11.0" },
 ]
 docs = [
@@ -679,6 +684,7 @@ execution = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
+    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0a4" },
     { name = "tket2", specifier = "~=0.11.0" },
 ]
 lint = [
@@ -696,6 +702,7 @@ pytket-integration = [
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0" },
+    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0a4" },
     { name = "tket2", specifier = "~=0.11.0" },
 ]
 test = [
@@ -707,6 +714,7 @@ test = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
+    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0a4" },
     { name = "tket2", specifier = "~=0.11.0" },
 ]
 

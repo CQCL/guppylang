@@ -69,7 +69,8 @@ test = [
     "tket2 ~= 0.11.0",
     "pytest-benchmark>=5.1.0",
     "miette-py",
-    "guppylang[emulator]"
+    "guppylang[emulator]",
+    "selene-hugr-qis-compiler>=0.2.0a4",
 ]
 execution = [
     { include-group = "test" },

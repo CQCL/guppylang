@@ -4,8 +4,9 @@ from hugr import ops
 
 from pathlib import Path
 import pytest
-import subprocess
 from typing import Any
+
+from selene_hugr_qis_compiler import check_hugr
 
 
 @pytest.fixture(scope="session")
@@ -30,27 +31,6 @@ def get_validator() -> Path | None:
 
 @pytest.fixture(scope="session")
 def validate(request, export_test_cases_dir: Path):
-    if request.config.getoption("validation"):
-        # Check if the validator is installed
-        validator = get_validator()
-        if validator is None:
-            pytest.fail("Run `cargo build -p release` to install the validator")
-    else:
-        pytest.skip("Skipping validation tests as requested")
-
-    def validate_bytes(package_bytes: bytes):
-        # Executes `cargo run -p validator -- validate -`
-        # passing the hugr JSON as stdin
-        p = subprocess.run(  # noqa: S603
-            [validator, "validate", "-"],
-            text=False,
-            input=package_bytes,
-            capture_output=True,
-        )
-
-        if p.returncode != 0:
-            raise RuntimeError(f"{p.stderr}")
-
     def validate_impl(package: Package | PackagePointer | Hugr, name=None):
         if isinstance(package, PackagePointer):
             package = package.package
@@ -64,7 +44,7 @@ def validate(request, export_test_cases_dir: Path):
             export_file = export_test_cases_dir / file_name
             export_file.write_bytes(package_bytes)
 
-        validate_bytes(package_bytes)
+        check_hugr(package_bytes)
 
     return validate_impl
 
