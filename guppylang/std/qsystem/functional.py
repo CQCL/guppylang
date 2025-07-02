@@ -1,3 +1,5 @@
+"""This module defines functional versions of the gates in std.qsystem"""
+
 from typing import no_type_check
 
 from guppylang.decorator import guppy
