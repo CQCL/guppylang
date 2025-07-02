@@ -346,10 +346,10 @@ def ch(control: qubit, target: qubit) -> None:
     r"""Controlled-H gate command.
 
     .. math::
-        \mathrm{CH}(q_1,q_2)= \frac{1}{\sqrt{2}}
+        \mathrm{CH}(q_1,q_2) = \frac{1}{\sqrt{2}}
           \begin{pmatrix}
             1 & 0 & 0 & 0 \\
-            0 & 1} & 0 & 0 \\
+            0 & 1 & 0 & 0 \\
             0 & 0 & 1 & 1 \\
             0 & 0 & 1 & -1
         \end{pmatrix}
