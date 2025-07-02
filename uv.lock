@@ -644,7 +644,7 @@ requires-dist = [
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "selene-sim", marker = "extra == 'emulator'", specifier = ">=0.2.0a4" },
+    { name = "selene-sim", marker = "extra == 'emulator'", path = "../selene/dist/selene_sim-0.2.0a4-cp313-cp313-macosx_11_0_arm64.whl" },
     { name = "tket2-exts", specifier = "~=0.9.1" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
@@ -666,7 +666,7 @@ dev = [
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0" },
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
-    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0a4" },
+    { name = "selene-hugr-qis-compiler", path = "../selene/dist/selene_hugr_qis_compiler-0.2.0a4-cp310-abi3-macosx_11_0_arm64.whl" },
     { name = "tket2", specifier = "~=0.11.0" },
 ]
 docs = [
@@ -684,7 +684,7 @@ execution = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
-    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0a4" },
+    { name = "selene-hugr-qis-compiler", path = "../selene/dist/selene_hugr_qis_compiler-0.2.0a4-cp310-abi3-macosx_11_0_arm64.whl" },
     { name = "tket2", specifier = "~=0.11.0" },
 ]
 lint = [
@@ -702,7 +702,7 @@ pytket-integration = [
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytket", specifier = ">=1.34.0" },
-    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0a4" },
+    { name = "selene-hugr-qis-compiler", path = "../selene/dist/selene_hugr_qis_compiler-0.2.0a4-cp310-abi3-macosx_11_0_arm64.whl" },
     { name = "tket2", specifier = "~=0.11.0" },
 ]
 test = [
@@ -714,7 +714,7 @@ test = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
-    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0a4" },
+    { name = "selene-hugr-qis-compiler", path = "../selene/dist/selene_hugr_qis_compiler-0.2.0a4-cp310-abi3-macosx_11_0_arm64.whl" },
     { name = "tket2", specifier = "~=0.11.0" },
 ]
 
@@ -2453,18 +2453,15 @@ wheels = [
 [[package]]
 name = "selene-hugr-qis-compiler"
 version = "0.2.0a4"
-source = { registry = "https://pypi.org/simple" }
+source = { path = "../selene/dist/selene_hugr_qis_compiler-0.2.0a4-cp310-abi3-macosx_11_0_arm64.whl" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d0/c0/22be01ba330d0237d0eacf199c69f8373b26acbbeb98864a31b34fbf45f9/selene_hugr_qis_compiler-0.2.0a4-cp310-abi3-macosx_13_0_arm64.whl", hash = "sha256:946422dad2b931ce469b643abf2d968e7005edb01737aa2c8677c20c8c0b1785", size = 28924009 },
-    { url = "https://files.pythonhosted.org/packages/7c/09/9e0e2f04c79a4f354579ad92ab3b3c85044656dce31c4816490527fec126/selene_hugr_qis_compiler-0.2.0a4-cp310-abi3-macosx_13_0_x86_64.whl", hash = "sha256:44be7680376a2d11ff299b00dfb0a35fde42f41b4131896abf4810ceaafca372", size = 31539737 },
-    { url = "https://files.pythonhosted.org/packages/4c/1d/27b97fc2f60eca39426fa52e9619b9cfdcb5da93f253fda07d06b50282ff/selene_hugr_qis_compiler-0.2.0a4-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:36a4c3017c56f4ab69a376c3dec0988ebc894e6e6f84e337f30da6a3bba7bf9a", size = 33179637 },
-    { url = "https://files.pythonhosted.org/packages/86/06/f6382af8547725a359f774928b27dbb5cea1196556f4155b6e15390a5ace/selene_hugr_qis_compiler-0.2.0a4-cp310-abi3-win_amd64.whl", hash = "sha256:085bcbcb9a10aabcf104f9dfb386d7437798774b66c528644a1b0bb0441f2981", size = 28565627 },
+    { filename = "selene_hugr_qis_compiler-0.2.0a4-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:d893e3b8738da59d5faeebd3b1df06e765abd6b364a666fb5f86308337b07678" },
 ]
 
 [[package]]
 name = "selene-sim"
 version = "0.2.0a4"
-source = { registry = "https://pypi.org/simple" }
+source = { path = "../selene/dist/selene_sim-0.2.0a4-cp313-cp313-macosx_11_0_arm64.whl" }
 dependencies = [
     { name = "hugr" },
     { name = "lief" },
@@ -2478,10 +2475,20 @@ dependencies = [
     { name = "ziglang" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/b0/b18bcaaf945ae8316fd3b7c732a9a5f6ead93e84e1b7ce062c0e77964e4a/selene_sim-0.2.0a4-py3-none-macosx_11_0_arm64.whl", hash = "sha256:a450b029eefc5c966c314df41de5394acd8fd814e8cc776b662a0bf6a60b94c1", size = 3438007 },
-    { url = "https://files.pythonhosted.org/packages/49/75/a92b8d8b1880a23332a614f2cffde7712391a23e1a956a408ce87c05e7fe/selene_sim-0.2.0a4-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:ad0556f0c1043b82f586fc3ea94de28abff0efb41f2aaa6b3cca7b241f270bf4", size = 3543997 },
-    { url = "https://files.pythonhosted.org/packages/64/e0/309a04fb4c4e43a60c5ec08c4ad4a2d3f3450dd48bd91cc58f2c2a5f1b63/selene_sim-0.2.0a4-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:812804940dcf29b78017b8d735994e0e0baaf4d447980ead32f1f833691489ad", size = 3898862 },
-    { url = "https://files.pythonhosted.org/packages/ff/81/74b7fa3708ca67c03f5ba1a086015373b018fb1670287e54a9c9ceda4f10/selene_sim-0.2.0a4-py3-none-win_amd64.whl", hash = "sha256:e7121ca957e324950ba63c61be7e5b721d13e894e41adb5fef73de5b1698dc9e", size = 2419612 },
+    { filename = "selene_sim-0.2.0a4-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:7930a6e98a0fe7e80e8385d3c6de88e7558c3d3d75bcb61b54eea52018673c9a" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "hugr", specifier = ">=0.12.2" },
+    { name = "lief", specifier = ">=0.16.5" },
+    { name = "numpy", specifier = ">=2.1" },
+    { name = "pydot", specifier = ">=4.0.0" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "selene-core", specifier = "~=0.2.0a4" },
+    { name = "selene-hugr-qis-compiler", specifier = "~=0.2.0a4" },
+    { name = "tqdm", specifier = ">=4.66" },
+    { name = "ziglang", specifier = "~=0.13" },
 ]
 
 [[package]]

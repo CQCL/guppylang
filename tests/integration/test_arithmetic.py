@@ -14,7 +14,7 @@ def test_negative(validate, run_int_fn):
     run_int_fn(compiled, expected=-40, fn_name="negative")
 
 
-def test_arith_basic(validate, run_int_fn):
+def test_arith_basic(validate, emulate_int_fn):
     @guppy
     def add(x: int, y: int) -> int:
         return x + y
@@ -25,7 +25,7 @@ def test_arith_basic(validate, run_int_fn):
 
     compiled = guppy.compile(main)
     validate(compiled)
-    run_int_fn(compiled, 42)
+    emulate_int_fn(main, 42)
 
 
 def test_constant(validate):

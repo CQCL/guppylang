@@ -146,8 +146,6 @@ class EmulatorBuilder(Config):
     def build(self, package: PackagePointer, n_qubits: int) -> EmulatorInstance:
         """Build an EmulatorInstance from a compiled package."""
 
-        # TODO remove after next Selene release
-        package.package.modules[0].entrypoint = package.package.modules[0].module_root
         instance = selene_sim.build(
             package,
             name=self.name,

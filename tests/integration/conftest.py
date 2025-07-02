@@ -8,6 +8,8 @@ from typing import Any
 
 from selene_hugr_qis_compiler import check_hugr
 
+from guppylang.tracing.object import GuppyDefinition
+
 
 @pytest.fixture(scope="session")
 def export_test_cases_dir(request):
@@ -87,6 +89,34 @@ def _run_fn(run_fn_name: str):
             pytest.skip("Skipping llvm execution")
         except ImportError:
             pytest.skip("Skipping llvm execution")
+
+    return f
+
+
+@pytest.fixture
+def emulate_int_fn():
+    from guppylang.decorator import guppy
+    from guppylang.std.builtins import result
+
+    def f(f: GuppyDefinition, expected: Any, args: list[Any] | None = None):
+        args = args or []
+
+        @guppy
+        def print_res(x: int) -> None:
+            result("out", x)
+
+        @guppy.comptime
+        def entry() -> None:
+            print_res(f(*args))
+
+        em = guppy.build_emulator(entry, n_qubits=1)
+        res = em.run_coinflip(n_shots=1)
+        num = res._qsys_result.results[0].entries[0][1]
+        assert isinstance(num, int), f"Expected an integer, got {num}"
+        if num != expected:
+            raise LLVMException(
+                f"Expected value ({expected}) doesn't match actual value ({num})"
+            )
 
     return f
 
