@@ -230,8 +230,9 @@ class CompilationEngine:
 
         compiled_def = self.compiled.get(id)
         from guppylang.definition.function import CompiledFunctionDef
+        from guppylang.definition.traced import CompiledTracedFunctionDef
 
-        if isinstance(compiled_def, CompiledFunctionDef):
+        if isinstance(compiled_def, CompiledFunctionDef | CompiledTracedFunctionDef):
             # if compiling a function set it as the HUGR entrypoint
             graph.hugr.entrypoint = compiled_def.func_def.parent_node
 
