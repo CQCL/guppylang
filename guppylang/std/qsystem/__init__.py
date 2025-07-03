@@ -11,6 +11,8 @@ from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_EXTENSION
 from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import owned
+from guppylang.std.futures import Future
+from guppylang.std.option import Option
 from guppylang.std.quantum import qubit
 
 
@@ -74,6 +76,42 @@ def reset(q: qubit) -> None: ...
 def qfree(q: qubit @ owned) -> None: ...
 
 
+@guppy.hugr_op(quantum_op("LazyMeasureLeaked", ext=QSYSTEM_EXTENSION))
+@no_type_check
+def _measure_leaked(q: qubit @ owned) -> Future[int]:
+    """Measure the quibit or return 2 if it is leaked."""
+
+
+@guppy
+def measure_leaked(q: qubit @ owned) -> "MaybeLeaked":
+    fm = _measure_leaked(q)
+    return MaybeLeaked(fm)
+
+
+class MaybeLeaked:
+    """A class representing a measurement that may have leaked.
+
+    This is used to represent the result of `measure_leaked`, which can either
+    return a boolean measurement result or indicate that the qubit has leaked.
+    """
+
+    _measurement: Future[int]
+
+    def __init__(self, value: Future[int]):
+        self._measurement = value
+
+    def is_leaked(self) -> bool:
+        """Check if the measurement indicates a leak."""
+        return self._measurement.read() == 2
+    
+    def to_result(self) -> Option[bool]:
+        """Get the measurement result if not leaked."""
+        if (self.is_leaked()):
+            return Option.none()
+        measurement = True if self._measurement == 1 else False
+        return Option.some(measurement)
+
+
 # ------------------------------------------------------
 # --------- Internal definitions -----------------------
 # ------------------------------------------------------
@@ -107,9 +145,3 @@ def _rz(q: qubit, angle: float) -> None:
     See `guppylang.std.qsystem.rz` for a public definition that
     accepts angle parameters.
     """
-
-
-@guppy.hugr_op(quantum_op("LazyMeasureLeaked", ext=QSYSTEM_EXTENSION))
-@no_type_check
-def measure_leaked(q: qubit @ owned) -> int:
-    """Measure the quibit or return 2 if it is leaked."""

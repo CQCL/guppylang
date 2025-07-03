@@ -3,6 +3,7 @@ from hugr.package import ModulePointer
 from guppylang.decorator import guppy
 from guppylang.std.angles import angle
 from guppylang.std.builtins import owned, array
+from guppylang.std.option import Option
 from guppylang.std.qsystem.random import make_discrete_distribution, RNG
 
 from guppylang.std.qsystem import measure_leaked
@@ -66,13 +67,14 @@ def test_measure_leaked(validate):  # type: ignore[no-untyped-def]
     """Compile the measure_leaked operation."""
 
     @guppy
-    def test(q: qubit @ owned) -> int:
-        m = measure_leaked(q)
-        # if m == 2:
+    def test(q: qubit @ owned) -> bool:
+        maybe_leaked: Option[bool] = measure_leaked(q)
+        # if maybe_leaked.is_leaked():
         #     q1 = qubit()
         #     m1 = measure(q1)
         #     qfree(q1)
         #     return m1
-        return m
+        # return maybe_leaked.to_result().unwrap()
+        return True
 
     validate(guppy.compile(test))
