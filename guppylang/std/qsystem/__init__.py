@@ -98,7 +98,7 @@ class MaybeLeaked:
     return a boolean measurement result or indicate that the qubit has leaked.
     """
 
-    _measurement: Future[int] # type: ignore
+    _measurement: Future[int]  # type: ignore
 
     @guppy
     @no_type_check
