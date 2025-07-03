@@ -13,7 +13,7 @@ from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import owned
 from guppylang.std.futures import Future
 from guppylang.std.option import Option, nothing, some
-from guppylang.std.quantum import discard, qubit
+from guppylang.std.quantum import qubit
 
 
 @guppy
@@ -98,7 +98,7 @@ class MaybeLeaked:
     return a boolean measurement result or indicate that the qubit has leaked.
     """
 
-    _measurement: Future[int]  # type: ignore
+    _measurement: Future[int]  # type: ignore[type-arg]
 
     @guppy
     @no_type_check
@@ -113,7 +113,7 @@ class MaybeLeaked:
         int_value: int = self._measurement.read()
         if int_value == 2:
             return nothing()
-        measurement = True if int_value == 1 else False
+        measurement = int_value == 1
         return some(measurement)
 
     @guppy
