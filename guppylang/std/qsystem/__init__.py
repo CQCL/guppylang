@@ -87,7 +87,7 @@ def measure_leaked(q: qubit @ owned) -> "MaybeLeaked":
     fm = _measure_leaked(q)
     return MaybeLeaked(fm)
 
-
+@guppy
 class MaybeLeaked:
     """A class representing a measurement that may have leaked.
 
