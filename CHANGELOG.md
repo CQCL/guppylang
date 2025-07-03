@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.21.0](https://github.com/CQCL/guppylang/compare/v0.20.0...v0.21.0) (2025-07-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* Capturing closures are now disabled by default. Enabling them requires calling `guppylang.enable_experimental_features()`, however note that they are not supported throughout the stack.
+
+### Features
+
+* Add guppy version metadata to hugr entrypoint ([#1039](https://github.com/CQCL/guppylang/issues/1039)) ([0eafbd9](https://github.com/CQCL/guppylang/commit/0eafbd9f8e52484ae823aba830c1d38d30dd9755)), closes [#1037](https://github.com/CQCL/guppylang/issues/1037)
+* Add manual registration of extensions ([#1045](https://github.com/CQCL/guppylang/issues/1045)) ([4b42936](https://github.com/CQCL/guppylang/commit/4b42936372d408b1b3c79a86e21d2a09a4220799))
+* Allow indexing on tuples ([#1038](https://github.com/CQCL/guppylang/issues/1038)) ([0e9097e](https://github.com/CQCL/guppylang/commit/0e9097eb14d3fd254ad1220f6feeaac74314afe6)), closes [#711](https://github.com/CQCL/guppylang/issues/711)
+* Declare WASM modules in guppy ([#942](https://github.com/CQCL/guppylang/issues/942)) ([e1240fb](https://github.com/CQCL/guppylang/commit/e1240fbec33703bf8a311dd7c0139ca36c11aed8))
+* set hugr entrypoint to compiled function ([#1063](https://github.com/CQCL/guppylang/issues/1063)) ([16bd267](https://github.com/CQCL/guppylang/commit/16bd2675bffa30d09ef700625e65afdac131aaa9))
+* store used extensions and versions in HUGR metadata ([#1049](https://github.com/CQCL/guppylang/issues/1049)) ([a9a300c](https://github.com/CQCL/guppylang/commit/a9a300c6d4e1f517002b4bf83885c2f6653efa70)), closes [#1048](https://github.com/CQCL/guppylang/issues/1048)
+* Support Python 3.12 generic syntax ([#1051](https://github.com/CQCL/guppylang/issues/1051)) ([ab2e118](https://github.com/CQCL/guppylang/commit/ab2e118e5d697f71d8226bc06ce9068e689fb367)), closes [#823](https://github.com/CQCL/guppylang/issues/823)
+* use `core.` prefix for metadata keys ([#1055](https://github.com/CQCL/guppylang/issues/1055)) ([2bf0d68](https://github.com/CQCL/guppylang/commit/2bf0d68eefc1f1211130328555e1f288235baef3))
+
+
+### Bug Fixes
+
+* Allow array comprehension syntax in comptime functions ([#1068](https://github.com/CQCL/guppylang/issues/1068)) ([da8f04a](https://github.com/CQCL/guppylang/commit/da8f04a04485b0e362ce736887235089b04b2ef7)), closes [#1067](https://github.com/CQCL/guppylang/issues/1067)
+* Fix nested function definitions in Python 3.12 ([#1064](https://github.com/CQCL/guppylang/issues/1064)) ([090f920](https://github.com/CQCL/guppylang/commit/090f920646703a40ece6cc5305d1011f2a220ff5))
+* Turn capturing closures into experimental feature ([#1065](https://github.com/CQCL/guppylang/issues/1065)) ([a959b18](https://github.com/CQCL/guppylang/commit/a959b1848f96c7899fd5d4ba173bd371c9aa286a))
+
+
+### Documentation
+
+* Improve RNG docs ([#1043](https://github.com/CQCL/guppylang/issues/1043)) ([8640f06](https://github.com/CQCL/guppylang/commit/8640f06f78a56d8c7a931481ca224eb7ac596c8a))
+* replace `compile_module` usage in README ([#1041](https://github.com/CQCL/guppylang/issues/1041)) ([03ccf3a](https://github.com/CQCL/guppylang/commit/03ccf3a27d8f7f1f186483acec0573d57c2cc1c0))
+
 ## [0.20.0](https://github.com/CQCL/guppylang/compare/v0.19.1...v0.20.0) (2025-06-19)
 
 
