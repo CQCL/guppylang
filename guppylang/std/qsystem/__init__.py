@@ -87,7 +87,7 @@ def measure_leaked(q: qubit @ owned) -> "MaybeLeaked":
     fm = _measure_leaked(q)
     return MaybeLeaked(fm)
 
-@guppy
+@guppy.struct
 class MaybeLeaked:
     """A class representing a measurement that may have leaked.
 
@@ -97,14 +97,13 @@ class MaybeLeaked:
 
     _measurement: Future[int]
 
-    def __init__(self, value: Future[int]):
-        self._measurement = value
-
-    def is_leaked(self) -> bool:
+    @guppy
+    def is_leaked(self: "MaybeLeaked") -> bool:
         """Check if the measurement indicates a leak."""
         return self._measurement.read() == 2
     
-    def to_result(self) -> Option[bool]:
+    @guppy
+    def to_result(self: "MaybeLeaked @ owned") -> Option[bool]:
         """Get the measurement result if not leaked."""
         if (self.is_leaked()):
             return Option.none()

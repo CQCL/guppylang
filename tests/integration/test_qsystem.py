@@ -67,14 +67,11 @@ def test_measure_leaked(validate):  # type: ignore[no-untyped-def]
     """Compile the measure_leaked operation."""
 
     @guppy
-    def test(q: qubit @ owned) -> bool:
+    def test(q: qubit @ owned):
         ml: MaybeLeaked = measure_leaked(q)
-        # if maybe_leaked.is_leaked():
-        #     q1 = qubit()
-        #     m1 = measure(q1)
-        #     qfree(q1)
-        #     return m1
-        # return maybe_leaked.to_result().unwrap()
-        return True
+        if ml.is_leaked():
+                q1 = qubit()
+                m1 = measure(q1)
+        b = ml.to_result().unwrap()
 
     validate(guppy.compile(test))
