@@ -6,7 +6,7 @@ from guppylang.std.builtins import owned, array
 from guppylang.std.option import Option
 from guppylang.std.qsystem.random import make_discrete_distribution, RNG
 
-from guppylang.std.qsystem import measure_leaked
+from guppylang.std.qsystem import MaybeLeaked, measure_leaked
 from guppylang.std.qsystem.utils import get_current_shot
 from guppylang.std.quantum import qubit, measure_array
 from guppylang.std.qsystem.functional import (
@@ -68,7 +68,7 @@ def test_measure_leaked(validate):  # type: ignore[no-untyped-def]
 
     @guppy
     def test(q: qubit @ owned) -> bool:
-        maybe_leaked: Option[bool] = measure_leaked(q)
+        ml: MaybeLeaked = measure_leaked(q)
         # if maybe_leaked.is_leaked():
         #     q1 = qubit()
         #     m1 = measure(q1)
