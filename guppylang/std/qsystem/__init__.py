@@ -12,8 +12,8 @@ from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import owned
 from guppylang.std.futures import Future
-from guppylang.std.option import Option
-from guppylang.std.quantum import qubit
+from guppylang.std.option import Option, nothing, some
+from guppylang.std.quantum import discard, qubit
 
 
 @guppy
@@ -100,16 +100,20 @@ class MaybeLeaked:
     @guppy
     def is_leaked(self: "MaybeLeaked") -> bool:
         """Check if the measurement indicates a leak."""
-        return self._measurement.read() == 2
+        return self._measurement.copy().read() == 2
     
     @guppy
     def to_result(self: "MaybeLeaked @ owned") -> Option[bool]:
         """Get the measurement result if not leaked."""
-        if (self.is_leaked()):
-            return Option.none()
-        measurement = True if self._measurement == 1 else False
-        return Option.some(measurement)
-
+        int_value: int = self._measurement.read()
+        if (int_value == 2):
+            return nothing()
+        measurement = True if int_value == 1 else False
+        return some(measurement)
+    
+    @guppy
+    def discard(self: "MaybeLeaked @ owned") -> None:
+        self._measurement.discard()
 
 # ------------------------------------------------------
 # --------- Internal definitions -----------------------
