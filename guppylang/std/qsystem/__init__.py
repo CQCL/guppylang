@@ -89,7 +89,7 @@ def rz(q: qubit, angle: angle) -> None:
 
     .. math::
         \mathrm{rz}(q,\theta)=
-        \exp(\frac{- i \pi \theta}{2}\big(Z \big))=
+        \exp(\frac{- i \pi \theta}{2} Z ) =
           \begin{pmatrix}
             e^{\frac{-i \pi \theta}{2}} & 0  \\
             0 & e^{\frac{i \pi \theta}{2}}
