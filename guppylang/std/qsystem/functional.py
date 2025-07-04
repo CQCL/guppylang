@@ -1,7 +1,7 @@
 """Guppy standard module for functional qsystem native operations. For the mathematical
 definitions of these gates, see the guppylang.std.qsystem documentation.
 
-These gates are the same as those in the std.qsystem but use functional syntax.
+These gates are the same as those in std.qsystem but use functional syntax.
 """
 
 from typing import no_type_check
