@@ -252,7 +252,7 @@ def ry(q: qubit, angle: angle) -> None:
     .. math::
         \mathrm{Ry}(q, \theta)=
           \begin{pmatrix}
-            \cos(\frac{\pi \theta}{2}) & \sin(\frac{\pi \theta}{2}) \\
+            \cos(\frac{\pi \theta}{2}) & -\sin(\frac{\pi \theta}{2}) \\
             \sin(\frac{\pi \theta}{2}) & \cos(\frac{\pi \theta}{2})
            \end{pmatrix}
 
