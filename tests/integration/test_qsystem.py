@@ -71,10 +71,8 @@ def test_measure_leaked(validate):  # type: ignore[no-untyped-def]
     def test(q: qubit @ owned) -> bool:
         ml: MaybeLeaked = measure_leaked(q)
         if ml.is_leaked():
-                ml.discard()
-                q = qubit()
-                m = measure(q)
-                return m
+            ml.discard()
+            return False
         b: bool = ml.to_result().unwrap()
         return b
 
