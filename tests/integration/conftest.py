@@ -18,18 +18,6 @@ def export_test_cases_dir(request):
     return r
 
 
-def get_validator() -> Path | None:
-    """
-    Returns the path to the `validator` binary, if it exists.
-    Otherwise, returns `None`.
-    """
-    bin_path = Path(__file__).parent.parent.parent / "target" / "release" / "validator"
-    if bin_path.exists():
-        return bin_path
-
-    return None
-
-
 @pytest.fixture(scope="session")
 def validate(request, export_test_cases_dir: Path):
     def validate_impl(package: Package | PackagePointer | Hugr, name=None):
@@ -55,6 +43,7 @@ class LLVMException(Exception):
 
 
 def _emulate_fn(is_flt: bool = False):
+    """Use selene to emulate a Guppy function."""
     from guppylang.decorator import guppy
     from guppylang.std.builtins import result
     from selene_sim.build import build

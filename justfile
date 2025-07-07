@@ -12,25 +12,19 @@ setup:
 
 # Prepare the environment for development, including the extra dependency groups.
 setup-extras:
-    uv sync --extra pytket --group execution --inexact
+    uv sync --extra pytket --inexact
 
 # Run the pre-commit checks.
 check:
     uv run pre-commit run --all-files
 
-# Compile integration test binaries.
-_prepare-test:
-    # Build the validator binary if rust is installed. Otherwise, skip it.
-    cargo build --release -p validator || true
-    # Build the execution binary if rust is installed. Otherwise, skip it.
-    uv run maturin develop -m execute_llvm/Cargo.toml --release || true
 
 # Run the tests.
-test *PYTEST_FLAGS: _prepare-test
+test *PYTEST_FLAGS:
     uv run pytest {{PYTEST_FLAGS}}
 
 # Export the integration test cases to a directory.
-export-integration-tests directory="guppy-exports": _prepare-test
+export-integration-tests directory="guppy-exports":
     uv run pytest --export-test-cases="{{ directory }}"
 
 # Auto-fix all clippy warnings.
