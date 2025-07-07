@@ -85,6 +85,7 @@ def _measure_leaked(q: qubit @ owned) -> Future[int]:
 @guppy
 @no_type_check
 def measure_leaked(q: qubit @ owned) -> "MaybeLeaked":
+    """Measure the qubit and return a MaybeLeaked result."""
     fm = _measure_leaked(q)
     return MaybeLeaked(fm)
 
@@ -109,7 +110,7 @@ class MaybeLeaked:
     @guppy
     @no_type_check
     def to_result(self: "MaybeLeaked @ owned") -> Option[bool]:
-        """Get the measurement result if not leaked."""
+        """Returns the measurement result or `nothing` if leaked."""
         int_value: int = self._measurement.read()
         if int_value == 2:
             return nothing()
