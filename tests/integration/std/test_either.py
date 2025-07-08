@@ -41,4 +41,3 @@ def test_to_option(validate, run_int_fn):
     compiled = guppy.compile(main)
     validate(compiled)
     run_int_fn(compiled, expected=11)
-

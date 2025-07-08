@@ -36,7 +36,7 @@ def test_int(validate, run_int_fn):
 
     @guppy.comptime
     def pow(x: int, y: int) -> int:
-        return 4 ** (x ** (y ** 0))
+        return 4 ** (x ** (y**0))
 
     @guppy
     def main() -> None:
@@ -177,7 +177,6 @@ def test_dunder_coercions(validate):
     validate(guppy.compile(test4))
     validate(guppy.compile(test5))
     validate(guppy.compile(test6))
-
 
 
 def test_const(validate):

@@ -105,4 +105,3 @@ def test_len(validate):
         return len(s)
 
     validate(guppy.compile(test))
-

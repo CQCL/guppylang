@@ -22,7 +22,7 @@ def test_roundtrip2(validate, run_float_fn_approx):
     @guppy
     def roundtrip(f: float) -> float:
         n = bytecast_float_to_nat(f)
-        f2 =  bytecast_nat_to_float(n)
+        f2 = bytecast_nat_to_float(n)
         n2 = bytecast_float_to_nat(f2)
         return bytecast_nat_to_float(n2)
 

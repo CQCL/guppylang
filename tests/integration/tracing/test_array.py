@@ -21,7 +21,7 @@ def test_turns_into_list(validate, run_int_fn):
 
 def test_accepts_list(validate, run_int_fn):
     @guppy
-    def foo(xs: array[int, 10] @owned) -> int:
+    def foo(xs: array[int, 10] @ owned) -> int:
         s = 0
         for x in xs:
             s += x

@@ -290,7 +290,6 @@ def test_eq(validate):
 
 
 def test_zero_as_bool(validate):
-
     @compile_guppy
     def foo() -> bool:
         if 0:
@@ -302,7 +301,6 @@ def test_zero_as_bool(validate):
 
 
 def test_one_as_bool(validate):
-
     @compile_guppy
     def foo() -> bool:
         if 1:

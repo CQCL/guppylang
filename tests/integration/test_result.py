@@ -67,6 +67,7 @@ def test_same_tag(validate):
 
     validate(main)
 
+
 def test_comptime_tag_inside(validate):
     @compile_guppy
     def main(x: int) -> None:

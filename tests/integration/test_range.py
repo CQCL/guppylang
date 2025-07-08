@@ -7,7 +7,7 @@ def test_range(validate, run_int_fn):
     def main() -> int:
         total = 0
         for x in range(5):
-            total += x + 100 # Make the initial 0 obvious
+            total += x + 100  # Make the initial 0 obvious
         return total
 
     @guppy
@@ -64,4 +64,3 @@ def test_static_generic_size(validate):
         return range(n)
 
     validate(guppy.compile(negative))
-

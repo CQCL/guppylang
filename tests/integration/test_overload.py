@@ -174,8 +174,7 @@ def test_everything_can_be_overloaded(validate):
         circ.H(0)
 
         @guppy.pytket(circ)
-        def circ1(q: qubit) -> None:
-            ...
+        def circ1(q: qubit) -> None: ...
 
         circ2 = guppy.load_pytket("circ2", circ, use_arrays=True)
 

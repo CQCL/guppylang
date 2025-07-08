@@ -102,7 +102,7 @@ def test_generic_nested(validate, run_float_fn_approx):
 
     @guppy.comptime
     def bar(
-        x1: int, x2: int, x3: float,x4: int, x5: int
+        x1: int, x2: int, x3: float, x4: int, x5: int
     ) -> tuple[StructA[StructA[float]], StructB[bool, int]]:
         a = StructA((x1, StructA((x2, x3))))
         b = StructB(True, StructA((x4, x5)))

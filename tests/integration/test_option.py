@@ -37,7 +37,7 @@ def test_nothing_unwrap(validate, run_int_fn):
     @no_type_check
     def main() -> int:
         x: Option[qubit] = nothing()
-        x.unwrap_nothing() # linearity error without this line
+        x.unwrap_nothing()  # linearity error without this line
         return 1
 
     compiled = guppy.compile(main)

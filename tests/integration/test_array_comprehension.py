@@ -1,4 +1,3 @@
-
 from guppylang.decorator import guppy
 from guppylang.std.builtins import array, owned
 from guppylang.std.quantum import qubit
@@ -182,4 +181,3 @@ def test_borrow_and_consume(validate):
         return array(foo(q) + bar(q) for q in qs)
 
     validate(guppy.compile(test))
-

@@ -9,7 +9,7 @@ from guppylang.tys.ty import NoneType
 
 def test_id(validate):
     @guppy
-    def test(q: qubit @owned) -> qubit:
+    def test(q: qubit @ owned) -> qubit:
         return q
 
     validate(guppy.compile(test))
@@ -17,7 +17,7 @@ def test_id(validate):
 
 def test_assign(validate):
     @guppy
-    def test(q: qubit @owned) -> qubit:
+    def test(q: qubit @ owned) -> qubit:
         r = q
         s = r
         return s
@@ -29,7 +29,7 @@ def test_linear_return_order(validate):
     # See https://github.com/CQCL-DEV/guppy/issues/35
 
     @guppy
-    def test(q: qubit @owned) -> tuple[qubit, bool]:
+    def test(q: qubit @ owned) -> tuple[qubit, bool]:
         return project_z(q)
 
     validate(guppy.compile(test))
@@ -37,14 +37,14 @@ def test_linear_return_order(validate):
 
 def test_interleave(validate):
     @guppy.declare
-    def f(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]: ...
+    def f(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]: ...
 
     @guppy.declare
-    def g(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]: ...
+    def g(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]: ...
 
     @guppy
     def test(
-        a: qubit @owned, b: qubit @owned, c: qubit @owned, d: qubit @owned
+        a: qubit @ owned, b: qubit @ owned, c: qubit @ owned, d: qubit @ owned
     ) -> tuple[qubit, qubit, qubit, qubit]:
         a, b = f(a, b)
         c, d = f(c, d)
@@ -61,17 +61,19 @@ def test_linear_struct(validate):
         q2: qubit
 
     @guppy.declare
-    def f(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]: ...
+    def f(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]: ...
 
     @guppy.declare
-    def g(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]: ...
+    def g(q1: qubit @ owned, q2: qubit @ owned) -> tuple[qubit, qubit]: ...
 
     @guppy
-    def construct(q1: qubit @owned, q2: qubit @owned) -> MyStruct:
+    def construct(q1: qubit @ owned, q2: qubit @ owned) -> MyStruct:
         return MyStruct(q1, q2)
 
     @guppy
-    def test(s: MyStruct @owned, t: MyStruct @owned) -> tuple[qubit, qubit, qubit, qubit]:
+    def test(
+        s: MyStruct @ owned, t: MyStruct @ owned
+    ) -> tuple[qubit, qubit, qubit, qubit]:
         s.q1, s.q2 = f(s.q2, s.q1)
         t.q1, t.q2 = f(t.q1, t.q2)
         s.q2, t.q1 = g(t.q1, s.q2)
@@ -88,16 +90,16 @@ def test_mixed_classical_linear_struct(validate):
         y: float
 
     @guppy.declare
-    def f(q: qubit @owned) -> qubit: ...
+    def f(q: qubit @ owned) -> qubit: ...
 
     @guppy
-    def test1(s: MyStruct @owned) -> tuple[MyStruct, float]:
+    def test1(s: MyStruct @ owned) -> tuple[MyStruct, float]:
         a = s.x + s.y
         s.q = f(s.q)
         return s, a * s.x
 
     @guppy
-    def test2(s: MyStruct @owned) -> tuple[MyStruct, int, int, int]:
+    def test2(s: MyStruct @ owned) -> tuple[MyStruct, int, int, int]:
         t = s
         u = t
         u.q = f(u.q)
@@ -155,13 +157,13 @@ def test_if_struct_rebuild(validate):
         q: qubit
 
     @guppy
-    def test1(s: MyStruct @owned, b: bool) -> MyStruct:
+    def test1(s: MyStruct @ owned, b: bool) -> MyStruct:
         if b:
             s = MyStruct(s.q)
         return s
 
     @guppy
-    def test2(s: MyStruct @owned, b: bool) -> MyStruct:
+    def test2(s: MyStruct @ owned, b: bool) -> MyStruct:
         if b:
             s.q = s.q
         return s
@@ -180,10 +182,10 @@ def test_struct_reassign(validate):
         q: qubit
 
     @guppy.declare
-    def consume(s: MyStruct2 @owned) -> None: ...
+    def consume(s: MyStruct2 @ owned) -> None: ...
 
     @guppy
-    def test(s: MyStruct2 @owned, b: bool) -> MyStruct2:
+    def test(s: MyStruct2 @ owned, b: bool) -> MyStruct2:
         consume(s)
         if b:
             s = MyStruct2(qubit())
@@ -202,10 +204,10 @@ def test_struct_reassign2(validate):
         q2: qubit
 
     @guppy.declare
-    def use(q: qubit @owned) -> None: ...
+    def use(q: qubit @ owned) -> None: ...
 
     @guppy
-    def test(s: MyStruct @owned, b: bool) -> MyStruct:
+    def test(s: MyStruct @ owned, b: bool) -> MyStruct:
         use(s.q1)
         use(s.q2)
         if b:
@@ -220,7 +222,7 @@ def test_struct_reassign2(validate):
 
 def test_measure(validate):
     @guppy
-    def test(q: qubit @owned, x: int) -> int:
+    def test(q: qubit @ owned, x: int) -> int:
         b = measure(q)
         return x
 
@@ -229,10 +231,10 @@ def test_measure(validate):
 
 def test_return_call(validate):
     @guppy.declare
-    def op(q: qubit @owned) -> qubit: ...
+    def op(q: qubit @ owned) -> qubit: ...
 
     @guppy
-    def test(q: qubit @owned) -> qubit:
+    def test(q: qubit @ owned) -> qubit:
         return op(q)
 
     validate(guppy.compile(test))
@@ -240,7 +242,7 @@ def test_return_call(validate):
 
 def test_while(validate):
     @guppy
-    def test(q: qubit @owned, i: int) -> qubit:
+    def test(q: qubit @ owned, i: int) -> qubit:
         while i > 0:
             i -= 1
             q = h(q)
@@ -251,7 +253,7 @@ def test_while(validate):
 
 def test_while_break(validate):
     @guppy
-    def test(q: qubit @owned, i: int) -> qubit:
+    def test(q: qubit @ owned, i: int) -> qubit:
         while i > 0:
             i -= 1
             q = h(q)
@@ -264,7 +266,7 @@ def test_while_break(validate):
 
 def test_while_continue(validate):
     @guppy
-    def test(q: qubit @owned, i: int) -> qubit:
+    def test(q: qubit @ owned, i: int) -> qubit:
         while i > 0:
             i -= 1
             if i % 3 == 0:
@@ -296,10 +298,10 @@ def test_while_move_back(validate):
         q: qubit
 
     @guppy.declare
-    def use(q: qubit @owned) -> None: ...
+    def use(q: qubit @ owned) -> None: ...
 
     @guppy
-    def test(s: MyStruct @owned) -> MyStruct:
+    def test(s: MyStruct @ owned) -> MyStruct:
         use(s.q)
         while True:
             s.q = qubit()
@@ -310,7 +312,7 @@ def test_while_move_back(validate):
 
 def test_for(validate):
     @guppy
-    def test(qs: list[tuple[qubit, qubit]] @owned) -> list[qubit]:
+    def test(qs: list[tuple[qubit, qubit]] @ owned) -> list[qubit]:
         rs: list[qubit] = []
         for q1, q2 in qs:
             q1, q2 = cx(q1, q2)
@@ -323,7 +325,7 @@ def test_for(validate):
 
 def test_for_measure(validate):
     @guppy
-    def test(qs: list[qubit] @owned) -> bool:
+    def test(qs: list[qubit] @ owned) -> bool:
         parity = False
         for q in qs:
             parity |= measure(q)
@@ -334,7 +336,7 @@ def test_for_measure(validate):
 
 def test_for_continue(validate):
     @guppy
-    def test(qs: list[qubit] @owned) -> int:
+    def test(qs: list[qubit] @ owned) -> int:
         x = 0
         for q in qs:
             if measure(q):
@@ -353,7 +355,6 @@ def test_for_nonlinear_break(validate):
         @guppy.declare
         def __next__(self: "MyIter") -> Option[tuple[qubit, "MyIter"]]: ...
 
-
     @guppy.type(NoneType().to_hugr())
     class MyType:
         """Type that produces the iterator above."""
@@ -362,7 +363,7 @@ def test_for_nonlinear_break(validate):
         def __iter__(self: "MyType") -> MyIter: ...
 
     @guppy.declare
-    def measure(q: qubit @owned) -> bool: ...
+    def measure(q: qubit @ owned) -> bool: ...
 
     @guppy
     def test(mt: MyType, xs: list[int]) -> None:
@@ -376,7 +377,7 @@ def test_for_nonlinear_break(validate):
 
 def test_rus(validate):
     @guppy
-    def repeat_until_success(q: qubit @owned) -> qubit:
+    def repeat_until_success(q: qubit @ owned) -> qubit:
         while True:
             aux, q = cx(t(h(qubit())), q)
             aux, q = cx(h(aux), q)
@@ -389,7 +390,7 @@ def test_rus(validate):
 
 def test_list_iter_arg(validate):
     @guppy
-    def owned_arg(qs: list[qubit] @owned) -> list[qubit]:
+    def owned_arg(qs: list[qubit] @ owned) -> list[qubit]:
         qs = [h(q) for q in qs]
         return qs
 
@@ -399,7 +400,7 @@ def test_list_iter_arg(validate):
 def test_list_iter(validate):
     @guppy
     def owned_arg() -> list[qubit]:
-        qs = [qubit() for _ in [0,1,2]]
+        qs = [qubit() for _ in [0, 1, 2]]
         qs = [h(q) for q in qs]
         return qs
 

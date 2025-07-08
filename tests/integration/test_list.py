@@ -37,7 +37,7 @@ def test_literal(validate):
 
 def test_literal_linear(validate):
     @guppy
-    def test(q1: qubit @owned, q2: qubit @owned) -> list[qubit]:
+    def test(q1: qubit @ owned, q2: qubit @ owned) -> list[qubit]:
         return [q1, h(q2)]
 
     validate(guppy.compile(test))
@@ -67,7 +67,9 @@ def test_arith(validate):
 @pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/528")
 def test_arith_linear(validate):
     @guppy
-    def test(xs: list[qubit] @owned, ys: list[qubit] @owned, q: qubit @owned) -> list[qubit]:
+    def test(
+        xs: list[qubit] @ owned, ys: list[qubit] @ owned, q: qubit @ owned
+    ) -> list[qubit]:
         xs += [q]
         return xs + ys
 
@@ -84,7 +86,7 @@ def test_subscript(validate):
 
 def test_linear(validate):
     @guppy
-    def test(xs: list[qubit], q: qubit @owned) -> int:
+    def test(xs: list[qubit], q: qubit @ owned) -> int:
         xs.append(q)
         return len(xs)
 
@@ -107,7 +109,7 @@ def test_linear_subscript(validate):
     def foo(q: qubit) -> None: ...
 
     @guppy
-    def main(qs: list[qubit] @owned, i: int) -> list[qubit]:
+    def main(qs: list[qubit] @ owned, i: int) -> list[qubit]:
         foo(qs[i])
         return qs
 
@@ -130,7 +132,7 @@ def test_multi_subscripts(validate):
     def foo(q1: qubit, q2: qubit) -> None: ...
 
     @guppy
-    def main(qs: list[qubit] @owned) -> list[qubit]:
+    def main(qs: list[qubit] @ owned) -> list[qubit]:
         foo(qs[0], qs[1])
         foo(qs[0], qs[0])  # Will panic at runtime
         return qs
@@ -148,7 +150,7 @@ def test_struct_list(validate):
     def foo(q1: qubit, q2: qubit) -> None: ...
 
     @guppy
-    def main(ss: list[S] @owned) -> list[S]:
+    def main(ss: list[S] @ owned) -> list[S]:
         # This will panic at runtime :(
         # To make this work, we would need to replace the qubits in the struct
         # with `qubit | None` and write back `None` after `q1` has been extracted...
@@ -163,12 +165,10 @@ def test_nested_subscripts(validate):
     def foo(q: qubit) -> None: ...
 
     @guppy.declare
-    def bar(
-        q1: qubit, q2: qubit, q3: qubit, q4: qubit
-    ) -> None: ...
+    def bar(q1: qubit, q2: qubit, q3: qubit, q4: qubit) -> None: ...
 
     @guppy
-    def main(qs: list[list[qubit]] @owned) -> list[list[qubit]]:
+    def main(qs: list[list[qubit]] @ owned) -> list[list[qubit]]:
         foo(qs[0][0])
         # The following should work *without* panicking at runtime! Accessing `qs[0][0]`
         # replaces one qubit with `None` but puts everything back into `qs` before
@@ -200,7 +200,7 @@ def test_struct_nested_subscript(validate):
     def foo(q1: qubit) -> None: ...
 
     @guppy
-    def main(a: A @owned, i: int, j: int, k: int) -> A:
+    def main(a: A @ owned, i: int, j: int, k: int) -> A:
         foo(a.xs[i].ys[j][k].c)
         return a
 

@@ -324,6 +324,7 @@ def test_shift(validate, run_int_fn) -> None:
     validate(compiled)
     run_int_fn(compiled, 42)
 
+
 def test_divmod(validate, run_int_fn) -> None:
     @guppy
     def quot() -> int:

@@ -655,6 +655,7 @@ def test_assign_dataflow(validate):
 
     See https://github.com/CQCL/guppylang/issues/844
     """
+
     @guppy
     def test1() -> None:
         xs = array(1, 2)

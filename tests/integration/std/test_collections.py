@@ -1,5 +1,10 @@
 from guppylang import guppy
-from guppylang.std.collections import Stack, empty_stack, PriorityQueue, empty_priority_queue
+from guppylang.std.collections import (
+    Stack,
+    empty_stack,
+    PriorityQueue,
+    empty_priority_queue,
+)
 
 
 def test_stack(validate, run_int_fn) -> None:
@@ -18,7 +23,9 @@ def test_stack(validate, run_int_fn) -> None:
 
     compiled = guppy.compile(main)
     validate(compiled)
-    run_int_fn(compiled, sum((i + 1) * x for i, x in enumerate(reversed(list(range(10))))))
+    run_int_fn(
+        compiled, sum((i + 1) * x for i, x in enumerate(reversed(list(range(10)))))
+    )
 
 
 def test_priority_queue(validate, run_int_fn) -> None:
@@ -42,5 +49,5 @@ def test_priority_queue(validate, run_int_fn) -> None:
     run_int_fn(
         compiled,
         # multiplier * value for ordered values in priority queue
-        sum((m + 1) * v for m, v in enumerate(reversed(list(range(10)))))
+        sum((m + 1) * v for m, v in enumerate(reversed(list(range(10))))),
     )

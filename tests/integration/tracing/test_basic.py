@@ -91,4 +91,3 @@ def test_inner_scope(validate):
     foo, bar = make(42)
     validate(guppy.compile(foo))
     validate(guppy.compile(bar))
-
