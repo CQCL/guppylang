@@ -47,18 +47,16 @@ def test_unpack_big_iterable(validate):
     validate(guppy.compile(main))
 
 
-def test_unpack_range(validate, run_int_fn):
+def test_unpack_range(run_int_fn):
     @guppy
     def main() -> int:
         [_, x, *_, y, _] = range(10)
         return x + y
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=9)
+    run_int_fn(main, expected=9)
 
 
-def test_unpack_tuple_starred(validate, run_int_fn):
+def test_unpack_tuple_starred(validate):
     @guppy
     def main() -> array[int, 2]:
         x, *ys, z = 1, 2, 3, 4
@@ -67,7 +65,7 @@ def test_unpack_tuple_starred(validate, run_int_fn):
     validate(guppy.compile(main))
 
 
-def test_unpack_nested(validate, run_int_fn):
+def test_unpack_nested(validate):
     @guppy
     def main(
         xs: array[array[array[int, 5], 10], 20] @ owned,
@@ -85,7 +83,7 @@ def test_unpack_nested(validate, run_int_fn):
     validate(guppy.compile(main))
 
 
-def test_left_to_right(validate, run_int_fn):
+def test_left_to_right(run_int_fn):
     @guppy
     def left() -> int:
         [x, x, *_] = range(10)
@@ -96,10 +94,6 @@ def test_left_to_right(validate, run_int_fn):
         [*_, x, x] = range(10)
         return x
 
-    compiled = guppy.compile(left)
-    validate(compiled)
-    run_int_fn(compiled, fn_name="left", expected=1)
+    run_int_fn(left, expected=1)
 
-    compiled = guppy.compile(right)
-    validate(compiled)
-    run_int_fn(compiled, fn_name="right", expected=9)
+    run_int_fn(right, expected=9)

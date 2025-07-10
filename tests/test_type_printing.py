@@ -26,6 +26,6 @@ def test_comptime_function_type():
     ty = FunctionType(
         inputs=[FuncInput(NumericType(NumericType.Kind.Nat), InputFlags.Comptime)],
         output=ty_param.to_bound(0).ty,
-        params=[ty_param]
+        params=[ty_param],
     )
     assert str(ty) == "forall T. nat @comptime -> T"

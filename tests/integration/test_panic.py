@@ -7,7 +7,7 @@ def test_basic(validate):
     @compile_guppy
     def main() -> None:
         panic("I panicked!")
-        exit( "I panicked!", 1)
+        exit("I panicked!", 1)
 
     validate(main)
 

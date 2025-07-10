@@ -135,7 +135,7 @@ def test_load_circuits(validate):
     @guppy
     def foo(q1: qubit, q2: qubit, q3: qubit) -> tuple[bool, bool]:
         guppy_circ1(q1)
-        return  guppy_circ2(q2, q3)
+        return guppy_circ2(q2, q3)
 
     validate(guppy.compile(foo))
 
@@ -152,7 +152,7 @@ def test_measure_some(validate):
 
     @guppy
     def foo(q1: qubit, q2: qubit) -> bool:
-        return  guppy_circ(q1, q2)
+        return guppy_circ(q1, q2)
 
     validate(guppy.compile(foo))
 
@@ -183,9 +183,8 @@ def test_register_arrays(validate):
     guppy_circ = guppy.load_pytket("guppy_circ", circ)
 
     @guppy
-    def foo(default_reg: array[qubit, 2], 
-            extra_reg: array[qubit, 3]) -> array[bool, 3]:
-        # Note that the default_reg name is 'q' so it has to come after 'e...' 
+    def foo(default_reg: array[qubit, 2], extra_reg: array[qubit, 3]) -> array[bool, 3]:
+        # Note that the default_reg name is 'q' so it has to come after 'e...'
         # lexicographically.
         return guppy_circ(extra_reg, default_reg)
 
@@ -205,13 +204,14 @@ def test_register_arrays_multiple_measure(validate):
     guppy_circ = guppy.load_pytket("guppy_circ", circ)
 
     @guppy
-    def foo(default_reg: array[qubit, 2], 
-            extra_reg1: array[qubit, 3]) -> tuple[array[bool, 3], array[bool, 2]]:
+    def foo(
+        default_reg: array[qubit, 2], extra_reg1: array[qubit, 3]
+    ) -> tuple[array[bool, 3], array[bool, 2]]:
         extra_reg2 = array(qubit(), qubit())
         result = guppy_circ(extra_reg1, extra_reg2, default_reg)
-        # Until we add linearity checks to loaded circuits need to discard owned 
+        # Until we add linearity checks to loaded circuits need to discard owned
         # arrays.
-        discard_array(extra_reg2) 
+        discard_array(extra_reg2)
         return result
 
     validate(guppy.compile(foo))
@@ -229,8 +229,9 @@ def test_register_arrays_mixed(validate):
     guppy_circ = guppy.load_pytket("guppy_circ", circ)
 
     @guppy
-    def foo(q: array[qubit, 2], 
-            q2: array[qubit, 3]) -> tuple[array[bool, 1], array[bool, 3]]:
+    def foo(
+        q: array[qubit, 2], q2: array[qubit, 3]
+    ) -> tuple[array[bool, 1], array[bool, 3]]:
         return guppy_circ(q, q2)
 
     validate(guppy.compile(foo))
