@@ -88,7 +88,7 @@ class TracedFunctionDef(RawTracedFunctionDef, CallableDef, CompilableDef):
         `CompiledFunctionDef.compile_inner()`.
         """
         func_type = self.ty.to_hugr_poly(ctx)
-        func_def = module.define_function(
+        func_def = module.module_root_builder().define_function(
             self.name, func_type.body.input, func_type.body.output, func_type.params
         )
         return CompiledTracedFunctionDef(

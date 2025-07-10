@@ -179,7 +179,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 hugr_func = mapping[circ.entrypoint]
 
                 func_type = self.ty.to_hugr_poly(ctx)
-                outer_func = module.define_function(
+                outer_func = module.module_root_builder().define_function(
                     self.name, func_type.body.input, func_type.body.output
                 )
 
