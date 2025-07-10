@@ -606,7 +606,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def visit_BarrierExpr(self, node: BarrierExpr) -> Wire:
         hugr_tys = [get_type(e).to_hugr(self.ctx) for e in node.args]
         op = hugr.std.prelude.PRELUDE_EXTENSION.get_op("Barrier").instantiate(
-            [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in hugr_tys])],
+            [ht.ListArg([ht.TypeTypeArg(ty) for ty in hugr_tys])],
             ht.FunctionType.endo(hugr_tys),
         )
 
