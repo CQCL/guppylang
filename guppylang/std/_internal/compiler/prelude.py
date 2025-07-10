@@ -63,8 +63,8 @@ def panic(
     name = "panic" if kind == ExitKind.Panic else "exit"
     op_def = hugr.std.PRELUDE.get_op(name)
     args: list[ht.TypeArg] = [
-        ht.SequenceArg([ht.TypeTypeArg(ty) for ty in inputs]),
-        ht.SequenceArg([ht.TypeTypeArg(ty) for ty in outputs]),
+        ht.ListArg([ht.TypeTypeArg(ty) for ty in inputs]),
+        ht.ListArg([ht.TypeTypeArg(ty) for ty in outputs]),
     ]
     sig = ht.FunctionType([error_type(), *inputs], outputs)
     return ops.ExtOp(op_def, sig, args)
@@ -255,7 +255,7 @@ class BarrierCompiler(CustomCallCompiler):
         tys = [t for arg in args if (t := self.builder.hugr.port_type(arg.out_port()))]
 
         op = hugr.std.prelude.PRELUDE_EXTENSION.get_op("Barrier").instantiate(
-            [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in tys])]
+            [ht.ListArg([ht.TypeTypeArg(ty) for ty in tys])]
         )
 
         barrier_n = self.builder.add_op(op, *args)

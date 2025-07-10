@@ -87,8 +87,8 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
             self.func.ty.output,
         ).to_hugr(self.ctx)
 
-        inputs_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.input])
-        output_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.output])
+        inputs_row_arg = ht.ListArg([ty.type_arg() for ty in wasm_sig.input])
+        output_row_arg = ht.ListArg([ty.type_arg() for ty in wasm_sig.output])
 
         func_ty = WASM_EXTENSION.get_type("func").instantiate(
             [inputs_row_arg, output_row_arg]

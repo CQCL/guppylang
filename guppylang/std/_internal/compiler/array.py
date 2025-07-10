@@ -136,7 +136,7 @@ def array_scan(
         length,
         ht.TypeTypeArg(elem_ty),
         ht.TypeTypeArg(new_elem_ty),
-        ht.SequenceArg([ht.TypeTypeArg(acc) for acc in accumulators]),
+        ht.ListArg([ht.TypeTypeArg(acc) for acc in accumulators]),
     ]
     ins = [
         array_type(elem_ty, length),
