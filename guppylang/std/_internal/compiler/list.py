@@ -318,7 +318,7 @@ class ListLengthCompiler(CustomCallCompiler):
 def list_new(
     builder: DfBase[ops.DfParentOp], elem_type: ht.Type, args: list[Wire]
 ) -> Wire:
-    if elem_type.type_bound() == ht.TypeBound.Any:
+    if elem_type.type_bound() == ht.TypeBound.Linear:
         return _list_new_linear(builder, elem_type, args)
     else:
         return _list_new_classical(builder, elem_type, args)

@@ -246,7 +246,7 @@ class NewArrayCompiler(ArrayCompiler):
         )
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        if self.elem_ty.type_bound() == ht.TypeBound.Any:
+        if self.elem_ty.type_bound() == ht.TypeBound.Linear:
             return [self.build_linear_array(args)]
         else:
             return [self.build_classical_array(args)]
@@ -332,7 +332,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
 
     def _build_linear_getitem(self, func: hf.Function) -> None:
         """Constructs function to call `array.__getitem__` for linear arrays."""
-        elem_ty = ht.Variable(0, ht.TypeBound.Any)
+        elem_ty = ht.Variable(0, ht.TypeBound.Linear)
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
         elem_opt_ty = ht.Option(elem_ty)
@@ -384,7 +384,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
         [elem_ty_arg, _] = self.type_args
         assert isinstance(elem_ty_arg, TypeArg)
         if not elem_ty_arg.ty.copyable:
-            func_ty = self._getitem_ty(ht.TypeBound.Any)
+            func_ty = self._getitem_ty(ht.TypeBound.Linear)
             func, already_exists = self.ctx.declare_global_func(
                 ARRAY_GETITEM_LINEAR, func_ty
             )
@@ -455,7 +455,7 @@ class ArraySetitemCompiler(ArrayCompiler):
 
     def _build_linear_setitem(self, func: hf.Function) -> None:
         """Constructs function to call `array.__setitem__` for linear arrays."""
-        elem_ty = ht.Variable(0, ht.TypeBound.Any)
+        elem_ty = ht.Variable(0, ht.TypeBound.Linear)
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
         elem_opt_ty = ht.Option(elem_ty)
@@ -506,8 +506,8 @@ class ArraySetitemCompiler(ArrayCompiler):
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [array, idx, elem] = args
-        if self.elem_ty.type_bound() == ht.TypeBound.Any:
-            func_ty = self._setitem_ty(ht.TypeBound.Any)
+        if self.elem_ty.type_bound() == ht.TypeBound.Linear:
+            func_ty = self._setitem_ty(ht.TypeBound.Linear)
             func, already_exists = self.ctx.declare_global_func(
                 ARRAY_SETITEM_LINEAR, func_ty
             )
@@ -532,7 +532,7 @@ class ArrayIterAsertAllUsedCompiler(ArrayCompiler):
     def compile(self, args: list[Wire]) -> list[Wire]:
         # For linear array iterators, map the array of optional elements to an
         # `array[None, n]` that we can discard.
-        if self.elem_ty.type_bound() == ht.TypeBound.Any:
+        if self.elem_ty.type_bound() == ht.TypeBound.Linear:
             elem_opt_ty = ht.Option(self.elem_ty)
             unit_ty = ht.UnitSum(1)
             # Instantiate `unwrap_none` function
@@ -553,10 +553,10 @@ class ArrayIterAsertAllUsedCompiler(ArrayCompiler):
     def define_unwrap_none_helper(self) -> hf.Function:
         """Define an `unwrap_none` function that checks that the passed element is
         indeed `None`."""
-        opt_ty = ht.Option(ht.Variable(0, ht.TypeBound.Any))
+        opt_ty = ht.Option(ht.Variable(0, ht.TypeBound.Linear))
         unit_ty = ht.UnitSum(1)
         func_ty = ht.PolyFuncType(
-            params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+            params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
             body=ht.FunctionType([opt_ty], [unit_ty]),
         )
         func, already_defined = self.ctx.declare_global_func(

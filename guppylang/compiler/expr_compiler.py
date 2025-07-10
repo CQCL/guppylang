@@ -854,9 +854,9 @@ def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
 
     See https://github.com/CQCL/guppylang/issues/629
     """
-    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Any))
+    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Linear))
     sig = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+        params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
         body=ht.FunctionType([], [ht.Option(v)]),
     )
     func, already_defined = ctx.declare_global_func(ARRAY_COMPREHENSION_INIT, sig)
@@ -868,9 +868,9 @@ def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
 def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
     """Returns the Hugr function that is used to unwrap the elements in an option array
     to turn it into a regular array."""
-    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Any))
+    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Linear))
     sig = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+        params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
         body=ht.FunctionType([ht.Option(v)], [v]),
     )
     func, already_defined = ctx.declare_global_func(ARRAY_UNWRAP_ELEM, sig)
@@ -883,9 +883,9 @@ def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
 def array_wrap_elem(ctx: CompilerContext) -> hf.Function:
     """Returns the Hugr function that is used to wrap the elements in an regular array
     to turn it into a option array."""
-    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Any))
+    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Linear))
     sig = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+        params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
         body=ht.FunctionType([v], [ht.Option(v)]),
     )
     func, already_defined = ctx.declare_global_func(ARRAY_WRAP_ELEM, sig)

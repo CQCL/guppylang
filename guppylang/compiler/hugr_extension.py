@@ -22,27 +22,27 @@ PARTIAL_OP_DEF: he.OpDef = EXTENSION.add_op_def(
             poly_func=ht.PolyFuncType(
                 params=[
                     # Captured input types
-                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Linear)),
                     # Non-captured input types
-                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Linear)),
                     # Output types
-                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Linear)),
                 ],
                 body=ht.FunctionType(
                     input=[
                         ht.FunctionType(
                             input=[
-                                ht.RowVariable(0, ht.TypeBound.Any),
-                                ht.RowVariable(1, ht.TypeBound.Any),
+                                ht.RowVariable(0, ht.TypeBound.Linear),
+                                ht.RowVariable(1, ht.TypeBound.Linear),
                             ],
-                            output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                            output=[ht.RowVariable(2, ht.TypeBound.Linear)],
                         ),
-                        ht.RowVariable(0, ht.TypeBound.Any),
+                        ht.RowVariable(0, ht.TypeBound.Linear),
                     ],
                     output=[
                         ht.FunctionType(
-                            input=[ht.RowVariable(1, ht.TypeBound.Any)],
-                            output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                            input=[ht.RowVariable(1, ht.TypeBound.Linear)],
+                            output=[ht.RowVariable(2, ht.TypeBound.Linear)],
                         ),
                     ],
                 ),
@@ -151,13 +151,13 @@ UNSUPPORTED_OP_DEF: he.OpDef = EXTENSION.add_op_def(
                     # Name of the operation
                     ht.StringParam(),
                     # Input types
-                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Linear)),
                     # Output types
-                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Linear)),
                 ],
                 body=ht.FunctionType(
-                    input=[ht.RowVariable(1, ht.TypeBound.Any)],
-                    output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                    input=[ht.RowVariable(1, ht.TypeBound.Linear)],
+                    output=[ht.RowVariable(2, ht.TypeBound.Linear)],
                 ),
             )
         ),

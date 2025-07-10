@@ -34,7 +34,7 @@ def int_arg(n: int = NumericType.INT_WIDTH) -> ht.TypeArg:
     return ht.BoundedNatArg(n=n)
 
 
-def type_arg(idx: int = 0, bound: ht.TypeBound = ht.TypeBound.Any) -> ht.TypeArg:
+def type_arg(idx: int = 0, bound: ht.TypeBound = ht.TypeBound.Linear) -> ht.TypeArg:
     """A generic type argument."""
     return ht.VariableArg(idx=idx, param=ht.TypeTypeParam(bound=bound))
 
