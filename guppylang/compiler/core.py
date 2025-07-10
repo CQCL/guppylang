@@ -272,7 +272,7 @@ class CompilerContext(ToHugrContext):
         """
         if (const_id, mono_args) in self.global_funcs:
             return self.global_funcs[const_id, mono_args], True
-        func = self.module.define_function(
+        func = self.module.module_root_builder().define_function(
             name=const_id.name,
             input_types=func_ty.body.input,
             output_types=func_ty.body.output,
