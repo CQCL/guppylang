@@ -226,7 +226,9 @@ def test_linear_next_nonlinear_iter(validate):
 
 def test_nonlinear_next_linear_iter(validate):
     @guppy.type(
-        tys.Opaque(extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Any),
+        tys.Opaque(
+            extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Linear
+        ),
         copyable=False,
         droppable=False,
     )
