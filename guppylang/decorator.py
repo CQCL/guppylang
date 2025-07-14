@@ -7,6 +7,7 @@ from pathlib import Path
 from types import FrameType, ModuleType
 from typing import Any, TypeVar, cast
 
+from hugr import ext as he
 from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
@@ -30,6 +31,7 @@ from guppylang.definition.declaration import RawFunctionDecl
 from guppylang.definition.extern import RawExternDef
 from guppylang.definition.function import (
     CompiledFunctionDef,
+    ParsedFunctionDef,
     PyFunc,
     RawFunctionDef,
 )
@@ -256,6 +258,61 @@ class _Guppy:
             name: The name of the function.
         """
         return self.custom(OpCompiler(op), checker, higher_order_value, name, signature)
+
+    def lower_op(
+        self,
+        hugr_ext: he.Extension,
+        checker: CustomCallChecker | None = None,
+        higher_order_value: bool = True,
+        name: str = "",
+    ) -> Callable[[F], F]:
+        """Lowerable operation that is linked to an automatically generated Hugr op."""
+        from guppylang.engine import ENGINE
+
+        def dec(f: F) -> F:
+
+            defn = RawFunctionDef(DefId.fresh(), f.__name__, None, f)
+            DEF_STORE.register_def(defn, get_calling_frame())
+
+            defn = GuppyDefinition(defn)
+
+            self.check(defn)
+
+            guppy_parsed = ENGINE.get_parsed(defn.id)
+            assert isinstance(guppy_parsed, ParsedFunctionDef)
+            ty = guppy_parsed.ty
+
+            compiled_defn = self.compile(defn)
+
+            op_def = he.OpDef(
+                name=f.__name__,
+                description=f.__doc__ or "",
+                signature=he.OpDefSig(poly_func=ty.to_hugr_poly()),
+                lower_funcs=[
+                    he.FixedHugr(
+                        ht.ExtensionSet(hugr_ext.name),
+                        compiled_defn.module,
+                    )
+                ],
+            )
+
+            hugr_ext.add_op_def(op_def)
+
+            compiled_defn.package.extensions.append(hugr_ext)
+
+            def empty_def() -> None: ...
+
+            def op(op_def):
+                def dec(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
+                    return ops.ExtOp(op_def, ty)
+
+                return dec
+
+            return self.custom(
+                OpCompiler(op(op_def)), checker, higher_order_value, name, ty
+            )(empty_def) # type: ignore[return-value]
+
+        return dec
 
     def declare(self, f: F) -> F:
         defn = RawFunctionDecl(DefId.fresh(), f.__name__, None, f)
