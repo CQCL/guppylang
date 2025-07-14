@@ -19,9 +19,9 @@ def compile_guppy(fn) -> FuncDefnPointer:
 
 def dump_llvm(package: PackagePointer):
     try:
-        from execute_llvm import compile_module_to_string
+        from selene_hugr_qis_compiler import compile_to_llvm_ir
 
-        llvm_module = compile_module_to_string(package.package.to_bytes())
+        llvm_module = compile_to_llvm_ir(package.package.to_bytes())
         print(llvm_module)  # noqa: T201
 
     except ImportError:

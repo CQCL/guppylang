@@ -3,6 +3,7 @@ from guppylang.decorator import guppy
 from guppylang.std.builtins import nat, array
 from guppylang.std.qsystem.wasm import spawn_wasm_contexts
 
+
 def test_wasm_functions(validate):
     @guppy.wasm_module("", 42)
     class MyWasm:
@@ -87,6 +88,7 @@ def test_wasm_guppy_module(validate):
 
     mod = main.compile()
     validate(mod)
+
 
 def test_comptime(validate):
     @guppy.wasm_module("", 42)

@@ -10,6 +10,7 @@ def test_hand(validate):
 
     See https://github.com/CQCL/guppylang/issues/569
     """
+
     @guppy
     def test() -> int:
         return a  # Intentional use of an undefined variable

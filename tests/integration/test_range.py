@@ -2,12 +2,12 @@ from guppylang.decorator import guppy
 from guppylang.std.builtins import range, SizedIter, Range, py
 
 
-def test_range(validate, run_int_fn):
+def test_range(run_int_fn):
     @guppy
     def main() -> int:
         total = 0
         for x in range(5):
-            total += x + 100 # Make the initial 0 obvious
+            total += x + 100  # Make the initial 0 obvious
         return total
 
     @guppy
@@ -25,17 +25,11 @@ def test_range(validate, run_int_fn):
             total += x + 100  # Make the initial 0 obvious
         return total
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=510)
+    run_int_fn(main, expected=510)
 
-    compiled = guppy.compile(negative)
-    validate(compiled)
-    run_int_fn(compiled, expected=0, fn_name="negative")
+    run_int_fn(negative, expected=0)
 
-    compiled = guppy.compile(non_static)
-    validate(compiled)
-    run_int_fn(compiled, expected=510, fn_name="non_static")
+    run_int_fn(non_static, expected=510)
 
 
 def test_static_size(validate):
@@ -64,4 +58,3 @@ def test_static_generic_size(validate):
         return range(n)
 
     validate(guppy.compile(negative))
-

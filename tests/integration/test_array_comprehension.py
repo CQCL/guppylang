@@ -1,4 +1,3 @@
-
 from guppylang.decorator import guppy
 from guppylang.std.builtins import array, owned
 from guppylang.std.quantum import qubit
@@ -6,7 +5,7 @@ from guppylang.std.quantum import qubit
 from tests.util import compile_guppy
 
 
-def test_basic_exec(validate, run_int_fn):
+def test_basic_exec(run_int_fn):
     @guppy
     def test() -> array[int, 10]:
         return array(i + 1 for i in range(10))
@@ -18,9 +17,7 @@ def test_basic_exec(validate, run_int_fn):
             s += x
         return s
 
-    package = guppy.compile(main)
-    validate(package)
-    run_int_fn(package, expected=sum(i + 1 for i in range(10)))
+    run_int_fn(main, expected=sum(i + 1 for i in range(10)))
 
 
 def test_basic_linear(validate):
@@ -31,7 +28,7 @@ def test_basic_linear(validate):
     validate(guppy.compile(test))
 
 
-def test_zero_length(validate, run_int_fn):
+def test_zero_length(run_int_fn):
     @guppy
     def test() -> array[float, 0]:
         return array(i / 0 for i in range(0))
@@ -41,12 +38,10 @@ def test_zero_length(validate, run_int_fn):
         test()
         return 0
 
-    package = guppy.compile(main)
-    validate(package)
-    run_int_fn(package, expected=0)
+    run_int_fn(main, expected=0)
 
 
-def test_capture(validate, run_int_fn):
+def test_capture(run_int_fn):
     @guppy
     def test(x: int) -> array[int, 42]:
         return array(i + x for i in range(42))
@@ -58,9 +53,7 @@ def test_capture(validate, run_int_fn):
             s += x
         return s
 
-    package = guppy.compile(main)
-    validate(package)
-    run_int_fn(package, expected=sum(i + 3 for i in range(42)))
+    run_int_fn(main, expected=sum(i + 3 for i in range(42)))
 
 
 def test_capture_struct(validate):
@@ -86,7 +79,7 @@ def test_scope(validate):
     validate(test)
 
 
-def test_nested_left(validate, run_int_fn):
+def test_nested_left(run_int_fn):
     @guppy
     def test() -> array[array[int, 10], 20]:
         return array(array(x + y for y in range(10)) for x in range(20))
@@ -99,9 +92,7 @@ def test_nested_left(validate, run_int_fn):
                 s += x
         return s
 
-    package = guppy.compile(main)
-    validate(package)
-    run_int_fn(package, expected=sum(x + y for y in range(10) for x in range(20)))
+    run_int_fn(main, expected=sum(x + y for y in range(10) for x in range(20)))
 
 
 def test_generic_size(validate):
@@ -182,4 +173,3 @@ def test_borrow_and_consume(validate):
         return array(foo(q) + bar(q) for q in qs)
 
     validate(guppy.compile(test))
-

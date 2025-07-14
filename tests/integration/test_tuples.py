@@ -3,16 +3,14 @@ from guppylang.std.builtins import array, owned, mem_swap
 from guppylang.std.quantum import qubit, discard, h, x
 
 
-def test_indexing(validate, run_int_fn):
+def test_indexing(run_int_fn):
     @guppy
     def main() -> int:
         t = (0.2, 2, 2.2)
         x = t[1]
         return x
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 2)
+    run_int_fn(main, 2)
 
 
 def test_indexing_input(validate):
@@ -23,14 +21,12 @@ def test_indexing_input(validate):
     validate(guppy.compile(main))
 
 
-def test_indexing_drop(validate, run_int_fn):
+def test_indexing_drop(run_int_fn):
     @guppy
     def main() -> int:
         return (1, 2, 3)[2]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 3)
+    run_int_fn(main, 3)
 
 
 def test_indexing_drop2(validate):
@@ -41,18 +37,16 @@ def test_indexing_drop2(validate):
     validate(guppy.compile(main))
 
 
-def test_indexing_nesting(validate, run_int_fn):
+def test_indexing_nesting(run_int_fn):
     @guppy
     def main() -> int:
         t = (1, 2, (3, 4))
         return t[2][0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 3)
+    run_int_fn(main, 3)
 
 
-def test_indexing_struct(validate, run_int_fn):
+def test_indexing_struct(run_int_fn):
     @guppy.struct
     class S:
         t: tuple[array[tuple[int, int], 1], int]
@@ -62,9 +56,7 @@ def test_indexing_struct(validate, run_int_fn):
         s = S((array((1, 2)), 3))
         return s.t[0][0][0] + 1
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, 2)
+    run_int_fn(main, 2)
 
 
 def test_rest_after_use(validate):

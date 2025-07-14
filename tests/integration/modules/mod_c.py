@@ -3,8 +3,7 @@ from tests.integration.modules.mod_a import f, MyType
 
 
 @guppy.declare
-def g() -> MyType:
-    ...
+def g() -> MyType: ...
 
 
 @guppy
