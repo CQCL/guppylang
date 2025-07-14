@@ -6,6 +6,7 @@ from hugr import val
 from tket2_exts import (
     debug,
     futures,
+    guppy,
     opaque_bool,
     qsystem,
     qsystem_random,
@@ -19,6 +20,7 @@ from tket2_exts import (
 BOOL_EXTENSION = opaque_bool()
 DEBUG_EXTENSION = debug()
 FUTURES_EXTENSION = futures()
+GUPPY_EXTENSION = guppy()
 QSYSTEM_EXTENSION = qsystem()
 QSYSTEM_RANDOM_EXTENSION = qsystem_random()
 QSYSTEM_UTILS_EXTENSION = qsystem_utils()
@@ -31,6 +33,7 @@ TKET2_EXTENSIONS = [
     BOOL_EXTENSION,
     DEBUG_EXTENSION,
     FUTURES_EXTENSION,
+    GUPPY_EXTENSION,
     QSYSTEM_EXTENSION,
     QSYSTEM_RANDOM_EXTENSION,
     QSYSTEM_UTILS_EXTENSION,
