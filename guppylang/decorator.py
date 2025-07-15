@@ -290,15 +290,13 @@ class _Guppy:
                 signature=he.OpDefSig(poly_func=ty.to_hugr_poly()),
                 lower_funcs=[
                     he.FixedHugr(
-                        ht.ExtensionSet(hugr_ext.name),
+                        ht.ExtensionSet(),
                         compiled_defn.module,
                     )
                 ],
             )
 
             hugr_ext.add_op_def(op_def)
-
-            compiled_defn.package.extensions.append(hugr_ext)
 
             def empty_def() -> None: ...
 
