@@ -77,6 +77,11 @@ def t(q: qubit) -> None: ...
 def s(q: qubit) -> None: ...
 
 
+@guppy.hugr_op(quantum_op("V"))
+@no_type_check
+def v(q: qubit) -> None: ...
+
+
 @guppy.hugr_op(quantum_op("X"))
 @no_type_check
 def x(q: qubit) -> None: ...
@@ -100,6 +105,11 @@ def tdg(q: qubit) -> None: ...
 @guppy.hugr_op(quantum_op("Sdg"))
 @no_type_check
 def sdg(q: qubit) -> None: ...
+
+
+@guppy.hugr_op(quantum_op("Vdg"))
+@no_type_check
+def vdg(q: qubit) -> None: ...
 
 
 @guppy.custom(RotationCompiler("Rz"))
