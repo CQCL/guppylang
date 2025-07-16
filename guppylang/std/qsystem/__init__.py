@@ -21,8 +21,8 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
 
     .. math::
 
-        \mathrm{phased\_x}(q, \theta_1, \theta_2)=
-          \mathrm{Rz(\theta_2)Rx(\theta_1)Rz(-\theta_2)}&=
+        \mathrm{PhasedX}(\theta_1, \theta_2)=
+          \mathrm{Rz(\theta_2)Rx(\theta_1)Rz(\theta_2)}&=
           \begin{pmatrix}
           \cos(\frac{\pi \theta_1}{2}) &
             -i e^{-i \pi \theta_2}\sin(\frac{\pi\theta_1}{2})\\
@@ -40,10 +40,14 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
 def zz_max(q1: qubit, q2: qubit) -> None:
     r"""zz_max gate command. A maximally entangling zz_phase gate.
 
-    This is a special case of the ZZPhase operation with angle :math:`\pi/2`.
+    This is a special case of the ZZPhase operation with angle = pi/2
+
+    zz_max(q1, q2)
+
+    Qubit ordering: [q1, q2]
 
     .. math::
-        \mathrm{zz\_max}(q_1,q_2)=\mathrm{zz\_phase}(q_2,q_1,\pi/2)=
+        \mathrm{ZZMax}=\mathrm{zz\_phase}(q_2,q_1,\pi/2)=
         \exp(\frac{- i \pi}{4}\big(Z \otimes Z \big))=
           \begin{pmatrix}
             e^{\frac{-i \pi}{4}} & 0 & 0 & 0 \\
@@ -60,8 +64,12 @@ def zz_max(q1: qubit, q2: qubit) -> None:
 def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
     r"""zz_phase gate command.
 
+    zz_phase(q1, q2, theta)
+
+    Qubit ordering: [q1, q2]
+
     .. math::
-        \mathrm{zz\_phase}(q_1,q_2,\theta)=
+        \mathrm{ZZPhase}(\theta)=
         \exp(\frac{- i \pi \theta}{2}\big(Z \otimes Z \big))=
           \begin{pmatrix}
             e^{\frac{-i \pi \theta}{2}} & 0 & 0 & 0 \\
@@ -88,8 +96,8 @@ def rz(q: qubit, angle: angle) -> None:
     r"""rz gate command.
 
     .. math::
-        \mathrm{rz}(q,\theta)=
-        \exp(\frac{- i \pi \theta}{2} Z ) =
+        \mathrm{Rz}(\theta)=
+        \exp(\frac{- i \pi \theta}{2}\big(Z \big))=
           \begin{pmatrix}
             e^{\frac{-i \pi \theta}{2}} & 0  \\
             0 & e^{\frac{i \pi \theta}{2}}
