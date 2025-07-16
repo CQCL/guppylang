@@ -281,7 +281,7 @@ def crz(control: qubit, target: qubit, angle: angle) -> None:
     Qubit ordering: [control, target]
 
     .. math::
-        \mathrm{CRz}(q_1,q_2)=
+        \mathrm{CRz}=
           \begin{pmatrix}
             1 & 0 & 0 & 0 \\
             0 & 1 & 0 & 0 \\
