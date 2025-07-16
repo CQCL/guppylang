@@ -55,6 +55,13 @@ def s(q: qubit @ owned) -> qubit:
 
 @guppy
 @no_type_check
+def v(q: qubit @ owned) -> qubit:
+    quantum.v(q)
+    return q
+
+
+@guppy
+@no_type_check
 def x(q: qubit @ owned) -> qubit:
     quantum.x(q)
     return q
@@ -85,6 +92,13 @@ def tdg(q: qubit @ owned) -> qubit:
 @no_type_check
 def sdg(q: qubit @ owned) -> qubit:
     quantum.sdg(q)
+    return q
+
+
+@guppy
+@no_type_check
+def vdg(q: qubit @ owned) -> qubit:
+    quantum.vdg(q)
     return q
 
 
