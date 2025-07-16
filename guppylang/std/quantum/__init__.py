@@ -53,7 +53,7 @@ def h(q: qubit) -> None:
     r"""Hadamard gate command
 
     .. math::
-        \mathrm{H}(q)= \frac{1}{\sqrt{2}}
+        \mathrm{H}= \frac{1}{\sqrt{2}}
           \begin{pmatrix}
             1 & 1 \\
             1 & -1
@@ -66,8 +66,12 @@ def h(q: qubit) -> None:
 def cz(control: qubit, target: qubit) -> None:
     r"""Controlled-Z gate command.
 
+    cz(control, target)
+
+    Qubit ordering: [control, target]
+
     .. math::
-        \mathrm{cz}(q_1,q_2)=
+        \mathrm{CZ}=
           \begin{pmatrix}
             1 & 0 & 0 & 0 \\
             0 & 1 & 0 & 0 \\
@@ -82,8 +86,12 @@ def cz(control: qubit, target: qubit) -> None:
 def cy(control: qubit, target: qubit) -> None:
     r"""Controlled-Y gate command.
 
+    cy(control, target)
+
+    Qubit ordering: [control, target]
+
     .. math::
-        \mathrm{cy}(q_1,q_2)=
+        \mathrm{CY}=
           \begin{pmatrix}
             1 & 0 & 0 & 0 \\
             0 & 1 & 0 & 0 \\
@@ -98,8 +106,12 @@ def cy(control: qubit, target: qubit) -> None:
 def cx(control: qubit, target: qubit) -> None:
     r"""Controlled-X gate command.
 
+    cx(control, target)
+
+    Qubit ordering: [control, target]
+
     .. math::
-        \mathrm{cx}(q_1,q_2)=
+        \mathrm{CX}=
           \begin{pmatrix}
             1 & 0 & 0 & 0 \\
             0 & 1 & 0 & 0 \\
@@ -115,7 +127,7 @@ def t(q: qubit) -> None:
     r"""T gate.
 
     .. math::
-        \mathrm{T}(q)=
+        \mathrm{T}=
           \begin{pmatrix}
             1 & 0 \\
             0 & e^{i \frac{\pi}{4}}
@@ -130,7 +142,7 @@ def s(q: qubit) -> None:
     r"""S gate.
 
     .. math::
-        \mathrm{S}(q)=
+        \mathrm{S}=
           \begin{pmatrix}
             1 & 0 \\
             0 & e^{i \frac{\pi}{2}}
@@ -145,7 +157,7 @@ def x(q: qubit) -> None:
     r"""X gate.
 
     .. math::
-        \mathrm{X}(q)=
+        \mathrm{X}=
           \begin{pmatrix}
             0 & 1 \\
             1 & 0
@@ -160,7 +172,7 @@ def y(q: qubit) -> None:
     r"""Y gate.
 
     .. math::
-        \mathrm{Y}(q)=
+        \mathrm{Y}=
           \begin{pmatrix}
             0 & -i \\
             i & 0
@@ -175,7 +187,7 @@ def z(q: qubit) -> None:
     r"""Z gate.
 
     .. math::
-        \mathrm{Z}(q)=
+        \mathrm{Z}=
           \begin{pmatrix}
             1 & 0 \\
             0 & -1
@@ -190,7 +202,7 @@ def tdg(q: qubit) -> None:
     r"""Tdg gate.
 
     .. math::
-        \mathrm{T}^\dagger(q)=
+        \mathrm{T}^\dagger=
           \begin{pmatrix}
             1 & 0 \\
             0 & e^{-i \frac{\pi}{4}}
@@ -205,7 +217,7 @@ def sdg(q: qubit) -> None:
     r"""Sdg gate.
 
     .. math::
-        \mathrm{S}^\dagger(q)=
+        \mathrm{S}^\dagger=
           \begin{pmatrix}
             1 & 0 \\
             0 & e^{-i \frac{\pi}{2}}
@@ -220,7 +232,7 @@ def rz(q: qubit, angle: angle) -> None:
     r"""Rz gate.
 
     .. math::
-        \mathrm{Rz}(q, \theta)=
+        \mathrm{Rz}(\theta)=
           \begin{pmatrix}
             e^{-\frac{1}{2}i \pi \theta} & 0 \\
             0 & e^{\frac{1}{2}i \pi \theta}
@@ -235,7 +247,7 @@ def rx(q: qubit, angle: angle) -> None:
     r"""Rx gate.
 
     .. math::
-        \mathrm{Rx}(q, \theta)=
+        \mathrm{Rx}(\theta)=
           \begin{pmatrix}
             \cos(\frac{\pi \theta}{2}) & -i\sin(\frac{\pi \theta}{2}) \\
             -i\sin(\frac{\pi \theta}{2}) & \cos(\frac{\pi \theta}{2})
@@ -250,9 +262,9 @@ def ry(q: qubit, angle: angle) -> None:
     r"""Ry gate.
 
     .. math::
-        \mathrm{Ry}(q, \theta)=
+        \mathrm{Ry}(\theta)=
           \begin{pmatrix}
-            \cos(\frac{\pi \theta}{2}) & -\sin(\frac{\pi \theta}{2}) \\
+            \cos(\frac{\pi \theta}{2}) & \sin(\frac{\pi \theta}{2}) \\
             \sin(\frac{\pi \theta}{2}) & \cos(\frac{\pi \theta}{2})
            \end{pmatrix}
 
@@ -264,8 +276,12 @@ def ry(q: qubit, angle: angle) -> None:
 def crz(control: qubit, target: qubit, angle: angle) -> None:
     r"""Controlled-Rz gate command.
 
+    crz(control, target, theta)
+
+    Qubit ordering: [control, target]
+
     .. math::
-        \mathrm{crz}(q_1,q_2,\theta)=
+        \mathrm{CRz}(q_1,q_2)=
           \begin{pmatrix}
             1 & 0 & 0 & 0 \\
             0 & 1 & 0 & 0 \\
@@ -280,8 +296,12 @@ def crz(control: qubit, target: qubit, angle: angle) -> None:
 def toffoli(control1: qubit, control2: qubit, target: qubit) -> None:
     r"""A Toffoli gate command. Also sometimes known as a CCX gate.
 
+    toffoli(control1, control2, target)
+
+    Qubit ordering: [control1, control2 target]
+
     .. math::
-        \mathrm{Toffoli}(q_1,q_2,q_3)=
+        \mathrm{Toffoli}=
           \begin{pmatrix}
             1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
             0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
@@ -345,8 +365,12 @@ def discard_array(qubits: array[qubit, N] @ owned) -> None:
 def ch(control: qubit, target: qubit) -> None:
     r"""Controlled-H gate command.
 
+    ch(control, target)
+
+    Qubit ordering: [control, target]
+
     .. math::
-        \mathrm{CH}(q_1,q_2) = \frac{1}{\sqrt{2}}
+        \mathrm{CH} = \frac{1}{\sqrt{2}}
           \begin{pmatrix}
             1 & 0 & 0 & 0 \\
             0 & 1 & 0 & 0 \\
