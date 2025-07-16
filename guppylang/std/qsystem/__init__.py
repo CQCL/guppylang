@@ -47,7 +47,7 @@ def zz_max(q1: qubit, q2: qubit) -> None:
     Qubit ordering: [q1, q2]
 
     .. math::
-        \mathrm{ZZMax}=\mathrm{zz\_phase}(q_2,q_1,\pi/2)=
+        \mathrm{ZZMax}=
         \exp(\frac{- i \pi}{4}\big(Z \otimes Z \big))=
           \begin{pmatrix}
             e^{\frac{-i \pi}{4}} & 0 & 0 & 0 \\
