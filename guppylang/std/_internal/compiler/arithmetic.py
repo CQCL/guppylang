@@ -15,11 +15,8 @@ INT_T = int_t(NumericType.INT_WIDTH)
 
 
 @dataclass
-class UnsignedIntVal(val.ExtensionValue):
-    """Custom value for an unsigned integer.
-
-    TODO: Upstream this to hugr-py?
-    """
+class UnsignedIntVal(val.ExtensionValue):  # TODO: Upstream this to hugr-py?
+    """Custom value for an unsigned integer."""
 
     v: int
     width: int
