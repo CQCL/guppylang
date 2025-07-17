@@ -131,6 +131,7 @@ class CompilationEngine:
     def register_extension(self, extension: Extension) -> None:
         self.additional_extensions.append(extension)
 
+    @pretty_errors
     def get_parsed(self, id: DefId) -> ParsedDef:
         """Look up the parsed version of a definition by its id.
 
@@ -151,6 +152,7 @@ class CompilationEngine:
             self.to_check_worklist[id] = defn
         return defn
 
+    @pretty_errors
     def get_checked(self, id: DefId) -> CheckedDef:
         """Look up the checked version of a definition by its id.
 
