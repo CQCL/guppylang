@@ -24,10 +24,10 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
         \mathrm{PhasedX}(\theta_1, \theta_2)=
           \mathrm{Rz(\theta_2)Rx(\theta_1)Rz(-\theta_2)}&=
           \begin{pmatrix}
-          \cos(\frac{\pi \theta_1}{2}) &
-            -i e^{-i \pi \theta_2}\sin(\frac{\pi\theta_1}{2})\\
-          -i e^{i \pi \theta_2}\sin(\frac{\pi\theta_1}{2}) &
-            \cos(\frac{\pi \theta_1}{2})
+          \cos(\frac{ \theta_1}{2}) &
+            -i e^{-i \theta_2}\sin(\frac{\theta_1}{2})\\
+          -i e^{i \theta_2}\sin(\frac{\theta_1}{2}) &
+            \cos(\frac{\theta_1}{2})
            \end{pmatrix}
     """
     f1 = float(angle1)
@@ -40,7 +40,7 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
 def zz_max(q1: qubit, q2: qubit) -> None:
     r"""zz_max gate command. A maximally entangling zz_phase gate.
 
-    This is a special case of the zz_max command with theta = pi/2
+    This is a special case of the zz_phase command with :math:`\theta = \frac{\pi}{2}`.
 
     zz_max(q1, q2)
 
@@ -48,12 +48,12 @@ def zz_max(q1: qubit, q2: qubit) -> None:
 
     .. math::
         \mathrm{ZZMax}=
-        \exp(\frac{- i \pi}{4}\big(Z \otimes Z \big))=
+        \exp(\frac{- i}{4}\big(Z \otimes Z \big))=
           \begin{pmatrix}
-            e^{\frac{-i \pi}{4}} & 0 & 0 & 0 \\
-            0 & e^{\frac{i \pi}{4}} & 0 & 0 \\
-            0 & 0 & e^{\frac{i \pi}{4}} & 0 \\
-            0 & 0 & 0 & e^{\frac{-i \pi}{4}}
+            e^{\frac{-i}{4}} & 0 & 0 & 0 \\
+            0 & e^{\frac{i}{4}} & 0 & 0 \\
+            0 & 0 & e^{\frac{i}{4}} & 0 \\
+            0 & 0 & 0 & e^{\frac{-i}{4}}
         \end{pmatrix}
     """
     zz_phase(q1, q2, pi / 2)
@@ -70,12 +70,12 @@ def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
 
     .. math::
         \mathrm{ZZPhase}(\theta)=
-        \exp(\frac{- i \pi \theta}{2}\big(Z \otimes Z \big))=
+        \exp(\frac{- i \theta}{2}\big(Z \otimes Z \big))=
           \begin{pmatrix}
-            e^{\frac{-i \pi \theta}{2}} & 0 & 0 & 0 \\
-            0 & e^{\frac{i \pi \theta}{2}} & 0 & 0 \\
-            0 & 0 & e^{\frac{i \pi \theta}{2}} & 0 \\
-            0 & 0 & 0 & e^{\frac{-i \pi \theta}{2}}
+            e^{\frac{-i \theta}{2}} & 0 & 0 & 0 \\
+            0 & e^{\frac{i \theta}{2}} & 0 & 0 \\
+            0 & 0 & e^{\frac{i \theta}{2}} & 0 \\
+            0 & 0 & 0 & e^{\frac{-i \theta}{2}}
         \end{pmatrix}
     >>> @guppy
     ... def qsystem_cx(q1: qubit, q2: qubit) -> None:
@@ -97,10 +97,10 @@ def rz(q: qubit, angle: angle) -> None:
 
     .. math::
         \mathrm{Rz}(\theta)=
-        \exp(\frac{- i \pi \theta}{2}\big(Z \big))=
+        \exp(\frac{- i \theta}{2} Z)=
           \begin{pmatrix}
-            e^{\frac{-i \pi \theta}{2}} & 0  \\
-            0 & e^{\frac{i \pi \theta}{2}}
+            e^{\frac{-i \theta}{2}} & 0  \\
+            0 & e^{\frac{i \theta}{2}}
         \end{pmatrix}
     """
 

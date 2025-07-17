@@ -233,9 +233,10 @@ def rz(q: qubit, angle: angle) -> None:
 
     .. math::
         \mathrm{Rz}(\theta)=
+        \exp(\frac{- i  \theta}{2} Z)=
           \begin{pmatrix}
-            e^{-\frac{1}{2}i \pi \theta} & 0 \\
-            0 & e^{\frac{1}{2}i \pi \theta}
+            e^{-\frac{1}{2}i  \theta} & 0 \\
+            0 & e^{\frac{1}{2}i  \theta}
            \end{pmatrix}
 
     """
@@ -249,8 +250,8 @@ def rx(q: qubit, angle: angle) -> None:
     .. math::
         \mathrm{Rx}(\theta)=
           \begin{pmatrix}
-            \cos(\frac{\pi \theta}{2}) & -i\sin(\frac{\pi \theta}{2}) \\
-            -i\sin(\frac{\pi \theta}{2}) & \cos(\frac{\pi \theta}{2})
+            \cos(\frac{ \theta}{2}) & -i\sin(\frac{ \theta}{2}) \\
+            -i\sin(\frac{ \theta}{2}) & \cos(\frac{ \theta}{2})
            \end{pmatrix}
 
     """
@@ -264,8 +265,8 @@ def ry(q: qubit, angle: angle) -> None:
     .. math::
         \mathrm{Ry}(\theta)=
           \begin{pmatrix}
-            \cos(\frac{\pi \theta}{2}) & \sin(\frac{\pi \theta}{2}) \\
-            \sin(\frac{\pi \theta}{2}) & \cos(\frac{\pi \theta}{2})
+            \cos(\frac{\theta}{2}) & \sin(\frac{ \theta}{2}) \\
+            \sin(\frac{ \theta}{2}) & \cos(\frac{ \theta}{2})
            \end{pmatrix}
 
     """
@@ -285,8 +286,8 @@ def crz(control: qubit, target: qubit, angle: angle) -> None:
           \begin{pmatrix}
             1 & 0 & 0 & 0 \\
             0 & 1 & 0 & 0 \\
-            0 & 0 & e^{-\frac{1}{2}i \pi \theta} & 0 \\
-            0 & 0 & 0 & e^{\frac{1}{2}i \pi \theta}
+            0 & 0 & e^{-\frac{1}{2}i  \theta} & 0 \\
+            0 & 0 & 0 & e^{\frac{1}{2}i  \theta}
         \end{pmatrix}
     """
 
