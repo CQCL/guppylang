@@ -40,7 +40,7 @@ def phased_x(q: qubit, angle1: angle, angle2: angle) -> None:
 def zz_max(q1: qubit, q2: qubit) -> None:
     r"""zz_max gate command. A maximally entangling zz_phase gate.
 
-    This is a special case of the ZZPhase operation with angle = pi/2
+    This is a special case of the zz_max command with theta = pi/2
 
     zz_max(q1, q2)
 
