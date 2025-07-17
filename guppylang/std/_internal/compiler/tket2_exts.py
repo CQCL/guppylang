@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-import hugr.model
-import hugr.std
 from hugr import val
 from tket2_exts import (
     debug,
@@ -59,9 +57,3 @@ class ConstWasmModule(val.ExtensionValue):
         return (
             f"ConstWasmModule(wasm_file={self.wasm_file}, wasm_hash={self.wasm_hash})"
         )
-
-    def to_model(self) -> hugr.model.Term:
-        file_tm = hugr.model.Literal(self.wasm_file)
-        hash_tm = hugr.model.Literal(self.wasm_hash)
-
-        return hugr.model.Apply("tket2.wasm.ConstWasmModule", [file_tm, hash_tm])
