@@ -280,7 +280,7 @@ class CompilerContext(ToHugrContext):
             case None:
                 # But in that case we'll have to down-shift the de Bruijn index to
                 # account for earlier params that have been monomorphized away
-                hugr_idx = compile_de_bruijn_idx(var.idx, self.current_mono_args)
+                hugr_idx = compile_variable_idx(var.idx, self.current_mono_args)
                 return ht.Variable(hugr_idx, var.hugr_bound)
             case _:
                 raise InternalGuppyError("Invalid monomorphization")
@@ -311,7 +311,7 @@ class CompilerContext(ToHugrContext):
             case None:
                 # But in that case we'll have to down-shift the de Bruijn index to
                 # account for earlier params that have been monomorphized away
-                hugr_idx = compile_de_bruijn_idx(var.idx, self.current_mono_args)
+                hugr_idx = compile_variable_idx(var.idx, self.current_mono_args)
                 return ht.VariableArg(hugr_idx, param)
             case _:
                 raise InternalGuppyError("Invalid monomorphization")
@@ -478,8 +478,8 @@ def compile_non_monomorphized_args(
     ]
 
 
-def compile_de_bruijn_idx(idx: int, mono_args: PartiallyMonomorphizedArgs) -> int:
-    """Returns the Hugr de Bruijn index for a variable.
+def compile_variable_idx(idx: int, mono_args: PartiallyMonomorphizedArgs) -> int:
+    """Returns the Hugr index for a variable.
 
     Takes care of shifting down Guppy's indices to account for the current partial
     monomorphization. This avoids gaps in Hugr indices due to the fact that not all
