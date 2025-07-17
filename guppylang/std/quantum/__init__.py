@@ -220,7 +220,7 @@ def sdg(q: qubit) -> None:
         \mathrm{S}^\dagger=
           \begin{pmatrix}
             1 & 0 \\
-            0 & e^{-i \frac{\pi}{2}}
+            0 & -i
            \end{pmatrix}
 
     """
