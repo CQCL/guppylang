@@ -1,9 +1,10 @@
 """Native arithmetic operations from the HUGR std, and compilers for non native ones."""
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 import hugr.std.int
-from hugr import ops
+from hugr import model, ops, val
 from hugr import tys as ht
 from hugr.std.int import int_t
 
@@ -11,6 +12,30 @@ from guppylang.std._internal.compiler.prelude import error_type
 from guppylang.tys.ty import NumericType
 
 INT_T = int_t(NumericType.INT_WIDTH)
+
+
+@dataclass
+class UnsignedIntVal(val.ExtensionValue):  # TODO: Upstream this to hugr-py?
+    """Custom value for an unsigned integer."""
+
+    v: int
+    width: int
+
+    def __post_init__(self) -> None:
+        assert self.v >= 0
+
+    def to_value(self) -> val.Extension:
+        payload = {"log_width": self.width, "value": self.v}
+        return val.Extension("ConstInt", typ=int_t(self.width), val=payload)
+
+    def __str__(self) -> str:
+        return f"{self.v}"
+
+    def to_model(self) -> model.Term:
+        return model.Apply(
+            "arithmetic.int.const", [model.Literal(self.width), model.Literal(self.v)]
+        )
+
 
 # ------------------------------------------------------
 # --------- std.arithmetic.int operations --------------

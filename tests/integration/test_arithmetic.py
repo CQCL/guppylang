@@ -40,6 +40,23 @@ def test_nat_literal(validate):
     validate(const)
 
 
+def test_int_bounds(run_int_fn):
+    @guppy
+    def main() -> int:
+        return 9_223_372_036_854_775_807 + -9_223_372_036_854_775_808
+
+    run_int_fn(main, -1)
+
+
+def test_nat_bounds(run_int_fn):
+    @guppy
+    def main() -> nat:
+        x: nat = 18_446_744_073_709_551_614
+        return x - x
+
+    run_int_fn(main, 0)
+
+
 def test_aug_assign(run_int_fn):
     @guppy
     def add(x: int) -> int:

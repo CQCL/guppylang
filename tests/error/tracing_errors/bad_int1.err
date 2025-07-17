@@ -3,4 +3,4 @@ Traceback (most recent call last):
     guppy.compile(test)
   File "$FILE", line 7, in test
     return x + (1 << 63)
-guppylang.error.GuppyComptimeError: Integer value 9223372036854775808 is out of bounds for 64-bit signed integer.
+guppylang.error.GuppyComptimeError: Integer overflow: Value does not fit into a 64-bit signed integer
