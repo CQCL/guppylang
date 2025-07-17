@@ -48,12 +48,12 @@ def zz_max(q1: qubit, q2: qubit) -> None:
 
     .. math::
         \mathrm{ZZMax}=
-        \exp(\frac{- i}{4}\big(Z \otimes Z \big))=
+        \exp(\frac{- i\pi}{4}\big(Z \otimes Z \big))=
           \begin{pmatrix}
-            e^{\frac{-i}{4}} & 0 & 0 & 0 \\
-            0 & e^{\frac{i}{4}} & 0 & 0 \\
-            0 & 0 & e^{\frac{i}{4}} & 0 \\
-            0 & 0 & 0 & e^{\frac{-i}{4}}
+            e^{\frac{-i\pi}{4}} & 0 & 0 & 0 \\
+            0 & e^{\frac{i\pi}{4}} & 0 & 0 \\
+            0 & 0 & e^{\frac{i\pi}{4}} & 0 \\
+            0 & 0 & 0 & e^{\frac{-i\pi}{4}}
         \end{pmatrix}
     """
     zz_phase(q1, q2, pi / 2)
