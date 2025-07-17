@@ -645,19 +645,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             # Update `count += 1`
             one = self.builder.load(hugr.std.int.IntVal(1, width=NumericType.INT_WIDTH))
             [self.dfg[count_var]], [] = self._build_method_call(
-                int_type(), "__add__", node, [count, one]
+                int_type(), "__add__", node, [count, one], []
             )
         return self.dfg[array_var]
 
     def _build_method_call(
-        self,
-        ty: Type,
-        method: str,
-        node: AstNode,
-        args: list[Wire],
-        type_args: Sequence[Argument] | None = None,
+        self, ty: Type, method: str, node: AstNode, args: list[Wire], type_args: Inst
     ) -> CallReturnWires:
-        type_args = type_args or []
         func = self.ctx.get_instance_func(ty, method, type_args)
         assert func is not None
         return func.compile_call(args, type_args, self.dfg, self.ctx, node)
