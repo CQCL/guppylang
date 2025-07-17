@@ -52,10 +52,11 @@ CompiledLocals = dict[PlaceId, Wire]
 #:
 #: A `mono_args: PartiallyMonomorphizedArgs` represents such a partial monomorphization
 #: of generic parameters as a sequence of `Argument | None`. Concretely,
-#: `mono_args[i] == None` means that the argument with index `i` is not part of the
-#: monomorphization. Otherwise, `mono_args[i]` specifies the monomorphic instantiation
-#: for parameter `i`. For example, a function with 3 generic parameters where no
-#: monomorphization is required at all, will have mono_args = `(None, None, None)`.
+#: `mono_args[i] == None` means that the argument with index `i` is left as a
+#: polymorphic Hugr type parameter, i.e. it is not monomorphised by Guppy. Otherwise,
+#: `mono_args[i]` specifies the monomorphic instantiation  for parameter `i`. For
+#: example, a function with 3 generic parameters that should all be retained in Hugr
+#: will have mono_args = `(None, None, None)`.
 #:
 #: Finally, note that this sequence is required to be a tuple to ensure hashability.
 PartiallyMonomorphizedArgs = tuple["Argument | None", ...]
