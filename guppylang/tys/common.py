@@ -1,5 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Protocol, TypeVar
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
+
+from hugr import tys as ht
+
+if TYPE_CHECKING:
+    from guppylang.tys.const import BoundConstVar
+    from guppylang.tys.param import Parameter
+    from guppylang.tys.ty import BoundTypeVar
 
 T = TypeVar("T")
 
@@ -8,8 +17,41 @@ class ToHugrContext(Protocol):
     """Protocol for the context capabilities required to translate Guppy types into Hugr
     types.
 
-    This is empty for now, but will soon be used for partial monomorphization.
+    Currently, the only required capability is translating bound type and const
+    variables into Hugr, taking into account partial monomorphization.
     """
+
+    def type_var_to_hugr(self, var: "BoundTypeVar") -> ht.Type:
+        """Compiles a bound Guppy type variable into a Hugr type.
+
+        Should take care of performing partial monomorphization as specified in the
+        current context.
+        """
+
+    def const_var_to_hugr(self, var: "BoundConstVar") -> ht.TypeArg:
+        """Compiles a bound Guppy const variable into a Hugr type argument.
+
+        Should take care of performing partial monomorphization as specified in the
+        current context.
+        """
+
+
+@dataclass(frozen=True)
+class QuantifiedToHugrContext(ToHugrContext):
+    """Concrete implementation of a `ToHugrContext` that should be used when moving
+    inside a quantifier.
+
+    This prevents the outer context from touching variables that are bound by a tighter
+    quantifier.
+    """
+
+    params: Sequence["Parameter"]
+
+    def type_var_to_hugr(self, var: "BoundTypeVar") -> ht.Type:
+        return ht.Variable(var.idx, var.hugr_bound)
+
+    def const_var_to_hugr(self, var: "BoundConstVar") -> ht.TypeArg:
+        return ht.VariableArg(var.idx, self.params[var.idx].to_hugr(self))
 
 
 class ToHugr(ABC, Generic[T]):

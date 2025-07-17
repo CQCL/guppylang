@@ -12,6 +12,7 @@ from hugr import tys as ht
 from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import (
+    QuantifiedToHugrContext,
     ToHugr,
     ToHugrContext,
     Transformable,
@@ -25,7 +26,7 @@ from guppylang.tys.var import BoundVar, ExistentialVar
 if TYPE_CHECKING:
     from guppylang.definition.struct import CheckedStructDef, StructField
     from guppylang.definition.ty import OpaqueTypeDef
-    from guppylang.tys.subst import Inst, Subst
+    from guppylang.tys.subst import Inst, PartialInst, Subst
 
 
 @dataclass(frozen=True)
@@ -199,9 +200,9 @@ class BoundTypeVar(TypeBase, BoundVar):
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
 
-    def to_hugr(self, ctx: ToHugrContext) -> ht.Variable:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.Type:
         """Computes the Hugr representation of the type."""
-        return ht.Variable(idx=self.idx, bound=self.hugr_bound)
+        return ctx.type_var_to_hugr(self)
 
     def visit(self, visitor: Visitor) -> None:
         """Accepts a visitor on this type."""
@@ -440,7 +441,10 @@ class FunctionType(ParametrizedTypeBase):
 
     def to_hugr_poly(self, ctx: ToHugrContext) -> ht.PolyFuncType:
         """Computes the Hugr `PolyFuncType` representation of the type."""
-        func_ty = self._to_hugr_function_type(ctx)
+        # Function body needs to be translated in a new context where the variables are
+        # bound to the quantifier.
+        inner_ctx = QuantifiedToHugrContext(self.params)
+        func_ty = self._to_hugr_function_type(inner_ctx)
         return ht.PolyFuncType(
             params=[p.to_hugr(ctx) for p in self.params], body=func_ty
         )
@@ -489,34 +493,45 @@ class FunctionType(ParametrizedTypeBase):
             self.params,
         )
 
-    def instantiate(self, args: "Inst") -> "FunctionType":
-        """Instantiates all function parameters with concrete types."""
+    def instantiate_partial(self, args: "PartialInst") -> "FunctionType":
+        """Instantiates a subset of the function parameters with concrete types."""
         from guppylang.tys.subst import Instantiator
 
         assert len(args) == len(self.params)
 
-        # Set the `preserve` flag for instantiated tuples and None
-        preserved_args: list[Argument] = []
-        for arg in args:
+        full_inst: list[Argument] = []
+        remaining_params: list[Parameter] = []
+        for param, arg in zip(self.params, args, strict=True):
+            # If no instantiation for this param is provided, it should stay around.
+            # However, we have to down-shift the de Bruijn index.
+            if arg is None:
+                param = param.with_idx(len(remaining_params))
+                remaining_params.append(param)
+                arg = param.to_bound()
+
+            # Set the `preserve` flag for instantiated tuples and None
             if isinstance(arg, TypeArg):
                 if isinstance(arg.ty, TupleType):
                     arg = TypeArg(TupleType(arg.ty.element_types, preserve=True))
                 elif isinstance(arg.ty, NoneType):
                     arg = TypeArg(NoneType(preserve=True))
-            preserved_args.append(arg)
+            full_inst.append(arg)
 
-        inst = Instantiator(preserved_args)
+        inst = Instantiator(full_inst)
         return FunctionType(
             [FuncInput(inp.ty.transform(inst), inp.flags) for inp in self.inputs],
             self.output.transform(inst),
             self.input_names,
-            # Function is now unquantified, so no parameters
-            params=[],
+            remaining_params,
             # Comptime type arguments also need to be instantiated
             comptime_args=[
                 cast(ConstArg, arg.transform(inst)) for arg in self.comptime_args
             ],
         )
+
+    def instantiate(self, args: "Inst") -> "FunctionType":
+        """Instantiates all function parameters with concrete types."""
+        return self.instantiate_partial(args)
 
     def unquantified(self) -> tuple["FunctionType", Sequence[ExistentialVar]]:
         """Instantiates all parameters with existential variables."""
