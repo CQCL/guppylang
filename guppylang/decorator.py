@@ -270,7 +270,6 @@ class _Guppy:
         from guppylang.engine import ENGINE
 
         def dec(f: F) -> F:
-
             defn = RawFunctionDef(DefId.fresh(), f.__name__, None, f)
             DEF_STORE.register_def(defn, get_calling_frame())
 
@@ -300,7 +299,9 @@ class _Guppy:
 
             def empty_def() -> None: ...
 
-            def op(op_def):
+            def op(
+                op_def: he.OpDef,
+            ) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
                 def dec(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
                     return ops.ExtOp(op_def, ty)
 
@@ -308,7 +309,7 @@ class _Guppy:
 
             return self.custom(
                 OpCompiler(op(op_def)), checker, higher_order_value, name, ty
-            )(empty_def) # type: ignore[return-value]
+            )(empty_def)  # type: ignore[return-value]
 
         return dec
 
