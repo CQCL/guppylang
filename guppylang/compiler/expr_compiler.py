@@ -36,7 +36,7 @@ from guppylang.definition.value import (
     CompiledCallableDef,
     CompiledValueDef,
 )
-from guppylang.error import GuppyComptimeError, GuppyError, InternalGuppyError
+from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
     BarrierExpr,
     DesugaredArrayComp,
@@ -58,7 +58,10 @@ from guppylang.nodes import (
     TupleAccessAndDrop,
     TypeApply,
 )
-from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
+from guppylang.std._internal.compiler.arithmetic import (
+    UnsignedIntVal,
+    convert_ifromusize,
+)
 from guppylang.std._internal.compiler.array import (
     array_convert_from_std_array,
     array_convert_to_std_array,
@@ -785,16 +788,14 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
         case str():
             return hugr.std.prelude.StringVal(v)
         case int():
-            bit_width = 1 << NumericType.INT_WIDTH
-            max_v = (1 << (bit_width - 1)) - 1
-            min_v = -(1 << (bit_width - 1))
-            if v < min_v or v > max_v:
-                msg = (
-                    f"Integer value {v} is out of bounds for {bit_width}"
-                    "-bit signed integer."
-                )
-                raise GuppyComptimeError(msg)
-            return hugr.std.int.IntVal(v, width=NumericType.INT_WIDTH)
+            assert isinstance(exp_ty, NumericType)
+            match exp_ty.kind:
+                case NumericType.Kind.Nat:
+                    return UnsignedIntVal(v, width=NumericType.INT_WIDTH)
+                case NumericType.Kind.Int:
+                    return hugr.std.int.IntVal(v, width=NumericType.INT_WIDTH)
+                case _:
+                    raise InternalGuppyError("Unexpected numeric type")
         case float():
             return hugr.std.float.FloatVal(v)
         case tuple(elts):

@@ -323,3 +323,22 @@ class TupleIndexOutOfBoundsError(Error):
     )
     index: int
     size: int
+
+
+@dataclass(frozen=True)
+class IntOverflowError(Error):
+    title: ClassVar[str] = "Integer {over_under}flow"
+    span_label: ClassVar[str] = (
+        "Value does not fit into a {bits}-bit {signed_unsigned} integer"
+    )
+    signed: bool
+    bits: int
+    is_underflow: bool
+
+    @property
+    def over_under(self) -> str:
+        return "under" if self.is_underflow else "over"
+
+    @property
+    def signed_unsigned(self) -> str:
+        return "signed" if self.signed else "unsigned"
