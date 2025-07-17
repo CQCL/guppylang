@@ -91,8 +91,8 @@ class GlobalConstId:
 #: definitions of constants).
 MonoDefId = tuple[DefId, PartiallyMonomorphizedArgs | None]
 
-#: Unique identifier for global Hugr constants and functions with optional monomorphized
-#: type arguments
+#: Unique identifier for global Hugr constants and functions, the latter with optional
+#: monomorphized type arguments
 MonoGlobalConstId = tuple[GlobalConstId, PartiallyMonomorphizedArgs | None]
 
 
