@@ -1,7 +1,7 @@
 """Guppy standard module for functional quantum operations. For the mathematical
 definitions of these gates, see the guppylang.std.quantum documentation.
 
-These gates are the same as those in the std.quantum but use functional syntax.
+These gates are the same as those in std.quantum but use functional syntax.
 """
 
 from typing import no_type_check
