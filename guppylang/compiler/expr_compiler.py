@@ -77,7 +77,7 @@ from guppylang.std._internal.compiler.tket2_bool import (
     not_op,
     read_bool,
 )
-from guppylang.tys.arg import Argument, ConstArg
+from guppylang.tys.arg import ConstArg
 from guppylang.tys.builtin import (
     bool_type,
     get_element_type,
