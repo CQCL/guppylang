@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
-from hugr import Hugr, Wire, envelope, ops, val
+from hugr import Wire, envelope, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.envelope import EnvelopeConfig
@@ -36,9 +36,7 @@ from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap, Span, ToSpan
 from guppylang.std._internal.compiler.array import (
-    array_discard_empty,
     array_new,
-    array_pop,
     array_unpack,
 )
 from guppylang.std._internal.compiler.prelude import build_unwrap
@@ -184,7 +182,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     outer_func.load(val.FALSE) for _ in range(self.input_circuit.n_bits)
                 ]
 
-                input_list = []
+                input_list: list[Wire] = []
                 if self.use_arrays:
                     # If the input is given as arrays, we need to unpack each element in
                     # them into separate wires.
@@ -205,12 +203,18 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
                 else:
                     # Otherwise pass inputs directly.
-                    input_list = list(outer_func.inputs()[:len(self.input_circuit.q_registers)])
+                    input_list = list(
+                        outer_func.inputs()[: len(self.input_circuit.q_registers)]
+                    )
 
                 # Symbolic parameters get passed at the end.
-                param_wires = list(outer_func.inputs()[len(self.input_circuit.q_registers):])
+                param_wires = list(
+                    outer_func.inputs()[len(self.input_circuit.q_registers) :]
+                )
 
-                call_node = outer_func.call(hugr_func, *(input_list + bool_wires + param_wires))
+                call_node = outer_func.call(
+                    hugr_func, *(input_list + bool_wires + param_wires)
+                )
 
                 # Pytket circuit hugr has qubit and bool wires in the opposite
                 # order to Guppy output wires.
