@@ -260,3 +260,30 @@ def test_compile_load(validate):
     pytket_func = guppy.load_pytket("guppy_circ", circ, use_arrays=False)
 
     validate(pytket_func.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_symbolic(validate):
+    from pytket import Circuit, OpType
+    from pytket.passes import AutoRebase
+    from sympy import Symbol
+
+    a = Symbol("alpha")
+    b = Symbol("beta")
+
+    circ = Circuit(2)
+    circ.Rx(a, 0)
+    circ.YYPhase(b, 0, 1)
+    circ.measure_all()
+
+    AutoRebase({OpType.CX, OpType.Rz, OpType.H}).apply(circ)
+
+    guppy_circ = guppy.load_pytket("guppy_circ", circ)
+
+    @guppy
+    def foo(reg: array[qubit, 2]) -> array[bool, 2]:
+        alpha = 0.3
+        beta = 1.2
+        return guppy_circ(reg, alpha, beta)
+
+    validate(guppy.compile(foo))
