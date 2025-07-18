@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
-from hugr import Wire, envelope, ops, val
+from hugr import Hugr, Wire, envelope, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.envelope import EnvelopeConfig
@@ -43,7 +43,7 @@ from guppylang.std._internal.compiler.array import (
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, make_opaque
 from guppylang.tracing.object import GuppyDefinition
-from guppylang.tys.builtin import array_type, bool_type
+from guppylang.tys.builtin import array_type, bool_type, float_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     FuncInput,
@@ -168,8 +168,10 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 circ = envelope.read_envelope(
                     Tk2Circuit(self.input_circuit).to_bytes(EnvelopeConfig.TEXT)
                 ).modules[0]
+
                 mapping = module.hugr.insert_hugr(circ)
                 hugr_func = mapping[circ.entrypoint]
+
 
                 func_type = self.ty.to_hugr_poly()
                 outer_func = module.define_function(
@@ -354,6 +356,11 @@ def _signature_from_circuit(
         if isinstance(input_circuit, pytket.circuit.Circuit):
             try:
                 import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
+
+                param_inputs = [
+                    FuncInput(float_type(), InputFlags.NoFlags)
+                    for symbol in input_circuit.free_symbols()
+                ]
 
                 from guppylang.std.quantum import qubit
 
