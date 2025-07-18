@@ -12,7 +12,6 @@ class PyDiagnostic:
     ) -> None: ...
 
 def render_report(diagnostic: PyDiagnostic) -> str: ...
-
 def guppy_to_miette(
     title: str,
     level: str,

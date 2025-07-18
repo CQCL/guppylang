@@ -83,4 +83,3 @@ def test_type_apply(validate):
         g(42, m)
 
     validate(guppy.compile(main))
-

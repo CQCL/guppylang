@@ -6,7 +6,10 @@ from hugr import ops, Hugr, Node
 from hugr.std import PRELUDE
 
 from guppylang import guppy
-from guppylang.std._internal.compiler.tket2_exts import RESULT_EXTENSION, QUANTUM_EXTENSION
+from guppylang.std._internal.compiler.tket2_exts import (
+    RESULT_EXTENSION,
+    QUANTUM_EXTENSION,
+)
 from guppylang.std.builtins import result, array, owned, panic
 from guppylang.std.quantum import qubit, discard, measure
 

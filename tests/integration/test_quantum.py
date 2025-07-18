@@ -23,11 +23,13 @@ from guppylang.std.quantum_functional import (
     h,
     t,
     s,
+    v,
     x,
     y,
     z,
     tdg,
     sdg,
+    vdg,
     rx,
     ry,
     rz,
@@ -57,11 +59,13 @@ def test_1qb_op(validate):
         q = h(q)
         q = t(q)
         q = s(q)
+        q = v(q)
         q = x(q)
         q = y(q)
         q = z(q)
         q = tdg(q)
         q = sdg(q)
+        q = vdg(q)
         return q
 
     validate(guppy.compile(test))

@@ -100,4 +100,3 @@ def test_struct_method_redefinition(validate):
         return Test(x).bar()
 
     validate(guppy.compile(main))
-

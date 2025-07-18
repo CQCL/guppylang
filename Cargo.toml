@@ -1,9 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["execute_llvm", "validator", "miette-py"]
-
-# Building "execute_llvm" requires having LLVM14 installed
-default-members = ["validator"]
+members = ["miette-py"]
 
 [workspace.package]
 rust-version = "1.75"
@@ -37,6 +34,3 @@ tket2 = { version = "0.12.0" }
 # hugr-cli = { git = "https://github.com/CQCL/hugr", rev = "42ce05d" }
 # hugr-llvm = { git = "https://github.com/CQCL/hugr", rev = "42ce05d" }
 # hugr-passes = { git = "https://github.com/CQCL/hugr", rev = "42ce05d" }
-
-# Uncomment if latest tket2 dependency is needed for execute_llvm
-# tket2 = { git = "https://github.com/CQCL/tket2.git", branch = "ts/replace-bool" }

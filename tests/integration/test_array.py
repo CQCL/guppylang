@@ -1,14 +1,12 @@
 import pytest
 
 from hugr import ops
-from hugr.std.int import IntVal
 
 from guppylang.decorator import guppy
-from guppylang.std.builtins import array, owned, mem_swap, nat
+from guppylang.std.builtins import array, owned, mem_swap
 from tests.util import compile_guppy
 
 from guppylang.std.quantum import qubit, discard
-import guppylang.std.quantum as quantum
 
 
 @pytest.mark.skip("Requires `is_to_u` in llvm")
@@ -20,7 +18,7 @@ def test_len_execute(validate, run_int_fn):
     compiled = guppy.compile(main)
     validate(compiled)
     if run_int_fn is not None:
-        run_int_fn(compiled, 42)
+        run_int_fn(compiled, expected=42)
 
 
 def test_len(validate):
@@ -252,21 +250,19 @@ def test_linear_for_loop(validate):
         for q in qs:
             discard(q)
 
-    validate(main.compile())
+    validate(guppy.compile(main))
 
 
-def test_exec_array(validate, run_int_fn):
+def test_exec_array(run_int_fn):
     @guppy
     def main() -> int:
         a = array(1, 2, 3)
         return a[0] + a[1] + a[2]
 
-    package = guppy.compile(main)
-    validate(package)
-    run_int_fn(package, expected=6)
+    run_int_fn(main, expected=6)
 
 
-def test_exec_array_loop(validate, run_int_fn):
+def test_exec_array_loop(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(1, 2, 3, 4, 5, 6, 7)
@@ -279,10 +275,7 @@ def test_exec_array_loop(validate, run_int_fn):
             s += x
         return s
 
-    package = guppy.compile(main)
-    validate(package)
-
-    run_int_fn(package, expected=9)
+    run_int_fn(main, expected=9)
 
 
 def test_mem_swap(validate):
@@ -308,7 +301,7 @@ def test_drop(validate):
     validate(main)
 
 
-def test_copy1(validate, run_int_fn):
+def test_copy1(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(1, 2, 3)
@@ -316,12 +309,10 @@ def test_copy1(validate, run_int_fn):
         xs = array(4, 5, 6)
         return xs[0] + ys[0]  # Check copy isn't modified
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=5)
+    run_int_fn(main, expected=5)
 
 
-def test_copy2(validate, run_int_fn):
+def test_copy2(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(1, 2, 3)
@@ -329,24 +320,20 @@ def test_copy2(validate, run_int_fn):
         xs = array(4, 5, 6)
         return xs[0] + ys[0]  # Check copy isn't modified
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=5)
+    run_int_fn(main, expected=5)
 
 
-def test_copy3(validate, run_int_fn):
+def test_copy3(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(1, 2, 3)
         ys = xs.copy()
         return xs[0]  # Check original can keep being used
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=1)
+    run_int_fn(main, expected=1)
 
 
-def test_copy_struct(validate, run_int_fn):
+def test_copy_struct(run_int_fn):
     @guppy.struct
     class S:
         a: array[int, 1]
@@ -357,23 +344,19 @@ def test_copy_struct(validate, run_int_fn):
         ys = xs[0].a.copy()
         return ys[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=1)
+    run_int_fn(main, expected=1)
 
 
-def test_copy_const(validate, run_int_fn):
+def test_copy_const(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(1, 2, 3).copy()
         return xs[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=1)
+    run_int_fn(main, expected=1)
 
 
-def test_subscript_assign(validate, run_int_fn):
+def test_subscript_assign(run_int_fn):
     @guppy
     def foo(xs: array[int, 3] @ owned, idx: int, n: int) -> array[int, 3]:
         xs[idx] = n
@@ -385,12 +368,10 @@ def test_subscript_assign(validate, run_int_fn):
         xs = foo(xs, 0, 2)
         return xs[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=2)
+    run_int_fn(main, expected=2)
 
 
-def test_subscript_assign_add(validate, run_int_fn):
+def test_subscript_assign_add(run_int_fn):
     @guppy
     def foo(xs: array[int, 1], n: int) -> None:
         xs[0] += n
@@ -402,12 +383,10 @@ def test_subscript_assign_add(validate, run_int_fn):
             foo(xs, i)
         return xs[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=15)
+    run_int_fn(main, expected=15)
 
 
-def test_subscript_assign_struct(validate, run_int_fn):
+def test_subscript_assign_struct(run_int_fn):
     @guppy.struct
     class S:
         a: array[int, 2]
@@ -422,12 +401,10 @@ def test_subscript_assign_struct(validate, run_int_fn):
         foo(s.a, 1, 42)
         return s.a[1]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=42)
+    run_int_fn(main, expected=42)
 
 
-def test_subscript_assign_nested(validate, run_int_fn):
+def test_subscript_assign_nested(run_int_fn):
     @guppy
     def foo(xs: array[array[int, 2], 2]) -> None:
         xs[0][0] = 22
@@ -438,12 +415,10 @@ def test_subscript_assign_nested(validate, run_int_fn):
         foo(xs)
         return xs[0][0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=22)
+    run_int_fn(main, expected=22)
 
 
-def test_subscript_assign_nested_struct1(validate, run_int_fn):
+def test_subscript_assign_nested_struct1(run_int_fn):
     @guppy.struct
     class S:
         a: array[int, 2]
@@ -456,12 +431,10 @@ def test_subscript_assign_nested_struct1(validate, run_int_fn):
         arr[0].a[1] = 42
         return arr[0].a[1]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=42)
+    run_int_fn(main, expected=42)
 
 
-def test_subscript_assign_nested_struct2(validate, run_int_fn):
+def test_subscript_assign_nested_struct2(run_int_fn):
     @guppy.struct
     class A:
         b: array[int, 2]
@@ -479,12 +452,10 @@ def test_subscript_assign_nested_struct2(validate, run_int_fn):
         arr[0].a[1].b[0] = 43
         return arr[0].a[1].b[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=43)
+    run_int_fn(main, expected=43)
 
 
-def test_subscript_assign_nested_struct3(validate, run_int_fn):
+def test_subscript_assign_nested_struct3(run_int_fn):
     @guppy.struct
     class A:
         b: array[int, 2]
@@ -501,12 +472,10 @@ def test_subscript_assign_nested_struct3(validate, run_int_fn):
         arr[0].a.b[0] = 2
         return arr[0].a.b[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=2)
+    run_int_fn(main, expected=2)
 
 
-def test_subscript_assign_nested_struct4(validate, run_int_fn):
+def test_subscript_assign_nested_struct4(run_int_fn):
     @guppy.struct
     class S:
         xs: array[int, 1]
@@ -517,12 +486,10 @@ def test_subscript_assign_nested_struct4(validate, run_int_fn):
         arr[0].xs = array(3)
         return arr[0].xs[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=3)
+    run_int_fn(main, expected=3)
 
 
-def test_subscript_assign_nested_struct5(validate, run_int_fn):
+def test_subscript_assign_nested_struct5(run_int_fn):
     @guppy.struct
     class A:
         b: array[int, 2]
@@ -539,24 +506,20 @@ def test_subscript_assign_nested_struct5(validate, run_int_fn):
         arr[0].a[0].b = array(42, 42)
         return arr[0].a[0].b[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=42)
+    run_int_fn(main, expected=42)
 
 
-def test_subscript_assign_unpacking(validate, run_int_fn):
+def test_subscript_assign_unpacking(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(11, 22, 33)
         xs[0], y = 44, 55
         return xs[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=44)
+    run_int_fn(main, expected=44)
 
 
-def test_subscript_subscript_assign(validate, run_int_fn):
+def test_subscript_subscript_assign(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(0)
@@ -564,61 +527,51 @@ def test_subscript_subscript_assign(validate, run_int_fn):
         xs[0] = ys[0]
         return xs[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=1)
+    run_int_fn(main, expected=1)
 
 
-def test_subscript_assign_unpacking_tuple(validate, run_int_fn):
+def test_subscript_assign_unpacking_tuple(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(0, 0, 0)
         a, *b, xs[1] = (1, 2, 3, 4)
         return xs[1]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=4)
+    run_int_fn(main, expected=4)
 
 
-def test_subscript_assign_unpacking_complicated(validate, run_int_fn):
+def test_subscript_assign_unpacking_complicated(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(0, 0, 0)
         (a1, a2), *b, (c1, c2) = array((0, 1), (2, 3), (4, 5), (5, 6))
         return a1 + c1
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=5)
+    run_int_fn(main, expected=5)
 
 
-def test_subscript_assign_unpacking_range(validate, run_int_fn):
+def test_subscript_assign_unpacking_range(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(0, 0, 0)
         a, *b, xs[1] = range(10)
         return xs[1]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=9)
+    run_int_fn(main, expected=9)
 
 
-def test_subscript_assign_unpacking_array(validate, run_int_fn):
+def test_subscript_assign_unpacking_array(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(0, 0, 0)
         a, *b, xs[1] = array(1, 2, 3, 4)
         return xs[1]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=4)
+    run_int_fn(main, expected=4)
 
 
 # Verifies that array.__getitem__ works across multiple functions calls.
-def test_multiple_functions(validate, run_int_fn):
+def test_multiple_functions(run_int_fn):
     @guppy
     def first(arr: array[int, 2]) -> int:
         return arr[0]
@@ -632,21 +585,17 @@ def test_multiple_functions(validate, run_int_fn):
         xs = array(1, 2)
         return first(xs) + second(xs)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=3)
+    run_int_fn(main, expected=3)
 
 
 # Verifies that the same index in a classical array can be accessed twice.
-def test_multiple_classical_accesses(validate, run_int_fn):
+def test_multiple_classical_accesses(run_int_fn):
     @guppy
     def main() -> int:
         xs = array(1, 2)
         return xs[0] + xs[0]
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    run_int_fn(compiled, expected=2)
+    run_int_fn(main, expected=2)
 
 
 def test_assign_dataflow(validate):
@@ -655,6 +604,7 @@ def test_assign_dataflow(validate):
 
     See https://github.com/CQCL/guppylang/issues/844
     """
+
     @guppy
     def test1() -> None:
         xs = array(1, 2)

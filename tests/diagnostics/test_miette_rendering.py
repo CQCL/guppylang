@@ -10,7 +10,7 @@ from guppylang.diagnostic import (
     MietteRenderer,
     Error,
     Note,
-    DiagnosticLevel
+    DiagnosticLevel,
 )
 from guppylang.span import Loc, SourceMap, Span
 
@@ -23,7 +23,7 @@ def run_miette_test(source: str, diagnostic: Diagnostic, snapshot, request):
         import miette_py  # noqa: F401
     except ImportError:
         pytest.skip("miette-py not available")
-    
+
     sources = SourceMap()
     sources.add_file(file, source)
 
@@ -51,6 +51,7 @@ def test_basic_diagnostic_rendering(snapshot, request):
 
 def test_multiple_spans_rendering(snapshot, request):
     """Test rendering with multiple span highlights (sub-diagnostics)."""
+
     @dataclass(frozen=True)
     class MyNote(Note):
         span_label: ClassVar[str] = "Sub-diagnostic label"
@@ -58,7 +59,7 @@ def test_multiple_spans_rendering(snapshot, request):
     source = "apple == orange"
     main_span = Span(Loc(file, 1, 6), Loc(file, 1, 8))
     sub_span = Span(Loc(file, 1, 9), Loc(file, 1, 15))
-    
+
     diagnostic = MyError(main_span)
     diagnostic.add_sub_diagnostic(MyNote(sub_span))
     run_miette_test(source, diagnostic, snapshot, request)
@@ -66,6 +67,7 @@ def test_multiple_spans_rendering(snapshot, request):
 
 def test_no_source_code_rendering(snapshot, request):
     """Test rendering diagnostics without source code (message-only)."""
+
     @dataclass(frozen=True)
     class NoSpanError(Error):
         title: ClassVar[str] = "Generic error"
@@ -78,6 +80,7 @@ def test_no_source_code_rendering(snapshot, request):
 
 def test_with_help_message(snapshot, request):
     """Test miette rendering with help sub-diagnostics."""
+
     @dataclass(frozen=True)
     class HelpNote(Note):
         message: ClassVar[str] = "Additional sub-diagnostic message without span"
@@ -91,6 +94,7 @@ def test_with_help_message(snapshot, request):
 
 def test_different_severity_levels(snapshot, request):
     """Test that different severity levels render correctly."""
+
     @dataclass(frozen=True)
     class WarningDiag(Error):
         title: ClassVar[str] = "Warning message"
@@ -105,6 +109,7 @@ def test_different_severity_levels(snapshot, request):
 
 def test_complete_issue_example(snapshot, request):
     """Test complete example from issue #968 with primary + sub-diagnostics."""
+
     @dataclass(frozen=True)
     class IssueError(Error):
         title: ClassVar[str] = "Short title for the diagnostic"
@@ -129,11 +134,11 @@ def foo(x: blah) -> None:
 
     # Main diagnostic on 'blah'
     main_span = Span(Loc(file, 4, 11), Loc(file, 4, 15))
-    # Sub-diagnostic on 'bar()'  
+    # Sub-diagnostic on 'bar()'
     sub_span = Span(Loc(file, 6, 8), Loc(file, 6, 13))
 
     diagnostic = IssueError(main_span)
     diagnostic.add_sub_diagnostic(IssueNoteSpan(sub_span))
     diagnostic.add_sub_diagnostic(IssueNoteMsg(None))
-    
+
     run_miette_test(source, diagnostic, snapshot, request)
