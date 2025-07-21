@@ -54,6 +54,7 @@ from guppylang.checker.expr_checker import (
 from guppylang.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang.nodes import (
     AnyUnpack,
+    ArrayUnpack,
     DesugaredArrayComp,
     IterableUnpack,
     MakeIter,
@@ -65,6 +66,7 @@ from guppylang.nodes import (
 from guppylang.span import Span, to_span
 from guppylang.tys.builtin import (
     array_type,
+    get_array_length,
     get_element_type,
     get_iter_size,
     is_array_type,
@@ -260,8 +262,10 @@ class StmtChecker(AstVisitor[BBStatement]):
             assert all_equal(starred_tys)
             if starred_tys:
                 starred_ty, *_ = starred_tys
-            # Starred part could be empty. If it's an iterable unpack, we're still fine
-            # since we know the yielded type
+            # Starred part could be empty. If it's an array or iterable unpack, we're
+            # still fine since we know the yielded type
+            elif isinstance(unpack, ArrayUnpack):
+                starred_ty = unpack.elt_type
             elif isinstance(unpack, IterableUnpack):
                 starred_ty = unpack.compr.elt_ty
             # For tuple unpacks, there is no way to infer a type for the empty starred
@@ -303,6 +307,19 @@ class StmtChecker(AstVisitor[BBStatement]):
             tys = ty.element_types
             elts = expr.elts if isinstance(expr, ast.Tuple) else [expr] * len(tys)
             return TupleUnpack(pattern), elts, tys
+
+        elif is_array_type(ty):
+            match get_array_length(ty):
+                case ConstValue(value=int(size)):
+                    elt_ty = get_element_type(ty)
+                    unpack = ArrayUnpack(pattern, size, elt_ty)
+                    return unpack, size * [expr], size * [elt_ty]
+                case generic_size:
+                    err = UnpackableError(expr, get_type(expr))
+                    err.add_sub_diagnostic(
+                        UnpackableError.GenericSize(None, generic_size)
+                    )
+                    raise GuppyError(err)
 
         elif self.ctx.globals.get_instance_func(ty, "__iter__"):
             size = check_iter_unpack_has_static_size(expr, self.ctx)

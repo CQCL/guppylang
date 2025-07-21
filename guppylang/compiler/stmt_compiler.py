@@ -17,6 +17,7 @@ from guppylang.compiler.core import (
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.error import InternalGuppyError
 from guppylang.nodes import (
+    ArrayUnpack,
     CheckedNestedFunctionDef,
     IterableUnpack,
     PlaceNode,
@@ -124,15 +125,12 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             self._assign(starred, array)
 
     @_assign.register
-    def _assign_iterable(self, lhs: IterableUnpack, port: Wire) -> None:
-        """Handles assignment where the RHS is an iterable that should be unpacked."""
-        # Given an assignment pattern `left, *starred, right`, collect the RHS into an
-        # array and pop from the left and right, leaving us with the starred array in
-        # the middle
-        assert isinstance(lhs.compr.length, ConstValue)
-        length = lhs.compr.length.value
-        assert isinstance(length, int)
-        opt_elt_ty = ht.Option(lhs.compr.elt_ty.to_hugr())
+    def _assign_array(self, lhs: ArrayUnpack, port: Wire) -> None:
+        """Handles assignment where the RHS is an array that should be unpacked."""
+        # Given an assignment pattern `left, *starred, right`, pop from the left and
+        # right, leaving us with the starred array in the middle
+        length = lhs.length
+        opt_elt_ty = ht.Option(lhs.elt_type.to_hugr())
 
         def pop(
             array: Wire, length: int, pats: list[ast.expr], from_left: bool
@@ -159,8 +157,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
                 self._assign(pat, elt)
             return array, length - num_pats
 
-        self.dfg[lhs.rhs_var.place] = port
-        array = self.expr_compiler.visit_DesugaredArrayComp(lhs.compr)
+        array = port
         array, length = pop(array, length, lhs.pattern.left, True)
         array, length = pop(array, length, lhs.pattern.right, False)
         if lhs.pattern.starred:
@@ -168,6 +165,20 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         else:
             assert length == 0
             self.builder.add_op(array_discard_empty(opt_elt_ty), array)
+
+    @_assign.register
+    def _assign_iterable(self, lhs: IterableUnpack, port: Wire) -> None:
+        """Handles assignment where the RHS is an iterable that should be unpacked."""
+        # Collect the RHS into an array by building the comprehension and then fall back
+        # to the array case above
+        assert isinstance(lhs.compr.length, ConstValue)
+        length = lhs.compr.length.value
+        assert isinstance(length, int)
+
+        self.dfg[lhs.rhs_var.place] = port
+        array = self.expr_compiler.visit_DesugaredArrayComp(lhs.compr)
+        unpack = ArrayUnpack(lhs.pattern, length, lhs.compr.elt_ty)
+        self._assign_array(unpack, array)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         [target] = node.targets
