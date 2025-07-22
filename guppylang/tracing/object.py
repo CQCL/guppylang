@@ -1,5 +1,4 @@
 import functools
-import inspect
 import itertools
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import suppress
@@ -24,7 +23,7 @@ from guppylang.definition.value import (
 )
 from guppylang.engine import DEF_STORE, ENGINE
 from guppylang.error import GuppyComptimeError, GuppyError, GuppyTypeError
-from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
+from guppylang.ipython_inspect import normalize_ipython_dummy_files
 from guppylang.tracing.state import get_tracing_state, tracing_active
 from guppylang.tracing.util import capture_guppy_errors, get_calling_frame, hide_trace
 from guppylang.tys.ty import FunctionType, StructType, Type
@@ -388,7 +387,7 @@ class GuppyObject(DunderMixin):
             # TODO: Should we print the full path to the file or only the name as is
             #  done here? Note that the former will lead to challenges with golden
             #  tests
-            filename = Path(use.module).name
+            filename = Path(normalize_ipython_dummy_files(use.module)).name
             err = (
                 f"Value with non-copyable type `{self._ty}` was already used\n\n"
                 f"Previous use occurred in {filename}:{use.lineno}"
@@ -400,13 +399,7 @@ class GuppyObject(DunderMixin):
         else:
             frame = get_calling_frame()
             assert frame is not None
-            if is_running_ipython():
-                module_name = "<In [?]>"
-                if defn := find_ipython_def(frame.f_code.co_name):
-                    module_name = f"<{defn.cell_name}>"
-            else:
-                module = inspect.getmodule(frame)
-                module_name = module.__file__ if module and module.__file__ else "???"
+            module_name = frame.f_code.co_filename
             self._used = ObjectUse(module_name, frame.f_lineno, called_func)
             if not self._ty.droppable:
                 state = get_tracing_state()
