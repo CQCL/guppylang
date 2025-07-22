@@ -5,8 +5,7 @@ from importlib.util import find_spec
 import pytest
 
 from guppylang.decorator import guppy
-from guppylang.std import quantum
-from guppylang.std.quantum import qubit, discard_array
+from guppylang.std.quantum import qubit, discard_array, discard, x
 from guppylang.std.builtins import array
 
 tket2_installed = find_spec("tket2") is not None
@@ -287,3 +286,34 @@ def test_symbolic(validate):
         return guppy_circ(reg, alpha, beta)
 
     validate(guppy.compile(foo))
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_measure_afterwards(validate, run_int_fn):
+    from pytket import Circuit
+
+    circ = Circuit(2, 2)
+    circ.X(0)
+    circ.measure_all()
+
+    @guppy.pytket(circ)
+    def guppy_circ(q1: qubit, q2: qubit) -> tuple[bool, bool]: ...
+
+    @guppy
+    def foo(q1: qubit, q2: qubit) -> tuple[bool, bool]:
+        res = guppy_circ(q1, q2)
+        x(q1)
+        return res
+    
+    @guppy
+    def main() -> int:
+        q1 = qubit()
+        q2 = qubit()
+        res = foo(q1, q2)
+        discard(q1)
+        discard(q2)
+        return int(res[0])
+
+
+    validate(guppy.compile(main))
+    run_int_fn(main, 1, num_qubits=2)

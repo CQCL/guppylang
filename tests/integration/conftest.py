@@ -48,8 +48,16 @@ def _emulate_fn(is_flt: bool = False):
     from guppylang.std.builtins import result
     from selene_sim.build import build
     from selene_sim.backends.bundled_simulators import Coinflip
+    from selene_sim.backends.bundled_simulators import Quest
 
-    def f(f: GuppyDefinition, expected: Any, args: list[Any] | None = None):
+    def f(f: GuppyDefinition, expected: Any, num_qubits: int | None = None, args: list[Any] | None = None):
+        if num_qubits:
+            n_qubits = num_qubits
+            simulator = Quest()
+        else:
+            n_qubits = 0
+            simulator = Coinflip(42)
+
         args = args or []
 
         @guppy.comptime
@@ -66,7 +74,7 @@ def _emulate_fn(is_flt: bool = False):
 
         em = guppy.compile(entry)
         instance = build(em)
-        res = instance.run(Coinflip(42), n_qubits=0)
+        res = instance.run(simulator=simulator, n_qubits=n_qubits)
         num = next(v for k, v in res if k == "_test_output")
         if num != expected:
             raise LLVMException(
