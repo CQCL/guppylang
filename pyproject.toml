@@ -82,8 +82,8 @@ members = ["miette-py"]
 miette-py = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
-hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "3943499" }
-tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", rev = "6017450" }
+hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "50a2bac" }
+tket2-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-exts", branch = "lm/hugr-v22" }
 # tket2 = { git = "https://github.com/CQCL/tket2", subdirectory = "tket2-py", rev = "fcb2131" }
 
 
