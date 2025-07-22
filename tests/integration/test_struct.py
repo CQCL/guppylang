@@ -174,3 +174,20 @@ def test_field_access_and_drop(validate):
         return MyStruct(42, 3.14, (1, 2)).y
 
     validate(guppy.compile(foo))
+
+
+def test_redefine(validate):
+    """See https://github.com/CQCL/guppylang/issues/1107"""
+    @guppy.struct
+    class MyStruct:
+        x: int
+
+    @guppy.struct
+    class MyStruct:
+        pass
+
+    @guppy
+    def foo() -> MyStruct:
+        return MyStruct()
+
+    validate(guppy.compile(foo))
