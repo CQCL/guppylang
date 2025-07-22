@@ -174,10 +174,16 @@ class _Guppy:
     @dataclass_transform()
     def struct(self, cls: builtins.type[T]) -> builtins.type[T]:
         defn = RawStructDef(DefId.fresh(), cls.__name__, None, cls)
-        DEF_STORE.register_def(defn, get_calling_frame())
+        frame = get_calling_frame()
+        DEF_STORE.register_def(defn, frame)
         for val in cls.__dict__.values():
             if isinstance(val, GuppyDefinition):
                 DEF_STORE.register_impl(defn.id, val.wrapped.name, val.id)
+        # Prior to Python 3.13, the `__firstlineno__` attribute on classes is not set.
+        # However, we need this information to precisely look up the source for the
+        # class later. If it's not there, we can set it from the calling frame:
+        if not hasattr(cls, "__firstlineno__"):
+            cls.__firstlineno__ = frame.f_lineno  # type: ignore[attr-defined]
         # We're pretending to return the class unchanged, but in fact we return
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
