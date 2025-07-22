@@ -30,7 +30,6 @@ from guppylang.definition.common import (
 )
 from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
 from guppylang.error import GuppyError
-from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
@@ -236,27 +235,10 @@ def compile_call(
 def parse_py_func(f: PyFunc, sources: SourceMap) -> tuple[ast.FunctionDef, str | None]:
     source_lines, line_offset = inspect.getsourcelines(f)
     source, func_ast, line_offset = parse_source(source_lines, line_offset)
-    # In Jupyter notebooks, we shouldn't use `inspect.getsourcefile(f)` since it would
-    # only give us a dummy temporary file
-    file: str | None
-    if is_running_ipython():
-        file = "<In [?]>"
-        if isinstance(func_ast, ast.FunctionDef):
-            defn = find_ipython_def(func_ast.name)
-            if defn is not None:
-                file = f"<{defn.cell_name}>"
-                sources.add_file(file, defn.cell_source)
-            else:
-                # If we couldn't find the defining cell, just use the source code we
-                # got from inspect. Line numbers will be wrong, but that's the best we
-                # can do.
-                sources.add_file(file, source)
-                line_offset = 0
-    else:
-        file = inspect.getsourcefile(f)
-        if file is None:
-            raise GuppyError(UnknownSourceError(None, f))
-        sources.add_file(file)
+    file = inspect.getsourcefile(f)
+    if file is None:
+        raise GuppyError(UnknownSourceError(None, f))
+    sources.add_file(file)
     annotate_location(func_ast, source, file, line_offset)
     if not isinstance(func_ast, ast.FunctionDef):
         raise GuppyError(ExpectedError(func_ast, "a function definition"))

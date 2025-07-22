@@ -7,6 +7,7 @@ from typing import TypeAlias
 
 from guppylang.ast_util import get_file, get_line_offset
 from guppylang.error import InternalGuppyError
+from guppylang.ipython_inspect import normalize_ipython_dummy_files
 
 
 @dataclass(frozen=True, order=True)
@@ -23,7 +24,8 @@ class Loc:
 
     def __str__(self) -> str:
         """Returns the string representation of this source location."""
-        return f"{self.file}:{self.line}:{self.column}"
+        file = normalize_ipython_dummy_files(self.file)
+        return f"{file}:{self.line}:{self.column}"
 
     def shift_left(self, cols: int) -> "Loc":
         """Returns a new location shifted to left by the given number of columns."""
