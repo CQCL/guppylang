@@ -66,10 +66,12 @@ if TYPE_CHECKING:
 #:
 #: All places are equipped with a unique id, a type and an optional definition AST
 #: location. During linearity checking, they are tracked separately.
-Place: TypeAlias = "Variable | FieldAccess | SubscriptAccess"
+Place: TypeAlias = "Variable | FieldAccess | SubscriptAccess | TupleAccess"
 
 #: Unique identifier for a `Place`.
-PlaceId: TypeAlias = "Variable.Id | FieldAccess.Id | SubscriptAccess.Id"
+PlaceId: TypeAlias = (
+    "Variable.Id | FieldAccess.Id | SubscriptAccess.Id | TupleAccess.Id"
+)
 
 
 @dataclass(frozen=True)
@@ -248,6 +250,56 @@ def contains_subscript(place: Place) -> SubscriptAccess | None:
             return place
         place = place.parent
     return None
+
+
+@dataclass(frozen=True)
+class TupleAccess:
+    """A place identifying an index access on a tuple."""
+
+    parent: Place
+    elem_ty: Type
+    index: int
+    exact_defined_at: AstNode | None
+
+    @dataclass(frozen=True)
+    class Id:
+        """Identifier for tuple places."""
+
+        parent: PlaceId
+        index: int
+
+    @cached_property
+    def id(self) -> "TupleAccess.Id":
+        """The unique `PlaceId` identifier for this place."""
+        return TupleAccess.Id(self.parent.id, self.index)
+
+    @cached_property
+    def root(self) -> "Variable":
+        """The root variable of this place."""
+        return self.parent.root
+
+    @property
+    def ty(self) -> Type:
+        """The type of this place."""
+        return self.elem_ty
+
+    @cached_property
+    def defined_at(self) -> AstNode | None:
+        """Optional location where this place was last assigned to."""
+        return self.exact_defined_at or self.parent.defined_at
+
+    @cached_property
+    def describe(self) -> str:
+        """A human-readable description of this place for error messages."""
+        return f"Tuple index `{self}`"
+
+    def __str__(self) -> str:
+        """String representation of this place."""
+        return f"{self.parent}[{self.index}]"
+
+    def replace_defined_at(self, node: AstNode | None) -> "TupleAccess":
+        """Returns a new `TupleAccess` instance with an updated definition location."""
+        return replace(self, exact_defined_at=node)
 
 
 @dataclass(frozen=True)

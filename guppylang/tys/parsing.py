@@ -1,4 +1,5 @@
 import ast
+import sys
 from collections.abc import Sequence
 from types import ModuleType
 
@@ -30,6 +31,7 @@ from guppylang.tys.errors import (
     InvalidTypeArgError,
     InvalidTypeError,
     LinearComptimeError,
+    LinearConstParamError,
     ModuleMemberNotFoundError,
     NonLinearOwnedError,
 )
@@ -98,10 +100,7 @@ def arg_from_ast(
             # Integer literals are turned into nat args.
             # TODO: To support int args, we need proper inference logic here
             #   See https://github.com/CQCL/guppylang/issues/1030
-            case int(v):
-                # Fun fact: int ast.Constant values are never negative since e.g. `-5`
-                # is a `ast.UnaryOp` negation of a `ast.Constant(5)`
-                assert v >= 0
+            case int(v) if v >= 0:
                 nat_ty = NumericType(NumericType.Kind.Nat)
                 return ConstArg(ConstValue(nat_ty, v))
             case float(v):
@@ -290,6 +289,58 @@ def parse_function_io_types(
         inputs.append(FuncInput(ty, flags))
     output = type_from_ast(output_node, globals, param_var_mapping, allow_free_vars)
     return inputs, output
+
+
+if sys.version_info >= (3, 12):
+
+    def parse_parameter(node: ast.type_param, idx: int, globals: Globals) -> Parameter:
+        """Parses a `Variable: Bound` generic type parameter declaration."""
+        if isinstance(node, ast.TypeVarTuple | ast.ParamSpec):
+            raise GuppyError(UnsupportedError(node, "Variadic generic parameters"))
+        assert isinstance(node, ast.TypeVar)
+
+        match node.bound:
+            # No bound means it's a linear type parameter
+            case None:
+                return TypeParam(
+                    idx, node.name, must_be_copyable=False, must_be_droppable=False
+                )
+            # Special `Copy` or `Drop` bounds for types
+            case ast.Name(id="Copy"):
+                return TypeParam(
+                    idx, node.name, must_be_copyable=True, must_be_droppable=False
+                )
+            case ast.Name(id="Drop"):
+                return TypeParam(
+                    idx, node.name, must_be_copyable=False, must_be_droppable=True
+                )
+            # Copy and drop is annotated as `T: (Copy, Drop)`
+            # TODO: Should we also allow `T: Copy + Drop`? Mypy would complain about it
+            case ast.Tuple(elts=[ast.Name(id=id1), ast.Name(id=id2)]) if {id1, id2} == {
+                "Copy",
+                "Drop",
+            }:
+                return TypeParam(
+                    idx, node.name, must_be_copyable=True, must_be_droppable=True
+                )
+            # Otherwise, it must be a const parameter
+            case bound:
+                # For now, we don't allow the types of const params to refer to previous
+                # parameters, so we pass an empty dict as the `param_var_mapping`.
+                # TODO: In the future we might want to allow stuff like
+                #   `def foo[T, XS: array[T, 42]]` and so on
+                ty = type_from_ast(bound, globals, {}, allow_free_vars=False)
+                if not ty.copyable or not ty.droppable:
+                    raise GuppyError(LinearConstParamError(bound, ty))
+
+                # TODO: For now we can only do `nat` const args since they lower to
+                #  Hugr bounded nats. Extend to arbitrary types via monomorphization.
+                #  See https://github.com/CQCL/guppylang/issues/1008
+                if ty != NumericType(NumericType.Kind.Nat):
+                    raise GuppyError(
+                        UnsupportedError(bound, f"`{ty}` generic parameters")
+                    )
+                return ConstParam(idx, node.name, ty)
 
 
 _type_param = TypeParam(0, "T", False, False)

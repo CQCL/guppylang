@@ -50,6 +50,7 @@ from guppylang.checker.core import (
     PythonObject,
     SetitemCall,
     SubscriptAccess,
+    TupleAccess,
     Variable,
 )
 from guppylang.checker.errors.comptime_errors import (
@@ -68,9 +69,11 @@ from guppylang.checker.errors.type_errors import (
     BinaryOperatorNotDefinedError,
     ConstMismatchError,
     IllegalConstant,
+    IntOverflowError,
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
     NotCallableError,
+    TupleIndexOutOfBoundsError,
     TypeApplyNotGenericError,
     TypeInferenceError,
     TypeMismatchError,
@@ -104,6 +107,7 @@ from guppylang.nodes import (
     PlaceNode,
     SubscriptAccessAndDrop,
     TensorCall,
+    TupleAccessAndDrop,
     TypeApply,
 )
 from guppylang.span import Span, to_span
@@ -639,8 +643,32 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         if isinstance(ty, FunctionType):
             inst = check_type_apply(ty, node, self.ctx)
             return instantiate_poly(node.value, ty, inst), ty.instantiate(inst)
-        # Otherwise, it's a regular __getitem__ subscript
         item_expr, item_ty = self.synthesize(node.slice)
+        # Special case for tuples: Index needs to be known statically in order to infer
+        # element type of subscript
+        if isinstance(ty, TupleType):
+            match item_expr:
+                case ast.Constant(value=int(idx)):
+                    if 0 <= idx < len(ty.element_types):
+                        result_ty = ty.element_types[idx]
+                        expr: ast.expr
+                        if isinstance(node.value, PlaceNode):
+                            tuple_place = TupleAccess(
+                                node.value.place, result_ty, idx, None
+                            )
+                            expr = PlaceNode(place=tuple_place)
+                        else:
+                            expr = TupleAccessAndDrop(node.value, ty, idx)
+                        return with_loc(node, expr), result_ty
+                    else:
+                        raise GuppyError(
+                            TupleIndexOutOfBoundsError(
+                                item_expr, idx, len(ty.element_types)
+                            )
+                        )
+                case _:
+                    raise GuppyTypeError(ExpectedError(item_expr, "an integer literal"))
+        # Otherwise, it's a regular __getitem__ subscript
         # Give the item a unique name so we can refer to it later in case we also want
         # to compile a call to `__setitem__`
         item = Variable(next(tmp_vars), item_ty, item_expr)
@@ -659,7 +687,6 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             node.value, [item_node], "__getitem__", "subscriptable", exp_sig
         )
         # Subscripting a place is itself a place
-        expr: ast.expr
         if isinstance(node.value, PlaceNode):
             place = SubscriptAccess(
                 node.value.place, item, result_ty, item_expr, getitem_expr
@@ -1028,6 +1055,10 @@ def check_place_assignable(
                 True,
             )
             return replace(place, setitem_call=SetitemCall(setitem_call, tmp_var))
+        case TupleAccess(parent=parent):
+            return replace(
+                place, parent=check_place_assignable(parent, ctx, node, reason)
+            )
 
 
 def check_comptime_arg(
@@ -1306,9 +1337,11 @@ def python_value_to_guppy_type(
             return string_type()
         # Only resolve `int` to `nat` if the user specifically asked for it
         case int(n) if type_hint == nat_type() and n >= 0:
+            _int_bounds_check(n, node, signed=False)
             return nat_type()
         # Otherwise, default to `int` for consistency with Python
-        case int():
+        case int(n):
+            _int_bounds_check(n, node, signed=True)
             return int_type()
         case float():
             return float_type()
@@ -1329,6 +1362,19 @@ def python_value_to_guppy_type(
             return _python_list_to_guppy_type(v, node, globals, type_hint)
         case _:
             return None
+
+
+def _int_bounds_check(value: int, node: AstNode, signed: bool) -> None:
+    bit_width = 1 << NumericType.INT_WIDTH
+    if signed:
+        max_v = (1 << (bit_width - 1)) - 1
+        min_v = -(1 << (bit_width - 1))
+    else:
+        max_v = (1 << bit_width) - 1
+        min_v = 0
+    if value < min_v or value > max_v:
+        err = IntOverflowError(node, signed, bit_width, value < min_v)
+        raise GuppyTypeError(err)
 
 
 def _python_list_to_guppy_type(

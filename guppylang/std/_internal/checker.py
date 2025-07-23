@@ -14,6 +14,7 @@ from guppylang.checker.errors.type_errors import (
 from guppylang.checker.expr_checker import (
     ExprChecker,
     ExprSynthesizer,
+    check_call,
     check_num_args,
     check_type_against,
     synthesize_call,
@@ -557,3 +558,16 @@ class BarrierChecker(CustomCallChecker):
         assert len(inst) == 0, "func_ty is not generic"
         node = BarrierExpr(args=args, func_ty=func_ty)
         return with_loc(self.node, node), ret_ty
+
+
+class WasmCallChecker(CustomCallChecker):
+    def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        # Use default implementation from the expression checker
+        args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
+
+        return GlobalCall(def_id=self.func.id, args=args, type_args=inst), subst
+
+    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
+        # Use default implementation from the expression checker
+        args, ty, inst = synthesize_call(self.func.ty, args, self.node, self.ctx)
+        return GlobalCall(def_id=self.func.id, args=args, type_args=inst), ty

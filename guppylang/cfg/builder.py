@@ -259,12 +259,7 @@ class CFGBuilder(AstVisitor[BB | None]):
             cfg,
             func_ty,
             docstring=docstring,
-            name=node.name,
-            args=node.args,
-            body=node.body,
-            decorator_list=node.decorator_list,
-            returns=node.returns,
-            type_comment=node.type_comment,
+            **dict(ast.iter_fields(node)),
         )
         set_location_from(new_node, node)
         bb.statements.append(new_node)
@@ -347,6 +342,15 @@ class ExprBuilder(ast.NodeTransformer):
 
     def visit_Call(self, node: ast.Call) -> ast.AST:
         return is_comptime_expression(node) or self.generic_visit(node)
+
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
+        # Desugar negated numeric constants into constants
+        match node.op, node.operand:
+            case ast.USub(), ast.Constant(value=float(v) | int(v)) as const:
+                const.value = -v
+                return with_loc(node, const)
+            case _:
+                return self.generic_visit(node)
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
         # Short-circuit expressions must be built using the `BranchBuilder`. However, we

@@ -1,5 +1,5 @@
 import ast
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Iterator, Sequence
 from contextlib import AbstractContextManager, ExitStack, contextmanager
 from typing import Any, Final, TypeGuard, TypeVar
 
@@ -22,6 +22,8 @@ from guppylang.cfg.builder import tmp_vars
 from guppylang.checker.core import Variable, contains_subscript
 from guppylang.checker.errors.generic import UnsupportedError
 from guppylang.compiler.core import (
+    DEBUG_EXTENSION,
+    RESULT_EXTENSION,
     CompilerBase,
     CompilerContext,
     DFContainer,
@@ -55,9 +57,13 @@ from guppylang.nodes import (
     StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
+    TupleAccessAndDrop,
     TypeApply,
 )
-from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
+from guppylang.std._internal.compiler.arithmetic import (
+    UnsignedIntVal,
+    convert_ifromusize,
+)
 from guppylang.std._internal.compiler.array import (
     array_convert_from_std_array,
     array_convert_to_std_array,
@@ -85,7 +91,6 @@ from guppylang.std._internal.compiler.tket2_bool import (
 )
 from guppylang.tys.arg import ConstArg
 from guppylang.tys.builtin import (
-    array_type,
     bool_type,
     get_element_type,
     int_type,
@@ -522,6 +527,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         self.dfg[node.item] = self.visit(node.item_expr)
         return self.visit(node.getitem_expr)
 
+    def visit_TupleAccessAndDrop(self, node: TupleAccessAndDrop) -> Wire:
+        tuple_port = self.visit(node.value)
+        return self._unpack_tuple(tuple_port, node.tuple_ty.element_types)[node.index]
+
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
         value_wire = self.visit(node.value)
         base_ty = node.base_ty.to_hugr(self.ctx)
@@ -542,47 +551,43 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             # The only other valid base type is bool
             assert is_bool_type(node.base_ty)
             base_name = "bool"
-        # Handle array results separately.
         if node.array_len is not None:
             op_name = f"result_array_{base_name}"
             size_arg = node.array_len.to_arg().to_hugr(self.ctx)
             extra_args = [size_arg, *extra_args]
-            is_bool = is_bool_type(node.base_ty)
-            op_base_ty = ht.Bool if is_bool else base_ty
-            hugr_ty: ht.Type = hugr.std.collections.array.Array(op_base_ty, size_arg)
-            op = tket2_result_op(
-                op_name=op_name,
-                typ=hugr_ty,
-                tag=node.tag,
-                extra_args=extra_args,
-                return_input=True,
+            # Remove the option wrapping in the array
+            unwrap = array_unwrap_elem(self.ctx)
+            unwrap = self.builder.load_function(
+                unwrap,
+                instantiation=ht.FunctionType([ht.Option(base_ty)], [base_ty]),
+                type_args=[ht.TypeTypeArg(base_ty)],
             )
-            arr_wire = apply_array_op_with_conversions(
-                self.ctx, self.builder, op, base_ty, size_arg, value_wire, is_bool
+            map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
+            value_wire = self.builder.add_op(map_op, value_wire, unwrap)
+            if is_bool_type(node.base_ty):
+                # We need to coerce a read on all the array elements if they are bools.
+                array_read = array_read_bool(self.ctx)
+                array_read = self.builder.load_function(array_read)
+                map_op = array_map(OpaqueBool, size_arg, ht.Bool)
+                value_wire = self.builder.add_op(map_op, value_wire, array_read)
+                base_ty = ht.Bool
+            # Turn `value_array` into regular linear `array`
+            value_wire = self.builder.add_op(
+                array_convert_to_std_array(base_ty, size_arg), value_wire
             )
-            # Update the inout ports for the array result.
-            func_ty = FunctionType(
-                [
-                    FuncInput(
-                        array_type(node.base_ty, node.array_len), InputFlags.Inout
-                    ),
-                ],
-                NoneType(),
-            )
-            self._update_inout_ports(node.args, iter([arr_wire]), func_ty)
+            hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
         else:
             if is_bool_type(node.base_ty):
                 base_ty = ht.Bool
                 value_wire = self.builder.add_op(read_bool(), value_wire)
             op_name = f"result_{base_name}"
             hugr_ty = base_ty
-            op = tket2_result_op(
-                op_name=op_name,
-                typ=hugr_ty,
-                tag=node.tag,
-                extra_args=extra_args,
-            )
-            self.builder.add_op(op, value_wire)
+
+        sig = ht.FunctionType(input=[hugr_ty], output=[])
+        args = [ht.StringArg(node.tag), *extra_args]
+        op = ops.ExtOp(RESULT_EXTENSION.get_op(op_name), signature=sig, args=args)
+
+        self.builder.add_op(op, value_wire)
         return self._pack_returns([], NoneType())
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
@@ -621,9 +626,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             [standard_array_type(ht.Qubit, num_qubits_arg)],
             [standard_array_type(ht.Qubit, num_qubits_arg)],
         )
-        op = ops.Custom(
-            op_name="StateResult", signature=sig, args=args, extension="tket2.debug"
-        )
+
+        op = ops.ExtOp(DEBUG_EXTENSION.get_op("StateResult"), signature=sig, args=args)
 
         if not node.array_len:
             # If the input is a sequence of qubits, we pack them into an array.
@@ -798,7 +802,14 @@ def python_value_to_hugr(v: Any, exp_ty: Type, ctx: CompilerContext) -> hv.Value
         case str():
             return hugr.std.prelude.StringVal(v)
         case int():
-            return hugr.std.int.IntVal(v, width=NumericType.INT_WIDTH)
+            assert isinstance(exp_ty, NumericType)
+            match exp_ty.kind:
+                case NumericType.Kind.Nat:
+                    return UnsignedIntVal(v, width=NumericType.INT_WIDTH)
+                case NumericType.Kind.Int:
+                    return hugr.std.int.IntVal(v, width=NumericType.INT_WIDTH)
+                case _:
+                    raise InternalGuppyError("Unexpected numeric type")
         case float():
             return hugr.std.float.FloatVal(v)
         case tuple(elts):
@@ -820,31 +831,6 @@ def python_value_to_hugr(v: Any, exp_ty: Type, ctx: CompilerContext) -> hv.Value
         case _:
             return None
     return None
-
-
-def tket2_result_op(
-    op_name: str,
-    typ: ht.Type,
-    tag: str,
-    extra_args: Iterable[ht.TypeArg],
-    return_input: bool = False,
-) -> ops.DataflowOp:
-    """Creates a tket2.result op."""
-    args = [
-        ht.StringArg(tag),
-        *extra_args,
-    ]
-    output = [typ] if return_input else []
-    sig = ht.FunctionType(
-        input=[typ],
-        output=output,
-    )
-    return ops.Custom(
-        extension="tket2.result",
-        op_name=op_name,
-        args=args,
-        signature=sig,
-    )
 
 
 ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(

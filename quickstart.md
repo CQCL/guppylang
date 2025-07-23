@@ -25,5 +25,5 @@ def teleport(src: qubit @ owned, tgt: qubit) -> None:
         x(tgt)
 
 
-guppy.compile_module()
+guppy.compile(teleport)
 ```

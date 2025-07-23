@@ -2,7 +2,7 @@ from guppylang import guppy
 from guppylang.std.builtins import frozenarray, panic, py
 
 
-def test_len(validate, run_int_fn):
+def test_len(run_int_fn):
     @guppy
     def foo(xs: frozenarray[int, 42]) -> int:
         return len(xs)
@@ -12,14 +12,10 @@ def test_len(validate, run_int_fn):
         xs = py(list(range(42)))
         return foo(xs)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    # TODO: Enable execution test once LLVM lowering is done:
-    #  https://github.com/CQCL/hugr/issues/1973
-    #run_int_fn(compiled, 42)
+    run_int_fn(main, 42)
 
 
-def test_subscript(validate, run_int_fn):
+def test_subscript(run_int_fn):
     @guppy
     def foo(xs: frozenarray[int, 42]) -> int:
         return xs[10] + xs[10]
@@ -29,14 +25,10 @@ def test_subscript(validate, run_int_fn):
         xs = py(list(range(42)))
         return foo(xs)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    # TODO: Enable execution test once LLVM lowering is done:
-    #  https://github.com/CQCL/hugr/issues/1973
-    #run_int_fn(compiled, 20)
+    run_int_fn(main, 20)
 
 
-def test_iter(validate):
+def test_iter(run_int_fn):
     @guppy
     def foo(xs: frozenarray[int, 42]) -> int:
         s = 0
@@ -49,14 +41,10 @@ def test_iter(validate):
         xs = py(list(range(42)))
         return foo(xs)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    # TODO: Enable execution test once LLVM lowering is done:
-    #  https://github.com/CQCL/hugr/issues/1973
-    #run_int_fn(compiled, sum(range(42)))
+    run_int_fn(main, sum(range(42)))
 
 
-def test_alias(validate):
+def test_alias(run_int_fn):
     @guppy
     def foo(xs: frozenarray[int, 42]) -> int:
         ys = xs
@@ -67,14 +55,10 @@ def test_alias(validate):
         xs = py(list(range(42)))
         return foo(xs)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    # TODO: Enable execution test once LLVM lowering is done:
-    #  https://github.com/CQCL/hugr/issues/1973
-    #run_int_fn(compiled, 1)
+    run_int_fn(main, 1)
 
 
-def test_mutable_copy(validate):
+def test_mutable_copy(run_int_fn):
     @guppy
     def foo(xs: frozenarray[int, 42]) -> int:
         ys = xs.mutable_copy()
@@ -91,14 +75,10 @@ def test_mutable_copy(validate):
         xs = py(list(range(42)))
         return foo(xs)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    # TODO: Enable execution test once LLVM lowering is done:
-    #  https://github.com/CQCL/hugr/issues/1973
-    #run_int_fn(compiled, 2 * sum(range(42))
+    run_int_fn(main, 2 * sum(range(42)))
 
 
-def test_nested_subscript(validate):
+def test_nested_subscript(run_int_fn):
     @guppy
     def foo(xs: frozenarray[frozenarray[int, 2], 2]) -> int:
         return xs[0][0] + xs[0][1] + xs[1][0] + xs[1][1]
@@ -108,14 +88,10 @@ def test_nested_subscript(validate):
         xs = py([[1, 2], [3, 4]])
         return foo(xs)
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    # TODO: Enable execution test once LLVM lowering is done:
-    #  https://github.com/CQCL/hugr/issues/1973
-    #run_int_fn(compiled, 1 + 2 + 3 + 4)
+    run_int_fn(main, 1 + 2 + 3 + 4)
 
 
-def test_nested_iter(validate):
+def test_nested_iter(run_int_fn):
     @guppy
     def foo(xss: frozenarray[frozenarray[int, 10], 42]) -> int:
         s = 0
@@ -130,11 +106,7 @@ def test_nested_iter(validate):
     def main() -> int:
         return foo(py(xss))
 
-    compiled = guppy.compile(main)
-    validate(compiled)
-    # TODO: Enable execution test once LLVM lowering is done:
-    #  https://github.com/CQCL/hugr/issues/1973
-    #run_int_fn(compiled, sum([sum(xs) for xs in xss]))
+    run_int_fn(main, sum([sum(xs) for xs in xss]))
 
 
 def test_nested_struct(validate):
@@ -152,4 +124,3 @@ def test_nested_struct(validate):
         return s
 
     validate(guppy.compile(foo))
-

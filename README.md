@@ -33,7 +33,7 @@ def teleport(src: qubit @ owned, tgt: qubit) -> None:
     if measure(tmp):
         x(tgt)
 
-guppy.compile_module()
+guppy.compile(teleport)
 ```
 
 More examples and tutorials are available [here][examples].

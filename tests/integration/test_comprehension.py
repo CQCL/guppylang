@@ -20,7 +20,7 @@ def test_basic(validate):
 
 def test_basic_linear(validate):
     @guppy
-    def test(qs: list[qubit] @owned) -> list[qubit]:
+    def test(qs: list[qubit] @ owned) -> list[qubit]:
         return [h(q) for q in qs]
 
     validate(guppy.compile(test))
@@ -48,7 +48,7 @@ def test_multiple_struct(validate):
         qs: list[qubit]
 
     @guppy
-    def test(ss: list[MyStruct] @owned) -> list[qubit]:
+    def test(ss: list[MyStruct] @ owned) -> list[qubit]:
         return [h(q) for s in ss for q in s.qs]
 
     validate(guppy.compile(test))
@@ -64,7 +64,7 @@ def test_tuple_pat(validate):
 
 def test_tuple_pat_linear(validate):
     @guppy
-    def test(qs: list[tuple[int, qubit, qubit]] @owned) -> list[tuple[qubit, qubit]]:
+    def test(qs: list[tuple[int, qubit, qubit]] @ owned) -> list[tuple[qubit, qubit]]:
         return [cx(q1, q2) for _, q1, q2 in qs]
 
     validate(guppy.compile(test))
@@ -138,7 +138,7 @@ def test_nested_right(validate):
 
 def test_nested_linear(validate):
     @guppy
-    def test(qs: list[qubit] @owned) -> list[qubit]:
+    def test(qs: list[qubit] @ owned) -> list[qubit]:
         return [h(q) for q in [h(q) for q in qs]]
 
     validate(guppy.compile(test))
@@ -154,10 +154,10 @@ def test_classical_list_comp(validate):
 
 def test_linear_discard(validate):
     @guppy.declare
-    def discard(q: qubit @owned) -> None: ...
+    def discard(q: qubit @ owned) -> None: ...
 
     @guppy
-    def test(qs: list[qubit] @owned) -> list[None]:
+    def test(qs: list[qubit] @ owned) -> list[None]:
         return [discard(q) for q in qs]
 
     validate(guppy.compile(test))
@@ -170,10 +170,10 @@ def test_linear_discard_struct(validate):
         q2: qubit
 
     @guppy.declare
-    def discard(q1: qubit @owned, q2: qubit @owned) -> None: ...
+    def discard(q1: qubit @ owned, q2: qubit @ owned) -> None: ...
 
     @guppy
-    def test(ss: list[MyStruct] @owned) -> list[None]:
+    def test(ss: list[MyStruct] @ owned) -> list[None]:
         return [discard(s.q1, s.q2) for s in ss]
 
     validate(guppy.compile(test))
@@ -181,10 +181,10 @@ def test_linear_discard_struct(validate):
 
 def test_linear_consume_in_guard(validate):
     @guppy.declare
-    def cond(q: qubit @owned) -> bool: ...
+    def cond(q: qubit @ owned) -> bool: ...
 
     @guppy
-    def test(qs: list[tuple[int, qubit]] @owned) -> list[int]:
+    def test(qs: list[tuple[int, qubit]] @ owned) -> list[int]:
         return [x for x, q in qs if cond(q)]
 
     validate(guppy.compile(test))
@@ -192,10 +192,10 @@ def test_linear_consume_in_guard(validate):
 
 def test_linear_consume_in_iter(validate):
     @guppy.declare
-    def make_list(q: qubit @owned) -> list[int]: ...
+    def make_list(q: qubit @ owned) -> list[int]: ...
 
     @guppy
-    def test(qs: list[qubit] @owned) -> list[int]:
+    def test(qs: list[qubit] @ owned) -> list[int]:
         return [x for q in qs for x in make_list(q)]
 
     validate(guppy.compile(test))
@@ -234,7 +234,7 @@ def test_nonlinear_next_linear_iter(validate):
         """A linear iterator that yields non-linear values."""
 
         @guppy.declare
-        def __next__(self: "MyIter" @owned) -> Option[tuple[int, "MyIter"]]: ...
+        def __next__(self: "MyIter" @ owned) -> Option[tuple[int, "MyIter"]]: ...
 
     @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyType:
@@ -348,5 +348,3 @@ def test_borrow_and_consume(validate):
         return [foo(q) + bar(q) for q in qs]
 
     validate(guppy.compile(test))
-
-

@@ -243,8 +243,7 @@ def test_type_apply_empty_tuple(validate):
     T = guppy.type_var("T")
 
     @guppy.declare
-    def foo(x: T) -> None:
-        ...
+    def foo(x: T) -> None: ...
 
     @guppy
     def main() -> None:
@@ -364,7 +363,6 @@ def test_custom_higher_order():
         def compile(self, args: list[Wire]) -> list[Wire]:
             return args
 
-
     T = guppy.type_var("T")
 
     @guppy.custom(CustomCompiler())
@@ -378,7 +376,6 @@ def test_custom_higher_order():
 
 @pytest.mark.skip("Higher-order polymorphic functions are not yet supported")
 def test_higher_order_value(validate):
-
     T = guppy.type_var("T")
 
     @guppy.declare

@@ -1,5 +1,7 @@
 import ast
 import inspect
+import linecache
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import ClassVar
@@ -29,16 +31,19 @@ from guppylang.definition.custom import (
 from guppylang.definition.function import parse_source
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
-from guppylang.diagnostic import Error, Help
+from guppylang.diagnostic import Error, Help, Note
 from guppylang.engine import DEF_STORE
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
-from guppylang.span import SourceMap
+from guppylang.span import SourceMap, Span, to_span
 from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.parsing import type_from_ast
 from guppylang.tys.ty import FuncInput, FunctionType, InputFlags, StructType, Type
+
+if sys.version_info >= (3, 12):
+    from guppylang.tys.parsing import parse_parameter
 
 
 @dataclass(frozen=True)
@@ -55,6 +60,19 @@ class StructField:
 
     name: str
     ty: Type
+
+
+@dataclass(frozen=True)
+class RedundantParamsError(Error):
+    title: ClassVar[str] = "Generic parameters already specified"
+    span_label: ClassVar[str] = "Duplicate specification of generic parameters"
+    struct_name: str
+
+    @dataclass(frozen=True)
+    class PrevSpec(Note):
+        span_label: ClassVar[str] = (
+            "Parameters of `{struct_name}` are already specified here"
+        )
 
 
 @dataclass(frozen=True)
@@ -98,18 +116,32 @@ class RawStructDef(TypeDef, ParsableDef):
         if cls_def.keywords:
             raise GuppyError(UnexpectedError(cls_def.keywords[0], "keyword"))
 
-        # The only base we allow is `Generic[...]` to specify generic parameters
-        # TODO: This will become obsolete once we have Python 3.12 style generic classes
-        params: list[Parameter]
+        # Look for generic parameters from Python 3.12 style syntax
+        params = []
+        params_span: Span | None = None
+        if sys.version_info >= (3, 12):
+            if cls_def.type_params:
+                first, last = cls_def.type_params[0], cls_def.type_params[-1]
+                params_span = Span(to_span(first).start, to_span(last).end)
+                params = [
+                    parse_parameter(node, idx, globals)
+                    for idx, node in enumerate(cls_def.type_params)
+                ]
+
+        # The only base we allow is `Generic[...]` to specify generic parameters with
+        # the legacy syntax
         match cls_def.bases:
             case []:
-                params = []
+                pass
             case [base] if elems := try_parse_generic_base(base):
+                # Complain if we already have Python 3.12 generic params
+                if params_span is not None:
+                    err: Error = RedundantParamsError(base, self.name)
+                    err.add_sub_diagnostic(RedundantParamsError.PrevSpec(params_span))
+                    raise GuppyError(err)
                 params = params_from_ast(elems, globals)
             case bases:
-                err: Error = UnsupportedError(
-                    bases[0], "Struct inheritance", singular=True
-                )
+                err = UnsupportedError(bases[0], "Struct inheritance", singular=True)
                 raise GuppyError(err)
 
         fields: list[UncheckedStructField] = []
@@ -267,11 +299,21 @@ def parse_py_class(cls: type, sources: SourceMap) -> ast.ClassDef:
                 raise GuppyError(ExpectedError(defn.node, "a class definition"))
             return defn.node
         # else, fall through to handle builtins.
-    source_lines, line_offset = inspect.getsourcelines(cls)
-    source, cls_ast, line_offset = parse_source(source_lines, line_offset)
+
+    # We can't rely on `inspect.getsourcelines` since it doesn't work properly for
+    # classes prior to Python 3.13. See https://github.com/CQCL/guppylang/issues/1107.
+    # Instead, we reproduce the behaviour of Python >= 3.13 using the `__firstlineno__`
+    # attribute. See https://github.com/python/cpython/blob/3.13/Lib/inspect.py#L1052.
+    # In the decorator, we make sure that `__firstlineno__` is set, even if we're not
+    # on Python 3.13.
     file = inspect.getsourcefile(cls)
     if file is None:
         raise GuppyError(UnknownSourceError(None, cls))
+    file_lines = linecache.getlines(file)
+    line_offset = cls.__firstlineno__  # type: ignore[attr-defined]
+    source_lines = inspect.getblock(file_lines[line_offset - 1 :])
+    source, cls_ast, line_offset = parse_source(source_lines, line_offset)
+
     # Store the source file in our cache
     sources.add_file(file)
     annotate_location(cls_ast, source, file, line_offset)
