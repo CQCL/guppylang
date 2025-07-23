@@ -229,12 +229,18 @@ class CompilerContext(ToHugrContext):
             with track_hugr_side_effects(), self.set_monomorphized_args(mono_args):
                 next_def.compile_inner(self)
 
-    def get_instance_func(
+    def build_compiled_instance_func(
         self,
         ty: Type | TypeDef,
         name: str,
         type_args: Inst,
     ) -> tuple[CompiledCallableDef, Inst] | None:
+        """Returns s compiled instance method along with its remaining type args that
+        have not been monomorphized away, or `None` if the type doesn't have a matching
+        method.
+
+        Compiles the definition and all of its dependencies into the current Hugr.
+        """
         from guppylang.engine import ENGINE
 
         parsed_func = self.checked_globals.get_instance_func(ty, name)

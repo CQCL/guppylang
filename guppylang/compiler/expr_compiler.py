@@ -652,7 +652,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def _build_method_call(
         self, ty: Type, method: str, node: AstNode, args: list[Wire], type_args: Inst
     ) -> CallReturnWires:
-        func_and_targs = self.ctx.get_instance_func(ty, method, type_args)
+        func_and_targs = self.ctx.build_compiled_instance_func(ty, method, type_args)
         assert func_and_targs is not None
         func, rem_args = func_and_targs
         return func.compile_call(args, rem_args, self.dfg, self.ctx, node)
