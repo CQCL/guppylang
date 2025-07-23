@@ -159,7 +159,8 @@ class CompilerContext(ToHugrContext):
     def build_compiled_def(
         self, def_id: DefId, type_args: Inst
     ) -> tuple[CompiledDef, Inst]:
-        """Returns the compiled definitions corresponding to the given ID.
+        """Returns the compiled definitions corresponding to the given ID, along with
+        the remaining type args that have not been monomorphized away.
 
         Might mutate the current Hugr if this definition has never been compiled before.
         """
@@ -174,10 +175,11 @@ class CompilerContext(ToHugrContext):
             return self.compiled[def_id, ()], type_args
 
         mono_args: PartiallyMonomorphizedArgs | None = None
+        rem_args = type_args
         compile_outer: Callable[[], CompiledDef]
         match ENGINE.get_checked(def_id):
             case MonomorphizableDef(params=params) as monomorphizable:
-                mono_args, type_args = partially_monomorphize_args(
+                mono_args, rem_args = partially_monomorphize_args(
                     params, type_args, self
                 )
                 compile_outer = lambda: monomorphizable.monomorphize(  # noqa: E731 (assign-lambda)
@@ -189,11 +191,10 @@ class CompilerContext(ToHugrContext):
                 compile_outer = lambda: compiled_defn  # noqa: E731
             case defn:
                 compile_outer = assert_never(defn)
-        # type_args are now those remaining after monomorphization
         if (def_id, mono_args) not in self.compiled:
             self.compiled[def_id, mono_args] = compile_outer()
             self.worklist[def_id, mono_args] = None
-        return self.compiled[def_id, mono_args], type_args
+        return self.compiled[def_id, mono_args], rem_args
 
     def compile(self, defn: CheckedDef) -> None:
         """Compiles the given definition and all of its dependencies into the current
@@ -240,9 +241,9 @@ class CompilerContext(ToHugrContext):
         if parsed_func is None:
             return None
         checked_func = ENGINE.get_checked(parsed_func.id)
-        (compiled_func, args) = self.build_compiled_def(checked_func.id, type_args)
+        compiled_func, rem_args = self.build_compiled_def(checked_func.id, type_args)
         assert isinstance(compiled_func, CompiledCallableDef)
-        return (compiled_func, args)
+        return compiled_func, rem_args
 
     def declare_global_func(
         self,

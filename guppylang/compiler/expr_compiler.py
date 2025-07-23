@@ -654,7 +654,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     ) -> CallReturnWires:
         func_and_targs = self.ctx.get_instance_func(ty, method, type_args)
         assert func_and_targs is not None
-        (func, rem_args) = func_and_targs
+        func, rem_args = func_and_targs
         return func.compile_call(args, rem_args, self.dfg, self.ctx, node)
 
     @contextmanager

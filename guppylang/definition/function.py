@@ -190,7 +190,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef, Monomorphized
         name: The name of the function.
         defined_at: The AST node where the function was defined.
         mono_args: Partial monomorphization of the generic type parameters.
-        ty: The type of the function.
+        ty: The type of the function after partial monomorphization.
         python_scope: The Python scope where the function was defined.
         docstring: The docstring of the function.
         cfg: The type- and linearity-checked CFG for the function body.
