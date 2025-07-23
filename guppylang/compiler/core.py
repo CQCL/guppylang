@@ -180,6 +180,7 @@ class CompilerContext(ToHugrContext):
         if (def_id, ()) in self.compiled:
             if type_args is None:
                 return self.compiled[def_id, ()]
+            assert type_args == []
             return self.compiled[def_id, ()], type_args
 
         compile_outer: Callable[[], CompiledDef]

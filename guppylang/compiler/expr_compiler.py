@@ -438,7 +438,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 get_type(node),
             )
         else:
-            func_ty = func.ty.instantiate(rem_args)  # node.type_args)
+            func_ty = func.ty.instantiate(rem_args)
 
         args = self._compile_call_args(node.args, func_ty)
         rets = func.compile_call(args, rem_args, self.dfg, self.ctx, node)
