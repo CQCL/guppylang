@@ -16,7 +16,7 @@ from guppylang.definition.ty import TypeDef
 from guppylang.engine import ENGINE
 from guppylang.error import GuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
-from guppylang.tys.builtin import CallableTypeDef
+from guppylang.tys.builtin import CallableTypeDef, bool_type
 from guppylang.tys.const import ConstValue
 from guppylang.tys.errors import (
     CallableComptimeError,
@@ -87,19 +87,32 @@ def arg_from_ast(
         )
         return TypeArg(ty)
 
-    # `None` is represented as a `ast.Constant` node with value `None`
-    if isinstance(node, ast.Constant) and node.value is None:
-        return TypeArg(NoneType())
-
-    # Integer literals are turned into nat args since these are the only ones we support
-    # right now.
-    # TODO: Once we also have int args etc, we need proper inference logic here
-    if isinstance(node, ast.Constant) and isinstance(node.value, int):
-        # Fun fact: int ast.Constant values are never negative since e.g. `-5` is a
-        # `ast.UnaryOp` negation of a `ast.Constant(5)`
-        assert node.value >= 0
-        nat_ty = NumericType(NumericType.Kind.Nat)
-        return ConstArg(ConstValue(nat_ty, node.value))
+    # Literals
+    if isinstance(node, ast.Constant):
+        match node.value:
+            # `None` is represented as a `ast.Constant` node with value `None`
+            case None:
+                return TypeArg(NoneType())
+            case bool(v):
+                return ConstArg(ConstValue(bool_type(), v))
+            # Integer literals are turned into nat args.
+            # TODO: To support int args, we need proper inference logic here
+            #   See https://github.com/CQCL/guppylang/issues/1030
+            case int(v):
+                # Fun fact: int ast.Constant values are never negative since e.g. `-5`
+                # is a `ast.UnaryOp` negation of a `ast.Constant(5)`
+                assert v >= 0
+                nat_ty = NumericType(NumericType.Kind.Nat)
+                return ConstArg(ConstValue(nat_ty, v))
+            case float(v):
+                float_ty = NumericType(NumericType.Kind.Float)
+                return ConstArg(ConstValue(float_ty, v))
+            # String literals are ignored for now since they could also be stringified
+            # types.
+            # TODO: To support string args, we need proper inference logic here
+            #   See https://github.com/CQCL/guppylang/issues/1030
+            case str(_):
+                pass
 
     # Py-expressions can also be used to specify static numbers
     if comptime_expr := is_comptime_expression(node):
