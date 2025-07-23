@@ -365,17 +365,6 @@ def type_with_flags_from_ast(
                 flags |= InputFlags.Comptime
                 if not ty.copyable or not ty.droppable:
                     raise GuppyError(LinearComptimeError(node.right, ty))
-
-                # TODO: For now we can only do `nat` comptime args since they lower to
-                #  Hugr bounded nats. Extend to arbitrary types via monomorphization.
-                #  See https://github.com/CQCL/guppylang/issues/1008
-                if (
-                    not isinstance(ty, NumericType)
-                    or not ty.kind == NumericType.Kind.Nat
-                ):
-                    raise GuppyError(
-                        UnsupportedError(node.right, f"`{ty}` comptime arguments")
-                    )
             case _:
                 raise GuppyError(InvalidFlagError(node.right))
         return ty, flags
