@@ -36,6 +36,7 @@ from guppylang.tys.errors import (
     NonLinearOwnedError,
 )
 from guppylang.tys.param import ConstParam, Parameter, TypeParam
+from guppylang.tys.subst import BoundVarFinder
 from guppylang.tys.ty import (
     FuncInput,
     FunctionType,
@@ -365,6 +366,16 @@ def type_with_flags_from_ast(
                 flags |= InputFlags.Comptime
                 if not ty.copyable or not ty.droppable:
                     raise GuppyError(LinearComptimeError(node.right, ty))
+                # For now, we don't allow comptime annotations on generic inputs
+                # TODO: In the future we might want to allow stuff like
+                #  `def foo[T: (Copy, Discard](x: T @comptime)`.
+                #   Also see the todo in `parse_parameter`.
+                var_finder = BoundVarFinder()
+                ty.visit(var_finder)
+                if var_finder.bound_vars:
+                    raise GuppyError(
+                        UnsupportedError(node.left, "Generic comptime arguments")
+                    )
             case _:
                 raise GuppyError(InvalidFlagError(node.right))
         return ty, flags
