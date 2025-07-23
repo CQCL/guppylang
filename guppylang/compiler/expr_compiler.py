@@ -30,10 +30,12 @@ from guppylang.compiler.core import (
 from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import (
+    CallableDef,
     CallReturnWires,
     CompiledCallableDef,
     CompiledValueDef,
 )
+from guppylang.engine import ENGINE
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
     BarrierExpr,
@@ -81,7 +83,7 @@ from guppylang.std._internal.compiler.tket2_bool import (
     not_op,
     read_bool,
 )
-from guppylang.tys.arg import Argument
+from guppylang.tys.arg import ConstArg
 from guppylang.tys.builtin import (
     array_type,
     bool_type,
@@ -90,6 +92,7 @@ from guppylang.tys.builtin import (
     is_bool_type,
     is_frozenarray_type,
 )
+from guppylang.tys.const import ConstValue
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
@@ -258,27 +261,39 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self.dfg[node.place]
 
     def visit_GlobalName(self, node: GlobalName) -> Wire:
-        defn = self.ctx.build_compiled_def(node.def_id)
-        assert isinstance(defn, CompiledValueDef)
-        if isinstance(defn, CompiledCallableDef) and defn.ty.parametrized:
+        defn = ENGINE.get_checked(node.def_id)
+        if isinstance(defn, CallableDef) and defn.ty.parametrized:
             # TODO: This should be caught during checking
             err = UnsupportedError(
                 node, "Polymorphic functions as dynamic higher-order values"
             )
             raise GuppyError(err)
+
+        defn, [] = self.ctx.build_compiled_def(node.def_id, type_args=[])
+        assert isinstance(defn, CompiledValueDef)
         return defn.load(self.dfg, self.ctx, node)
 
     def visit_GenericParamValue(self, node: GenericParamValue) -> Wire:
         match node.param.ty:
             case NumericType(NumericType.Kind.Nat):
+                # Generic nat parameters are encoded using Hugr bounded nat parameters,
+                # so they are not monomorphized when compiling to Hugr
                 arg = node.param.to_bound().to_hugr(self.ctx)
                 load_nat = hugr.std.PRELUDE.get_op("load_nat").instantiate(
                     [arg], ht.FunctionType([], [ht.USize()])
                 )
                 usize = self.builder.add_op(load_nat)
                 return self.builder.add_op(convert_ifromusize(), usize)
-            case _:
-                raise NotImplementedError
+            case ty:
+                # Look up monomorphization
+                assert self.ctx.current_mono_args is not None
+                match self.ctx.current_mono_args[node.param.idx]:
+                    case ConstArg(const=ConstValue(value=v)):
+                        val = python_value_to_hugr(v, ty, self.ctx)
+                        assert val is not None
+                        return self.builder.load(val)
+                    case _:
+                        raise InternalGuppyError("Monomorphized const is not a value")
 
     def visit_Name(self, node: ast.Name) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
@@ -420,7 +435,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
     def visit_GlobalCall(self, node: GlobalCall) -> Wire:
-        func = self.ctx.build_compiled_def(node.def_id)
+        func, rem_args = self.ctx.build_compiled_def(node.def_id, node.type_args)
         assert isinstance(func, CompiledCallableDef)
 
         if isinstance(func, CustomFunctionDef) and not func.has_signature:
@@ -429,10 +444,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 get_type(node),
             )
         else:
-            func_ty = func.ty.instantiate(node.type_args)
+            func_ty = func.ty.instantiate(rem_args)
 
         args = self._compile_call_args(node.args, func_ty)
-        rets = func.compile_call(args, list(node.type_args), self.dfg, self.ctx, node)
+        rets = func.compile_call(args, rem_args, self.dfg, self.ctx, node)
         self._update_inout_ports(node.args, iter(rets.inout_returns), func_ty)
         return self._pack_returns(rets.regular_returns, func_ty.output)
 
@@ -469,7 +484,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # For now, we can only TypeApply global FunctionDefs/Decls.
         if not isinstance(node.value, GlobalName):
             raise InternalGuppyError("Dynamic TypeApply not supported yet!")
-        defn = self.ctx.build_compiled_def(node.value.def_id)
+        defn, rem_args = self.ctx.build_compiled_def(node.value.def_id, node.inst)
         assert isinstance(defn, CompiledCallableDef)
 
         # We have to be very careful here: If we instantiate `foo: forall T. T -> T`
@@ -485,7 +500,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             raise GuppyError(err)
 
-        return defn.load_with_args(node.inst, self.dfg, self.ctx, node)
+        return defn.load_with_args(rem_args, self.dfg, self.ctx, node)
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> Wire:
         # The only case that is not desugared by the type checker is the `not` operation
@@ -597,7 +612,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_StateResultExpr(self, node: StateResultExpr) -> Wire:
         num_qubits_arg = (
-            node.array_len.to_arg().to_hugr()
+            node.array_len.to_arg().to_hugr(self.ctx)
             if node.array_len
             else ht.BoundedNatArg(len(node.args) - 1)
         )
@@ -685,21 +700,17 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             # Update `count += 1`
             one = self.builder.load(hugr.std.int.IntVal(1, width=NumericType.INT_WIDTH))
             [self.dfg[count_var]], [] = self._build_method_call(
-                int_type(), "__add__", node, [count, one]
+                int_type(), "__add__", node, [count, one], []
             )
         return self.dfg[array_var]
 
     def _build_method_call(
-        self,
-        ty: Type,
-        method: str,
-        node: AstNode,
-        args: list[Wire],
-        type_args: Sequence[Argument] | None = None,
+        self, ty: Type, method: str, node: AstNode, args: list[Wire], type_args: Inst
     ) -> CallReturnWires:
-        func = self.ctx.get_instance_func(ty, method)
-        assert func is not None
-        return func.compile_call(args, type_args or [], self.dfg, self.ctx, node)
+        func_and_targs = self.ctx.build_compiled_instance_func(ty, method, type_args)
+        assert func_and_targs is not None
+        func, rem_args = func_and_targs
+        return func.compile_call(args, rem_args, self.dfg, self.ctx, node)
 
     @contextmanager
     def _build_generators(

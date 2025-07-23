@@ -17,6 +17,7 @@ from guppylang.tys.var import ExistentialVar
 
 Subst = dict[ExistentialVar, Type | Const]
 Inst = Sequence[Argument]
+PartialInst = Sequence["Argument | None"]
 
 
 class Substituter(Transformer):
