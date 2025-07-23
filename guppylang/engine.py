@@ -226,10 +226,9 @@ class CompilationEngine:
         from guppylang.compiler.core import CompilerContext
 
         ctx = CompilerContext(graph)
-        ctx.compile(self.checked[id])
+        compiled_def = ctx.compile(self.checked[id])
         self.compiled = ctx.compiled
 
-        compiled_def = self.compiled.get(id)
         from guppylang.definition.function import CompiledFunctionDef
         from guppylang.definition.traced import CompiledTracedFunctionDef
 

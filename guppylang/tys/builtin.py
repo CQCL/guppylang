@@ -120,7 +120,9 @@ class WasmModuleTypeDef(OpaqueTypeDef):
         self.wasm_file = wasm_file
         self.wasm_hash = wasm_hash
 
-    def to_hugr(self, args: Sequence[TypeArg | ConstArg], /) -> ht.Type:
+    def to_hugr(
+        self, args: Sequence[TypeArg | ConstArg], ctx: ToHugrContext
+    ) -> ht.Type:
         assert args == []
         ty = WASM_EXTENSION.get_type("context")
         return ty.instantiate([])

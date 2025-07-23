@@ -203,7 +203,7 @@ class CompilerContext(ToHugrContext):
             self.worklist[def_id, mono_args] = None
         return self.compiled[def_id, mono_args], rem_args
 
-    def compile(self, defn: CheckedDef) -> None:
+    def compile(self, defn: CheckedDef) -> CompiledDef:
         """Compiles the given definition and all of its dependencies into the current
         Hugr."""
         # Check and compile the entry point
@@ -235,6 +235,8 @@ class CompilerContext(ToHugrContext):
             next_def = self.compiled[next_id, mono_args]
             with track_hugr_side_effects(), self.set_monomorphized_args(mono_args):
                 next_def.compile_inner(self)
+
+        return entry_compiled
 
     def build_compiled_instance_func(
         self,
@@ -408,9 +410,8 @@ class DFContainer:
             self.locals.pop(place.id, None)
         # Same for tuples.
         elif isinstance(place.ty, TupleType) and not is_return:
-            unpack = self.builder.add_op(
-                ops.UnpackTuple([ty.to_hugr() for ty in place.ty.element_types]), port
-            )
+            hugr_elem_tys = [ty.to_hugr(self.ctx) for ty in place.ty.element_types]
+            unpack = self.builder.add_op(ops.UnpackTuple(hugr_elem_tys), port)
             for idx, (elem, elem_port) in enumerate(
                 zip(place.ty.element_types, unpack, strict=True)
             ):

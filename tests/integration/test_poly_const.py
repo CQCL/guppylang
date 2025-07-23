@@ -46,7 +46,7 @@ def test_bool(validate, run_int_fn):
     # Check we have main, and 2 monomorphizations of foo (Dummy constructor is inlined)
     assert len(funcs_defs(compiled.module)) == 3
 
-    run_int_fn(compiled, 101)
+    run_int_fn(main, 101)
 
 
 @pytest.mark.xfail(reason="https://github.com/CQCL/guppylang/issues/1030")
@@ -114,7 +114,7 @@ def test_float(validate, run_float_fn_approx):
     # Check we have main, and 3 monomorphizations of foo (Dummy constructor is inlined)
     assert len(funcs_defs(compiled.module)) == 4
 
-    run_float_fn_approx(compiled, 10.5)
+    run_float_fn_approx(main, 10.5)
 
 
 @pytest.mark.xfail(reason="https://github.com/CQCL/guppylang/issues/1030")
@@ -191,7 +191,7 @@ def test_chain(validate, run_int_fn):
     # Check we have main, and 4 monomorphizations (a, b, c, d)
     assert len(funcs_defs(compiled.module)) == 5
 
-    run_int_fn(compiled, 1)
+    run_int_fn(main, 1)
 
 
 def test_recursion(validate):

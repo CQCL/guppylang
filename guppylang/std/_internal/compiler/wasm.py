@@ -85,7 +85,7 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         wasm_sig = FunctionType(
             self.func.ty.inputs[1:],
             self.func.ty.output,
-        ).to_hugr()
+        ).to_hugr(self.ctx)
 
         inputs_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.input])
         output_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.output])
