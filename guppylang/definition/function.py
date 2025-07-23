@@ -138,14 +138,16 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
 
     cfg: CheckedCFG[Place]
 
-    def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledFunctionDef":
+    def compile_outer(
+        self, module: DefinitionBuilder[OpVar], ctx: CompilerContext
+    ) -> "CompiledFunctionDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr.
 
         Note that we don't compile the function body at this point since we don't have
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        func_type = self.ty.to_hugr_poly()
+        func_type = self.ty.to_hugr_poly(ctx)
         func_def = module.define_function(
             self.name, func_type.body.input, func_type.body.output, func_type.params
         )
@@ -210,8 +212,8 @@ def load_with_args(
     func: ToNode,
 ) -> Wire:
     """Loads the function as a value into a local Hugr dataflow graph."""
-    func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr()
-    type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+    func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
+    type_args: list[ht.TypeArg] = [arg.to_hugr(dfg.ctx) for arg in type_args]
     return dfg.builder.load_function(func, func_ty, type_args)
 
 
@@ -223,8 +225,8 @@ def compile_call(
     func: ToNode,
 ) -> CallReturnWires:
     """Compiles a call to the function."""
-    func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr()
-    type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+    func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
+    type_args: list[ht.TypeArg] = [arg.to_hugr(dfg.ctx) for arg in type_args]
     num_returns = len(type_to_row(ty.output))
     call = dfg.builder.call(func, *args, instantiation=func_ty, type_args=type_args)
     return CallReturnWires(

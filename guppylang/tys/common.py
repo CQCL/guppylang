@@ -1,14 +1,22 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
 T = TypeVar("T")
+
+
+class ToHugrContext(Protocol):
+    """Protocol for the context capabilities required to translate Guppy types into Hugr
+    types.
+
+    This is empty for now, but will soon be used for partial monomorphization.
+    """
 
 
 class ToHugr(ABC, Generic[T]):
     """Abstract base class for objects that have a Hugr representation."""
 
     @abstractmethod
-    def to_hugr(self) -> T:
+    def to_hugr(self, ctx: ToHugrContext) -> T:
         """Computes the Hugr representation of the object."""
 
 
