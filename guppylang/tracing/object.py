@@ -547,7 +547,7 @@ class GuppyDefinition(DunderMixin):
 
     def to_guppy_object(self) -> GuppyObject:
         state = get_tracing_state()
-        defn = state.ctx.build_compiled_def(self.id, type_args=None)
+        defn, [] = state.ctx.build_compiled_def(self.id, type_args=[])
         if isinstance(defn, CompiledValueDef):
             wire = defn.load(state.dfg, state.ctx, state.node)
             return GuppyObject(defn.ty, wire, None)

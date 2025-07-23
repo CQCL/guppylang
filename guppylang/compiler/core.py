@@ -4,7 +4,7 @@ from collections import defaultdict
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import tket2_exts
 from hugr import Hugr, Node, Wire, ops
@@ -156,17 +156,9 @@ class CompilerContext(ToHugrContext):
         yield
         self.current_mono_args = old
 
-    @overload
     def build_compiled_def(
         self, def_id: DefId, type_args: Inst
-    ) -> tuple[CompiledDef, Inst]: ...
-
-    @overload
-    def build_compiled_def(self, def_id: DefId, type_args: None) -> CompiledDef: ...
-
-    def build_compiled_def(
-        self, def_id: DefId, type_args: Inst | None
-    ) -> CompiledDef | tuple[CompiledDef, Inst]:
+    ) -> tuple[CompiledDef, Inst]:
         """Returns the compiled definitions corresponding to the given ID.
 
         Might mutate the current Hugr if this definition has never been compiled before.
@@ -178,34 +170,30 @@ class CompilerContext(ToHugrContext):
         #  nested functions).
         #  See https://github.com/CQCL/guppylang/issues/1032
         if (def_id, ()) in self.compiled:
-            if type_args is None:
-                return self.compiled[def_id, ()]
             assert type_args == []
             return self.compiled[def_id, ()], type_args
 
+        mono_args: PartiallyMonomorphizedArgs | None = None
         compile_outer: Callable[[], CompiledDef]
         match ENGINE.get_checked(def_id):
             case MonomorphizableDef(params=params) as monomorphizable:
-                assert type_args is not None
-                mono_args, rest = partially_monomorphize_args(params, type_args, self)
-                if (def_id, mono_args) not in self.compiled:
-                    self.compiled[def_id, mono_args] = monomorphizable.monomorphize(
-                        self.module, mono_args, self
-                    )
-                    self.worklist[def_id, mono_args] = None
-                return (self.compiled[def_id, mono_args], rest)
+                mono_args, type_args = partially_monomorphize_args(
+                    params, type_args, self
+                )
+                compile_outer = lambda: monomorphizable.monomorphize(  # noqa: E731 (assign-lambda)
+                    self.module, mono_args, self
+                )
             case CompilableDef() as compilable:
                 compile_outer = lambda: compilable.compile_outer(self.module, self)  # noqa: E731
             case CompiledDef() as compiled_defn:
                 compile_outer = lambda: compiled_defn  # noqa: E731
             case defn:
                 compile_outer = assert_never(defn)
-        if (def_id, None) not in self.compiled:
-            self.compiled[def_id, None] = compile_outer()
-            self.worklist[def_id, None] = None
-        if type_args is None:
-            return self.compiled[def_id, None]
-        return self.compiled[def_id, None], type_args
+        # type_args are now those remaining after monomorphization
+        if (def_id, mono_args) not in self.compiled:
+            self.compiled[def_id, mono_args] = compile_outer()
+            self.worklist[def_id, mono_args] = None
+        return self.compiled[def_id, mono_args], type_args
 
     def compile(self, defn: CheckedDef) -> None:
         """Compiles the given definition and all of its dependencies into the current
