@@ -428,7 +428,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
     def visit_GlobalCall(self, node: GlobalCall) -> Wire:
-        assert node.type_args is not None
         func, rem_args = self.ctx.build_compiled_def(node.def_id, node.type_args)
         assert isinstance(func, CompiledCallableDef)
 

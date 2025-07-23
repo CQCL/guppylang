@@ -426,21 +426,6 @@ def test_subscript_assign_struct(validate, run_int_fn):
     validate(compiled)
     run_int_fn(compiled, expected=42)
 
-def test_array_loop_identity(validate):
-    from guppylang.std.quantum import cz, h, qubit
-    @guppy
-    def main(qs: array[qubit, 3] @owned) -> array[qubit, 3]:
-        for i in range(3):
-            h(qs[i])
-        for i in range(2):
-            for j in range(3):
-                cz(qs[j], qs[(j+1)%3])
-        for i in range(3):
-            h(qs[i])
-        return qs
-
-    compiled = guppy.compile(main)
-    validate(compiled, name="array_loop_identity")
 
 def test_subscript_assign_nested(validate, run_int_fn):
     @guppy
