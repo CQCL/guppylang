@@ -246,8 +246,8 @@ def compile_call(
 ) -> CallReturnWires:
     """Compiles a call to the function."""
     func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
+    type_args = [arg.to_hugr(dfg.ctx) for arg in type_args]
     num_returns = len(type_to_row(ty.output))
-    type_args = [ta.to_hugr(dfg.ctx) for ta in type_args]
     call = dfg.builder.call(func, *args, instantiation=func_ty, type_args=type_args)
     return CallReturnWires(
         regular_returns=list(call[:num_returns]),

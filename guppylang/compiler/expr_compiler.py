@@ -52,15 +52,20 @@ from guppylang.nodes import (
     PartialApply,
     PlaceNode,
     ResultExpr,
+    StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
     TypeApply,
 )
 from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
 from guppylang.std._internal.compiler.array import (
+    array_convert_from_std_array,
     array_convert_to_std_array,
     array_map,
+    array_new,
     array_repeat,
+    standard_array_type,
+    unpack_array,
 )
 from guppylang.std._internal.compiler.list import (
     list_new,
@@ -74,11 +79,13 @@ from guppylang.std._internal.compiler.prelude import (
 from guppylang.std._internal.compiler.tket2_bool import (
     OpaqueBool,
     OpaqueBoolVal,
+    make_opaque,
     not_op,
     read_bool,
 )
 from guppylang.tys.arg import ConstArg
 from guppylang.tys.builtin import (
+    array_type,
     bool_type,
     get_element_type,
     int_type,
@@ -535,44 +542,47 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             # The only other valid base type is bool
             assert is_bool_type(node.base_ty)
             base_name = "bool"
+        # Handle array results separately.
         if node.array_len is not None:
             op_name = f"result_array_{base_name}"
             size_arg = node.array_len.to_arg().to_hugr(self.ctx)
             extra_args = [size_arg, *extra_args]
-            # Remove the option wrapping in the array
-            unwrap = array_unwrap_elem(self.ctx)
-            unwrap = self.builder.load_function(
-                unwrap,
-                instantiation=ht.FunctionType([ht.Option(base_ty)], [base_ty]),
-                type_args=[ht.TypeTypeArg(base_ty)],
+            is_bool = is_bool_type(node.base_ty)
+            op_base_ty = ht.Bool if is_bool else base_ty
+            hugr_ty: ht.Type = hugr.std.collections.array.Array(op_base_ty, size_arg)
+            op = tket2_result_op(
+                op_name=op_name,
+                typ=hugr_ty,
+                tag=node.tag,
+                extra_args=extra_args,
+                return_input=True,
             )
-            map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
-            value_wire = self.builder.add_op(map_op, value_wire, unwrap)
-            if is_bool_type(node.base_ty):
-                # We need to coerce a read on all the array elements if they are bools.
-                array_read = array_read_bool(self.ctx)
-                array_read = self.builder.load_function(array_read)
-                map_op = array_map(OpaqueBool, size_arg, ht.Bool)
-                value_wire = self.builder.add_op(map_op, value_wire, array_read)
-                base_ty = ht.Bool
-            # Turn `value_array` into regular linear `array`
-            value_wire = self.builder.add_op(
-                array_convert_to_std_array(base_ty, size_arg), value_wire
+            arr_wire = apply_array_op_with_conversions(
+                self.ctx, self.builder, op, base_ty, size_arg, value_wire, is_bool
             )
-            hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
+            # Update the inout ports for the array result.
+            func_ty = FunctionType(
+                [
+                    FuncInput(
+                        array_type(node.base_ty, node.array_len), InputFlags.Inout
+                    ),
+                ],
+                NoneType(),
+            )
+            self._update_inout_ports(node.args, iter([arr_wire]), func_ty)
         else:
             if is_bool_type(node.base_ty):
                 base_ty = ht.Bool
                 value_wire = self.builder.add_op(read_bool(), value_wire)
             op_name = f"result_{base_name}"
             hugr_ty = base_ty
-        op = tket2_result_op(
-            op_name=op_name,
-            typ=hugr_ty,
-            tag=node.tag,
-            extra_args=extra_args,
-        )
-        self.builder.add_op(op, value_wire)
+            op = tket2_result_op(
+                op_name=op_name,
+                typ=hugr_ty,
+                tag=node.tag,
+                extra_args=extra_args,
+            )
+            self.builder.add_op(op, value_wire)
         return self._pack_returns([], NoneType())
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
@@ -598,6 +608,51 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         barrier_n = self.builder.add_op(op, *(self.visit(e) for e in node.args))
 
         self._update_inout_ports(node.args, iter(barrier_n), node.func_ty)
+        return self._pack_returns([], NoneType())
+
+    def visit_StateResultExpr(self, node: StateResultExpr) -> Wire:
+        num_qubits_arg = (
+            node.array_len.to_arg().to_hugr(self.ctx)
+            if node.array_len
+            else ht.BoundedNatArg(len(node.args) - 1)
+        )
+        args = [ht.StringArg(node.tag), num_qubits_arg]
+        sig = ht.FunctionType(
+            [standard_array_type(ht.Qubit, num_qubits_arg)],
+            [standard_array_type(ht.Qubit, num_qubits_arg)],
+        )
+        op = ops.Custom(
+            op_name="StateResult", signature=sig, args=args, extension="tket2.debug"
+        )
+
+        if not node.array_len:
+            # If the input is a sequence of qubits, we pack them into an array.
+            qubits_in = [self.visit(e) for e in node.args[1:]]
+            qubit_arr_in = self.builder.add_op(
+                array_new(ht.Qubit, len(node.args) - 1), *qubits_in
+            )
+            # Turn into standard array from value array.
+            qubit_arr_in = self.builder.add_op(
+                array_convert_to_std_array(ht.Qubit, num_qubits_arg), qubit_arr_in
+            )
+
+            qubit_arr_out = self.builder.add_op(op, qubit_arr_in)
+
+            qubit_arr_out = self.builder.add_op(
+                array_convert_from_std_array(ht.Qubit, num_qubits_arg), qubit_arr_out
+            )
+            qubits_out = unpack_array(self.builder, qubit_arr_out)
+        else:
+            # If the input is an array of qubits, we need to unwrap the elements first,
+            # and then convert to a value array and back.
+            qubits_in = [self.visit(node.args[1])]
+            qubits_out = [
+                apply_array_op_with_conversions(
+                    self.ctx, self.builder, op, ht.Qubit, num_qubits_arg, qubits_in[0]
+                )
+            ]
+
+        self._update_inout_ports(node.args, iter(qubits_out), node.func_ty)
         return self._pack_returns([], NoneType())
 
     def visit_DesugaredListComp(self, node: DesugaredListComp) -> Wire:
@@ -772,15 +827,17 @@ def tket2_result_op(
     typ: ht.Type,
     tag: str,
     extra_args: Iterable[ht.TypeArg],
+    return_input: bool = False,
 ) -> ops.DataflowOp:
-    """Creates a dummy operation for constructing a list."""
+    """Creates a tket2.result op."""
     args = [
         ht.StringArg(tag),
         *extra_args,
     ]
+    output = [typ] if return_input else []
     sig = ht.FunctionType(
         input=[typ],
-        output=[],
+        output=output,
     )
     return ops.Custom(
         extension="tket2.result",
@@ -793,9 +850,14 @@ def tket2_result_op(
 ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(
     "array.__comprehension.init"
 )
+
 ARRAY_UNWRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__unwrap_elem")
+ARRAY_WRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__wrap_elem")
 
 ARRAY_READ_BOOL: Final[GlobalConstId] = GlobalConstId.fresh("array.__read_bool")
+ARRAY_MAKE_OPAQUE_BOOL: Final[GlobalConstId] = GlobalConstId.fresh(
+    "array.__make_opaque_bool"
+)
 
 
 def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
@@ -832,6 +894,20 @@ def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
     return func
 
 
+def array_wrap_elem(ctx: CompilerContext) -> hf.Function:
+    """Returns the Hugr function that is used to wrap the elements in an regular array
+    to turn it into a option array."""
+    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Any))
+    sig = ht.PolyFuncType(
+        params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+        body=ht.FunctionType([v], [ht.Option(v)]),
+    )
+    func, already_defined = ctx.declare_global_func(ARRAY_WRAP_ELEM, sig)
+    if not already_defined:
+        func.set_outputs(func.add_op(ops.Tag(1, ht.Option(v)), func.inputs()[0]))
+    return func
+
+
 def array_read_bool(ctx: CompilerContext) -> hf.Function:
     """Returns the Hugr function that is used to unwrap the elements in an option array
     to turn it into a regular array."""
@@ -845,9 +921,83 @@ def array_read_bool(ctx: CompilerContext) -> hf.Function:
     return func
 
 
+def array_make_opaque_bool(ctx: CompilerContext) -> hf.Function:
+    """Returns the Hugr function that is used to unwrap the elements in an option array
+    to turn it into a regular array."""
+    sig = ht.PolyFuncType(
+        params=[],
+        body=ht.FunctionType([ht.Bool], [OpaqueBool]),
+    )
+    func, already_defined = ctx.declare_global_func(ARRAY_MAKE_OPAQUE_BOOL, sig)
+    if not already_defined:
+        func.set_outputs(func.add_op(make_opaque(), func.inputs()[0]))
+    return func
+
+
 T = TypeVar("T")
 
 
 def doesnt_contain_none(xs: list[T | None]) -> TypeGuard[list[T]]:
     """Checks if a list contains `None`."""
     return all(x is not None for x in xs)
+
+
+def apply_array_op_with_conversions(
+    ctx: CompilerContext,
+    builder: DfBase[ops.DfParentOp],
+    op: ops.DataflowOp,
+    elem_ty: ht.Type,
+    size_arg: ht.TypeArg,
+    input_array: Wire,
+    convert_bool: bool = False,
+) -> Wire:
+    """Applies common transformations to a Guppy array input before it can be passed to
+    a Hugr op operating on a standard Hugr array, and then reverses them again on the
+    output array.
+
+    Transformations:
+    1. Unwraps / wraps elements in options.
+    3. (Optional) Converts from / to opaque bool to / from Hugr bool.
+    2. Converts from / to value array to / from standard Hugr array.
+    """
+    unwrap = array_unwrap_elem(ctx)
+    unwrap = builder.load_function(
+        unwrap,
+        instantiation=ht.FunctionType([ht.Option(elem_ty)], [elem_ty]),
+        type_args=[ht.TypeTypeArg(elem_ty)],
+    )
+    map_op = array_map(ht.Option(elem_ty), size_arg, elem_ty)
+    unwrapped_array = builder.add_op(map_op, input_array, unwrap)
+
+    if convert_bool:
+        array_read = array_read_bool(ctx)
+        array_read = builder.load_function(array_read)
+        map_op = array_map(OpaqueBool, size_arg, ht.Bool)
+        unwrapped_array = builder.add_op(map_op, unwrapped_array, array_read)
+        elem_ty = ht.Bool
+
+    unwrapped_array = builder.add_op(
+        array_convert_to_std_array(elem_ty, size_arg), unwrapped_array
+    )
+
+    result_array = builder.add_op(op, unwrapped_array)
+
+    result_array = builder.add_op(
+        array_convert_from_std_array(elem_ty, size_arg), result_array
+    )
+
+    if convert_bool:
+        array_make_opaque = array_make_opaque_bool(ctx)
+        array_make_opaque = builder.load_function(array_make_opaque)
+        map_op = array_map(ht.Bool, size_arg, OpaqueBool)
+        result_array = builder.add_op(map_op, result_array, array_make_opaque)
+        elem_ty = OpaqueBool
+
+    wrap = array_wrap_elem(ctx)
+    wrap = builder.load_function(
+        wrap,
+        instantiation=ht.FunctionType([elem_ty], [ht.Option(elem_ty)]),
+        type_args=[ht.TypeTypeArg(elem_ty)],
+    )
+    map_op = array_map(elem_ty, size_arg, ht.Option(elem_ty))
+    return builder.add_op(map_op, result_array, wrap)

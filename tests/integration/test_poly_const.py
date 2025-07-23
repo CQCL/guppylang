@@ -108,7 +108,6 @@ def test_float(validate, run_float_fn_approx):
             + foo[1.5](Dummy())
         )
 
-    # TODO: Validate once Hugr lowering is implemented:
     compiled = guppy.compile(main)
     validate(compiled)
 

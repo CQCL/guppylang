@@ -279,7 +279,7 @@ def parse_function_io_types(
             #    def foo(xs: array[int, n], n: nat @comptime)
             #
             # TODO: In principle we could lift this restriction by tracking multiple
-            #  params refering to the same name in `param_var_mapping`, but not sure if
+            #  params referring to the same name in `param_var_mapping`, but not sure if
             #  this would be worth it...
             if name in param_var_mapping:
                 raise GuppyError(ComptimeArgShadowError(inp, name))
