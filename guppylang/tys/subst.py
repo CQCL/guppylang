@@ -13,7 +13,7 @@ from guppylang.tys.ty import (
     Type,
     TypeBase,
 )
-from guppylang.tys.var import ExistentialVar, BoundVar
+from guppylang.tys.var import BoundVar, ExistentialVar
 
 Subst = dict[ExistentialVar, Type | Const]
 Inst = Sequence[Argument]
