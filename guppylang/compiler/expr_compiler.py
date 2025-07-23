@@ -262,7 +262,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             raise GuppyError(err)
 
-        defn = self.ctx.build_compiled_def(node.def_id, type_args=[])
+        defn, [] = self.ctx.build_compiled_def(node.def_id, type_args=[])
         assert isinstance(defn, CompiledValueDef)
         return defn.load(self.dfg, self.ctx, node)
 
@@ -428,7 +428,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
     def visit_GlobalCall(self, node: GlobalCall) -> Wire:
-        func = self.ctx.build_compiled_def(node.def_id, node.type_args)
+        assert node.type_args is not None
+        func, rem_args = self.ctx.build_compiled_def(node.def_id, node.type_args)
         assert isinstance(func, CompiledCallableDef)
 
         if isinstance(func, CustomFunctionDef) and not func.has_signature:
@@ -437,10 +438,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 get_type(node),
             )
         else:
-            func_ty = func.ty.instantiate(node.type_args)
+            func_ty = func.ty.instantiate(rem_args)  # node.type_args)
 
         args = self._compile_call_args(node.args, func_ty)
-        rets = func.compile_call(args, list(node.type_args), self.dfg, self.ctx, node)
+        rets = func.compile_call(args, rem_args, self.dfg, self.ctx, node)
         self._update_inout_ports(node.args, iter(rets.inout_returns), func_ty)
         return self._pack_returns(rets.regular_returns, func_ty.output)
 
@@ -477,7 +478,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # For now, we can only TypeApply global FunctionDefs/Decls.
         if not isinstance(node.value, GlobalName):
             raise InternalGuppyError("Dynamic TypeApply not supported yet!")
-        defn = self.ctx.build_compiled_def(node.value.def_id, node.inst)
+        defn, rem_args = self.ctx.build_compiled_def(node.value.def_id, node.inst)
         assert isinstance(defn, CompiledCallableDef)
 
         # We have to be very careful here: If we instantiate `foo: forall T. T -> T`
@@ -493,7 +494,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             raise GuppyError(err)
 
-        return defn.load_with_args(node.inst, self.dfg, self.ctx, node)
+        return defn.load_with_args(rem_args, self.dfg, self.ctx, node)
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> Wire:
         # The only case that is not desugared by the type checker is the `not` operation
@@ -652,9 +653,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
     def _build_method_call(
         self, ty: Type, method: str, node: AstNode, args: list[Wire], type_args: Inst
     ) -> CallReturnWires:
-        func = self.ctx.get_instance_func(ty, method, type_args)
-        assert func is not None
-        return func.compile_call(args, type_args, self.dfg, self.ctx, node)
+        func_and_targs = self.ctx.get_instance_func(ty, method, type_args)
+        assert func_and_targs is not None
+        (func, rem_args) = func_and_targs
+        return func.compile_call(args, rem_args, self.dfg, self.ctx, node)
 
     @contextmanager
     def _build_generators(

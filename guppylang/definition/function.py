@@ -24,7 +24,6 @@ from guppylang.compiler.core import (
     CompilerContext,
     DFContainer,
     PartiallyMonomorphizedArgs,
-    compile_non_monomorphized_args,
 )
 from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import (
@@ -165,16 +164,17 @@ class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        mono_ty = self.ty.instantiate_partial(mono_args).to_hugr_poly(ctx)
+        mono_ty = self.ty.instantiate_partial(mono_args)
+        hugr_ty = mono_ty.to_hugr_poly(ctx)
         func_def = module.define_function(
-            self.name, mono_ty.body.input, mono_ty.body.output, mono_ty.params
+            self.name, hugr_ty.body.input, hugr_ty.body.output, hugr_ty.params
         )
         return CompiledFunctionDef(
             self.id,
             self.name,
             self.defined_at,
             mono_args,
-            self.ty,
+            mono_ty,
             self.docstring,
             self.cfg,
             func_def,
@@ -207,7 +207,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef, Monomorphized
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        return load_with_args(type_args, dfg, self.ty, self.func_def, self.mono_args)
+        return load_with_args(type_args, dfg, self.ty, self.func_def)
 
     def compile_call(
         self,
@@ -218,9 +218,7 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef, Monomorphized
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
-        return compile_call(
-            args, type_args, dfg, self.ty, self.func_def, self.mono_args
-        )
+        return compile_call(args, type_args, dfg, self.ty, self.func_def)
 
     def compile_inner(self, globals: CompilerContext) -> None:
         """Compiles the body of the function."""
@@ -232,26 +230,24 @@ def load_with_args(
     dfg: DFContainer,
     ty: FunctionType,
     func: ToNode,
-    mono_args: PartiallyMonomorphizedArgs | None = None,
 ) -> Wire:
     """Loads the function as a value into a local Hugr dataflow graph."""
     func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
-    type_args = compile_non_monomorphized_args(type_args, mono_args, dfg.ctx)
+    type_args = [ta.to_hugr(dfg.ctx) for ta in type_args]
     return dfg.builder.load_function(func, func_ty, type_args)
 
 
 def compile_call(
     args: list[Wire],
-    type_args: Inst,
+    type_args: Inst,  # Non-monomorphized type args only
     dfg: DFContainer,
     ty: FunctionType,
     func: ToNode,
-    mono_args: PartiallyMonomorphizedArgs | None = None,
 ) -> CallReturnWires:
     """Compiles a call to the function."""
     func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
-    type_args = compile_non_monomorphized_args(type_args, mono_args, dfg.ctx)
     num_returns = len(type_to_row(ty.output))
+    type_args = [ta.to_hugr(dfg.ctx) for ta in type_args]
     call = dfg.builder.call(func, *args, instantiation=func_ty, type_args=type_args)
     return CallReturnWires(
         regular_returns=list(call[:num_returns]),

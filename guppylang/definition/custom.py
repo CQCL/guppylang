@@ -16,7 +16,6 @@ from guppylang.compiler.core import (
     CompilerContext,
     DFContainer,
     GlobalConstId,
-    compile_non_monomorphized_args,
     partially_monomorphize_args,
 )
 from guppylang.definition.common import ParsableDef
@@ -236,7 +235,9 @@ class CustomFunctionDef(CompiledCallableDef):
         assert len(self.ty.params) == len(type_args)
 
         # Partially monomorphize the function if required
-        mono_args = partially_monomorphize_args(self.ty.params, type_args, ctx)
+        mono_args, rem_args = partially_monomorphize_args(
+            self.ty.params, type_args, ctx
+        )
 
         # We create a generic `FunctionDef` that takes some inputs, compiles a call to
         # the function, and returns the results
@@ -255,7 +256,7 @@ class CustomFunctionDef(CompiledCallableDef):
 
         # Finally, load the function into the local DFG
         mono_ty = self.ty.instantiate(type_args).to_hugr(ctx)
-        hugr_ty_args = compile_non_monomorphized_args(type_args, mono_args, ctx)
+        hugr_ty_args = [ta.to_hugr(ctx) for ta in rem_args]
         return dfg.builder.load_function(func, mono_ty, hugr_ty_args)
 
     def compile_call(
