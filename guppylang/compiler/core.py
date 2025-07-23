@@ -305,7 +305,7 @@ class CompilerContext(ToHugrContext):
         if var.ty != nat_type():
             raise InternalGuppyError(
                 "Tried to convert non-nat const type argument to Hugr. This should "
-                "have been erased."
+                "have been monomprhized away."
             )
         param = ht.BoundedNatParam(upper_bound=None)
 

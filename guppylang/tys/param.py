@@ -218,7 +218,7 @@ class ConstParam(ParameterBase):
             case _:
                 raise InternalGuppyError(
                     "Tried to convert non-nat const type parameter to Hugr. This "
-                    "should have been erased."
+                    "should have been monomorphized away."
                 )
 
     def __str__(self) -> str:

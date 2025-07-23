@@ -92,7 +92,7 @@ class ConstArg(ArgumentBase):
             case ConstValue():
                 raise InternalGuppyError(
                     "Tried to convert non-nat const type argument to Hugr. This should "
-                    "have been erased."
+                    "have been monomorphized away."
                 )
             case ExistentialConstVar():
                 raise InternalGuppyError(
