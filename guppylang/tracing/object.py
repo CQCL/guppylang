@@ -5,7 +5,7 @@ from collections.abc import Callable, Iterator, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, ClassVar, NamedTuple, TypeAlias, TypeVar
+from typing import Any, ClassVar, NamedTuple, TypeAlias
 
 from hugr import Wire
 
@@ -348,7 +348,7 @@ class GuppyObject(DunderMixin):
             raise GuppyComptimeError(
                 f"Expression of type `{self._ty}` has no attribute `{key}`"
             )
-        return lambda *xs: GuppyDefinition(func)(self, *xs)
+        return lambda *xs: TracingDefMixin(func)(self, *xs)
 
     @hide_trace
     def __bool__(self) -> Any:
@@ -462,7 +462,7 @@ class GuppyStructObject(DunderMixin):
         if func is None:
             err = f"Expression of type `{self._ty}` has no attribute `{key}`"
             raise AttributeError(err)
-        return lambda *xs: GuppyDefinition(func)(self, *xs)
+        return lambda *xs: TracingDefMixin(func)(self, *xs)
 
     @hide_trace
     def __setattr__(self, key: str, value: Any) -> None:
@@ -486,13 +486,8 @@ class GuppyStructObject(DunderMixin):
 
 
 @dataclass(frozen=True)
-class GuppyDefinition(DunderMixin):
-    """A top-level Guppy definition.
-
-    This is the object that is returned to the users when they decorate a function or
-    class. In particular, this is the version of the definition that is available during
-    tracing.
-    """
+class TracingDefMixin(DunderMixin):
+    """Mixin to provide tracing semantics for definitions."""
 
     wrapped: Definition
 
@@ -519,7 +514,7 @@ class GuppyDefinition(DunderMixin):
             and "__new__" in DEF_STORE.impls[defn.id]
         ):
             constructor = DEF_STORE.raw_defs[DEF_STORE.impls[defn.id]["__new__"]]
-            return GuppyDefinition(constructor)(*args)
+            return TracingDefMixin(constructor)(*args)
         err = f"{defn.description.capitalize()} `{defn.name}` is not callable"
         raise GuppyComptimeError(err)
 
@@ -554,38 +549,6 @@ class GuppyDefinition(DunderMixin):
         elif isinstance(defn, TypeDef):
             if defn.id in DEF_STORE.impls and "__new__" in DEF_STORE.impls[defn.id]:
                 constructor = DEF_STORE.raw_defs[DEF_STORE.impls[defn.id]["__new__"]]
-                return GuppyDefinition(constructor).to_guppy_object()
+                return TracingDefMixin(constructor).to_guppy_object()
         err = f"{defn.description.capitalize()} `{defn.name}` is not a value"
         raise GuppyComptimeError(err)
-
-    def compile(self) -> Any:
-        from guppylang.engine import ENGINE
-
-        return ENGINE.compile(self.id)
-
-
-@dataclass(frozen=True)
-class TypeVarGuppyDefinition(GuppyDefinition):
-    """A `GuppyDefinition` subclass that answers 'yes' to an instance check on
-    `typing.TypeVar`.
-
-    This is the object returned by `guppy.type_var`. The `TypeVar` hack is needed since
-    `typing.Generic[T]` has a runtime check that enforces that the passed `T` is
-    actually a `TypeVar`.
-    """
-
-    __class__: ClassVar[type] = TypeVar
-
-    _ty_var: TypeVar
-
-    def __eq__(self, other: object) -> bool:
-        # We need to compare as equal to an equivalent regular type var
-        if isinstance(other, TypeVar):
-            return self._ty_var == other
-        return object.__eq__(self, other)
-
-    def __getattr__(self, name: str) -> Any:
-        # Pretend to be a `TypeVar` by providing all of its attributes
-        if hasattr(self._ty_var, name):
-            return getattr(self._ty_var, name)
-        return object.__getattribute__(self, name)

@@ -22,7 +22,12 @@ from guppylang.definition.function import (
     load_with_args,
     parse_py_func,
 )
-from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
+from guppylang.definition.value import (
+    CallableDef,
+    CallReturnWires,
+    CompiledCallableDef,
+    CompiledHugrNodeDef,
+)
 from guppylang.diagnostic import Error
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
@@ -130,10 +135,17 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
 
 
 @dataclass(frozen=True)
-class CompiledFunctionDecl(CheckedFunctionDecl, CompiledCallableDef):
+class CompiledFunctionDecl(
+    CheckedFunctionDecl, CompiledCallableDef, CompiledHugrNodeDef
+):
     """A function declaration with a corresponding Hugr node."""
 
     declaration: Node
+
+    @property
+    def hugr_node(self) -> Node:
+        """The Hugr node this definition was compiled into."""
+        return self.declaration
 
     def load_with_args(
         self,
