@@ -45,7 +45,7 @@ def compile_cfg(
 
     # Explicitly annotate the output types since Hugr can't infer them if the exit is
     # unreachable
-    out_tys = [place.ty.to_hugr() for place in cfg.exit_bb.sig.input_row]
+    out_tys = [place.ty.to_hugr(ctx) for place in cfg.exit_bb.sig.input_row]
     # TODO: Use proper API for this once it's added in hugr-py:
     #  https://github.com/CQCL/hugr/issues/1816
     builder._exit_op._cfg_outputs = out_tys
@@ -90,10 +90,10 @@ def compile_bb(
         block = builder.add_entry()
     else:
         inputs = sort_vars(bb.sig.input_row)
-        block = builder.add_block(*(v.ty.to_hugr() for v in inputs))
+        block = builder.add_block(*(v.ty.to_hugr(ctx) for v in inputs))
 
     # Add input node and compile the statements
-    dfg = DFContainer(block)
+    dfg = DFContainer(block, ctx)
     for v, wire in zip(inputs, block.input_node, strict=True):
         dfg[v] = wire
     dfg = StmtCompiler(ctx).compile_stmts(bb.statements, dfg)
@@ -190,7 +190,7 @@ def choose_vars_for_tuple_sum(
     """
     assert all(v.ty.droppable for var_row in output_vars for v in var_row)
     tys = [[v.ty for v in var_row] for var_row in output_vars]
-    sum_type = SumType([row_to_type(row) for row in tys]).to_hugr()
+    sum_type = SumType([row_to_type(row) for row in tys]).to_hugr(dfg.ctx)
 
     # We pass all values into the conditional instead of relying on non-local edges.
     # This is because we can't handle them in lower parts of the stack yet :/

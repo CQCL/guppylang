@@ -36,17 +36,20 @@ def compile_local_func_def(
 
     # Pick an order for the captured variables
     captured = list(func.captured.values())
-    captured_types = [v.ty.to_hugr() for v, _ in captured]
+    captured_types = [v.ty.to_hugr(ctx) for v, _ in captured]
 
     # Whether the function calls itself recursively.
     recursive = func.name in func.cfg.live_before[func.cfg.entry_bb]
 
     # Prepend captured variables to the function arguments
-    func_ty = func.ty.to_hugr()
+    func_ty = func.ty.to_hugr(ctx)
     closure_ty = ht.FunctionType([*captured_types, *func_ty.input], func_ty.output)
     func_builder = dfg.builder.define_function(
         func.name, closure_ty.input, closure_ty.output
     )
+
+    # Nested functions are not generic, so no need to worry about monomorphization
+    mono_args = ()
 
     # If we have captured variables and the body contains a recursive occurrence of
     # the function itself, then we provide the partially applied function as a local
@@ -70,16 +73,17 @@ def compile_local_func_def(
         # Otherwise, we treat the function like a normal global variable
         from guppylang.definition.function import CompiledFunctionDef
 
-        ctx.compiled[func.def_id] = CompiledFunctionDef(
+        ctx.compiled[func.def_id, mono_args] = CompiledFunctionDef(
             func.def_id,
             func.name,
             func,
+            mono_args,
             func.ty,
             None,
             func.cfg,
             func_builder,
         )
-        ctx.worklist[func.def_id] = None  # will compile the CFG later
+        ctx.worklist[func.def_id, mono_args] = None  # will compile the CFG later
 
     # Finally, load the function into the local data-flow graph
     loaded = dfg.builder.load_function(func_builder, closure_ty)

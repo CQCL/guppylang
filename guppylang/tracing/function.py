@@ -11,7 +11,7 @@ from guppylang.checker.core import ComptimeVariable, Context, Locals, Variable
 from guppylang.checker.errors.type_errors import TypeMismatchError
 from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.compiler.expr_compiler import ExprCompiler
-from guppylang.definition.value import CompiledCallableDef
+from guppylang.definition.value import CallableDef
 from guppylang.diagnostic import Error
 from guppylang.error import GuppyComptimeError, GuppyError, exception_hook
 from guppylang.nodes import PlaceNode
@@ -56,7 +56,7 @@ def trace_function(
     Invokes the passed Python callable and constructs the corresponding Hugr using the
     passed builder.
     """
-    state = TracingState(ctx, DFContainer(builder, {}), node)
+    state = TracingState(ctx, DFContainer(builder, ctx, {}), node)
     with set_tracing_state(state):
         inputs = [
             unpack_guppy_object(
@@ -75,7 +75,7 @@ def trace_function(
             py_out = python_func(*inputs)
 
         try:
-            out_obj = guppy_object_from_py(py_out, builder, node)
+            out_obj = guppy_object_from_py(py_out, builder, node, ctx)
         except GuppyComptimeError as err:
             # Error in the return statement. For example, this happens if users
             # try to return a struct with invalid field values or there is a linearity
@@ -109,7 +109,7 @@ def trace_function(
                     f"the caller. "
                 )
                 try:
-                    obj = guppy_object_from_py(inout_obj, builder, node)
+                    obj = guppy_object_from_py(inout_obj, builder, node, ctx)
                     inout_returns.append(obj._use_wire(None))
                 except GuppyComptimeError as err:
                     msg = str(err)
@@ -137,7 +137,7 @@ def trace_function(
 
 
 @capture_guppy_errors
-def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
+def trace_call(func: CallableDef, *args: Any) -> Any:
     """Handles calls to Guppy functions during tracing.
 
     Checks that the passed arguments match the signature of the function and also
@@ -147,7 +147,8 @@ def trace_call(func: CompiledCallableDef, *args: Any) -> Any:
 
     # Try to turn args into `GuppyObjects`
     args_objs = [
-        guppy_object_from_py(arg, state.dfg.builder, state.node) for arg in args
+        guppy_object_from_py(arg, state.dfg.builder, state.node, state.ctx)
+        for arg in args
     ]
 
     # Create dummy variables and bind the objects to them

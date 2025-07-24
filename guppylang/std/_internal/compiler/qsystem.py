@@ -18,7 +18,7 @@ class RandomIntCompiler(CustomInoutCallCompiler):
         [ctx] = args
         [rnd, ctx] = self.builder.add_op(
             external_op("RandomInt", [], ext=QSYSTEM_RANDOM_EXTENSION)(
-                ht.FunctionType([RNGCONTEXT_T], [int_t(5), RNGCONTEXT_T]), []
+                ht.FunctionType([RNGCONTEXT_T], [int_t(5), RNGCONTEXT_T]), [], self.ctx
             ),
             ctx,
         )
@@ -35,7 +35,9 @@ class RandomIntBoundedCompiler(CustomInoutCallCompiler):
         )
         [rnd, ctx] = self.builder.add_op(
             external_op("RandomIntBounded", [], ext=QSYSTEM_RANDOM_EXTENSION)(
-                ht.FunctionType([RNGCONTEXT_T, int_t(5)], [int_t(5), RNGCONTEXT_T]), []
+                ht.FunctionType([RNGCONTEXT_T, int_t(5)], [int_t(5), RNGCONTEXT_T]),
+                [],
+                self.ctx,
             ),
             ctx,
             bound,

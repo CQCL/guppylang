@@ -144,10 +144,12 @@ class ListGetitemCompiler(CustomCallCompiler):
         [elem_ty_arg] = self.type_args
         assert isinstance(elem_ty_arg, TypeArg)
         if elem_ty_arg.ty.linear:
-            return self.build_linear_getitem(list_wire, idx, elem_ty_arg.ty.to_hugr())
+            return self.build_linear_getitem(
+                list_wire, idx, elem_ty_arg.ty.to_hugr(self.ctx)
+            )
         else:
             return self.build_classical_getitem(
-                list_wire, idx, elem_ty_arg.ty.to_hugr()
+                list_wire, idx, elem_ty_arg.ty.to_hugr(self.ctx)
             )
 
     def compile(self, args: list[Wire]) -> list[Wire]:
@@ -201,11 +203,11 @@ class ListSetitemCompiler(CustomCallCompiler):
         assert isinstance(elem_ty_arg, TypeArg)
         if elem_ty_arg.ty.linear:
             return self.build_linear_setitem(
-                list_wire, idx, elem, elem_ty_arg.ty.to_hugr()
+                list_wire, idx, elem, elem_ty_arg.ty.to_hugr(self.ctx)
             )
         else:
             return self.build_classical_setitem(
-                list_wire, idx, elem, elem_ty_arg.ty.to_hugr()
+                list_wire, idx, elem, elem_ty_arg.ty.to_hugr(self.ctx)
             )
 
     def compile(self, args: list[Wire]) -> list[Wire]:
@@ -244,9 +246,9 @@ class ListPopCompiler(CustomCallCompiler):
         [elem_ty_arg] = self.type_args
         assert isinstance(elem_ty_arg, TypeArg)
         if elem_ty_arg.ty.linear:
-            return self.build_linear_pop(list_wire, elem_ty_arg.ty.to_hugr())
+            return self.build_linear_pop(list_wire, elem_ty_arg.ty.to_hugr(self.ctx))
         else:
-            return self.build_classical_pop(list_wire, elem_ty_arg.ty.to_hugr())
+            return self.build_classical_pop(list_wire, elem_ty_arg.ty.to_hugr(self.ctx))
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
@@ -283,9 +285,13 @@ class ListPushCompiler(CustomCallCompiler):
         [elem_ty_arg] = self.type_args
         assert isinstance(elem_ty_arg, TypeArg)
         if elem_ty_arg.ty.linear:
-            return self.build_linear_push(list_wire, elem, elem_ty_arg.ty.to_hugr())
+            return self.build_linear_push(
+                list_wire, elem, elem_ty_arg.ty.to_hugr(self.ctx)
+            )
         else:
-            return self.build_classical_push(list_wire, elem, elem_ty_arg.ty.to_hugr())
+            return self.build_classical_push(
+                list_wire, elem, elem_ty_arg.ty.to_hugr(self.ctx)
+            )
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         raise InternalGuppyError("Call compile_with_inouts instead")
@@ -298,7 +304,7 @@ class ListLengthCompiler(CustomCallCompiler):
         [list_wire] = args
         [elem_ty_arg] = self.type_args
         assert isinstance(elem_ty_arg, TypeArg)
-        elem_ty = elem_ty_arg.ty.to_hugr()
+        elem_ty = elem_ty_arg.ty.to_hugr(self.ctx)
         if elem_ty_arg.ty.linear:
             elem_ty = ht.Option(elem_ty)
         list_wire, length = self.builder.add_op(list_length(elem_ty), list_wire)
