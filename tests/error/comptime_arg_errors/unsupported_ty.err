@@ -1,8 +1,0 @@
-Error: Unsupported (at $FILE:6:17)
-  | 
-4 | 
-5 | @guppy
-6 | def main(n: int @comptime) -> None:
-  |                  ^^^^^^^^ `int` comptime arguments are not supported
-
-Guppy compilation failed due to 1 previous error

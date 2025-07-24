@@ -36,6 +36,7 @@ from guppylang.tys.errors import (
     NonLinearOwnedError,
 )
 from guppylang.tys.param import ConstParam, Parameter, TypeParam
+from guppylang.tys.subst import BoundVarFinder
 from guppylang.tys.ty import (
     FuncInput,
     FunctionType,
@@ -365,16 +366,15 @@ def type_with_flags_from_ast(
                 flags |= InputFlags.Comptime
                 if not ty.copyable or not ty.droppable:
                     raise GuppyError(LinearComptimeError(node.right, ty))
-
-                # TODO: For now we can only do `nat` comptime args since they lower to
-                #  Hugr bounded nats. Extend to arbitrary types via monomorphization.
-                #  See https://github.com/CQCL/guppylang/issues/1008
-                if (
-                    not isinstance(ty, NumericType)
-                    or not ty.kind == NumericType.Kind.Nat
-                ):
+                # For now, we don't allow comptime annotations on generic inputs
+                # TODO: In the future we might want to allow stuff like
+                #  `def foo[T: (Copy, Discard](x: T @comptime)`.
+                #   Also see the todo in `parse_parameter`.
+                var_finder = BoundVarFinder()
+                ty.visit(var_finder)
+                if var_finder.bound_vars:
                     raise GuppyError(
-                        UnsupportedError(node.right, f"`{ty}` comptime arguments")
+                        UnsupportedError(node.left, "Generic comptime arguments")
                     )
             case _:
                 raise GuppyError(InvalidFlagError(node.right))
