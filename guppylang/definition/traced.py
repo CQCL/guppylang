@@ -5,9 +5,8 @@ from typing import Any
 
 import hugr.build.function as hf
 import hugr.tys as ht
-from hugr import Wire
+from hugr import Node, Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
-from hugr.package import FuncDefnPointer
 
 from guppylang.ast_util import AstNode, with_loc
 from guppylang.checker.core import Context, Globals
@@ -25,7 +24,12 @@ from guppylang.definition.common import (
     ParsableDef,
 )
 from guppylang.definition.function import parse_py_func
-from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
+from guppylang.definition.value import (
+    CallableDef,
+    CallReturnWires,
+    CompiledCallableDef,
+    CompiledHugrNodeDef,
+)
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
@@ -48,11 +52,6 @@ class RawTracedFunctionDef(ParsableDef):
         if ty.parametrized:
             raise GuppyError(UnsupportedError(func_ast, "Generic comptime functions"))
         return TracedFunctionDef(self.id, self.name, func_ast, ty, self.python_func)
-
-    def compile(self) -> FuncDefnPointer:
-        from guppylang.decorator import guppy
-
-        return guppy.compile_function(self)
 
 
 @dataclass(frozen=True)
@@ -103,8 +102,15 @@ class TracedFunctionDef(RawTracedFunctionDef, CallableDef, CompilableDef):
 
 
 @dataclass(frozen=True)
-class CompiledTracedFunctionDef(TracedFunctionDef, CompiledCallableDef):
+class CompiledTracedFunctionDef(
+    TracedFunctionDef, CompiledCallableDef, CompiledHugrNodeDef
+):
     func_def: hf.Function
+
+    @property
+    def hugr_node(self) -> Node:
+        """The Hugr node this definition was compiled into."""
+        return self.func_def.parent_node
 
     def load_with_args(
         self,

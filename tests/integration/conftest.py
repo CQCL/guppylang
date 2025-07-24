@@ -7,7 +7,7 @@ from typing import Any
 
 from selene_hugr_qis_compiler import check_hugr
 
-from guppylang.tracing.object import GuppyDefinition
+from guppylang.defs import GuppyDefinition
 
 
 @pytest.fixture(scope="session")

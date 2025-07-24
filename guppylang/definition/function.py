@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 import hugr.build.function as hf
 import hugr.tys as ht
-from hugr import Wire
+from hugr import Node, Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.hugr.node_port import ToNode
 
@@ -33,7 +33,12 @@ from guppylang.definition.common import (
     ParsableDef,
     UnknownSourceError,
 )
-from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
+from guppylang.definition.value import (
+    CallableDef,
+    CallReturnWires,
+    CompiledCallableDef,
+    CompiledHugrNodeDef,
+)
 from guppylang.error import GuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.nodes import GlobalCall
@@ -182,7 +187,9 @@ class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
 
 
 @dataclass(frozen=True)
-class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef, MonomorphizedDef):
+class CompiledFunctionDef(
+    CheckedFunctionDef, CompiledCallableDef, MonomorphizedDef, CompiledHugrNodeDef
+):
     """A function definition with a corresponding Hugr node.
 
     Args:
@@ -198,6 +205,11 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef, Monomorphized
     """
 
     func_def: hf.Function
+
+    @property
+    def hugr_node(self) -> Node:
+        """The Hugr node this definition was compiled into."""
+        return self.func_def.parent_node
 
     def load_with_args(
         self,
