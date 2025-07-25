@@ -12,7 +12,7 @@ from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.errors.comptime_errors import (
     PytketSignatureMismatch,
-    Tket2NotInstalled,
+    TketNotInstalled,
 )
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import (
@@ -47,7 +47,7 @@ from guppylang.std._internal.compiler.array import (
     array_pop,
 )
 from guppylang.std._internal.compiler.prelude import build_unwrap
-from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, make_opaque
+from guppylang.std._internal.compiler.tket_bool import OpaqueBool, make_opaque
 from guppylang.tys.builtin import array_type, bool_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -167,7 +167,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
             import pytket
 
             if isinstance(self.input_circuit, pytket.circuit.Circuit):
-                from tket2.circuit import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
+                from tket.circuit import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
                     Tk2Circuit,
                 )
 
@@ -365,7 +365,7 @@ def _signature_from_circuit(
 
         if isinstance(input_circuit, pytket.circuit.Circuit):
             try:
-                import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
+                import tket  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
                 from guppylang.std.quantum import qubit
 
@@ -392,8 +392,8 @@ def _signature_from_circuit(
                         row_to_type([bool_type()] * input_circuit.n_bits),
                     )
             except ImportError:
-                err = Tket2NotInstalled(defined_at)
-                err.add_sub_diagnostic(Tket2NotInstalled.InstallInstruction(None))
+                err = TketNotInstalled(defined_at)
+                err.add_sub_diagnostic(TketNotInstalled.InstallInstruction(None))
                 raise GuppyError(err) from None
         else:
             pass

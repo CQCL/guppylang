@@ -8,10 +8,10 @@ from guppylang.decorator import guppy
 from guppylang.std.quantum import qubit, discard_array
 from guppylang.std.builtins import array
 
-tket2_installed = find_spec("tket2") is not None
+tket_installed = find_spec("tket") is not None
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_single_qubit_circuit(validate):
     from pytket import Circuit
 
@@ -28,7 +28,7 @@ def test_single_qubit_circuit(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_multi_qubit_circuit(validate):
     from pytket import Circuit
 
@@ -46,7 +46,7 @@ def test_multi_qubit_circuit(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_measure(validate):
     from pytket import Circuit
 
@@ -64,7 +64,7 @@ def test_measure(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_measure_multiple(validate):
     from pytket import Circuit
 
@@ -82,7 +82,7 @@ def test_measure_multiple(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_measure_not_last(validate):
     from pytket import Circuit
 
@@ -101,7 +101,7 @@ def test_measure_not_last(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_load_circuit(validate):
     from pytket import Circuit
 
@@ -117,7 +117,7 @@ def test_load_circuit(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_load_circuits(validate):
     from pytket import Circuit
 
@@ -139,7 +139,7 @@ def test_load_circuits(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_measure_some(validate):
     from pytket import Circuit
 
@@ -156,7 +156,7 @@ def test_measure_some(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_register_arrays_default(validate):
     from pytket import Circuit
 
@@ -171,7 +171,7 @@ def test_register_arrays_default(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_register_arrays(validate):
     from pytket import Circuit
 
@@ -190,7 +190,7 @@ def test_register_arrays(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_register_arrays_multiple_measure(validate):
     from pytket import Circuit
 
@@ -216,7 +216,7 @@ def test_register_arrays_multiple_measure(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_register_arrays_mixed(validate):
     from pytket import Circuit
 
@@ -236,7 +236,7 @@ def test_register_arrays_mixed(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_compile_sig(validate):
     from pytket import Circuit
 
@@ -249,7 +249,7 @@ def test_compile_sig(validate):
     validate(guppy_circ.compile())
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_compile_load(validate):
     from pytket import Circuit
 

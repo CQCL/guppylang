@@ -7,7 +7,7 @@ from guppylang.decorator import guppy
 from guppylang.std.builtins import py, comptime, array, frozenarray, nat, owned
 from tests.util import compile_guppy
 
-tket2_installed = find_spec("tket2") is not None
+tket_installed = find_spec("tket") is not None
 
 
 def test_basic(validate):

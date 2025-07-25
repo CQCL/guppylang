@@ -16,8 +16,8 @@ from hugr import ops
 from hugr import tys as ht
 
 from guppylang.compiler.hugr_extension import UnsupportedOp
-from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
-from guppylang.std._internal.compiler.tket2_exts import (
+from guppylang.std._internal.compiler.tket_bool import OpaqueBool
+from guppylang.std._internal.compiler.tket_exts import (
     BOOL_EXTENSION,
     QUANTUM_EXTENSION,
 )
@@ -252,7 +252,7 @@ def unsupported_op(
 def bool_logic_op(
     op_name: str,
 ) -> Callable[[ht.FunctionType, Inst, ToHugrContext], ops.DataflowOp]:
-    """Utility method to create binary `tket2.bool` logic ops.
+    """Utility method to create binary `tket.bool` logic ops.
 
     args:
         op_name: The name of the operation.
