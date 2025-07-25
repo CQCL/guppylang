@@ -13,8 +13,8 @@ from guppylang.definition.common import CompiledDef, DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
-from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
-from guppylang.std._internal.compiler.tket2_exts import WASM_EXTENSION
+from guppylang.std._internal.compiler.tket_bool import OpaqueBool
+from guppylang.std._internal.compiler.tket_exts import WASM_EXTENSION
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugrContext
 from guppylang.tys.const import Const, ConstValue

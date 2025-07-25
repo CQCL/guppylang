@@ -253,10 +253,10 @@ class CompilationEngine:
         #  We should compute this dynamically from the imported dependencies instead.
         #
         # The hugr prelude and std_extensions are implicit.
-        from guppylang.std._internal.compiler.tket2_exts import TKET2_EXTENSIONS
+        from guppylang.std._internal.compiler.tket_exts import TKET_EXTENSIONS
 
         extensions = [
-            *TKET2_EXTENSIONS,
+            *TKET_EXTENSIONS,
             guppylang.compiler.hugr_extension.EXTENSION,
             *self.additional_extensions,
         ]

@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
-import tket2_exts
+import tket_exts
 from hugr import Hugr, Node, Wire, ops
 from hugr import tys as ht
 from hugr.build import function as hf
@@ -514,9 +514,9 @@ def compile_variable_idx(idx: int, mono_args: PartiallyMonomorphizedArgs) -> int
     return sum(1 for arg in mono_args[:idx] if arg is None)
 
 
-QUANTUM_EXTENSION = tket2_exts.quantum()
-RESULT_EXTENSION = tket2_exts.result()
-DEBUG_EXTENSION = tket2_exts.debug()
+QUANTUM_EXTENSION = tket_exts.quantum()
+RESULT_EXTENSION = tket_exts.result()
+DEBUG_EXTENSION = tket_exts.debug()
 
 #: List of extension ops that have side-effects, identified by their qualified name
 EXTENSION_OPS_WITH_SIDE_EFFECTS: list[str] = [

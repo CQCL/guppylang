@@ -82,7 +82,7 @@ from guppylang.std._internal.compiler.prelude import (
     build_unwrap,
     panic,
 )
-from guppylang.std._internal.compiler.tket2_bool import (
+from guppylang.std._internal.compiler.tket_bool import (
     OpaqueBool,
     OpaqueBoolVal,
     make_opaque,
