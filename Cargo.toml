@@ -25,7 +25,8 @@ cargo_toml = "0.20.4"
 thiserror = "2.0.6"
 hugr = "0.20.2"
 hugr-cli = "0.20.2"
-tket2 = { version = "0.12.0" }
+#tket2 = { version = "0.12.0" }
+tket2 = { git = "https://github.com/CQCL/tket2", branch = "gpu" }
 
 [patch.crates-io]
 

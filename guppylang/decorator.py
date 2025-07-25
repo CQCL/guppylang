@@ -33,6 +33,7 @@ from guppylang.definition.function import (
     PyFunc,
     RawFunctionDef,
 )
+from guppylang.definition.gpu import RawGpuFunctionDef
 from guppylang.definition.overloaded import OverloadedFunctionDef
 from guppylang.definition.parameter import ConstVarDef, TypeVarDef
 from guppylang.definition.pytket_circuits import (
@@ -47,7 +48,12 @@ from guppylang.definition.wasm import RawWasmFunctionDef
 from guppylang.dummy_decorator import _DummyGuppy, sphinx_running
 from guppylang.engine import DEF_STORE
 from guppylang.span import Loc, SourceMap, Span
-from guppylang.std._internal.checker import WasmCallChecker
+from guppylang.std._internal.checker import GenericCallChecker
+from guppylang.std._internal.compiler.gpu import (
+    GpuModuleCallCompiler,
+    GpuModuleDiscardCompiler,
+    GpuModuleInitCompiler,
+)
 from guppylang.std._internal.compiler.wasm import (
     WasmModuleCallCompiler,
     WasmModuleDiscardCompiler,
@@ -445,63 +451,81 @@ class _Guppy:
         DEF_STORE.register_def(defn, get_calling_frame())
         return GuppyDefinition(defn)
 
-    def wasm_module(
-        self, filename: str, filehash: int
-    ) -> Decorator[builtins.type[T], GuppyDefinition]:
-        def dec(cls: builtins.type[T]) -> GuppyDefinition:
-            # N.B. Only one module per file and vice-versa
-            wasm_module = WasmModuleTypeDef(
-                DefId.fresh(),
-                cls.__name__,
-                None,
-                filename,
-                filehash,
-            )
+    def wasm_module(self, filename: str, filehash: int) -> Decorator[builtins.type[T], GuppyDefinition]:
+        def type_def_wrapper(id: DefId,
+                             name: str,
+                             defined_at: ast.AST | None,
+                             wasm_file: str,
+                             wasm_hash: int,
+                             config: str | None
+                             ) -> OpaqueTypeDef:
+            assert(config is None)
+            return WasmModuleTypeDef(id, name, defined_at, wasm_file, wasm_hash)
 
-            wasm_module_ty = wasm_module.check_instantiate([], None)
+        f = self.ext_module_decorator(type_def_wrapper, WasmModuleInitCompiler(), WasmModuleDiscardCompiler())
+        return f(filename, filehash, None)
 
-            DEF_STORE.register_def(wasm_module, get_calling_frame())
-            for val in cls.__dict__.values():
-                if isinstance(val, GuppyDefinition):
-                    DEF_STORE.register_impl(wasm_module.id, val.wrapped.name, val.id)
-            # Add a constructor to the class
-            call_method = CustomFunctionDef(
-                DefId.fresh(),
-                "__new__",
-                None,
-                FunctionType(
-                    [
-                        FuncInput(
-                            NumericType(NumericType.Kind.Nat), flags=InputFlags.Owned
-                        )
-                    ],
-                    wasm_module_ty,
-                ),
-                DefaultCallChecker(),
-                WasmModuleInitCompiler(),
-                True,
-                GlobalConstId.fresh(f"{cls.__name__}.__new__"),
-                True,
-            )
-            discard = CustomFunctionDef(
-                DefId.fresh(),
-                "discard",
-                None,
-                FunctionType([FuncInput(wasm_module_ty, InputFlags.Owned)], NoneType()),
-                DefaultCallChecker(),
-                WasmModuleDiscardCompiler(),
-                False,
-                GlobalConstId.fresh(f"{cls.__name__}.__discard__"),
-                True,
-            )
-            DEF_STORE.register_def(call_method, get_calling_frame())
-            DEF_STORE.register_impl(wasm_module.id, "__new__", call_method.id)
-            DEF_STORE.register_def(discard, get_calling_frame())
-            DEF_STORE.register_impl(wasm_module.id, "discard", discard.id)
+    def ext_module_decorator(
+            self, type_def: Callable[[DefId, str, ast.AST | None, str, int, str | None], OpaqueTypeDef],
+            init_compiler: CustomInoutCallCompiler,
+            discard_compiler: CustomInoutCallCompiler,
+    ) -> Callable[[str, int, str | None], Decorator[builtins.type[T], GuppyDefinition]]:
+        def fun(filename: str, filehash: int, module: str | None) -> Decorator[builtins.type[T], GuppyDefinition]:
+            def dec(cls: builtins.type[T]) -> GuppyDefinition:
+                # N.B. Only one module per file and vice-versa
+                ext_module = type_def(
+                    DefId.fresh(),
+                    cls.__name__,
+                    None,
+                    filename,
+                    filehash,
+                    module,
+                )
 
-            return GuppyDefinition(wasm_module)
+                ext_module_ty = ext_module.check_instantiate([], None)
 
-        return dec
+                DEF_STORE.register_def(ext_module, get_calling_frame())
+                for val in cls.__dict__.values():
+                    if isinstance(val, GuppyDefinition):
+                        DEF_STORE.register_impl(ext_module.id, val.wrapped.name, val.id)
+                # Add a constructor to the class
+                call_method = CustomFunctionDef(
+                    DefId.fresh(),
+                    "__new__",
+                    None,
+                    FunctionType(
+                        [
+                            FuncInput(
+                                NumericType(NumericType.Kind.Nat), flags=InputFlags.Owned
+                            )
+                        ],
+                        ext_module_ty,
+                    ),
+                    DefaultCallChecker(),
+                    init_compiler,
+                    True,
+                    GlobalConstId.fresh(f"{cls.__name__}.__new__"),
+                    True,
+                )
+                discard = CustomFunctionDef(
+                    DefId.fresh(),
+                    "discard",
+                    None,
+                    FunctionType([FuncInput(ext_module_ty, InputFlags.Owned)], NoneType()),
+                    DefaultCallChecker(),
+                    discard_compiler,
+                    False,
+                    GlobalConstId.fresh(f"{cls.__name__}.__discard__"),
+                    True,
+                )
+                DEF_STORE.register_def(call_method, get_calling_frame())
+                DEF_STORE.register_impl(ext_module.id, "__new__", call_method.id)
+                DEF_STORE.register_def(discard, get_calling_frame())
+                DEF_STORE.register_impl(ext_module.id, "discard", discard.id)
+
+                return GuppyDefinition(ext_module)
+            return dec
+        return fun
 
     def wasm(self, f: PyFunc) -> GuppyDefinition:
         func = RawWasmFunctionDef(
@@ -509,8 +533,22 @@ class _Guppy:
             f.__name__,
             None,
             f,
-            WasmCallChecker(),
+            GenericCallChecker(),
             WasmModuleCallCompiler(f.__name__),
+            True,
+            signature=None,
+        )
+        DEF_STORE.register_def(func, get_calling_frame())
+        return GuppyDefinition(func)
+
+    def gpu(self, f: PyFunc) -> GuppyDefinition:
+        func = RawGpuFunctionDef(
+            DefId.fresh(),
+            f.__name__,
+            None,
+            f,
+            GenericCallChecker(),
+            GpuModuleCallCompiler(f.__name__),
             True,
             signature=None,
         )
