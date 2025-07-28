@@ -153,7 +153,9 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
     description: str = field(default="pytket circuit", init=False)
 
-    def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledPytketDef":
+    def compile_outer(
+        self, module: DefinitionBuilder[OpVar], ctx: CompilerContext
+    ) -> "CompiledPytketDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr."""
         try:
             import pytket
@@ -171,7 +173,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 mapping = module.hugr.insert_hugr(circ)
                 hugr_func = mapping[circ.entrypoint]
 
-                func_type = self.ty.to_hugr_poly()
+                func_type = self.ty.to_hugr_poly(ctx)
                 outer_func = module.define_function(
                     self.name, func_type.body.input, func_type.body.output
                 )

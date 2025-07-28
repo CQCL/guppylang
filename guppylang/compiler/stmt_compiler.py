@@ -101,7 +101,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         """Handles assignment where the RHS is a tuple that should be unpacked."""
         # Unpack the RHS tuple
         left, starred, right = lhs.pattern.left, lhs.pattern.starred, lhs.pattern.right
-        types = [ty.to_hugr() for ty in type_to_row(get_type(lhs))]
+        types = [ty.to_hugr(self.ctx) for ty in type_to_row(get_type(lhs))]
         unpack = self.builder.add_op(ops.UnpackTuple(types), port)
         ports = list(unpack)
 
@@ -118,7 +118,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             starred_ports = (
                 ports[len(left) : -len(right)] if right else ports[len(left) :]
             )
-            elt = get_element_type(array_ty).to_hugr()
+            elt = get_element_type(array_ty).to_hugr(self.ctx)
             opts = [self.builder.add_op(ops.Some(elt), p) for p in starred_ports]
             array = self.builder.add_op(array_new(ht.Option(elt), len(opts)), *opts)
             self._assign(starred, array)
@@ -132,7 +132,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         assert isinstance(lhs.compr.length, ConstValue)
         length = lhs.compr.length.value
         assert isinstance(length, int)
-        opt_elt_ty = ht.Option(lhs.compr.elt_ty.to_hugr())
+        opt_elt_ty = ht.Option(lhs.compr.elt_ty.to_hugr(self.ctx))
 
         def pop(
             array: Wire, length: int, pats: list[ast.expr], from_left: bool
@@ -194,7 +194,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
 
             row: list[tuple[Wire, Type]]
             if isinstance(return_ty, TupleType):
-                types = [e.to_hugr() for e in return_ty.element_types]
+                types = [e.to_hugr(self.ctx) for e in return_ty.element_types]
                 unpack = self.builder.add_op(ops.UnpackTuple(types), port)
                 row = list(zip(unpack, return_ty.element_types, strict=True))
             else:

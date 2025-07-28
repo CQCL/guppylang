@@ -14,8 +14,12 @@ from hugr.package import FuncDefnPointer, ModulePointer
 from typing_extensions import dataclass_transform
 
 from guppylang.ast_util import annotate_location
-from guppylang.compiler.core import GlobalConstId
-from guppylang.definition.common import DefId
+from guppylang.compiler.core import (
+    CompilerContext,
+    GlobalConstId,
+    PartiallyMonomorphizedArgs,
+)
+from guppylang.definition.common import DefId, MonomorphizableDef
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
     CustomCallChecker,
@@ -34,7 +38,7 @@ from guppylang.definition.function import (
     RawFunctionDef,
 )
 from guppylang.definition.overloaded import OverloadedFunctionDef
-from guppylang.definition.parameter import ConstVarDef, TypeVarDef
+from guppylang.definition.parameter import ConstVarDef, RawConstVarDef, TypeVarDef
 from guppylang.definition.pytket_circuits import (
     CompiledPytketDef,
     RawLoadPytketDef,
@@ -131,7 +135,7 @@ class _Guppy:
 
     def type(
         self,
-        hugr_ty: ht.Type | Callable[[Sequence[Argument]], ht.Type],
+        hugr_ty: ht.Type | Callable[[Sequence[Argument], CompilerContext], ht.Type],
         name: str = "",
         copyable: bool = True,
         droppable: bool = True,
@@ -148,7 +152,9 @@ class _Guppy:
         For generic types, a callable may be passed that takes the type arguments of a
         concrete instantiation.
         """
-        mk_hugr_ty = (lambda _: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
+        mk_hugr_ty = (
+            (lambda args, ctx: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
+        )
 
         def dec(c: type[T]) -> type[T]:
             defn = OpaqueTypeDef(
@@ -174,10 +180,16 @@ class _Guppy:
     @dataclass_transform()
     def struct(self, cls: builtins.type[T]) -> builtins.type[T]:
         defn = RawStructDef(DefId.fresh(), cls.__name__, None, cls)
-        DEF_STORE.register_def(defn, get_calling_frame())
+        frame = get_calling_frame()
+        DEF_STORE.register_def(defn, frame)
         for val in cls.__dict__.values():
             if isinstance(val, GuppyDefinition):
                 DEF_STORE.register_impl(defn.id, val.wrapped.name, val.id)
+        # Prior to Python 3.13, the `__firstlineno__` attribute on classes is not set.
+        # However, we need this information to precisely look up the source for the
+        # class later. If it's not there, we can set it from the calling frame:
+        if not hasattr(cls, "__firstlineno__"):
+            cls.__firstlineno__ = frame.f_lineno  # type: ignore[attr-defined]
         # We're pretending to return the class unchanged, but in fact we return
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
@@ -198,6 +210,17 @@ class _Guppy:
     def nat_var(self, name: str) -> TypeVar:
         """Creates a new const nat variable in a module."""
         defn = ConstVarDef(DefId.fresh(), name, None, NumericType(NumericType.Kind.Nat))
+        DEF_STORE.register_def(defn, get_calling_frame())
+        # We're pretending to return a `typing.TypeVar`, but in fact we return a special
+        # `GuppyDefinition` that pretends to be a TypeVar at runtime
+        return TypeVarGuppyDefinition(defn, TypeVar(name))  # type: ignore[return-value]
+
+    def const_var(self, name: str, ty: str) -> TypeVar:
+        """Creates a new const type variable."""
+        type_ast = _parse_expr_string(
+            ty, f"Not a valid Guppy type: `{ty}`", DEF_STORE.sources
+        )
+        defn = RawConstVarDef(DefId.fresh(), name, None, type_ast)
         DEF_STORE.register_def(defn, get_calling_frame())
         # We're pretending to return a `typing.TypeVar`, but in fact we return a special
         # `GuppyDefinition` that pretends to be a TypeVar at runtime
@@ -239,7 +262,7 @@ class _Guppy:
 
     def hugr_op(
         self,
-        op: Callable[[ht.FunctionType, Inst], ops.DataflowOp],
+        op: Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp],
         checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
@@ -386,7 +409,15 @@ class _Guppy:
         if not isinstance(obj, GuppyDefinition):
             raise TypeError(f"Object is not a Guppy definition: {obj}")
         compiled_module = ENGINE.compile(obj.id)
-        compiled_def = ENGINE.compiled[obj.id]
+
+        # Look up how many generic params the function has so we can create an empty
+        # partial monomorphization to look up in the context
+        checked_def = ENGINE.checked[obj.id]
+        mono_args: PartiallyMonomorphizedArgs | None = None
+        if isinstance(checked_def, MonomorphizableDef):
+            mono_args = tuple(None for _ in checked_def.params)
+
+        compiled_def = ENGINE.compiled[obj.id, mono_args]
         assert isinstance(compiled_def, CompiledFunctionDef | CompiledPytketDef)
         node = compiled_def.func_def.parent_node
         return FuncDefnPointer(

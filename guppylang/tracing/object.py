@@ -19,7 +19,6 @@ from guppylang.definition.common import DefId, Definition
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import (
     CallableDef,
-    CompiledCallableDef,
     CompiledValueDef,
 )
 from guppylang.engine import DEF_STORE, ENGINE
@@ -62,7 +61,7 @@ def unary_operation(f: UnaryDunderMethod) -> UnaryDunderMethod:
         from guppylang.tracing.unpacking import guppy_object_from_py
 
         state = get_tracing_state()
-        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+        self = guppy_object_from_py(self, state.dfg.builder, state.node, state.ctx)
 
         with suppress(Exception):
             return f(self)
@@ -89,8 +88,8 @@ def binary_operation(f: BinaryDunderMethod) -> BinaryDunderMethod:
         from guppylang.tracing.unpacking import guppy_object_from_py
 
         state = get_tracing_state()
-        self = guppy_object_from_py(self, state.dfg.builder, state.node)
-        other = guppy_object_from_py(other, state.dfg.builder, state.node)
+        self = guppy_object_from_py(self, state.dfg.builder, state.node, state.ctx)
+        other = guppy_object_from_py(other, state.dfg.builder, state.node, state.ctx)
 
         # First try the method on `self`
         with suppress(Exception):
@@ -126,7 +125,7 @@ class DunderMixin:
         from guppylang.tracing.unpacking import guppy_object_from_py
 
         state = get_tracing_state()
-        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+        self = guppy_object_from_py(self, state.dfg.builder, state.node, state.ctx)
         return self.__getattr__(name)
 
     def __abs__(self) -> Any:
@@ -297,7 +296,7 @@ class ObjectUse(NamedTuple):
 
     #: If the use was as an argument to a Guppy function, we also record a reference to
     #: the called function.
-    called_func: CompiledCallableDef | None
+    called_func: CallableDef | None
 
 
 @dataclass(frozen=True)
@@ -381,7 +380,7 @@ class GuppyObject(DunderMixin):
             f"Expression of type `{self._ty}` is not iterable at comptime"
         )
 
-    def _use_wire(self, called_func: CompiledCallableDef | None) -> Wire:
+    def _use_wire(self, called_func: CallableDef | None) -> Wire:
         # Panic if the value has already been used
         if self._used and not self._ty.copyable:
             use = self._used
@@ -511,10 +510,8 @@ class GuppyDefinition(DunderMixin):
                 "only be called in a Guppy context"
             )
 
-        state = get_tracing_state()
         defn = ENGINE.get_checked(self.wrapped.id)
-        defn = state.ctx.build_compiled_def(defn.id)
-        if isinstance(defn, CompiledCallableDef):
+        if isinstance(defn, CallableDef):
             return trace_call(defn, *args)
         elif (
             isinstance(defn, TypeDef)
@@ -550,7 +547,7 @@ class GuppyDefinition(DunderMixin):
 
     def to_guppy_object(self) -> GuppyObject:
         state = get_tracing_state()
-        defn = state.ctx.build_compiled_def(self.id)
+        defn, [] = state.ctx.build_compiled_def(self.id, type_args=[])
         if isinstance(defn, CompiledValueDef):
             wire = defn.load(state.dfg, state.ctx, state.node)
             return GuppyObject(defn.ty, wire, None)

@@ -1,6 +1,7 @@
 from collections import defaultdict
 from enum import Enum
 from types import FrameType
+from typing import TYPE_CHECKING
 
 import hugr.build.function as hf
 import hugr.std.collections.array
@@ -39,6 +40,9 @@ from guppylang.tys.builtin import (
     string_type_def,
     tuple_type_def,
 )
+
+if TYPE_CHECKING:
+    from guppylang.compiler.core import MonoDefId
 
 BUILTIN_DEFS_LIST: list[RawDef] = [
     callable_type_def,
@@ -112,7 +116,7 @@ class CompilationEngine:
 
     parsed: dict[DefId, ParsedDef]
     checked: dict[DefId, CheckedDef]
-    compiled: dict[DefId, CompiledDef]
+    compiled: dict["MonoDefId", CompiledDef]
     additional_extensions: list[Extension]
 
     types_to_check_worklist: dict[DefId, ParsedDef]
@@ -210,7 +214,7 @@ class CompilationEngine:
     def compile(self, id: DefId) -> ModulePointer:
         """Top-level function to kick of Hugr compilation of a definition.
 
-        This is the main driver behind `guppy.compile()`.
+        This is the function that is invoked by `guppy.compile`.
         """
         self.check(id)
 
@@ -222,13 +226,9 @@ class CompilationEngine:
         from guppylang.compiler.core import CompilerContext
 
         ctx = CompilerContext(graph)
-        # Iterate over copy of the checked values since in some cases, compiling can
-        # kick of checking calls that would change the size of `self.checked`
-        for defn in list(self.checked.values()):
-            ctx.compile(defn)
+        compiled_def = ctx.compile(self.checked[id])
         self.compiled = ctx.compiled
 
-        compiled_def = self.compiled.get(id)
         from guppylang.definition.function import CompiledFunctionDef
         from guppylang.definition.traced import CompiledTracedFunctionDef
 

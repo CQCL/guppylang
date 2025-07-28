@@ -1,5 +1,6 @@
 import ast
 import inspect
+import linecache
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -298,11 +299,21 @@ def parse_py_class(cls: type, sources: SourceMap) -> ast.ClassDef:
                 raise GuppyError(ExpectedError(defn.node, "a class definition"))
             return defn.node
         # else, fall through to handle builtins.
-    source_lines, line_offset = inspect.getsourcelines(cls)
-    source, cls_ast, line_offset = parse_source(source_lines, line_offset)
+
+    # We can't rely on `inspect.getsourcelines` since it doesn't work properly for
+    # classes prior to Python 3.13. See https://github.com/CQCL/guppylang/issues/1107.
+    # Instead, we reproduce the behaviour of Python >= 3.13 using the `__firstlineno__`
+    # attribute. See https://github.com/python/cpython/blob/3.13/Lib/inspect.py#L1052.
+    # In the decorator, we make sure that `__firstlineno__` is set, even if we're not
+    # on Python 3.13.
     file = inspect.getsourcefile(cls)
     if file is None:
         raise GuppyError(UnknownSourceError(None, cls))
+    file_lines = linecache.getlines(file)
+    line_offset = cls.__firstlineno__  # type: ignore[attr-defined]
+    source_lines = inspect.getblock(file_lines[line_offset - 1 :])
+    source, cls_ast, line_offset = parse_source(source_lines, line_offset)
+
     # Store the source file in our cache
     sources.add_file(file)
     annotate_location(cls_ast, source, file, line_offset)

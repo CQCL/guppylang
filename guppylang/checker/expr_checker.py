@@ -39,7 +39,7 @@ from guppylang.ast_util import (
     with_loc,
     with_type,
 )
-from guppylang.cfg.builder import tmp_vars
+from guppylang.cfg.builder import is_tmp_var, tmp_vars
 from guppylang.checker.core import (
     Context,
     DummyEvalDict,
@@ -1083,7 +1083,7 @@ def check_comptime_arg(
             match arg:
                 case PlaceNode(place=place) if place.root.is_func_input:
                     s = ComptimeUnknownError.InputHint(place.defined_at, place)
-                case PlaceNode(place=place):
+                case PlaceNode(place=place) if not is_tmp_var(place.root.name):
                     s = ComptimeUnknownError.VariableHint(place.defined_at, place)
                 case arg:
                     s = ComptimeUnknownError.FallbackHint(arg)
