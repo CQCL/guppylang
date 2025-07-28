@@ -36,14 +36,13 @@ from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap, Span, ToSpan
 from guppylang.std._internal.compiler.array import (
-    array_discard_empty,
     array_new,
-    array_pop,
+    array_unpack,
 )
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, make_opaque
 from guppylang.tracing.object import GuppyDefinition
-from guppylang.tys.builtin import array_type, bool_type
+from guppylang.tys.builtin import array_type, bool_type, float_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
     FuncInput,
@@ -170,6 +169,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 circ = envelope.read_envelope(
                     Tk2Circuit(self.input_circuit).to_bytes(EnvelopeConfig.TEXT)
                 ).modules[0]
+
                 mapping = module.hugr.insert_hugr(circ)
                 hugr_func = mapping[circ.entrypoint]
 
@@ -184,41 +184,51 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     outer_func.load(val.FALSE) for _ in range(self.input_circuit.n_bits)
                 ]
 
-                input_list = []
+                input_list: list[Wire] = []
                 if self.use_arrays:
                     # If the input is given as arrays, we need to unpack each element in
                     # them into separate wires.
-                    # TODO: Replace with actual unpack HUGR op once
-                    # https://github.com/CQCL/hugr/issues/1947 is done.
-                    def unpack(
-                        array: Wire, elem_ty: ht.Type, length: int
-                    ) -> list[Wire]:
-                        err = "Internal error: unpacking of array failed"
-                        elts: list[Wire] = []
-                        for i in range(length):
-                            res = outer_func.add_op(
-                                array_pop(elem_ty, length - i, True), array
+                    for i, q_reg in enumerate(self.input_circuit.q_registers):
+                        reg_wire = outer_func.inputs()[i]
+                        opt_elem_wires = outer_func.add_op(
+                            array_unpack(ht.Option(ht.Qubit), q_reg.size), reg_wire
+                        )
+                        elem_wires = [
+                            build_unwrap(
+                                outer_func,
+                                opt_elem,
+                                "Internal error: unwrapping of array element failed",
                             )
-                            [elt_opt, array] = build_unwrap(outer_func, res, err)
-                            [elt] = build_unwrap(outer_func, elt_opt, err)
-                            elts.append(elt)
-                        outer_func.add_op(array_discard_empty(elem_ty), array)
-                        return elts
-
-                    # Must be same length due to earlier signature computation /
-                    # comparison.
-                    for q_reg, wire in zip(
-                        self.input_circuit.q_registers,
-                        list(outer_func.inputs()),
-                        strict=True,
-                    ):
-                        input_list.extend(unpack(wire, ht.Option(ht.Qubit), q_reg.size))
+                            for opt_elem in opt_elem_wires
+                        ]
+                        input_list.extend(elem_wires)
 
                 else:
                     # Otherwise pass inputs directly.
-                    input_list = list(outer_func.inputs())
+                    input_list = list(
+                        outer_func.inputs()[: len(self.input_circuit.q_registers)]
+                    )
 
-                call_node = outer_func.call(hugr_func, *(input_list + bool_wires))
+                # Symbolic parameters get passed at the end.
+                # We assume they are given in lexicographic order by the user.
+                # We need to sort them according to the metadata order.
+                # TODO: Allow to be passed as array if `use_arrays=True`.
+                param_wires = []
+                if "TKET1.input_parameters" in hugr_func.metadata:
+                    param_order = cast(
+                        list[str], hugr_func.metadata["TKET1.input_parameters"]
+                    )
+                    lex_names = sorted(param_order)
+                    lex_params = list(
+                        outer_func.inputs()[len(self.input_circuit.q_registers) :]
+                    )
+                    assert len(lex_names) == len(lex_params)
+                    name_to_param = dict(zip(lex_names, lex_params, strict=True))
+                    param_wires = [name_to_param[name] for name in param_order]
+
+                call_node = outer_func.call(
+                    hugr_func, *(input_list + bool_wires + param_wires)
+                )
 
                 # Pytket circuit hugr has qubit and bool wires in the opposite
                 # order to Guppy output wires.
@@ -357,6 +367,11 @@ def _signature_from_circuit(
             try:
                 import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
+                param_inputs = [
+                    FuncInput(float_type(), InputFlags.NoFlags)
+                    for _ in range(len(input_circuit.free_symbols()))
+                ]
+
                 from guppylang.std.quantum import qubit
 
                 assert isinstance(qubit, GuppyDefinition)
@@ -372,13 +387,13 @@ def _signature_from_circuit(
                         for c_reg in input_circuit.c_registers
                     ]
                     circuit_signature = FunctionType(
-                        inputs,
+                        inputs + param_inputs,
                         row_to_type(outputs),
                     )
                 else:
                     circuit_signature = FunctionType(
-                        [FuncInput(qubit_ty, InputFlags.Inout)]
-                        * input_circuit.n_qubits,
+                        [FuncInput(qubit_ty, InputFlags.Inout)] * input_circuit.n_qubits
+                        + param_inputs,
                         row_to_type([bool_type()] * input_circuit.n_bits),
                     )
             except ImportError:

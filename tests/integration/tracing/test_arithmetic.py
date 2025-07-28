@@ -38,14 +38,14 @@ def test_int(run_int_fn):
     def pow(x: int, y: int) -> int:
         return 4 ** (x ** (y**0))
 
-    run_int_fn(pos, 10, [10])
-    run_int_fn(neg, -10, [10])
-    run_int_fn(add, 2, [3, -4])
-    run_int_fn(sub, -8, [3, -4])
-    run_int_fn(mul, -24, [3, -4])
-    run_int_fn(div, 20, [25, 10])
-    run_int_fn(mod, 7, [8, 9])
-    run_int_fn(pow, 16, [2, 100])
+    run_int_fn(pos, 10, args=[10])
+    run_int_fn(neg, -10, args=[10])
+    run_int_fn(add, 2, args=[3, -4])
+    run_int_fn(sub, -8, args=[3, -4])
+    run_int_fn(mul, -24, args=[3, -4])
+    run_int_fn(div, 20, args=[25, 10])
+    run_int_fn(mod, 7, args=[8, 9])
+    run_int_fn(pow, 16, args=[2, 100])
 
 
 def test_float(validate, run_float_fn_approx):
@@ -83,12 +83,12 @@ def test_float(validate, run_float_fn_approx):
     # def pow(x: float, y: float) -> float:
     #     return 4 ** (x ** (y ** 0.5))
 
-    run_float_fn_approx(pos, 10.5, [10.5])
-    run_float_fn_approx(neg, -10.5, [10.5])
-    run_float_fn_approx(add, 1.5, [3, -4.5])
-    run_float_fn_approx(sub, -8.5, [3, -4.5])
-    run_float_fn_approx(mul, -27.0, [3, -4.5])
-    run_float_fn_approx(div, 400.0, [0.5, 4])
+    run_float_fn_approx(pos, 10.5, args=[10.5])
+    run_float_fn_approx(neg, -10.5, args=[10.5])
+    run_float_fn_approx(add, 1.5, args=[3, -4.5])
+    run_float_fn_approx(sub, -8.5, args=[3, -4.5])
+    run_float_fn_approx(mul, -27.0, args=[3, -4.5])
+    run_float_fn_approx(div, 400.0, args=[0.5, 4])
 
     # TODO: Requires lowering of `ffloor` op: https://github.com/CQCL/hugr/issues/1905
     # emulate_float_fn_approx(div, ..., [...])

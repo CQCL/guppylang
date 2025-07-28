@@ -1,13 +1,13 @@
 """Tests for loading pytket circuits as functions."""
 
 from importlib.util import find_spec
+from math import pi
 
 import pytest
 
 from guppylang.decorator import guppy
-from guppylang.std import quantum
-from guppylang.std.quantum import qubit, discard_array
-from guppylang.std.builtins import array
+from guppylang.std.quantum import qubit, discard_array, discard, x
+from guppylang.std.builtins import array, comptime
 
 tket2_installed = find_spec("tket2") is not None
 
@@ -260,3 +260,86 @@ def test_compile_load(validate):
     pytket_func = guppy.load_pytket("guppy_circ", circ, use_arrays=False)
 
     validate(pytket_func.compile())
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_symbolic(validate):
+    from pytket import Circuit, OpType
+    from pytket.passes import AutoRebase
+    from sympy import Symbol
+
+    a = Symbol("alpha")
+    b = Symbol("beta")
+
+    circ = Circuit(2)
+    circ.YYPhase(b, 0, 1)
+    circ.Rx(a, 0)
+    circ.measure_all()
+
+    AutoRebase({OpType.CX, OpType.Rz, OpType.H}).apply(circ)
+
+    guppy_circ = guppy.load_pytket("guppy_circ", circ)
+
+    @guppy
+    def foo(reg: array[qubit, 2]) -> array[bool, 2]:
+        alpha = 0.3
+        beta = 1.2
+        return guppy_circ(reg, alpha, beta)
+
+    validate(guppy.compile(foo))
+
+
+@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+def test_symbolic_exec(validate, run_int_fn):
+    from pytket import Circuit, OpType
+    from pytket.passes import AutoRebase
+    from sympy import Symbol
+
+    a = Symbol("alpha")
+
+    circ = Circuit(1)
+    circ.Rx(a, 0)
+    circ.measure_all()
+
+    AutoRebase({OpType.CX, OpType.Rz, OpType.H}).apply(circ)
+
+    flip = guppy.load_pytket("flip", circ, use_arrays=False)
+
+    @guppy
+    def main() -> int:
+        q = qubit()
+        res = int(flip(q, 0))
+        discard(q)
+        return res
+
+    validate(guppy.compile(main))
+    run_int_fn(main, 0, num_qubits=2)
+
+
+@pytest.mark.skip("TODO: Investigate runtime error")
+def test_exec(validate, run_int_fn):
+    from pytket import Circuit
+
+    circ = Circuit(2, 2)
+    circ.X(0)
+    circ.measure_all()
+
+    guppy_circ = guppy.load_pytket("guppy_circ", circ, use_arrays=False)
+
+    @guppy
+    def foo(q1: qubit, q2: qubit) -> tuple[bool, bool]:
+        res = guppy_circ(q1, q2)
+        return res
+    
+    @guppy
+    def main() -> int:
+        q1 = qubit()
+        q2 = qubit()
+        res = foo(q1, q2)
+        discard(q1)
+        discard(q2)
+        return int(res[0])
+
+
+    validate(guppy.compile(main))
+    run_int_fn(main, 1, num_qubits=2)
