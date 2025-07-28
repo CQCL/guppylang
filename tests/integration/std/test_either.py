@@ -1,6 +1,6 @@
 from guppylang.decorator import guppy
 from guppylang.std.either import Either, left, right
-from guppylang.std.quantum import qubit
+from guppylang.std.quantum import qubit  # noqa: TCH001
 
 
 def test_left(run_int_fn):

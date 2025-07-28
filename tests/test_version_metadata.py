@@ -1,4 +1,3 @@
-from sympy import use
 
 from guppylang import __version__, guppy
 from guppylang.engine import CoreMetadataKeys

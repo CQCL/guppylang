@@ -1,6 +1,5 @@
 from guppylang.decorator import guppy
 from guppylang.std.angles import angle, pi
-from guppylang.std.builtins import nat
 
 from hugr.std.int import IntVal
 

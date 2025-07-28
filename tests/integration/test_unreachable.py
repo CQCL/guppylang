@@ -1,5 +1,4 @@
 from guppylang import guppy, qubit
-from guppylang.std import quantum
 from guppylang.std.quantum import discard, h
 from tests.util import compile_guppy
 
