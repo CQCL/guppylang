@@ -1,4 +1,3 @@
-
 class PyDiagnostic:
     def __init__(
         self,

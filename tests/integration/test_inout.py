@@ -3,7 +3,6 @@ from guppylang.std.builtins import owned
 from guppylang.std.quantum import qubit
 
 
-
 def test_basic(validate):
     @guppy.declare
     def foo(q: qubit) -> None: ...

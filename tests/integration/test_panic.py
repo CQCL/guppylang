@@ -1,5 +1,5 @@
 from guppylang import guppy
-from guppylang.std.builtins import panic, exit
+from guppylang.std.builtins import panic, exit, comptime
 from tests.util import compile_guppy
 
 
@@ -43,8 +43,8 @@ def test_value(validate):
 def test_py_message(validate):
     @compile_guppy
     def main(x: int) -> None:
-        panic(py("I" + "panicked" + "!"))
-        exit(py("I" + "exited" + "!"), 0)
+        panic(comptime("I" + "panicked" + "!"))
+        exit(comptime("I" + "exited" + "!"), 0)
 
     validate(main)
 

@@ -28,10 +28,10 @@ def test_right(run_int_fn):
 def test_to_option(run_int_fn):
     @guppy
     def main() -> int:
-        l: Either[int, float] = left(1)
-        r: Either[float, int] = right(10)
-        l.try_into_right().unwrap_nothing()
-        r.try_into_left().unwrap_nothing()
-        return l.try_into_left().unwrap() + r.try_into_right().unwrap()
+        l_val: Either[int, float] = left(1)
+        r_val: Either[float, int] = right(10)
+        l_val.try_into_right().unwrap_nothing()
+        r_val.try_into_left().unwrap_nothing()
+        return l_val.try_into_left().unwrap() + r_val.try_into_right().unwrap()
 
     run_int_fn(main, expected=11)

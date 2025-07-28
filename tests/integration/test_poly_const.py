@@ -51,10 +51,10 @@ def test_bool(validate, run_int_fn):
 
 @pytest.mark.xfail(reason="https://github.com/CQCL/guppylang/issues/1030")
 def test_int(validate):
-    I = guppy.const_var("I", "int§")
+    IT = guppy.const_var("IT", "int§")
 
     @guppy.struct
-    class Dummy(Generic[I]):
+    class Dummy(Generic[IT]):
         """Unit struct type to introduce generic I into the signature of `foo` below.
 
         This is needed because we don't support the `def foo[I: int]` syntax yet to
@@ -62,8 +62,8 @@ def test_int(validate):
         """
 
     @guppy
-    def foo(_: Dummy[I]) -> float:
-        return I
+    def foo(_: Dummy[IT]) -> float:
+        return IT
 
     @guppy
     def main() -> float:
@@ -244,6 +244,7 @@ def test_many(validate):
         This is needed because we don't support the `def foo[S: str]` syntax yet to
         introduce type params that are not referenced in the signature.
         """
+
         x1: T1
         x2: T2
         x3s: array[T3, N]
@@ -299,9 +300,9 @@ def test_constructor(validate):
 
     @guppy
     def main() -> None:
-        s1: MyStruct[True, 1.0] = MyStruct()   # This is inlined
+        s1: MyStruct[True, 1.0] = MyStruct()  # This is inlined
         s2: MyStruct[False, 1.0] = MyStruct()  # This is inlined
-        f1 = MyStruct[True, 2.0]   # This is monomorphized
+        f1 = MyStruct[True, 2.0]  # This is monomorphized
         f2 = MyStruct[False, 2.0]  # This is monomorphized
         f1()
         f2()

@@ -174,7 +174,7 @@ def test_const(validate):
         return 1 + x
 
     @guppy.comptime
-    def test2() -> int:
+    def test2() -> int:  # noqa: F811
         return x * 2
 
     @guppy.comptime

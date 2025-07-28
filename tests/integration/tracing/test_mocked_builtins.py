@@ -19,8 +19,8 @@ def test_float(validate):
         assert issubclass(float, float)
         assert issubclass(float, builtins.float)
         assert issubclass(builtins.float, float)
-        assert float == builtins.float
-        assert not float != builtins.float
+        assert float == builtins.float  # noqa: E721
+        assert not float != builtins.float  # noqa: E721
         assert float.__name__ == builtins.float.__name__
         assert float.__qualname__ == builtins.float.__qualname__
 
@@ -53,8 +53,8 @@ def test_int(validate):
         assert issubclass(int, builtins.int)
         assert issubclass(builtins.int, int)
         assert issubclass(bool, int)
-        assert int == builtins.int
-        assert not int != builtins.int
+        assert int == builtins.int  # noqa: E721
+        assert not int != builtins.int  # noqa: E721
         assert int.__name__ == builtins.int.__name__
         assert int.__qualname__ == builtins.int.__qualname__
 
