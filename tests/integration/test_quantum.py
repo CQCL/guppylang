@@ -2,10 +2,9 @@
 
 from typing import no_type_check
 
-from guppylang.decorator import guppy
 from guppylang.std.angles import angle
 
-from guppylang.std.builtins import owned, array, barrier
+from guppylang.std.builtins import owned, array, barrier, panic, result
 
 from guppylang.std import quantum as q
 from guppylang.std.quantum import (

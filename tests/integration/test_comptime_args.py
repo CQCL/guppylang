@@ -41,7 +41,7 @@ def test_comptime_expr(validate):
 
 def test_dependent(validate):
     @guppy
-    def foo(n: nat @ comptime, xs: "array[int, n]") -> None:
+    def foo(n: nat @ comptime, xs: "array[int, n]") -> None:  # noqa: F821
         pass
 
     @guppy
@@ -57,7 +57,7 @@ def test_dependent_generic(validate):
     x = guppy.nat_var("x")
 
     @guppy
-    def foo(n: nat @ comptime, xs: "array[int, n]") -> None:
+    def foo(n: nat @ comptime, xs: "array[int, n]") -> None:  # noqa: F821
         pass
 
     @guppy
