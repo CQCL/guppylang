@@ -99,6 +99,7 @@ def run_float_fn_approx():
     def run_approx(
         f: GuppyDefinition,
         expected: float,
+        num_qubits: int | None = None,
         args: list[Any] | None = None,
         *,
         rel: float | None = None,
@@ -108,6 +109,7 @@ def run_float_fn_approx():
         return run_fn(
             f,
             pytest.approx(expected, rel=rel, abs=abs, nan_ok=nan_ok),
+            num_qubits,
             args,
         )
 

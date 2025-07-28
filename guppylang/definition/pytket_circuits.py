@@ -210,9 +210,21 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     )
 
                 # Symbolic parameters get passed at the end.
-                param_wires = list(
-                    outer_func.inputs()[len(self.input_circuit.q_registers) :]
-                )
+                # We assume they are given in lexicographic order by the user.
+                # We need to sort them according to the metadata order.
+                # TODO: Allow to be passed as array if `use_arrays=True`.
+                param_wires = []
+                if "TKET1.input_parameters" in hugr_func.metadata:
+                    param_order = cast(
+                        list[str], hugr_func.metadata["TKET1.input_parameters"]
+                    )
+                    lex_names = sorted(param_order)
+                    lex_params = list(
+                        outer_func.inputs()[len(self.input_circuit.q_registers) :]
+                    )
+                    assert len(lex_names) == len(lex_params)
+                    name_to_param = dict(zip(lex_names, lex_params, strict=True))
+                    param_wires = [name_to_param[name] for name in param_order]
 
                 call_node = outer_func.call(
                     hugr_func, *(input_list + bool_wires + param_wires)
@@ -357,7 +369,7 @@ def _signature_from_circuit(
 
                 param_inputs = [
                     FuncInput(float_type(), InputFlags.NoFlags)
-                    for symbol in input_circuit.free_symbols()
+                    for _ in range(len(input_circuit.free_symbols()))
                 ]
 
                 from guppylang.std.quantum import qubit
