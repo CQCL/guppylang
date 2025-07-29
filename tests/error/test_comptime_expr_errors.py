@@ -31,6 +31,6 @@ def test_comptime_expr_errors(file, capsys, snapshot):
 @pytest.mark.skipif(tket_installed, reason="tket is installed")
 def test_tket_not_installed(capsys, snapshot):
     path = (
-        pathlib.Path(__file__).parent.resolve() / "py_errors" / "tket_not_installed.py"
+        pathlib.Path(__file__).parent.resolve() / "comptime_expr_errors" / "tket_not_installed.py"
     )
     run_error_test(str(path), capsys, snapshot)

@@ -38,7 +38,7 @@ dependencies = [
     "networkx >=3.2.1,<4",
     "pydantic >=2.7.0b1,<3",
     "typing-extensions >=4.9.0,<5",
-    "tket-exts",
+    "tket-exts ~= 0.10.0",
     "hugr >= 0.13.0rc1,<0.14",
 ]
 
@@ -65,7 +65,7 @@ test = [
     "pytest-notebook >=0.10.0,<0.11",
     "pytest-snapshot >=0.9.0,<1",
     "ipykernel >=6.29.5,<7",
-    "tket",
+    "tket ~= 0.12.1",
     "pytest-benchmark>=5.1.0",
     "miette-py",
     "guppylang[emulator]",
@@ -83,8 +83,7 @@ miette-py = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "50a2bac" }
-tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", rev = "1bf4c70" }
-tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", rev = "1bf4c70" }
+# tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", rev = "aca944c" }
 
 
 [build-system]
