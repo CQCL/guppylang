@@ -23,6 +23,7 @@ from guppylang.definition.common import (
     RawDef,
 )
 from guppylang.definition.ty import TypeDef
+from guppylang.definition.value import CompiledHugrNodeDef
 from guppylang.error import pretty_errors
 from guppylang.span import SourceMap
 from guppylang.tys.builtin import (
@@ -242,12 +243,9 @@ class CompilationEngine:
         compiled_def = ctx.compile(self.checked[id])
         self.compiled = ctx.compiled
 
-        from guppylang.definition.function import CompiledFunctionDef
-        from guppylang.definition.traced import CompiledTracedFunctionDef
-
-        if isinstance(compiled_def, CompiledFunctionDef | CompiledTracedFunctionDef):
+        if isinstance(compiled_def, CompiledHugrNodeDef):
             # if compiling a function set it as the HUGR entrypoint
-            graph.hugr.entrypoint = compiled_def.func_def.parent_node
+            graph.hugr.entrypoint = compiled_def.hugr_node
 
         # TODO: Currently the list of extensions is manually managed by the user.
         #  We should compute this dynamically from the imported dependencies instead.
