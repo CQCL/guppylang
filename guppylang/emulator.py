@@ -43,7 +43,7 @@ class EmulatorResult(QsysResult):
 @dataclass(frozen=True)
 class EmulatorOpts:
     _n_shots: int = 1
-    _simulator: Simulator = field(default_factory=Coinflip)
+    _simulator: Simulator = field(default_factory=Quest)
     _runtime: Runtime = field(default_factory=SimpleRuntime)
     _error_model: ErrorModel = field(default_factory=IdealErrorModel)
     _event_hook: EventHook = field(default_factory=NoEventHook)
