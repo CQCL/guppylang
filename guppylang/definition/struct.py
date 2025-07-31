@@ -31,12 +31,12 @@ from guppylang.definition.custom import (
 from guppylang.definition.function import parse_source
 from guppylang.definition.parameter import ParamDef
 from guppylang.definition.ty import TypeDef
+from guppylang.defs import GuppyDefinition
 from guppylang.diagnostic import Error, Help, Note
 from guppylang.engine import DEF_STORE
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.span import SourceMap, Span, to_span
-from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
 from guppylang.tys.parsing import type_from_ast
