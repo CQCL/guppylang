@@ -1,4 +1,4 @@
-from guppylang import guppy
+from guppylang.decorator import guppy, extend_type
 from tests.integration.modules.mod_a import f, MyType
 
 
@@ -12,7 +12,7 @@ def h(x: int) -> int:
 
 
 # Extend type defined in module A
-@guppy.extend_type(MyType)
+@extend_type(MyType)
 class _:
     @guppy
     def __int__(self: "MyType") -> int:

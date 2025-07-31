@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, no_type_check
 
-from guppylang.decorator import custom_function, guppy
+from guppylang.decorator import custom_function, extend_type, guppy
 from guppylang.definition.custom import NoopCompiler
 from guppylang.std._internal.checker import RangeChecker
 from guppylang.std.option import Option, nothing, some
@@ -20,7 +20,7 @@ L = guppy.type_var("L", copyable=False, droppable=False)
 n = guppy.nat_var("n")
 
 
-@guppy.extend_type(sized_iter_type_def)
+@extend_type(sized_iter_type_def)
 class SizedIter:
     """A wrapper around an iterator type `L` promising that the iterator will yield
     exactly `n` values.

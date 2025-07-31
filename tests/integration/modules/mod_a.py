@@ -2,7 +2,7 @@
 
 import hugr.tys as ht
 
-from guppylang import guppy
+from guppylang.decorator import guppy, custom_type
 
 
 @guppy
@@ -14,7 +14,7 @@ def f(x: int) -> int:
 def g() -> int: ...
 
 
-@guppy.type(ht.Bool)
+@custom_type(ht.Bool)
 class MyType:
     @guppy.declare
     def __neg__(self: "MyType") -> "MyType": ...

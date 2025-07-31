@@ -5,7 +5,7 @@ Type `Either[L, R]` represents a value of either typr `L` ("left") or `R` ("righ
 
 from typing import Generic, no_type_check
 
-from guppylang.decorator import custom_function, guppy
+from guppylang.decorator import custom_function, custom_type, guppy
 from guppylang.std._internal.compiler.either import (
     EitherConstructor,
     EitherTestCompiler,
@@ -24,7 +24,7 @@ Droppable = guppy.type_var("Droppable", copyable=False, droppable=True)
 _params = [TypeParam(0, "L", False, False), TypeParam(1, "L", False, False)]
 
 
-@guppy.type(either_to_hugr, params=_params)
+@custom_type(either_to_hugr, params=_params)
 class Either(Generic[L, R]):  # type: ignore[misc]
     """Represents a union of either a `left` or a `right` value."""
 

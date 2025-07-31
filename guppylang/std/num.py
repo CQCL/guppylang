@@ -9,7 +9,7 @@ from typing import no_type_check
 
 import hugr.std.int
 
-from guppylang.decorator import custom_function, guppy, hugr_op
+from guppylang.decorator import custom_function, extend_type, guppy, hugr_op
 from guppylang.definition.custom import BoolOpCompiler, NoopCompiler
 from guppylang.std._internal.checker import DunderChecker, ReversingChecker
 from guppylang.std._internal.compiler.prelude import UnwrapOpCompiler
@@ -18,7 +18,7 @@ from guppylang.std.platform import panic
 from guppylang.tys.builtin import float_type_def, int_type_def, nat_type_def
 
 
-@guppy.extend_type(nat_type_def)
+@extend_type(nat_type_def)
 class nat:
     """A 64-bit unsigned integer."""
 
@@ -161,7 +161,7 @@ class nat:
     def __xor__(self: nat, other: nat) -> nat: ...
 
 
-@guppy.extend_type(int_type_def)
+@extend_type(int_type_def)
 class int:
     """A 64-bit signed integer."""
 
@@ -315,7 +315,7 @@ class int:
     def __xor__(self: int, other: int) -> int: ...
 
 
-@guppy.extend_type(float_type_def)
+@extend_type(float_type_def)
 class float:
     """An IEEE754 double-precision floating point value."""
 

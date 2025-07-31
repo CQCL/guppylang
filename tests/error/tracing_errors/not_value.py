@@ -1,9 +1,9 @@
 from hugr import tys
 
-from guppylang.decorator import guppy
+from guppylang.decorator import guppy, custom_type
 
 
-@guppy.type(tys.Tuple())
+@custom_type(tys.Tuple())
 class T:
     pass
 

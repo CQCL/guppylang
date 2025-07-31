@@ -2,10 +2,10 @@ from typing import Generic
 
 from hugr import tys
 
-from guppylang.decorator import guppy
+from guppylang.decorator import guppy, custom_type
 
 
-@guppy.type(tys.Tuple(), droppable=False)
+@custom_type(tys.Tuple(), droppable=False)
 class MyType:
     pass
 

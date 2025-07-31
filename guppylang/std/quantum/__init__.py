@@ -6,7 +6,7 @@ from typing import no_type_check
 
 from hugr import tys as ht
 
-from guppylang.decorator import custom_function, guppy, hugr_op
+from guppylang.decorator import custom_function, custom_type, guppy, hugr_op
 from guppylang.std._internal.compiler.quantum import (
     InoutMeasureCompiler,
     RotationCompiler,
@@ -18,7 +18,7 @@ from guppylang.std.lang import owned
 from guppylang.std.option import Option
 
 
-@guppy.type(ht.Qubit, copyable=False, droppable=False)
+@custom_type(ht.Qubit, copyable=False, droppable=False)
 class qubit:
     @hugr_op(quantum_op("QAlloc"))
     @no_type_check

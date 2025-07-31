@@ -1,4 +1,4 @@
-from guppylang.decorator import guppy
+from guppylang.decorator import guppy, custom_type
 from guppylang.std.builtins import owned
 from guppylang.std.option import Option
 from guppylang.std.quantum import qubit, measure
@@ -348,14 +348,14 @@ def test_for_continue(validate):
 
 
 def test_for_nonlinear_break(validate):
-    @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
+    @custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
         @guppy.declare
         def __next__(self: "MyIter") -> Option[tuple[qubit, "MyIter"]]: ...
 
-    @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
+    @custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyType:
         """Type that produces the iterator above."""
 

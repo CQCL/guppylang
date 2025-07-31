@@ -4,12 +4,12 @@
 
 from __future__ import annotations
 
-from guppylang.decorator import custom_function, guppy
+from guppylang.decorator import custom_function, extend_type
 from guppylang.std._internal.checker import UnsupportedChecker
 from guppylang.tys.builtin import string_type_def
 
 
-@guppy.extend_type(string_type_def)
+@extend_type(string_type_def)
 class str:
     """A string, i.e. immutable sequences of Unicode code points."""
 

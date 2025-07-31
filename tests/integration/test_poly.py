@@ -6,7 +6,7 @@ from hugr import tys as ht
 
 from hugr import Wire
 
-from guppylang.decorator import guppy, custom_function
+from guppylang.decorator import guppy, custom_function, custom_type
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.std.builtins import array
 from guppylang.std.quantum import qubit
@@ -315,7 +315,7 @@ def test_affine(validate):
 def test_relevant(validate):
     T = guppy.type_var("T", copyable=True, droppable=False)
 
-    @guppy.type(ht.Bool, copyable=True, droppable=False)
+    @custom_type(ht.Bool, copyable=True, droppable=False)
     class R: ...
 
     @guppy.declare

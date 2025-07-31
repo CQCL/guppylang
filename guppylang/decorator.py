@@ -119,17 +119,11 @@ class _Guppy:
         DEF_STORE.register_def(defn, get_calling_frame())
         return GuppyFunctionDefinition(defn)
 
+    @deprecated("Use @extend_type instead.")
     def extend_type(self, defn: TypeDef) -> Callable[[type], type]:
-        """Decorator to add new instance functions to a type."""
+        return extend_type(defn)
 
-        def dec(c: type) -> type:
-            for val in c.__dict__.values():
-                if isinstance(val, GuppyDefinition):
-                    DEF_STORE.register_impl(defn.id, val.wrapped.name, val.id)
-            return c
-
-        return dec
-
+    @deprecated("Use @custom_type instead.")
     def type(
         self,
         hugr_ty: ht.Type | Callable[[Sequence[Argument], CompilerContext], ht.Type],
@@ -139,40 +133,7 @@ class _Guppy:
         bound: ht.TypeBound | None = None,
         params: Sequence[Parameter] | None = None,
     ) -> Callable[[type[T]], type[T]]:
-        """Decorator to annotate a class definitions as Guppy types.
-
-        Requires the static Hugr translation of the type. Additionally, the type can be
-        marked as linear. All `@guppy` annotated functions on the class are turned into
-        instance functions.
-
-        For non-generic types, the Hugr representation can be passed as a static value.
-        For generic types, a callable may be passed that takes the type arguments of a
-        concrete instantiation.
-        """
-        mk_hugr_ty = (
-            (lambda args, ctx: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
-        )
-
-        def dec(c: type[T]) -> type[T]:
-            defn = OpaqueTypeDef(
-                DefId.fresh(),
-                name or c.__name__,
-                None,
-                params or [],
-                not copyable,
-                not droppable,
-                mk_hugr_ty,
-                bound,
-            )
-            DEF_STORE.register_def(defn, get_calling_frame())
-            for val in c.__dict__.values():
-                if isinstance(val, GuppyDefinition):
-                    DEF_STORE.register_impl(defn.id, val.wrapped.name, val.id)
-            # We're pretending to return the class unchanged, but in fact we return
-            # a `GuppyDefinition` that handles the comptime logic
-            return GuppyDefinition(defn)  # type: ignore[return-value]
-
-        return dec
+        return custom_type(hugr_ty, name, copyable, droppable, bound, params)
 
     @dataclass_transform()
     def struct(self, cls: builtins.type[T]) -> builtins.type[T]:
@@ -621,6 +582,62 @@ def hugr_op(
         name: The name of the function.
     """
     return custom_function(OpCompiler(op), checker, higher_order_value, name, signature)
+
+
+def extend_type(defn: TypeDef) -> Callable[[type], type]:
+    """Decorator to add new instance functions to a type."""
+
+    def dec(c: type) -> type:
+        for val in c.__dict__.values():
+            if isinstance(val, GuppyDefinition):
+                DEF_STORE.register_impl(defn.id, val.wrapped.name, val.id)
+        return c
+
+    return dec
+
+
+def custom_type(
+    hugr_ty: ht.Type | Callable[[Sequence[Argument], CompilerContext], ht.Type],
+    name: str = "",
+    copyable: bool = True,
+    droppable: bool = True,
+    bound: ht.TypeBound | None = None,
+    params: Sequence[Parameter] | None = None,
+) -> Callable[[type[T]], type[T]]:
+    """Decorator to annotate a class definitions as Guppy types.
+
+    Requires the static Hugr translation of the type. Additionally, the type can be
+    marked as linear. All `@guppy` annotated functions on the class are turned into
+    instance functions.
+
+    For non-generic types, the Hugr representation can be passed as a static value.
+    For generic types, a callable may be passed that takes the type arguments of a
+    concrete instantiation.
+    """
+    mk_hugr_ty = (
+        (lambda args, ctx: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
+    )
+
+    def dec(c: type[T]) -> type[T]:
+        defn = OpaqueTypeDef(
+            DefId.fresh(),
+            name or c.__name__,
+            None,
+            params or [],
+            not copyable,
+            not droppable,
+            mk_hugr_ty,
+            bound,
+        )
+        DEF_STORE.register_def(defn, get_calling_frame())
+        for val in c.__dict__.values():
+            if isinstance(val, GuppyDefinition):
+                DEF_STORE.register_impl(defn.id, val.wrapped.name, val.id)
+        # We're pretending to return the class unchanged, but in fact we return
+        # a `GuppyDefinition` that handles the comptime logic
+        return GuppyDefinition(defn)  # type: ignore[return-value]
+
+    return dec
 
 
 guppy = cast(_Guppy, _DummyGuppy()) if sphinx_running() else _Guppy()

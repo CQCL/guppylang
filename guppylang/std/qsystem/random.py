@@ -1,7 +1,7 @@
 # mypy: disable-error-code="no-any-return"
 from typing import Generic, no_type_check
 
-from guppylang.decorator import custom_function, guppy, hugr_op
+from guppylang.decorator import custom_function, custom_type, guppy, hugr_op
 from guppylang.std._internal.compiler.qsystem import (
     RandomIntBoundedCompiler,
     RandomIntCompiler,
@@ -26,7 +26,7 @@ DISCRETE_N = guppy.nat_var("DISCRETE_N")
 def _new_rng_context(seed: int) -> Option["RNG"]: ...
 
 
-@guppy.type(RNGCONTEXT_T, copyable=False, droppable=False)
+@custom_type(RNGCONTEXT_T, copyable=False, droppable=False)
 class RNG:
     """Random number generator."""
 

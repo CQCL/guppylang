@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import no_type_check
 
-from guppylang.decorator import custom_function, guppy, hugr_op
+from guppylang.decorator import custom_function, extend_type, guppy, hugr_op
 from guppylang.definition.custom import NoopCompiler
 from guppylang.std._internal.checker import DunderChecker
 from guppylang.std._internal.util import bool_logic_op
@@ -14,7 +14,7 @@ from guppylang.std.num import nat
 from guppylang.tys.builtin import bool_type_def
 
 
-@guppy.extend_type(bool_type_def)
+@extend_type(bool_type_def)
 class bool:
     """Booleans representing truth values.
 

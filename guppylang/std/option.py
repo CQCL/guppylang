@@ -1,6 +1,6 @@
 from typing import Generic, no_type_check
 
-from guppylang.decorator import custom_function, guppy
+from guppylang.decorator import custom_function, extend_type, guppy
 from guppylang.std._internal.compiler.option import (
     OptionConstructor,
     OptionTestCompiler,
@@ -14,7 +14,7 @@ from guppylang.tys.builtin import option_type_def
 L = guppy.type_var("T", copyable=False, droppable=False)
 
 
-@guppy.extend_type(option_type_def)
+@extend_type(option_type_def)
 class Option(Generic[L]):  # type: ignore[misc]
     """Represents an optional value."""
 
