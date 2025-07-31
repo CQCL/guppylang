@@ -4,6 +4,7 @@ import linecache
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
+from types import FrameType
 from typing import ClassVar
 
 from hugr import Wire, ops
@@ -35,7 +36,7 @@ from guppylang.defs import GuppyDefinition
 from guppylang.diagnostic import Error, Help, Note
 from guppylang.engine import DEF_STORE
 from guppylang.error import GuppyError, InternalGuppyError
-from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
+from guppylang.ipython_inspect import is_running_ipython
 from guppylang.span import SourceMap, Span, to_span
 from guppylang.tys.arg import Argument
 from guppylang.tys.param import Parameter, check_all_args
@@ -112,7 +113,8 @@ class RawStructDef(TypeDef, ParsableDef):
 
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedStructDef":
         """Parses the raw class object into an AST and checks that it is well-formed."""
-        cls_def = parse_py_class(self.python_class, sources)
+        frame = DEF_STORE.frames[self.id]
+        cls_def = parse_py_class(self.python_class, frame, sources)
         if cls_def.keywords:
             raise GuppyError(UnexpectedError(cls_def.keywords[0], "keyword"))
 
@@ -282,23 +284,25 @@ class CheckedStructDef(TypeDef, CompiledDef):
         return [constructor_def]
 
 
-def parse_py_class(cls: type, sources: SourceMap) -> ast.ClassDef:
+def parse_py_class(
+    cls: type, defining_frame: FrameType, sources: SourceMap
+) -> ast.ClassDef:
     """Parses a Python class object into an AST."""
-    # If we are running IPython, `inspect.getsourcelines` works only for builtins
-    # (guppy stdlib), but not for most/user-defined classes - see:
+    module = inspect.getmodule(cls)
+    if module is None:
+        raise GuppyError(UnknownSourceError(None, cls))
+
+    # If we are running IPython, `inspect.getsourcefile` won't work if the class was
+    # defined inside a cell. See
     #  - https://bugs.python.org/issue33826
     #  - https://github.com/ipython/ipython/issues/11249
     #  - https://github.com/wandb/weave/pull/1864
-    if is_running_ipython():
-        defn = find_ipython_def(cls.__name__)
-        if defn is not None:
-            file_name = f"<{defn.cell_name}>"
-            sources.add_file(file_name, defn.cell_source)
-            annotate_location(defn.node, defn.cell_source, file_name, 1)
-            if not isinstance(defn.node, ast.ClassDef):
-                raise GuppyError(ExpectedError(defn.node, "a class definition"))
-            return defn.node
-        # else, fall through to handle builtins.
+    if is_running_ipython() and module.__name__ == "__main__":
+        file: str | None = defining_frame.f_code.co_filename
+    else:
+        file = inspect.getsourcefile(cls)
+    if file is None:
+        raise GuppyError(UnknownSourceError(None, cls))
 
     # We can't rely on `inspect.getsourcelines` since it doesn't work properly for
     # classes prior to Python 3.13. See https://github.com/CQCL/guppylang/issues/1107.
@@ -306,9 +310,6 @@ def parse_py_class(cls: type, sources: SourceMap) -> ast.ClassDef:
     # attribute. See https://github.com/python/cpython/blob/3.13/Lib/inspect.py#L1052.
     # In the decorator, we make sure that `__firstlineno__` is set, even if we're not
     # on Python 3.13.
-    file = inspect.getsourcefile(cls)
-    if file is None:
-        raise GuppyError(UnknownSourceError(None, cls))
     file_lines = linecache.getlines(file)
     line_offset = cls.__firstlineno__  # type: ignore[attr-defined]
     source_lines = inspect.getblock(file_lines[line_offset - 1 :])
