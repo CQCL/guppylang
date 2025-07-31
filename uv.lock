@@ -833,21 +833,18 @@ dependencies = [
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pydantic" },
+    { name = "selene-sim" },
     { name = "tket-exts" },
     { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
-emulator = [
-    { name = "selene-sim" },
-]
 pytket = [
     { name = "pytket" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "guppylang", extra = ["emulator"] },
     { name = "ipykernel" },
     { name = "matplotlib" },
     { name = "miette-py" },
@@ -874,7 +871,6 @@ lint = [
     { name = "ruff" },
 ]
 pytket-integration = [
-    { name = "guppylang", extra = ["emulator"] },
     { name = "ipykernel" },
     { name = "matplotlib" },
     { name = "miette-py" },
@@ -888,7 +884,6 @@ pytket-integration = [
     { name = "tket" },
 ]
 test = [
-    { name = "guppylang", extra = ["emulator"] },
     { name = "ipykernel" },
     { name = "matplotlib" },
     { name = "miette-py" },
@@ -908,15 +903,14 @@ requires-dist = [
     { name = "networkx", specifier = ">=3.2.1,<4" },
     { name = "pydantic", specifier = ">=2.7.0b1,<3" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "selene-sim", marker = "extra == 'emulator'", specifier = ">=0.2.0rc1" },
+    { name = "selene-sim", specifier = ">=0.2.0rc1" },
     { name = "tket-exts", specifier = "~=0.10.0" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
-provides-extras = ["pytket", "emulator"]
+provides-extras = ["pytket"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "guppylang", extras = ["emulator"] },
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "matplotlib", specifier = ">=3.9.2" },
     { name = "miette-py", editable = "miette-py" },
@@ -942,7 +936,6 @@ lint = [
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
 ]
 pytket-integration = [
-    { name = "guppylang", extras = ["emulator"] },
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "matplotlib", specifier = ">=3.9.2" },
     { name = "miette-py", editable = "miette-py" },
@@ -956,7 +949,6 @@ pytket-integration = [
     { name = "tket", specifier = "~=0.12.1" },
 ]
 test = [
-    { name = "guppylang", extras = ["emulator"] },
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
     { name = "matplotlib", specifier = ">=3.9.2" },
     { name = "miette-py", editable = "miette-py" },
