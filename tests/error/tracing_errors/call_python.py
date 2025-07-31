@@ -6,6 +6,6 @@ def foo() -> None:
     pass
 
 
-guppy.compile(foo)
+foo.compile()
 
 foo()

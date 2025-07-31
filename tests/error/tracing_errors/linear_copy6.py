@@ -8,4 +8,4 @@ def test() -> tuple[qubit, qubit]:
     return q, q
 
 
-guppy.compile(test)
+test.compile()

@@ -6,4 +6,4 @@ def test(x: float) -> float:
     return ~x
 
 
-guppy.compile(test)
+test.compile()

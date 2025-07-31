@@ -13,4 +13,4 @@ def test() -> int:
     return foo[int](0)
 
 
-guppy.compile(test)
+test.compile()

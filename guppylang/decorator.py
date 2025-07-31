@@ -11,7 +11,7 @@ from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
 from hugr.package import ModulePointer
-from typing_extensions import dataclass_transform
+from typing_extensions import dataclass_transform, deprecated
 
 from guppylang.ast_util import annotate_location
 from guppylang.compiler.core import (
@@ -376,13 +376,16 @@ class _Guppy:
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
 
+    @deprecated(
+        "guppy.compile(foo) is deprecated and will be removed in a future version"
+        " use foo.compile() instead."
+    )
     def compile(self, obj: Any) -> ModulePointer:
         """Compiles a Guppy definition to Hugr."""
-        from guppylang.engine import ENGINE
 
         if not isinstance(obj, GuppyDefinition):
             raise TypeError(f"Object is not a Guppy definition: {obj}")
-        return ENGINE.compile(obj.id)
+        return ModulePointer(obj.compile(), 0)
 
     def pytket(
         self, input_circuit: Any

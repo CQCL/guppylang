@@ -8,4 +8,4 @@ def test() -> None:
     x(1)
 
 
-guppy.compile(test)
+test.compile()

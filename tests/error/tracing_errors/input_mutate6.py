@@ -22,4 +22,4 @@ def foo(s: S @ owned) -> None:
     discard(s.q)
 
 
-guppy.compile(foo)
+foo.compile()

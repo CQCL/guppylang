@@ -12,4 +12,4 @@ def test(x: int) -> None:
     s.y = x
 
 
-guppy.compile(test)
+test.compile()

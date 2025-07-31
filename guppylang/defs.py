@@ -28,12 +28,11 @@ class GuppyDefinition(TracingDefMixin):
     """A general Guppy definition."""
 
     def compile(self) -> Package:
-        from guppylang.decorator import guppy
-
-        return guppy.compile(self).package
+        """Compile a Guppy definition to HUGR."""
+        return ENGINE.compile(self.id).package
 
     def check(self) -> None:
-        """Compiles a Guppy definition to Hugr."""
+        """Type check a Guppy definition."""
         from guppylang.engine import ENGINE
 
         return ENGINE.check(self.id)
@@ -48,6 +47,7 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         return cast(Out, super().__call__(*args, **kwargs))
 
     def compile(self) -> Package:
+        """Compile a Guppy function definition to HUGR."""
         compiled_module = ENGINE.compile(self.id)
 
         # Look up how many generic params the function has so we can create an empty
