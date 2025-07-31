@@ -34,8 +34,6 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - name: install-llvm
-        run: "sudo apt-get update && sudo apt-get install -y llvm-14"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
