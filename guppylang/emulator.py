@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 import selene_sim
 from hugr.qsystem.result import QsysResult
-from selene_core.simulator import Simulator
 from selene_sim.backends.bundled_error_models import IdealErrorModel
 from selene_sim.backends.bundled_runtimes import SimpleRuntime
 from selene_sim.backends.bundled_simulators import Coinflip, Quest, Stim
@@ -22,6 +21,7 @@ if TYPE_CHECKING:
     from selene_core import BuildPlanner, QuantumInterface, Utility
     from selene_core.error_model import ErrorModel
     from selene_core.runtime import Runtime
+    from selene_core.simulator import Simulator
     from selene_sim.instance import SeleneInstance
 
 
@@ -29,14 +29,15 @@ __all__ = [
     "EmulatorInstance",
     "EmulatorOpts",
     "EmulatorResult",
-    "Simulator",
+    "EmulatorBuilder",
     "selene_sim",
 ]
 
 
-@dataclass(frozen=True)
-class EmulatorResult:
-    _qsys_result: QsysResult
+class EmulatorResult(QsysResult):
+    """A result from running an emulator instance."""
+
+    # TODO more docstring
 
 
 @dataclass(frozen=True)
@@ -163,8 +164,7 @@ class EmulatorInstance:
 
         # TODO progress bar on consuming iterator?
 
-        qsys_res = QsysResult(result_stream)
-        return EmulatorResult(_qsys_result=qsys_res)
+        return EmulatorResult(result_stream)
 
     def _run_instance(
         self, n_qubits: int, options: EmulatorOpts | None = None

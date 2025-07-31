@@ -14,7 +14,7 @@ from guppylang.engine import ENGINE
 from guppylang.tracing.object import TracingDefMixin
 from guppylang.tracing.util import hide_trace
 
-from .emulator import EmulatorBuilder, EmulatorInstance
+from .emulator import EmulatorBuilder, EmulatorInstance, EmulatorOpts, EmulatorResult
 
 if TYPE_CHECKING:
     from guppylang.compiler.core import PartiallyMonomorphizedArgs
@@ -67,6 +67,17 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
 
         builder = builder or EmulatorBuilder()
         return builder.build(mod)
+
+    def run_emulator(
+        self,
+        n_qubits: int,
+        options: EmulatorOpts | None = None,
+        *,
+        builder: EmulatorBuilder | None = None,
+    ) -> EmulatorResult:
+        """Run the Guppy function in an emulator."""
+        em = self.build_emulator(builder)
+        return em.run(n_qubits, options)
 
 
 @dataclass(frozen=True)

@@ -1,7 +1,7 @@
 from guppylang.decorator import guppy
 from guppylang.std.builtins import result
 from guppylang.std.quantum import qubit, measure, h
-from guppylang.emulator import QsysResult, EmulatorOpts
+from guppylang.emulator import EmulatorResult, EmulatorOpts
 
 
 def test_basic_emulation() -> None:
@@ -11,8 +11,8 @@ def test_basic_emulation() -> None:
 
     em = main.build_emulator()
     res = em.run(1, EmulatorOpts.statevector())
-    expected = QsysResult([[("c", False)]])
-    assert res._qsys_result == expected
+    expected = EmulatorResult([[("c", False)]])
+    assert res == expected
 
     @guppy
     def main() -> None:
@@ -20,7 +20,9 @@ def test_basic_emulation() -> None:
         h(q)
         result("c", measure(q))
 
-    em = main.build_emulator()
-    res = em.run(1, EmulatorOpts.statevector().with_random_seed(42))
-    expected = QsysResult([[("c", True)]])
-    assert res._qsys_result == expected
+    res = main.run_emulator(1, EmulatorOpts.statevector().with_random_seed(42))
+    expected = EmulatorResult([[("c", True)]])
+    assert res == expected
+
+
+# TODO more tests
