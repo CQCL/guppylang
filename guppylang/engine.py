@@ -100,6 +100,17 @@ class DefinitionStore:
             frame = self.frames[impl_id].f_back
             if frame:
                 self.frames[impl_id] = frame
+                # For Python 3.12 generic functions and classes, there is an additional
+                # inserted frame for the annotation scope. We can detect this frame by
+                # looking for the special ".generic_base" variable in the frame locals
+                # that is implicitly inserted by CPython. See
+                # - https://docs.python.org/3/reference/executionmodel.html#annotation-scopes
+                # - https://docs.python.org/3/reference/compound_stmts.html#generic-functions
+                # - https://jellezijlstra.github.io/pep695.html
+                if ".generic_base" in frame.f_locals:
+                    frame = frame.f_back
+                    assert frame is not None
+                    self.frames[impl_id] = frame
 
 
 DEF_STORE: DefinitionStore = DefinitionStore()
