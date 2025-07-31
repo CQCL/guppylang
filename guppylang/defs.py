@@ -27,6 +27,12 @@ class GuppyDefinition(TracingDefMixin):
 
         return guppy.compile(self).package
 
+    def check(self) -> None:
+        """Compiles a Guppy definition to Hugr."""
+        from guppylang.engine import ENGINE
+
+        return ENGINE.check(self.id)
+
 
 @dataclass(frozen=True)
 class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):

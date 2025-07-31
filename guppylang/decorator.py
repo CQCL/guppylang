@@ -378,13 +378,6 @@ class _Guppy:
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
 
-    def check(self, obj: Any) -> None:
-        """Compiles a Guppy definition to Hugr."""
-        from guppylang.engine import ENGINE
-
-        if not isinstance(obj, GuppyDefinition):
-            raise TypeError(f"Object is not a Guppy definition: {obj}")
-        return ENGINE.check(obj.id)
 
     def compile(self, obj: Any) -> ModulePointer:
         """Compiles a Guppy definition to Hugr."""
