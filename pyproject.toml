@@ -70,6 +70,7 @@ test = [
     "miette-py",
     "guppylang[emulator]",
     "selene-hugr-qis-compiler>=0.2.0rc1",
+    "matplotlib>=3.9.2",
 ]
 
 pytket_integration = [{ include-group = "test" }, "pytket >=1.34.0"]
