@@ -7,12 +7,7 @@ import selene_sim
 from hugr.qsystem.result import QsysResult
 from selene_core.simulator import Simulator
 from selene_sim.backends.bundled_error_models import IdealErrorModel
-from selene_sim.backends.bundled_simulators import (
-    ClassicalReplay,
-    Coinflip,
-    Quest,
-    Stim,
-)
+from selene_sim.backends.bundled_simulators import Quest
 from selene_sim.event_hooks import EventHook, NoEventHook
 
 if TYPE_CHECKING:
@@ -66,12 +61,13 @@ class EmulatorOptions(Config):
 @dataclass
 class EmulatorInstance:
     _instance: SeleneInstance
-    n_qubits: int
     options: EmulatorOptions = field(default_factory=EmulatorOptions)
 
-    def run(self, simulator: Simulator, n_shots: int = 1) -> EmulatorResult:
+    def run(
+        self, simulator: Simulator, n_qubits: int, n_shots: int = 1
+    ) -> EmulatorResult:
         result_stream = self._run_instance(
-            simulator=simulator, n_qubits=self.n_qubits, n_shots=n_shots
+            simulator=simulator, n_qubits=n_qubits, n_shots=n_shots
         )
 
         # TODO progress bar on consuming iterator?
@@ -79,31 +75,35 @@ class EmulatorInstance:
         qsys_res = QsysResult(result_stream)
         return EmulatorResult(_qsys_result=qsys_res)
 
-    def run_statevector(self, n_shots: int = 1) -> EmulatorResult:
+    def run_statevector(self, n_qubits: int, n_shots: int = 1) -> EmulatorResult:
         """Run with the default statevector simulation backend."""
-        return self.run(simulator=Quest(self.options.random_seed), n_shots=n_shots)
-
-    def run_stabilizer(self, n_shots: int = 1) -> EmulatorResult:
-        """Run with the default stabilizer simulation backend."""
-        return self.run(simulator=Stim(self.options.random_seed), n_shots=n_shots)
-
-    def run_coinflip(self, n_shots: int = 1) -> EmulatorResult:
-        """Run with the default coinflip simulation backend."""
         return self.run(
-            simulator=Coinflip(random_seed=self.options.random_seed), n_shots=n_shots
-        )
-
-    def run_classical_replay(
-        self, measurements: Sequence[Sequence[bool]], n_shots: int = 1
-    ) -> EmulatorResult:
-        """Run with the default classical replay simulation backend."""
-        return self.run(
-            simulator=ClassicalReplay(
-                measurements=list(map(list, measurements)),
-                random_seed=self.options.random_seed,
-            ),
+            simulator=Quest(self.options.random_seed),
+            n_qubits=n_qubits,
             n_shots=n_shots,
         )
+
+    # def run_stabilizer(self, n_shots: int = 1) -> EmulatorResult:
+    #     """Run with the default stabilizer simulation backend."""
+    #     return self.run(simulator=Stim(self.options.random_seed), n_shots=n_shots)
+
+    # def run_coinflip(self, n_shots: int = 1) -> EmulatorResult:
+    #     """Run with the default coinflip simulation backend."""
+    #     return self.run(
+    #         simulator=Coinflip(random_seed=self.options.random_seed), n_shots=n_shots
+    #     )
+
+    # def run_classical_replay(
+    #     self, measurements: Sequence[Sequence[bool]], n_shots: int = 1
+    # ) -> EmulatorResult:
+    #     """Run with the default classical replay simulation backend."""
+    #     return self.run(
+    #         simulator=ClassicalReplay(
+    #             measurements=list(map(list, measurements)),
+    #             random_seed=self.options.random_seed,
+    #         ),
+    #         n_shots=n_shots,
+    # )
 
     def _run_instance(
         self, simulator: Simulator, n_qubits: int, n_shots: int
@@ -143,7 +143,7 @@ class EmulatorBuilder(Config):
     strict: bool = False
     save_planner: bool = False
 
-    def build(self, package: Package, n_qubits: int) -> EmulatorInstance:
+    def build(self, package: Package) -> EmulatorInstance:
         """Build an EmulatorInstance from a compiled package."""
 
         instance = selene_sim.build(  # type: ignore[attr-defined]
@@ -159,4 +159,4 @@ class EmulatorBuilder(Config):
             save_planner=self.save_planner,
         )
 
-        return EmulatorInstance(_instance=instance, n_qubits=n_qubits)
+        return EmulatorInstance(_instance=instance)

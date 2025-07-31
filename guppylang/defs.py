@@ -61,12 +61,12 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         return compiled_module.package
 
     def build_emulator(
-        self, n_qubits: int, builder: EmulatorBuilder | None = None
+        self, builder: EmulatorBuilder | None = None
     ) -> EmulatorInstance:
         mod = self.compile()
 
         builder = builder or EmulatorBuilder()
-        return builder.build(mod, n_qubits)
+        return builder.build(mod)
 
 
 @dataclass(frozen=True)
