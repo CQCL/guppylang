@@ -5,14 +5,19 @@ with the compiler-internal definition objects in the `definitions` module.
 """
 
 from dataclasses import dataclass
-from typing import Any, ClassVar, Generic, ParamSpec, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, ParamSpec, TypeVar, cast
 
 from hugr.package import Package
 
+from guppylang.definition.common import MonomorphizableDef
+from guppylang.engine import ENGINE
 from guppylang.tracing.object import TracingDefMixin
 from guppylang.tracing.util import hide_trace
 
 from .emulator import EmulatorBuilder, EmulatorInstance
+
+if TYPE_CHECKING:
+    from guppylang.compiler.core import PartiallyMonomorphizedArgs
 
 P = ParamSpec("P")
 Out = TypeVar("Out")
@@ -43,9 +48,17 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         return cast(Out, super().__call__(*args, **kwargs))
 
     def compile(self) -> Package:
-        from guppylang.decorator import guppy
+        compiled_module = ENGINE.compile(self.id)
 
-        return guppy.compile_function(self).package
+        # Look up how many generic params the function has so we can create an empty
+        # partial monomorphization to look up in the context
+        checked_def = ENGINE.checked[self.id]
+        mono_args: PartiallyMonomorphizedArgs | None = None
+        if isinstance(checked_def, MonomorphizableDef):
+            mono_args = tuple(None for _ in checked_def.params)
+
+        _ = ENGINE.compiled[self.id, mono_args]
+        return compiled_module.package
 
     def build_emulator(
         self, n_qubits: int, builder: EmulatorBuilder | None = None

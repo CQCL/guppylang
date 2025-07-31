@@ -10,16 +10,15 @@ from typing import Any, ParamSpec, TypeVar, cast
 from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
-from hugr.package import FuncDefnPointer, ModulePointer
+from hugr.package import ModulePointer
 from typing_extensions import dataclass_transform
 
 from guppylang.ast_util import annotate_location
 from guppylang.compiler.core import (
     CompilerContext,
     GlobalConstId,
-    PartiallyMonomorphizedArgs,
 )
-from guppylang.definition.common import DefId, MonomorphizableDef
+from guppylang.definition.common import DefId
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
     CustomCallChecker,
@@ -44,7 +43,6 @@ from guppylang.definition.pytket_circuits import (
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.traced import RawTracedFunctionDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
-from guppylang.definition.value import CompiledHugrNodeDef
 from guppylang.definition.wasm import RawWasmFunctionDef
 from guppylang.defs import (
     GuppyDefinition,
@@ -378,7 +376,6 @@ class _Guppy:
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
 
-
     def compile(self, obj: Any) -> ModulePointer:
         """Compiles a Guppy definition to Hugr."""
         from guppylang.engine import ENGINE
@@ -386,28 +383,6 @@ class _Guppy:
         if not isinstance(obj, GuppyDefinition):
             raise TypeError(f"Object is not a Guppy definition: {obj}")
         return ENGINE.compile(obj.id)
-
-    def compile_function(self, obj: GuppyFunctionDefinition[P, T]) -> FuncDefnPointer:
-        """Compiles a single function definition."""
-        from guppylang.engine import ENGINE
-
-        if not isinstance(obj, GuppyDefinition):
-            raise TypeError(f"Object is not a Guppy definition: {obj}")
-        compiled_module = ENGINE.compile(obj.id)
-
-        # Look up how many generic params the function has so we can create an empty
-        # partial monomorphization to look up in the context
-        checked_def = ENGINE.checked[obj.id]
-        mono_args: PartiallyMonomorphizedArgs | None = None
-        if isinstance(checked_def, MonomorphizableDef):
-            mono_args = tuple(None for _ in checked_def.params)
-
-        compiled_def = ENGINE.compiled[obj.id, mono_args]
-        assert isinstance(compiled_def, CompiledHugrNodeDef)
-        node = compiled_def.hugr_node
-        return FuncDefnPointer(
-            compiled_module.package, compiled_module.module_index, node
-        )
 
     def pytket(
         self, input_circuit: Any
