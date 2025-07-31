@@ -208,7 +208,7 @@ def test_capture_recurse_nested(validate):
 
         return bar(x, 0)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_capture_while(validate):

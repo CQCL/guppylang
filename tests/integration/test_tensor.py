@@ -31,9 +31,9 @@ def test_check_callable(validate):
     def baz2(x: int) -> bool:
         return (foo,)(is_42)(x)
 
-    validate(guppy.compile(baz))
-    validate(guppy.compile(baz1))
-    validate(guppy.compile(baz2))
+    validate(baz.compile())
+    validate(baz1.compile())
+    validate(baz2.compile())
 
 
 def test_call(validate):
@@ -67,9 +67,9 @@ def test_call(validate):
         g = (foo, bar, f)
         return g()
 
-    validate(guppy.compile(baz_ho_call))
-    validate(guppy.compile(baz))
-    validate(guppy.compile(call_var))
+    validate(baz_ho_call.compile())
+    validate(baz.compile())
+    validate(call_var.compile())
 
 
 def test_call_inplace(validate):
@@ -77,7 +77,7 @@ def test_call_inplace(validate):
     def local(f: Callable[[int], bool], g: Callable[[bool], int]) -> tuple[bool, int]:
         return (f, g)(42, True)
 
-    validate(guppy.compile(local))
+    validate(local.compile())
 
 
 def test_singleton(validate):
@@ -89,7 +89,7 @@ def test_singleton(validate):
     def baz(x: int) -> tuple[int, int]:
         return (foo,)(x, x)
 
-    validate(guppy.compile(baz))
+    validate(baz.compile())
 
 
 def test_call_back(validate):
@@ -110,7 +110,7 @@ def test_call_back(validate):
         f = foo, baz
         return f(x, x, x)
 
-    validate(guppy.compile(call_var))
+    validate(call_var.compile())
 
 
 def test_normal(validate):
@@ -122,7 +122,7 @@ def test_normal(validate):
     def foo(x: int) -> int:
         return glo(x)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_higher_order(validate):
@@ -153,7 +153,7 @@ def test_higher_order(validate):
     #     def apply_call(args: tuple[int, float]) -> tuple[bool, int]:
     #         return apply(baz, args)
 
-    validate(guppy.compile(baz))
+    validate(baz.compile())
 
 
 def test_nesting(validate):
@@ -170,4 +170,4 @@ def test_nesting(validate):
         f = bar, (bar, foo)
         return f(x, x, x, x)
 
-    validate(guppy.compile(call))
+    validate(call.compile())

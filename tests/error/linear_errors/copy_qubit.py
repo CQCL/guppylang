@@ -8,4 +8,4 @@ def foo(q: qubit @owned) -> tuple[qubit, qubit]:
     return q, q
 
 
-guppy.compile(foo)
+foo.compile()

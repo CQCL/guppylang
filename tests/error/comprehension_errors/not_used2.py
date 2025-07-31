@@ -14,4 +14,4 @@ def foo(ss: list[MyStruct] @owned) -> list[qubit]:
     return [s.q1 for s in ss]
 
 
-guppy.compile(foo)
+foo.compile()

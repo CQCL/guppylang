@@ -7,4 +7,4 @@ def main(q: qubit @comptime) -> None:
     pass
 
 
-guppy.compile(main)
+main.compile()

@@ -23,4 +23,4 @@ def main(_: Struct[X]) -> None:
     pass
 
 
-guppy.compile(main)
+main.compile()

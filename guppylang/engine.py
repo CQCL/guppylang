@@ -9,6 +9,7 @@ import hugr.std.float
 import hugr.std.int
 import hugr.std.logic
 import hugr.std.prelude
+from hugr import ops
 from hugr.ext import Extension
 from hugr.package import ModulePointer, Package
 
@@ -23,7 +24,7 @@ from guppylang.definition.common import (
     RawDef,
 )
 from guppylang.definition.ty import TypeDef
-from guppylang.definition.value import CompiledHugrNodeDef
+from guppylang.definition.value import CompiledCallableDef, CompiledHugrNodeDef
 from guppylang.error import pretty_errors
 from guppylang.span import SourceMap
 from guppylang.tys.builtin import (
@@ -243,8 +244,13 @@ class CompilationEngine:
         compiled_def = ctx.compile(self.checked[id])
         self.compiled = ctx.compiled
 
-        if isinstance(compiled_def, CompiledHugrNodeDef):
-            # if compiling a function set it as the HUGR entrypoint
+        if (
+            isinstance(compiled_def, CompiledHugrNodeDef)
+            and isinstance(compiled_def, CompiledCallableDef)
+            and not isinstance(graph.hugr[compiled_def.hugr_node].op, ops.FuncDecl)
+        ):
+            # if compiling a region set it as the HUGR entrypoint
+            # can be loosened after https://github.com/CQCL/hugr/issues/2501 is fixed
             graph.hugr.entrypoint = compiled_def.hugr_node
 
         # TODO: Currently the list of extensions is manually managed by the user.

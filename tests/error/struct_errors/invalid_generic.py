@@ -11,4 +11,4 @@ class MyStruct(Generic[X]):
     x: int
 
 
-guppy.compile(MyStruct)
+MyStruct.compile()

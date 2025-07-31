@@ -24,7 +24,7 @@ def test_custom_decorator(validate):
     def main() -> int:
         return foo() + bar() + main()
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_nested(validate):
@@ -52,7 +52,7 @@ def test_nested(validate):
     def main() -> int:
         return foo() + bar() + main()
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_method(validate):
@@ -80,4 +80,4 @@ def test_method(validate):
     def main() -> int:
         return foo() + bar() + main()
 
-    validate(guppy.compile(main))
+    validate(main.compile())

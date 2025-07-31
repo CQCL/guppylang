@@ -11,4 +11,4 @@ def foo(xs: array[int, n]) -> int:
     return a
 
 
-guppy.compile(foo)
+foo.compile()

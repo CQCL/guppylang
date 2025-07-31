@@ -21,4 +21,4 @@ def foo(s: MyStruct1 @owned) -> MyStruct1:
     return s
 
 
-guppy.compile(foo)
+foo.compile()

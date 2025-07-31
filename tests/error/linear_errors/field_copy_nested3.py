@@ -23,4 +23,4 @@ def foo(s: MyStruct1 @owned) -> qubit:
     return s.x.q
 
 
-guppy.compile(foo)
+foo.compile()

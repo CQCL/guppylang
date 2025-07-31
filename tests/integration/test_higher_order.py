@@ -13,7 +13,7 @@ def test_basic(validate):
     def foo() -> Callable[[int], bool]:
         return bar
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_call_1(validate):
@@ -29,7 +29,7 @@ def test_call_1(validate):
     def baz() -> bool:
         return foo()()
 
-    validate(guppy.compile(baz))
+    validate(baz.compile())
 
 
 def test_call_2(validate):
@@ -45,7 +45,7 @@ def test_call_2(validate):
     def baz(y: int) -> None:
         return foo()(y)(y)
 
-    validate(guppy.compile(baz))
+    validate(baz.compile())
 
 
 def test_method(validate):
@@ -54,7 +54,7 @@ def test_method(validate):
         f = x.__add__
         return f(1), f
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_nested(validate):
@@ -80,7 +80,7 @@ def test_nested_capture_struct(validate):
 
         return bar
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_curry(validate):
@@ -115,7 +115,7 @@ def test_curry(validate):
         uncurried(x, y)
         curry(uncurry(curry(gt)))(y)(x)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_y_combinator(validate):
@@ -136,4 +136,4 @@ def test_y_combinator(validate):
     def fac(x: int) -> int:
         return Y(fac_)(x)
 
-    validate(guppy.compile(fac))
+    validate(fac.compile())

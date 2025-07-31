@@ -5,4 +5,4 @@ from guppylang.decorator import guppy
 def foo(x): ...
 
 
-guppy.compile(foo)
+foo.compile()

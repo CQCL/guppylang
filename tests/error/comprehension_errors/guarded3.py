@@ -19,4 +19,4 @@ def foo(qs: list[MyStruct] @owned) -> list[qubit]:
     return [s.q2 for s in qs if bar(s.q1)]
 
 
-guppy.compile(foo)
+foo.compile()

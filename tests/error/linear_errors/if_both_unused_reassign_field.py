@@ -18,4 +18,4 @@ def foo(b: bool, s: MyStruct @owned) -> MyStruct:
     return s
 
 
-guppy.compile(foo)
+foo.compile()

@@ -10,4 +10,4 @@ blah = owned
 def foo(x: int @blah) -> qubit: ...
 
 
-guppy.compile(foo)
+foo.compile()

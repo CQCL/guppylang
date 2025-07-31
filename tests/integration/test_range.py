@@ -37,7 +37,7 @@ def test_static_size(validate):
     def negative() -> SizedIter[Range, 10]:
         return range(10)
 
-    validate(guppy.compile(negative))
+    validate(negative.compile())
 
 
 def test_py_size(validate):
@@ -47,7 +47,7 @@ def test_py_size(validate):
     def negative() -> SizedIter[Range, 10]:
         return range(py(n))
 
-    validate(guppy.compile(negative))
+    validate(negative.compile())
 
 
 def test_static_generic_size(validate):
@@ -57,4 +57,4 @@ def test_static_generic_size(validate):
     def negative() -> SizedIter[Range, n]:
         return range(n)
 
-    validate(guppy.compile(negative))
+    validate(negative.compile())

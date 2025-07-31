@@ -16,4 +16,4 @@ def test(q: array[int, 3]) -> None:
     use(q)
 
 
-guppy.compile(test)
+test.compile()

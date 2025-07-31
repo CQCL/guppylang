@@ -6,4 +6,4 @@ class MyStruct:
     x: "tuple[MyStruct, int]"
 
 
-guppy.compile(MyStruct)
+MyStruct.compile()

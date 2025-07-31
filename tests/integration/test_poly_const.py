@@ -40,11 +40,11 @@ def test_bool(validate, run_int_fn):
             s += 10000
         return s
 
-    compiled = guppy.compile(main)
+    compiled = main.compile()
     validate(compiled)
 
     # Check we have main, and 2 monomorphizations of foo (Dummy constructor is inlined)
-    assert len(funcs_defs(compiled.module)) == 3
+    assert len(funcs_defs(compiled.modules[0])) == 3
 
     run_int_fn(main, 101)
 
@@ -76,11 +76,11 @@ def test_int(validate):
             + foo[1](Dummy())
         )
 
-    compiled = guppy.compile(main)
+    compiled = main.compile()
     validate(compiled)
 
     # Check we have main, and 4 monomorphizations of foo (Dummy constructor is inlined)
-    assert len(funcs_defs(compiled.module)) == 5
+    assert len(funcs_defs(compiled.modules[0])) == 5
 
 
 def test_float(validate, run_float_fn_approx):
@@ -108,11 +108,11 @@ def test_float(validate, run_float_fn_approx):
             + foo[1.5](Dummy())
         )
 
-    compiled = guppy.compile(main)
+    compiled = main.compile()
     validate(compiled)
 
     # Check we have main, and 3 monomorphizations of foo (Dummy constructor is inlined)
-    assert len(funcs_defs(compiled.module)) == 4
+    assert len(funcs_defs(compiled.modules[0])) == 4
 
     run_float_fn_approx(main, 10.5)
 
@@ -143,11 +143,11 @@ def test_string(validate):
             foo["a"](Dummy()),
         )
 
-    compiled = guppy.compile(main)
+    compiled = main.compile()
     validate(compiled)
 
     # Check we have main, and 4 monomorphizations of foo (Dummy constructor is inlined)
-    assert len(funcs_defs(compiled.module)) == 5
+    assert len(funcs_defs(compiled.modules[0])) == 5
 
 
 def test_chain(validate, run_int_fn):
@@ -185,11 +185,11 @@ def test_chain(validate, run_int_fn):
         d[True](Dummy())
         return 1 if x else 0
 
-    compiled = guppy.compile(main)
+    compiled = main.compile()
     validate(compiled)
 
     # Check we have main, and 4 monomorphizations (a, b, c, d)
-    assert len(funcs_defs(compiled.module)) == 5
+    assert len(funcs_defs(compiled.modules[0])) == 5
 
     run_int_fn(main, 1)
 
@@ -221,11 +221,11 @@ def test_recursion(validate):
     def main() -> int:
         return baz[True](Dummy())
 
-    compiled = guppy.compile(main)
+    compiled = main.compile()
     validate(compiled)
 
     # Check we have main, and 5 monomorphizations of foo/bar/baz
-    assert len(funcs_defs(compiled.module)) == 6
+    assert len(funcs_defs(compiled.modules[0])) == 6
 
 
 def test_many(validate):
@@ -281,13 +281,13 @@ def test_many(validate):
         bar(s3.x3s)
         foo(s3)
 
-    compiled = guppy.compile(main)
+    compiled = main.compile()
     validate(compiled)
 
     # Check we have main, and 2 monomorphizations of foo and baz each. Note that `s2`
     # doesn't generate a monomorphisation since it shares the relevant mono-parameters
     # with `s1`
-    assert len(funcs_defs(compiled.module)) == 5
+    assert len(funcs_defs(compiled.modules[0])) == 5
 
 
 def test_constructor(validate):
@@ -307,11 +307,11 @@ def test_constructor(validate):
         f1()
         f2()
 
-    compiled = guppy.compile(main)
+    compiled = main.compile()
     validate(compiled)
 
     # Check we have main, and 2 monomorphizations of the MyStruct constructor
-    assert len(funcs_defs(compiled.module)) == 3
+    assert len(funcs_defs(compiled.modules[0])) == 3
 
 
 def test_higher_order(validate):
@@ -346,8 +346,8 @@ def test_higher_order(validate):
         foo(fun3[False])
         foo(fun3[True])
 
-    compiled = guppy.compile(main)
+    compiled = main.compile()
     validate(compiled)
 
     # Check we have main, fun2, and 2 monomorphizations of fun1, fun3, and foo each
-    assert len(funcs_defs(compiled.module)) == 8
+    assert len(funcs_defs(compiled.modules[0])) == 8

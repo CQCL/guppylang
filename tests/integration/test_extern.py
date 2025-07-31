@@ -12,10 +12,10 @@ def test_extern_float(validate):
     def main() -> float:
         return ext + ext
 
-    package = guppy.compile(main)
+    package = main.compile()
     validate(package)
 
-    hg = package.module
+    hg = package.modules[0]
     [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(c.val, val.Extension)
     assert c.val.val["symbol"] == "ext"
@@ -28,10 +28,10 @@ def test_extern_alt_symbol(validate):
     def main() -> int:
         return ext
 
-    package = guppy.compile(main)
+    package = main.compile()
     validate(package)
 
-    hg = package.module
+    hg = package.modules[0]
     [c] = [data.op for n, data in hg.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(c.val, val.Extension)
     assert c.val.val["symbol"] == "foo"
@@ -45,7 +45,7 @@ def test_extern_tuple(validate):
         x, y = ext
         return x + y
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 @pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/827")
@@ -58,4 +58,4 @@ def test_extern_conditional_assign(validate):
             x = 4
         return x
 
-    validate(guppy.compile(main))
+    validate(main.compile())

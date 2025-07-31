@@ -23,7 +23,7 @@ def test_basic_overload(validate):
         combined(1, 2)
         combined(1, 2, 3)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_pick_first(validate):
@@ -45,7 +45,7 @@ def test_pick_first(validate):
         x = combined(42)
         return x
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_generic_overload(validate):
@@ -68,7 +68,7 @@ def test_generic_overload(validate):
         x = combined(1, 1.0)
         return x
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_pick_by_return_type1(validate):
@@ -85,7 +85,7 @@ def test_pick_by_return_type1(validate):
     def main() -> None:
         out: int = combined()
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_pick_by_return_type2(validate):
@@ -108,7 +108,7 @@ def test_pick_by_return_type2(validate):
         # the return type and infer that `variant2` is the only matching one.
         out: int = combined(42.0)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_comptime_overload_call(validate):
@@ -132,7 +132,7 @@ def test_comptime_overload_call(validate):
         combined(1, 2)
         combined(1, 2, 3)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_everything_can_be_overloaded(validate):
@@ -164,7 +164,7 @@ def test_everything_can_be_overloaded(validate):
         combined(1, 2, 3)
         combined(1, 2, 3, 4)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
     # If we have tket installed, we can even overload circuits
     try:
@@ -190,7 +190,7 @@ def test_everything_can_be_overloaded(validate):
             combined(q)
             combined(qs)
 
-        validate(guppy.compile(main))
+        validate(main.compile())
 
     except ImportError:
         pass

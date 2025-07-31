@@ -13,7 +13,7 @@ def test_func_redefinition(validate):
     def test() -> bool:  # noqa: F811
         return False
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_method_redefinition(validate):
@@ -33,7 +33,7 @@ def test_method_redefinition(validate):
     def main(t: Test) -> int:
         return t.foo()
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_redefine_after_error(validate):
@@ -46,7 +46,7 @@ def test_redefine_after_error(validate):
         return y  # noqa: F821
 
     with pytest.raises(GuppyError):
-        guppy.compile(foo)
+        foo.compile()
 
     @guppy.struct
     class Foo:  # noqa: F811
@@ -56,7 +56,7 @@ def test_redefine_after_error(validate):
     def foo(f: Foo) -> int:
         return f.x
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/456")
@@ -73,7 +73,7 @@ def test_struct_redefinition(validate):
     def main(x: int) -> Test:
         return Test(x)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 @pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/456")
@@ -98,4 +98,4 @@ def test_struct_method_redefinition(validate):
     def main(x: int) -> int:
         return Test(x).bar()
 
-    validate(guppy.compile(main))
+    validate(main.compile())

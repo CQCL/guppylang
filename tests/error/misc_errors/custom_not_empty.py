@@ -6,4 +6,4 @@ def foo(x: int) -> int:
     return x
 
 
-guppy.compile(foo)
+foo.compile()

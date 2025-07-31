@@ -9,4 +9,4 @@ def bad(b: bool) -> int:
         x = 4
     return x
 
-guppy.compile(bad)
+bad.compile()

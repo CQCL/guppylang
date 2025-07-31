@@ -13,4 +13,4 @@ def foo(qs: list[qubit] @owned) -> list[qubit]:
     return [q for q in qs for x in bar(q)]
 
 
-guppy.compile(foo)
+foo.compile()

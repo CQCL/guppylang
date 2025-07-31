@@ -17,4 +17,4 @@ def test(s: MyStruct) -> None:
     use(s.x)
 
 
-guppy.compile(test)
+test.compile()

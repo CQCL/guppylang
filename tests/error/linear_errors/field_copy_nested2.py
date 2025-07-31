@@ -20,4 +20,4 @@ def foo(s: MyStruct1 @owned) -> MyStruct1:
     return MyStruct1(s.x)
 
 
-guppy.compile(foo)
+foo.compile()

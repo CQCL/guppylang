@@ -13,4 +13,4 @@ class MyStruct[D: NonDroppable]:
     pass
 
 
-guppy.compile(MyStruct)
+MyStruct.compile()

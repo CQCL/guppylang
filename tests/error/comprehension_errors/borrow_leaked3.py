@@ -12,4 +12,4 @@ def foo(qs: list[qubit] @owned) -> list[int]:
     return [0 for q in qs if bar(q)]
 
 
-guppy.compile(foo)
+foo.compile()

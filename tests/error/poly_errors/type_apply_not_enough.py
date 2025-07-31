@@ -15,4 +15,4 @@ def main() -> None:
     foo[int, int]
 
 
-guppy.compile(main)
+main.compile()

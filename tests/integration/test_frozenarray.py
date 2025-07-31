@@ -123,4 +123,4 @@ def test_nested_struct(validate):
                 s += x
         return s
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())

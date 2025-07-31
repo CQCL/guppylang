@@ -64,7 +64,7 @@ def _emulate_fn(is_flt: bool = False):
 
         entry = flt_entry if is_flt else int_entry
 
-        em = guppy.compile(entry)
+        em = entry.compile()
         instance = build(em)
         res = instance.run(Coinflip(42), n_qubits=0)
         num = next(v for k, v in res if k == "_test_output")

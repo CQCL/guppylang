@@ -86,7 +86,7 @@ def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
     ...     rz(angle(5/2), q1)
     ...     phasedx(angle(-3/2), q1)
     ...     rz(angle(3/2), q2)
-    >>> guppy.compile(qsystem_cx)
+    >>> qsystem_cx.compile()
     """
     f = float(angle)
     _zz_phase(q1, q2, f)
