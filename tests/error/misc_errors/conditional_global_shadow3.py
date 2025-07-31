@@ -1,7 +1,7 @@
 from guppylang.decorator import guppy
 
 
-x = guppy.extern("x", ty="int")
+x = guppy._extern("x", ty="int")
 
 @guppy
 def bad(b: bool) -> int:

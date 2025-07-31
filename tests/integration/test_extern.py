@@ -6,7 +6,7 @@ from guppylang.decorator import guppy
 
 
 def test_extern_float(validate):
-    ext = guppy.extern("ext", ty="float")
+    ext = guppy._extern("ext", ty="float")
 
     @guppy
     def main() -> float:
@@ -22,7 +22,7 @@ def test_extern_float(validate):
 
 
 def test_extern_alt_symbol(validate):
-    ext = guppy.extern("ext", ty="int", symbol="foo")
+    ext = guppy._extern("ext", ty="int", symbol="foo")
 
     @guppy
     def main() -> int:
@@ -38,7 +38,7 @@ def test_extern_alt_symbol(validate):
 
 
 def test_extern_tuple(validate):
-    ext = guppy.extern("ext", ty="tuple[int, float]")
+    ext = guppy._extern("ext", ty="tuple[int, float]")
 
     @guppy
     def main() -> float:
@@ -50,7 +50,7 @@ def test_extern_tuple(validate):
 
 @pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/827")
 def test_extern_conditional_assign(validate):
-    x = guppy.extern("x", ty="int")
+    x = guppy._extern("x", ty="int")
 
     @guppy
     def main(b: bool) -> int:

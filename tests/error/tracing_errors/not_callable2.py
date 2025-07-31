@@ -1,6 +1,6 @@
 from guppylang.decorator import guppy
 
-x = guppy.extern("x", "float")
+x = guppy._extern("x", "float")
 
 
 @guppy.comptime

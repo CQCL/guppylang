@@ -359,7 +359,7 @@ class _Guppy:
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
 
-    def extern(
+    def _extern(
         self,
         name: str,
         ty: str,
