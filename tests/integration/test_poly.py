@@ -6,7 +6,7 @@ from hugr import tys as ht
 
 from hugr import Wire
 
-from guppylang.decorator import guppy
+from guppylang.decorator import guppy, custom_function
 from guppylang.definition.custom import CustomCallCompiler
 from guppylang.std.builtins import array
 from guppylang.std.quantum import qubit
@@ -365,7 +365,7 @@ def test_custom_higher_order():
 
     T = guppy.type_var("T")
 
-    @guppy.custom(CustomCompiler())
+    @custom_function(CustomCompiler())
     def foo(x: T) -> T: ...
 
     @guppy

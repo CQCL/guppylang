@@ -2,11 +2,11 @@
 
 # mypy: disable-error-code="empty-body, no-untyped-def"
 
-from guppylang.decorator import guppy
+from guppylang.decorator import custom_function
 from guppylang.std._internal.debug import StateResultChecker
 
 
-@guppy.custom(checker=StateResultChecker(), higher_order_value=False)
+@custom_function(checker=StateResultChecker(), higher_order_value=False)
 def state_result(tag, *args) -> None:
     """Report the quantum state of the specified qubits.
 

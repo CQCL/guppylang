@@ -1,6 +1,6 @@
 from typing import no_type_check
 
-from guppylang.decorator import guppy
+from guppylang.decorator import custom_function, guppy, hugr_op
 from guppylang.definition.custom import BoolOpCompiler
 from guppylang.std import angles
 from guppylang.std._internal.compiler.quantum import (
@@ -110,37 +110,37 @@ def rz(q: qubit, angle: angle) -> None:
     _rz(q, f1)
 
 
-@guppy.hugr_op(quantum_op("Measure", ext=QSYSTEM_EXTENSION))
+@hugr_op(quantum_op("Measure", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def measure(q: qubit @ owned) -> bool:
     """Measure a qubit destructively."""
 
 
-@guppy.custom(InoutMeasureResetCompiler("MeasureReset", QSYSTEM_EXTENSION))
+@custom_function(InoutMeasureResetCompiler("MeasureReset", QSYSTEM_EXTENSION))
 @no_type_check
 def measure_and_reset(q: qubit) -> bool:
     """MeasureReset operation from the qsystem extension."""
 
 
-@guppy.hugr_op(quantum_op("Reset", ext=QSYSTEM_EXTENSION))
+@hugr_op(quantum_op("Reset", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def reset(q: qubit) -> None:
     """Reset a qubit to the |0> state."""
 
 
 # TODO
-# @guppy.hugr_op(quantum_op("TryQAlloc", ext=QSYSTEM_EXTENSION))
+# @hugr_op(quantum_op("TryQAlloc", ext=QSYSTEM_EXTENSION))
 # @no_type_check
 # def _try_qalloc() -> Option[qubit]:
 #     ..
 
 
-@guppy.hugr_op(quantum_op("QFree", ext=QSYSTEM_EXTENSION))
+@hugr_op(quantum_op("QFree", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def qfree(q: qubit @ owned) -> None: ...
 
 
-@guppy.hugr_op(quantum_op("LazyMeasureLeaked", ext=QSYSTEM_EXTENSION))
+@hugr_op(quantum_op("LazyMeasureLeaked", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def _measure_leaked(q: qubit @ owned) -> Future[int]:
     """Measure the quibit or return 2 if it is leaked."""
@@ -192,7 +192,7 @@ class MaybeLeaked:
 # ------------------------------------------------------
 
 
-@guppy.hugr_op(quantum_op("PhasedX", ext=QSYSTEM_EXTENSION))
+@hugr_op(quantum_op("PhasedX", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def _phased_x(q: qubit, angle1: float, angle2: float) -> None:
     """PhasedX operation from the qsystem extension.
@@ -202,7 +202,7 @@ def _phased_x(q: qubit, angle1: float, angle2: float) -> None:
     """
 
 
-@guppy.hugr_op(quantum_op("ZZPhase", ext=QSYSTEM_EXTENSION))
+@hugr_op(quantum_op("ZZPhase", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def _zz_phase(q1: qubit, q2: qubit, angle: float) -> None:
     """ZZPhase operation from the qsystem extension.
@@ -212,7 +212,7 @@ def _zz_phase(q1: qubit, q2: qubit, angle: float) -> None:
     """
 
 
-@guppy.hugr_op(quantum_op("Rz", ext=QSYSTEM_EXTENSION))
+@hugr_op(quantum_op("Rz", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def _rz(q: qubit, angle: float) -> None:
     """Rz operation from the qsystem extension.

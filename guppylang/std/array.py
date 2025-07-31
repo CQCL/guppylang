@@ -12,7 +12,7 @@ import builtins
 from types import GeneratorType
 from typing import TYPE_CHECKING, Generic, TypeVar, no_type_check
 
-from guppylang.decorator import guppy
+from guppylang.decorator import custom_function, guppy
 from guppylang.definition.custom import CopyInoutCompiler
 from guppylang.std._internal.checker import ArrayCopyChecker, NewArrayChecker
 from guppylang.std._internal.compiler.array import (
@@ -42,10 +42,10 @@ _n = TypeVar("_n")
 class array(builtins.list[_T], Generic[_T, _n]):
     """Sequence of homogeneous values with statically known fixed length."""
 
-    @guppy.custom(ArrayGetitemCompiler())
+    @custom_function(ArrayGetitemCompiler())
     def __getitem__(self: array[L, n], idx: int) -> L: ...
 
-    @guppy.custom(ArraySetitemCompiler())
+    @custom_function(ArraySetitemCompiler())
     def __setitem__(self: array[L, n], idx: int, value: L @ owned) -> None: ...
 
     @guppy
@@ -53,7 +53,7 @@ class array(builtins.list[_T], Generic[_T, _n]):
     def __len__(self: array[L, n]) -> int:
         return n
 
-    @guppy.custom(NewArrayCompiler(), NewArrayChecker(), higher_order_value=False)
+    @custom_function(NewArrayCompiler(), NewArrayChecker(), higher_order_value=False)
     def __new__(): ...
 
     # `__new__` will be overwritten below to provide actual runtime behaviour for
@@ -66,7 +66,7 @@ class array(builtins.list[_T], Generic[_T, _n]):
     def __iter__(self: array[L, n] @ owned) -> SizedIter[ArrayIter[L, n], n]:
         return SizedIter(ArrayIter(self, 0))
 
-    @guppy.custom(CopyInoutCompiler(), ArrayCopyChecker())
+    @custom_function(CopyInoutCompiler(), ArrayCopyChecker())
     def copy(self: array[T, n]) -> array[T, n]: ...
 
     def __new__(cls, *args: _T) -> builtins.list[_T]:  # type: ignore[no-redef]
@@ -95,11 +95,11 @@ class ArrayIter(Generic[L, n]):
         self._assert_all_used()
         return nothing()
 
-    @guppy.custom(ArrayIterAsertAllUsedCompiler())
+    @custom_function(ArrayIterAsertAllUsedCompiler())
     def _assert_all_used(self: ArrayIter[L, n] @ owned) -> None: ...
 
 
-@guppy.custom(ArrayGetitemCompiler())
+@custom_function(ArrayGetitemCompiler())
 def _array_unsafe_getitem(xs: array[L, n], idx: int) -> L: ...
 
 
@@ -107,7 +107,7 @@ def _array_unsafe_getitem(xs: array[L, n], idx: int) -> L: ...
 class frozenarray(Generic[T, n]):
     """An immutable array of fixed static size."""
 
-    @guppy.custom(FrozenarrayGetitemCompiler())
+    @custom_function(FrozenarrayGetitemCompiler())
     def __getitem__(self: frozenarray[T, n], item: int) -> T: ...  # type: ignore[type-arg]
 
     @guppy

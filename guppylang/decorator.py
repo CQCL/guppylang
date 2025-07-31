@@ -223,6 +223,7 @@ class _Guppy:
         # `GuppyDefinition` that pretends to be a TypeVar at runtime
         return GuppyTypeVarDefinition(defn, TypeVar(name))  # type: ignore[return-value]
 
+    @deprecated("Use @custom_function instead.")
     def custom(
         self,
         compiler: CustomInoutCallCompiler | None = None,
@@ -231,30 +232,9 @@ class _Guppy:
         name: str = "",
         signature: FunctionType | None = None,
     ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
-        """Decorator to add custom typing or compilation behaviour to function decls.
+        return custom_function(compiler, checker, higher_order_value, name, signature)
 
-        Optionally, usage of the function as a higher-order value can be disabled. In
-        that case, the function signature can be omitted if a custom call compiler is
-        provided.
-        """
-
-        def dec(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
-            call_checker = checker or DefaultCallChecker()
-            func = RawCustomFunctionDef(
-                DefId.fresh(),
-                name or f.__name__,
-                None,
-                f,
-                call_checker,
-                compiler or NotImplementedCallCompiler(),
-                higher_order_value,
-                signature,
-            )
-            DEF_STORE.register_def(func, get_calling_frame())
-            return GuppyFunctionDefinition(func)
-
-        return dec
-
+    @deprecated("Use @hugr_op instead.")
     def hugr_op(
         self,
         op: Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp],
@@ -263,17 +243,7 @@ class _Guppy:
         name: str = "",
         signature: FunctionType | None = None,
     ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
-        """Decorator to annotate function declarations as HUGR ops.
-
-        Args:
-            op: A function that takes an instantiation of the type arguments as well as
-                the inferred input and output types and returns a concrete HUGR op.
-            checker: The custom call checker.
-            higher_order_value: Whether the function may be used as a higher-order
-                value.
-            name: The name of the function.
-        """
-        return self.custom(OpCompiler(op), checker, higher_order_value, name, signature)
+        return hugr_op(op, checker, higher_order_value, name, signature)
 
     def declare(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         defn = RawFunctionDecl(DefId.fresh(), f.__name__, None, f)
@@ -601,4 +571,58 @@ def get_calling_frame() -> FrameType:
     raise RuntimeError("Couldn't obtain stack frame for definition")
 
 
+def custom_function(
+    compiler: CustomInoutCallCompiler | None = None,
+    checker: CustomCallChecker | None = None,
+    higher_order_value: bool = True,
+    name: str = "",
+    signature: FunctionType | None = None,
+) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
+    """Decorator to add custom typing or compilation behaviour to function decls.
+
+    Optionally, usage of the function as a higher-order value can be disabled. In
+    that case, the function signature can be omitted if a custom call compiler is
+    provided.
+    """
+
+    def dec(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+        call_checker = checker or DefaultCallChecker()
+        func = RawCustomFunctionDef(
+            DefId.fresh(),
+            name or f.__name__,
+            None,
+            f,
+            call_checker,
+            compiler or NotImplementedCallCompiler(),
+            higher_order_value,
+            signature,
+        )
+        DEF_STORE.register_def(func, get_calling_frame())
+        return GuppyFunctionDefinition(func)
+
+    return dec
+
+
+def hugr_op(
+    op: Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp],
+    checker: CustomCallChecker | None = None,
+    higher_order_value: bool = True,
+    name: str = "",
+    signature: FunctionType | None = None,
+) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
+    """Decorator to annotate function declarations as HUGR ops.
+
+    Args:
+        op: A function that takes an instantiation of the type arguments as well as
+            the inferred input and output types and returns a concrete HUGR op.
+        checker: The custom call checker.
+        higher_order_value: Whether the function may be used as a higher-order
+            value.
+        name: The name of the function.
+    """
+    return custom_function(OpCompiler(op), checker, higher_order_value, name, signature)
+
+
 guppy = cast(_Guppy, _DummyGuppy()) if sphinx_running() else _Guppy()
+
+# TODO sphinx hack for other decorators

@@ -1,4 +1,4 @@
-from guppylang.decorator import guppy
+from guppylang.decorator import guppy, hugr_op
 from guppylang.std._internal.util import int_op
 from guppylang.tys.ty import (
     FuncInput,
@@ -20,7 +20,7 @@ ty = FunctionType(
 
 
 # Create hugr_op using custom signature
-@guppy.hugr_op(int_op("iadd"), signature=ty)
+@hugr_op(int_op("iadd"), signature=ty)
 def fake_iadd(*args) -> None: ...
 
 

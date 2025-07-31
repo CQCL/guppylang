@@ -60,7 +60,7 @@ class NoSignatureError(Error):
     class Suggestion(Help):
         message: ClassVar[str] = (
             "Annotate the type signature of `{name}` or disallow the use of `{name}` "
-            "as a higher-order value: `@guppy.custom(..., higher_order_value=False)`"
+            "as a higher-order value: `@custom_function(..., higher_order_value=False)`"
         )
 
     def __post_init__(self) -> None:

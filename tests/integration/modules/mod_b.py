@@ -1,6 +1,7 @@
 """Dummy module used in `test_imports.py`"""
 
 from guppylang import guppy
+from guppylang.decorator import hugr_op
 from guppylang.std._internal.util import unsupported_op
 
 
@@ -9,7 +10,7 @@ def f(x: bool) -> bool:
     return not x
 
 
-@guppy.hugr_op(unsupported_op("h"))
+@hugr_op(unsupported_op("h"))
 def h() -> int: ...
 
 

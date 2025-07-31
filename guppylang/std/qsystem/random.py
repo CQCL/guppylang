@@ -1,7 +1,7 @@
 # mypy: disable-error-code="no-any-return"
 from typing import Generic, no_type_check
 
-from guppylang.decorator import guppy
+from guppylang.decorator import custom_function, guppy, hugr_op
 from guppylang.std._internal.compiler.qsystem import (
     RandomIntBoundedCompiler,
     RandomIntCompiler,
@@ -21,7 +21,7 @@ SHUFFLE_T = guppy.type_var("SHUFFLE_T", copyable=False, droppable=False)
 DISCRETE_N = guppy.nat_var("DISCRETE_N")
 
 
-@guppy.hugr_op(external_op("NewRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION))
+@hugr_op(external_op("NewRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION))
 @no_type_check
 def _new_rng_context(seed: int) -> Option["RNG"]: ...
 
@@ -45,22 +45,22 @@ class RNG:
         r"""Generate a random Clifford angle (multiple of :math:`\pi/2`)."""
         return self.random_int_bounded(4) * pi / 2
 
-    @guppy.hugr_op(external_op("DeleteRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION))
+    @hugr_op(external_op("DeleteRNGContext", [], ext=QSYSTEM_RANDOM_EXTENSION))
     @no_type_check
     def discard(self: "RNG" @ owned) -> None:
         """Discard the random number generator."""
 
-    @guppy.custom(RandomIntCompiler())
+    @custom_function(RandomIntCompiler())
     @no_type_check
     def random_int(self: "RNG") -> int:
         """Generate a random 32-bit signed integer."""
 
-    @guppy.hugr_op(external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION))
+    @hugr_op(external_op("RandomFloat", [], ext=QSYSTEM_RANDOM_EXTENSION))
     @no_type_check
     def random_float(self: "RNG") -> float:
         """Generate a random floating point value in the range [0,1)."""
 
-    @guppy.custom(RandomIntBoundedCompiler())
+    @custom_function(RandomIntBoundedCompiler())
     @no_type_check
     def random_int_bounded(self: "RNG", bound: int) -> int:
         """Generate a random 32-bit integer in the range [0, bound).

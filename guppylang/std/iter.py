@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, no_type_check
 
-from guppylang.decorator import guppy
+from guppylang.decorator import custom_function, guppy
 from guppylang.definition.custom import NoopCompiler
 from guppylang.std._internal.checker import RangeChecker
 from guppylang.std.option import Option, nothing, some
@@ -33,15 +33,15 @@ class SizedIter:
         # positions that are evaluated by the Python interpreter
         return cls
 
-    @guppy.custom(NoopCompiler())
+    @custom_function(NoopCompiler())
     def __new__(iterator: L @ owned) -> SizedIter[L, n]:  # type: ignore[type-arg]
         """Casts an iterator into a `SizedIter`."""
 
-    @guppy.custom(NoopCompiler())
+    @custom_function(NoopCompiler())
     def unwrap_iter(self: SizedIter[L, n] @ owned) -> L:
         """Extracts the actual iterator."""
 
-    @guppy.custom(NoopCompiler())
+    @custom_function(NoopCompiler())
     def __iter__(self: SizedIter[L, n] @ owned) -> SizedIter[L, n]:  # type: ignore[type-arg]
         """Dummy implementation making sized iterators iterable themselves."""
 
@@ -63,7 +63,7 @@ class Range:
         return nothing()
 
 
-@guppy.custom(checker=RangeChecker(), higher_order_value=False)
+@custom_function(checker=RangeChecker(), higher_order_value=False)
 def range(stop: int) -> Range:
     """Limited version of python range().
     Only a single argument (stop/limit) is supported."""

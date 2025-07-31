@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import no_type_check
 
-from guppylang.decorator import guppy
+from guppylang.decorator import custom_function, guppy
 from guppylang.std._internal.compiler.mem import WithOwnedCompiler
 from guppylang.std._internal.compiler.prelude import MemSwapCompiler
 from guppylang.std.lang import owned
@@ -12,13 +12,13 @@ T = guppy.type_var("T", copyable=False, droppable=False)
 Out = guppy.type_var("Out", copyable=False, droppable=False)
 
 
-@guppy.custom(MemSwapCompiler())
+@custom_function(MemSwapCompiler())
 @no_type_check
 def mem_swap(x: T, y: T) -> None:
     """Swaps the values of two variables."""
 
 
-@guppy.custom(WithOwnedCompiler())
+@custom_function(WithOwnedCompiler())
 @no_type_check
 def with_owned(val: T, f: Callable[[T @ owned], tuple[Out, T]]) -> Out:
     """Runs a closure where the borrowed argument is promoted to an owned one.

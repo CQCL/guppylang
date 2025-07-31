@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import no_type_check
 
-from guppylang.decorator import guppy
+from guppylang.decorator import custom_function
 from guppylang.std._internal.checker import (
     BarrierChecker,
     ExitChecker,
@@ -15,7 +15,7 @@ from guppylang.std._internal.checker import (
 )
 
 
-@guppy.custom(checker=ResultChecker(), higher_order_value=False)
+@custom_function(checker=ResultChecker(), higher_order_value=False)
 def result(tag: str, value):
     """Report a result with the given tag and value.
 
@@ -30,7 +30,7 @@ def result(tag: str, value):
     """
 
 
-@guppy.custom(checker=PanicChecker(), higher_order_value=False)
+@custom_function(checker=PanicChecker(), higher_order_value=False)
 def panic(msg: str, *args):
     """Panic, throwing an error with the given message, and immediately exit the
     program, aborting any subsequent shots.
@@ -44,7 +44,7 @@ def panic(msg: str, *args):
     """
 
 
-@guppy.custom(checker=ExitChecker(), higher_order_value=False)
+@custom_function(checker=ExitChecker(), higher_order_value=False)
 def exit(msg: str, signal: int, *args):
     """Exit, reporting the given message and signal, and immediately exit the
     program. Subsequent shots may still run.
@@ -60,7 +60,7 @@ def exit(msg: str, signal: int, *args):
     """
 
 
-@guppy.custom(checker=BarrierChecker(), higher_order_value=False)
+@custom_function(checker=BarrierChecker(), higher_order_value=False)
 @no_type_check
 def barrier(*args) -> None:
     """Barrier to guarantee that all operations before the barrier are completed before
