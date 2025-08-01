@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import selene_sim
 from hugr.qsystem.result import QsysResult
+from selene_quest_plugin.state import SeleneQuestState, TracedState
 from selene_sim.backends.bundled_error_models import IdealErrorModel
 from selene_sim.backends.bundled_runtimes import SimpleRuntime
 from selene_sim.backends.bundled_simulators import Coinflip, Quest, Stim
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
     from pathlib import Path
 
+    import numpy as np
     from hugr.package import Package
     from hugr.qsystem.result import TaggedResult
     from selene_core import BuildPlanner, QuantumInterface, Utility
@@ -31,13 +33,61 @@ __all__ = [
     "EmulatorResult",
     "EmulatorBuilder",
     "selene_sim",
+    "TracedState",
+    "PartialState",
 ]
+
+
+class PartialState:
+    _inner: SeleneQuestState
+
+    def __init__(
+        self, state: np.ndarray, total_qubits: int, specified_qubits: list[int]
+    ) -> None:
+        self._inner = SeleneQuestState(
+            state=state, total_qubits=total_qubits, specified_qubits=specified_qubits
+        )
+
+    @property
+    def total_qubits(self) -> int:
+        """Total number of qubits in the state."""
+        return self._inner.total_qubits
+
+    @property
+    def specified_qubits(self) -> list[int]:
+        """List of specified qubits in the state."""
+        return self._inner.specified_qubits
+
+    def state_distribution(self, zero_threshold=1e-12) -> list[TracedState[np.ndarray]]:
+        return self._inner.get_state_vector_distribution(zero_threshold=zero_threshold)
+
+    def as_single_state(self, zero_threshold=1e-12) -> np.ndarray:
+        return self._inner.get_single_state(zero_threshold=zero_threshold)
+
+    @classmethod
+    def _from_inner(cls, inner: SeleneQuestState) -> Self:
+        """Create a StateVector from an inner SeleneQuestState."""
+        obj = cls.__new__(cls)
+        obj._inner = inner
+        return obj
 
 
 class EmulatorResult(QsysResult):
     """A result from running an emulator instance."""
 
     # TODO more docstring
+
+    def partial_states_dict(self) -> list[dict[str, PartialState]]:
+        return [dict(x) for x in self.partial_states()]
+
+    def partial_states(self) -> list[list[tuple[str, PartialState]]]:
+        def to_partial(x: tuple[str, SeleneQuestState]) -> tuple[str, PartialState]:
+            return x[0], PartialState._from_inner(x[1])
+
+        return [
+            list(map(to_partial, Quest.extract_states(shot.entries)))
+            for shot in self.results
+        ]
 
 
 @dataclass(frozen=True)
@@ -179,7 +229,7 @@ class EmulatorInstance:
             simulator=self.simulator,
             n_qubits=self.n_qubits,
             n_shots=self.shots,
-            event_hook=self.event_hook,
+            event_hook=self._options._event_hook,
             error_model=self.error_model,
             verbose=self.verbose,
             timeout=self.timeout,
