@@ -60,11 +60,27 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         _ = ENGINE.compiled[self.id, mono_args]
         return compiled_module.package
 
-    def emulator(self, builder: EmulatorBuilder | None = None) -> EmulatorInstance:
+    def emulator(
+        self, n_qubits: int, builder: EmulatorBuilder | None = None
+    ) -> EmulatorInstance:
+        """Compile this function for emulation with the selene-sim emulator.
+
+        Calls `compile()` to get the HUGR package and then builds it using the
+        provided `EmulatorBuilder` or a default one.
+
+
+        Args:
+            n_qubits: The number of qubits to allocate for the function.
+            builder: An optional `EmulatorBuilder` to use for building the emulator
+                instance. If not provided, a default `EmulatorBuilder` will be used.
+
+        Returns:
+            An `EmulatorInstance` that can be used to run the function in an emulator.
+        """
         mod = self.compile()
 
         builder = builder or EmulatorBuilder()
-        return builder.build(mod)
+        return builder.build(mod, n_qubits=n_qubits)
 
 
 @dataclass(frozen=True)

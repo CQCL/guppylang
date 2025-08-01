@@ -42,28 +42,35 @@ class EmulatorResult(QsysResult):
 
 @dataclass(frozen=True)
 class _Options:
-    _shots: int = 1
     _simulator: Simulator = field(default_factory=Quest)
     _runtime: Runtime = field(default_factory=SimpleRuntime)
     _error_model: ErrorModel = field(default_factory=IdealErrorModel)
-    _event_hook: EventHook = field(default_factory=NoEventHook)
+    _shots: int = 1
+    _shot_increment: int = 1
+    _shot_offset: int = 0
+    _seed: int | None = None
     _verbose: bool = False
     _timeout: datetime.timedelta | None = None
-    _results_logfile: Path | None = None
-    _seed: int | None = None
-    _shot_offset: int = 0
-    _shot_increment: int = 1
     _n_processes: int = 1
+    _event_hook: EventHook = field(default_factory=NoEventHook)
+    # unstable:
+    _results_logfile: Path | None = None
 
 
 @dataclass(frozen=True)
 class EmulatorInstance:
     _instance: SeleneInstance
+    _n_qubits: int
     _options: _Options = field(default_factory=_Options)
 
     def _with_option(self, **kwargs: Any) -> Self:
         """Helper method to simplify setting options."""
         return replace(self, _options=replace(self._options, **kwargs))
+
+    @property
+    def n_qubits(self) -> int:
+        """Number of qubits available in the emulator instance."""
+        return self._n_qubits
 
     @property
     def shots(self) -> int:
@@ -82,20 +89,12 @@ class EmulatorInstance:
         return self._options._error_model
 
     @property
-    def event_hook(self) -> EventHook:
-        return self._options._event_hook
-
-    @property
     def verbose(self) -> bool:
         return self._options._verbose
 
     @property
     def timeout(self) -> datetime.timedelta | None:
         return self._options._timeout
-
-    @property
-    def results_logfile(self) -> Path | None:
-        return self._options._results_logfile
 
     @property
     def seed(self) -> int | None:
@@ -112,6 +111,10 @@ class EmulatorInstance:
     @property
     def n_processes(self) -> int:
         return self._options._n_processes
+
+    def with_n_qubits(self, value: int) -> Self:
+        """Update the number of qubits for the emulator instance."""
+        return replace(self, _n_qubits=value)
 
     def with_shots(self, value: int) -> Self:
         return self._with_option(_shots=value)
@@ -162,24 +165,25 @@ class EmulatorInstance:
     def stabilizer_sim(self) -> Self:
         return self.with_simulator(Stim())
 
-    def run(self, n_qubits: int) -> EmulatorResult:
-        result_stream = self._run_instance(n_qubits=n_qubits)
+    def run(self) -> EmulatorResult:
+        # TODO mention only runs one shot by default
+        result_stream = self._run_instance()
 
         # TODO progress bar on consuming iterator?
 
         return EmulatorResult(result_stream)
 
-    def _run_instance(self, n_qubits: int) -> Iterator[Iterator[TaggedResult]]:
+    def _run_instance(self) -> Iterator[Iterator[TaggedResult]]:
         """Run the Selene instance with the given simulator."""
         return self._instance.run_shots(
             simulator=self.simulator,
-            n_qubits=n_qubits,
+            n_qubits=self.n_qubits,
             n_shots=self.shots,
             event_hook=self.event_hook,
             error_model=self.error_model,
             verbose=self.verbose,
             timeout=self.timeout,
-            results_logfile=self.results_logfile,
+            results_logfile=self._options._results_logfile,
             random_seed=self.seed,
             shot_offset=self.shot_offset,
             shot_increment=self.shot_increment,
@@ -225,7 +229,7 @@ class EmulatorBuilder:
     def with_verbose(self, value: bool) -> Self:
         return replace(self, _verbose=value)
 
-    def build(self, package: Package) -> EmulatorInstance:
+    def build(self, package: Package, n_qubits: int) -> EmulatorInstance:
         """Build an EmulatorInstance from a compiled package."""
 
         instance = selene_sim.build(  # type: ignore[attr-defined]
@@ -241,4 +245,4 @@ class EmulatorBuilder:
             save_planner=self._save_planner,
         )
 
-        return EmulatorInstance(_instance=instance)
+        return EmulatorInstance(_instance=instance, _n_qubits=n_qubits)

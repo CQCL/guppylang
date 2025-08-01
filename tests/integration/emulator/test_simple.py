@@ -9,7 +9,7 @@ def test_basic_emulation() -> None:
     def main() -> None:
         result("c", measure(qubit()))
 
-    res = main.emulator().run(1)
+    res = main.emulator(1).run()
     expected = EmulatorResult([[("c", False)]])
     assert res == expected
 
@@ -19,7 +19,7 @@ def test_basic_emulation() -> None:
         h(q)
         result("c", measure(q))
 
-    res = main.emulator().statevector_sim().with_seed(42).run(1)
+    res = main.emulator(1).statevector_sim().with_seed(42).run()
     expected = EmulatorResult([[("c", True)]])
     assert res == expected
 
