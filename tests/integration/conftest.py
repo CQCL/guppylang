@@ -46,7 +46,6 @@ def _emulate_fn(is_flt: bool = False):
     """Use selene to emulate a Guppy function."""
     from guppylang.decorator import guppy
     from guppylang.std.builtins import result
-    from guppylang.emulator import EmulatorOpts
 
     def f(f: GuppyDefinition, expected: Any, args: list[Any] | None = None):
         args = args or []
@@ -62,7 +61,7 @@ def _emulate_fn(is_flt: bool = False):
             result("_test_output", o)
 
         entry = flt_entry if is_flt else int_entry
-        res = entry.run_emulator(0, EmulatorOpts.coinflip().with_seed(42))
+        res = entry.emulator().coinflip_sim().with_seed(42).run(0)
         num = next(v for k, v in res.results[0].entries if k == "_test_output")
         if num != expected:
             raise LLVMException(

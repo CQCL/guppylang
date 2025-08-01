@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import selene_sim
 from hugr.qsystem.result import QsysResult
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "EmulatorInstance",
-    "EmulatorOpts",
+    "_Options",
     "EmulatorResult",
     "EmulatorBuilder",
     "selene_sim",
@@ -41,7 +41,7 @@ class EmulatorResult(QsysResult):
 
 
 @dataclass(frozen=True)
-class EmulatorOpts:
+class _Options:
     _shots: int = 1
     _simulator: Simulator = field(default_factory=Quest)
     _runtime: Runtime = field(default_factory=SimpleRuntime)
@@ -55,136 +55,135 @@ class EmulatorOpts:
     _shot_increment: int = 1
     _n_processes: int = 1
 
+
+@dataclass(frozen=True)
+class EmulatorInstance:
+    _instance: SeleneInstance
+    _options: _Options = field(default_factory=_Options)
+
+    def _with_option(self, **kwargs: Any) -> Self:
+        """Helper method to simplify setting options."""
+        return replace(self, _options=replace(self._options, **kwargs))
+
     @property
     def shots(self) -> int:
-        return self._shots
+        return self._options._shots
 
     @property
     def simulator(self) -> Simulator:
-        return self._simulator
+        return self._options._simulator
 
     @property
     def runtime(self) -> Runtime:
-        return self._runtime
+        return self._options._runtime
 
     @property
     def error_model(self) -> ErrorModel:
-        return self._error_model
+        return self._options._error_model
 
     @property
     def event_hook(self) -> EventHook:
-        return self._event_hook
+        return self._options._event_hook
 
     @property
     def verbose(self) -> bool:
-        return self._verbose
+        return self._options._verbose
 
     @property
     def timeout(self) -> datetime.timedelta | None:
-        return self._timeout
+        return self._options._timeout
 
     @property
     def results_logfile(self) -> Path | None:
-        return self._results_logfile
+        return self._options._results_logfile
 
     @property
     def seed(self) -> int | None:
-        return self._seed
+        return self._options._seed
 
     @property
     def shot_offset(self) -> int:
-        return self._shot_offset
+        return self._options._shot_offset
 
     @property
     def shot_increment(self) -> int:
-        return self._shot_increment
+        return self._options._shot_increment
 
     @property
     def n_processes(self) -> int:
-        return self._n_processes
+        return self._options._n_processes
 
     def with_shots(self, value: int) -> Self:
-        return replace(self, _shots=value)
+        return self._with_option(_shots=value)
 
     def with_simulator(self, value: Simulator) -> Self:
-        return replace(self, _simulator=value)
+        return self._with_option(_simulator=value)
 
     def with_runtime(self, value: Runtime) -> Self:
-        return replace(self, _runtime=value)
+        return self._with_option(_runtime=value)
 
     def with_error_model(self, value: ErrorModel) -> Self:
-        return replace(self, _error_model=value)
+        return self._with_option(_error_model=value)
 
     def with_event_hook(self, value: EventHook) -> Self:
-        return replace(self, _event_hook=value)
+        return self._with_option(_event_hook=value)
 
     def with_verbose(self, value: bool) -> Self:
-        return replace(self, _verbose=value)
+        return self._with_option(_verbose=value)
 
     def with_timeout(self, value: datetime.timedelta | None) -> Self:
-        return replace(self, _timeout=value)
+        return self._with_option(_timeout=value)
 
     def with_results_logfile(self, value: Path | None) -> Self:
-        return replace(self, _results_logfile=value)
+        return self._with_option(_results_logfile=value)
 
     def with_seed(self, value: int | None) -> Self:
-        out = replace(self, _seed=value)
+        new_options = replace(self._options, _seed=value)
         # TODO flaky stateful, remove when selene simplifies
-        out.simulator.random_seed = value
+        new_options._simulator.random_seed = value
+        out = replace(self, _options=new_options)
         return out
 
     def with_shot_offset(self, value: int) -> Self:
-        return replace(self, _shot_offset=value)
+        return self._with_option(_shot_offset=value)
 
     def with_shot_increment(self, value: int) -> Self:
-        return replace(self, _shot_increment=value)
+        return self._with_option(_shot_increment=value)
 
     def with_n_processes(self, value: int) -> Self:
-        return replace(self, _n_processes=value)
+        return self._with_option(_n_processes=value)
 
-    @classmethod
-    def statevector(cls) -> Self:
-        return cls().with_simulator(Quest())
+    def statevector_sim(self) -> Self:
+        return self.with_simulator(Quest())
 
-    @classmethod
-    def coinflip(cls) -> Self:
-        return cls().with_simulator(Coinflip())
+    def coinflip_sim(self) -> Self:
+        return self.with_simulator(Coinflip())
 
-    @classmethod
-    def stabilizer(cls) -> Self:
-        return cls().with_simulator(Stim())
+    def stabilizer_sim(self) -> Self:
+        return self.with_simulator(Stim())
 
-
-@dataclass
-class EmulatorInstance:
-    _instance: SeleneInstance
-
-    def run(self, n_qubits: int, options: EmulatorOpts | None = None) -> EmulatorResult:
-        result_stream = self._run_instance(n_qubits=n_qubits, options=options)
+    def run(self, n_qubits: int) -> EmulatorResult:
+        result_stream = self._run_instance(n_qubits=n_qubits)
 
         # TODO progress bar on consuming iterator?
 
         return EmulatorResult(result_stream)
 
-    def _run_instance(
-        self, n_qubits: int, options: EmulatorOpts | None = None
-    ) -> Iterator[Iterator[TaggedResult]]:
+    def _run_instance(self, n_qubits: int) -> Iterator[Iterator[TaggedResult]]:
         """Run the Selene instance with the given simulator."""
-        options = options or EmulatorOpts()
-
         return self._instance.run_shots(
-            simulator=options.simulator,
+            simulator=self.simulator,
             n_qubits=n_qubits,
-            n_shots=options.shots,
-            event_hook=options.event_hook,
-            error_model=options.error_model,
-            verbose=options.verbose,
-            timeout=options.timeout,
-            results_logfile=options.results_logfile,
-            random_seed=options.seed,
-            shot_offset=options.shot_offset,
-            shot_increment=options.shot_increment,
-            n_processes=options.n_processes,
+            n_shots=self.shots,
+            event_hook=self.event_hook,
+            error_model=self.error_model,
+            verbose=self.verbose,
+            timeout=self.timeout,
+            results_logfile=self.results_logfile,
+            random_seed=self.seed,
+            shot_offset=self.shot_offset,
+            shot_increment=self.shot_increment,
+            n_processes=self.n_processes,
         )
 
 
