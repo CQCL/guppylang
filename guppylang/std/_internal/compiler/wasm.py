@@ -7,7 +7,7 @@ from guppylang.error import InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.std._internal.compiler.arithmetic import convert_itousize
 from guppylang.std._internal.compiler.prelude import build_unwrap
-from guppylang.std._internal.compiler.tket2_exts import (
+from guppylang.std._internal.compiler.tket_exts import (
     FUTURES_EXTENSION,
     WASM_EXTENSION,
     ConstWasmModule,
@@ -22,8 +22,8 @@ from guppylang.tys.ty import (
 
 class WasmModuleInitCompiler(CustomInoutCallCompiler):
     """Compiler for initialising WASM modules.
-    Calls tket2's "get_context" and unwraps the `Option` result.
-    Returns a `tket2.wasm.context` wire.
+    Calls tket's "get_context" and unwraps the `Option` result.
+    Returns a `tket.wasm.context` wire.
     """
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
@@ -57,7 +57,7 @@ class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
 
 class WasmModuleCallCompiler(CustomInoutCallCompiler):
     """Compiler for WASM calls
-    When a wasm method is called in guppy, we turn it into 2 tket2 ops:
+    When a wasm method is called in guppy, we turn it into 2 tket ops:
     * lookup: wasm.module -> wasm.func
     * call: wasm.context * wasm.func * inputs -> wasm.context * output
 
@@ -87,8 +87,8 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
             self.func.ty.output,
         ).to_hugr(self.ctx)
 
-        inputs_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.input])
-        output_row_arg = ht.SequenceArg([ty.type_arg() for ty in wasm_sig.output])
+        inputs_row_arg = ht.ListArg([ty.type_arg() for ty in wasm_sig.input])
+        output_row_arg = ht.ListArg([ty.type_arg() for ty in wasm_sig.output])
 
         func_ty = WASM_EXTENSION.get_type("func").instantiate(
             [inputs_row_arg, output_row_arg]

@@ -11,7 +11,7 @@ from guppylang.std._internal.compiler.prelude import (
     build_unwrap_left,
     build_unwrap_right,
 )
-from guppylang.std._internal.compiler.tket2_bool import OPAQUE_FALSE, OPAQUE_TRUE
+from guppylang.std._internal.compiler.tket_bool import OPAQUE_FALSE, OPAQUE_TRUE
 from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.common import ToHugrContext
 from guppylang.tys.ty import type_to_row

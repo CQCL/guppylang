@@ -22,27 +22,27 @@ PARTIAL_OP_DEF: he.OpDef = EXTENSION.add_op_def(
             poly_func=ht.PolyFuncType(
                 params=[
                     # Captured input types
-                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Linear)),
                     # Non-captured input types
-                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Linear)),
                     # Output types
-                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Linear)),
                 ],
                 body=ht.FunctionType(
                     input=[
                         ht.FunctionType(
                             input=[
-                                ht.RowVariable(0, ht.TypeBound.Any),
-                                ht.RowVariable(1, ht.TypeBound.Any),
+                                ht.RowVariable(0, ht.TypeBound.Linear),
+                                ht.RowVariable(1, ht.TypeBound.Linear),
                             ],
-                            output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                            output=[ht.RowVariable(2, ht.TypeBound.Linear)],
                         ),
-                        ht.RowVariable(0, ht.TypeBound.Any),
+                        ht.RowVariable(0, ht.TypeBound.Linear),
                     ],
                     output=[
                         ht.FunctionType(
-                            input=[ht.RowVariable(1, ht.TypeBound.Any)],
-                            output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                            input=[ht.RowVariable(1, ht.TypeBound.Linear)],
+                            output=[ht.RowVariable(2, ht.TypeBound.Linear)],
                         ),
                     ],
                 ),
@@ -109,9 +109,9 @@ class PartialOp(ops.AsExtOp):
         other_args: list[ht.TypeArg] = [ht.TypeTypeArg(ty) for ty in self.other_inputs]
         output_args: list[ht.TypeArg] = [ht.TypeTypeArg(ty) for ty in self.outputs]
         return [
-            ht.SequenceArg(captured_args),
-            ht.SequenceArg(other_args),
-            ht.SequenceArg(output_args),
+            ht.ListArg(captured_args),
+            ht.ListArg(other_args),
+            ht.ListArg(output_args),
         ]
 
     def cached_signature(self) -> ht.FunctionType | None:
@@ -151,13 +151,13 @@ UNSUPPORTED_OP_DEF: he.OpDef = EXTENSION.add_op_def(
                     # Name of the operation
                     ht.StringParam(),
                     # Input types
-                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Linear)),
                     # Output types
-                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Any)),
+                    ht.ListParam(ht.TypeTypeParam(ht.TypeBound.Linear)),
                 ],
                 body=ht.FunctionType(
-                    input=[ht.RowVariable(1, ht.TypeBound.Any)],
-                    output=[ht.RowVariable(2, ht.TypeBound.Any)],
+                    input=[ht.RowVariable(1, ht.TypeBound.Linear)],
+                    output=[ht.RowVariable(2, ht.TypeBound.Linear)],
                 ),
             )
         ),
@@ -185,8 +185,8 @@ class UnsupportedOp(ops.AsExtOp):
 
     def type_args(self) -> list[ht.TypeArg]:
         op_name = ht.StringArg(self.op_name)
-        input_args = ht.SequenceArg([ht.TypeTypeArg(ty) for ty in self.inputs])
-        output_args = ht.SequenceArg([ht.TypeTypeArg(ty) for ty in self.outputs])
+        input_args = ht.ListArg([ht.TypeTypeArg(ty) for ty in self.inputs])
+        output_args = ht.ListArg([ht.TypeTypeArg(ty) for ty in self.outputs])
         return [op_name, input_args, output_args]
 
     def cached_signature(self) -> ht.FunctionType | None:
@@ -217,8 +217,8 @@ class UnsupportedOp(ops.AsExtOp):
 
 
 def _arg_seq_to_types(args: ht.TypeArg) -> Iterator[ht.Type]:
-    """Converts a SequenceArg of type arguments into a sequence of types."""
-    assert isinstance(args, ht.SequenceArg)
+    """Converts a ListArg of type arguments into a sequence of types."""
+    assert isinstance(args, ht.ListArg)
     for arg in args.elems:
         assert isinstance(arg, ht.TypeTypeArg)
         yield arg.ty

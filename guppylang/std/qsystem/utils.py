@@ -1,7 +1,7 @@
 from typing import no_type_check
 
 from guppylang.decorator import guppy
-from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_UTILS_EXTENSION
+from guppylang.std._internal.compiler.tket_exts import QSYSTEM_UTILS_EXTENSION
 from guppylang.std._internal.util import external_op
 
 

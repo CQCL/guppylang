@@ -4,7 +4,7 @@ from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
 
-from guppylang.std._internal.compiler.tket2_exts import BOOL_EXTENSION
+from guppylang.std._internal.compiler.tket_exts import BOOL_EXTENSION
 
 BOOL_DEF = BOOL_EXTENSION.get_type("bool")
 OpaqueBool = ht.ExtType(BOOL_DEF)
