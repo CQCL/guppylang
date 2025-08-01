@@ -1,7 +1,7 @@
 import ast
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Literal, Optional, TypeGuard
+from typing import Literal, TypeGuard
 
 import hugr.std
 import hugr.std.collections.array
@@ -127,6 +127,7 @@ class WasmModuleTypeDef(OpaqueTypeDef):
         ty = WASM_EXTENSION.get_type("context")
         return ty.instantiate([])
 
+
 class GpuModuleTypeDef(OpaqueTypeDef):
     # Identify the module to load
     gpu_file: str
@@ -142,14 +143,14 @@ class GpuModuleTypeDef(OpaqueTypeDef):
         defined_at: ast.AST | None,
         gpu_file: str,
         gpu_hash: int,
-        gpu_config: str | None = None
+        gpu_config: str | None = None,
     ) -> None:
         super().__init__(id, name, defined_at, [], True, True, self.to_hugr)
         self.gpu_file = gpu_file
         self.gpu_hash = gpu_hash
         self.gpu_config = gpu_config
 
-    def to_hugr(self, args: Sequence[TypeArg | ConstArg], /) -> ht.Type:
+    def to_hugr(self, args: Sequence[TypeArg | ConstArg], _: ToHugrContext, /) -> ht.Type:
         assert args == []
         ty = GPU_EXTENSION.get_type("context")
         return ty.instantiate([])
@@ -377,7 +378,8 @@ def wasm_module_info(ty: Type) -> tuple[str, int] | None:
         return ty.defn.wasm_file, ty.defn.wasm_hash
     return None
 
-def gpu_module_info(ty: Type) -> tuple[str, int, Optional[str]] | None:
+
+def gpu_module_info(ty: Type) -> tuple[str, int, str | None] | None:
     if isinstance(ty, OpaqueType) and isinstance(ty.defn, GpuModuleTypeDef):
         return ty.defn.gpu_file, ty.defn.gpu_hash, ty.defn.gpu_config
     return None
