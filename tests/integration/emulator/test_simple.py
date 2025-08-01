@@ -20,7 +20,7 @@ def test_basic_emulation() -> None:
         h(q)
         result("c", measure(q))
 
-    res = main.run_emulator(1, EmulatorOpts.statevector().with_random_seed(42))
+    res = main.run_emulator(1, EmulatorOpts.statevector().with_seed(42))
     expected = EmulatorResult([[("c", True)]])
     assert res == expected
 

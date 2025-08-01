@@ -42,7 +42,7 @@ class EmulatorResult(QsysResult):
 
 @dataclass(frozen=True)
 class EmulatorOpts:
-    _n_shots: int = 1
+    _shots: int = 1
     _simulator: Simulator = field(default_factory=Quest)
     _runtime: Runtime = field(default_factory=SimpleRuntime)
     _error_model: ErrorModel = field(default_factory=IdealErrorModel)
@@ -50,14 +50,14 @@ class EmulatorOpts:
     _verbose: bool = False
     _timeout: datetime.timedelta | None = None
     _results_logfile: Path | None = None
-    _random_seed: int | None = None
+    _seed: int | None = None
     _shot_offset: int = 0
     _shot_increment: int = 1
     _n_processes: int = 1
 
     @property
-    def n_shots(self) -> int:
-        return self._n_shots
+    def shots(self) -> int:
+        return self._shots
 
     @property
     def simulator(self) -> Simulator:
@@ -88,8 +88,8 @@ class EmulatorOpts:
         return self._results_logfile
 
     @property
-    def random_seed(self) -> int | None:
-        return self._random_seed
+    def seed(self) -> int | None:
+        return self._seed
 
     @property
     def shot_offset(self) -> int:
@@ -103,8 +103,8 @@ class EmulatorOpts:
     def n_processes(self) -> int:
         return self._n_processes
 
-    def with_n_shots(self, value: int) -> Self:
-        return replace(self, _n_shots=value)
+    def with_shots(self, value: int) -> Self:
+        return replace(self, _shots=value)
 
     def with_simulator(self, value: Simulator) -> Self:
         return replace(self, _simulator=value)
@@ -127,8 +127,8 @@ class EmulatorOpts:
     def with_results_logfile(self, value: Path | None) -> Self:
         return replace(self, _results_logfile=value)
 
-    def with_random_seed(self, value: int | None) -> Self:
-        out = replace(self, _random_seed=value)
+    def with_seed(self, value: int | None) -> Self:
+        out = replace(self, _seed=value)
         # TODO flaky stateful, remove when selene simplifies
         out.simulator.random_seed = value
         return out
@@ -175,13 +175,13 @@ class EmulatorInstance:
         return self._instance.run_shots(
             simulator=options.simulator,
             n_qubits=n_qubits,
-            n_shots=options.n_shots,
+            n_shots=options.shots,
             event_hook=options.event_hook,
             error_model=options.error_model,
             verbose=options.verbose,
             timeout=options.timeout,
             results_logfile=options.results_logfile,
-            random_seed=options.random_seed,
+            random_seed=options.seed,
             shot_offset=options.shot_offset,
             shot_increment=options.shot_increment,
             n_processes=options.n_processes,
