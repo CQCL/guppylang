@@ -39,8 +39,8 @@ dependencies = [
     "pydantic >=2.7.0b1,<3",
     "typing-extensions >=4.9.0,<5",
     "tket-exts ~= 0.10.0",
-    "hugr >= 0.13.0rc1,<0.14",
-    "selene-sim>=0.2.0rc1"
+    "hugr ~= 0.13.0",
+    "selene-sim>=0.2.0rc4, <0.3",
 ]
 
 
@@ -68,7 +68,7 @@ test = [
     "tket ~= 0.12.1",
     "pytest-benchmark>=5.1.0",
     "miette-py",
-    "selene-hugr-qis-compiler>=0.2.0rc1",
+    "selene-hugr-qis-compiler>=0.2.0rc4, <0.3",
     "matplotlib>=3.9.2",
 ]
 
