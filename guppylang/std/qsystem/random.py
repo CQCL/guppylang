@@ -9,7 +9,7 @@ from guppylang.std._internal.compiler.qsystem import (
 from guppylang.std._internal.compiler.quantum import (
     RNGCONTEXT_T,
 )
-from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_RANDOM_EXTENSION
+from guppylang.std._internal.compiler.tket_exts import QSYSTEM_RANDOM_EXTENSION
 from guppylang.std._internal.util import external_op
 from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import array, mem_swap, owned, panic

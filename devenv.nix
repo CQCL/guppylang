@@ -1,8 +1,6 @@
 { pkgs, lib, ... }:
 
 {
-  # for building optional tket2 dependency
-  # see https://github.com/CQCL/tket2/blob/main/devenv.nix
   packages = [
     pkgs.just
     pkgs.graphviz

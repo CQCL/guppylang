@@ -11,15 +11,15 @@ from hugr.std.float import FLOAT_T
 
 from guppylang.definition.custom import CustomInoutCallCompiler
 from guppylang.definition.value import CallReturnWires
-from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, make_opaque
-from guppylang.std._internal.compiler.tket2_exts import (
+from guppylang.std._internal.compiler.tket_bool import OpaqueBool, make_opaque
+from guppylang.std._internal.compiler.tket_exts import (
     QSYSTEM_RANDOM_EXTENSION,
     QUANTUM_EXTENSION,
     ROTATION_EXTENSION,
 )
 
 # ----------------------------------------------
-# --------- tket2.* extensions -----------------
+# --------- tket.* extensions -----------------
 # ----------------------------------------------
 
 

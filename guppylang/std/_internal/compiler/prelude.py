@@ -63,8 +63,8 @@ def panic(
     name = "panic" if kind == ExitKind.Panic else "exit"
     op_def = hugr.std.PRELUDE.get_op(name)
     args: list[ht.TypeArg] = [
-        ht.SequenceArg([ht.TypeTypeArg(ty) for ty in inputs]),
-        ht.SequenceArg([ht.TypeTypeArg(ty) for ty in outputs]),
+        ht.ListArg([ht.TypeTypeArg(ty) for ty in inputs]),
+        ht.ListArg([ht.TypeTypeArg(ty) for ty in outputs]),
     ]
     sig = ht.FunctionType([error_type(), *inputs], outputs)
     return ops.ExtOp(op_def, sig, args)
@@ -194,16 +194,16 @@ def unwrap_result(
     [error_tys, result_tys] = either_ty.variant_rows
     # Construct the function signature for unwrapping a result of type T.
     func_ty = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(ht.TypeBound.Any)],
+        params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
         body=ht.FunctionType(
-            input=[ht.Either(error_tys, [ht.Variable(0, ht.TypeBound.Any)])],
-            output=[ht.Variable(0, ht.TypeBound.Any)],
+            input=[ht.Either(error_tys, [ht.Variable(0, ht.TypeBound.Linear)])],
+            output=[ht.Variable(0, ht.TypeBound.Linear)],
         ),
     )
     # Build global unwrap result function if it doesn't already exist.
     func, already_exists = ctx.declare_global_func(UNWRAP_RESULT, func_ty)
     if not already_exists:
-        _build_unwrap_result(func, ht.Variable(0, ht.TypeBound.Any))
+        _build_unwrap_result(func, ht.Variable(0, ht.TypeBound.Linear))
     # Call the global function.
     concrete_ty = ht.FunctionType(
         input=[ht.Either(error_tys, result_tys)], output=result_tys
@@ -255,7 +255,7 @@ class BarrierCompiler(CustomCallCompiler):
         tys = [t for arg in args if (t := self.builder.hugr.port_type(arg.out_port()))]
 
         op = hugr.std.prelude.PRELUDE_EXTENSION.get_op("Barrier").instantiate(
-            [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in tys])]
+            [ht.ListArg([ht.TypeTypeArg(ty) for ty in tys])]
         )
 
         barrier_n = self.builder.add_op(op, *args)

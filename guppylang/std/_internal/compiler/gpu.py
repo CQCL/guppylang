@@ -7,7 +7,7 @@ from guppylang.error import InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.std._internal.compiler.arithmetic import convert_itousize
 from guppylang.std._internal.compiler.prelude import build_unwrap
-from guppylang.std._internal.compiler.tket2_exts import (
+from guppylang.std._internal.compiler.tket_exts import (
     FUTURES_EXTENSION,
     GPU_EXTENSION,
     ConstGpuModule,
@@ -85,10 +85,10 @@ class GpuModuleCallCompiler(CustomInoutCallCompiler):
         gpu_sig = FunctionType(
             self.func.ty.inputs[1:],
             self.func.ty.output,
-        ).to_hugr()
+        ).to_hugr(self.ctx)
 
-        inputs_row_arg = ht.SequenceArg([ty.type_arg() for ty in gpu_sig.input])
-        output_row_arg = ht.SequenceArg([ty.type_arg() for ty in gpu_sig.output])
+        inputs_row_arg = ht.ListArg([ty.type_arg() for ty in gpu_sig.input])
+        output_row_arg = ht.ListArg([ty.type_arg() for ty in gpu_sig.output])
 
         func_ty = GPU_EXTENSION.get_type("func").instantiate(
             [inputs_row_arg, output_row_arg]

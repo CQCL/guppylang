@@ -28,6 +28,24 @@ def test_struct(validate):
     validate(guppy.compile(main))
 
 
+def test_inner_frame(validate):
+    """See https://github.com/CQCL/guppylang/issues/1116"""
+    def make():
+        @guppy.struct
+        class MyStruct[T]:
+            @guppy
+            def foo(self: "MyStruct[int]") -> None:
+                pass
+
+        @guppy
+        def main() -> None:
+            MyStruct[int]().foo()
+
+        return main
+
+    validate(guppy.compile(make()))
+
+
 def test_copy_bound(validate):
     @guppy.struct
     class MyStruct[T: Copy]:

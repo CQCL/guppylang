@@ -4,7 +4,7 @@ from hugr import ops
 from hugr import tys as ht
 
 from guppylang.error import InternalGuppyError
-from guppylang.std._internal.compiler.tket2_exts import FUTURES_EXTENSION
+from guppylang.std._internal.compiler.tket_exts import FUTURES_EXTENSION
 from guppylang.tys.arg import Argument, TypeArg
 from guppylang.tys.common import ToHugrContext
 from guppylang.tys.subst import Inst

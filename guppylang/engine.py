@@ -100,6 +100,17 @@ class DefinitionStore:
             frame = self.frames[impl_id].f_back
             if frame:
                 self.frames[impl_id] = frame
+                # For Python 3.12 generic functions and classes, there is an additional
+                # inserted frame for the annotation scope. We can detect this frame by
+                # looking for the special ".generic_base" variable in the frame locals
+                # that is implicitly inserted by CPython. See
+                # - https://docs.python.org/3/reference/executionmodel.html#annotation-scopes
+                # - https://docs.python.org/3/reference/compound_stmts.html#generic-functions
+                # - https://jellezijlstra.github.io/pep695.html
+                if ".generic_base" in frame.f_locals:
+                    frame = frame.f_back
+                    assert frame is not None
+                    self.frames[impl_id] = frame
 
 
 DEF_STORE: DefinitionStore = DefinitionStore()
@@ -135,6 +146,7 @@ class CompilationEngine:
     def register_extension(self, extension: Extension) -> None:
         self.additional_extensions.append(extension)
 
+    @pretty_errors
     def get_parsed(self, id: DefId) -> ParsedDef:
         """Look up the parsed version of a definition by its id.
 
@@ -155,6 +167,7 @@ class CompilationEngine:
             self.to_check_worklist[id] = defn
         return defn
 
+    @pretty_errors
     def get_checked(self, id: DefId) -> CheckedDef:
         """Look up the checked version of a definition by its id.
 
@@ -240,10 +253,10 @@ class CompilationEngine:
         #  We should compute this dynamically from the imported dependencies instead.
         #
         # The hugr prelude and std_extensions are implicit.
-        from guppylang.std._internal.compiler.tket2_exts import TKET2_EXTENSIONS
+        from guppylang.std._internal.compiler.tket_exts import TKET_EXTENSIONS
 
         extensions = [
-            *TKET2_EXTENSIONS,
+            *TKET_EXTENSIONS,
             guppylang.compiler.hugr_extension.EXTENSION,
             *self.additional_extensions,
         ]

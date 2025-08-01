@@ -9,7 +9,7 @@ from guppylang.std._internal.compiler.prelude import build_unwrap_right
 from guppylang.std._internal.compiler.quantum import (
     RNGCONTEXT_T,
 )
-from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_RANDOM_EXTENSION
+from guppylang.std._internal.compiler.tket_exts import QSYSTEM_RANDOM_EXTENSION
 from guppylang.std._internal.util import external_op
 
 

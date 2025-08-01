@@ -8,11 +8,11 @@ from guppylang.checker.errors.type_errors import WrongNumberOfArgsError
 from guppylang.checker.expr_checker import ExprChecker, ExprSynthesizer, synthesize_call
 from guppylang.definition.custom import CustomCallChecker
 from guppylang.definition.ty import TypeDef
+from guppylang.defs import GuppyDefinition
 from guppylang.diagnostic import Error
 from guppylang.error import GuppyTypeError
 from guppylang.nodes import StateResultExpr
 from guppylang.std._internal.checker import TAG_MAX_LEN, TooLongError
-from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.builtin import (
     get_array_length,
     get_element_type,

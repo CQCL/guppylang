@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 
-import hugr.model
-import hugr.std
 from hugr import val
-from tket2_exts import (
+from tket_exts import (
     debug,
     futures,
     gpu,
@@ -30,7 +28,7 @@ RESULT_EXTENSION = result()
 ROTATION_EXTENSION = rotation()
 WASM_EXTENSION = wasm()
 
-TKET2_EXTENSIONS = [
+TKET_EXTENSIONS = [
     BOOL_EXTENSION,
     DEBUG_EXTENSION,
     FUTURES_EXTENSION,
@@ -47,7 +45,7 @@ TKET2_EXTENSIONS = [
 
 @dataclass(frozen=True)
 class ConstWasmModule(val.ExtensionValue):
-    """Python wrapper for the tket2 ConstWasmModule type"""
+    """Python wrapper for the tket ConstWasmModule type"""
 
     wasm_file: str
     wasm_hash: int
@@ -55,20 +53,14 @@ class ConstWasmModule(val.ExtensionValue):
     def to_value(self) -> val.Extension:
         ty = WASM_EXTENSION.get_type("module").instantiate([])
 
-        name = "tket2.wasm.ConstWasmModule"
+        name = "tket.wasm.ConstWasmModule"
         payload = {"name": self.wasm_file, "hash": self.wasm_hash}
-        return val.Extension(name, typ=ty, val=payload, extensions=["tket2.wasm"])
+        return val.Extension(name, typ=ty, val=payload, extensions=["tket.wasm"])
 
     def __str__(self) -> str:
         return (
             f"ConstWasmModule(wasm_file={self.wasm_file}, wasm_hash={self.wasm_hash})"
         )
-
-    def to_model(self) -> hugr.model.Term:
-        file_tm = hugr.model.Literal(self.wasm_file)
-        hash_tm = hugr.model.Literal(self.wasm_hash)
-
-        return hugr.model.Apply("tket2.wasm.ConstWasmModule", [file_tm, hash_tm])
 
 
 @dataclass(frozen=True)
@@ -94,18 +86,4 @@ class ConstGpuModule(val.ExtensionValue):
         return (
             f"ConstGpuModule(gpu_file={self.gpu_file}, gpu_hash={self.gpu_hash}, "
             f"gpu_config={self.gpu_config})"
-        )
-
-    def to_model(self) -> hugr.model.Term:
-        file_tm = hugr.model.Literal(self.gpu_file)
-        hash_tm = hugr.model.Literal(self.gpu_hash)
-        if isinstance(self.gpu_config, str):
-            config_tm = hugr.val.Some(
-                hugr.std.prelude.StringVal(self.gpu_config)
-            ).to_model()
-        else:
-            config_tm = hugr.val.None_().to_model()
-
-        return hugr.model.Apply(
-            "tket2.gpu.ConstGpuModule", [file_tm, hash_tm, config_tm]
         )

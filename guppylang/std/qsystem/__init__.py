@@ -7,7 +7,7 @@ from guppylang.std._internal.compiler.quantum import (
     InoutMeasureCompiler,
     InoutMeasureResetCompiler,
 )
-from guppylang.std._internal.compiler.tket2_exts import QSYSTEM_EXTENSION
+from guppylang.std._internal.compiler.tket_exts import QSYSTEM_EXTENSION
 from guppylang.std._internal.util import quantum_op
 from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import owned

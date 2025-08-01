@@ -13,8 +13,8 @@ from guppylang.definition.common import CompiledDef, DefId
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.experimental import check_lists_enabled
-from guppylang.std._internal.compiler.tket2_bool import OpaqueBool
-from guppylang.std._internal.compiler.tket2_exts import GPU_EXTENSION, WASM_EXTENSION
+from guppylang.std._internal.compiler.tket_bool import OpaqueBool
+from guppylang.std._internal.compiler.tket_exts import GPU_EXTENSION, WASM_EXTENSION
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
 from guppylang.tys.common import ToHugrContext
 from guppylang.tys.const import Const, ConstValue
@@ -150,7 +150,9 @@ class GpuModuleTypeDef(OpaqueTypeDef):
         self.gpu_hash = gpu_hash
         self.gpu_config = gpu_config
 
-    def to_hugr(self, args: Sequence[TypeArg | ConstArg], _: ToHugrContext, /) -> ht.Type:
+    def to_hugr(
+        self, args: Sequence[TypeArg | ConstArg], _: ToHugrContext, /
+    ) -> ht.Type:
         assert args == []
         ty = GPU_EXTENSION.get_type("context")
         return ty.instantiate([])

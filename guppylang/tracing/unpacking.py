@@ -9,11 +9,12 @@ from guppylang.checker.errors.comptime_errors import IllegalComptimeExpressionEr
 from guppylang.checker.expr_checker import python_value_to_guppy_type
 from guppylang.compiler.core import CompilerContext
 from guppylang.compiler.expr_compiler import python_value_to_hugr
+from guppylang.defs import GuppyDefinition
 from guppylang.error import GuppyComptimeError, GuppyError
 from guppylang.std._internal.compiler.array import array_new, unpack_array
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.tracing.frozenlist import frozenlist
-from guppylang.tracing.object import GuppyDefinition, GuppyObject, GuppyStructObject
+from guppylang.tracing.object import GuppyObject, GuppyStructObject
 from guppylang.tracing.state import get_tracing_state
 from guppylang.tys.builtin import (
     array_type,

@@ -7,7 +7,7 @@ from guppylang.definition.custom import CustomCallCompiler, CustomInoutCallCompi
 from guppylang.definition.value import CallReturnWires
 from guppylang.error import InternalGuppyError
 from guppylang.std._internal.compiler.prelude import build_expect_none, build_unwrap
-from guppylang.std._internal.compiler.tket2_bool import OPAQUE_FALSE, OPAQUE_TRUE
+from guppylang.std._internal.compiler.tket_bool import OPAQUE_FALSE, OPAQUE_TRUE
 from guppylang.tys.arg import TypeArg
 
 
