@@ -2,9 +2,6 @@ import ast
 import builtins
 import inspect
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
-from pathlib import Path
-from types import FrameType, ModuleType
 from typing import Any, ParamSpec, TypeVar, cast
 
 from hugr import ops
@@ -86,24 +83,6 @@ AnyRawFunctionDef = (
     RawLoadPytketDef,
     OverloadedFunctionDef,
 )
-
-
-_JUPYTER_NOTEBOOK_MODULE = "<jupyter-notebook>"
-
-
-@dataclass(frozen=True)
-class ModuleIdentifier:
-    """Identifier for the Python file/module that called the decorator."""
-
-    filename: Path
-
-    #: The name of the module. We only store this to have nice name to report back to
-    #: the user. When determining whether two `ModuleIdentifier`s correspond to the same
-    #: module, we only take the module path into account.
-    name: str = field(compare=False)
-
-    #: A reference to the python module
-    module: ModuleType | None = field(compare=False)
 
 
 class _Guppy:
