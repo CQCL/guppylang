@@ -170,7 +170,7 @@ class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
         """
         mono_ty = self.ty.instantiate_partial(mono_args)
         hugr_ty = mono_ty.to_hugr_poly(ctx)
-        func_def = module.define_function(
+        func_def = module.module_root_builder().define_function(
             self.name, hugr_ty.body.input, hugr_ty.body.output, hugr_ty.params
         )
         return CompiledFunctionDef(

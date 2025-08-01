@@ -30,6 +30,7 @@ def test_struct(validate):
 
 def test_inner_frame(validate):
     """See https://github.com/CQCL/guppylang/issues/1116"""
+
     def make():
         @guppy.struct
         class MyStruct[T]:
