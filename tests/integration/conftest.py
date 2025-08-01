@@ -7,7 +7,7 @@ from typing import Any
 
 from selene_hugr_qis_compiler import check_hugr
 
-from guppylang.tracing.object import GuppyDefinition
+from guppylang.defs import GuppyDefinition
 
 
 @pytest.fixture(scope="session")
@@ -84,8 +84,8 @@ def run_int_fn():
 
 @pytest.fixture
 def run_float_fn_approx():
-    """Like run_int_fn, but takes optional additional parameters `rel`, `abs` and `nan_ok`
-    as per `pytest.approx`."""
+    """Like run_int_fn, but takes optional additional parameters `rel`, `abs`
+    and `nan_ok` as per `pytest.approx`."""
     run_fn = _emulate_fn(is_flt=True)
 
     def run_approx(

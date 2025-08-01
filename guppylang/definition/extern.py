@@ -8,7 +8,7 @@ from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals
 from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
-from guppylang.definition.value import CompiledValueDef, ValueDef
+from guppylang.definition.value import CompiledHugrNodeDef, CompiledValueDef, ValueDef
 from guppylang.span import SourceMap
 from guppylang.tys.parsing import type_from_ast
 
@@ -40,18 +40,20 @@ class RawExternDef(ParsableDef):
 class ExternDef(RawExternDef, ValueDef, CompilableDef):
     """An extern symbol definition."""
 
-    def compile_outer(self, graph: DefinitionBuilder[OpVar]) -> "CompiledExternDef":
+    def compile_outer(
+        self, graph: DefinitionBuilder[OpVar], ctx: CompilerContext
+    ) -> "CompiledExternDef":
         """Adds a Hugr constant node for the extern definition to the provided graph."""
         # The `typ` field must be serialized at this point, to ensure that the
         # `Extension` is serializable.
         custom_const = {
             "symbol": self.symbol,
-            "typ": self.ty.to_hugr()._to_serial_root(),
+            "typ": self.ty.to_hugr(ctx)._to_serial_root(),
             "constant": self.constant,
         }
         value = val.Extension(
             name="ConstExternalSymbol",
-            typ=self.ty.to_hugr(),
+            typ=self.ty.to_hugr(ctx),
             val=custom_const,
         )
         const_node = graph.add_const(value)
@@ -68,10 +70,15 @@ class ExternDef(RawExternDef, ValueDef, CompilableDef):
 
 
 @dataclass(frozen=True)
-class CompiledExternDef(ExternDef, CompiledValueDef):
+class CompiledExternDef(ExternDef, CompiledValueDef, CompiledHugrNodeDef):
     """An extern symbol definition that has been compiled to a Hugr constant."""
 
     const_node: Node
+
+    @property
+    def hugr_node(self) -> Node:
+        """The Hugr node this definition was compiled into."""
+        return self.const_node
 
     def load(self, dfg: DFContainer, ctx: CompilerContext, node: AstNode) -> Wire:
         """Loads the extern value into a local Hugr dataflow graph."""

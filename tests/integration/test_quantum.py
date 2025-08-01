@@ -2,10 +2,9 @@
 
 from typing import no_type_check
 
-from guppylang.decorator import guppy
 from guppylang.std.angles import angle
 
-from guppylang.std.builtins import owned, array, barrier
+from guppylang.std.builtins import owned, array, barrier, panic, result
 
 from guppylang.std import quantum as q
 from guppylang.std.quantum import (
@@ -23,11 +22,13 @@ from guppylang.std.quantum_functional import (
     h,
     t,
     s,
+    v,
     x,
     y,
     z,
     tdg,
     sdg,
+    vdg,
     rx,
     ry,
     rz,
@@ -57,11 +58,13 @@ def test_1qb_op(validate):
         q = h(q)
         q = t(q)
         q = s(q)
+        q = v(q)
         q = x(q)
         q = y(q)
         q = z(q)
         q = tdg(q)
         q = sdg(q)
+        q = vdg(q)
         return q
 
     validate(guppy.compile(test))

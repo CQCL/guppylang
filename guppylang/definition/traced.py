@@ -5,9 +5,8 @@ from typing import Any
 
 import hugr.build.function as hf
 import hugr.tys as ht
-from hugr import Wire
+from hugr import Node, Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
-from hugr.package import FuncDefnPointer
 
 from guppylang.ast_util import AstNode, with_loc
 from guppylang.checker.core import Context, Globals
@@ -25,7 +24,12 @@ from guppylang.definition.common import (
     ParsableDef,
 )
 from guppylang.definition.function import parse_py_func
-from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
+from guppylang.definition.value import (
+    CallableDef,
+    CallReturnWires,
+    CompiledCallableDef,
+    CompiledHugrNodeDef,
+)
 from guppylang.error import GuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
@@ -48,11 +52,6 @@ class RawTracedFunctionDef(ParsableDef):
         if ty.parametrized:
             raise GuppyError(UnsupportedError(func_ast, "Generic comptime functions"))
         return TracedFunctionDef(self.id, self.name, func_ast, ty, self.python_func)
-
-    def compile(self) -> FuncDefnPointer:
-        from guppylang.decorator import guppy
-
-        return guppy.compile_function(self)
 
 
 @dataclass(frozen=True)
@@ -80,7 +79,7 @@ class TracedFunctionDef(RawTracedFunctionDef, CallableDef, CompilableDef):
         return node, ty
 
     def compile_outer(
-        self, module: DefinitionBuilder[OpVar]
+        self, module: DefinitionBuilder[OpVar], ctx: CompilerContext
     ) -> "CompiledTracedFunctionDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr.
 
@@ -88,7 +87,7 @@ class TracedFunctionDef(RawTracedFunctionDef, CallableDef, CompilableDef):
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        func_type = self.ty.to_hugr_poly()
+        func_type = self.ty.to_hugr_poly(ctx)
         func_def = module.define_function(
             self.name, func_type.body.input, func_type.body.output, func_type.params
         )
@@ -103,8 +102,15 @@ class TracedFunctionDef(RawTracedFunctionDef, CallableDef, CompilableDef):
 
 
 @dataclass(frozen=True)
-class CompiledTracedFunctionDef(TracedFunctionDef, CompiledCallableDef):
+class CompiledTracedFunctionDef(
+    TracedFunctionDef, CompiledCallableDef, CompiledHugrNodeDef
+):
     func_def: hf.Function
+
+    @property
+    def hugr_node(self) -> Node:
+        """The Hugr node this definition was compiled into."""
+        return self.func_def.parent_node
 
     def load_with_args(
         self,
@@ -114,8 +120,8 @@ class CompiledTracedFunctionDef(TracedFunctionDef, CompiledCallableDef):
         node: AstNode,
     ) -> Wire:
         """Loads the function as a value into a local Hugr dataflow graph."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
-        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr(ctx)
+        type_args: list[ht.TypeArg] = [arg.to_hugr(ctx) for arg in type_args]
         return dfg.builder.load_function(self.func_def, func_ty, type_args)
 
     def compile_call(
@@ -127,8 +133,8 @@ class CompiledTracedFunctionDef(TracedFunctionDef, CompiledCallableDef):
         node: AstNode,
     ) -> CallReturnWires:
         """Compiles a call to the function."""
-        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr()
-        type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+        func_ty: ht.FunctionType = self.ty.instantiate(type_args).to_hugr(ctx)
+        type_args: list[ht.TypeArg] = [arg.to_hugr(ctx) for arg in type_args]
         num_returns = len(type_to_row(self.ty.output))
         call = dfg.builder.call(
             self.func_def, *args, instantiation=func_ty, type_args=type_args

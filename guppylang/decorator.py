@@ -5,7 +5,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import FrameType, ModuleType
-from typing import Any, TypeVar, cast
+from typing import Any, ParamSpec, TypeVar, cast
 
 from hugr import ext as he
 from hugr import ops
@@ -15,8 +15,12 @@ from hugr.package import FuncDefnPointer, ModulePointer
 from typing_extensions import dataclass_transform
 
 from guppylang.ast_util import annotate_location
-from guppylang.compiler.core import GlobalConstId
-from guppylang.definition.common import DefId
+from guppylang.compiler.core import (
+    CompilerContext,
+    GlobalConstId,
+    PartiallyMonomorphizedArgs,
+)
+from guppylang.definition.common import DefId, MonomorphizableDef
 from guppylang.definition.const import RawConstDef
 from guppylang.definition.custom import (
     CustomCallChecker,
@@ -36,16 +40,21 @@ from guppylang.definition.function import (
     RawFunctionDef,
 )
 from guppylang.definition.overloaded import OverloadedFunctionDef
-from guppylang.definition.parameter import ConstVarDef, TypeVarDef
+from guppylang.definition.parameter import ConstVarDef, RawConstVarDef, TypeVarDef
 from guppylang.definition.pytket_circuits import (
-    CompiledPytketDef,
     RawLoadPytketDef,
     RawPytketDef,
 )
 from guppylang.definition.struct import RawStructDef
 from guppylang.definition.traced import RawTracedFunctionDef
 from guppylang.definition.ty import OpaqueTypeDef, TypeDef
+from guppylang.definition.value import CompiledHugrNodeDef
 from guppylang.definition.wasm import RawWasmFunctionDef
+from guppylang.defs import (
+    GuppyDefinition,
+    GuppyFunctionDefinition,
+    GuppyTypeVarDefinition,
+)
 from guppylang.dummy_decorator import _DummyGuppy, sphinx_running
 from guppylang.engine import DEF_STORE
 from guppylang.span import Loc, SourceMap, Span
@@ -55,7 +64,6 @@ from guppylang.std._internal.compiler.wasm import (
     WasmModuleDiscardCompiler,
     WasmModuleInitCompiler,
 )
-from guppylang.tracing.object import GuppyDefinition, TypeVarGuppyDefinition
 from guppylang.tys.arg import Argument
 from guppylang.tys.builtin import (
     WasmModuleTypeDef,
@@ -73,6 +81,7 @@ from guppylang.tys.ty import (
 S = TypeVar("S")
 T = TypeVar("T")
 F = TypeVar("F", bound=Callable[..., Any])
+P = ParamSpec("P")
 Decorator = Callable[[S], T]
 
 AnyRawFunctionDef = (
@@ -106,19 +115,15 @@ class ModuleIdentifier:
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
-    def __call__(self, f: F) -> F:
+    def __call__(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         defn = RawFunctionDef(DefId.fresh(), f.__name__, None, f)
         DEF_STORE.register_def(defn, get_calling_frame())
-        # We're pretending to return the function unchanged, but in fact we return
-        # a `GuppyDefinition` that handles the comptime logic
-        return GuppyDefinition(defn)  # type: ignore[return-value]
+        return GuppyFunctionDefinition(defn)
 
-    def comptime(self, f: F) -> F:
+    def comptime(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         defn = RawTracedFunctionDef(DefId.fresh(), f.__name__, None, f)
         DEF_STORE.register_def(defn, get_calling_frame())
-        # We're pretending to return the function unchanged, but in fact we return
-        # a `GuppyDefinition` that handles the comptime logic
-        return GuppyDefinition(defn)  # type: ignore[return-value]
+        return GuppyFunctionDefinition(defn)
 
     def extend_type(self, defn: TypeDef) -> Callable[[type], type]:
         """Decorator to add new instance functions to a type."""
@@ -133,7 +138,7 @@ class _Guppy:
 
     def type(
         self,
-        hugr_ty: ht.Type | Callable[[Sequence[Argument]], ht.Type],
+        hugr_ty: ht.Type | Callable[[Sequence[Argument], CompilerContext], ht.Type],
         name: str = "",
         copyable: bool = True,
         droppable: bool = True,
@@ -150,7 +155,9 @@ class _Guppy:
         For generic types, a callable may be passed that takes the type arguments of a
         concrete instantiation.
         """
-        mk_hugr_ty = (lambda _: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
+        mk_hugr_ty = (
+            (lambda args, ctx: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
+        )
 
         def dec(c: type[T]) -> type[T]:
             defn = OpaqueTypeDef(
@@ -176,10 +183,16 @@ class _Guppy:
     @dataclass_transform()
     def struct(self, cls: builtins.type[T]) -> builtins.type[T]:
         defn = RawStructDef(DefId.fresh(), cls.__name__, None, cls)
-        DEF_STORE.register_def(defn, get_calling_frame())
+        frame = get_calling_frame()
+        DEF_STORE.register_def(defn, frame)
         for val in cls.__dict__.values():
             if isinstance(val, GuppyDefinition):
                 DEF_STORE.register_impl(defn.id, val.wrapped.name, val.id)
+        # Prior to Python 3.13, the `__firstlineno__` attribute on classes is not set.
+        # However, we need this information to precisely look up the source for the
+        # class later. If it's not there, we can set it from the calling frame:
+        if not hasattr(cls, "__firstlineno__"):
+            cls.__firstlineno__ = frame.f_lineno  # type: ignore[attr-defined]
         # We're pretending to return the class unchanged, but in fact we return
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
@@ -195,7 +208,7 @@ class _Guppy:
         DEF_STORE.register_def(defn, get_calling_frame())
         # We're pretending to return a `typing.TypeVar`, but in fact we return a special
         # `GuppyDefinition` that pretends to be a TypeVar at runtime
-        return TypeVarGuppyDefinition(defn, TypeVar(name))  # type: ignore[return-value]
+        return GuppyTypeVarDefinition(defn, TypeVar(name))  # type: ignore[return-value]
 
     def nat_var(self, name: str) -> TypeVar:
         """Creates a new const nat variable in a module."""
@@ -203,7 +216,18 @@ class _Guppy:
         DEF_STORE.register_def(defn, get_calling_frame())
         # We're pretending to return a `typing.TypeVar`, but in fact we return a special
         # `GuppyDefinition` that pretends to be a TypeVar at runtime
-        return TypeVarGuppyDefinition(defn, TypeVar(name))  # type: ignore[return-value]
+        return GuppyTypeVarDefinition(defn, TypeVar(name))  # type: ignore[return-value]
+
+    def const_var(self, name: str, ty: str) -> TypeVar:
+        """Creates a new const type variable."""
+        type_ast = _parse_expr_string(
+            ty, f"Not a valid Guppy type: `{ty}`", DEF_STORE.sources
+        )
+        defn = RawConstVarDef(DefId.fresh(), name, None, type_ast)
+        DEF_STORE.register_def(defn, get_calling_frame())
+        # We're pretending to return a `typing.TypeVar`, but in fact we return a special
+        # `GuppyDefinition` that pretends to be a TypeVar at runtime
+        return GuppyTypeVarDefinition(defn, TypeVar(name))  # type: ignore[return-value]
 
     def custom(
         self,
@@ -212,7 +236,7 @@ class _Guppy:
         higher_order_value: bool = True,
         name: str = "",
         signature: FunctionType | None = None,
-    ) -> Callable[[F], F]:
+    ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
         """Decorator to add custom typing or compilation behaviour to function decls.
 
         Optionally, usage of the function as a higher-order value can be disabled. In
@@ -220,7 +244,7 @@ class _Guppy:
         provided.
         """
 
-        def dec(f: F) -> F:
+        def dec(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
             call_checker = checker or DefaultCallChecker()
             func = RawCustomFunctionDef(
                 DefId.fresh(),
@@ -233,20 +257,18 @@ class _Guppy:
                 signature,
             )
             DEF_STORE.register_def(func, get_calling_frame())
-            # We're pretending to return the function unchanged, but in fact we return
-            # a `GuppyDefinition` that handles the comptime logic
-            return GuppyDefinition(func)  # type: ignore[return-value]
+            return GuppyFunctionDefinition(func)
 
         return dec
 
     def hugr_op(
         self,
-        op: Callable[[ht.FunctionType, Inst], ops.DataflowOp],
+        op: Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp],
         checker: CustomCallChecker | None = None,
         higher_order_value: bool = True,
         name: str = "",
         signature: FunctionType | None = None,
-    ) -> Callable[[F], F]:
+    ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
         """Decorator to annotate function declarations as HUGR ops.
 
         Args:
@@ -313,14 +335,14 @@ class _Guppy:
 
         return dec
 
-    def declare(self, f: F) -> F:
+    def declare(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         defn = RawFunctionDecl(DefId.fresh(), f.__name__, None, f)
         DEF_STORE.register_def(defn, get_calling_frame())
-        # We're pretending to return the function unchanged, but in fact we return
-        # a `GuppyDefinition` that handles the comptime logic
-        return GuppyDefinition(defn)  # type: ignore[return-value]
+        return GuppyFunctionDefinition(defn)
 
-    def overload(self, *funcs: Any) -> Callable[[F], F]:
+    def overload(
+        self, *funcs: Any
+    ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
         """Collects multiple function definitions into one overloaded function.
 
         Consider the following example:
@@ -374,15 +396,13 @@ class _Guppy:
                 )
             func_ids.append(func.id)
 
-        def dec(f: F) -> F:
+        def dec(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
             dummy_sig = FunctionType([], NoneType())
             defn = OverloadedFunctionDef(
                 DefId.fresh(), f.__name__, None, dummy_sig, func_ids
             )
             DEF_STORE.register_def(defn, get_calling_frame())
-            # We're pretending to return the class unchanged, but in fact we return
-            # a `GuppyDefinition` that handles the comptime logic
-            return GuppyDefinition(defn)  # type: ignore[return-value]
+            return GuppyFunctionDefinition(defn)
 
         return dec
 
@@ -432,24 +452,31 @@ class _Guppy:
             raise TypeError(f"Object is not a Guppy definition: {obj}")
         return ENGINE.compile(obj.id)
 
-    def compile_function(
-        self,
-        obj: Any,
-    ) -> FuncDefnPointer:
+    def compile_function(self, obj: GuppyFunctionDefinition[P, T]) -> FuncDefnPointer:
         """Compiles a single function definition."""
         from guppylang.engine import ENGINE
 
         if not isinstance(obj, GuppyDefinition):
             raise TypeError(f"Object is not a Guppy definition: {obj}")
         compiled_module = ENGINE.compile(obj.id)
-        compiled_def = ENGINE.compiled[obj.id]
-        assert isinstance(compiled_def, CompiledFunctionDef | CompiledPytketDef)
-        node = compiled_def.func_def.parent_node
+
+        # Look up how many generic params the function has so we can create an empty
+        # partial monomorphization to look up in the context
+        checked_def = ENGINE.checked[obj.id]
+        mono_args: PartiallyMonomorphizedArgs | None = None
+        if isinstance(checked_def, MonomorphizableDef):
+            mono_args = tuple(None for _ in checked_def.params)
+
+        compiled_def = ENGINE.compiled[obj.id, mono_args]
+        assert isinstance(compiled_def, CompiledHugrNodeDef)
+        node = compiled_def.hugr_node
         return FuncDefnPointer(
             compiled_module.package, compiled_module.module_index, node
         )
 
-    def pytket(self, input_circuit: Any) -> Callable[[F], F]:
+    def pytket(
+        self, input_circuit: Any
+    ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
         """Adds a pytket circuit function definition with explicit signature."""
         err_msg = "Only pytket circuits can be passed to guppy.pytket"
         try:
@@ -461,12 +488,10 @@ class _Guppy:
         except ImportError:
             raise TypeError(err_msg) from None
 
-        def func(f: F) -> F:
+        def func(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
             defn = RawPytketDef(DefId.fresh(), f.__name__, None, f, input_circuit)
             DEF_STORE.register_def(defn, get_calling_frame())
-            # We're pretending to return the function unchanged, but in fact we return
-            # a `GuppyDefinition` that handles the comptime logic
-            return GuppyDefinition(defn)  # type: ignore[return-value]
+            return GuppyFunctionDefinition(defn)
 
         return func
 
@@ -476,7 +501,7 @@ class _Guppy:
         input_circuit: Any,
         *,
         use_arrays: bool = True,
-    ) -> GuppyDefinition:
+    ) -> GuppyFunctionDefinition[..., Any]:
         """Adds a pytket circuit function definition with implicit signature."""
         err_msg = "Only pytket circuits can be passed to guppy.load_pytket"
         try:
@@ -493,7 +518,7 @@ class _Guppy:
             DefId.fresh(), name, None, span, input_circuit, use_arrays
         )
         DEF_STORE.register_def(defn, get_calling_frame())
-        return GuppyDefinition(defn)
+        return GuppyFunctionDefinition(defn)
 
     def wasm_module(
         self, filename: str, filehash: int
@@ -553,7 +578,7 @@ class _Guppy:
 
         return dec
 
-    def wasm(self, f: PyFunc) -> GuppyDefinition:
+    def wasm(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         func = RawWasmFunctionDef(
             DefId.fresh(),
             f.__name__,
@@ -565,7 +590,7 @@ class _Guppy:
             signature=None,
         )
         DEF_STORE.register_def(func, get_calling_frame())
-        return GuppyDefinition(func)
+        return GuppyFunctionDefinition(func)
 
 
 def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.expr:

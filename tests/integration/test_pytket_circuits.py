@@ -5,7 +5,6 @@ from importlib.util import find_spec
 import pytest
 
 from guppylang.decorator import guppy
-from guppylang.std import quantum
 from guppylang.std.quantum import qubit, discard_array
 from guppylang.std.builtins import array
 

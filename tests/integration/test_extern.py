@@ -10,7 +10,7 @@ def test_extern_float(validate):
 
     @guppy
     def main() -> float:
-        return ext + ext  # noqa: F821
+        return ext + ext
 
     package = guppy.compile(main)
     validate(package)
@@ -26,7 +26,7 @@ def test_extern_alt_symbol(validate):
 
     @guppy
     def main() -> int:
-        return ext  # noqa: F821
+        return ext
 
     package = guppy.compile(main)
     validate(package)
@@ -42,7 +42,7 @@ def test_extern_tuple(validate):
 
     @guppy
     def main() -> float:
-        x, y = ext  # noqa: F821
+        x, y = ext
         return x + y
 
     validate(guppy.compile(main))

@@ -12,7 +12,12 @@ from guppylang.ast_util import AstNode, get_type, has_empty_body, with_loc, with
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import check_signature
-from guppylang.compiler.core import CompilerContext, DFContainer, GlobalConstId
+from guppylang.compiler.core import (
+    CompilerContext,
+    DFContainer,
+    GlobalConstId,
+    partially_monomorphize_args,
+)
 from guppylang.definition.common import ParsableDef
 from guppylang.definition.value import CallReturnWires, CompiledCallableDef
 from guppylang.diagnostic import Error, Help
@@ -229,21 +234,29 @@ class CustomFunctionDef(CompiledCallableDef):
             raise GuppyError(NotHigherOrderError(node, self.name))
         assert len(self.ty.params) == len(type_args)
 
+        # Partially monomorphize the function if required
+        mono_args, rem_args = partially_monomorphize_args(
+            self.ty.params, type_args, ctx
+        )
+
         # We create a generic `FunctionDef` that takes some inputs, compiles a call to
         # the function, and returns the results
         func, already_defined = ctx.declare_global_func(
-            self.higher_order_func_id, self.ty.to_hugr_poly()
+            self.higher_order_func_id,
+            self.ty.instantiate_partial(mono_args).to_hugr_poly(ctx),
+            mono_args,
         )
         if not already_defined:
-            func_dfg = DFContainer(func, dfg.locals.copy())
-            args: list[Wire] = list(func.inputs())
-            generic_ty_args = [param.to_bound() for param in self.ty.params]
-            returns = self.compile_call(args, generic_ty_args, func_dfg, ctx, node)
-            func.set_outputs(*returns.regular_returns, *returns.inout_returns)
+            with ctx.set_monomorphized_args(mono_args):
+                func_dfg = DFContainer(func, ctx, dfg.locals.copy())
+                args: list[Wire] = list(func.inputs())
+                generic_ty_args = [param.to_bound() for param in self.ty.params]
+                returns = self.compile_call(args, generic_ty_args, func_dfg, ctx, node)
+                func.set_outputs(*returns.regular_returns, *returns.inout_returns)
 
         # Finally, load the function into the local DFG
-        mono_ty = self.ty.instantiate(type_args).to_hugr()
-        hugr_ty_args = [arg.to_hugr() for arg in type_args]
+        mono_ty = self.ty.instantiate(type_args).to_hugr(ctx)
+        hugr_ty_args = [ta.to_hugr(ctx) for ta in rem_args]
         return dfg.builder.load_function(func, mono_ty, hugr_ty_args)
 
     def compile_call(
@@ -263,7 +276,7 @@ class CustomFunctionDef(CompiledCallableDef):
                 [FuncInput(get_type(arg), InputFlags.NoFlags) for arg in node.args],
                 get_type(node),
             )
-        hugr_ty = concrete_ty.to_hugr()
+        hugr_ty = concrete_ty.to_hugr(ctx)
 
         self.call_compiler._setup(type_args, dfg, ctx, node, hugr_ty, self)
         return self.call_compiler.compile_with_inouts(args)
@@ -396,13 +409,15 @@ class OpCompiler(CustomInoutCallCompiler):
             the monomorphic function type, and returns a concrete HUGR op.
     """
 
-    op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]
+    op: Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]
 
-    def __init__(self, op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]) -> None:
+    def __init__(
+        self, op: Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]
+    ) -> None:
         self.op = op
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
-        op = self.op(self.ty, self.type_args)
+        op = self.op(self.ty, self.type_args, self.ctx)
         node = self.builder.add_op(op, *args)
         num_returns = (
             len(type_to_row(self.func.ty.output)) if self.func else len(self.ty.output)
@@ -423,9 +438,11 @@ class BoolOpCompiler(CustomInoutCallCompiler):
             the monomorphic function type, and returns a concrete HUGR op.
     """
 
-    op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]
+    op: Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]
 
-    def __init__(self, op: Callable[[ht.FunctionType, Inst], ops.DataflowOp]) -> None:
+    def __init__(
+        self, op: Callable[[ht.FunctionType, Inst, CompilerContext], ops.DataflowOp]
+    ) -> None:
         self.op = op
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
@@ -434,7 +451,7 @@ class BoolOpCompiler(CustomInoutCallCompiler):
             ht.Bool if out == OpaqueBool else out for out in self.ty.output
         ]
         hugr_op_ty = ht.FunctionType(converted_in, converted_out)
-        op = self.op(hugr_op_ty, self.type_args)
+        op = self.op(hugr_op_ty, self.type_args, self.ctx)
         converted_args = [
             self.builder.add_op(read_bool(), arg)
             if self.builder.hugr.port_type(arg.out_port()) == OpaqueBool

@@ -1,6 +1,5 @@
 import pytest
 from guppylang import qubit, guppy
-from guppylang.std import quantum
 from guppylang.std.angles import angle
 from guppylang.std.builtins import owned
 from guppylang.std.quantum import cx, rz

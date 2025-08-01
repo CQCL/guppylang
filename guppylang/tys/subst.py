@@ -4,7 +4,7 @@ from typing import Any
 
 from guppylang.error import InternalGuppyError
 from guppylang.tys.arg import Argument, ConstArg, TypeArg
-from guppylang.tys.common import Transformer
+from guppylang.tys.common import Transformer, Visitor
 from guppylang.tys.const import BoundConstVar, Const, ConstBase, ExistentialConstVar
 from guppylang.tys.ty import (
     BoundTypeVar,
@@ -13,10 +13,11 @@ from guppylang.tys.ty import (
     Type,
     TypeBase,
 )
-from guppylang.tys.var import ExistentialVar
+from guppylang.tys.var import BoundVar, ExistentialVar
 
 Subst = dict[ExistentialVar, Type | Const]
 Inst = Sequence[Argument]
+PartialInst = Sequence["Argument | None"]
 
 
 class Substituter(Transformer):
@@ -81,3 +82,26 @@ class Instantiator(Transformer):
         if ty.parametrized:
             raise InternalGuppyError("Tried to instantiate under binder")
         return None
+
+
+class BoundVarFinder(Visitor):
+    """Type visitor that looks for occurrences of bound variables."""
+
+    bound_vars: set[BoundVar]
+
+    def __init__(self) -> None:
+        self.bound_vars = set()
+
+    @functools.singledispatchmethod
+    def visit(self, ty: Any) -> bool:  # type: ignore[override]
+        return False
+
+    @visit.register
+    def _transform_BoundTypeVar(self, ty: BoundTypeVar) -> bool:
+        self.bound_vars.add(ty)
+        return False
+
+    @visit.register
+    def _transform_BoundConstVar(self, c: BoundConstVar) -> bool:
+        self.bound_vars.add(c)
+        return False

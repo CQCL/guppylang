@@ -2,7 +2,7 @@ from guppylang.decorator import guppy
 from guppylang.std.builtins import nat, comptime, array
 
 
-def test_basic(validate):
+def test_basic_nat(validate):
     @guppy
     def foo(n: nat @ comptime) -> nat:
         return nat(n + 1)
@@ -10,6 +10,42 @@ def test_basic(validate):
     @guppy
     def main() -> nat:
         return foo(42)
+
+    validate(guppy.compile(main))
+
+
+def test_basic_int(validate):
+    @guppy
+    def foo(n: int @ comptime) -> int:
+        return n + 1
+
+    @guppy
+    def main() -> int:
+        return foo(42)
+
+    validate(guppy.compile(main))
+
+
+def test_basic_float(validate):
+    @guppy
+    def foo(f: float @ comptime) -> float:
+        return f + 1.5
+
+    @guppy
+    def main() -> float:
+        return foo(42.0)
+
+    validate(guppy.compile(main))
+
+
+def test_basic_bool(validate):
+    @guppy
+    def foo(b: bool @ comptime) -> bool:
+        return not b
+
+    @guppy
+    def main() -> bool:
+        return foo(True)
 
     validate(guppy.compile(main))
 
@@ -41,7 +77,7 @@ def test_comptime_expr(validate):
 
 def test_dependent(validate):
     @guppy
-    def foo(n: nat @ comptime, xs: "array[int, n]") -> None:
+    def foo(n: nat @ comptime, xs: "array[int, n]") -> None:  # noqa: F821
         pass
 
     @guppy
@@ -57,7 +93,7 @@ def test_dependent_generic(validate):
     x = guppy.nat_var("x")
 
     @guppy
-    def foo(n: nat @ comptime, xs: "array[int, n]") -> None:
+    def foo(n: nat @ comptime, xs: "array[int, n]") -> None:  # noqa: F821
         pass
 
     @guppy

@@ -1,6 +1,5 @@
 from guppylang.decorator import guppy
 from guppylang.std.angles import angle, pi
-from guppylang.std.builtins import nat
 
 from hugr.std.int import IntVal
 
@@ -175,7 +174,7 @@ def test_const(validate):
         return 1 + x
 
     @guppy.comptime
-    def test2() -> int:
+    def test2() -> int:  # noqa: F811
         return x * 2
 
     @guppy.comptime

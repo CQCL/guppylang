@@ -1,5 +1,5 @@
 from guppylang import guppy
-from guppylang.std.builtins import result, nat, array, comptime, panic
+from guppylang.std.builtins import result, nat, array, comptime
 from tests.util import compile_guppy
 
 

@@ -1,11 +1,10 @@
 import functools
-import inspect
 import itertools
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, ClassVar, NamedTuple, TypeAlias, TypeVar
+from typing import Any, ClassVar, NamedTuple, TypeAlias
 
 from hugr import Wire
 
@@ -19,12 +18,11 @@ from guppylang.definition.common import DefId, Definition
 from guppylang.definition.ty import TypeDef
 from guppylang.definition.value import (
     CallableDef,
-    CompiledCallableDef,
     CompiledValueDef,
 )
 from guppylang.engine import DEF_STORE, ENGINE
 from guppylang.error import GuppyComptimeError, GuppyError, GuppyTypeError
-from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
+from guppylang.ipython_inspect import normalize_ipython_dummy_files
 from guppylang.tracing.state import get_tracing_state, tracing_active
 from guppylang.tracing.util import capture_guppy_errors, get_calling_frame, hide_trace
 from guppylang.tys.ty import FunctionType, StructType, Type
@@ -62,7 +60,7 @@ def unary_operation(f: UnaryDunderMethod) -> UnaryDunderMethod:
         from guppylang.tracing.unpacking import guppy_object_from_py
 
         state = get_tracing_state()
-        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+        self = guppy_object_from_py(self, state.dfg.builder, state.node, state.ctx)
 
         with suppress(Exception):
             return f(self)
@@ -89,8 +87,8 @@ def binary_operation(f: BinaryDunderMethod) -> BinaryDunderMethod:
         from guppylang.tracing.unpacking import guppy_object_from_py
 
         state = get_tracing_state()
-        self = guppy_object_from_py(self, state.dfg.builder, state.node)
-        other = guppy_object_from_py(other, state.dfg.builder, state.node)
+        self = guppy_object_from_py(self, state.dfg.builder, state.node, state.ctx)
+        other = guppy_object_from_py(other, state.dfg.builder, state.node, state.ctx)
 
         # First try the method on `self`
         with suppress(Exception):
@@ -126,7 +124,7 @@ class DunderMixin:
         from guppylang.tracing.unpacking import guppy_object_from_py
 
         state = get_tracing_state()
-        self = guppy_object_from_py(self, state.dfg.builder, state.node)
+        self = guppy_object_from_py(self, state.dfg.builder, state.node, state.ctx)
         return self.__getattr__(name)
 
     def __abs__(self) -> Any:
@@ -297,7 +295,7 @@ class ObjectUse(NamedTuple):
 
     #: If the use was as an argument to a Guppy function, we also record a reference to
     #: the called function.
-    called_func: CompiledCallableDef | None
+    called_func: CallableDef | None
 
 
 @dataclass(frozen=True)
@@ -349,7 +347,7 @@ class GuppyObject(DunderMixin):
             raise GuppyComptimeError(
                 f"Expression of type `{self._ty}` has no attribute `{key}`"
             )
-        return lambda *xs: GuppyDefinition(func)(self, *xs)
+        return lambda *xs: TracingDefMixin(func)(self, *xs)
 
     @hide_trace
     def __bool__(self) -> Any:
@@ -381,14 +379,14 @@ class GuppyObject(DunderMixin):
             f"Expression of type `{self._ty}` is not iterable at comptime"
         )
 
-    def _use_wire(self, called_func: CompiledCallableDef | None) -> Wire:
+    def _use_wire(self, called_func: CallableDef | None) -> Wire:
         # Panic if the value has already been used
         if self._used and not self._ty.copyable:
             use = self._used
             # TODO: Should we print the full path to the file or only the name as is
             #  done here? Note that the former will lead to challenges with golden
             #  tests
-            filename = Path(use.module).name
+            filename = Path(normalize_ipython_dummy_files(use.module)).name
             err = (
                 f"Value with non-copyable type `{self._ty}` was already used\n\n"
                 f"Previous use occurred in {filename}:{use.lineno}"
@@ -400,13 +398,7 @@ class GuppyObject(DunderMixin):
         else:
             frame = get_calling_frame()
             assert frame is not None
-            if is_running_ipython():
-                module_name = "<In [?]>"
-                if defn := find_ipython_def(frame.f_code.co_name):
-                    module_name = f"<{defn.cell_name}>"
-            else:
-                module = inspect.getmodule(frame)
-                module_name = module.__file__ if module and module.__file__ else "???"
+            module_name = frame.f_code.co_filename
             self._used = ObjectUse(module_name, frame.f_lineno, called_func)
             if not self._ty.droppable:
                 state = get_tracing_state()
@@ -463,7 +455,7 @@ class GuppyStructObject(DunderMixin):
         if func is None:
             err = f"Expression of type `{self._ty}` has no attribute `{key}`"
             raise AttributeError(err)
-        return lambda *xs: GuppyDefinition(func)(self, *xs)
+        return lambda *xs: TracingDefMixin(func)(self, *xs)
 
     @hide_trace
     def __setattr__(self, key: str, value: Any) -> None:
@@ -487,13 +479,8 @@ class GuppyStructObject(DunderMixin):
 
 
 @dataclass(frozen=True)
-class GuppyDefinition(DunderMixin):
-    """A top-level Guppy definition.
-
-    This is the object that is returned to the users when they decorate a function or
-    class. In particular, this is the version of the definition that is available during
-    tracing.
-    """
+class TracingDefMixin(DunderMixin):
+    """Mixin to provide tracing semantics for definitions."""
 
     wrapped: Definition
 
@@ -511,10 +498,8 @@ class GuppyDefinition(DunderMixin):
                 "only be called in a Guppy context"
             )
 
-        state = get_tracing_state()
         defn = ENGINE.get_checked(self.wrapped.id)
-        defn = state.ctx.build_compiled_def(defn.id)
-        if isinstance(defn, CompiledCallableDef):
+        if isinstance(defn, CallableDef):
             return trace_call(defn, *args)
         elif (
             isinstance(defn, TypeDef)
@@ -522,7 +507,7 @@ class GuppyDefinition(DunderMixin):
             and "__new__" in DEF_STORE.impls[defn.id]
         ):
             constructor = DEF_STORE.raw_defs[DEF_STORE.impls[defn.id]["__new__"]]
-            return GuppyDefinition(constructor)(*args)
+            return TracingDefMixin(constructor)(*args)
         err = f"{defn.description.capitalize()} `{defn.name}` is not callable"
         raise GuppyComptimeError(err)
 
@@ -550,45 +535,13 @@ class GuppyDefinition(DunderMixin):
 
     def to_guppy_object(self) -> GuppyObject:
         state = get_tracing_state()
-        defn = state.ctx.build_compiled_def(self.id)
+        defn, [] = state.ctx.build_compiled_def(self.id, type_args=[])
         if isinstance(defn, CompiledValueDef):
             wire = defn.load(state.dfg, state.ctx, state.node)
             return GuppyObject(defn.ty, wire, None)
         elif isinstance(defn, TypeDef):
             if defn.id in DEF_STORE.impls and "__new__" in DEF_STORE.impls[defn.id]:
                 constructor = DEF_STORE.raw_defs[DEF_STORE.impls[defn.id]["__new__"]]
-                return GuppyDefinition(constructor).to_guppy_object()
+                return TracingDefMixin(constructor).to_guppy_object()
         err = f"{defn.description.capitalize()} `{defn.name}` is not a value"
         raise GuppyComptimeError(err)
-
-    def compile(self) -> Any:
-        from guppylang.engine import ENGINE
-
-        return ENGINE.compile(self.id)
-
-
-@dataclass(frozen=True)
-class TypeVarGuppyDefinition(GuppyDefinition):
-    """A `GuppyDefinition` subclass that answers 'yes' to an instance check on
-    `typing.TypeVar`.
-
-    This is the object returned by `guppy.type_var`. The `TypeVar` hack is needed since
-    `typing.Generic[T]` has a runtime check that enforces that the passed `T` is
-    actually a `TypeVar`.
-    """
-
-    __class__: ClassVar[type] = TypeVar
-
-    _ty_var: TypeVar
-
-    def __eq__(self, other: object) -> bool:
-        # We need to compare as equal to an equivalent regular type var
-        if isinstance(other, TypeVar):
-            return self._ty_var == other
-        return object.__eq__(self, other)
-
-    def __getattr__(self, name: str) -> Any:
-        # Pretend to be a `TypeVar` by providing all of its attributes
-        if hasattr(self._ty_var, name):
-            return getattr(self._ty_var, name)
-        return object.__getattribute__(self, name)

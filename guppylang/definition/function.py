@@ -1,12 +1,12 @@
 import ast
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import hugr.build.function as hf
 import hugr.tys as ht
-from hugr import Wire
+from hugr import Node, Wire
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.hugr.node_port import ToNode
 
@@ -20,21 +20,33 @@ from guppylang.checker.func_checker import (
     check_signature,
     parse_function_with_docstring,
 )
-from guppylang.compiler.core import CompilerContext, DFContainer
+from guppylang.compiler.core import (
+    CompilerContext,
+    DFContainer,
+    PartiallyMonomorphizedArgs,
+)
 from guppylang.compiler.func_compiler import compile_global_func_def
 from guppylang.definition.common import (
     CheckableDef,
-    CompilableDef,
+    MonomorphizableDef,
+    MonomorphizedDef,
     ParsableDef,
     UnknownSourceError,
 )
-from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
+from guppylang.definition.value import (
+    CallableDef,
+    CallReturnWires,
+    CompiledCallableDef,
+    CompiledHugrNodeDef,
+)
 from guppylang.error import GuppyError
-from guppylang.ipython_inspect import find_ipython_def, is_running_ipython
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import FunctionType, Type, type_to_row
+
+if TYPE_CHECKING:
+    from guppylang.tys.param import Parameter
 
 PyFunc = Callable[..., Any]
 
@@ -120,7 +132,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
 
 
 @dataclass(frozen=True)
-class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
+class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
     """Type checked version of a user-defined function that is ready to be compiled.
 
     In particular, this means that we have a constructed and type checked a control-flow
@@ -138,22 +150,35 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
 
     cfg: CheckedCFG[Place]
 
-    def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledFunctionDef":
-        """Adds a Hugr `FuncDefn` node for this function to the Hugr.
+    @property
+    def params(self) -> "Sequence[Parameter]":
+        """Generic parameters of this function."""
+        return self.ty.params
+
+    def monomorphize(
+        self,
+        module: DefinitionBuilder[OpVar],
+        mono_args: "PartiallyMonomorphizedArgs",
+        ctx: "CompilerContext",
+    ) -> "CompiledFunctionDef":
+        """Adds a Hugr `FuncDefn` node for the (partially) monomorphized function to the
+        Hugr.
 
         Note that we don't compile the function body at this point since we don't have
         access to the other compiled functions yet. The body is compiled later in
         `CompiledFunctionDef.compile_inner()`.
         """
-        func_type = self.ty.to_hugr_poly()
+        mono_ty = self.ty.instantiate_partial(mono_args)
+        hugr_ty = mono_ty.to_hugr_poly(ctx)
         func_def = module.define_function(
-            self.name, func_type.body.input, func_type.body.output, func_type.params
+            self.name, hugr_ty.body.input, hugr_ty.body.output, hugr_ty.params
         )
         return CompiledFunctionDef(
             self.id,
             self.name,
             self.defined_at,
-            self.ty,
+            mono_args,
+            mono_ty,
             self.docstring,
             self.cfg,
             func_def,
@@ -161,14 +186,17 @@ class CheckedFunctionDef(ParsedFunctionDef, CompilableDef):
 
 
 @dataclass(frozen=True)
-class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
+class CompiledFunctionDef(
+    CheckedFunctionDef, CompiledCallableDef, MonomorphizedDef, CompiledHugrNodeDef
+):
     """A function definition with a corresponding Hugr node.
 
     Args:
         id: The unique definition identifier.
         name: The name of the function.
         defined_at: The AST node where the function was defined.
-        ty: The type of the function.
+        mono_args: Partial monomorphization of the generic type parameters.
+        ty: The type of the function after partial monomorphization.
         python_scope: The Python scope where the function was defined.
         docstring: The docstring of the function.
         cfg: The type- and linearity-checked CFG for the function body.
@@ -176,6 +204,11 @@ class CompiledFunctionDef(CheckedFunctionDef, CompiledCallableDef):
     """
 
     func_def: hf.Function
+
+    @property
+    def hugr_node(self) -> Node:
+        """The Hugr node this definition was compiled into."""
+        return self.func_def.parent_node
 
     def load_with_args(
         self,
@@ -210,21 +243,21 @@ def load_with_args(
     func: ToNode,
 ) -> Wire:
     """Loads the function as a value into a local Hugr dataflow graph."""
-    func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr()
-    type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+    func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
+    type_args = [ta.to_hugr(dfg.ctx) for ta in type_args]
     return dfg.builder.load_function(func, func_ty, type_args)
 
 
 def compile_call(
     args: list[Wire],
-    type_args: Inst,
+    type_args: Inst,  # Non-monomorphized type args only
     dfg: DFContainer,
     ty: FunctionType,
     func: ToNode,
 ) -> CallReturnWires:
     """Compiles a call to the function."""
-    func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr()
-    type_args: list[ht.TypeArg] = [arg.to_hugr() for arg in type_args]
+    func_ty: ht.FunctionType = ty.instantiate(type_args).to_hugr(dfg.ctx)
+    type_args = [arg.to_hugr(dfg.ctx) for arg in type_args]
     num_returns = len(type_to_row(ty.output))
     call = dfg.builder.call(func, *args, instantiation=func_ty, type_args=type_args)
     return CallReturnWires(
@@ -236,27 +269,10 @@ def compile_call(
 def parse_py_func(f: PyFunc, sources: SourceMap) -> tuple[ast.FunctionDef, str | None]:
     source_lines, line_offset = inspect.getsourcelines(f)
     source, func_ast, line_offset = parse_source(source_lines, line_offset)
-    # In Jupyter notebooks, we shouldn't use `inspect.getsourcefile(f)` since it would
-    # only give us a dummy temporary file
-    file: str | None
-    if is_running_ipython():
-        file = "<In [?]>"
-        if isinstance(func_ast, ast.FunctionDef):
-            defn = find_ipython_def(func_ast.name)
-            if defn is not None:
-                file = f"<{defn.cell_name}>"
-                sources.add_file(file, defn.cell_source)
-            else:
-                # If we couldn't find the defining cell, just use the source code we
-                # got from inspect. Line numbers will be wrong, but that's the best we
-                # can do.
-                sources.add_file(file, source)
-                line_offset = 0
-    else:
-        file = inspect.getsourcefile(f)
-        if file is None:
-            raise GuppyError(UnknownSourceError(None, f))
-        sources.add_file(file)
+    file = inspect.getsourcefile(f)
+    if file is None:
+        raise GuppyError(UnknownSourceError(None, f))
+    sources.add_file(file)
     annotate_location(func_ast, source, file, line_offset)
     if not isinstance(func_ast, ast.FunctionDef):
         raise GuppyError(ExpectedError(func_ast, "a function definition"))

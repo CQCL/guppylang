@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
-from hugr import Wire, envelope, ops, val
+from hugr import Node, Wire, envelope, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.envelope import EnvelopeConfig
@@ -31,7 +31,13 @@ from guppylang.definition.function import (
     parse_py_func,
 )
 from guppylang.definition.ty import TypeDef
-from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
+from guppylang.definition.value import (
+    CallableDef,
+    CallReturnWires,
+    CompiledCallableDef,
+    CompiledHugrNodeDef,
+)
+from guppylang.defs import GuppyDefinition
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap, Span, ToSpan
@@ -42,7 +48,6 @@ from guppylang.std._internal.compiler.array import (
 )
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, make_opaque
-from guppylang.tracing.object import GuppyDefinition
 from guppylang.tys.builtin import array_type, bool_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -154,7 +159,9 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
     description: str = field(default="pytket circuit", init=False)
 
-    def compile_outer(self, module: DefinitionBuilder[OpVar]) -> "CompiledPytketDef":
+    def compile_outer(
+        self, module: DefinitionBuilder[OpVar], ctx: CompilerContext
+    ) -> "CompiledPytketDef":
         """Adds a Hugr `FuncDefn` node for this function to the Hugr."""
         try:
             import pytket
@@ -171,7 +178,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 mapping = module.hugr.insert_hugr(circ)
                 hugr_func = mapping[circ.entrypoint]
 
-                func_type = self.ty.to_hugr_poly()
+                func_type = self.ty.to_hugr_poly(ctx)
                 outer_func = module.define_function(
                     self.name, func_type.body.input, func_type.body.output
                 )
@@ -302,7 +309,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
 
 @dataclass(frozen=True)
-class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
+class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef, CompiledHugrNodeDef):
     """A function definition with a corresponding Hugr node.
 
     Args:
@@ -316,6 +323,11 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
     """
 
     func_def: hf.Function
+
+    @property
+    def hugr_node(self) -> Node:
+        """The Hugr node this definition was compiled into."""
+        return self.func_def.parent_node
 
     def load_with_args(
         self,

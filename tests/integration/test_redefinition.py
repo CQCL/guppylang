@@ -1,6 +1,7 @@
 import pytest
 
 from guppylang.decorator import guppy
+from guppylang.error import GuppyError
 
 
 def test_func_redefinition(validate):
@@ -25,7 +26,7 @@ def test_method_redefinition(validate):
             return 1.0  # Type error on purpose
 
         @guppy
-        def foo(self: "Test") -> int:
+        def foo(self: "Test") -> int:  # noqa: F811
             return 1  # Type error on purpose
 
     @guppy
@@ -42,15 +43,13 @@ def test_redefine_after_error(validate):
 
     @guppy
     def foo() -> int:
-        return y
+        return y  # noqa: F821
 
-    try:
+    with pytest.raises(GuppyError):
         guppy.compile(foo)
-    except:
-        pass
 
     @guppy.struct
-    class Foo:
+    class Foo:  # noqa: F811
         x: int
 
     @guppy
@@ -64,10 +63,10 @@ def test_redefine_after_error(validate):
 def test_struct_redefinition(validate):
     @guppy.struct
     class Test:
-        x: "blah"  # Non-existing type
+        x: "blah"  # Non-existing type  # noqa: F821
 
     @guppy.struct
-    class Test:
+    class Test:  # noqa: F811
         y: int
 
     @guppy
@@ -88,7 +87,7 @@ def test_struct_method_redefinition(validate):
             return 1.0  # Type error on purpose
 
     @guppy.struct
-    class Test:
+    class Test:  # noqa: F811
         y: int
 
         @guppy

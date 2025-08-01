@@ -39,7 +39,7 @@ from guppylang.ast_util import (
     with_loc,
     with_type,
 )
-from guppylang.cfg.builder import tmp_vars
+from guppylang.cfg.builder import is_tmp_var, tmp_vars
 from guppylang.checker.core import (
     Context,
     DummyEvalDict,
@@ -69,6 +69,7 @@ from guppylang.checker.errors.type_errors import (
     BinaryOperatorNotDefinedError,
     ConstMismatchError,
     IllegalConstant,
+    IntOverflowError,
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
     NotCallableError,
@@ -451,8 +452,8 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 )
 
     def visit_Attribute(self, node: ast.Attribute) -> tuple[ast.expr, Type]:
+        from guppylang.defs import GuppyDefinition
         from guppylang.engine import ENGINE
-        from guppylang.tracing.object import GuppyDefinition
 
         # A `value.attr` attribute access. Unfortunately, the `attr` is just a string,
         # not an AST node, so we have to compute its span by hand. This is fine since
@@ -1082,7 +1083,7 @@ def check_comptime_arg(
             match arg:
                 case PlaceNode(place=place) if place.root.is_func_input:
                     s = ComptimeUnknownError.InputHint(place.defined_at, place)
-                case PlaceNode(place=place):
+                case PlaceNode(place=place) if not is_tmp_var(place.root.name):
                     s = ComptimeUnknownError.VariableHint(place.defined_at, place)
                 case arg:
                     s = ComptimeUnknownError.FallbackHint(arg)
@@ -1336,9 +1337,11 @@ def python_value_to_guppy_type(
             return string_type()
         # Only resolve `int` to `nat` if the user specifically asked for it
         case int(n) if type_hint == nat_type() and n >= 0:
+            _int_bounds_check(n, node, signed=False)
             return nat_type()
         # Otherwise, default to `int` for consistency with Python
-        case int():
+        case int(n):
+            _int_bounds_check(n, node, signed=True)
             return int_type()
         case float():
             return float_type()
@@ -1359,6 +1362,19 @@ def python_value_to_guppy_type(
             return _python_list_to_guppy_type(v, node, globals, type_hint)
         case _:
             return None
+
+
+def _int_bounds_check(value: int, node: AstNode, signed: bool) -> None:
+    bit_width = 1 << NumericType.INT_WIDTH
+    if signed:
+        max_v = (1 << (bit_width - 1)) - 1
+        min_v = -(1 << (bit_width - 1))
+    else:
+        max_v = (1 << bit_width) - 1
+        min_v = 0
+    if value < min_v or value > max_v:
+        err = IntOverflowError(node, signed, bit_width, value < min_v)
+        raise GuppyTypeError(err)
 
 
 def _python_list_to_guppy_type(

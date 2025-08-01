@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING, TypeAlias
 from hugr import tys as ht
 
 from guppylang.error import InternalGuppyError
-from guppylang.tys.common import ToHugr, Transformable, Transformer, Visitor
+from guppylang.tys.common import (
+    ToHugr,
+    ToHugrContext,
+    Transformable,
+    Transformer,
+    Visitor,
+)
 from guppylang.tys.const import BoundConstVar, Const, ConstValue, ExistentialConstVar
 from guppylang.tys.var import ExistentialVar
 
@@ -47,9 +53,9 @@ class TypeArg(ArgumentBase):
         """The existential type variables contained in this argument."""
         return self.ty.unsolved_vars
 
-    def to_hugr(self) -> ht.TypeTypeArg:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.TypeTypeArg:
         """Computes the Hugr representation of the argument."""
-        ty: ht.Type = self.ty.to_hugr()
+        ty: ht.Type = self.ty.to_hugr(ctx)
         return ty.type_arg()
 
     def visit(self, visitor: Visitor) -> None:
@@ -73,7 +79,7 @@ class ConstArg(ArgumentBase):
         """The existential const variables contained in this argument."""
         return self.const.unsolved_vars
 
-    def to_hugr(self) -> ht.TypeArg:
+    def to_hugr(self, ctx: ToHugrContext) -> ht.TypeArg:
         """Computes the Hugr representation of this argument."""
         from guppylang.tys.ty import NumericType
 
@@ -81,12 +87,13 @@ class ConstArg(ArgumentBase):
             case ConstValue(value=v, ty=NumericType(kind=NumericType.Kind.Nat)):
                 assert isinstance(v, int)
                 return ht.BoundedNatArg(n=v)
-            case BoundConstVar(idx=idx, ty=NumericType(kind=NumericType.Kind.Nat)):
-                param = ht.BoundedNatParam(upper_bound=None)
-                return ht.VariableArg(idx=idx, param=param)
-            case ConstValue() | BoundConstVar():
-                # TODO: Handle other cases besides nats
-                raise NotImplementedError
+            case BoundConstVar() as var:
+                return ctx.const_var_to_hugr(var)
+            case ConstValue():
+                raise InternalGuppyError(
+                    "Tried to convert non-nat const type argument to Hugr. This should "
+                    "have been monomorphized away."
+                )
             case ExistentialConstVar():
                 raise InternalGuppyError(
                     "Tried to convert unsolved constant variable to Hugr"

@@ -9,7 +9,7 @@ from guppylang.ast_util import AstNode
 from guppylang.checker.core import Globals
 from guppylang.compiler.core import CompilerContext, DFContainer
 from guppylang.definition.common import CompilableDef, ParsableDef
-from guppylang.definition.value import CompiledValueDef, ValueDef
+from guppylang.definition.value import CompiledHugrNodeDef, CompiledValueDef, ValueDef
 from guppylang.span import SourceMap
 from guppylang.tys.parsing import type_from_ast
 
@@ -39,7 +39,9 @@ class RawConstDef(ParsableDef):
 class ConstDef(RawConstDef, ValueDef, CompilableDef):
     """A constant with a checked type."""
 
-    def compile_outer(self, graph: DefinitionBuilder[OpVar]) -> "CompiledConstDef":
+    def compile_outer(
+        self, graph: DefinitionBuilder[OpVar], ctx: CompilerContext
+    ) -> "CompiledConstDef":
         const_node = graph.add_const(self.value)
         return CompiledConstDef(
             self.id,
@@ -53,10 +55,15 @@ class ConstDef(RawConstDef, ValueDef, CompilableDef):
 
 
 @dataclass(frozen=True)
-class CompiledConstDef(ConstDef, CompiledValueDef):
+class CompiledConstDef(ConstDef, CompiledValueDef, CompiledHugrNodeDef):
     """A constant that has been compiled to a Hugr node."""
 
     const_node: Node
+
+    @property
+    def hugr_node(self) -> Node:
+        """The Hugr node this definition was compiled into."""
+        return self.const_node
 
     def load(self, dfg: DFContainer, ctx: CompilerContext, node: AstNode) -> Wire:
         """Loads the extern value into a local Hugr dataflow graph."""

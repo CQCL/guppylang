@@ -7,12 +7,14 @@ from hugr.build.dfg import DfBase
 from guppylang.ast_util import AstNode
 from guppylang.checker.errors.comptime_errors import IllegalComptimeExpressionError
 from guppylang.checker.expr_checker import python_value_to_guppy_type
+from guppylang.compiler.core import CompilerContext
 from guppylang.compiler.expr_compiler import python_value_to_hugr
+from guppylang.defs import GuppyDefinition
 from guppylang.error import GuppyComptimeError, GuppyError
 from guppylang.std._internal.compiler.array import array_new, unpack_array
 from guppylang.std._internal.compiler.prelude import build_unwrap
 from guppylang.tracing.frozenlist import frozenlist
-from guppylang.tracing.object import GuppyDefinition, GuppyObject, GuppyStructObject
+from guppylang.tracing.object import GuppyObject, GuppyStructObject
 from guppylang.tracing.state import get_tracing_state
 from guppylang.tys.builtin import (
     array_type,
@@ -79,7 +81,9 @@ def unpack_guppy_object(
             return obj
 
 
-def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObject:
+def guppy_object_from_py(
+    v: Any, builder: DfBase[P], node: AstNode, ctx: CompilerContext
+) -> GuppyObject:
     """Constructs a Guppy object from a Python value.
 
     Essentially undoes the `unpack_guppy_object` operation.
@@ -92,7 +96,7 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
         case None:
             return GuppyObject(NoneType(), builder.add_op(ops.MakeTuple()))
         case tuple(vs):
-            objs = [guppy_object_from_py(v, builder, node) for v in vs]
+            objs = [guppy_object_from_py(v, builder, node, ctx) for v in vs]
             return GuppyObject(
                 TupleType([obj._ty for obj in objs]),
                 builder.add_op(ops.MakeTuple(), *(obj._use_wire(None) for obj in objs)),
@@ -100,7 +104,7 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
         case GuppyStructObject(_ty=struct_ty, _field_values=values):
             wires = []
             for f in struct_ty.fields:
-                obj = guppy_object_from_py(values[f.name], builder, node)
+                obj = guppy_object_from_py(values[f.name], builder, node, ctx)
                 # Check that the field still has the correct type. Since we allow users
                 # to mutate structs unchecked, this needs to be checked here
                 if obj._ty != f.ty:
@@ -111,7 +115,7 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
                 wires.append(obj._use_wire(None))
             return GuppyObject(struct_ty, builder.add_op(ops.MakeTuple(), *wires))
         case list(vs) if len(vs) > 0:
-            objs = [guppy_object_from_py(v, builder, node) for v in vs]
+            objs = [guppy_object_from_py(v, builder, node, ctx) for v in vs]
             elem_ty = objs[0]._ty
             for i, obj in enumerate(objs[1:]):
                 if obj._ty != elem_ty:
@@ -119,7 +123,7 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
                         f"Element at index {i + 1} does not match the type of "
                         f"previous elements. Expected `{elem_ty}`, got `{obj._ty}`."
                     )
-            hugr_elem_ty = ht.Option(elem_ty.to_hugr())
+            hugr_elem_ty = ht.Option(elem_ty.to_hugr(ctx))
             wires = [
                 builder.add_op(ops.Tag(1, hugr_elem_ty), obj._use_wire(None))
                 for obj in objs
@@ -136,7 +140,7 @@ def guppy_object_from_py(v: Any, builder: DfBase[P], node: AstNode) -> GuppyObje
             ty = python_value_to_guppy_type(v, node, get_tracing_state().globals)
             if ty is None:
                 raise GuppyError(IllegalComptimeExpressionError(node, type(v)))
-            hugr_val = python_value_to_hugr(v, ty)
+            hugr_val = python_value_to_hugr(v, ty, ctx)
             assert hugr_val is not None
             return GuppyObject(ty, builder.load(hugr_val))
 

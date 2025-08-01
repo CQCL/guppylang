@@ -1,5 +1,4 @@
 from guppylang.decorator import guppy
-from tests.util import compile_guppy
 
 
 def test_call(validate):

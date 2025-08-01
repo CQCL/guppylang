@@ -3,7 +3,7 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, NamedTuple
 
-from hugr import Wire
+from hugr import Node, Wire
 
 from guppylang.ast_util import AstNode
 from guppylang.definition.common import CompiledDef, Definition
@@ -104,3 +104,12 @@ class CallReturnWires(NamedTuple):
 
     regular_returns: list[Wire]
     inout_returns: list[Wire]
+
+
+class CompiledHugrNodeDef(Definition):
+    """Abstract base class for definitions that are compiled into a single Hugr node."""
+
+    @property
+    @abstractmethod
+    def hugr_node(self) -> Node:
+        """The Hugr node this definition was compiled into."""

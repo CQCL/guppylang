@@ -32,11 +32,13 @@ from guppylang.compiler.core import (
 from guppylang.compiler.hugr_extension import PartialOp
 from guppylang.definition.custom import CustomFunctionDef
 from guppylang.definition.value import (
+    CallableDef,
     CallReturnWires,
     CompiledCallableDef,
     CompiledValueDef,
 )
-from guppylang.error import GuppyComptimeError, GuppyError, InternalGuppyError
+from guppylang.engine import ENGINE
+from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import (
     BarrierExpr,
     DesugaredArrayComp,
@@ -58,7 +60,10 @@ from guppylang.nodes import (
     TupleAccessAndDrop,
     TypeApply,
 )
-from guppylang.std._internal.compiler.arithmetic import convert_ifromusize
+from guppylang.std._internal.compiler.arithmetic import (
+    UnsignedIntVal,
+    convert_ifromusize,
+)
 from guppylang.std._internal.compiler.array import (
     array_convert_from_std_array,
     array_convert_to_std_array,
@@ -84,7 +89,7 @@ from guppylang.std._internal.compiler.tket2_bool import (
     not_op,
     read_bool,
 )
-from guppylang.tys.arg import Argument
+from guppylang.tys.arg import ConstArg
 from guppylang.tys.builtin import (
     bool_type,
     get_element_type,
@@ -92,6 +97,7 @@ from guppylang.tys.builtin import (
     is_bool_type,
     is_frozenarray_type,
 )
+from guppylang.tys.const import ConstValue
 from guppylang.tys.subst import Inst
 from guppylang.tys.ty import (
     BoundTypeVar,
@@ -144,7 +150,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert len({inp.place.id for inp in inputs}) == len(
             inputs
         ), "Inputs are not unique"
-        self.dfg = DFContainer(builder, self.dfg.locals.copy())
+        self.dfg = DFContainer(builder, self.ctx, self.dfg.locals.copy())
         hugr_input = builder.input_node
         for input_node, wire in zip(inputs, hugr_input, strict=True):
             self.dfg[input_node.place] = wire
@@ -248,7 +254,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             yield
 
     def visit_Constant(self, node: ast.Constant) -> Wire:
-        if value := python_value_to_hugr(node.value, get_type(node)):
+        if value := python_value_to_hugr(node.value, get_type(node), self.ctx):
             return self.builder.load(value)
         raise InternalGuppyError("Unsupported constant expression in compiler")
 
@@ -260,27 +266,39 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self.dfg[node.place]
 
     def visit_GlobalName(self, node: GlobalName) -> Wire:
-        defn = self.ctx.build_compiled_def(node.def_id)
-        assert isinstance(defn, CompiledValueDef)
-        if isinstance(defn, CompiledCallableDef) and defn.ty.parametrized:
+        defn = ENGINE.get_checked(node.def_id)
+        if isinstance(defn, CallableDef) and defn.ty.parametrized:
             # TODO: This should be caught during checking
             err = UnsupportedError(
                 node, "Polymorphic functions as dynamic higher-order values"
             )
             raise GuppyError(err)
+
+        defn, [] = self.ctx.build_compiled_def(node.def_id, type_args=[])
+        assert isinstance(defn, CompiledValueDef)
         return defn.load(self.dfg, self.ctx, node)
 
     def visit_GenericParamValue(self, node: GenericParamValue) -> Wire:
         match node.param.ty:
             case NumericType(NumericType.Kind.Nat):
-                arg = node.param.to_bound().to_hugr()
+                # Generic nat parameters are encoded using Hugr bounded nat parameters,
+                # so they are not monomorphized when compiling to Hugr
+                arg = node.param.to_bound().to_hugr(self.ctx)
                 load_nat = hugr.std.PRELUDE.get_op("load_nat").instantiate(
                     [arg], ht.FunctionType([], [ht.USize()])
                 )
                 usize = self.builder.add_op(load_nat)
                 return self.builder.add_op(convert_ifromusize(), usize)
-            case _:
-                raise NotImplementedError
+            case ty:
+                # Look up monomorphization
+                assert self.ctx.current_mono_args is not None
+                match self.ctx.current_mono_args[node.param.idx]:
+                    case ConstArg(const=ConstValue(value=v)):
+                        val = python_value_to_hugr(v, ty, self.ctx)
+                        assert val is not None
+                        return self.builder.load(val)
+                    case _:
+                        raise InternalGuppyError("Monomorphized const is not a value")
 
     def visit_Name(self, node: ast.Name) -> Wire:
         raise InternalGuppyError("Node should have been removed during type checking.")
@@ -295,16 +313,16 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         inputs = [self.visit(e) for e in node.elts]
         list_ty = get_type(node)
         elem_ty = get_element_type(list_ty)
-        return list_new(self.builder, elem_ty.to_hugr(), inputs)
+        return list_new(self.builder, elem_ty.to_hugr(self.ctx), inputs)
 
     def _unpack_tuple(self, wire: Wire, types: Sequence[Type]) -> Sequence[Wire]:
         """Add a tuple unpack operation to the graph"""
-        types = [t.to_hugr() for t in types]
+        types = [t.to_hugr(self.ctx) for t in types]
         return list(self.builder.add_op(ops.UnpackTuple(types), wire))
 
     def _pack_tuple(self, wires: Sequence[Wire], types: Sequence[Type]) -> Wire:
         """Add a tuple pack operation to the graph"""
-        types = [t.to_hugr() for t in types]
+        types = [t.to_hugr(self.ctx) for t in types]
         return self.builder.add_op(ops.MakeTuple(types), *wires)
 
     def _pack_returns(self, returns: Sequence[Wire], return_ty: Type) -> Wire:
@@ -354,7 +372,9 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         num_returns = len(type_to_row(func_ty.output))
 
         args = self._compile_call_args(node.args, func_ty)
-        call = self.builder.add_op(ops.CallIndirect(func_ty.to_hugr()), func, *args)
+        call = self.builder.add_op(
+            ops.CallIndirect(func_ty.to_hugr(self.ctx)), func, *args
+        )
         regular_returns = list(call[:num_returns])
         inout_returns = call[num_returns:]
         self._update_inout_ports(node.args, inout_returns, func_ty)
@@ -410,7 +430,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             consumed_args, other_args = args[0:input_len], args[input_len:]
             consumed_wires = self._compile_call_args(consumed_args, func_ty)
             call = self.builder.add_op(
-                ops.CallIndirect(func_ty.to_hugr()), func, *consumed_wires
+                ops.CallIndirect(func_ty.to_hugr(self.ctx)), func, *consumed_wires
             )
             regular_returns: list[Wire] = list(call[:num_returns])
             inout_returns = call[num_returns:]
@@ -420,7 +440,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             raise InternalGuppyError("Tensor element wasn't function or tuple")
 
     def visit_GlobalCall(self, node: GlobalCall) -> Wire:
-        func = self.ctx.build_compiled_def(node.def_id)
+        func, rem_args = self.ctx.build_compiled_def(node.def_id, node.type_args)
         assert isinstance(func, CompiledCallableDef)
 
         if isinstance(func, CustomFunctionDef) and not func.has_signature:
@@ -429,10 +449,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 get_type(node),
             )
         else:
-            func_ty = func.ty.instantiate(node.type_args)
+            func_ty = func.ty.instantiate(rem_args)
 
         args = self._compile_call_args(node.args, func_ty)
-        rets = func.compile_call(args, list(node.type_args), self.dfg, self.ctx, node)
+        rets = func.compile_call(args, rem_args, self.dfg, self.ctx, node)
         self._update_inout_ports(node.args, iter(rets.inout_returns), func_ty)
         return self._pack_returns(rets.regular_returns, func_ty.output)
 
@@ -458,7 +478,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         func_ty = get_type(node.func)
         assert isinstance(func_ty, FunctionType)
         op = PartialOp.from_closure(
-            func_ty.to_hugr(), [get_type(arg).to_hugr() for arg in node.args]
+            func_ty.to_hugr(self.ctx),
+            [get_type(arg).to_hugr(self.ctx) for arg in node.args],
         )
         return self.builder.add_op(
             op, self.visit(node.func), *(self.visit(arg) for arg in node.args)
@@ -468,7 +489,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         # For now, we can only TypeApply global FunctionDefs/Decls.
         if not isinstance(node.value, GlobalName):
             raise InternalGuppyError("Dynamic TypeApply not supported yet!")
-        defn = self.ctx.build_compiled_def(node.value.def_id)
+        defn, rem_args = self.ctx.build_compiled_def(node.value.def_id, node.inst)
         assert isinstance(defn, CompiledCallableDef)
 
         # We have to be very careful here: If we instantiate `foo: forall T. T -> T`
@@ -484,7 +505,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             raise GuppyError(err)
 
-        return defn.load_with_args(node.inst, self.dfg, self.ctx, node)
+        return defn.load_with_args(rem_args, self.dfg, self.ctx, node)
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> Wire:
         # The only case that is not desugared by the type checker is the `not` operation
@@ -512,7 +533,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
         value_wire = self.visit(node.value)
-        base_ty = node.base_ty.to_hugr()
+        base_ty = node.base_ty.to_hugr(self.ctx)
         extra_args: list[ht.TypeArg] = []
         if isinstance(node.base_ty, NumericType):
             match node.base_ty.kind:
@@ -532,7 +553,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             base_name = "bool"
         if node.array_len is not None:
             op_name = f"result_array_{base_name}"
-            size_arg = node.array_len.to_arg().to_hugr()
+            size_arg = node.array_len.to_arg().to_hugr(self.ctx)
             extra_args = [size_arg, *extra_args]
             # Remove the option wrapping in the array
             unwrap = array_unwrap_elem(self.ctx)
@@ -571,8 +592,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
         err = build_error(self.builder, node.signal, node.msg)
-        in_tys = [get_type(e).to_hugr() for e in node.values]
-        out_tys = [ty.to_hugr() for ty in type_to_row(get_type(node))]
+        in_tys = [get_type(e).to_hugr(self.ctx) for e in node.values]
+        out_tys = [ty.to_hugr(self.ctx) for ty in type_to_row(get_type(node))]
         args = [self.visit(e) for e in node.values]
         match node.kind:
             case ExitKind.Panic:
@@ -583,7 +604,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._pack_returns(list(h_node.outputs()), get_type(node))
 
     def visit_BarrierExpr(self, node: BarrierExpr) -> Wire:
-        hugr_tys = [get_type(e).to_hugr() for e in node.args]
+        hugr_tys = [get_type(e).to_hugr(self.ctx) for e in node.args]
         op = hugr.std.prelude.PRELUDE_EXTENSION.get_op("Barrier").instantiate(
             [ht.SequenceArg([ht.TypeTypeArg(ty) for ty in hugr_tys])],
             ht.FunctionType.endo(hugr_tys),
@@ -596,7 +617,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
 
     def visit_StateResultExpr(self, node: StateResultExpr) -> Wire:
         num_qubits_arg = (
-            node.array_len.to_arg().to_hugr()
+            node.array_len.to_arg().to_hugr(self.ctx)
             if node.array_len
             else ht.BoundedNatArg(len(node.args) - 1)
         )
@@ -644,7 +665,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert isinstance(list_ty, OpaqueType)
         elem_ty = get_element_type(list_ty)
         list_place = Variable(next(tmp_vars), list_ty, node)
-        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(), [])
+        self.dfg[list_place] = list_new(self.builder, elem_ty.to_hugr(self.ctx), [])
         with self._build_generators(node.generators, [list_place]):
             elt_port = self.visit(node.elt)
             list_port = self.dfg[list_place]
@@ -660,16 +681,16 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         array_var = Variable(next(tmp_vars), array_ty, node)
         count_var = Variable(next(tmp_vars), int_type(), node)
         # See https://github.com/CQCL/guppylang/issues/629
-        hugr_elt_ty = ht.Option(node.elt_ty.to_hugr())
+        hugr_elt_ty = ht.Option(node.elt_ty.to_hugr(self.ctx))
         # Initialise array with `None`s
         make_none = array_comprehension_init_func(self.ctx)
         make_none = self.builder.load_function(
             make_none,
             instantiation=ht.FunctionType([], [hugr_elt_ty]),
-            type_args=[ht.TypeTypeArg(node.elt_ty.to_hugr())],
+            type_args=[ht.TypeTypeArg(node.elt_ty.to_hugr(self.ctx))],
         )
         self.dfg[array_var] = self.builder.add_op(
-            array_repeat(hugr_elt_ty, node.length.to_arg().to_hugr()), make_none
+            array_repeat(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx)), make_none
         )
         self.dfg[count_var] = self.builder.load(
             hugr.std.int.IntVal(0, width=NumericType.INT_WIDTH)
@@ -683,21 +704,17 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             # Update `count += 1`
             one = self.builder.load(hugr.std.int.IntVal(1, width=NumericType.INT_WIDTH))
             [self.dfg[count_var]], [] = self._build_method_call(
-                int_type(), "__add__", node, [count, one]
+                int_type(), "__add__", node, [count, one], []
             )
         return self.dfg[array_var]
 
     def _build_method_call(
-        self,
-        ty: Type,
-        method: str,
-        node: AstNode,
-        args: list[Wire],
-        type_args: Sequence[Argument] | None = None,
+        self, ty: Type, method: str, node: AstNode, args: list[Wire], type_args: Inst
     ) -> CallReturnWires:
-        func = self.ctx.get_instance_func(ty, method)
-        assert func is not None
-        return func.compile_call(args, type_args or [], self.dfg, self.ctx, node)
+        func_and_targs = self.ctx.build_compiled_instance_func(ty, method, type_args)
+        assert func_and_targs is not None
+        func, rem_args = func_and_targs
+        return func.compile_call(args, rem_args, self.dfg, self.ctx, node)
 
     @contextmanager
     def _build_generators(
@@ -733,7 +750,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                     outputs=[break_pred, *inputs],
                 )
                 # In the "no" case, we set the break predicate to true
-                break_pred_hugr_ty = ht.Either([iter_ty.to_hugr()], [])
+                break_pred_hugr_ty = ht.Either([iter_ty.to_hugr(self.ctx)], [])
                 with stop_case:
                     self.dfg[break_pred.place] = self.dfg.builder.add_op(
                         ops.Tag(1, break_pred_hugr_ty)
@@ -774,7 +791,7 @@ def instantiation_needs_unpacking(func_ty: FunctionType, inst: Inst) -> bool:
     return False
 
 
-def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
+def python_value_to_hugr(v: Any, exp_ty: Type, ctx: CompilerContext) -> hv.Value | None:
     """Turns a Python value into a Hugr value.
 
     Returns None if the Python value cannot be represented in Guppy.
@@ -785,22 +802,20 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
         case str():
             return hugr.std.prelude.StringVal(v)
         case int():
-            bit_width = 1 << NumericType.INT_WIDTH
-            max_v = (1 << (bit_width - 1)) - 1
-            min_v = -(1 << (bit_width - 1))
-            if v < min_v or v > max_v:
-                msg = (
-                    f"Integer value {v} is out of bounds for {bit_width}"
-                    "-bit signed integer."
-                )
-                raise GuppyComptimeError(msg)
-            return hugr.std.int.IntVal(v, width=NumericType.INT_WIDTH)
+            assert isinstance(exp_ty, NumericType)
+            match exp_ty.kind:
+                case NumericType.Kind.Nat:
+                    return UnsignedIntVal(v, width=NumericType.INT_WIDTH)
+                case NumericType.Kind.Int:
+                    return hugr.std.int.IntVal(v, width=NumericType.INT_WIDTH)
+                case _:
+                    raise InternalGuppyError("Unexpected numeric type")
         case float():
             return hugr.std.float.FloatVal(v)
         case tuple(elts):
             assert isinstance(exp_ty, TupleType)
             vs = [
-                python_value_to_hugr(elt, ty)
+                python_value_to_hugr(elt, ty, ctx)
                 for elt, ty in zip(elts, exp_ty.element_types, strict=True)
             ]
             if doesnt_contain_none(vs):
@@ -808,10 +823,10 @@ def python_value_to_hugr(v: Any, exp_ty: Type) -> hv.Value | None:
         case list(elts):
             assert is_frozenarray_type(exp_ty)
             elem_ty = get_element_type(exp_ty)
-            vs = [python_value_to_hugr(elt, elem_ty) for elt in elts]
+            vs = [python_value_to_hugr(elt, elem_ty, ctx) for elt in elts]
             if doesnt_contain_none(vs):
                 return hugr.std.collections.static_array.StaticArrayVal(
-                    vs, elem_ty.to_hugr(), name=f"static_pyarray.{next(tmp_vars)}"
+                    vs, elem_ty.to_hugr(ctx), name=f"static_pyarray.{next(tmp_vars)}"
                 )
         case _:
             return None
