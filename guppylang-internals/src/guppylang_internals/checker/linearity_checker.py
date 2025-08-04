@@ -12,7 +12,12 @@ from typing import TYPE_CHECKING, NamedTuple, TypeGuard
 from guppylang_internals.ast_util import AstNode, find_nodes, get_type
 from guppylang_internals.cfg.analysis import LivenessAnalysis, LivenessDomain
 from guppylang_internals.cfg.bb import BB, VariableStats
-from guppylang_internals.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
+from guppylang_internals.checker.cfg_checker import (
+    CheckedBB,
+    CheckedCFG,
+    Row,
+    Signature,
+)
 from guppylang_internals.checker.core import (
     FieldAccess,
     Globals,

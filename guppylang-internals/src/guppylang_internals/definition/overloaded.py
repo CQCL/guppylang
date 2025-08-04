@@ -12,7 +12,11 @@ from guppylang_internals.compiler.core import CompilerContext, DFContainer
 from guppylang_internals.definition.common import (
     DefId,
 )
-from guppylang_internals.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
+from guppylang_internals.definition.value import (
+    CallableDef,
+    CallReturnWires,
+    CompiledCallableDef,
+)
 from guppylang_internals.diagnostic import Error, Note
 from guppylang_internals.error import GuppyError, InternalGuppyError
 from guppylang_internals.span import Span, to_span

@@ -33,7 +33,11 @@ from guppylang_internals.definition.function import (
     RawFunctionDef,
 )
 from guppylang_internals.definition.overloaded import OverloadedFunctionDef
-from guppylang_internals.definition.parameter import ConstVarDef, RawConstVarDef, TypeVarDef
+from guppylang_internals.definition.parameter import (
+    ConstVarDef,
+    RawConstVarDef,
+    TypeVarDef,
+)
 from guppylang_internals.definition.pytket_circuits import (
     RawLoadPytketDef,
     RawPytketDef,

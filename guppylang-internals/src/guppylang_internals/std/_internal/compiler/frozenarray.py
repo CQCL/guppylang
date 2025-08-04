@@ -12,7 +12,10 @@ from guppylang_internals.compiler.core import (
     GlobalConstId,
 )
 from guppylang_internals.definition.custom import CustomCallCompiler
-from guppylang_internals.std._internal.compiler.arithmetic import INT_T, convert_itousize
+from guppylang_internals.std._internal.compiler.arithmetic import (
+    INT_T,
+    convert_itousize,
+)
 from guppylang_internals.std._internal.compiler.prelude import (
     build_unwrap,
 )

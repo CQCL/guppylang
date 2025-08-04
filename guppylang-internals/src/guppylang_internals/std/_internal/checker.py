@@ -519,8 +519,8 @@ class RangeChecker(CustomCallChecker):
         return None
 
     def range_ty(self) -> StructType:
-        from guppylang_internals.engine import ENGINE
         from guppylang.std.builtins import Range
+        from guppylang_internals.engine import ENGINE
 
         def_id = cast(RawStructDef, Range).id
         range_type_def = ENGINE.get_checked(def_id)

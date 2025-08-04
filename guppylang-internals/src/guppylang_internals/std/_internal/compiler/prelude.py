@@ -14,7 +14,10 @@ from hugr import tys as ht
 from hugr import val as hv
 
 from guppylang_internals.compiler.core import CompilerContext, GlobalConstId
-from guppylang_internals.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
+from guppylang_internals.definition.custom import (
+    CustomCallCompiler,
+    CustomInoutCallCompiler,
+)
 from guppylang_internals.definition.value import CallReturnWires
 from guppylang_internals.error import InternalGuppyError
 from guppylang_internals.nodes import ExitKind

@@ -42,7 +42,13 @@ from guppylang_internals.tys.common import ToHugrContext
 from guppylang_internals.tys.const import BoundConstVar, ConstValue
 from guppylang_internals.tys.param import ConstParam, Parameter, TypeParam
 from guppylang_internals.tys.subst import Inst
-from guppylang_internals.tys.ty import BoundTypeVar, NumericType, StructType, TupleType, Type
+from guppylang_internals.tys.ty import (
+    BoundTypeVar,
+    NumericType,
+    StructType,
+    TupleType,
+    Type,
+)
 
 if TYPE_CHECKING:
     from guppylang_internals.tys.arg import Argument

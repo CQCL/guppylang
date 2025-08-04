@@ -5,7 +5,10 @@ from guppylang_internals.checker.errors.wasm import (
     FirstArgNotModule,
     UnWasmableType,
 )
-from guppylang_internals.definition.custom import CustomFunctionDef, RawCustomFunctionDef
+from guppylang_internals.definition.custom import (
+    CustomFunctionDef,
+    RawCustomFunctionDef,
+)
 from guppylang_internals.error import GuppyError
 from guppylang_internals.span import SourceMap
 from guppylang_internals.tys.builtin import wasm_module_info

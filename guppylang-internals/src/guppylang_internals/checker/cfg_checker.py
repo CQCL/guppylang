@@ -13,7 +13,14 @@ from typing import ClassVar, Generic, TypeVar, cast
 from guppylang_internals.ast_util import line_col
 from guppylang_internals.cfg.bb import BB
 from guppylang_internals.cfg.cfg import CFG, BaseCFG
-from guppylang_internals.checker.core import Context, Globals, Locals, Place, V, Variable
+from guppylang_internals.checker.core import (
+    Context,
+    Globals,
+    Locals,
+    Place,
+    V,
+    Variable,
+)
 from guppylang_internals.checker.expr_checker import ExprSynthesizer, to_bool
 from guppylang_internals.checker.stmt_checker import StmtChecker
 from guppylang_internals.definition.value import ValueDef

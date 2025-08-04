@@ -12,7 +12,12 @@ from guppylang_internals.tys.common import (
     Transformer,
     Visitor,
 )
-from guppylang_internals.tys.const import BoundConstVar, Const, ConstValue, ExistentialConstVar
+from guppylang_internals.tys.const import (
+    BoundConstVar,
+    Const,
+    ConstValue,
+    ExistentialConstVar,
+)
 from guppylang_internals.tys.var import ExistentialVar
 
 if TYPE_CHECKING:

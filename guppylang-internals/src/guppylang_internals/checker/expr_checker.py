@@ -89,7 +89,10 @@ from guppylang_internals.error import (
     GuppyTypeInferenceError,
     InternalGuppyError,
 )
-from guppylang_internals.experimental import check_function_tensors_enabled, check_lists_enabled
+from guppylang_internals.experimental import (
+    check_function_tensors_enabled,
+    check_lists_enabled,
+)
 from guppylang_internals.nodes import (
     ComptimeExpr,
     DesugaredGenerator,
@@ -423,7 +426,9 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 case Definition() as defn:
                     return self._check_global(defn, x, node)
                 case PythonObject():
-                    from guppylang_internals.checker.cfg_checker import VarNotDefinedError
+                    from guppylang_internals.checker.cfg_checker import (
+                        VarNotDefinedError,
+                    )
 
                     # TODO: Emit a hint that the variable could be accessed through a
                     #  comptime expression

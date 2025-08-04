@@ -63,10 +63,12 @@ class PartialState:
         """List of specified qubits in the state."""
         return self._inner.specified_qubits
 
-    def state_distribution(self, zero_threshold=1e-12) -> list[TracedState[np.ndarray]]:
+    def state_distribution(
+        self, zero_threshold: float = 1e-12
+    ) -> list[TracedState[np.ndarray]]:
         return self._inner.get_state_vector_distribution(zero_threshold=zero_threshold)
 
-    def as_single_state(self, zero_threshold=1e-12) -> np.ndarray:
+    def as_single_state(self, zero_threshold: float = 1e-12) -> np.ndarray:
         return self._inner.get_single_state(zero_threshold=zero_threshold)
 
     @classmethod

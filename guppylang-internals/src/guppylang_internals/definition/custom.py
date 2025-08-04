@@ -8,7 +8,13 @@ from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.build.dfg import DfBase
 
-from guppylang_internals.ast_util import AstNode, get_type, has_empty_body, with_loc, with_type
+from guppylang_internals.ast_util import (
+    AstNode,
+    get_type,
+    has_empty_body,
+    with_loc,
+    with_type,
+)
 from guppylang_internals.checker.core import Context, Globals
 from guppylang_internals.checker.expr_checker import check_call, synthesize_call
 from guppylang_internals.checker.func_checker import check_signature

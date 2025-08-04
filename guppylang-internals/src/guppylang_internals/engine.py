@@ -24,7 +24,10 @@ from guppylang_internals.definition.common import (
     RawDef,
 )
 from guppylang_internals.definition.ty import TypeDef
-from guppylang_internals.definition.value import CompiledCallableDef, CompiledHugrNodeDef
+from guppylang_internals.definition.value import (
+    CompiledCallableDef,
+    CompiledHugrNodeDef,
+)
 from guppylang_internals.error import pretty_errors
 from guppylang_internals.span import SourceMap
 from guppylang_internals.tys.builtin import (

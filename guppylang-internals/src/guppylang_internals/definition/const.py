@@ -9,7 +9,11 @@ from guppylang_internals.ast_util import AstNode
 from guppylang_internals.checker.core import Globals
 from guppylang_internals.compiler.core import CompilerContext, DFContainer
 from guppylang_internals.definition.common import CompilableDef, ParsableDef
-from guppylang_internals.definition.value import CompiledHugrNodeDef, CompiledValueDef, ValueDef
+from guppylang_internals.definition.value import (
+    CompiledHugrNodeDef,
+    CompiledValueDef,
+    ValueDef,
+)
 from guppylang_internals.span import SourceMap
 from guppylang_internals.tys.parsing import type_from_ast
 

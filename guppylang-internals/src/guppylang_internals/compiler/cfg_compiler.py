@@ -8,7 +8,12 @@ from hugr.build import cfg as hc
 from hugr.build.dfg import DP, DfBase
 from hugr.hugr.node_port import ToNode
 
-from guppylang_internals.checker.cfg_checker import CheckedBB, CheckedCFG, Row, Signature
+from guppylang_internals.checker.cfg_checker import (
+    CheckedBB,
+    CheckedCFG,
+    Row,
+    Signature,
+)
 from guppylang_internals.checker.core import Place, Variable
 from guppylang_internals.compiler.core import (
     CompilerContext,

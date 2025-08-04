@@ -5,7 +5,12 @@ from typing import Any
 from guppylang_internals.error import InternalGuppyError
 from guppylang_internals.tys.arg import Argument, ConstArg, TypeArg
 from guppylang_internals.tys.common import Transformer, Visitor
-from guppylang_internals.tys.const import BoundConstVar, Const, ConstBase, ExistentialConstVar
+from guppylang_internals.tys.const import (
+    BoundConstVar,
+    Const,
+    ConstBase,
+    ExistentialConstVar,
+)
 from guppylang_internals.tys.ty import (
     BoundTypeVar,
     ExistentialTypeVar,

@@ -5,7 +5,9 @@ from hugr import tys as ht
 from hugr.build.dfg import DfBase
 
 from guppylang_internals.ast_util import AstNode
-from guppylang_internals.checker.errors.comptime_errors import IllegalComptimeExpressionError
+from guppylang_internals.checker.errors.comptime_errors import (
+    IllegalComptimeExpressionError,
+)
 from guppylang_internals.checker.expr_checker import python_value_to_guppy_type
 from guppylang_internals.compiler.core import CompilerContext
 from guppylang_internals.compiler.expr_compiler import python_value_to_hugr

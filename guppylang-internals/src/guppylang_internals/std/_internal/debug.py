@@ -5,7 +5,11 @@ from typing import ClassVar, cast
 from guppylang_internals.ast_util import with_loc
 from guppylang_internals.checker.errors.generic import ExpectedError
 from guppylang_internals.checker.errors.type_errors import WrongNumberOfArgsError
-from guppylang_internals.checker.expr_checker import ExprChecker, ExprSynthesizer, synthesize_call
+from guppylang_internals.checker.expr_checker import (
+    ExprChecker,
+    ExprSynthesizer,
+    synthesize_call,
+)
 from guppylang_internals.definition.custom import CustomCallChecker
 from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.defs import GuppyDefinition
@@ -19,7 +23,13 @@ from guppylang_internals.tys.builtin import (
     is_array_type,
     string_type,
 )
-from guppylang_internals.tys.ty import FuncInput, FunctionType, InputFlags, NoneType, Type
+from guppylang_internals.tys.ty import (
+    FuncInput,
+    FunctionType,
+    InputFlags,
+    NoneType,
+    Type,
+)
 
 
 class StateResultChecker(CustomCallChecker):

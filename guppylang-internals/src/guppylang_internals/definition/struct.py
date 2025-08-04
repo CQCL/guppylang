@@ -41,7 +41,13 @@ from guppylang_internals.span import SourceMap, Span, to_span
 from guppylang_internals.tys.arg import Argument
 from guppylang_internals.tys.param import Parameter, check_all_args
 from guppylang_internals.tys.parsing import type_from_ast
-from guppylang_internals.tys.ty import FuncInput, FunctionType, InputFlags, StructType, Type
+from guppylang_internals.tys.ty import (
+    FuncInput,
+    FunctionType,
+    InputFlags,
+    StructType,
+    Type,
+)
 
 if sys.version_info >= (3, 12):
     from guppylang_internals.tys.parsing import parse_parameter

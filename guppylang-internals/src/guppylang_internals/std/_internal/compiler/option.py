@@ -3,11 +3,20 @@ from abc import ABC
 from hugr import Wire, ops
 from hugr import tys as ht
 
-from guppylang_internals.definition.custom import CustomCallCompiler, CustomInoutCallCompiler
+from guppylang_internals.definition.custom import (
+    CustomCallCompiler,
+    CustomInoutCallCompiler,
+)
 from guppylang_internals.definition.value import CallReturnWires
 from guppylang_internals.error import InternalGuppyError
-from guppylang_internals.std._internal.compiler.prelude import build_expect_none, build_unwrap
-from guppylang_internals.std._internal.compiler.tket_bool import OPAQUE_FALSE, OPAQUE_TRUE
+from guppylang_internals.std._internal.compiler.prelude import (
+    build_expect_none,
+    build_unwrap,
+)
+from guppylang_internals.std._internal.compiler.tket_bool import (
+    OPAQUE_FALSE,
+    OPAQUE_TRUE,
+)
 from guppylang_internals.tys.arg import TypeArg
 
 
