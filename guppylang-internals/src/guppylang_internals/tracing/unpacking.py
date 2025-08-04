@@ -71,9 +71,7 @@ def unpack_guppy_object(
                     # them as Guppy objects here
                     return obj
                 elem_ty = get_element_type(ty)
-                opt_elems = unpack_array(builder, obj._use_wire(None))
-                err = "Non-copyable array element has already been used"
-                elems = [build_unwrap(builder, opt_elem, err) for opt_elem in opt_elems]
+                elems = unpack_array(builder, obj._use_wire(None))
                 obj_list = [
                     unpack_guppy_object(GuppyObject(elem_ty, wire), builder, frozen)
                     for wire in elems
@@ -128,9 +126,9 @@ def guppy_object_from_py(
                         f"Element at index {i + 1} does not match the type of "
                         f"previous elements. Expected `{elem_ty}`, got `{obj._ty}`."
                     )
-            hugr_elem_ty = ht.Option(elem_ty.to_hugr(ctx))
+            hugr_elem_ty = elem_ty.to_hugr(ctx)
             wires = [
-                builder.add_op(ops.Tag(1, hugr_elem_ty), obj._use_wire(None))
+                obj._use_wire(None)
                 for obj in objs
             ]
             return GuppyObject(

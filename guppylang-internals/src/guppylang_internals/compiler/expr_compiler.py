@@ -69,7 +69,7 @@ from guppylang_internals.std._internal.compiler.array import (
     array_convert_to_std_array,
     array_map,
     array_new,
-    array_repeat,
+    array_new_all_borrowed,
     standard_array_type,
     unpack_array,
 )
@@ -79,7 +79,6 @@ from guppylang_internals.std._internal.compiler.list import (
 from guppylang_internals.std._internal.compiler.prelude import (
     build_error,
     build_panic,
-    build_unwrap,
     panic,
 )
 from guppylang_internals.std._internal.compiler.tket_bool import (
@@ -555,15 +554,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             op_name = f"result_array_{base_name}"
             size_arg = node.array_len.to_arg().to_hugr(self.ctx)
             extra_args = [size_arg, *extra_args]
-            # Remove the option wrapping in the array
-            unwrap = array_unwrap_elem(self.ctx)
-            unwrap = self.builder.load_function(
-                unwrap,
-                instantiation=ht.FunctionType([ht.Option(base_ty)], [base_ty]),
-                type_args=[ht.TypeTypeArg(base_ty)],
-            )
-            map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
-            value_wire = self.builder.add_op(map_op, value_wire, unwrap)
             if is_bool_type(node.base_ty):
                 # We need to coerce a read on all the array elements if they are bools.
                 array_read = array_read_bool(self.ctx)
@@ -571,7 +561,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 map_op = array_map(OpaqueBool, size_arg, ht.Bool)
                 value_wire = self.builder.add_op(map_op, value_wire, array_read)
                 base_ty = ht.Bool
-            # Turn `value_array` into regular linear `array`
+            # Turn `borrow_array` into regular `array`
             value_wire = self.builder.add_op(
                 array_convert_to_std_array(base_ty, size_arg), value_wire
             )
@@ -647,8 +637,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             qubits_out = unpack_array(self.builder, qubit_arr_out)
         else:
-            # If the input is an array of qubits, we need to unwrap the elements first,
-            # and then convert to a value array and back.
+            # If the input is an array of qubits, we need to convert to a standard
+            # array.
             qubits_in = [self.visit(node.args[1])]
             qubits_out = [
                 apply_array_op_with_conversions(
@@ -680,17 +670,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert isinstance(array_ty, OpaqueType)
         array_var = Variable(next(tmp_vars), array_ty, node)
         count_var = Variable(next(tmp_vars), int_type(), node)
-        # See https://github.com/CQCL/guppylang/issues/629
-        hugr_elt_ty = ht.Option(node.elt_ty.to_hugr(self.ctx))
+        hugr_elt_ty = node.elt_ty.to_hugr(self.ctx)
         # Initialise array with `None`s
-        make_none = array_comprehension_init_func(self.ctx)
-        make_none = self.builder.load_function(
-            make_none,
-            instantiation=ht.FunctionType([], [hugr_elt_ty]),
-            type_args=[ht.TypeTypeArg(node.elt_ty.to_hugr(self.ctx))],
-        )
         self.dfg[array_var] = self.builder.add_op(
-            array_repeat(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx)), make_none
+            array_new_all_borrowed(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx))
         )
         self.dfg[count_var] = self.builder.load(
             hugr.std.int.IntVal(0, width=NumericType.INT_WIDTH)
@@ -835,10 +818,6 @@ def python_value_to_hugr(v: Any, exp_ty: Type, ctx: CompilerContext) -> hv.Value
     return None
 
 
-ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(
-    "array.__comprehension.init"
-)
-
 ARRAY_UNWRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__unwrap_elem")
 ARRAY_WRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__wrap_elem")
 
@@ -846,54 +825,6 @@ ARRAY_READ_BOOL: Final[GlobalConstId] = GlobalConstId.fresh("array.__read_bool")
 ARRAY_MAKE_OPAQUE_BOOL: Final[GlobalConstId] = GlobalConstId.fresh(
     "array.__make_opaque_bool"
 )
-
-
-def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
-    """Returns the Hugr function that is used to initialise arrays elements before a
-    comprehension.
-
-    Just returns the `None` variant of the optional element type.
-
-    See https://github.com/CQCL/guppylang/issues/629
-    """
-    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Linear))
-    sig = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
-        body=ht.FunctionType([], [ht.Option(v)]),
-    )
-    func, already_defined = ctx.declare_global_func(ARRAY_COMPREHENSION_INIT, sig)
-    if not already_defined:
-        func.set_outputs(func.add_op(ops.Tag(0, ht.Option(v))))
-    return func
-
-
-def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
-    """Returns the Hugr function that is used to unwrap the elements in an option array
-    to turn it into a regular array."""
-    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Linear))
-    sig = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
-        body=ht.FunctionType([ht.Option(v)], [v]),
-    )
-    func, already_defined = ctx.declare_global_func(ARRAY_UNWRAP_ELEM, sig)
-    if not already_defined:
-        msg = "Linear array element has already been used"
-        func.set_outputs(build_unwrap(func, func.inputs()[0], msg))
-    return func
-
-
-def array_wrap_elem(ctx: CompilerContext) -> hf.Function:
-    """Returns the Hugr function that is used to wrap the elements in an regular array
-    to turn it into a option array."""
-    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Linear))
-    sig = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
-        body=ht.FunctionType([v], [ht.Option(v)]),
-    )
-    func, already_defined = ctx.declare_global_func(ARRAY_WRAP_ELEM, sig)
-    if not already_defined:
-        func.set_outputs(func.add_op(ops.Tag(1, ht.Option(v)), func.inputs()[0]))
-    return func
 
 
 def array_read_bool(ctx: CompilerContext) -> hf.Function:
@@ -944,31 +875,21 @@ def apply_array_op_with_conversions(
     output array.
 
     Transformations:
-    1. Unwraps / wraps elements in options.
-    3. (Optional) Converts from / to opaque bool to / from Hugr bool.
+    1. (Optional) Converts from / to opaque bool to / from Hugr bool.
     2. Converts from / to value array to / from standard Hugr array.
     """
-    unwrap = array_unwrap_elem(ctx)
-    unwrap = builder.load_function(
-        unwrap,
-        instantiation=ht.FunctionType([ht.Option(elem_ty)], [elem_ty]),
-        type_args=[ht.TypeTypeArg(elem_ty)],
-    )
-    map_op = array_map(ht.Option(elem_ty), size_arg, elem_ty)
-    unwrapped_array = builder.add_op(map_op, input_array, unwrap)
-
     if convert_bool:
         array_read = array_read_bool(ctx)
         array_read = builder.load_function(array_read)
         map_op = array_map(OpaqueBool, size_arg, ht.Bool)
-        unwrapped_array = builder.add_op(map_op, unwrapped_array, array_read)
+        input_array = builder.add_op(map_op, input_array, array_read)
         elem_ty = ht.Bool
 
-    unwrapped_array = builder.add_op(
-        array_convert_to_std_array(elem_ty, size_arg), unwrapped_array
+    input_array = builder.add_op(
+        array_convert_to_std_array(elem_ty, size_arg), input_array
     )
 
-    result_array = builder.add_op(op, unwrapped_array)
+    result_array = builder.add_op(op, input_array)
 
     result_array = builder.add_op(
         array_convert_from_std_array(elem_ty, size_arg), result_array
@@ -981,11 +902,4 @@ def apply_array_op_with_conversions(
         result_array = builder.add_op(map_op, result_array, array_make_opaque)
         elem_ty = OpaqueBool
 
-    wrap = array_wrap_elem(ctx)
-    wrap = builder.load_function(
-        wrap,
-        instantiation=ht.FunctionType([elem_ty], [ht.Option(elem_ty)]),
-        type_args=[ht.TypeTypeArg(elem_ty)],
-    )
-    map_op = array_map(elem_ty, size_arg, ht.Option(elem_ty))
-    return builder.add_op(map_op, result_array, wrap)
+    return result_array

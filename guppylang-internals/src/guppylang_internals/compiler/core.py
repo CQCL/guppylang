@@ -15,7 +15,8 @@ from hugr.build.dfg import DP, DefinitionBuilder, DfBase
 from hugr.hugr.base import OpVarCov
 from hugr.hugr.node_port import ToNode
 from hugr.std import PRELUDE
-from hugr.std.collections import EXTENSION as ARRAY_EXTENSION
+from hugr.std.collections.array import EXTENSION as ARRAY_EXTENSION
+from hugr.std.collections.borrow_array import EXTENSION as BORROW_ARRAY_EXTENSION
 from typing_extensions import assert_never
 
 from guppylang_internals.checker.core import (
@@ -635,6 +636,7 @@ def qualified_name(type_def: he.TypeDef) -> str:
 #: insertion of an explicit drop operation.
 AFFINE_EXTENSION_TYS: list[str] = [
     qualified_name(ARRAY_EXTENSION.get_type("array")),
+    qualified_name(BORROW_ARRAY_EXTENSION.get_type("borrow_array")),
 ]
 
 

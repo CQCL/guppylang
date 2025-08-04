@@ -2,7 +2,6 @@ import ast
 import functools
 from collections.abc import Sequence
 
-import hugr.tys as ht
 from hugr import Wire, ops
 from hugr.build.dfg import DfBase
 
@@ -119,8 +118,9 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
                 ports[len(left) : -len(right)] if right else ports[len(left) :]
             )
             elt = get_element_type(array_ty).to_hugr(self.ctx)
-            opts = [self.builder.add_op(ops.Some(elt), p) for p in starred_ports]
-            array = self.builder.add_op(array_new(ht.Option(elt), len(opts)), *opts)
+            array = self.builder.add_op(
+                array_new(elt, len(starred_ports)), *starred_ports
+            )
             self._assign(starred, array)
 
     @_assign.register
@@ -132,7 +132,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         assert isinstance(lhs.compr.length, ConstValue)
         length = lhs.compr.length.value
         assert isinstance(length, int)
-        opt_elt_ty = ht.Option(lhs.compr.elt_ty.to_hugr(self.ctx))
+        elt_ty = lhs.compr.elt_ty.to_hugr(self.ctx)
 
         def pop(
             array: Wire, length: int, pats: list[ast.expr], from_left: bool
@@ -143,10 +143,9 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             elts = []
             for i in range(num_pats):
                 res = self.builder.add_op(
-                    array_pop(opt_elt_ty, length - i, from_left), array
+                    array_pop(elt_ty, length - i, from_left), array
                 )
-                [elt_opt, array] = build_unwrap(self.builder, res, err)
-                [elt] = build_unwrap(self.builder, elt_opt, err)
+                [elt, array] = build_unwrap(self.builder, res, err)
                 elts.append(elt)
             # Assign elements to the given patterns
             for pat, elt in zip(
@@ -167,7 +166,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             self._assign(lhs.pattern.starred, array)
         else:
             assert length == 0
-            self.builder.add_op(array_discard_empty(opt_elt_ty), array)
+            self.builder.add_op(array_discard_empty(elt_ty), array)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         [target] = node.targets

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Final, TypeVar
 import hugr
 from hugr import Wire, ops
 from hugr import tys as ht
-from hugr.std.collections.value_array import EXTENSION
+from hugr.std.collections.borrow_array import EXTENSION
 
 from guppylang_internals.compiler.core import (
     GlobalConstId,
@@ -18,8 +18,6 @@ from guppylang_internals.error import InternalGuppyError
 from guppylang_internals.std._internal.compiler.arithmetic import convert_itousize
 from guppylang_internals.std._internal.compiler.prelude import (
     build_expect_none,
-    build_unwrap,
-    build_unwrap_left,
     build_unwrap_right,
 )
 from guppylang_internals.tys.arg import ConstArg, TypeArg
@@ -50,10 +48,10 @@ def _instantiate_array_op(
 def array_type(elem_ty: ht.Type, length: ht.TypeArg) -> ht.ExtType:
     """Returns the hugr type of a fixed length array.
 
-    This is the copyable `value_array` type used by Guppy.
+    This is the `borrow_array` type used by Guppy.
     """
     elem_arg = ht.TypeTypeArg(elem_ty)
-    return EXTENSION.types["value_array"].instantiate([length, elem_arg])
+    return EXTENSION.types["borrow_array"].instantiate([length, elem_arg])
 
 
 def standard_array_type(elem_ty: ht.Type, length: ht.TypeArg) -> ht.ExtType:
@@ -163,8 +161,8 @@ def array_repeat(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
 
 
 def array_convert_to_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
-    """Returns an array operation to convert the `value_array` type used by Guppy into
-    the regular linear `array` in Hugr.
+    """Returns an array operation to convert the `borrow_array` type used by Guppy into
+    the regular `array` in Hugr.
     """
     return EXTENSION.get_op("to_array").instantiate(
         [length, ht.TypeTypeArg(elem_ty)],
@@ -176,7 +174,7 @@ def array_convert_to_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtO
 
 def array_convert_from_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array operation to convert the `array` type used by Hugr into the
-    `value_array` type used by Guppy.
+    `borrow_array` type used by Guppy.
     """
     return EXTENSION.get_op("from_array").instantiate(
         [length, ht.TypeTypeArg(elem_ty)],
@@ -184,6 +182,34 @@ def array_convert_from_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.Ex
             [standard_array_type(elem_ty, length)], [array_type(elem_ty, length)]
         ),
     )
+
+
+def array_borrow(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array `borrow` operation."""
+    arr_ty = array_type(elem_ty, length)
+    return _instantiate_array_op(
+        "borrow", elem_ty, length, [arr_ty, ht.USize()], [elem_ty, arr_ty]
+    )
+
+
+def array_return(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array `return` operation."""
+    arr_ty = array_type(elem_ty, length)
+    return _instantiate_array_op(
+        "return", elem_ty, length, [arr_ty, ht.USize(), elem_ty], [arr_ty]
+    )
+
+
+def array_discard_all_borrowed(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array `borrow` operation."""
+    arr_ty = array_type(elem_ty, length)
+    return _instantiate_array_op("discard_all_borrowed", elem_ty, length, [arr_ty], [])
+
+
+def array_new_all_borrowed(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array `borrow` operation."""
+    arr_ty = array_type(elem_ty, length)
+    return _instantiate_array_op("new_all_borrowed", elem_ty, length, [arr_ty], [])
 
 
 # ------------------------------------------------------
@@ -274,7 +300,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
 
     def _getitem_ty(self, bound: ht.TypeBound) -> ht.PolyFuncType:
         """Constructs a polymorphic function type for `__getitem__`"""
-        # a(Option(T), N), int -> T, a(Option(T), N)
+        # a(T, N), int -> T, a(T, N)
         # Array element type parameter
         elem_ty_param = ht.TypeTypeParam(bound)
         # Array length parameter
@@ -284,7 +310,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
             body=ht.FunctionType(
                 input=[
                     array_type(
-                        ht.Option(ht.Variable(0, bound)),
+                        ht.Variable(0, bound),
                         ht.VariableArg(1, length_param),
                     ),
                     int_type().to_hugr(self.ctx),
@@ -292,7 +318,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
                 output=[
                     ht.Variable(0, bound),
                     array_type(
-                        ht.Option(ht.Variable(0, bound)),
+                        ht.Variable(0, bound),
                         ht.VariableArg(1, length_param),
                     ),
                 ],
@@ -304,29 +330,13 @@ class ArrayGetitemCompiler(ArrayCompiler):
         elem_ty = ht.Variable(0, ht.TypeBound.Copyable)
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
-        # See https://github.com/CQCL/guppylang/issues/629
-        elem_opt_ty = ht.Option(elem_ty)
-        none = func.add_op(ops.Tag(0, elem_opt_ty))
         idx = func.add_op(convert_itousize(), func.inputs()[1])
-        # As copyable elements can be used multiple times, we need to swap the element
-        # back after initially swapping it out for `None` to get the value.
-        initial_result = func.add_op(
-            array_set(elem_opt_ty, length),
+        opt_elem, arr = func.add_op(
+            array_get(elem_ty, length),
             func.inputs()[0],
             idx,
-            none,
         )
-        elem_opt, arr = build_unwrap_right(
-            func, initial_result, "Array index out of bounds"
-        )
-        swapped_back = func.add_op(
-            array_set(elem_opt_ty, length),
-            arr,
-            idx,
-            elem_opt,
-        )
-        _, arr = build_unwrap_right(func, swapped_back, "Array index out of bounds")
-        elem = build_unwrap(func, elem_opt, "array.__getitem__: Internal error")
+        elem = build_unwrap_right(func, opt_elem, "Array index out of bounds")
 
         func.set_outputs(elem, arr)
 
@@ -335,21 +345,14 @@ class ArrayGetitemCompiler(ArrayCompiler):
         elem_ty = ht.Variable(0, ht.TypeBound.Linear)
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
-        elem_opt_ty = ht.Option(elem_ty)
-        none = func.add_op(ops.Tag(0, elem_opt_ty))
         idx = func.add_op(convert_itousize(), func.inputs()[1])
-        result = func.add_op(
-            array_set(elem_opt_ty, length),
+        elem, arr = func.add_op(
+            array_borrow(elem_ty, length),
             func.inputs()[0],
             idx,
-            none,
-        )
-        elem_opt, array = build_unwrap_right(func, result, "Array index out of bounds")
-        elem = build_unwrap(
-            func, elem_opt, "Linear array element has already been used"
         )
 
-        func.set_outputs(elem, array)
+        func.set_outputs(elem, arr)
 
     def _build_call_getitem(
         self,
@@ -360,10 +363,10 @@ class ArrayGetitemCompiler(ArrayCompiler):
         """Inserts a call to `array.__getitem__`."""
         concrete_func_ty = ht.FunctionType(
             input=[
-                array_type(ht.Option(self.elem_ty), self.length),
+                array_type(self.elem_ty, self.length),
                 int_type().to_hugr(self.ctx),
             ],
-            output=[self.elem_ty, array_type(ht.Option(self.elem_ty), self.length)],
+            output=[self.elem_ty, array_type(self.elem_ty, self.length)],
         )
         type_args = [ht.TypeTypeArg(self.elem_ty), self.length]
         func_call = self.builder.call(
@@ -412,7 +415,7 @@ class ArraySetitemCompiler(ArrayCompiler):
 
     def _setitem_ty(self, bound: ht.TypeBound) -> ht.PolyFuncType:
         """Constructs a polymorphic function type for `__setitem__`"""
-        # a(Option(T), N), int, T -> a(Option(T), N)
+        # a(T, N), int, T -> a(T, N)
         elem_ty_param = ht.TypeTypeParam(bound)
         length_param = ht.BoundedNatParam()
         return ht.PolyFuncType(
@@ -420,7 +423,7 @@ class ArraySetitemCompiler(ArrayCompiler):
             body=ht.FunctionType(
                 input=[
                     array_type(
-                        ht.Option(ht.Variable(0, bound)),
+                        ht.Variable(0, bound),
                         ht.VariableArg(1, length_param),
                     ),
                     int_type().to_hugr(self.ctx),
@@ -428,7 +431,7 @@ class ArraySetitemCompiler(ArrayCompiler):
                 ],
                 output=[
                     array_type(
-                        ht.Option(ht.Variable(0, bound)),
+                        ht.Variable(0, bound),
                         ht.VariableArg(1, length_param),
                     ),
                 ],
@@ -440,14 +443,12 @@ class ArraySetitemCompiler(ArrayCompiler):
         elem_ty = ht.Variable(0, ht.TypeBound.Copyable)
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
-        elem_opt_ty = ht.Option(elem_ty)
         idx = func.add_op(convert_itousize(), func.inputs()[1])
-        elem_opt = func.add_op(ops.Some(elem_ty), func.inputs()[2])
         result = func.add_op(
-            array_set(elem_opt_ty, length),
+            array_set(elem_ty, length),
             func.inputs()[0],
             idx,
-            elem_opt,
+            func.inputs()[2],
         )
         _, array = build_unwrap_right(func, result, "Array index out of bounds")
 
@@ -458,21 +459,15 @@ class ArraySetitemCompiler(ArrayCompiler):
         elem_ty = ht.Variable(0, ht.TypeBound.Linear)
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
-        elem_opt_ty = ht.Option(elem_ty)
-        elem = func.add_op(ops.Some(elem_ty), func.inputs()[2])
         idx = func.add_op(convert_itousize(), func.inputs()[1])
-        result = func.add_op(
-            array_set(elem_opt_ty, length),
+        arr = func.add_op(
+            array_return(elem_ty, length),
             func.inputs()[0],
             idx,
-            elem,
+            func.inputs()[2],
         )
-        old_elem_opt, array = build_unwrap_right(
-            func, result, "Array index out of bounds"
-        )
-        build_unwrap_left(func, old_elem_opt, "Linear array element has not been used")
 
-        func.set_outputs(array)
+        func.set_outputs(arr)
 
     def _build_call_setitem(
         self,
@@ -484,11 +479,11 @@ class ArraySetitemCompiler(ArrayCompiler):
         """Inserts a call to `array.__setitem__`."""
         concrete_func_ty = ht.FunctionType(
             input=[
-                array_type(ht.Option(self.elem_ty), self.length),
+                array_type(self.elem_ty, self.length),
                 int_type().to_hugr(self.ctx),
                 self.elem_ty,
             ],
-            output=[array_type(ht.Option(self.elem_ty), self.length)],
+            output=[array_type(self.elem_ty, self.length)],
         )
         type_args = [ht.TypeTypeArg(self.elem_ty), self.length]
         func_call = self.builder.call(
