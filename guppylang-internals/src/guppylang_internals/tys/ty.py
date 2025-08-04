@@ -21,6 +21,7 @@ from guppylang_internals.tys.common import (
 )
 from guppylang_internals.tys.const import Const, ConstValue, ExistentialConstVar
 from guppylang_internals.tys.param import ConstParam, Parameter
+from guppylang_internals.tys.protocol import ProtocolInst
 from guppylang_internals.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
@@ -186,6 +187,7 @@ class BoundTypeVar(TypeBase, BoundVar):
 
     copyable: bool
     droppable: bool
+    implements: Sequence[ProtocolInst]
 
     @cached_property
     def hugr_bound(self) -> ht.TypeBound:
@@ -230,6 +232,7 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
 
     copyable: bool
     droppable: bool
+    implements: Sequence[ProtocolInst]
 
     @classmethod
     def fresh(
@@ -821,6 +824,7 @@ def _unify_var(
         return unify(var, subst[t], subst)
     if var in t.unsolved_vars:
         return None
+    # TODO check that t implements all the protocol bounds that var has
     return {var: t, **subst}
 
 
