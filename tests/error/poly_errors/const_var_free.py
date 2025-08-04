@@ -19,4 +19,4 @@ def main(_: Struct[T, n, X]) -> None:
     pass
 
 
-guppy.compile(main)
+main.compile()

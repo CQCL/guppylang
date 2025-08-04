@@ -8,4 +8,4 @@ def foo(x: int) -> int:
 def main() -> int:
     return (foo, foo)(42)
 
-guppy.compile(main)
+main.compile()

@@ -12,4 +12,4 @@ def test(q: array[int, 3] @owned) -> None:
         i + i
     use(q)
 
-guppy.compile(test)
+test.compile()

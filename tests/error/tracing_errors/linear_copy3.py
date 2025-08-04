@@ -9,4 +9,4 @@ def test() -> qubit:
     return q
 
 
-guppy.compile(test)
+test.compile()

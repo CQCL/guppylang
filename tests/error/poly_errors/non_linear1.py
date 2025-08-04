@@ -14,4 +14,4 @@ def main(q: qubit) -> None:
     foo(q)
 
 
-guppy.compile(main)
+main.compile()

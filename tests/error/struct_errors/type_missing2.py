@@ -6,4 +6,4 @@ class MyStruct:
     x = 42
 
 
-guppy.compile(MyStruct)
+MyStruct.compile()

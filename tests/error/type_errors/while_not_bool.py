@@ -9,4 +9,4 @@ def foo(x: NonBool) -> int:
     return 0
 
 
-guppy.compile(foo)
+foo.compile()

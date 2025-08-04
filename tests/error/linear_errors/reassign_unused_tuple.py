@@ -14,4 +14,4 @@ def foo(q: qubit @owned) -> tuple[qubit, qubit]:
     return q, r
 
 
-guppy.compile(foo)
+foo.compile()

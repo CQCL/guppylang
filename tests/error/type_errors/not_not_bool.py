@@ -7,4 +7,4 @@ def foo(x: NonBool) -> bool:
     return not x
 
 
-guppy.compile(foo)
+foo.compile()

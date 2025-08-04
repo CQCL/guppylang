@@ -10,4 +10,4 @@ def test() -> None:
     foo(1, 2, 3, 4)
 
 
-guppy.compile(test)
+test.compile()

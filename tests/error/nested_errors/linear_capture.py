@@ -11,4 +11,4 @@ def foo(q: qubit @owned) -> qubit:
     return q
 
 
-guppy.compile(foo)
+foo.compile()

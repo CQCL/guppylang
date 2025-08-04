@@ -7,4 +7,4 @@ def test(x: int) -> None:
         pass
 
 
-guppy.compile(test)
+test.compile()

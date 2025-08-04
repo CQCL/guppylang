@@ -15,4 +15,4 @@ def main() -> None:
     # provide this semantics, so the mutation in `foo` is rejected by the compiler.
 
 
-guppy.compile(main)
+main.compile()

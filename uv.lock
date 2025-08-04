@@ -697,6 +697,15 @@ wheels = [
 ]
 
 [[package]]
+name = "execnet"
+version = "2.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/bb/ff/b4c0dc78fbe20c3e59c0c7334de0c27eb4001a2b2017999af398bf730817/execnet-2.1.1.tar.gz", hash = "sha256:5189b52c6121c24feae288166ab41b32549c7e2348652736540b9e6e7d4e72e3", size = 166524, upload-time = "2024-04-08T09:04:19.245Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/09/2aea36ff60d16dd8879bdb2f5b3ee0ba8d08cbbdcdfe870e695ce3784385/execnet-2.1.1-py3-none-any.whl", hash = "sha256:26dee51f1b80cebd6d0ca8e74dd8745419761d3bef34163928cbebbdc4749fdc", size = 40612, upload-time = "2024-04-08T09:04:17.414Z" },
+]
+
+[[package]]
 name = "executing"
 version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -816,11 +825,11 @@ wheels = [
 
 [[package]]
 name = "graphviz"
-version = "0.20.3"
+version = "0.21"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fa/83/5a40d19b8347f017e417710907f824915fba411a9befd092e52746b63e9f/graphviz-0.20.3.zip", hash = "sha256:09d6bc81e6a9fa392e7ba52135a9d49f1ed62526f96499325930e87ca1b5925d", size = 256455, upload-time = "2024-03-21T07:50:45.772Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f8/b3/3ac91e9be6b761a4b30d66ff165e54439dcd48b83f4e20d644867215f6ca/graphviz-0.21.tar.gz", hash = "sha256:20743e7183be82aaaa8ad6c93f8893c923bd6658a04c32ee115edb3c8a835f78", size = 200434, upload-time = "2025-06-15T09:35:05.824Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/00/be/d59db2d1d52697c6adc9eacaf50e8965b6345cc143f671e1ed068818d5cf/graphviz-0.20.3-py3-none-any.whl", hash = "sha256:81f848f2904515d8cd359cc611faba817598d2feaac4027b266aa3eda7b3dde5", size = 47126, upload-time = "2024-03-21T07:50:43.091Z" },
+    { url = "https://files.pythonhosted.org/packages/91/4c/e0ce1ef95d4000ebc1c11801f9b944fa5910ecc15b5e351865763d8657f8/graphviz-0.21-py3-none-any.whl", hash = "sha256:54f33de9f4f911d7e84e4191749cac8cc5653f815b06738c54db9a15ab8b1e42", size = 47300, upload-time = "2025-06-15T09:35:04.433Z" },
 ]
 
 [[package]]
@@ -829,6 +838,8 @@ version = "0.20.0"
 source = { editable = "." }
 dependencies = [
     { name = "hugr" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "selene-sim" },
     { name = "tket-exts" },
     { name = "typing-extensions" },
@@ -855,6 +866,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
+    { name = "pytest-xdist" },
     { name = "ruff" },
     { name = "selene-hugr-qis-compiler" },
 ]
@@ -882,6 +894,7 @@ pytket-integration = [
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
+    { name = "pytest-xdist" },
     { name = "selene-hugr-qis-compiler" },
 ]
 test = [
@@ -892,12 +905,14 @@ test = [
     { name = "pytest-cov" },
     { name = "pytest-notebook" },
     { name = "pytest-snapshot" },
+    { name = "pytest-xdist" },
     { name = "selene-hugr-qis-compiler" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "hugr", specifier = "~=0.13.0" },
+    { name = "numpy", specifier = "~=2.0" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
     { name = "selene-sim", specifier = ">=0.2.0rc4,<0.3" },
     { name = "tket", marker = "extra == 'pytket'", specifier = ">=0.12.1" },
@@ -920,6 +935,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
+    { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
     { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0rc4,<0.3" },
 ]
@@ -945,6 +961,7 @@ pytket-integration = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
+    { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0rc4,<0.3" },
 ]
 test = [
@@ -955,6 +972,7 @@ test = [
     { name = "pytest-cov", specifier = ">=5.0.0,<6" },
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
+    { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "selene-hugr-qis-compiler", specifier = ">=0.2.0rc4,<0.3" },
 ]
 
@@ -2412,6 +2430,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9b/7b/ab8f1fc1e687218aa66acec1c3674d9c443f6a2dc8cb6a50f464548ffa34/pytest-snapshot-0.9.0.tar.gz", hash = "sha256:c7013c3abc3e860f9feff899f8b4debe3708650d8d8242a61bf2625ff64db7f3", size = 19877, upload-time = "2022-04-23T17:35:31.751Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cb/29/518f32faf6edad9f56d6e0107217f7de6b79f297a47170414a2bd4be7f01/pytest_snapshot-0.9.0-py3-none-any.whl", hash = "sha256:4b9fe1c21c868fe53a545e4e3184d36bc1c88946e3f5c1d9dd676962a9b3d4ab", size = 10715, upload-time = "2022-04-23T17:35:30.288Z" },
+]
+
+[[package]]
+name = "pytest-xdist"
+version = "3.8.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "execnet" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/78/b4/439b179d1ff526791eb921115fca8e44e596a13efeda518b9d845a619450/pytest_xdist-3.8.0.tar.gz", hash = "sha256:7e578125ec9bc6050861aa93f2d59f1d8d085595d6551c2c90b6f4fad8d3a9f1", size = 88069, upload-time = "2025-07-01T13:30:59.346Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ca/31/d4e37e9e550c2b92a9cbc2e4d0b7420a27224968580b5a447f420847c975/pytest_xdist-3.8.0-py3-none-any.whl", hash = "sha256:202ca578cfeb7370784a8c33d6d05bc6e13b4f25b5053c30a152269fd10f0b88", size = 46396, upload-time = "2025-07-01T13:30:56.632Z" },
 ]
 
 [[package]]

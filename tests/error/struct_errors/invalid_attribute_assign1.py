@@ -12,4 +12,4 @@ def foo(s: MyStruct) -> None:
     s.z = 2
 
 
-guppy.compile(foo)
+foo.compile()

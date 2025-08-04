@@ -12,4 +12,4 @@ def test() -> int:
     return 0
 
 
-guppy.compile(test)
+test.compile()

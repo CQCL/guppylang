@@ -12,7 +12,7 @@ def test_id(validate):
     def test(q: qubit @ owned) -> qubit:
         return q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_assign(validate):
@@ -22,7 +22,7 @@ def test_assign(validate):
         s = r
         return s
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_linear_return_order(validate):
@@ -32,7 +32,7 @@ def test_linear_return_order(validate):
     def test(q: qubit @ owned) -> tuple[qubit, bool]:
         return project_z(q)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_interleave(validate):
@@ -51,7 +51,7 @@ def test_interleave(validate):
         b, c = g(b, c)
         return a, b, c, d
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_linear_struct(validate):
@@ -79,7 +79,7 @@ def test_linear_struct(validate):
         s.q2, t.q1 = g(t.q1, s.q2)
         return s.q1, s.q2, t.q1, t.q2
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_mixed_classical_linear_struct(validate):
@@ -105,8 +105,8 @@ def test_mixed_classical_linear_struct(validate):
         u.q = f(u.q)
         return u, s.x, t.x, u.x
 
-    validate(guppy.compile(test1))
-    validate(guppy.compile(test2))
+    validate(test1.compile())
+    validate(test2.compile())
 
 
 def test_drop_classical_field(validate):
@@ -122,7 +122,7 @@ def test_drop_classical_field(validate):
     def test() -> qubit:
         return f().q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_if(validate):
@@ -135,7 +135,7 @@ def test_if(validate):
             q = qubit()
         return q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_if_return(validate):
@@ -148,7 +148,7 @@ def test_if_return(validate):
             q = qubit()
         return q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_if_struct_rebuild(validate):
@@ -168,8 +168,8 @@ def test_if_struct_rebuild(validate):
             s.q = s.q
         return s
 
-    validate(guppy.compile(test1))
-    validate(guppy.compile(test2))
+    validate(test1.compile())
+    validate(test2.compile())
 
 
 def test_struct_reassign(validate):
@@ -194,7 +194,7 @@ def test_struct_reassign(validate):
             s = MyStruct1(MyStruct2(qubit()))
         return s.x
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_struct_reassign2(validate):
@@ -217,7 +217,7 @@ def test_struct_reassign2(validate):
         s.q2 = qubit()
         return s
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_measure(validate):
@@ -226,7 +226,7 @@ def test_measure(validate):
         b = measure(q)
         return x
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_return_call(validate):
@@ -237,7 +237,7 @@ def test_return_call(validate):
     def test(q: qubit @ owned) -> qubit:
         return op(q)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_while(validate):
@@ -248,7 +248,7 @@ def test_while(validate):
             q = h(q)
         return q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_while_break(validate):
@@ -261,7 +261,7 @@ def test_while_break(validate):
                 break
         return q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_while_continue(validate):
@@ -274,7 +274,7 @@ def test_while_continue(validate):
             q = h(q)
         return q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_while_reset(validate):
@@ -289,7 +289,7 @@ def test_while_reset(validate):
             i -= 1
         return b
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_while_move_back(validate):
@@ -307,7 +307,7 @@ def test_while_move_back(validate):
             s.q = qubit()
             return s
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_for(validate):
@@ -320,7 +320,7 @@ def test_for(validate):
             rs.append(q2)
         return rs
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_for_measure(validate):
@@ -331,7 +331,7 @@ def test_for_measure(validate):
             parity |= measure(q)
         return parity
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_for_continue(validate):
@@ -344,7 +344,7 @@ def test_for_continue(validate):
             x += 1
         return x
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_for_nonlinear_break(validate):
@@ -372,7 +372,7 @@ def test_for_nonlinear_break(validate):
             if measure(q):
                 break
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_rus(validate):
@@ -385,7 +385,7 @@ def test_rus(validate):
                 break
         return q
 
-    validate(guppy.compile(repeat_until_success))
+    validate(repeat_until_success.compile())
 
 
 def test_list_iter_arg(validate):
@@ -394,7 +394,7 @@ def test_list_iter_arg(validate):
         qs = [h(q) for q in qs]
         return qs
 
-    validate(guppy.compile(owned_arg))
+    validate(owned_arg.compile())
 
 
 def test_list_iter(validate):
@@ -404,7 +404,7 @@ def test_list_iter(validate):
         qs = [h(q) for q in qs]
         return qs
 
-    validate(guppy.compile(owned_arg))
+    validate(owned_arg.compile())
 
 
 def test_non_terminating(validate):
@@ -414,4 +414,4 @@ def test_non_terminating(validate):
         while True:
             q = h(q)
 
-    validate(guppy.compile(test))
+    validate(test.compile())

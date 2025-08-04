@@ -17,4 +17,4 @@ def bar() -> None:
     foo().x += 1
 
 
-guppy.compile(bar)
+bar.compile()

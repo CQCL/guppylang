@@ -17,4 +17,4 @@ def foo(b: bool) -> qubit:
     return q
 
 
-guppy.compile(foo)
+foo.compile()

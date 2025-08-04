@@ -34,4 +34,4 @@ def test(x: MyType) -> None:
         pass
 
 
-guppy.compile(test)
+test.compile()

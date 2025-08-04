@@ -9,4 +9,4 @@ def test(xs: array[int, 10]) -> None:
         xs.append(float(i))
 
 
-guppy.compile(test)
+test.compile()

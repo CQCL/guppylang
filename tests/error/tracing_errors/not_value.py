@@ -17,4 +17,4 @@ def test() -> None:
     foo(T)
 
 
-guppy.compile(test)
+test.compile()

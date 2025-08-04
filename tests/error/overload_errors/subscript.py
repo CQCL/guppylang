@@ -20,4 +20,4 @@ def main() -> None:
     overloaded[int](42)
 
 
-guppy.compile(main)
+main.compile()

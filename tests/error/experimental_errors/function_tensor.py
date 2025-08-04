@@ -16,4 +16,4 @@ def main() -> tuple[int, int]:
     return (f, g)(1, 2)
 
 
-guppy.compile(main)
+main.compile()

@@ -2,19 +2,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import guppylang
-from guppylang import guppy
-from guppylang.decorator import custom_guppy_decorator
+from guppylang.decorator import custom_guppy_decorator, guppy
 
 if TYPE_CHECKING:
-    from hugr.package import FuncDefnPointer, PackagePointer
+    from hugr.package import Package, PackagePointer
+
+    from guppylang.defs import GuppyFunctionDefinition
 
 
 @custom_guppy_decorator
-def compile_guppy(fn) -> FuncDefnPointer:
+def compile_guppy(fn) -> Package:
     """A decorator that combines @guppy with HUGR compilation."""
-    defn = guppylang.decorator.guppy(fn)
-    return guppy.compile(defn)
+    defn: GuppyFunctionDefinition = guppy(fn)
+    return defn.compile()
 
 
 def dump_llvm(package: PackagePointer):

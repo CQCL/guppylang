@@ -1,6 +1,6 @@
 Traceback (most recent call last):
   File "$FILE", line 12, in <module>
-    guppy.compile(test)
+    test.compile()
   File "$FILE", line 8, in test
     cx(q, q)
 guppylang.error.GuppyComptimeError: Value with non-copyable type `qubit` was already used

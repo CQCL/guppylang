@@ -18,4 +18,4 @@ def foo(s: Struct @owned) -> Struct:
     return f()
 
 
-guppy.compile(foo)
+foo.compile()

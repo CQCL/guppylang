@@ -39,7 +39,7 @@ def test_literal_linear(validate):
     def test(q1: qubit @ owned, q2: qubit @ owned) -> list[qubit]:
         return [q1, h(q2)]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_push_pop(validate):
@@ -72,7 +72,7 @@ def test_arith_linear(validate):
         xs += [q]
         return xs + ys
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_subscript(validate):
@@ -89,7 +89,7 @@ def test_linear(validate):
         xs.append(q)
         return len(xs)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_subscript_drop_rest(validate):
@@ -100,7 +100,7 @@ def test_subscript_drop_rest(validate):
     def main() -> int:
         return foo()[0]
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_linear_subscript(validate):
@@ -112,7 +112,7 @@ def test_linear_subscript(validate):
         foo(qs[i])
         return qs
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_inout_subscript(validate):
@@ -123,7 +123,7 @@ def test_inout_subscript(validate):
     def main(qs: list[qubit], i: int) -> None:
         foo(qs[i])
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_multi_subscripts(validate):
@@ -136,7 +136,7 @@ def test_multi_subscripts(validate):
         foo(qs[0], qs[0])  # Will panic at runtime
         return qs
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_struct_list(validate):
@@ -156,7 +156,7 @@ def test_struct_list(validate):
         foo(ss[0].q1, ss[0].q2)
         return ss
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_nested_subscripts(validate):
@@ -175,7 +175,7 @@ def test_nested_subscripts(validate):
         bar(qs[0][0], qs[0][1], qs[1][0], qs[1][1])
         return qs
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_struct_nested_subscript(validate):
@@ -203,7 +203,7 @@ def test_struct_nested_subscript(validate):
         foo(a.xs[i].ys[j][k].c)
         return a
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_phase_gadget(validate):
@@ -216,4 +216,4 @@ def test_phase_gadget(validate):
         for i in range(n - 1):
             cx(qs[n - i - 1], qs[n - i - 2])
 
-    validate(guppy.compile(paulig))
+    validate(paulig.compile())

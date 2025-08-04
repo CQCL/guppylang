@@ -38,6 +38,7 @@ dependencies = [
     "tket-exts ~= 0.10.0",
     "hugr ~= 0.13.0",
     "selene-sim>=0.2.0rc4, <0.3",
+    "numpy~=2.0",
 ]
 
 
@@ -64,6 +65,7 @@ test = [
     "pytest-notebook >=0.10.0,<0.11",
     "pytest-snapshot >=0.9.0,<1",
     "pytest-benchmark>=5.1.0",
+    "pytest-xdist>=3.8.0",
     "ipykernel >=6.29.5,<7",
     "miette-py",
     "selene-hugr-qis-compiler>=0.2.0rc4, <0.3",
@@ -112,3 +114,6 @@ exclude_also = [
 
 [tool.pytest.ini_options]
 addopts = "--benchmark-skip" # benchmarks run explicitly with `just bench`
+filterwarnings = [
+    "ignore::DeprecationWarning",
+] # TODO remove after removing guppy.compile()

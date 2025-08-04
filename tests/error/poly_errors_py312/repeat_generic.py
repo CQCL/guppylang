@@ -18,4 +18,4 @@ class MyStruct[S](Generic[T]):
     pass
 
 
-guppy.check(MyStruct)
+MyStruct.check()

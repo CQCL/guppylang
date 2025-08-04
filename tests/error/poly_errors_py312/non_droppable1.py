@@ -13,4 +13,4 @@ def main[D: NonDroppable]() -> None:
     pass
 
 
-guppy.compile(main)
+main.compile()

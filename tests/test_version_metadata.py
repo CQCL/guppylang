@@ -7,7 +7,7 @@ def test_metadata():
     def foo() -> None:
         pass
 
-    hugr = foo.compile().module
+    hugr = foo.compile().modules[0]
     meta = hugr.module_root.metadata
     gen_key = CoreMetadataKeys.GENERATOR.value
     assert meta[gen_key]["name"] == "guppylang"

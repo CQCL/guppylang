@@ -7,4 +7,4 @@ def main[Q: qubit]() -> None:
     pass
 
 
-guppy.compile(main)
+main.compile()

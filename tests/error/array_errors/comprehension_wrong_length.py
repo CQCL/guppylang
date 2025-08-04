@@ -7,4 +7,4 @@ def main() -> array[int, 42]:
     return array(i for i in range(10))
 
 
-guppy.compile(main)
+main.compile()

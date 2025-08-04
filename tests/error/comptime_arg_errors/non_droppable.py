@@ -10,4 +10,4 @@ def main(q: T @comptime) -> None:
     pass
 
 
-guppy.compile(main)
+main.compile()

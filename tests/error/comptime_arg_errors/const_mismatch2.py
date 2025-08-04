@@ -12,4 +12,4 @@ def main(n: nat @ comptime) -> None:
     foo[n](42)
 
 
-guppy.compile(main)
+main.compile()

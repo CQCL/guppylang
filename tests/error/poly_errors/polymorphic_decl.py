@@ -14,4 +14,4 @@ class Struct(Generic[F]):
 def main(_: Struct[F]) -> float: ...
 
 
-guppy.compile(main)
+main.compile()

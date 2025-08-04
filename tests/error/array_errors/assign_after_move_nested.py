@@ -9,4 +9,4 @@ def main() -> None:
    xs[0][0] = 0
 
 
-guppy.compile(main)
+main.compile()

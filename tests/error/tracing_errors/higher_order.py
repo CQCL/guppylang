@@ -8,4 +8,4 @@ def test(f: Callable[[], int]) -> int:
     return f()
 
 
-guppy.compile(test)
+test.compile()

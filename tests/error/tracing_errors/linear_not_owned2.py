@@ -8,4 +8,4 @@ def test(qs: array[qubit, 10]) -> None:
     measure(qs[0])
 
 
-guppy.compile(test)
+test.compile()
