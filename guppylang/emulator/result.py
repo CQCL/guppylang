@@ -26,7 +26,7 @@ class EmulatorResult(QsysResult):
     convention is used, including conversion to a pytket BackendResult.
 
     Under this convention, tags are assumed to be a name of a bit register unless
-    theyfit the regex pattern `^([a-z][\w_]*)\[(\d+)\]$` (like `my_Reg[12]`) in which
+    they fit the regex pattern `^([a-z][\w_]*)\[(\d+)\]$` (like `my_Reg[12]`) in which
     case they are assumed to refer to the nth element of a bit register.
 
     For results of the form ``` result("<register>", value) ``` `value` can be `{0, 1}`,
