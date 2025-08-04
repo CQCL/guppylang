@@ -298,7 +298,7 @@ class _Guppy:
         return GuppyDefinition(defn)  # type: ignore[return-value]
 
     @deprecated(
-        "foo.compile() is deprecated and will be removed in a future version"
+        "guppy.compile(foo) is deprecated and will be removed in a future version:"
         " use foo.compile() instead."
     )
     def compile(self, obj: Any) -> ModulePointer:
