@@ -2,6 +2,7 @@ from typing import no_type_check
 
 from hugr.package import ModulePointer
 
+from guppylang import GuppyModule
 from guppylang.decorator import guppy
 from guppylang.std import quantum
 from guppylang.std.builtins import array, py

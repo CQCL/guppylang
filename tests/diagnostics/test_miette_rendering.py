@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import ClassVar
 
 import pytest
-
 from guppylang_internals.diagnostic import (
     Diagnostic,
     DiagnosticLevel,

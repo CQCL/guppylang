@@ -1,3 +1,4 @@
+import builtins
 import inspect
 from collections.abc import Callable, Sequence
 from types import FrameType
@@ -12,10 +13,12 @@ from guppylang.defs import (
 )
 from guppylang_internals.compiler.core import (
     CompilerContext,
+    GlobalConstId,
 )
 from guppylang_internals.definition.common import DefId
 from guppylang_internals.definition.custom import (
     CustomCallChecker,
+    CustomFunctionDef,
     CustomInoutCallCompiler,
     DefaultCallChecker,
     NotImplementedCallCompiler,
@@ -23,12 +26,26 @@ from guppylang_internals.definition.custom import (
     RawCustomFunctionDef,
 )
 from guppylang_internals.definition.ty import OpaqueTypeDef, TypeDef
+from guppylang_internals.definition.wasm import RawWasmFunctionDef
 from guppylang_internals.engine import DEF_STORE
+from guppylang_internals.std._internal.checker import WasmCallChecker
+from guppylang_internals.std._internal.compiler.wasm import (
+    WasmModuleCallCompiler,
+    WasmModuleDiscardCompiler,
+    WasmModuleInitCompiler,
+)
 from guppylang_internals.tys.arg import Argument
+from guppylang_internals.tys.builtin import (
+    WasmModuleTypeDef,
+)
 from guppylang_internals.tys.param import Parameter
 from guppylang_internals.tys.subst import Inst
 from guppylang_internals.tys.ty import (
+    FuncInput,
     FunctionType,
+    InputFlags,
+    NoneType,
+    NumericType,
 )
 
 T = TypeVar("T")
@@ -154,6 +171,76 @@ def custom_type(
         return GuppyDefinition(defn)  # type: ignore[return-value]
 
     return dec
+
+
+def wasm_module(
+    filename: str, filehash: int
+) -> Callable[[builtins.type[T]], GuppyDefinition]:
+    def dec(cls: builtins.type[T]) -> GuppyDefinition:
+        # N.B. Only one module per file and vice-versa
+        wasm_module = WasmModuleTypeDef(
+            DefId.fresh(),
+            cls.__name__,
+            None,
+            filename,
+            filehash,
+        )
+
+        wasm_module_ty = wasm_module.check_instantiate([], None)
+
+        DEF_STORE.register_def(wasm_module, get_calling_frame())
+        for val in cls.__dict__.values():
+            if isinstance(val, GuppyDefinition):
+                DEF_STORE.register_impl(wasm_module.id, val.wrapped.name, val.id)
+        # Add a constructor to the class
+        call_method = CustomFunctionDef(
+            DefId.fresh(),
+            "__new__",
+            None,
+            FunctionType(
+                [FuncInput(NumericType(NumericType.Kind.Nat), flags=InputFlags.Owned)],
+                wasm_module_ty,
+            ),
+            DefaultCallChecker(),
+            WasmModuleInitCompiler(),
+            True,
+            GlobalConstId.fresh(f"{cls.__name__}.__new__"),
+            True,
+        )
+        discard = CustomFunctionDef(
+            DefId.fresh(),
+            "discard",
+            None,
+            FunctionType([FuncInput(wasm_module_ty, InputFlags.Owned)], NoneType()),
+            DefaultCallChecker(),
+            WasmModuleDiscardCompiler(),
+            False,
+            GlobalConstId.fresh(f"{cls.__name__}.__discard__"),
+            True,
+        )
+        DEF_STORE.register_def(call_method, get_calling_frame())
+        DEF_STORE.register_impl(wasm_module.id, "__new__", call_method.id)
+        DEF_STORE.register_def(discard, get_calling_frame())
+        DEF_STORE.register_impl(wasm_module.id, "discard", discard.id)
+
+        return GuppyDefinition(wasm_module)
+
+    return dec
+
+
+def wasm(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+    func = RawWasmFunctionDef(
+        DefId.fresh(),
+        f.__name__,
+        None,
+        f,
+        WasmCallChecker(),
+        WasmModuleCallCompiler(f.__name__),
+        True,
+        signature=None,
+    )
+    DEF_STORE.register_def(func, get_calling_frame())
+    return GuppyFunctionDefinition(func)
 
 
 # TODO sphinx hack for custom decorators
