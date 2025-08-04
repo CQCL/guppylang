@@ -126,7 +126,7 @@ def measure_and_reset(q: qubit) -> bool:
 @guppy.hugr_op(quantum_op("Reset", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def reset(q: qubit) -> None:
-    """Reset a qubit to the `|0>` state."""
+    """Reset a qubit to the :math:`|0\rangle` state."""
 
 
 # TODO
