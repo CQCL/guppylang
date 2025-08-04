@@ -1,7 +1,6 @@
 """Tests for loading pytket circuits as functions."""
 
 from importlib.util import find_spec
-from math import pi
 
 import pytest
 
@@ -278,13 +277,39 @@ def test_symbolic(validate):
 
     AutoRebase({OpType.CX, OpType.Rz, OpType.H}).apply(circ)
 
+    guppy_circ = guppy.load_pytket("guppy_circ", circ, use_arrays=False)
+
+    @guppy
+    def foo(q1: qubit, q2: qubit) -> tuple[bool, bool]:
+        alpha = 0.3
+        beta = 1.2
+        return guppy_circ(q1, q2, alpha, beta)
+
+    validate(guppy.compile(foo))
+
+
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
+def test_symbolic_array(validate):
+    from pytket import Circuit, OpType
+    from pytket.passes import AutoRebase
+    from sympy import Symbol
+
+    a = Symbol("alpha")
+    b = Symbol("beta")
+
+    circ = Circuit(2)
+    circ.YYPhase(b, 0, 1)
+    circ.Rx(a, 0)
+    circ.measure_all()
+
+    AutoRebase({OpType.CX, OpType.Rz, OpType.H}).apply(circ)
+
     guppy_circ = guppy.load_pytket("guppy_circ", circ)
 
     @guppy
     def foo(reg: array[qubit, 2]) -> array[bool, 2]:
-        alpha = 0.3
-        beta = 1.2
-        return guppy_circ(reg, alpha, beta)
+        params = array(0.3, 1.2)
+        return guppy_circ(reg, params)
 
     validate(guppy.compile(foo))
 

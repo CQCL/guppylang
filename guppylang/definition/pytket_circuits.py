@@ -87,9 +87,7 @@ class RawPytketDef(ParsableDef):
         stub_signature = check_signature(func_ast, globals)
 
         # Compare signatures.
-        circuit_signature = _signature_from_circuit(
-            self.input_circuit, globals, self.defined_at
-        )
+        circuit_signature = _signature_from_circuit(self.input_circuit, self.defined_at)
         if not (
             circuit_signature.inputs == stub_signature.inputs
             and circuit_signature.output == stub_signature.output
@@ -126,7 +124,7 @@ class RawLoadPytketDef(ParsableDef):
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedPytketDef":
         """Creates a function signature based on the user-provided circuit."""
         circuit_signature = _signature_from_circuit(
-            self.input_circuit, globals, self.source_span, self.use_arrays
+            self.input_circuit, self.source_span, self.use_arrays
         )
 
         return ParsedPytketDef(
@@ -183,12 +181,6 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     self.name, func_type.body.input, func_type.body.output
                 )
 
-                # Initialise every input bit in the circuit as false.
-                # TODO: Provide the option for the user to pass this input as well.
-                bool_wires = [
-                    outer_func.load(val.FALSE) for _ in range(self.input_circuit.n_bits)
-                ]
-
                 input_list: list[Wire] = []
                 if self.use_arrays:
                     # If the input is given as arrays, we need to unpack each element in
@@ -214,23 +206,56 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                         outer_func.inputs()[: len(self.input_circuit.q_registers)]
                     )
 
-                # Symbolic parameters get passed at the end.
-                # We assume they are given in lexicographic order by the user.
-                # We need to sort them according to the metadata order.
-                # TODO: Allow to be passed as array if `use_arrays=True`.
-                param_wires = []
-                if "TKET1.input_parameters" in hugr_func.metadata:
+                # Initialise every input bit in the circuit as false.
+                # TODO: Provide the option for the user to pass this input as well.
+                bool_wires = [
+                    outer_func.load(val.FALSE) for _ in range(self.input_circuit.n_bits)
+                ]
+
+                # Symbolic parameters (if present) get passed after qubits and bools.
+                has_params = len(self.input_circuit.free_symbols()) != 0
+                if has_params and "TKET1.input_parameters" not in hugr_func.metadata:
+                    raise InternalGuppyError(
+                        "Parameter metadata is missing from pytket circuit HUGR"
+                    ) from None
+                param_wires: list[Wire] = []
+                # We assume they are given in lexicographic order by the user, then we
+                # wire them up according to the metadata order.
+                if has_params:
+                    offset = (
+                        len(self.input_circuit.q_registers)
+                        if self.use_arrays
+                        else self.input_circuit.n_qubits
+                    )
+                    lex_params = list(
+                        outer_func.inputs()[offset :]
+                    )
+                    if self.use_arrays:
+                        opt_param_wires = outer_func.add_op(
+                            array_unpack(
+                                ht.Option(float_type().to_hugr(ctx)), q_reg.size
+                            ),
+                            lex_params[0],
+                        )
+                        lex_params = [
+                            build_unwrap(
+                                outer_func,
+                                opt_param,
+                                "Internal error: unwrapping of array element failed",
+                            )
+                            for opt_param in opt_param_wires
+                        ]
                     param_order = cast(
                         list[str], hugr_func.metadata["TKET1.input_parameters"]
                     )
                     lex_names = sorted(param_order)
-                    lex_params = list(
-                        outer_func.inputs()[len(self.input_circuit.q_registers) :]
-                    )
+                    print(lex_names)
+                    print(lex_params)
                     assert len(lex_names) == len(lex_params)
                     name_to_param = dict(zip(lex_names, lex_params, strict=True))
                     param_wires = [name_to_param[name] for name in param_order]
 
+                # Pass all arguments to call node.
                 call_node = outer_func.call(
                     hugr_func, *(input_list + bool_wires + param_wires)
                 )
@@ -365,7 +390,6 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef, CompiledHugrNodeDe
 
 def _signature_from_circuit(
     input_circuit: Any,
-    globals: Globals,
     defined_at: ToSpan | None,
     use_arrays: bool = False,
 ) -> FunctionType:
@@ -377,11 +401,6 @@ def _signature_from_circuit(
             try:
                 import tket  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
-                param_inputs = [
-                    FuncInput(float_type(), InputFlags.NoFlags)
-                    for _ in range(len(input_circuit.free_symbols()))
-                ]
-
                 from guppylang.std.quantum import qubit
 
                 assert isinstance(qubit, GuppyDefinition)
@@ -392,15 +411,28 @@ def _signature_from_circuit(
                         FuncInput(array_type(qubit_ty, q_reg.size), InputFlags.Inout)
                         for q_reg in input_circuit.q_registers
                     ]
+                    if len(input_circuit.free_symbols()) != 0:
+                        inputs.append(
+                            FuncInput(
+                                array_type(
+                                    float_type(), len(input_circuit.free_symbols())
+                                ),
+                                InputFlags.NoFlags,
+                            )
+                        )
                     outputs = [
                         array_type(bool_type(), c_reg.size)
                         for c_reg in input_circuit.c_registers
                     ]
                     circuit_signature = FunctionType(
-                        inputs + param_inputs,
+                        inputs,
                         row_to_type(outputs),
                     )
                 else:
+                    param_inputs = [
+                        FuncInput(float_type(), InputFlags.NoFlags)
+                        for _ in range(len(input_circuit.free_symbols()))
+                    ]
                     circuit_signature = FunctionType(
                         [FuncInput(qubit_ty, InputFlags.Inout)] * input_circuit.n_qubits
                         + param_inputs,
