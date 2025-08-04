@@ -79,6 +79,7 @@ def zz_phase(q1: qubit, q2: qubit, angle: angle) -> None:
             0 & 0 & e^{\frac{i \theta}{2}} & 0 \\
             0 & 0 & 0 & e^{\frac{-i \theta}{2}}
         \end{pmatrix}
+
     >>> @guppy
     ... def qsystem_cx(q1: qubit, q2: qubit) -> None:
     ...     phased_x(angle(3/2), angle(-1/2), q2)
@@ -125,7 +126,7 @@ def measure_and_reset(q: qubit) -> bool:
 @guppy.hugr_op(quantum_op("Reset", ext=QSYSTEM_EXTENSION))
 @no_type_check
 def reset(q: qubit) -> None:
-    """Reset a qubit to the |0> state."""
+    """Reset a qubit to the :math:`|0\rangle` state."""
 
 
 # TODO
@@ -197,7 +198,7 @@ class MaybeLeaked:
 def _phased_x(q: qubit, angle1: float, angle2: float) -> None:
     """PhasedX operation from the qsystem extension.
 
-    See `guppylang.std.qsystem.phased_x` for a public definition that
+    See ``guppylang.std.qsystem.phased_x`` for a public definition that
     accepts angle parameters.
     """
 
@@ -207,7 +208,7 @@ def _phased_x(q: qubit, angle1: float, angle2: float) -> None:
 def _zz_phase(q1: qubit, q2: qubit, angle: float) -> None:
     """ZZPhase operation from the qsystem extension.
 
-    See `guppylang.std.qsystem.zz_phase` for a public definition that
+    See ``guppylang.std.qsystem.zz_phase`` for a public definition that
     accepts angle parameters.
     """
 
@@ -217,6 +218,6 @@ def _zz_phase(q1: qubit, q2: qubit, angle: float) -> None:
 def _rz(q: qubit, angle: float) -> None:
     """Rz operation from the qsystem extension.
 
-    See `guppylang.std.qsystem.rz` for a public definition that
+    See ``guppylang.std.qsystem.rz`` for a public definition that
     accepts angle parameters.
     """
