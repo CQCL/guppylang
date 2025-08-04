@@ -16,7 +16,7 @@ class EmulatorResult(QsysResult):
 
     # TODO more docstring
 
-    def partial_states_dict(self) -> list[dict[str, PartialVector]]:
+    def partial_state_dicts(self) -> list[dict[str, PartialVector]]:
         return [dict(x) for x in self.partial_states()]
 
     def partial_states(self) -> list[list[tuple[str, PartialVector]]]:
