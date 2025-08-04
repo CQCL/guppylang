@@ -33,7 +33,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "guppylang-internals",
+    "guppylang-internals ~= 0.20.0",
 ]
 
 
