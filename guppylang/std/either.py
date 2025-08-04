@@ -5,7 +5,7 @@ Type `Either[L, R]` represents a value of either typr `L` ("left") or `R` ("righ
 
 from typing import Generic, no_type_check
 
-from guppylang_internals.decorator import custom_function, custom_type, guppy
+from guppylang_internals.decorator import custom_function, custom_type
 from guppylang_internals.std._internal.compiler.either import (
     EitherConstructor,
     EitherTestCompiler,
@@ -15,6 +15,7 @@ from guppylang_internals.std._internal.compiler.either import (
 )
 from guppylang_internals.tys.param import TypeParam
 
+from guppylang import guppy
 from guppylang.std.builtins import owned
 from guppylang.std.option import Option
 

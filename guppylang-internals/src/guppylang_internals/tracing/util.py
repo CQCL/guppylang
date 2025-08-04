@@ -2,7 +2,7 @@ import functools
 import inspect
 import sys
 from collections.abc import Callable
-from types import FrameType, TracebackType
+from types import FrameType, ModuleType, TracebackType
 from typing import ParamSpec, TypeVar
 
 from guppylang_internals.error import GuppyComptimeError, GuppyError, exception_hook
@@ -62,7 +62,7 @@ def get_calling_frame() -> FrameType | None:
     frame = inspect.currentframe()
     while frame:
         module = inspect.getmodule(frame)
-        if module is None or not module.__name__.startswith("guppylang_internals."):
+        if module is None or not is_compiler_module(module):
             return frame
         frame = frame.f_back
     return None
@@ -72,8 +72,15 @@ def remove_internal_frames(tb: TracebackType | None) -> TracebackType | None:
     """Removes internal frames relating to the Guppy compiler from a traceback."""
     if tb:
         module = inspect.getmodule(tb.tb_frame)
-        if module is not None and module.__name__.startswith("guppylang_internals."):
+        if module is not None and is_compiler_module(module):
             return remove_internal_frames(tb.tb_next)
         if tb.tb_next:
             tb.tb_next = remove_internal_frames(tb.tb_next)
     return tb
+
+
+def is_compiler_module(module: ModuleType) -> bool:
+    """Checks whether a given Python module belongs to the Guppy compiler."""
+    return module.__name__.startswith(
+        "guppylang_internals."
+    ) or module.__name__.startswith("guppylang.")

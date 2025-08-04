@@ -11,12 +11,15 @@ from guppylang_internals.checker.errors.comptime_errors import (
 from guppylang_internals.checker.expr_checker import python_value_to_guppy_type
 from guppylang_internals.compiler.core import CompilerContext
 from guppylang_internals.compiler.expr_compiler import python_value_to_hugr
-from guppylang_internals.defs import GuppyDefinition
 from guppylang_internals.error import GuppyComptimeError, GuppyError
 from guppylang_internals.std._internal.compiler.array import array_new, unpack_array
 from guppylang_internals.std._internal.compiler.prelude import build_unwrap
 from guppylang_internals.tracing.frozenlist import frozenlist
-from guppylang_internals.tracing.object import GuppyObject, GuppyStructObject
+from guppylang_internals.tracing.object import (
+    GuppyObject,
+    GuppyStructObject,
+    TracingDefMixin,
+)
 from guppylang_internals.tracing.state import get_tracing_state
 from guppylang_internals.tys.builtin import (
     array_type,
@@ -93,7 +96,7 @@ def guppy_object_from_py(
     match v:
         case GuppyObject() as obj:
             return obj
-        case GuppyDefinition() as defn:
+        case TracingDefMixin() as defn:
             return defn.to_guppy_object()
         case None:
             return GuppyObject(NoneType(), builder.add_op(ops.MakeTuple()))

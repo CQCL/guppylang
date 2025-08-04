@@ -32,7 +32,6 @@ from guppylang_internals.definition.custom import (
 from guppylang_internals.definition.function import parse_source
 from guppylang_internals.definition.parameter import ParamDef
 from guppylang_internals.definition.ty import TypeDef
-from guppylang_internals.defs import GuppyDefinition
 from guppylang_internals.diagnostic import Error, Help, Note
 from guppylang_internals.engine import DEF_STORE
 from guppylang_internals.error import GuppyError, InternalGuppyError
@@ -165,6 +164,8 @@ class RawStructDef(TypeDef, ParsableDef):
                     pass
                 # Ensure that all function definitions are Guppy functions
                 case _, ast.FunctionDef(name=name) as node:
+                    from guppylang.defs import GuppyDefinition
+
                     v = getattr(self.python_class, name)
                     if not isinstance(v, GuppyDefinition):
                         raise GuppyError(NonGuppyMethodError(node, self.name, name))

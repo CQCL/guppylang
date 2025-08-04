@@ -1,6 +1,6 @@
-from guppylang_internals.decorator import guppy, custom_type
+from guppylang import guppy
+from guppylang_internals.decorator import custom_type
 from guppylang_internals.tys.ty import NoneType
-
 
 @custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
 class MyIter:

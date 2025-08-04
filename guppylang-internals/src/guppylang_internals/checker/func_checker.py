@@ -149,8 +149,8 @@ def check_nested_func_def(
     if func_def.name in cfg.live_before[cfg.entry_bb]:
         if not captured:
             # If there are no captured vars, we treat the function like a global name
+            from guppylang.defs import GuppyDefinition
             from guppylang_internals.definition.function import ParsedFunctionDef
-            from guppylang_internals.defs import GuppyDefinition
 
             func = ParsedFunctionDef(def_id, func_def.name, func_def, func_ty, None)
             DEF_STORE.register_def(func, None)

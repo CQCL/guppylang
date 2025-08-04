@@ -6,11 +6,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, no_type_check
 
-from guppylang_internals.decorator import custom_function, extend_type, guppy
+from guppylang_internals.decorator import custom_function, extend_type
 from guppylang_internals.definition.custom import NoopCompiler
 from guppylang_internals.std._internal.checker import RangeChecker
 from guppylang_internals.tys.builtin import sized_iter_type_def
 
+from guppylang import guppy
 from guppylang.std.option import Option, nothing, some
 
 if TYPE_CHECKING:

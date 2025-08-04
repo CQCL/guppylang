@@ -338,7 +338,7 @@ class Globals:
     @cache
     def builtin_defs() -> dict[str, Definition]:
         import guppylang.std.builtins
-        from guppylang_internals.defs import GuppyDefinition
+        from guppylang.defs import GuppyDefinition
 
         return BUILTIN_DEFS | {
             name: val.wrapped
@@ -408,7 +408,7 @@ class Globals:
     def __getitem__(self, item: str) -> "ParsedDef | PythonObject": ...
 
     def __getitem__(self, item: DefId | str) -> "ParsedDef | PythonObject":
-        from guppylang_internals.defs import GuppyDefinition
+        from guppylang.defs import GuppyDefinition
 
         match item:
             case DefId() as def_id:

@@ -135,8 +135,8 @@ def arg_from_ast(
 
 def _try_parse_defn(node: AstNode, globals: Globals) -> Definition | None:
     """Tries to parse a (possibly qualified) name into a global definition."""
+    from guppylang.defs import GuppyDefinition
     from guppylang_internals.checker.cfg_checker import VarNotDefinedError
-    from guppylang_internals.defs import GuppyDefinition
 
     match node:
         case ast.Name(id=x):

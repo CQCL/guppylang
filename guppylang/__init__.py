@@ -1,8 +1,3 @@
-from guppylang_internals.defs import (
-    GuppyDefinition,
-    GuppyFunctionDefinition,
-    GuppyTypeVarDefinition,
-)
 from guppylang_internals.experimental import enable_experimental_features
 from guppylang_internals.module import GuppyModule
 
@@ -15,9 +10,7 @@ __all__ = (
     "qubit",
     "guppy",
     "enable_experimental_features",
-    "GuppyModule" "GuppyDefinition",
-    "GuppyFunctionDefinition",
-    "GuppyTypeVarDefinition",
+    "GuppyModule",
 )
 
 # This is updated by our release-please workflow, triggered by this

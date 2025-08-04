@@ -12,7 +12,7 @@ import builtins
 from types import GeneratorType
 from typing import TYPE_CHECKING, Generic, TypeVar, no_type_check
 
-from guppylang_internals.decorator import extend_type, guppy
+from guppylang_internals.decorator import extend_type
 from guppylang_internals.definition.custom import CopyInoutCompiler
 from guppylang_internals.std._internal.checker import ArrayCopyChecker, NewArrayChecker
 from guppylang_internals.std._internal.compiler.array import (
@@ -26,6 +26,7 @@ from guppylang_internals.std._internal.compiler.frozenarray import (
 )
 from guppylang_internals.tys.builtin import array_type_def, frozenarray_type_def
 
+from guppylang import guppy
 from guppylang.std.iter import SizedIter
 from guppylang.std.option import Option, nothing, some
 

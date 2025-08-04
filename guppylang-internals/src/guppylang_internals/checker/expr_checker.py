@@ -457,7 +457,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 )
 
     def visit_Attribute(self, node: ast.Attribute) -> tuple[ast.expr, Type]:
-        from guppylang_internals.defs import GuppyDefinition
+        from guppylang.defs import GuppyDefinition
         from guppylang_internals.engine import ENGINE
 
         # A `value.attr` attribute access. Unfortunately, the `attr` is just a string,

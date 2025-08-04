@@ -6,12 +6,13 @@ from __future__ import annotations
 
 from typing import no_type_check
 
-from guppylang_internals.decorator import custom_function, extend_type, guppy, hugr_op
+from guppylang_internals.decorator import custom_function, extend_type, hugr_op
 from guppylang_internals.definition.custom import NoopCompiler
 from guppylang_internals.std._internal.checker import DunderChecker
 from guppylang_internals.std._internal.util import bool_logic_op
 from guppylang_internals.tys.builtin import bool_type_def
 
+from guppylang import guppy
 from guppylang.std.num import nat
 
 

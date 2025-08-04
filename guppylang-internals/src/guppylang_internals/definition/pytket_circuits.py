@@ -37,7 +37,6 @@ from guppylang_internals.definition.value import (
     CompiledCallableDef,
     CompiledHugrNodeDef,
 )
-from guppylang_internals.defs import GuppyDefinition
 from guppylang_internals.error import GuppyError, InternalGuppyError
 from guppylang_internals.nodes import GlobalCall
 from guppylang_internals.span import SourceMap, Span, ToSpan
@@ -367,6 +366,7 @@ def _signature_from_circuit(
             try:
                 import tket  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
+                from guppylang.defs import GuppyDefinition
                 from guppylang.std.quantum import qubit
 
                 assert isinstance(qubit, GuppyDefinition)

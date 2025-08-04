@@ -1,6 +1,6 @@
-from guppylang_internals.decorator import guppy, extend_type
+from guppylang import guppy
+from guppylang_internals.decorator import extend_type
 from tests.integration.modules.mod_a import f, MyType
-
 
 @guppy.declare
 def g() -> MyType: ...

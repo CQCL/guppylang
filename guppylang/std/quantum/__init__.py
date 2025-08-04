@@ -4,7 +4,7 @@
 
 from typing import no_type_check
 
-from guppylang_internals.decorator import custom_function, custom_type, guppy, hugr_op
+from guppylang_internals.decorator import custom_function, custom_type, hugr_op
 from guppylang_internals.std._internal.compiler.quantum import (
     InoutMeasureCompiler,
     RotationCompiler,
@@ -12,6 +12,7 @@ from guppylang_internals.std._internal.compiler.quantum import (
 from guppylang_internals.std._internal.util import quantum_op
 from hugr import tys as ht
 
+from guppylang import guppy
 from guppylang.std.angles import angle, pi
 from guppylang.std.array import array
 from guppylang.std.lang import owned

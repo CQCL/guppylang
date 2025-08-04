@@ -1,6 +1,6 @@
 from hugr import tys
-
-from guppylang_internals.decorator import guppy, custom_type
+from guppylang import guppy
+from guppylang_internals.decorator import custom_type
 
 
 @custom_type(tys.Tuple(), droppable=False)

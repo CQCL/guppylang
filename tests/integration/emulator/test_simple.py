@@ -1,7 +1,7 @@
 from guppylang.decorator import guppy
 from guppylang.std.builtins import result
 from guppylang.std.quantum import qubit, measure, h
-from guppylang_internals.emulator import EmulatorResult
+from guppylang.emulator import EmulatorResult
 
 
 def test_basic_emulation() -> None:

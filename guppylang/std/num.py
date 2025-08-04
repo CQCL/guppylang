@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import no_type_check
 
 import hugr.std.int
-from guppylang_internals.decorator import custom_function, extend_type, guppy, hugr_op
+from guppylang_internals.decorator import custom_function, extend_type, hugr_op
 from guppylang_internals.definition.custom import BoolOpCompiler, NoopCompiler
 from guppylang_internals.std._internal.checker import DunderChecker, ReversingChecker
 from guppylang_internals.std._internal.compiler.prelude import UnwrapOpCompiler
@@ -20,6 +20,7 @@ from guppylang_internals.std._internal.util import (
 )
 from guppylang_internals.tys.builtin import float_type_def, int_type_def, nat_type_def
 
+from guppylang import guppy
 from guppylang.std.platform import panic
 
 

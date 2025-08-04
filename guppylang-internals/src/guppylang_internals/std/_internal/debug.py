@@ -12,7 +12,6 @@ from guppylang_internals.checker.expr_checker import (
 )
 from guppylang_internals.definition.custom import CustomCallChecker
 from guppylang_internals.definition.ty import TypeDef
-from guppylang_internals.defs import GuppyDefinition
 from guppylang_internals.diagnostic import Error
 from guppylang_internals.error import GuppyTypeError
 from guppylang_internals.nodes import StateResultExpr
@@ -55,6 +54,7 @@ class StateResultChecker(CustomCallChecker):
         if len(args) < 2:
             raise GuppyTypeError(self.MissingQubitsError(self.node))
 
+        from guppylang.defs import GuppyDefinition
         from guppylang.std.quantum import qubit
 
         assert isinstance(qubit, GuppyDefinition)

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic
 
-from guppylang_internals.decorator import custom_function, extend_type, guppy, hugr_op
+from guppylang_internals.decorator import custom_function, extend_type, hugr_op
 from guppylang_internals.definition.custom import NoopCompiler
 from guppylang_internals.std._internal.checker import UnsupportedChecker
 from guppylang_internals.std._internal.compiler.list import (
@@ -20,6 +20,7 @@ from guppylang_internals.std._internal.compiler.list import (
 from guppylang_internals.std._internal.util import unsupported_op
 from guppylang_internals.tys.builtin import list_type_def
 
+from guppylang import guppy
 from guppylang.std.option import Option  # noqa: TCH001
 
 if TYPE_CHECKING:
