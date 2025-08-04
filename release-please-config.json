@@ -15,6 +15,24 @@
           "jsonpath": "$.package[?(@.name.value=='guppylang')].version"
         }
       ]
+    },
+    "guppylang-internals": {
+      "package-name": "guppylang-internals",
+      "component": "guppylang-internals",
+      "release-type": "python",
+      "changelog-path": "CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "draft": false,
+      "prerelease": false,
+      "draft-pull-request": true,
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='guppylang-internals')].version"
+        }
+      ]
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
