@@ -32,7 +32,7 @@ class GuppyDefinition(TracingDefMixin):
         return ENGINE.compile(self.id).package
 
     def check(self) -> None:
-        """Type check a Guppy definition."""
+        """Type-check a Guppy definition."""
         from guppylang.engine import ENGINE
 
         return ENGINE.check(self.id)
