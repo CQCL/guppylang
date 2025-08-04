@@ -1,6 +1,5 @@
-from guppylang import GuppyModule
 from guppylang.decorator import guppy
-from guppylang.std.builtins import nat, array
+from guppylang.std.builtins import nat, comptime
 from guppylang.std.qsystem.wasm import spawn_wasm_contexts
 
 

@@ -18,7 +18,7 @@ from guppylang.compiler.core import (
 )
 from guppylang.compiler.expr_compiler import ExprCompiler
 from guppylang.compiler.stmt_compiler import StmtCompiler
-from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, read_bool
+from guppylang.std._internal.compiler.tket_bool import OpaqueBool, read_bool
 from guppylang.tys.ty import SumType, row_to_type, type_to_row
 
 

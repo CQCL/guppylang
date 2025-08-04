@@ -178,12 +178,13 @@ def test_field_access_and_drop(validate):
 
 def test_redefine(validate):
     """See https://github.com/CQCL/guppylang/issues/1107"""
+
     @guppy.struct
     class MyStruct:
         x: int
 
     @guppy.struct
-    class MyStruct:
+    class MyStruct:  # noqa: F811
         pass
 
     @guppy

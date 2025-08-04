@@ -166,7 +166,7 @@ def test_everything_can_be_overloaded(validate):
 
     validate(guppy.compile(main))
 
-    # If we have tket2 installed, we can even overload circuits
+    # If we have tket installed, we can even overload circuits
     try:
         from pytket import Circuit
 

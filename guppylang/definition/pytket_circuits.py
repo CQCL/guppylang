@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
-from hugr import Wire, envelope, ops, val
+from hugr import Node, Wire, envelope, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.envelope import EnvelopeConfig
@@ -12,7 +12,7 @@ from guppylang.ast_util import AstNode, has_empty_body, with_loc
 from guppylang.checker.core import Context, Globals
 from guppylang.checker.errors.comptime_errors import (
     PytketSignatureMismatch,
-    Tket2NotInstalled,
+    TketNotInstalled,
 )
 from guppylang.checker.expr_checker import check_call, synthesize_call
 from guppylang.checker.func_checker import (
@@ -31,7 +31,13 @@ from guppylang.definition.function import (
     parse_py_func,
 )
 from guppylang.definition.ty import TypeDef
-from guppylang.definition.value import CallableDef, CallReturnWires, CompiledCallableDef
+from guppylang.definition.value import (
+    CallableDef,
+    CallReturnWires,
+    CompiledCallableDef,
+    CompiledHugrNodeDef,
+)
+from guppylang.defs import GuppyDefinition
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap, Span, ToSpan
@@ -40,8 +46,7 @@ from guppylang.std._internal.compiler.array import (
     array_unpack,
 )
 from guppylang.std._internal.compiler.prelude import build_unwrap
-from guppylang.std._internal.compiler.tket2_bool import OpaqueBool, make_opaque
-from guppylang.tracing.object import GuppyDefinition
+from guppylang.std._internal.compiler.tket_bool import OpaqueBool, make_opaque
 from guppylang.tys.builtin import array_type, bool_type, float_type
 from guppylang.tys.subst import Inst, Subst
 from guppylang.tys.ty import (
@@ -161,7 +166,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
             import pytket
 
             if isinstance(self.input_circuit, pytket.circuit.Circuit):
-                from tket2.circuit import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
+                from tket.circuit import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
                     Tk2Circuit,
                 )
 
@@ -174,7 +179,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 hugr_func = mapping[circ.entrypoint]
 
                 func_type = self.ty.to_hugr_poly(ctx)
-                outer_func = module.define_function(
+                outer_func = module.module_root_builder().define_function(
                     self.name, func_type.body.input, func_type.body.output
                 )
 
@@ -314,7 +319,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
 
 @dataclass(frozen=True)
-class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
+class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef, CompiledHugrNodeDef):
     """A function definition with a corresponding Hugr node.
 
     Args:
@@ -328,6 +333,11 @@ class CompiledPytketDef(ParsedPytketDef, CompiledCallableDef):
     """
 
     func_def: hf.Function
+
+    @property
+    def hugr_node(self) -> Node:
+        """The Hugr node this definition was compiled into."""
+        return self.func_def.parent_node
 
     def load_with_args(
         self,
@@ -365,7 +375,7 @@ def _signature_from_circuit(
 
         if isinstance(input_circuit, pytket.circuit.Circuit):
             try:
-                import tket2  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
+                import tket  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
                 param_inputs = [
                     FuncInput(float_type(), InputFlags.NoFlags)
@@ -397,8 +407,8 @@ def _signature_from_circuit(
                         row_to_type([bool_type()] * input_circuit.n_bits),
                     )
             except ImportError:
-                err = Tket2NotInstalled(defined_at)
-                err.add_sub_diagnostic(Tket2NotInstalled.InstallInstruction(None))
+                err = TketNotInstalled(defined_at)
+                err.add_sub_diagnostic(TketNotInstalled.InstallInstruction(None))
                 raise GuppyError(err) from None
         else:
             pass

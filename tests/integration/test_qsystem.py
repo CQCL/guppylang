@@ -1,9 +1,6 @@
-from hugr.package import ModulePointer
-
 from guppylang.decorator import guppy
 from guppylang.std.angles import angle
 from guppylang.std.builtins import owned, array
-from guppylang.std.option import Option
 from guppylang.std.qsystem.random import make_discrete_distribution, RNG
 
 from guppylang.std.qsystem import MaybeLeaked, measure_leaked
@@ -19,7 +16,6 @@ from guppylang.std.qsystem.functional import (
     measure,
     qfree,
 )
-from tests.util import compile_guppy
 
 
 def test_qsystem(validate):  # type: ignore[no-untyped-def]

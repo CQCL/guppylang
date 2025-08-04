@@ -24,7 +24,7 @@ from guppylang.diagnostic import Error, Help
 from guppylang.error import GuppyError, InternalGuppyError
 from guppylang.nodes import GlobalCall
 from guppylang.span import SourceMap
-from guppylang.std._internal.compiler.tket2_bool import (
+from guppylang.std._internal.compiler.tket_bool import (
     OpaqueBool,
     make_opaque,
     read_bool,

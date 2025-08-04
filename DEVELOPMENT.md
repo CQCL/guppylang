@@ -33,10 +33,6 @@ To setup the environment manually you will need:
   - If you have an older manually installed `uv` version you can upgrade it with `uv self update`,
     or by following the instructions in your package manager.
 
-The extended test suite has additional requirements. These are **optional**; tests that require them will be skipped if they are not installed.
-
-- Rust `>=1.75`: [rust-lang.org](https://www.rust-lang.org/tools/install)
-- `llvm-14`: [llvm.org](https://llvm.org/)
 
 Once you have these installed, you can install the required python dependencies and setup pre-commit hooks with:
 
@@ -54,8 +50,7 @@ just test
 just test -k test_name
 ```
 
-If you have Rust and `llvm-14` installed, this will include the integration
-tests automatically. If you need to export the integration test cases, use:
+If you need to export the integration test cases, use:
 
 ```bash
 just export-integration-tests

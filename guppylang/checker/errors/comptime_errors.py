@@ -45,15 +45,15 @@ class ComptimeExprIncoherentListError(Error):
 
 
 @dataclass(frozen=True)
-class Tket2NotInstalled(Error):
-    title: ClassVar[str] = "Tket2 not installed"
+class TketNotInstalled(Error):
+    title: ClassVar[str] = "Tket not installed"
     span_label: ClassVar[str] = (
-        "Experimental pytket compatibility requires `tket2` to be installed"
+        "Experimental pytket compatibility requires `tket` to be installed"
     )
 
     @dataclass(frozen=True)
     class InstallInstruction(Help):
-        message: ClassVar[str] = "Install tket2: `pip install tket2`"
+        message: ClassVar[str] = "Install tket: `pip install tket`"
 
 
 @dataclass(frozen=True)

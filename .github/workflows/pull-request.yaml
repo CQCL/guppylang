@@ -34,8 +34,6 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - name: install-llvm
-        run: "sudo apt-get update && sudo apt-get install -y llvm-14"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -58,10 +56,10 @@ jobs:
       - name: Run tests
         run: uv run pytest
 
-      - name: Install tket2 dependencies
+      - name: Install tket dependencies
         run: uv sync --extra pytket
 
-      - name: Rerun comptime expression tests and pytket lowering with tket2 installed
+      - name: Rerun comptime expression tests and pytket lowering with tket installed
         run: uv run pytest tests/integration/test_comptime_expr.py tests/error/test_comptime_expr_errors.py tests/integration/test_pytket_circuits.py
 
   test-coverage:

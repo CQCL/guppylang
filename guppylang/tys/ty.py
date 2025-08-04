@@ -162,7 +162,7 @@ class ParametrizedTypeBase(TypeBase, ABC):
     def hugr_bound(self) -> ht.TypeBound:
         """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
         if self.linear:
-            return ht.TypeBound.Any
+            return ht.TypeBound.Linear
         return ht.TypeBound.join(
             *(arg.ty.hugr_bound for arg in self.args if isinstance(arg, TypeArg))
         )
@@ -191,7 +191,7 @@ class BoundTypeVar(TypeBase, BoundVar):
     def hugr_bound(self) -> ht.TypeBound:
         """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
         if self.linear:
-            return ht.TypeBound.Any
+            return ht.TypeBound.Linear
         # We're conservative and don't require equatability for non-linear variables.
         # This is fine since Guppy doesn't use the equatable feature anyways.
         return ht.TypeBound.Copyable
