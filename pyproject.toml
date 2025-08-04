@@ -34,6 +34,8 @@ classifiers = [
 
 dependencies = [
     "guppylang-internals ~= 0.20.0",
+    "selene-sim>=0.2.0rc1,<0.3",
+    "numpy~=2.0",
 ]
 
 
@@ -68,10 +70,7 @@ test = [
 pytket_integration = [{ include-group = "test" }, "guppylang[pytket]"]
 
 [tool.uv.workspace]
-members = [
-    "guppylang-internals",
-    "miette-py",
-]
+members = ["guppylang-internals", "miette-py"]
 
 [tool.uv.sources]
 guppylang-internals = { workspace = true }
