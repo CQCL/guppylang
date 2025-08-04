@@ -85,4 +85,5 @@ def test_statevector() -> None:
     assert len(shot_states) == 2
     assert all(tag == "s" for tag, _ in shot_states)
 
-    assert res.partial_state_dicts() == [{"s": shot_states[0][1]}]
+    # repeated tag causes overwrite
+    assert res.partial_state_dicts() == [{"s": shot_states[1][1]}]

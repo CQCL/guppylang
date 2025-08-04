@@ -44,6 +44,9 @@ class EmulatorResult(QsysResult):
 
     """
 
+    # cache for extracted partial states, since extraction cleans up the files
+    _partial_states: list[list[tuple[str, PartialVector]]] | None = None
+
     def partial_state_dicts(self) -> list[dict[str, PartialVector]]:
         """Extract state results from shot results in to dictionaries.
 
@@ -67,11 +70,15 @@ class EmulatorResult(QsysResult):
             is over the state results in that shot.
             Each inner list contains tuples of (string tag, PartialVector).
         """
+        if self._partial_states is None:
 
-        def to_partial(x: tuple[str, SeleneQuestState]) -> tuple[str, PartialVector]:
-            return x[0], PartialVector._from_inner(x[1])
+            def to_partial(
+                x: tuple[str, SeleneQuestState],
+            ) -> tuple[str, PartialVector]:
+                return x[0], PartialVector._from_inner(x[1])
 
-        return [
-            list(map(to_partial, Quest.extract_states(shot.entries)))
-            for shot in self.results
-        ]
+            self._partial_states = [
+                list(map(to_partial, Quest.extract_states(shot.entries)))
+                for shot in self.results
+            ]
+        return self._partial_states
