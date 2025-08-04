@@ -3,98 +3,24 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
-import selene_sim
-from hugr.qsystem.result import QsysResult
-from selene_quest_plugin.state import SeleneQuestState, TracedState
 from selene_sim.backends.bundled_error_models import IdealErrorModel
 from selene_sim.backends.bundled_runtimes import SimpleRuntime
 from selene_sim.backends.bundled_simulators import Coinflip, Quest, Stim
 from selene_sim.event_hooks import EventHook, NoEventHook
 from typing_extensions import Self
 
+from .result import EmulatorResult
+
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Iterator
     from pathlib import Path
 
-    import numpy as np
-    from hugr.package import Package
     from hugr.qsystem.result import TaggedResult
-    from selene_core import BuildPlanner, QuantumInterface, Utility
     from selene_core.error_model import ErrorModel
     from selene_core.runtime import Runtime
     from selene_core.simulator import Simulator
     from selene_sim.instance import SeleneInstance
-
-
-__all__ = [
-    "EmulatorInstance",
-    "_Options",
-    "EmulatorResult",
-    "EmulatorBuilder",
-    "selene_sim",
-    "TracedState",
-    "PartialState",
-]
-
-
-class PartialState:
-    _inner: SeleneQuestState
-
-    def __init__(
-        self, state: np.ndarray, total_qubits: int, specified_qubits: list[int]
-    ) -> None:
-        self._inner = SeleneQuestState(
-            state=state, total_qubits=total_qubits, specified_qubits=specified_qubits
-        )
-
-    @property
-    def state(self) -> np.ndarray:
-        """Get the full state vector of the quantum state."""
-        return self._inner.state
-
-    @property
-    def total_qubits(self) -> int:
-        """Total number of qubits in the state."""
-        return self._inner.total_qubits
-
-    @property
-    def specified_qubits(self) -> list[int]:
-        """List of specified qubits in the state."""
-        return self._inner.specified_qubits
-
-    def state_distribution(
-        self, zero_threshold: float = 1e-12
-    ) -> list[TracedState[np.ndarray]]:
-        return self._inner.get_state_vector_distribution(zero_threshold=zero_threshold)
-
-    def as_single_state(self, zero_threshold: float = 1e-12) -> np.ndarray:
-        return self._inner.get_single_state(zero_threshold=zero_threshold)
-
-    @classmethod
-    def _from_inner(cls, inner: SeleneQuestState) -> Self:
-        """Create a StateVector from an inner SeleneQuestState."""
-        obj = cls.__new__(cls)
-        obj._inner = inner
-        return obj
-
-
-class EmulatorResult(QsysResult):
-    """A result from running an emulator instance."""
-
-    # TODO more docstring
-
-    def partial_states_dict(self) -> list[dict[str, PartialState]]:
-        return [dict(x) for x in self.partial_states()]
-
-    def partial_states(self) -> list[list[tuple[str, PartialState]]]:
-        def to_partial(x: tuple[str, SeleneQuestState]) -> tuple[str, PartialState]:
-            return x[0], PartialState._from_inner(x[1])
-
-        return [
-            list(map(to_partial, Quest.extract_states(shot.entries)))
-            for shot in self.results
-        ]
 
 
 @dataclass(frozen=True)
@@ -246,60 +172,3 @@ class EmulatorInstance:
             shot_increment=self.shot_increment,
             n_processes=self.n_processes,
         )
-
-
-@dataclass(frozen=True)
-class EmulatorBuilder:
-    """A builder class for creating EmulatorInstance objects."""
-
-    # interface supported parameters
-    _name: str | None = None
-    _build_dir: Path | None = None
-    _verbose: bool = False
-
-    # selene_sim supported parameters, may be added in the future
-    _planner: BuildPlanner | None = None
-    _utilities: Sequence[Utility] | None = None
-    _interface: QuantumInterface | None = None
-    _progress_bar: bool = False
-    _strict: bool = False
-    _save_planner: bool = False
-
-    @property
-    def name(self) -> str | None:
-        return self._name
-
-    @property
-    def build_dir(self) -> Path | None:
-        return self._build_dir
-
-    @property
-    def verbose(self) -> bool:
-        return self._verbose
-
-    def with_name(self, value: str | None) -> Self:
-        return replace(self, _name=value)
-
-    def with_build_dir(self, value: Path | None) -> Self:
-        return replace(self, _build_dir=value)
-
-    def with_verbose(self, value: bool) -> Self:
-        return replace(self, _verbose=value)
-
-    def build(self, package: Package, n_qubits: int) -> EmulatorInstance:
-        """Build an EmulatorInstance from a compiled package."""
-
-        instance = selene_sim.build(  # type: ignore[attr-defined]
-            package,
-            name=self._name,
-            build_dir=self._build_dir,
-            interface=self._interface,
-            utilities=self._utilities,
-            verbose=self._verbose,
-            planner=self._planner,
-            progress_bar=self._progress_bar,
-            strict=self._strict,
-            save_planner=self._save_planner,
-        )
-
-        return EmulatorInstance(_instance=instance, _n_qubits=n_qubits)

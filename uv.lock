@@ -930,6 +930,8 @@ version = "0.20.0"
 source = { editable = "guppylang-internals" }
 dependencies = [
     { name = "hugr" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "selene-sim" },
     { name = "tket-exts" },
     { name = "typing-extensions" },
@@ -943,6 +945,7 @@ pytket = [
 [package.metadata]
 requires-dist = [
     { name = "hugr", specifier = ">=0.13.0rc1,<0.14" },
+    { name = "numpy", specifier = "~=2.0" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
     { name = "selene-sim", specifier = ">=0.2.0rc1" },
     { name = "tket-exts", specifier = "~=0.10.0" },
@@ -3603,6 +3606,8 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/94/84/2ca431d4f7984a260b5115a5ab130c1459d0b0ed08c5ae7d4093e52cb4a3/ziglang-0.14.1-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:7994b27f3cbfcedea43f9b7552e38b45857bdf0e9a45065474092dd74e7048cf", size = 80233732, upload_time = "2025-05-26T11:45:07.741Z" },
     { url = "https://files.pythonhosted.org/packages/74/ea/c59e5a0368bb85eded8df8893f6e7a72d20293268f4ad5b2ce6aabe8cf8e/ziglang-0.14.1-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.musllinux_1_1_armv7l.whl", hash = "sha256:2c9dbee405ad83a062df3569949f24b59e938c1b85aa26674e30b515e654fef4", size = 81624139, upload_time = "2025-05-26T11:45:19.882Z" },
     { url = "https://files.pythonhosted.org/packages/cf/b6/2e9673067d0e25a4c0681e33f1c6213f36e9b1d3ad327ea58f061765a6ef/ziglang-0.14.1-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.musllinux_1_1_ppc64le.whl", hash = "sha256:ad2c7c3a77cff522971fc303da2b656c4ed675fe17cdf5ff74ba7e1b594a4780", size = 89083283, upload_time = "2025-05-26T11:45:31.61Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/6c/628f046d91e8f0b8b65fa268c6a8b60d7e52f5ea8d1c1ed07b3a28a2d1aa/ziglang-0.14.1-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.musllinux_1_1_s390x.whl", hash = "sha256:f566222095390406ededf87bff1aa3df00eaf7d9ddc2ddd182b214f1c16f2904", size = 101514887, upload_time = "2025-08-04T15:52:20.596Z" },
+    { url = "https://files.pythonhosted.org/packages/be/2c/ab9d28df1f6bce523397d5e39add3bf12737487dfd6d4ae56f5d40bb3656/ziglang-0.14.1-py3-none-manylinux_2_31_riscv64.musllinux_1_1_riscv64.whl", hash = "sha256:75f879ea9678eeba5fe7909a4cf4e67324eb761d68f416a72d5c3a130361d9fa", size = 82279115, upload_time = "2025-08-04T15:52:32.137Z" },
     { url = "https://files.pythonhosted.org/packages/8b/2e/a66ac42e58db4349d75e77644f2717aecccade7bc4f2f924cd114a05ef2e/ziglang-0.14.1-py3-none-win32.whl", hash = "sha256:3d68104704f850c52e2baec1e12caf58e097e954a40880b247da8fb4fa500550", size = 85479685, upload_time = "2025-05-26T11:45:43.203Z" },
     { url = "https://files.pythonhosted.org/packages/9d/53/b15661c6f4442c0e1ec1223c17f7a47e5cc108cb171bbdadbc675479582d/ziglang-0.14.1-py3-none-win_amd64.whl", hash = "sha256:e4f7e089a44d5ce34181853a90cdb8456e63c6640f5d44b844a117055326c375", size = 83574233, upload_time = "2025-05-26T11:45:55.268Z" },
     { url = "https://files.pythonhosted.org/packages/83/55/ba6235dfcaf5c64524615786031b69af2323ac55242433fc01089badf7bf/ziglang-0.14.1-py3-none-win_arm64.whl", hash = "sha256:f9e13d3e3778a850acf20115b0193a9ae0569c5ca2f71c8e690c4110746b6993", size = 79290101, upload_time = "2025-05-26T11:46:06.54Z" },
