@@ -227,9 +227,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                         if self.use_arrays
                         else self.input_circuit.n_qubits
                     )
-                    lex_params = list(
-                        outer_func.inputs()[offset :]
-                    )
+                    lex_params: list[Wire] = list(outer_func.inputs()[offset:])
                     if self.use_arrays:
                         opt_param_wires = outer_func.add_op(
                             array_unpack(
@@ -249,8 +247,6 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                         list[str], hugr_func.metadata["TKET1.input_parameters"]
                     )
                     lex_names = sorted(param_order)
-                    print(lex_names)
-                    print(lex_params)
                     assert len(lex_names) == len(lex_params)
                     name_to_param = dict(zip(lex_names, lex_params, strict=True))
                     param_wires = [name_to_param[name] for name in param_order]

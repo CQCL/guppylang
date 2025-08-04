@@ -341,7 +341,7 @@ def test_symbolic_exec(validate, run_int_fn):
     run_int_fn(main, 0, num_qubits=2)
 
 
-@pytest.mark.skip("TODO: Investigate runtime error")
+# @pytest.mark.skip("TODO: Investigate runtime error")
 def test_exec(validate, run_int_fn):
     from pytket import Circuit
 
