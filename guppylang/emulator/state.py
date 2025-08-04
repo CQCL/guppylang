@@ -1,3 +1,7 @@
+"""
+Debug querying the internal state of the emulator.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,9 +20,9 @@ __all__ = [
     "StateVector",
 ]
 
-# Type encoding a single state. e.g. StateVector for a state vector.
+#: Type encoding a single state. e.g. StateVector for a state vector.
 S = TypeVar("S")
-
+#: Type encoding a state vector, type alias for numpy array of complex numbers.
 StateVector = npt.NDArray[np.complexfloating]
 
 
@@ -53,12 +57,28 @@ class PartialState(Protocol[S]):
         ...
 
     def state_distribution(self, zero_threshold: float = 1e-12) -> list[TracedState[S]]:
-        """Distribution of states after tracing out unspecified qubits."""
+        """Distribution of states after tracing out unspecified qubits.
+        In general this results in a distribution of states, each with a probability.
+
+        Args:
+            zero_threshold: Threshold for considering a state amplitude to be zero.
+                Defaults to 1e-12.
+        Returns:
+            List of traced states, each with a state vector and a probability."""
         ...
 
     def as_single_state(self, zero_threshold: float = 1e-12) -> S:
         """If no qubits are traced out (len(specified_qubits) == total_qubits),
-        return the state as a single state vector."""
+        return the state as a single state vector.
+
+        Args:
+            zero_threshold: Threshold for considering a state amplitude to be zero.
+                Defaults to 1e-12.
+        Raises:
+            NotSingleStateError: If the state has unspecified qubits.
+        Returns:
+            The state as a single state type.
+        """
         if len(self.specified_qubits) != self.total_qubits:
             raise NotSingleStateError(
                 total_qubits=self.total_qubits,
@@ -70,13 +90,24 @@ class PartialState(Protocol[S]):
 
 
 class PartialVector(PartialState[StateVector]):
-    """Partial state vector for simulator backends with statevector representation."""
+    """Partial state vector for simulator backends with statevector representation.
+    Partial in the sense that some qubits may be traced out, and the state is
+    represented as a distribution of state vectors.
+    """
 
     _inner: SeleneQuestState
 
     def __init__(
         self, base_state: StateVector, total_qubits: int, specified_qubits: list[int]
     ) -> None:
+        """Initialize a PartialVector from a base state vector, total qubits, and
+        specified qubits.
+        Args:
+            base_state: The state vector over all qubits in the system.
+            total_qubits: Total number of qubits in the system
+            specified_qubits: List of specified qubits in the state. Those not in this
+                list are considered traced out.
+        """
         self._inner = SeleneQuestState(
             state=base_state,
             total_qubits=total_qubits,
@@ -90,7 +121,8 @@ class PartialVector(PartialState[StateVector]):
 
     @property
     def specified_qubits(self) -> list[int]:
-        """List of specified qubits in the state."""
+        """List of specified qubits in the state. Those not in this
+        list are considered traced out."""
         return self._inner.specified_qubits
 
     def state_distribution(
