@@ -2,7 +2,7 @@ from typing import Generic
 
 from hugr import tys
 
-from guppylang.decorator import guppy, custom_type
+from guppylang_internals.decorator import guppy, custom_type
 
 
 @custom_type(tys.Tuple(), droppable=False)

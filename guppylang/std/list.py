@@ -7,19 +7,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic
 
-from guppylang.decorator import custom_function, extend_type, guppy, hugr_op
-from guppylang.definition.custom import NoopCompiler
-from guppylang.std._internal.checker import UnsupportedChecker
-from guppylang.std._internal.compiler.list import (
+from guppylang_internals.decorator import custom_function, extend_type, guppy, hugr_op
+from guppylang_internals.definition.custom import NoopCompiler
+from guppylang_internals.std._internal.checker import UnsupportedChecker
+from guppylang_internals.std._internal.compiler.list import (
     ListGetitemCompiler,
     ListLengthCompiler,
     ListPopCompiler,
     ListPushCompiler,
     ListSetitemCompiler,
 )
-from guppylang.std._internal.util import unsupported_op
+from guppylang_internals.std._internal.util import unsupported_op
+from guppylang_internals.tys.builtin import list_type_def
+
 from guppylang.std.option import Option  # noqa: TCH001
-from guppylang.tys.builtin import list_type_def
 
 if TYPE_CHECKING:
     from guppylang.std.lang import owned

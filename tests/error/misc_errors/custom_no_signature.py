@@ -1,4 +1,4 @@
-from guppylang.decorator import custom_function
+from guppylang_internals.decorator import custom_function
 
 
 @custom_function()

@@ -1,4 +1,4 @@
-from guppylang.decorator import custom_guppy_decorator, guppy
+from guppylang_internals.decorator import custom_guppy_decorator, guppy
 
 
 @custom_guppy_decorator

@@ -1,9 +1,10 @@
 from typing import Generic, no_type_check
 
-from guppylang.decorator import custom_type, guppy, hugr_op
-from guppylang.std._internal.compiler.futures import future_op, future_to_hugr
+from guppylang_internals.decorator import custom_type, guppy, hugr_op
+from guppylang_internals.std._internal.compiler.futures import future_op, future_to_hugr
+from guppylang_internals.tys.param import TypeParam
+
 from guppylang.std.lang import owned
-from guppylang.tys.param import TypeParam
 
 T = guppy.type_var("T", copyable=False, droppable=False)
 

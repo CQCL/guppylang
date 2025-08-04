@@ -1,4 +1,4 @@
-from guppylang.decorator import guppy, extend_type
+from guppylang_internals.decorator import guppy, extend_type
 from tests.integration.modules.mod_a import f, MyType
 
 

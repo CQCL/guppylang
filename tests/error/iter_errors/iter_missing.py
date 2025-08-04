@@ -1,5 +1,5 @@
-from guppylang.decorator import guppy, custom_type
-from guppylang.tys.ty import NoneType
+from guppylang_internals.decorator import guppy, custom_type
+from guppylang_internals.tys.ty import NoneType
 
 
 @custom_type(NoneType())

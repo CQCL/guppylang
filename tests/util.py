@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from guppylang.decorator import custom_guppy_decorator, guppy
+from guppylang_internals.decorator import custom_guppy_decorator, guppy
 
 if TYPE_CHECKING:
     from hugr.package import Package, PackagePointer

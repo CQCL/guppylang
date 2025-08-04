@@ -1,15 +1,16 @@
 from typing import Generic, no_type_check
 
-from guppylang.decorator import custom_function, extend_type, guppy
-from guppylang.std._internal.compiler.option import (
+from guppylang_internals.decorator import custom_function, extend_type, guppy
+from guppylang_internals.std._internal.compiler.option import (
     OptionConstructor,
     OptionTestCompiler,
     OptionUnwrapCompiler,
     OptionUnwrapNothingCompiler,
 )
+from guppylang_internals.tys.builtin import option_type_def
+
 from guppylang.std.lang import owned
 from guppylang.std.mem import mem_swap
-from guppylang.tys.builtin import option_type_def
 
 L = guppy.type_var("T", copyable=False, droppable=False)
 

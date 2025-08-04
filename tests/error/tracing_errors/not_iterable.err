@@ -3,4 +3,4 @@ Traceback (most recent call last):
     test.compile()
   File "$FILE", line 6, in test
     for _ in x:
-guppylang.error.GuppyComptimeError: Expression of type `int` is not iterable at comptime
+guppylang_internals.error.GuppyComptimeError: Expression of type `int` is not iterable at comptime

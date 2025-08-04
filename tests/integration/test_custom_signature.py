@@ -1,12 +1,13 @@
-from guppylang.decorator import guppy, hugr_op
-from guppylang.std._internal.util import int_op
-from guppylang.tys.ty import (
+from guppylang.decorator import guppy
+from guppylang_internals.decorator import hugr_op
+from guppylang_internals.std._internal.util import int_op
+from guppylang_internals.tys.ty import (
     FuncInput,
     FunctionType,
     InputFlags,
     NumericType,
 )
-from guppylang.error import GuppyTypeError
+from guppylang_internals.error import GuppyTypeError
 
 # Define custom signature for iadd operation
 ty = FunctionType(

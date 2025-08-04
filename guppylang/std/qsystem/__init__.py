@@ -1,14 +1,15 @@
 from typing import no_type_check
 
-from guppylang.decorator import custom_function, guppy, hugr_op
-from guppylang.definition.custom import BoolOpCompiler
-from guppylang.std import angles
-from guppylang.std._internal.compiler.quantum import (
+from guppylang_internals.decorator import custom_function, guppy, hugr_op
+from guppylang_internals.definition.custom import BoolOpCompiler
+from guppylang_internals.std._internal.compiler.quantum import (
     InoutMeasureCompiler,
     InoutMeasureResetCompiler,
 )
-from guppylang.std._internal.compiler.tket_exts import QSYSTEM_EXTENSION
-from guppylang.std._internal.util import quantum_op
+from guppylang_internals.std._internal.compiler.tket_exts import QSYSTEM_EXTENSION
+from guppylang_internals.std._internal.util import quantum_op
+
+from guppylang.std import angles
 from guppylang.std.angles import angle, pi
 from guppylang.std.builtins import owned
 from guppylang.std.futures import Future

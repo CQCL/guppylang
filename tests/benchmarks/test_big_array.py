@@ -3,7 +3,7 @@ from typing import no_type_check
 from hugr.package import ModulePointer
 
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
+from guppylang_internals.module import GuppyModule
 from guppylang.std import quantum
 from guppylang.std.builtins import array, py
 from guppylang.std.quantum import cx, discard_array, h, qubit

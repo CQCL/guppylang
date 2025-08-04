@@ -1,8 +1,8 @@
 # mypy: disable-error-code="empty-body, no-untyped-def"
 """Python builtins that are not supported yet"""
 
-from guppylang.decorator import custom_function
-from guppylang.std._internal.checker import UnsupportedChecker
+from guppylang_internals.decorator import custom_function
+from guppylang_internals.std._internal.checker import UnsupportedChecker
 
 
 @custom_function(checker=UnsupportedChecker(), higher_order_value=False)

@@ -6,8 +6,9 @@ from hugr import tys as ht
 
 from hugr import Wire
 
-from guppylang.decorator import guppy, custom_function, custom_type
-from guppylang.definition.custom import CustomCallCompiler
+from guppylang.decorator import guppy
+from guppylang_internals.decorator import custom_function, custom_type
+from guppylang_internals.definition.custom import CustomCallCompiler
 from guppylang.std.builtins import array
 from guppylang.std.quantum import qubit
 

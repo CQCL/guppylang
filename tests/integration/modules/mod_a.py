@@ -2,7 +2,7 @@
 
 import hugr.tys as ht
 
-from guppylang.decorator import guppy, custom_type
+from guppylang_internals.decorator import guppy, custom_type
 
 
 @guppy

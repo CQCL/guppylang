@@ -2,8 +2,8 @@
 
 # mypy: disable-error-code="empty-body, no-untyped-def"
 
-from guppylang.decorator import custom_function
-from guppylang.std._internal.debug import StateResultChecker
+from guppylang_internals.decorator import custom_function
+from guppylang_internals.std._internal.debug import StateResultChecker
 
 
 @custom_function(checker=StateResultChecker(), higher_order_value=False)

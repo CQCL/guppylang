@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from typing import no_type_check
 
-from guppylang.decorator import custom_function
-from guppylang.std._internal.checker import (
+from guppylang_internals.decorator import custom_function
+from guppylang_internals.std._internal.checker import (
     BarrierChecker,
     ExitChecker,
     PanicChecker,

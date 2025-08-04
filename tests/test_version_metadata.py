@@ -1,5 +1,5 @@
 from guppylang import __version__, guppy
-from guppylang.engine import CoreMetadataKeys
+from guppylang_internals.engine import CoreMetadataKeys
 
 
 def test_metadata():

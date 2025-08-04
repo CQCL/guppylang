@@ -1,10 +1,11 @@
-from guppylang.decorator import guppy, custom_type
+from guppylang.decorator import guppy
 from guppylang.std.builtins import owned
 from guppylang.std.option import Option
 from guppylang.std.quantum import qubit, measure
 
 from guppylang.std.quantum_functional import cx, t, h, project_z
-from guppylang.tys.ty import NoneType
+from guppylang_internals.decorator import custom_type
+from guppylang_internals.tys.ty import NoneType
 
 
 def test_id(validate):

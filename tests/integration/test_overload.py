@@ -1,7 +1,8 @@
 from guppylang import qubit, array
-from guppylang.decorator import guppy, custom_function, hugr_op
-from guppylang.definition.custom import NoopCompiler
-from guppylang.std._internal.util import int_op
+from guppylang.decorator import guppy
+from guppylang_internals.decorator import custom_function, hugr_op
+from guppylang_internals.definition.custom import NoopCompiler
+from guppylang_internals.std._internal.util import int_op
 
 
 def test_basic_overload(validate):

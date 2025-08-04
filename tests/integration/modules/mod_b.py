@@ -1,8 +1,8 @@
 """Dummy module used in `test_imports.py`"""
 
 from guppylang import guppy
-from guppylang.decorator import hugr_op
-from guppylang.std._internal.util import unsupported_op
+from guppylang_internals.decorator import hugr_op
+from guppylang_internals.std._internal.util import unsupported_op
 
 
 @guppy

@@ -6,14 +6,14 @@ from typing import ClassVar
 
 import pytest
 
-from guppylang.diagnostic import (
+from guppylang_internals.diagnostic import (
     Diagnostic,
     DiagnosticLevel,
     Error,
     MietteRenderer,
     Note,
 )
-from guppylang.span import Loc, SourceMap, Span
+from guppylang_internals.span import Loc, SourceMap, Span
 
 file = "<unknown>"
 

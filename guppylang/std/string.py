@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
-from guppylang.decorator import custom_function, extend_type
-from guppylang.std._internal.checker import UnsupportedChecker
-from guppylang.tys.builtin import string_type_def
+from guppylang_internals.decorator import custom_function, extend_type
+from guppylang_internals.std._internal.checker import UnsupportedChecker
+from guppylang_internals.tys.builtin import string_type_def
 
 
 @extend_type(string_type_def)

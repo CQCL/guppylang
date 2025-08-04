@@ -3,9 +3,10 @@
 from collections.abc import Callable
 from typing import no_type_check
 
-from guppylang.decorator import custom_function, guppy
-from guppylang.std._internal.compiler.mem import WithOwnedCompiler
-from guppylang.std._internal.compiler.prelude import MemSwapCompiler
+from guppylang_internals.decorator import custom_function, guppy
+from guppylang_internals.std._internal.compiler.mem import WithOwnedCompiler
+from guppylang_internals.std._internal.compiler.prelude import MemSwapCompiler
+
 from guppylang.std.lang import owned
 
 T = guppy.type_var("T", copyable=False, droppable=False)
