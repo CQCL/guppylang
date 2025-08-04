@@ -48,13 +48,13 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         """Compile this function for emulation with the selene-sim emulator.
 
         Calls `compile()` to get the HUGR package and then builds it using the
-        provided `EmulatorBuilder` or a default one.
+        provided `EmulatorBuilder` configuration or a default one.
 
 
         Args:
             n_qubits: The number of qubits to allocate for the function.
             builder: An optional `EmulatorBuilder` to use for building the emulator
-                instance. If not provided, a default `EmulatorBuilder` will be used.
+                instance. If not provided, the default `EmulatorBuilder` will be used.
 
         Returns:
             An `EmulatorInstance` that can be used to run the function in an emulator.
