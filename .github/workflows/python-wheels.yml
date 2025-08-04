@@ -37,13 +37,15 @@ jobs:
             dir: ".",
             component: guppylang,
             package: guppylang,
-            lib: guppylang
+            lib: guppylang,
+            dist: dist
           }
           - {
             dir: guppylang-internals,
             component: guppylang-internals,
             package: guppylang-internals,
-            lib: guppylang_internals
+            lib: guppylang_internals,
+            dist: ../dist
           }
     steps:
       # Check the release tag against the package name
@@ -76,7 +78,7 @@ jobs:
         if: ${{ steps.check-tag.outputs.run == 'true' }}
         run: |
           cd ${{ matrix.target.dir }}
-          uvx --from build pyproject-build --installer uv --outdir ../dist
+          uvx --from build pyproject-build --installer uv --outdir ${{ matrix.target.dist }}
 
       - name: Upload the built packages as artifacts
         if: ${{ steps.check-tag.outputs.run == 'true' }}
