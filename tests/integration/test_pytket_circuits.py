@@ -262,7 +262,7 @@ def test_compile_load(validate):
     validate(pytket_func.compile())
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_symbolic(validate):
     from pytket import Circuit, OpType
     from pytket.passes import AutoRebase
@@ -289,7 +289,7 @@ def test_symbolic(validate):
     validate(guppy.compile(foo))
 
 
-@pytest.mark.skipif(not tket2_installed, reason="Tket2 is not installed")
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_symbolic_exec(validate, run_int_fn):
     from pytket import Circuit, OpType
     from pytket.passes import AutoRebase
