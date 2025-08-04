@@ -5,8 +5,9 @@ from guppylang.std.builtins import owned
 from guppylang.std.option import Option
 from guppylang.std.quantum import qubit
 from guppylang.std.quantum_functional import h, cx
+from guppylang_internals.decorator import custom_type
 
-from guppylang.tys.ty import NoneType
+from guppylang_internals.tys.ty import NoneType
 from tests.util import compile_guppy
 
 
@@ -202,14 +203,14 @@ def test_linear_consume_in_iter(validate):
 
 
 def test_linear_next_nonlinear_iter(validate):
-    @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
+    @custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
         @guppy.declare
         def __next__(self: "MyIter") -> Option[tuple[qubit, "MyIter"]]: ...
 
-    @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
+    @custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyType:
         """Type that produces the iterator above."""
 
@@ -225,7 +226,7 @@ def test_linear_next_nonlinear_iter(validate):
 
 
 def test_nonlinear_next_linear_iter(validate):
-    @guppy.type(
+    @custom_type(
         tys.Opaque(
             extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Linear
         ),
@@ -238,7 +239,7 @@ def test_nonlinear_next_linear_iter(validate):
         @guppy.declare
         def __next__(self: "MyIter" @ owned) -> Option[tuple[int, "MyIter"]]: ...
 
-    @guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
+    @custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyType:
         """Type that produces the iterator above."""
 

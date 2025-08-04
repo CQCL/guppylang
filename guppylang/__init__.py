@@ -1,9 +1,17 @@
+from guppylang_internals.experimental import enable_experimental_features
+
 from guppylang.decorator import guppy
-from guppylang.experimental import enable_experimental_features
 from guppylang.module import GuppyModule
 from guppylang.std import builtins, debug, quantum
 from guppylang.std.builtins import array, comptime, py
 from guppylang.std.quantum import qubit
+
+__all__ = (
+    "qubit",
+    "guppy",
+    "enable_experimental_features",
+    "GuppyModule",
+)
 
 # This is updated by our release-please workflow, triggered by this
 # annotation: x-release-please-version

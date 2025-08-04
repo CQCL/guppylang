@@ -24,7 +24,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -34,10 +33,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "typing-extensions>=4.9,<5",
-    "tket-exts ~= 0.10.0",
-    "hugr ~= 0.13.0",
-    "selene-sim>=0.2.0rc4, <0.3",
+    "guppylang-internals ~= 0.20.0",
+    "selene-sim>=0.2.0rc1,<0.3",
     "numpy~=2.0",
 ]
 
@@ -73,9 +70,10 @@ test = [
 pytket_integration = [{ include-group = "test" }, "guppylang[pytket]"]
 
 [tool.uv.workspace]
-members = ["miette-py"]
+members = ["guppylang-internals", "miette-py"]
 
 [tool.uv.sources]
+guppylang-internals = { workspace = true }
 miette-py = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
@@ -89,7 +87,6 @@ build-backend = "hatchling.build"
 
 
 [tool.mypy]
-plugins = ["pydantic.mypy"]
 strict = true
 allow_redefinition = true
 

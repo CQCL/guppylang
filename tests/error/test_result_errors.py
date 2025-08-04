@@ -1,8 +1,6 @@
 import pathlib
 import pytest
 
-from guppylang import GuppyModule, guppy
-from guppylang.error import GuppyError
 from tests.error.util import run_error_test
 
 path = pathlib.Path(__file__).parent.resolve() / "result_errors"

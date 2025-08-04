@@ -3,4 +3,4 @@ Traceback (most recent call last):
     test.compile()
   File "$FILE", line 6, in test
     return (1, 2) + x
-guppylang.error.GuppyComptimeError: Operator not defined: Binary operator `+` not defined for `(int, int)` and `int`
+guppylang_internals.error.GuppyComptimeError: Operator not defined: Binary operator `+` not defined for `(int, int)` and `int`

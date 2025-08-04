@@ -1,7 +1,8 @@
 from guppylang import qubit, array
 from guppylang.decorator import guppy
-from guppylang.definition.custom import NoopCompiler
-from guppylang.std._internal.util import int_op
+from guppylang_internals.decorator import custom_function, hugr_op
+from guppylang_internals.definition.custom import NoopCompiler
+from guppylang_internals.std._internal.util import int_op
 
 
 def test_basic_overload(validate):
@@ -138,11 +139,11 @@ def test_comptime_overload_call(validate):
 def test_everything_can_be_overloaded(validate):
     """Test that all kinds of functions can be overloaded."""
 
-    @guppy.custom(NoopCompiler())
+    @custom_function(NoopCompiler())
     def custom(a: int) -> int: ...
 
-    @guppy.hugr_op(int_op("iadd"))
-    def hugr_op(a: int, b: int) -> int: ...
+    @hugr_op(int_op("iadd"))
+    def my_hugr_op(a: int, b: int) -> int: ...
 
     @guppy.declare
     def declaration(a: int, b: int, c: int) -> None: ...
@@ -154,7 +155,7 @@ def test_everything_can_be_overloaded(validate):
     @guppy.overload(declaration, defined)
     def overloaded(): ...  # Overloaded functions can be overloaded themselves!
 
-    @guppy.overload(custom, hugr_op, declaration, defined, overloaded)
+    @guppy.overload(custom, my_hugr_op, declaration, defined, overloaded)
     def combined(): ...
 
     @guppy
@@ -178,7 +179,9 @@ def test_everything_can_be_overloaded(validate):
 
         circ2 = guppy.load_pytket("circ2", circ, use_arrays=True)
 
-        @guppy.overload(custom, hugr_op, declaration, defined, overloaded, circ1, circ2)
+        @guppy.overload(
+            custom, my_hugr_op, declaration, defined, overloaded, circ1, circ2
+        )
         def combined(): ...
 
         @guppy

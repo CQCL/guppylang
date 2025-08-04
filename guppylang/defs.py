@@ -7,13 +7,15 @@ with the compiler-internal definition objects in the `definitions` module.
 from dataclasses import dataclass
 from typing import Any, ClassVar, Generic, ParamSpec, TypeVar, cast
 
+from guppylang_internals.engine import ENGINE
+from guppylang_internals.tracing.object import TracingDefMixin
+from guppylang_internals.tracing.util import hide_trace
 from hugr.package import Package
 
-from guppylang.engine import ENGINE
-from guppylang.tracing.object import TracingDefMixin
-from guppylang.tracing.util import hide_trace
+from guppylang.emulator import EmulatorBuilder, EmulatorInstance
 
-from .emulator import EmulatorBuilder, EmulatorInstance
+__all__ = ("GuppyDefinition", "GuppyFunctionDefinition", "GuppyTypeVarDefinition")
+
 
 P = ParamSpec("P")
 Out = TypeVar("Out")
@@ -29,8 +31,6 @@ class GuppyDefinition(TracingDefMixin):
 
     def check(self) -> None:
         """Type-check a Guppy definition."""
-        from guppylang.engine import ENGINE
-
         return ENGINE.check(self.id)
 
 

@@ -1,8 +1,8 @@
-from guppylang.decorator import guppy
-from guppylang.tys.ty import NoneType
+from guppylang import guppy
+from guppylang_internals.decorator import custom_type
+from guppylang_internals.tys.ty import NoneType
 
-
-@guppy.type(NoneType())
+@custom_type(NoneType())
 class MyType:
     """A non-iterable type."""
 

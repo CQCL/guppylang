@@ -4,7 +4,7 @@
 import inspect
 from types import GenericAlias, UnionType
 
-import guppylang
+import guppylang_internals
 
 project = "Guppy Compiler"
 copyright = "2025, Quantinuum"
@@ -66,7 +66,7 @@ def _find_aliases(module):
 
 # Generate a mapping from type aliases to their qualified name to ensure that autodoc
 # doesn't unfold them
-_aliases = _find_aliases(guppylang)
+_aliases = _find_aliases(guppylang_internals)
 autodoc_type_aliases = {
     alias: f"~{module.__name__}.{alias}" for alias, module in _aliases.items()
 }

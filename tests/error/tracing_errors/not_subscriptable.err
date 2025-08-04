@@ -3,4 +3,4 @@ Traceback (most recent call last):
     test.compile()
   File "$FILE", line 10, in test
     foo[0]()
-guppylang.error.GuppyComptimeError: Function `foo` is not subscriptable
+guppylang_internals.error.GuppyComptimeError: Function `foo` is not subscriptable

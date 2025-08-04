@@ -1,7 +1,7 @@
 import pytest
 
 from guppylang.decorator import guppy
-from guppylang.error import GuppyError
+from guppylang_internals.error import GuppyError
 
 
 def test_func_redefinition(validate):
