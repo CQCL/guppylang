@@ -4,7 +4,7 @@ from typing import Generic
 import pytest
 from hugr import Hugr, ops
 
-from guppylang import guppy, array
+from guppylang import guppy, array, comptime
 from guppylang.std.num import nat
 
 
@@ -351,3 +351,26 @@ def test_higher_order(validate):
 
     # Check we have main, fun2, and 2 monomorphizations of fun1, fun3, and foo each
     assert len(funcs_defs(compiled.modules[0])) == 8
+
+
+def test_nat_generic(validate):
+    T = guppy.type_var("T", copyable=True, droppable=True)
+
+    @guppy
+    def foo(t: T @ comptime) -> T:
+        return t
+
+    @guppy
+    def main(n: nat @ comptime, m: nat @ comptime) -> None:
+        foo(n)
+        foo(m)
+        foo(True)
+        foo(False)
+
+    compiled = main.compile()
+    validate(compiled)
+
+    # Check we have main, and 3 monomorphisations of foo. The two nat versions should
+    # correspond to the same monomorphisation since the bounded nat args are preserved
+    # in Hugr!
+    assert len(funcs_defs(compiled.modules[0])) == 4
