@@ -1365,6 +1365,8 @@ def python_value_to_guppy_type(
             return TupleType(cast(list[Type], tys))
         case list():
             return _python_list_to_guppy_type(v, node, globals, type_hint)
+        case None:
+            return NoneType()
         case _:
             return None
 

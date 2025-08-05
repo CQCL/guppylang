@@ -828,6 +828,8 @@ def python_value_to_hugr(v: Any, exp_ty: Type, ctx: CompilerContext) -> hv.Value
                 return hugr.std.collections.static_array.StaticArrayVal(
                     vs, elem_ty.to_hugr(ctx), name=f"static_pyarray.{next(tmp_vars)}"
                 )
+        case None:
+            return hugr.val.Unit
         case _:
             return None
     return None
