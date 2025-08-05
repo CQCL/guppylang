@@ -1,12 +1,13 @@
 """Tests for loading pytket circuits as functions."""
 
 from importlib.util import find_spec
+import math
 
 import pytest
 
 from guppylang.decorator import guppy
 from guppylang.std.quantum import qubit, discard_array, discard
-from guppylang.std.builtins import array
+from guppylang.std.builtins import array, comptime
 
 tket_installed = find_spec("tket") is not None
 
@@ -333,12 +334,12 @@ def test_symbolic_exec(validate, run_int_fn):
     @guppy
     def main() -> int:
         q = qubit()
-        res = int(flip(q, 0))
+        res = int(flip(q, comptime(math.pi)))
         discard(q)
         return res
 
     validate(main.compile())
-    run_int_fn(main, 0, num_qubits=2)
+    run_int_fn(main, 1, num_qubits=2)
 
 
 def test_exec(validate, run_int_fn):

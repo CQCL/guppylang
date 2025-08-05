@@ -180,6 +180,13 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     self.name, func_type.body.input, func_type.body.output
                 )
 
+                # Number of qubit inputs in the outer function.
+                offset = (
+                    len(self.input_circuit.q_registers)
+                    if self.use_arrays
+                    else self.input_circuit.n_qubits
+                )
+
                 input_list: list[Wire] = []
                 if self.use_arrays:
                     # If the input is given as arrays, we need to unpack each element in
@@ -201,9 +208,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
 
                 else:
                     # Otherwise pass inputs directly.
-                    input_list = list(
-                        outer_func.inputs()[: len(self.input_circuit.q_registers)]
-                    )
+                    input_list = list(outer_func.inputs()[:offset])
 
                 # Initialise every input bit in the circuit as false.
                 # TODO: Provide the option for the user to pass this input as well.
@@ -221,11 +226,6 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 # We assume they are given in lexicographic order by the user, then we
                 # wire them up according to the metadata order.
                 if has_params:
-                    offset = (
-                        len(self.input_circuit.q_registers)
-                        if self.use_arrays
-                        else self.input_circuit.n_qubits
-                    )
                     lex_params: list[Wire] = list(outer_func.inputs()[offset:])
                     if self.use_arrays:
                         opt_param_wires = outer_func.add_op(
