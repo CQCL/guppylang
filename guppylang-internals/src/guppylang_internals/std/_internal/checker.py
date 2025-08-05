@@ -1,10 +1,10 @@
 import ast
 from dataclasses import dataclass
-from typing import ClassVar, cast
+from typing import ClassVar
 
 from typing_extensions import assert_never
 
-from guppylang_internals.ast_util import get_type, with_loc, with_type
+from guppylang_internals.ast_util import get_type, with_loc
 from guppylang_internals.checker.core import ComptimeVariable, Context
 from guppylang_internals.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang_internals.checker.errors.type_errors import (
@@ -23,7 +23,6 @@ from guppylang_internals.checker.expr_checker import (
 from guppylang_internals.definition.custom import (
     CustomCallChecker,
 )
-from guppylang_internals.definition.struct import CheckedStructDef, RawStructDef
 from guppylang_internals.diagnostic import Error, Note
 from guppylang_internals.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang_internals.nodes import (
@@ -31,7 +30,6 @@ from guppylang_internals.nodes import (
     DesugaredArrayComp,
     DesugaredGeneratorExpr,
     ExitKind,
-    GenericParamValue,
     GlobalCall,
     MakeIter,
     PanicExpr,
@@ -61,7 +59,6 @@ from guppylang_internals.tys.ty import (
     InputFlags,
     NoneType,
     NumericType,
-    StructType,
     Type,
     unify,
 )
@@ -493,45 +490,6 @@ class ExitChecker(CustomCallChecker):
         # empty substitution
         expr, _ = self.synthesize(args)
         return expr, {}
-
-
-class RangeChecker(CustomCallChecker):
-    """Call checker for the `range` function."""
-
-    def synthesize(self, args: list[ast.expr]) -> tuple[ast.expr, Type]:
-        check_num_args(1, len(args), self.node)
-        [stop] = args
-        stop_checked, _ = ExprChecker(self.ctx).check(stop, int_type(), "argument")
-        range_iter, range_ty = self.make_range(stop_checked)
-        # Check if `stop` is a statically known value. Note that we need to do this on
-        # the original `stop` instead of `stop_checked` to avoid any previously inserted
-        # `int` coercions.
-        if (static_stop := self.check_static(stop)) is not None:
-            return to_sized_iter(range_iter, range_ty, static_stop, self.ctx)
-        return range_iter, range_ty
-
-    def check_static(self, stop: ast.expr) -> "int | Const | None":
-        stop, _ = ExprSynthesizer(self.ctx).synthesize(stop, allow_free_vars=True)
-        if isinstance(stop, ast.Constant) and isinstance(stop.value, int):
-            return stop.value
-        if isinstance(stop, GenericParamValue) and stop.param.ty == nat_type():
-            return stop.param.to_bound().const
-        return None
-
-    def range_ty(self) -> StructType:
-        from guppylang.std.builtins import Range
-        from guppylang_internals.engine import ENGINE
-
-        def_id = cast(RawStructDef, Range).id
-        range_type_def = ENGINE.get_checked(def_id)
-        assert isinstance(range_type_def, CheckedStructDef)
-        return StructType([], range_type_def)
-
-    def make_range(self, stop: ast.expr) -> tuple[ast.expr, Type]:
-        make_range = self.ctx.globals.get_instance_func(self.range_ty(), "__new__")
-        assert make_range is not None
-        start = with_type(int_type(), with_loc(self.node, ast.Constant(value=0)))
-        return make_range.synthesize_call([start, stop], self.node, self.ctx)
 
 
 def to_sized_iter(
