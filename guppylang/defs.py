@@ -7,11 +7,14 @@ with the compiler-internal definition objects in the `definitions` module.
 from dataclasses import dataclass
 from typing import Any, ClassVar, Generic, ParamSpec, TypeVar, cast
 
-from guppylang_internals.engine import ENGINE
+import guppylang_internals
+from guppylang_internals.engine import ENGINE, CoreMetadataKeys
 from guppylang_internals.tracing.object import TracingDefMixin
 from guppylang_internals.tracing.util import hide_trace
+from hugr.hugr import Hugr
 from hugr.package import Package
 
+import guppylang
 from guppylang.emulator import EmulatorBuilder, EmulatorInstance
 
 __all__ = ("GuppyDefinition", "GuppyFunctionDefinition", "GuppyTypeVarDefinition")
@@ -21,13 +24,27 @@ P = ParamSpec("P")
 Out = TypeVar("Out")
 
 
+def _update_generator_metadata(hugr: Hugr[Any]) -> None:
+    """Update the generator metadata of a Hugr to be
+    guppylang rather than just internals."""
+    key = CoreMetadataKeys.GENERATOR.value
+
+    hugr.module_root.metadata[key] = {
+        "name": f"guppylang (guppylang-internals-v{guppylang_internals.__version__})",
+        "version": guppylang.__version__,
+    }
+
+
 @dataclass(frozen=True)
 class GuppyDefinition(TracingDefMixin):
     """A general Guppy definition."""
 
     def compile(self) -> Package:
         """Compile a Guppy definition to HUGR."""
-        return ENGINE.compile(self.id).package
+        package: Package = ENGINE.compile(self.id).package
+        for mod in package.modules:
+            _update_generator_metadata(mod)
+        return package
 
     def check(self) -> None:
         """Type-check a Guppy definition."""
