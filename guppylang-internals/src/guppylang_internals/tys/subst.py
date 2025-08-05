@@ -51,7 +51,8 @@ class Substituter(Transformer):
 class Instantiator(Transformer):
     """Type transformer that instantiates bound variables."""
 
-    def __init__(self, inst: Inst) -> None:
+    def __init__(self, inst: PartialInst, allow_partial: bool = False) -> None:
+        self.allow_partial = allow_partial
         self.inst = inst
 
     @functools.singledispatchmethod
@@ -63,6 +64,8 @@ class Instantiator(Transformer):
         # Instantiate if type for the index is available
         if ty.idx < len(self.inst):
             arg = self.inst[ty.idx]
+            if arg is None and self.allow_partial:
+                return None
             assert isinstance(arg, TypeArg)
             return arg.ty
 
@@ -76,6 +79,8 @@ class Instantiator(Transformer):
         # Instantiate if const value for the index is available
         if c.idx < len(self.inst):
             arg = self.inst[c.idx]
+            if arg is None and self.allow_partial:
+                return None
             assert isinstance(arg, ConstArg)
             return arg.const
 
