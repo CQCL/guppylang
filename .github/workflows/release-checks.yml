@@ -8,7 +8,9 @@ name: 🚚 guppylang release checks
 on:
   pull_request:
     branches:
-      - release-please--branches--main--components--guppylang
+      #- release-please--branches--main--components--guppylang
+      # TODO: Remove. Temporary trigger for testing in the PR.
+      - '**'
   workflow_dispatch: {}
 
 env:
