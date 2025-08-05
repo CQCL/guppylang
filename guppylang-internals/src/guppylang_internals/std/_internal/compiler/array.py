@@ -209,7 +209,7 @@ def array_discard_all_borrowed(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtO
 def array_new_all_borrowed(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array `borrow` operation."""
     arr_ty = array_type(elem_ty, length)
-    return _instantiate_array_op("new_all_borrowed", elem_ty, length, [arr_ty], [])
+    return _instantiate_array_op("new_all_borrowed", elem_ty, length, [], [arr_ty])
 
 
 # ------------------------------------------------------
@@ -264,11 +264,8 @@ class NewArrayCompiler(ArrayCompiler):
 
     def build_linear_array(self, elems: list[Wire]) -> Wire:
         """Lowers a call to `array.__new__` for linear arrays."""
-        elem_opts = [
-            self.builder.add_op(ops.Some(self.elem_ty), elem) for elem in elems
-        ]
         return self.builder.add_op(
-            array_new(ht.Option(self.elem_ty), len(elems)), *elem_opts
+            array_new(self.elem_ty, len(elems)), *elems
         )
 
     def compile(self, args: list[Wire]) -> list[Wire]:
