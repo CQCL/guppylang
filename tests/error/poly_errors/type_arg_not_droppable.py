@@ -15,4 +15,4 @@ def main() -> None:
     f = foo[qubit]
 
 
-guppy.compile(main)
+main.compile()

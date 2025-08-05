@@ -7,4 +7,4 @@ def test(xs: array[int, 10]) -> bool:
     return all(x for x in xs)
 
 
-guppy.compile(test)
+test.compile()

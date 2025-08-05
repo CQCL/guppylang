@@ -15,4 +15,4 @@ def foo(b: bool) -> bool:
     return False
 
 
-guppy.compile(foo)
+foo.compile()

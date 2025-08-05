@@ -13,4 +13,4 @@ def foo(xs: list[int], s: MyStruct @owned) -> list[MyStruct]:
     return [s for x in xs]
 
 
-guppy.compile(foo)
+foo.compile()

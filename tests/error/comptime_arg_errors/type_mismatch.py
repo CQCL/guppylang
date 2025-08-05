@@ -12,4 +12,4 @@ def main() -> None:
     foo(False)
 
 
-guppy.compile(main)
+main.compile()

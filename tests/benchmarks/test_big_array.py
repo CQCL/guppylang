@@ -2,14 +2,15 @@ from typing import no_type_check
 
 from hugr.package import ModulePointer
 
+from guppylang import GuppyModule
 from guppylang.decorator import guppy
-from guppylang.module import GuppyModule
 from guppylang.std import quantum
 from guppylang.std.builtins import array, py
 from guppylang.std.quantum import cx, discard_array, h, qubit
 
 
-def big_array(n_q: int = 20, n_a: int = 5) -> GuppyModule:
+def big_array(n_q: int = 20, n_a: int = 5):
+    # TODO: This is broken
     module = GuppyModule("big_array")
     module.load_all(quantum)
 

@@ -37,7 +37,7 @@ def test_float(validate):
             builtins.float(x)
         return float(x)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_int(validate):
@@ -71,7 +71,7 @@ def test_int(validate):
             builtins.int(x)
         return int(x)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_len(validate):
@@ -104,4 +104,4 @@ def test_len(validate):
             builtins.len(s)
         return len(s)
 
-    validate(guppy.compile(test))
+    validate(test.compile())

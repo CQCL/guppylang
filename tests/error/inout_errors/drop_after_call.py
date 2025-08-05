@@ -11,4 +11,4 @@ def test() -> None:
    foo(qubit())
 
 
-guppy.compile(test)
+test.compile()

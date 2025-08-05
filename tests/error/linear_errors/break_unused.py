@@ -25,4 +25,4 @@ def foo(i: int) -> bool:
     return b
 
 
-guppy.compile(foo)
+foo.compile()

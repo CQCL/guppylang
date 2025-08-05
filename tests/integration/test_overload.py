@@ -1,7 +1,8 @@
 from guppylang import qubit, array
 from guppylang.decorator import guppy
-from guppylang.definition.custom import NoopCompiler
-from guppylang.std._internal.util import int_op
+from guppylang_internals.decorator import custom_function, hugr_op
+from guppylang_internals.definition.custom import NoopCompiler
+from guppylang_internals.std._internal.util import int_op
 
 
 def test_basic_overload(validate):
@@ -23,7 +24,7 @@ def test_basic_overload(validate):
         combined(1, 2)
         combined(1, 2, 3)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_pick_first(validate):
@@ -45,7 +46,7 @@ def test_pick_first(validate):
         x = combined(42)
         return x
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_generic_overload(validate):
@@ -68,7 +69,7 @@ def test_generic_overload(validate):
         x = combined(1, 1.0)
         return x
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_pick_by_return_type1(validate):
@@ -85,7 +86,7 @@ def test_pick_by_return_type1(validate):
     def main() -> None:
         out: int = combined()
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_pick_by_return_type2(validate):
@@ -108,7 +109,7 @@ def test_pick_by_return_type2(validate):
         # the return type and infer that `variant2` is the only matching one.
         out: int = combined(42.0)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_comptime_overload_call(validate):
@@ -132,17 +133,17 @@ def test_comptime_overload_call(validate):
         combined(1, 2)
         combined(1, 2, 3)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_everything_can_be_overloaded(validate):
     """Test that all kinds of functions can be overloaded."""
 
-    @guppy.custom(NoopCompiler())
+    @custom_function(NoopCompiler())
     def custom(a: int) -> int: ...
 
-    @guppy.hugr_op(int_op("iadd"))
-    def hugr_op(a: int, b: int) -> int: ...
+    @hugr_op(int_op("iadd"))
+    def my_hugr_op(a: int, b: int) -> int: ...
 
     @guppy.declare
     def declaration(a: int, b: int, c: int) -> None: ...
@@ -154,7 +155,7 @@ def test_everything_can_be_overloaded(validate):
     @guppy.overload(declaration, defined)
     def overloaded(): ...  # Overloaded functions can be overloaded themselves!
 
-    @guppy.overload(custom, hugr_op, declaration, defined, overloaded)
+    @guppy.overload(custom, my_hugr_op, declaration, defined, overloaded)
     def combined(): ...
 
     @guppy
@@ -164,7 +165,7 @@ def test_everything_can_be_overloaded(validate):
         combined(1, 2, 3)
         combined(1, 2, 3, 4)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
     # If we have tket installed, we can even overload circuits
     try:
@@ -178,7 +179,9 @@ def test_everything_can_be_overloaded(validate):
 
         circ2 = guppy.load_pytket("circ2", circ, use_arrays=True)
 
-        @guppy.overload(custom, hugr_op, declaration, defined, overloaded, circ1, circ2)
+        @guppy.overload(
+            custom, my_hugr_op, declaration, defined, overloaded, circ1, circ2
+        )
         def combined(): ...
 
         @guppy
@@ -190,7 +193,7 @@ def test_everything_can_be_overloaded(validate):
             combined(q)
             combined(qs)
 
-        validate(guppy.compile(main))
+        validate(main.compile())
 
     except ImportError:
         pass

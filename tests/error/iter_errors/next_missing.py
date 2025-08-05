@@ -1,8 +1,8 @@
-from guppylang.decorator import guppy
-from guppylang.tys.ty import NoneType
+from guppylang import guppy
+from guppylang_internals.decorator import custom_type
+from guppylang_internals.tys.ty import NoneType
 
-
-@guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
+@custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
 class MyIter:
     """An iterator that is missing the `__next__` method."""
 
@@ -15,7 +15,7 @@ class MyIter:
         ...
 
 
-@guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
+@custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
 class MyType:
     """Type that produces the iterator above."""
 
@@ -30,4 +30,4 @@ def test(x: MyType) -> None:
         pass
 
 
-guppy.compile(test)
+test.compile()

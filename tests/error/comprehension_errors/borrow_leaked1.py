@@ -12,4 +12,4 @@ def foo(n: int, q: qubit @owned) -> list[int]:
     return [bar(q) for _ in range(n)]
 
 
-guppy.compile(foo)
+foo.compile()

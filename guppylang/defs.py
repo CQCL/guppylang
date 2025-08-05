@@ -7,10 +7,15 @@ with the compiler-internal definition objects in the `definitions` module.
 from dataclasses import dataclass
 from typing import Any, ClassVar, Generic, ParamSpec, TypeVar, cast
 
-from hugr.package import FuncDefnPointer, ModulePointer
+from guppylang_internals.engine import ENGINE
+from guppylang_internals.tracing.object import TracingDefMixin
+from guppylang_internals.tracing.util import hide_trace
+from hugr.package import Package
 
-from guppylang.tracing.object import TracingDefMixin
-from guppylang.tracing.util import hide_trace
+from guppylang.emulator import EmulatorBuilder, EmulatorInstance
+
+__all__ = ("GuppyDefinition", "GuppyFunctionDefinition", "GuppyTypeVarDefinition")
+
 
 P = ParamSpec("P")
 Out = TypeVar("Out")
@@ -20,10 +25,13 @@ Out = TypeVar("Out")
 class GuppyDefinition(TracingDefMixin):
     """A general Guppy definition."""
 
-    def compile(self) -> ModulePointer:
-        from guppylang.decorator import guppy
+    def compile(self) -> Package:
+        """Compile a Guppy definition to HUGR."""
+        return ENGINE.compile(self.id).package
 
-        return guppy.compile(self)
+    def check(self) -> None:
+        """Type-check a Guppy definition."""
+        return ENGINE.check(self.id)
 
 
 @dataclass(frozen=True)
@@ -34,10 +42,27 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> Out:
         return cast(Out, super().__call__(*args, **kwargs))
 
-    def compile(self) -> FuncDefnPointer:
-        from guppylang.decorator import guppy
+    def emulator(
+        self, n_qubits: int, builder: EmulatorBuilder | None = None
+    ) -> EmulatorInstance:
+        """Compile this function for emulation with the selene-sim emulator.
 
-        return guppy.compile_function(self)
+        Calls `compile()` to get the HUGR package and then builds it using the
+        provided `EmulatorBuilder` configuration or a default one.
+
+
+        Args:
+            n_qubits: The number of qubits to allocate for the function.
+            builder: An optional `EmulatorBuilder` to use for building the emulator
+                instance. If not provided, the default `EmulatorBuilder` will be used.
+
+        Returns:
+            An `EmulatorInstance` that can be used to run the function in an emulator.
+        """
+        mod = self.compile()
+
+        builder = builder or EmulatorBuilder()
+        return builder.build(mod, n_qubits=n_qubits)
 
 
 @dataclass(frozen=True)

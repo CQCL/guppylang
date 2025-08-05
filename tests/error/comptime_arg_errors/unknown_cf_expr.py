@@ -12,4 +12,4 @@ def main(b: bool) -> nat:
     return foo(nat(1) if b else nat(2))
 
 
-guppy.compile(main)
+main.compile()

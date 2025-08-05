@@ -9,4 +9,4 @@ def main(f: Callable[[nat @comptime], None]) -> None:
     pass
 
 
-guppy.compile(main)
+main.compile()

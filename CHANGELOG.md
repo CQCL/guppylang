@@ -1,5 +1,69 @@
 # Changelog
 
+## [0.21.0](https://github.com/CQCL/guppylang/compare/guppylang-v0.20.0...guppylang-v0.21.0) (2025-08-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* All compiler-internal and non-userfacing functionality is moved into a new `guppylang_internals` package
+* `guppy.compile(foo)` and `guppy.check(foo)` replaced with `foo.check()` and `foo.compile()`
+* default HUGR output uses compressed binary encoding.
+* `guppylang.tracing.object.GuppyDefinition` moved to `guppylang.defs.GuppyDefinition` `guppylang.tracing.object.TypeVarGuppyDefinition` moved and renamed to `guppylang.defs.GuppyTypeVarDefinition`
+* All `to_hugr` methods on types, arguments, and parameters now require a `ToHugrContext` `CompileableDef.compile_outer` now requires a `ToHugrContext` `guppy.hugr_op` now passes the compiler context to the function generating the op `CheckedFunctionDef` now implements `MonomorphizableDef` instead of `CompileableDef` `CompilerContext.build_compiled_def` now requires an instantiation for the definition's type parameters The `ToHugrContext` protocol now requires two additional methods: `type_var_to_hugr` and `const_var_to_hugr` `CompilerContext.{compiled, worklist}` and `CompilationEngine.compiled` are now indexed by a tuple of `DefId` and optional `PartiallyMonomorphizedArgs`
+* comptime code that previously used constant integers outside i64 will now fail to compile.
+* Capturing closures are now disabled by default. Enabling them requires calling `guppylang.enable_experimental_features()`, however note that they are not supported throughout the stack.
+
+### Features
+
+* Add `Future` type ([#1075](https://github.com/CQCL/guppylang/issues/1075)) ([5ad7673](https://github.com/CQCL/guppylang/commit/5ad76734c58e6d0c48a487c0645a4265abf3763e))
+* add error when constant integer out of bounds ([#1084](https://github.com/CQCL/guppylang/issues/1084)) ([eee77ae](https://github.com/CQCL/guppylang/commit/eee77ae92d0490f9a6fc843b02729a4fc88ba16c))
+* Add guppy version metadata to hugr entrypoint ([#1039](https://github.com/CQCL/guppylang/issues/1039)) ([0eafbd9](https://github.com/CQCL/guppylang/commit/0eafbd9f8e52484ae823aba830c1d38d30dd9755)), closes [#1037](https://github.com/CQCL/guppylang/issues/1037)
+* Add manual registration of extensions ([#1045](https://github.com/CQCL/guppylang/issues/1045)) ([4b42936](https://github.com/CQCL/guppylang/commit/4b42936372d408b1b3c79a86e21d2a09a4220799))
+* add qsystem op for measure leaked ([#1057](https://github.com/CQCL/guppylang/issues/1057)) ([c555727](https://github.com/CQCL/guppylang/commit/c55572716333b1b88026c6d0221a1cb9fbd7d1a1))
+* add selene via optional feature and use for testing ([#1081](https://github.com/CQCL/guppylang/issues/1081)) ([cefc70e](https://github.com/CQCL/guppylang/commit/cefc70e9a51c6fe5cac318d35473f953b9bff893))
+* Add support for V and Vdg. ([#1094](https://github.com/CQCL/guppylang/issues/1094)) ([6b0d44a](https://github.com/CQCL/guppylang/commit/6b0d44a5b1b6661a0d67e3df261a188bdb9a7f0b))
+* Allow indexing on tuples ([#1038](https://github.com/CQCL/guppylang/issues/1038)) ([0e9097e](https://github.com/CQCL/guppylang/commit/0e9097eb14d3fd254ad1220f6feeaac74314afe6)), closes [#711](https://github.com/CQCL/guppylang/issues/711)
+* Declare WASM modules in guppy ([#942](https://github.com/CQCL/guppylang/issues/942)) ([e1240fb](https://github.com/CQCL/guppylang/commit/e1240fbec33703bf8a311dd7c0139ca36c11aed8))
+* Extend comptime arguments to arbitrary non-linear types ([#1110](https://github.com/CQCL/guppylang/issues/1110)) ([384dd8c](https://github.com/CQCL/guppylang/commit/384dd8cdebdd68c13279e096e7d74bcb50f9667c))
+* Make decorator return types more precise ([#1115](https://github.com/CQCL/guppylang/issues/1115)) ([c84e8b1](https://github.com/CQCL/guppylang/commit/c84e8b13d63bc2c3453ffd1adb47451f2009db16))
+* set hugr entrypoint to compiled function ([#1063](https://github.com/CQCL/guppylang/issues/1063)) ([16bd267](https://github.com/CQCL/guppylang/commit/16bd2675bffa30d09ef700625e65afdac131aaa9))
+* store used extensions and versions in HUGR metadata ([#1049](https://github.com/CQCL/guppylang/issues/1049)) ([a9a300c](https://github.com/CQCL/guppylang/commit/a9a300c6d4e1f517002b4bf83885c2f6653efa70)), closes [#1048](https://github.com/CQCL/guppylang/issues/1048)
+* Support arbitrary const generics via monomorphisation ([#1033](https://github.com/CQCL/guppylang/issues/1033)) ([bcf9865](https://github.com/CQCL/guppylang/commit/bcf986539daf4794172e7b078d4bae432bed331f))
+* Support Python 3.12 generic syntax ([#1051](https://github.com/CQCL/guppylang/issues/1051)) ([ab2e118](https://github.com/CQCL/guppylang/commit/ab2e118e5d697f71d8226bc06ce9068e689fb367)), closes [#823](https://github.com/CQCL/guppylang/issues/823)
+* Top level compile + emulate Interface ([#1127](https://github.com/CQCL/guppylang/issues/1127)) ([5e2f595](https://github.com/CQCL/guppylang/commit/5e2f5951dff8782f7bbfe656ed02edf761a66593))
+* update to hugr-py v0.13 ([#1083](https://github.com/CQCL/guppylang/issues/1083)) ([8f071c8](https://github.com/CQCL/guppylang/commit/8f071c8c3c7bb88d0fbe79e41a7f5ccf768248ec))
+* use `core.` prefix for metadata keys ([#1055](https://github.com/CQCL/guppylang/issues/1055)) ([2bf0d68](https://github.com/CQCL/guppylang/commit/2bf0d68eefc1f1211130328555e1f288235baef3))
+
+
+### Bug Fixes
+
+* Allow array comprehension syntax in comptime functions ([#1068](https://github.com/CQCL/guppylang/issues/1068)) ([da8f04a](https://github.com/CQCL/guppylang/commit/da8f04a04485b0e362ce736887235089b04b2ef7)), closes [#1067](https://github.com/CQCL/guppylang/issues/1067)
+* Allow struct redefinitions for Python &lt; 3.13 ([#1108](https://github.com/CQCL/guppylang/issues/1108)) ([959a4e4](https://github.com/CQCL/guppylang/commit/959a4e4d93fde387a669f47bdbe1fbcff2090046)), closes [#1107](https://github.com/CQCL/guppylang/issues/1107)
+* Correctly detect `[@custom](https://github.com/custom)_guppy_decorator` in nested scopes ([#1086](https://github.com/CQCL/guppylang/issues/1086)) ([678583c](https://github.com/CQCL/guppylang/commit/678583c173407d2827ae44c7e22a96639170685f))
+* Fix diagnostics rendering for comptime entrypoints ([#1099](https://github.com/CQCL/guppylang/issues/1099)) ([fdd2676](https://github.com/CQCL/guppylang/commit/fdd26760a0ab8c3a3df2bdc6a5eb5dc4c816bd9c)), closes [#1097](https://github.com/CQCL/guppylang/issues/1097)
+* Fix frame lookup for Python 3.12 annotation scopes ([#1120](https://github.com/CQCL/guppylang/issues/1120)) ([a69e489](https://github.com/CQCL/guppylang/commit/a69e4899d49ecae00335e47cdbed5953f0a16012)), closes [#1116](https://github.com/CQCL/guppylang/issues/1116)
+* Fix hugr conversion and bounds checks on numeric literals ([#1100](https://github.com/CQCL/guppylang/issues/1100)) ([73d5e92](https://github.com/CQCL/guppylang/commit/73d5e92ac7af1b9f900a2f55b461d925f143a3f0))
+* Fix Jupyter notebook diagnostic rendering ([#1109](https://github.com/CQCL/guppylang/issues/1109)) ([6002474](https://github.com/CQCL/guppylang/commit/6002474a533ac22c18837c2a560e4478c188f9f9))
+* Fix nested function definitions in Python 3.12 ([#1064](https://github.com/CQCL/guppylang/issues/1064)) ([090f920](https://github.com/CQCL/guppylang/commit/090f920646703a40ece6cc5305d1011f2a220ff5))
+* Stop showing temporary variables in comptime diagnostics ([#1112](https://github.com/CQCL/guppylang/issues/1112)) ([63854c5](https://github.com/CQCL/guppylang/commit/63854c54492e66de0d2e70d6f06a411093dab992)), closes [#1111](https://github.com/CQCL/guppylang/issues/1111)
+* support comptime entrypoint ([#1079](https://github.com/CQCL/guppylang/issues/1079)) ([721e3dd](https://github.com/CQCL/guppylang/commit/721e3dde7ca18d2a1eaa541ff6d5c8b81d296c23))
+* Turn capturing closures into experimental feature ([#1065](https://github.com/CQCL/guppylang/issues/1065)) ([a959b18](https://github.com/CQCL/guppylang/commit/a959b1848f96c7899fd5d4ba173bd371c9aa286a))
+
+
+### Documentation
+
+* add docstrings for emulator module ([#1131](https://github.com/CQCL/guppylang/issues/1131)) ([b33e065](https://github.com/CQCL/guppylang/commit/b33e0656f152ce8dc4bc09b7a44d7b3017e28c8b))
+* add quantum and qsystem gate definitions ([#912](https://github.com/CQCL/guppylang/issues/912)) ([32a4bbc](https://github.com/CQCL/guppylang/commit/32a4bbced00b4603c2c4d04af3c35e40bcac427f))
+* Fix docstrings ([#1128](https://github.com/CQCL/guppylang/issues/1128)) ([0aded85](https://github.com/CQCL/guppylang/commit/0aded8524807d521adfd3137a62d92da0291b937))
+* Improve RNG docs ([#1043](https://github.com/CQCL/guppylang/issues/1043)) ([8640f06](https://github.com/CQCL/guppylang/commit/8640f06f78a56d8c7a931481ca224eb7ac596c8a))
+* replace `compile_module` usage in README ([#1041](https://github.com/CQCL/guppylang/issues/1041)) ([03ccf3a](https://github.com/CQCL/guppylang/commit/03ccf3a27d8f7f1f186483acec0573d57c2cc1c0))
+* Update guppy examples ([#1121](https://github.com/CQCL/guppylang/issues/1121)) ([b994655](https://github.com/CQCL/guppylang/commit/b9946559856232398e757a10159bbe140c6cb27f))
+
+
+### Code Refactoring
+
+* Split up into `guppylang_internals` package ([#1126](https://github.com/CQCL/guppylang/issues/1126)) ([81d50c0](https://github.com/CQCL/guppylang/commit/81d50c0a24f55eca48d62e4b0275ef2126c5e626))
+
 ## [0.20.0](https://github.com/CQCL/guppylang/compare/v0.19.1...v0.20.0) (2025-06-19)
 
 

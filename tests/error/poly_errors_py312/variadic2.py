@@ -6,4 +6,4 @@ def main[**Ts]() -> None:
     ...
 
 
-guppy.compile(main)
+main.compile()

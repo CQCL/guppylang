@@ -1,7 +1,7 @@
 import pathlib
 import pytest
 
-from guppylang.tracing.state import reset_state
+from guppylang_internals.tracing.state import reset_state
 from tests.error.util import run_error_test
 
 path = pathlib.Path(__file__).parent.resolve() / "tracing_errors"

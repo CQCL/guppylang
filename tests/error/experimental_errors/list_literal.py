@@ -6,4 +6,4 @@ def main() -> None:
     [1, 2, 3]
 
 
-guppy.compile(main)
+main.compile()

@@ -12,4 +12,4 @@ def test_read(validate):
         z.discard()
         return 0
 
-    validate(guppy.compile(main))
+    validate(main.compile())

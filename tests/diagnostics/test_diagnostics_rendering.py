@@ -4,14 +4,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-from guppylang.diagnostic import (
+from guppylang_internals.diagnostic import (
     Diagnostic,
     DiagnosticsRenderer,
     Error,
     Help,
     Note,
 )
-from guppylang.span import Loc, SourceMap, Span
+from guppylang_internals.span import Loc, SourceMap, Span
 
 file = "<unknown>"
 

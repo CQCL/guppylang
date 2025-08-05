@@ -14,4 +14,4 @@ def main(xs: array[int, 42]) -> None:
     foo[43](xs)
 
 
-guppy.compile(main)
+main.compile()

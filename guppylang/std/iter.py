@@ -6,11 +6,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, no_type_check
 
-from guppylang.decorator import guppy
-from guppylang.definition.custom import NoopCompiler
-from guppylang.std._internal.checker import RangeChecker
+from guppylang_internals.decorator import custom_function, extend_type
+from guppylang_internals.definition.custom import NoopCompiler
+from guppylang_internals.std._internal.checker import RangeChecker
+from guppylang_internals.tys.builtin import sized_iter_type_def
+
+from guppylang import guppy
 from guppylang.std.option import Option, nothing, some
-from guppylang.tys.builtin import sized_iter_type_def
 
 if TYPE_CHECKING:
     from guppylang.std.lang import owned
@@ -20,7 +22,7 @@ L = guppy.type_var("L", copyable=False, droppable=False)
 n = guppy.nat_var("n")
 
 
-@guppy.extend_type(sized_iter_type_def)
+@extend_type(sized_iter_type_def)
 class SizedIter:
     """A wrapper around an iterator type `L` promising that the iterator will yield
     exactly `n` values.
@@ -33,15 +35,15 @@ class SizedIter:
         # positions that are evaluated by the Python interpreter
         return cls
 
-    @guppy.custom(NoopCompiler())
+    @custom_function(NoopCompiler())
     def __new__(iterator: L @ owned) -> SizedIter[L, n]:  # type: ignore[type-arg]
         """Casts an iterator into a `SizedIter`."""
 
-    @guppy.custom(NoopCompiler())
+    @custom_function(NoopCompiler())
     def unwrap_iter(self: SizedIter[L, n] @ owned) -> L:
         """Extracts the actual iterator."""
 
-    @guppy.custom(NoopCompiler())
+    @custom_function(NoopCompiler())
     def __iter__(self: SizedIter[L, n] @ owned) -> SizedIter[L, n]:  # type: ignore[type-arg]
         """Dummy implementation making sized iterators iterable themselves."""
 
@@ -63,7 +65,7 @@ class Range:
         return nothing()
 
 
-@guppy.custom(checker=RangeChecker(), higher_order_value=False)
+@custom_function(checker=RangeChecker(), higher_order_value=False)
 def range(stop: int) -> Range:
     """Limited version of python range().
     Only a single argument (stop/limit) is supported."""

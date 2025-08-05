@@ -7,4 +7,4 @@ def test(q: qubit) -> None:
     measure(q)
 
 
-guppy.compile(test)
+test.compile()

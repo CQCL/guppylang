@@ -7,4 +7,4 @@ class MyStruct[Q: qubit]:
     pass
 
 
-guppy.compile(MyStruct)
+MyStruct.compile()

@@ -10,4 +10,4 @@ def foo(x: T) -> T:
 def main() -> int:
     return (foo, foo)(42, 42)
 
-guppy.compile(main)
+main.compile()

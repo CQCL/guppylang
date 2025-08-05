@@ -12,19 +12,23 @@ import builtins
 from types import GeneratorType
 from typing import TYPE_CHECKING, Generic, TypeVar, no_type_check
 
-from guppylang.decorator import guppy
-from guppylang.definition.custom import CopyInoutCompiler
-from guppylang.std._internal.checker import ArrayCopyChecker, NewArrayChecker
-from guppylang.std._internal.compiler.array import (
+from guppylang_internals.decorator import extend_type
+from guppylang_internals.definition.custom import CopyInoutCompiler
+from guppylang_internals.std._internal.checker import ArrayCopyChecker, NewArrayChecker
+from guppylang_internals.std._internal.compiler.array import (
     ArrayGetitemCompiler,
     ArrayIterAsertAllUsedCompiler,
     ArraySetitemCompiler,
     NewArrayCompiler,
 )
-from guppylang.std._internal.compiler.frozenarray import FrozenarrayGetitemCompiler
+from guppylang_internals.std._internal.compiler.frozenarray import (
+    FrozenarrayGetitemCompiler,
+)
+from guppylang_internals.tys.builtin import array_type_def, frozenarray_type_def
+
+from guppylang import guppy
 from guppylang.std.iter import SizedIter
 from guppylang.std.option import Option, nothing, some
-from guppylang.tys.builtin import array_type_def, frozenarray_type_def
 
 if TYPE_CHECKING:
     from guppylang.std.lang import owned
@@ -38,7 +42,7 @@ _T = TypeVar("_T")
 _n = TypeVar("_n")
 
 
-@guppy.extend_type(array_type_def)
+@extend_type(array_type_def)
 class array(builtins.list[_T], Generic[_T, _n]):
     """Sequence of homogeneous values with statically known fixed length."""
 
@@ -58,7 +62,7 @@ class array(builtins.list[_T], Generic[_T, _n]):
 
     # `__new__` will be overwritten below to provide actual runtime behaviour for
     # comptime. We still need to hold on to a reference to the Guppy function so
-    # `@guppy.extend_type` can find it
+    # `@extend_type` can find it
     __new_guppy__ = __new__
 
     @guppy
@@ -103,7 +107,7 @@ class ArrayIter(Generic[L, n]):
 def _array_unsafe_getitem(xs: array[L, n], idx: int) -> L: ...
 
 
-@guppy.extend_type(frozenarray_type_def)
+@extend_type(frozenarray_type_def)
 class frozenarray(Generic[T, n]):
     """An immutable array of fixed static size."""
 

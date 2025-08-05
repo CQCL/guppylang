@@ -11,4 +11,4 @@ def foo(x: int) -> int:
     return bar(foo)
 
 
-guppy.compile(foo)
+foo.compile()

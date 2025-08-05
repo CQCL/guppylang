@@ -11,4 +11,4 @@ def main() -> None:
     MyStruct(0)
 
 
-guppy.compile(main)
+main.compile()

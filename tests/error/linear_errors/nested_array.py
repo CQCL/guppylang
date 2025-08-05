@@ -6,4 +6,4 @@ from guppylang.std.builtins import array
 def foo(xs: array[array[int, 10], 20]) -> array[int, 10]:
     return xs[0]
 
-guppy.compile(foo)
+foo.compile()

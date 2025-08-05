@@ -8,4 +8,4 @@ def main[T](x: T @ owned) -> tuple[T, T]:
     return x, x
 
 
-guppy.compile(main)
+main.compile()

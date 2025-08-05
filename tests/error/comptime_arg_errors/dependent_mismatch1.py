@@ -11,4 +11,4 @@ def main() -> None:
     foo(3, array(1, 2))
 
 
-guppy.compile(main)
+main.compile()

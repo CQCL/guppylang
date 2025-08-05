@@ -11,4 +11,4 @@ def test(q: qubit) -> MyStruct:
     return MyStruct(q)
 
 
-guppy.compile(test)
+test.compile()
