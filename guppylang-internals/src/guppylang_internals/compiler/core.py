@@ -39,7 +39,7 @@ from guppylang_internals.definition.value import CompiledCallableDef
 from guppylang_internals.diagnostic import Error
 from guppylang_internals.engine import ENGINE
 from guppylang_internals.error import GuppyError, InternalGuppyError
-from guppylang_internals.std._internal.compiler import GUPPY_EXTENSION
+from guppylang_internals.std._internal.compiler.tket_exts import GUPPY_EXTENSION
 from guppylang_internals.tys.arg import ConstArg, TypeArg
 from guppylang_internals.tys.builtin import nat_type
 from guppylang_internals.tys.common import ToHugrContext
@@ -245,7 +245,7 @@ class CompilerContext(ToHugrContext):
             next_def = self.compiled[next_id, mono_args]
             with track_hugr_side_effects(), self.set_monomorphized_args(mono_args):
                 next_def.compile_inner(self)
-        
+
         # Insert explicit drops for affine types
         # TODO: This is a quick workaround until we can properly insert these drops
         # during linearity checking. See https://github.com/CQCL/guppylang/issues/1082

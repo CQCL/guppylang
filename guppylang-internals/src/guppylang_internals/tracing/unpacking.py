@@ -1,7 +1,6 @@
 from typing import Any, TypeVar
 
 from hugr import ops
-from hugr import tys as ht
 from hugr.build.dfg import DfBase
 
 from guppylang_internals.ast_util import AstNode
@@ -127,10 +126,7 @@ def guppy_object_from_py(
                         f"previous elements. Expected `{elem_ty}`, got `{obj._ty}`."
                     )
             hugr_elem_ty = elem_ty.to_hugr(ctx)
-            wires = [
-                obj._use_wire(None)
-                for obj in objs
-            ]
+            wires = [obj._use_wire(None) for obj in objs]
             return GuppyObject(
                 array_type(elem_ty, len(vs)),
                 builder.add_op(array_new(hugr_elem_ty, len(vs)), *wires),
