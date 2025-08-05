@@ -39,6 +39,11 @@ class ConstBase(Transformable["Const"], ABC):
         """The existential type variables contained in this constant."""
         return set()
 
+    @property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this constant."""
+        return self.ty.bound_vars
+
     def __str__(self) -> str:
         from guppylang_internals.tys.printing import TypePrinter
 
@@ -89,6 +94,11 @@ class BoundConstVar(BoundVar, ConstBase):
     we represent the int argument to `array` as a `ConstArg` containing a
     `BoundConstVar(idx=0)`.
     """
+
+    @property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this constant."""
+        return {self} | self.ty.bound_vars
 
     def cast(self) -> "Const":
         """Casts an implementor of `ConstBase` into a `Const`."""

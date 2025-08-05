@@ -87,26 +87,3 @@ class Instantiator(Transformer):
         if ty.parametrized:
             raise InternalGuppyError("Tried to instantiate under binder")
         return None
-
-
-class BoundVarFinder(Visitor):
-    """Type visitor that looks for occurrences of bound variables."""
-
-    bound_vars: set[BoundVar]
-
-    def __init__(self) -> None:
-        self.bound_vars = set()
-
-    @functools.singledispatchmethod
-    def visit(self, ty: Any) -> bool:  # type: ignore[override]
-        return False
-
-    @visit.register
-    def _transform_BoundTypeVar(self, ty: BoundTypeVar) -> bool:
-        self.bound_vars.add(ty)
-        return False
-
-    @visit.register
-    def _transform_BoundConstVar(self, c: BoundConstVar) -> bool:
-        self.bound_vars.add(c)
-        return False
