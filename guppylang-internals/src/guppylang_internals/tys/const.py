@@ -8,6 +8,7 @@ from guppylang_internals.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
     from guppylang_internals.tys.arg import ConstArg
+    from guppylang_internals.tys.subst import Subst
     from guppylang_internals.tys.ty import Type
 
 

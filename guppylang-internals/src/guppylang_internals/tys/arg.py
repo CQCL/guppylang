@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypeAlias
 
 from hugr import tys as ht
@@ -56,7 +56,7 @@ class TypeArg(ArgumentBase):
     """Argument that can be instantiated for a `TypeParameter`."""
 
     # The type to instantiate
-    ty: "Type"
+    ty: "Type" = field(hash=False)  # Types are not hashable
 
     @property
     def unsolved_vars(self) -> set[ExistentialVar]:
