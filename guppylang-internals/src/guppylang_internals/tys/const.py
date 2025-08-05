@@ -48,15 +48,17 @@ class ConstBase(Transformable["Const"], ABC):
         """Accepts a visitor on this constant."""
         visitor.visit(self)
 
-    def transform(self, transformer: Transformer, /) -> "Const":
-        """Accepts a transformer on this constant."""
-        return transformer.transform(self) or self.cast()
-
     def to_arg(self) -> "ConstArg":
         """Wraps this constant into a type argument."""
         from guppylang_internals.tys.arg import ConstArg
 
         return ConstArg(self.cast())
+
+    def substitute(self, subst: "Subst") -> "Const":
+        """Substitutes existential variables in this constant."""
+        from guppylang_internals.tys.subst import Substituter
+
+        return self.transform(Substituter(subst))
 
 
 @dataclass(frozen=True)
@@ -74,6 +76,10 @@ class ConstValue(ConstBase):
         """Casts an implementor of `ConstBase` into a `Const`."""
         return self
 
+    def transform(self, transformer: Transformer, /) -> "Const":
+        """Accepts a transformer on this constant."""
+        return transformer.transform(self) or self
+
 
 @dataclass(frozen=True)
 class BoundConstVar(BoundVar, ConstBase):
@@ -87,6 +93,12 @@ class BoundConstVar(BoundVar, ConstBase):
     def cast(self) -> "Const":
         """Casts an implementor of `ConstBase` into a `Const`."""
         return self
+
+    def transform(self, transformer: Transformer, /) -> "Const":
+        """Accepts a transformer on this constant."""
+        return transformer.transform(self) or BoundConstVar(
+            transformer.transform(self.ty) or self.ty, self.display_name, self.idx
+        )
 
 
 @dataclass(frozen=True)
@@ -109,6 +121,12 @@ class ExistentialConstVar(ExistentialVar, ConstBase):
     def cast(self) -> "Const":
         """Casts an implementor of `ConstBase` into a `Const`."""
         return self
+
+    def transform(self, transformer: Transformer, /) -> "Const":
+        """Accepts a transformer on this constant."""
+        return transformer.transform(self) or ExistentialConstVar(
+            transformer.transform(self.ty) or self.ty, self.display_name, self.id
+        )
 
 
 Const: TypeAlias = ConstValue | BoundConstVar | ExistentialConstVar

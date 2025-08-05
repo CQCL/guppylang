@@ -991,15 +991,17 @@ def type_check_args(
     comptime_args = iter(func_ty.comptime_args)
     for inp, func_inp in zip(inputs, func_ty.inputs, strict=True):
         a, s = ExprChecker(ctx).check(inp, func_inp.ty.substitute(subst), "argument")
+        subst |= s
         if InputFlags.Inout in func_inp.flags and isinstance(a, PlaceNode):
             a.place = check_place_assignable(
                 a.place, ctx, a, "able to borrow subscripted elements"
             )
         if InputFlags.Comptime in func_inp.flags:
             comptime_arg = next(comptime_args)
-            s = check_comptime_arg(a, comptime_arg.const, func_inp.ty, s)
+            const = comptime_arg.const.substitute(subst)
+            s = check_comptime_arg(a, const, func_inp.ty.substitute(subst), subst)
+            subst |= s
         new_args.append(a)
-        subst |= s
     assert next(comptime_args, None) is None
 
     # If the argument check succeeded, this means that we must have found instantiations
