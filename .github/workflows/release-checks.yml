@@ -42,8 +42,12 @@ jobs:
         run: |
           uv sync --no-sources --no-install-workspace \
             --python ${{ env.PYTHON_HIGHEST }}
-          uv pip install --no-sources guppylang-internals
-          uv pip install guppylang
+          # Install the latest published release of guppylang-internals.
+          uv pip install --no-sources guppylang-internals \
+            --python-version ${{ env.PYTHON_HIGHEST }}
+          # Install the local version of guppylang.
+          uv pip install -e . --no-deps \
+            --python-version ${{ env.PYTHON_HIGHEST }}
           echo "\nDone! Installed dependencies:"
           uv pip list
       - name: Type check with mypy
@@ -58,6 +62,13 @@ jobs:
         run: |
           uv sync --no-sources --no-install-workspace \
             --python ${{ env.PYTHON_HIGHEST }} --extra pytket
+          # Install the latest published release of guppylang-internals.
+          uv pip install --no-sources guppylang-internals \
+            --python-version ${{ env.PYTHON_HIGHEST }}
+          # Install the local version of guppylang.
+          uv pip install -e . --no-deps \
+            --python-version ${{ env.PYTHON_HIGHEST }}
+          echo "\nDone! Installed dependencies:"
       - name: Rerun comptime expression tests and pytket lowering with tket installed
         run: uv run --no-sync pytest tests/integration/test_comptime_expr.py tests/error/test_comptime_expr_errors.py tests/integration/test_pytket_circuits.py
 
