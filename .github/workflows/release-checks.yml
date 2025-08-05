@@ -25,7 +25,7 @@ jobs:
     # Check if we are running on a release PR.
     #
     # release-please always uses this branch name.
-    if: ${{ github.ref == 'refs/heads/release-please--branches--main--components--guppylang' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.head_ref 'refs/heads/release-please--branches--main--components--guppylang' }}
     steps:
       - uses: actions/checkout@v4
       - uses: mozilla-actions/sccache-action@v0.0.9
