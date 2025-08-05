@@ -20,4 +20,4 @@ def main() -> None:
     x: int = overloaded(1.2, 3.4)
 
 
-guppy.compile(main)
+main.compile()

@@ -1,9 +1,9 @@
 from guppylang import guppy
-from guppylang.module import GuppyModule
+from guppylang_internals.decorator import wasm, wasm_module
 
-@guppy.wasm_module("", 0)
+@wasm_module("", 0)
 class Foo:
-    @guppy.wasm
+    @wasm
     def foo(x: int) -> None: ...
 
 @guppy

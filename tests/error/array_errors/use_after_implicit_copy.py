@@ -7,4 +7,4 @@ def main(xs: array[int, 2] @ owned) -> array[int, 2]:
    ys = xs
    return xs
 
-guppy.compile(main)
+main.compile()

@@ -9,4 +9,4 @@ def main(xs: array[int, n], n: nat @comptime) -> None:
     pass
 
 
-guppy.compile(main)
+main.compile()

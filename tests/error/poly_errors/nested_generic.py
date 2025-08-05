@@ -9,4 +9,4 @@ def foo() -> None:
         return x
 
 
-guppy.compile(foo)
+foo.compile()

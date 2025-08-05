@@ -9,4 +9,4 @@ def test(n: int) -> int:
     return s
 
 
-guppy.compile(test)
+test.compile()

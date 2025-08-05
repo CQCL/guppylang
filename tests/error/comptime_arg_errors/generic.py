@@ -14,4 +14,4 @@ def main() -> int:
     return foo(42)
 
 
-guppy.compile(main)
+main.compile()

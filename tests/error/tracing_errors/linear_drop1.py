@@ -7,4 +7,4 @@ def test() -> None:
     q = qubit()
 
 
-guppy.compile(test)
+test.compile()

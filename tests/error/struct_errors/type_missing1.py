@@ -9,4 +9,4 @@ class MyStruct:
     x
 
 
-guppy.compile(MyStruct)
+MyStruct.compile()

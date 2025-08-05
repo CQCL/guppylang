@@ -14,4 +14,4 @@ def main(x: int, y: float) -> None:
     foo[float, int](x, y)
 
 
-guppy.compile(main)
+main.compile()

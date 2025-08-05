@@ -1,10 +1,11 @@
 from guppylang import guppy
+from guppylang_internals.decorator import wasm, wasm_module
 from guppylang.std.quantum import qubit
 
 
-@guppy.wasm_module("", 0)
+@wasm_module("", 0)
 class Foo:
-    @guppy.wasm
+    @wasm
     def foo(self: "Foo", x: qubit) -> qubit: ...
 
 @guppy

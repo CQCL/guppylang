@@ -7,4 +7,4 @@ def test(xs: array[int, 10]) -> None:
     xs.pop()
 
 
-guppy.compile(test)
+test.compile()

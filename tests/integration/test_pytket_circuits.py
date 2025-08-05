@@ -25,7 +25,7 @@ def test_single_qubit_circuit(validate):
     def foo(q: qubit) -> None:
         guppy_circ(q)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -43,7 +43,7 @@ def test_multi_qubit_circuit(validate):
     def foo(q1: qubit, q2: qubit) -> None:
         guppy_circ(q1, q2)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -61,7 +61,7 @@ def test_measure(validate):
     def foo(q: qubit) -> bool:
         return guppy_circ(q)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -79,7 +79,7 @@ def test_measure_multiple(validate):
     def foo(q1: qubit, q2: qubit) -> tuple[bool, bool]:
         return guppy_circ(q1, q2)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -98,7 +98,7 @@ def test_measure_not_last(validate):
     def foo(q: qubit) -> bool:
         return guppy_circ(q)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -114,7 +114,7 @@ def test_load_circuit(validate):
     def foo(q: qubit) -> None:
         guppy_circ(q)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -136,7 +136,7 @@ def test_load_circuits(validate):
         guppy_circ1(q1)
         return guppy_circ2(q2, q3)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -153,7 +153,7 @@ def test_measure_some(validate):
     def foo(q1: qubit, q2: qubit) -> bool:
         return guppy_circ(q1, q2)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -168,7 +168,7 @@ def test_register_arrays_default(validate):
     def foo(default_reg: array[qubit, 2]) -> None:
         return guppy_circ(default_reg)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -187,7 +187,7 @@ def test_register_arrays(validate):
         # lexicographically.
         return guppy_circ(extra_reg, default_reg)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -213,7 +213,7 @@ def test_register_arrays_multiple_measure(validate):
         discard_array(extra_reg2)
         return result
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -233,7 +233,7 @@ def test_register_arrays_mixed(validate):
     ) -> tuple[array[bool, 1], array[bool, 3]]:
         return guppy_circ(q, q2)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")

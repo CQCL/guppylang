@@ -13,4 +13,4 @@ def test() -> S:
     return s
 
 
-guppy.compile(test)
+test.compile()

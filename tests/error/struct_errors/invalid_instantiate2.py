@@ -16,4 +16,4 @@ def foo(s: MyStruct[int, bool]) -> None:
     pass
 
 
-guppy.compile(foo)
+foo.compile()

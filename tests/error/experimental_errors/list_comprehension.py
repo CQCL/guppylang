@@ -6,4 +6,4 @@ def main() -> None:
     [i for i in range(10)]
 
 
-guppy.compile(main)
+main.compile()

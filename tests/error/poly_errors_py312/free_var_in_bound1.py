@@ -8,4 +8,4 @@ def main[x: T]() -> None:
     ...
 
 
-guppy.compile(main)
+main.compile()

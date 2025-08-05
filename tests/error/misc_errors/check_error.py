@@ -7,4 +7,4 @@ def foo(x: float) -> int:
 
 
 # Call check instead of compile
-guppy.check(foo)
+foo.check()

@@ -9,4 +9,4 @@ def main() -> None:
     qs[0] = qubit()  # Leaks the old qubit at index 0
 
 
-guppy.compile(main)
+main.compile()

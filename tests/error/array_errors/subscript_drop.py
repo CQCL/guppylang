@@ -12,4 +12,4 @@ def main() -> qubit:
     return foo()[0]
 
 
-guppy.compile(main)
+main.compile()

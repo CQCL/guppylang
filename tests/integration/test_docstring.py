@@ -31,6 +31,6 @@ def test_docstring(validate):
             string.
             """
 
-    validate(guppy.compile(f))
-    validate(guppy.compile(g))
-    validate(guppy.compile(nested))
+    validate(f.compile())
+    validate(g.compile())
+    validate(nested.compile())

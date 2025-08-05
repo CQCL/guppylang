@@ -6,4 +6,4 @@ class MyStruct(int):
     x: bool
 
 
-guppy.compile(MyStruct)
+MyStruct.compile()

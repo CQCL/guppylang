@@ -12,4 +12,4 @@ def test_with_owned(validate):
 
         return with_owned(q, helper)
 
-    validate(guppy.compile(measure_and_reset))
+    validate(measure_and_reset.compile())

@@ -15,4 +15,4 @@ def main(_: Struct[F]) -> float:
     return F
 
 
-guppy.compile(main)
+main.compile()

@@ -12,4 +12,4 @@ def test(xs: array[int, 0]) -> None:
     foo([])  # But we currently cannot infer the type here
 
 
-guppy.compile(test)
+test.compile()

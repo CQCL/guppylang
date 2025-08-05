@@ -13,4 +13,4 @@ def test(q: qubit, b: bool) -> None:
         use(q)
 
 
-guppy.compile(test)
+test.compile()

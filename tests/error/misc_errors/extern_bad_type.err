@@ -2,7 +2,7 @@ Error: Non-parametric type (at $FILE:3:0)
   | 
 1 | from guppylang.decorator import guppy
 2 | 
-3 | x = guppy.extern("x", ty="float[int]")
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Type `float` is not parametric
+3 | x = guppy._extern("x", ty="float[int]")
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Type `float` is not parametric
 
 Guppy compilation failed due to 1 previous error

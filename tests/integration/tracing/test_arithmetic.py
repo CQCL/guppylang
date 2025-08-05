@@ -126,7 +126,7 @@ def test_angle(validate):
         """Dummy main function"""
         add, sub, mul, div
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_dunder_coercions(validate):
@@ -154,12 +154,12 @@ def test_dunder_coercions(validate):
     def test6(x: float, y: int) -> float:
         return x + y
 
-    validate(guppy.compile(test1))
-    validate(guppy.compile(test2))
-    validate(guppy.compile(test3))
-    validate(guppy.compile(test4))
-    validate(guppy.compile(test5))
-    validate(guppy.compile(test6))
+    validate(test1.compile())
+    validate(test2.compile())
+    validate(test3.compile())
+    validate(test4.compile())
+    validate(test5.compile())
+    validate(test6.compile())
 
 
 def test_const(validate):
@@ -185,7 +185,7 @@ def test_const(validate):
     def test4() -> float:
         return x / 0.5
 
-    validate(guppy.compile(test1))
-    validate(guppy.compile(test2))
-    validate(guppy.compile(test3))
-    validate(guppy.compile(test4))
+    validate(test1.compile())
+    validate(test2.compile())
+    validate(test3.compile())
+    validate(test4.compile())

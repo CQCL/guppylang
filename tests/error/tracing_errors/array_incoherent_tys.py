@@ -7,4 +7,4 @@ def test(xs: array[int, 10]) -> None:
     xs[1] = 1.0
 
 
-guppy.compile(test)
+test.compile()

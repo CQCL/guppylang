@@ -10,4 +10,4 @@ def main() -> None:
    barrier(qubit())
 
 
-guppy.compile(main)
+main.compile()

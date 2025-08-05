@@ -1,8 +1,8 @@
-from guppylang.decorator import guppy
-from guppylang.tys.ty import NoneType
+from guppylang import guppy
+from guppylang_internals.decorator import custom_type
+from guppylang_internals.tys.ty import NoneType
 
-
-@guppy.type(lambda _, ctx: NoneType().to_hugr(ctx))
+@custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
 class MyType:
     """A type where the `__iter__` method has the wrong signature."""
 
@@ -17,4 +17,4 @@ def test(x: MyType) -> None:
         pass
 
 
-guppy.compile(test)
+test.compile()

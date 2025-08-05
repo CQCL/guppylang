@@ -7,4 +7,4 @@ def main() -> None:
     xs = array()
 
 
-guppy.compile(main)
+main.compile()

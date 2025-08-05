@@ -9,4 +9,4 @@ from guppylang.std.quantum import qubit
 def foo(f: "Callable[[], qubit @owned]") -> None: ...
 
 
-guppy.compile(foo)
+foo.compile()

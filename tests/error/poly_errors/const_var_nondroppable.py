@@ -1,11 +1,11 @@
 from typing import Generic
 
 from hugr import tys
+from guppylang import guppy
+from guppylang_internals.decorator import custom_type
 
-from guppylang.decorator import guppy
 
-
-@guppy.type(tys.Tuple(), droppable=False)
+@custom_type(tys.Tuple(), droppable=False)
 class MyType:
     pass
 
@@ -23,4 +23,4 @@ def main(_: Struct[X]) -> None:
     pass
 
 
-guppy.compile(main)
+main.compile()

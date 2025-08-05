@@ -15,4 +15,4 @@ def test_hand(validate):
     def test() -> int:
         return a  # Intentional use of an undefined variable  # noqa: F821
 
-    validate(guppy.compile(test))
+    validate(test.compile())

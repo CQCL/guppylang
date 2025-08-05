@@ -12,4 +12,4 @@ def test(q: qubit @owned) -> None:
    foo(q)
 
 
-guppy.compile(test)
+test.compile()

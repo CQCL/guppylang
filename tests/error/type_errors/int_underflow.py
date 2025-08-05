@@ -6,4 +6,4 @@ def foo() -> int:
     return -9_223_372_036_854_775_809
 
 
-guppy.compile(foo)
+foo.compile()

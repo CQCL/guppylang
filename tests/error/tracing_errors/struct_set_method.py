@@ -16,4 +16,4 @@ def test(x: int) -> None:
     s.foo = 0
 
 
-guppy.compile(test)
+test.compile()

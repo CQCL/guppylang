@@ -14,4 +14,4 @@ def main() -> None:
     f = foo[array[int, 10]]
 
 
-guppy.compile(main)
+main.compile()

@@ -18,4 +18,4 @@ def main() -> None:
     overloaded()
 
 
-guppy.compile(main)
+main.compile()

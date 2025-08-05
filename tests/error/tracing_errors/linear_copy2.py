@@ -8,4 +8,4 @@ def test(q: qubit) -> None:
     cx(q, r)
 
 
-guppy.compile(test)
+test.compile()

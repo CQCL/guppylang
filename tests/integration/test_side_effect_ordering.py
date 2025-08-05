@@ -6,7 +6,7 @@ from hugr import ops, Hugr, Node
 from hugr.std import PRELUDE
 
 from guppylang import guppy
-from guppylang.std._internal.compiler.tket_exts import (
+from guppylang_internals.std._internal.compiler.tket_exts import (
     RESULT_EXTENSION,
     QUANTUM_EXTENSION,
 )
@@ -62,11 +62,11 @@ def test_result_panic(validate):
         exit("Foo!", 1)
         result("c", 10.5)
 
-    compiled = guppy.compile(test)
+    compiled = test.compile()
     validate(compiled)
 
     # Check that we have the expected order edges between the results
-    hugr = compiled.module
+    hugr = compiled.modules[0]
     [a] = find_ext_nodes(hugr, RESULT_EXTENSION.get_op("result_bool").qualified_name())
     [b] = find_ext_nodes(hugr, RESULT_EXTENSION.get_op("result_int").qualified_name())
     [p] = find_ext_nodes(hugr, PRELUDE.get_op("panic").qualified_name())
@@ -83,11 +83,11 @@ def test_qalloc_qfree(validate):
         q2 = qubit()
         measure(q2)
 
-    compiled = guppy.compile(test)
+    compiled = test.compile()
     validate(compiled)
 
     # Check that we have the expected order edges between the allocations and frees
-    hugr = compiled.module
+    hugr = compiled.modules[0]
     [a1, a2] = find_ext_nodes(hugr, QUANTUM_EXTENSION.get_op("QAlloc").qualified_name())
     [d1] = find_ext_nodes(hugr, QUANTUM_EXTENSION.get_op("QFree").qualified_name())
     [d2] = find_ext_nodes(
@@ -109,11 +109,11 @@ def test_call(validate):
         f = my_discard
         f(q2)
 
-    compiled = guppy.compile(test)
+    compiled = test.compile()
     validate(compiled)
 
     # Check that we have the expected order edges between the allocations and calls
-    hugr = compiled.module
+    hugr = compiled.modules[0]
     [a1, a2] = find_ext_nodes(hugr, QUANTUM_EXTENSION.get_op("QAlloc").qualified_name())
     [d1] = [node for node, data in hugr.nodes() if isinstance(data.op, ops.Call)]
     [d2] = [
@@ -130,11 +130,11 @@ def test_nested(validate):
         qs2 = array(qubit() for _ in range(10))
         array(discard(q) for q in qs2)
 
-    compiled = guppy.compile(test)
+    compiled = test.compile()
     validate(compiled)
 
     # Check that we have the expected order edges between the comprehension tail loops
-    hugr = compiled.module
+    hugr = compiled.modules[0]
     [l1, l2, l3, l4] = [
         node for node, data in hugr.nodes() if isinstance(data.op, ops.TailLoop)
     ]

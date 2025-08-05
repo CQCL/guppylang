@@ -13,4 +13,4 @@ def foo(qs: list[tuple[bool, qubit]] @owned) -> list[int]:
     return [42 for b, q in qs if b if bar(q)]
 
 
-guppy.compile(foo)
+foo.compile()

@@ -9,4 +9,4 @@ def foo(q: qubit @owned) -> None:
         pass
 
 
-guppy.compile(foo)
+foo.compile()

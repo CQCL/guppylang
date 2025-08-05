@@ -11,4 +11,4 @@ def main() -> None:
     foo(nat(1 + 2))
 
 
-guppy.compile(main)
+main.compile()

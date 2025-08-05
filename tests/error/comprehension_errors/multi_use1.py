@@ -8,4 +8,4 @@ def foo(qs: list[qubit] @owned, xs: list[int]) -> list[qubit]:
     return [q for q in qs for x in xs]
 
 
-guppy.compile(foo)
+foo.compile()
