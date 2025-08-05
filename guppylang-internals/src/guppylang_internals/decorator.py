@@ -1,7 +1,6 @@
-import builtins
+from __future__ import annotations
+
 import inspect
-from collections.abc import Callable, Sequence
-from types import FrameType
 from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 from hugr import ops
@@ -31,12 +30,9 @@ from guppylang_internals.std._internal.compiler.wasm import (
     WasmModuleDiscardCompiler,
     WasmModuleInitCompiler,
 )
-from guppylang_internals.tys.arg import Argument
 from guppylang_internals.tys.builtin import (
     WasmModuleTypeDef,
 )
-from guppylang_internals.tys.param import Parameter
-from guppylang_internals.tys.subst import Inst
 from guppylang_internals.tys.ty import (
     FuncInput,
     FunctionType,
@@ -46,7 +42,14 @@ from guppylang_internals.tys.ty import (
 )
 
 if TYPE_CHECKING:
+    import builtins
+    from collections.abc import Callable, Sequence
+    from types import FrameType
+
     from guppylang.defs import GuppyDefinition, GuppyFunctionDefinition
+    from guppylang_internals.tys.arg import Argument
+    from guppylang_internals.tys.param import Parameter
+    from guppylang_internals.tys.subst import Inst
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -71,7 +74,7 @@ def custom_function(
     higher_order_value: bool = True,
     name: str = "",
     signature: FunctionType | None = None,
-) -> Callable[[Callable[P, T]], "GuppyFunctionDefinition[P, T]"]:
+) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
     """Decorator to add custom typing or compilation behaviour to function decls.
 
     Optionally, usage of the function as a higher-order value can be disabled. In
@@ -104,7 +107,7 @@ def hugr_op(
     higher_order_value: bool = True,
     name: str = "",
     signature: FunctionType | None = None,
-) -> Callable[[Callable[P, T]], "GuppyFunctionDefinition[P, T]"]:
+) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
     """Decorator to annotate function declarations as HUGR ops.
 
     Args:
@@ -179,7 +182,7 @@ def custom_type(
 
 def wasm_module(
     filename: str, filehash: int
-) -> Callable[[builtins.type[T]], "GuppyDefinition"]:
+) -> Callable[[builtins.type[T]], GuppyDefinition]:
     from guppylang.defs import GuppyDefinition
 
     def dec(cls: builtins.type[T]) -> GuppyDefinition:
@@ -234,7 +237,7 @@ def wasm_module(
     return dec
 
 
-def wasm(f: Callable[P, T]) -> "GuppyFunctionDefinition[P, T]":
+def wasm(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
     from guppylang.defs import GuppyFunctionDefinition
 
     func = RawWasmFunctionDef(
