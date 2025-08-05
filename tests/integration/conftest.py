@@ -66,7 +66,7 @@ def _emulate_fn(is_flt: bool = False):
             result("_test_output", o)
 
         entry = flt_entry if is_flt else int_entry
-        res = entry.emulator(0).coinflip_sim().with_seed(42).run(n_qubits=n_qubits)
+        res = entry.emulator(n_qubits).coinflip_sim().with_seed(42).run()
         num = next(v for k, v in res.results[0].entries if k == "_test_output")
         if num != expected:
             raise LLVMException(
