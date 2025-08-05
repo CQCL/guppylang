@@ -2,7 +2,7 @@ import builtins
 import inspect
 from collections.abc import Callable, Sequence
 from types import FrameType
-from typing import ParamSpec, TypeVar
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 from hugr import ops
 from hugr import tys as ht
@@ -27,6 +27,7 @@ from guppylang_internals.definition.custom import (
 )
 from guppylang_internals.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang_internals.definition.wasm import RawWasmFunctionDef
+from guppylang_internals.dummy_decorator import _dummy_custom_decorator, sphinx_running
 from guppylang_internals.engine import DEF_STORE
 from guppylang_internals.std._internal.checker import WasmCallChecker
 from guppylang_internals.std._internal.compiler.wasm import (
@@ -243,4 +244,11 @@ def wasm(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
     return GuppyFunctionDefinition(func)
 
 
-# TODO sphinx hack for custom decorators
+# Override decorators with dummy versions if we're running a sphinx build
+if not TYPE_CHECKING and sphinx_running():
+    custom_function = _dummy_custom_decorator
+    hugr_op = _dummy_custom_decorator
+    extend_type = _dummy_custom_decorator
+    custom_type = _dummy_custom_decorator
+    wasm_module = _dummy_custom_decorator
+    wasm = _dummy_custom_decorator()
