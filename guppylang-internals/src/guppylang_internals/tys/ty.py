@@ -506,7 +506,7 @@ class FunctionType(ParametrizedTypeBase):
             # However, we have to down-shift the de Bruijn index.
             if arg is None:
                 param = param.with_idx(len(remaining_params))
-                remaining_params.append(param)
+                remaining_params.append(param.instantiate_bounds(full_inst))
                 arg = param.to_bound()
 
             # Set the `preserve` flag for instantiated tuples and None
