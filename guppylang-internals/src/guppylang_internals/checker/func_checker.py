@@ -208,7 +208,7 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
     param_var_mapping: dict[str, Parameter] = {}
     if sys.version_info >= (3, 12):
         for i, param_node in enumerate(func_def.type_params):
-            param = parse_parameter(param_node, i, globals)
+            param = parse_parameter(param_node, i, globals, param_var_mapping)
             param_var_mapping[param.name] = param
 
     input_nodes = []
