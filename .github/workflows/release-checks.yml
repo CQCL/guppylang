@@ -43,6 +43,7 @@ jobs:
           uv sync --no-sources --no-install-workspace \
             --python ${{ env.PYTHON_HIGHEST }}
           uv pip install --no-sources guppylang-internals
+          uv pip install guppylang
           echo "\nDone! Installed dependencies:"
           uv pip list
       - name: Type check with mypy
