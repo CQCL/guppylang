@@ -4,7 +4,7 @@ from typing import Any
 
 from guppylang_internals.error import InternalGuppyError
 from guppylang_internals.tys.arg import Argument, ConstArg, TypeArg
-from guppylang_internals.tys.common import Transformer, Visitor
+from guppylang_internals.tys.common import Transformer
 from guppylang_internals.tys.const import (
     BoundConstVar,
     Const,
@@ -18,7 +18,7 @@ from guppylang_internals.tys.ty import (
     Type,
     TypeBase,
 )
-from guppylang_internals.tys.var import BoundVar, ExistentialVar
+from guppylang_internals.tys.var import ExistentialVar
 
 Subst = dict[ExistentialVar, Type | Const]
 Inst = Sequence[Argument]
