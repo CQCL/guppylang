@@ -41,7 +41,6 @@ from guppylang_internals.error import GuppyError, InternalGuppyError
 from guppylang_internals.nodes import GlobalCall
 from guppylang_internals.span import SourceMap, Span, ToSpan
 from guppylang_internals.std._internal.compiler.array import (
-    array_discard_empty,
     array_new,
     array_unpack,
 )

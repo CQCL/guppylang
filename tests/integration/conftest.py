@@ -47,7 +47,12 @@ def _emulate_fn(is_flt: bool = False):
     from guppylang.decorator import guppy
     from guppylang.std.builtins import result
 
-    def f(f: GuppyDefinition, expected: Any, num_qubits: int | None = None, args: list[Any] | None = None):
+    def f(
+        f: GuppyDefinition,
+        expected: Any,
+        num_qubits: int | None = None,
+        args: list[Any] | None = None,
+    ):
         if num_qubits:
             n_qubits = num_qubits
         else:

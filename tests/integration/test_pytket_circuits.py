@@ -5,8 +5,8 @@ from importlib.util import find_spec
 import pytest
 
 from guppylang.decorator import guppy
-from guppylang.std.quantum import qubit, discard_array, discard, x
-from guppylang.std.builtins import array, comptime
+from guppylang.std.quantum import qubit, discard_array, discard
+from guppylang.std.builtins import array
 
 tket_installed = find_spec("tket") is not None
 
@@ -285,7 +285,7 @@ def test_symbolic(validate):
         beta = 1.2
         return guppy_circ(q1, q2, alpha, beta)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -311,7 +311,7 @@ def test_symbolic_array(validate):
         params = array(0.3, 1.2)
         return guppy_circ(reg, params)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
@@ -337,11 +337,10 @@ def test_symbolic_exec(validate, run_int_fn):
         discard(q)
         return res
 
-    validate(guppy.compile(main))
+    validate(main.compile())
     run_int_fn(main, 0, num_qubits=2)
 
 
-# @pytest.mark.skip("TODO: Investigate runtime error")
 def test_exec(validate, run_int_fn):
     from pytket import Circuit
 
@@ -355,7 +354,7 @@ def test_exec(validate, run_int_fn):
     def foo(q1: qubit, q2: qubit) -> tuple[bool, bool]:
         res = guppy_circ(q1, q2)
         return res
-    
+
     @guppy
     def main() -> int:
         q1 = qubit()
@@ -365,6 +364,5 @@ def test_exec(validate, run_int_fn):
         discard(q2)
         return int(res[0])
 
-
-    validate(guppy.compile(main))
+    validate(main.compile())
     run_int_fn(main, 1, num_qubits=2)
