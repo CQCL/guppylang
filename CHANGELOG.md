@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.21.1](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.0...guppylang-v0.21.1) (2025-08-05)
+
+
+### Bug Fixes
+
+* **guppylang-internals:** Fix circular import for custom decorators ([#1146](https://github.com/CQCL/guppylang/issues/1146)) ([d8474d8](https://github.com/CQCL/guppylang/commit/d8474d8af3d394275268cd3d0754ff06ecb9bcc2)), closes [#1145](https://github.com/CQCL/guppylang/issues/1145)
+* overwrite generator metadata with guppylang version ([#1147](https://github.com/CQCL/guppylang/issues/1147)) ([2e20693](https://github.com/CQCL/guppylang/commit/2e206933b4f87515e375034ab108523bad7ebb5e)), closes [#1138](https://github.com/CQCL/guppylang/issues/1138)
+* **std:** remove deprecated decorators ([#1151](https://github.com/CQCL/guppylang/issues/1151)) ([b309ba5](https://github.com/CQCL/guppylang/commit/b309ba524b70ebc704facdeebc709f78b273e449))
+* Support `None` value ([#1149](https://github.com/CQCL/guppylang/issues/1149)) ([7f606c7](https://github.com/CQCL/guppylang/commit/7f606c778d98312a0d1c4a9c7a27448c24d80585)), closes [#1148](https://github.com/CQCL/guppylang/issues/1148)
+
+
+### Documentation
+
+* Fix docs build ([#1142](https://github.com/CQCL/guppylang/issues/1142)) ([4dfd575](https://github.com/CQCL/guppylang/commit/4dfd575bcdfdf1e2db4e61f2f406fff27e0c08f7))
+
 ## [0.21.0](https://github.com/CQCL/guppylang/compare/guppylang-v0.20.0...guppylang-v0.21.0) (2025-08-04)
 
 
