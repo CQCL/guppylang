@@ -7,10 +7,6 @@ from typing import TYPE_CHECKING, ParamSpec, TypeVar
 from hugr import ops
 from hugr import tys as ht
 
-from guppylang.defs import (
-    GuppyDefinition,
-    GuppyFunctionDefinition,
-)
 from guppylang_internals.compiler.core import (
     CompilerContext,
     GlobalConstId,
@@ -49,6 +45,9 @@ from guppylang_internals.tys.ty import (
     NumericType,
 )
 
+if TYPE_CHECKING:
+    from guppylang.defs import GuppyDefinition, GuppyFunctionDefinition
+
 T = TypeVar("T")
 P = ParamSpec("P")
 
@@ -72,13 +71,14 @@ def custom_function(
     higher_order_value: bool = True,
     name: str = "",
     signature: FunctionType | None = None,
-) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
+) -> Callable[[Callable[P, T]], "GuppyFunctionDefinition[P, T]"]:
     """Decorator to add custom typing or compilation behaviour to function decls.
 
     Optionally, usage of the function as a higher-order value can be disabled. In
     that case, the function signature can be omitted if a custom call compiler is
     provided.
     """
+    from guppylang.defs import GuppyFunctionDefinition
 
     def dec(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         call_checker = checker or DefaultCallChecker()
@@ -104,7 +104,7 @@ def hugr_op(
     higher_order_value: bool = True,
     name: str = "",
     signature: FunctionType | None = None,
-) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
+) -> Callable[[Callable[P, T]], "GuppyFunctionDefinition[P, T]"]:
     """Decorator to annotate function declarations as HUGR ops.
 
     Args:
@@ -120,6 +120,7 @@ def hugr_op(
 
 def extend_type(defn: TypeDef) -> Callable[[type], type]:
     """Decorator to add new instance functions to a type."""
+    from guppylang.defs import GuppyDefinition
 
     def dec(c: type) -> type:
         for val in c.__dict__.values():
@@ -148,6 +149,8 @@ def custom_type(
     For generic types, a callable may be passed that takes the type arguments of a
     concrete instantiation.
     """
+    from guppylang.defs import GuppyDefinition
+
     mk_hugr_ty = (
         (lambda args, ctx: hugr_ty) if isinstance(hugr_ty, ht.Type) else hugr_ty
     )
@@ -176,7 +179,9 @@ def custom_type(
 
 def wasm_module(
     filename: str, filehash: int
-) -> Callable[[builtins.type[T]], GuppyDefinition]:
+) -> Callable[[builtins.type[T]], "GuppyDefinition"]:
+    from guppylang.defs import GuppyDefinition
+
     def dec(cls: builtins.type[T]) -> GuppyDefinition:
         # N.B. Only one module per file and vice-versa
         wasm_module = WasmModuleTypeDef(
@@ -229,7 +234,9 @@ def wasm_module(
     return dec
 
 
-def wasm(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+def wasm(f: Callable[P, T]) -> "GuppyFunctionDefinition[P, T]":
+    from guppylang.defs import GuppyFunctionDefinition
+
     func = RawWasmFunctionDef(
         DefId.fresh(),
         f.__name__,
