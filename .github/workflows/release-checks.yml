@@ -27,7 +27,7 @@ jobs:
     # release-please always uses the branch name `release-please--branches--main--components--guppylang`
     # if: ${{ github.ref == 'refs/heads/release-please--branches--main--components--guppylang' }}
     # TODO: Remove. Temporary trigger for testing in the PR.
-    if: ${{ github.ref == 'ab/release-checks' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.head_ref == 'ab/release-checks' }}
     steps:
       - uses: actions/checkout@v4
       - uses: mozilla-actions/sccache-action@v0.0.9
