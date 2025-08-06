@@ -24,12 +24,7 @@ from guppylang_internals.definition.custom import (
 )
 from guppylang_internals.definition.declaration import RawFunctionDecl
 from guppylang_internals.definition.extern import RawExternDef
-from guppylang_internals.definition.function import (
-    CompiledFunctionDef,
-    ParsedFunctionDef,
-    PyFunc,
-    RawFunctionDef,
-)
+from guppylang_internals.definition.function import RawFunctionDef
 from guppylang_internals.definition.overloaded import OverloadedFunctionDef
 from guppylang_internals.definition.parameter import (
     ConstVarDef,
@@ -54,11 +49,10 @@ from guppylang_internals.tys.ty import (
     NoneType,
     NumericType,
 )
-from hugr import ext as he
 from hugr import ops
 from hugr import tys as ht
 from hugr import val as hv
-from hugr.package import FuncDefnPointer, ModulePointer
+from hugr.package import ModulePointer
 from typing_extensions import dataclass_transform, deprecated
 
 from guppylang.defs import (
@@ -184,60 +178,6 @@ class _Guppy:
         signature: FunctionType | None = None,
     ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
         return hugr_op(op, checker, higher_order_value, name, signature)
-
-    def lower_op(
-        self,
-        hugr_ext: he.Extension,
-        checker: CustomCallChecker | None = None,
-        higher_order_value: bool = True,
-        name: str = "",
-    ) -> Callable[[F], F]:
-        """Lowerable operation that is linked to an automatically generated Hugr op."""
-        from guppylang.engine import ENGINE
-
-        def dec(f: F) -> F:
-            defn = RawFunctionDef(DefId.fresh(), f.__name__, None, f)
-            DEF_STORE.register_def(defn, get_calling_frame())
-
-            defn = GuppyDefinition(defn)
-
-            self.check(defn)
-
-            guppy_parsed = ENGINE.get_parsed(defn.id)
-            assert isinstance(guppy_parsed, ParsedFunctionDef)
-            ty = guppy_parsed.ty
-
-            compiled_defn = self.compile(defn)
-
-            op_def = he.OpDef(
-                name=f.__name__,
-                description=f.__doc__ or "",
-                signature=he.OpDefSig(poly_func=ty.to_hugr_poly()),
-                lower_funcs=[
-                    he.FixedHugr(
-                        ht.ExtensionSet(),
-                        compiled_defn.module,
-                    )
-                ],
-            )
-
-            hugr_ext.add_op_def(op_def)
-
-            def empty_def() -> None: ...
-
-            def op(
-                op_def: he.OpDef,
-            ) -> Callable[[ht.FunctionType, Inst], ops.DataflowOp]:
-                def dec(ty: ht.FunctionType, inst: Inst) -> ops.DataflowOp:
-                    return ops.ExtOp(op_def, ty)
-
-                return dec
-
-            return self.custom(
-                OpCompiler(op(op_def)), checker, higher_order_value, name, ty
-            )(empty_def)  # type: ignore[return-value]
-
-        return dec
 
     def declare(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         defn = RawFunctionDecl(DefId.fresh(), f.__name__, None, f)

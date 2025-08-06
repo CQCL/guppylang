@@ -3,9 +3,11 @@ from __future__ import annotations
 import inspect
 from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
+from hugr import ext as he
 from hugr import ops
 from hugr import tys as ht
 
+from guppylang.defs import GuppyDefinition
 from guppylang_internals.compiler.core import (
     CompilerContext,
     GlobalConstId,
@@ -20,6 +22,7 @@ from guppylang_internals.definition.custom import (
     OpCompiler,
     RawCustomFunctionDef,
 )
+from guppylang_internals.definition.function import RawFunctionDef
 from guppylang_internals.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang_internals.definition.wasm import RawWasmFunctionDef
 from guppylang_internals.dummy_decorator import _dummy_custom_decorator, sphinx_running
@@ -46,7 +49,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from types import FrameType
 
-    from guppylang.defs import GuppyDefinition, GuppyFunctionDefinition
+    from guppylang.defs import GuppyFunctionDefinition
     from guppylang_internals.tys.arg import Argument
     from guppylang_internals.tys.param import Parameter
     from guppylang_internals.tys.subst import Inst
@@ -119,6 +122,46 @@ def hugr_op(
         name: The name of the function.
     """
     return custom_function(OpCompiler(op), checker, higher_order_value, name, signature)
+
+
+def lower_op(
+    hugr_ext: he.Extension,
+) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
+    """Decorator to automatically generate a hugr OpDef and add to the user-provided
+    hugr extension.
+
+    Args:
+        hugr_ext: Hugr extension for the hugr OpDef to be added
+    """
+
+    def dec(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+        defn = RawFunctionDef(DefId.fresh(), f.__name__, None, f)
+        DEF_STORE.register_def(defn, get_calling_frame())
+
+        defn = GuppyDefinition(defn)
+
+        compiled_defn = defn.compile()
+
+        def op(ty: ht.FunctionType, inst: Inst, ctx: CompilerContext) -> ops.DataflowOp:
+            op_def = he.OpDef(
+                name=f.__name__,
+                description=f.__doc__ or "",
+                signature=he.OpDefSig(poly_func=ty),
+                lower_funcs=[
+                    he.FixedHugr(
+                        ht.ExtensionSet(),
+                        compiled_defn,
+                    )
+                ],
+            )
+
+            hugr_ext.add_op_def(op_def)
+
+            return ops.ExtOp(op_def, ty, [arg.to_hugr(ctx) for arg in inst])
+
+        return custom_function(OpCompiler(op))(f)
+
+    return dec
 
 
 def extend_type(defn: TypeDef) -> Callable[[type], type]:
