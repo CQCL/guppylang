@@ -70,9 +70,8 @@ test = [
 pytket_integration = [{ include-group = "test" }, "guppylang[pytket]"]
 
 [tool.uv]
-prerelease = "allow"
 override-dependencies = [
-    "selene-hugr-qis-compiler @ file:///Users/tatiana.sedelnikov/Documents/Code/selene/dist/selene_hugr_qis_compiler-0.2.0rc2-cp310-abi3-macosx_11_0_arm64.whl",
+    "selene-hugr-qis-compiler @ file:///Users/tatiana.sedelnikov/Documents/Code/selene/dist/selene_hugr_qis_compiler-0.2.0-cp310-abi3-macosx_11_0_arm64.whl",
 ]
 
 [tool.uv.workspace]

@@ -63,6 +63,7 @@ from guppylang_internals.nodes import (
 from guppylang_internals.std._internal.compiler.arithmetic import (
     UnsignedIntVal,
     convert_ifromusize,
+    convert_itousize,
 )
 from guppylang_internals.std._internal.compiler.array import (
     array_convert_from_std_array,
@@ -70,6 +71,7 @@ from guppylang_internals.std._internal.compiler.array import (
     array_map,
     array_new,
     array_new_all_borrowed,
+    array_return,
     standard_array_type,
     unpack_array,
 )
@@ -554,6 +556,11 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             op_name = f"result_array_{base_name}"
             size_arg = node.array_len.to_arg().to_hugr(self.ctx)
             extra_args = [size_arg, *extra_args]
+            # As `borrow_array`s used by Guppy are, we need to clone it (knowing that
+            # all elements in it are copyable) to avoid linearity violations when
+            # both passing it to the result operation and returning it.
+            # value_wire, inout_wire = self.builder.add_op(array_clone(base_ty, 
+            # size_arg), value_wire)
             if is_bool_type(node.base_ty):
                 # We need to coerce a read on all the array elements if they are bools.
                 array_read = array_read_bool(self.ctx)
@@ -578,6 +585,8 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         op = ops.ExtOp(RESULT_EXTENSION.get_op(op_name), signature=sig, args=args)
 
         self.builder.add_op(op, value_wire)
+        # if node.array_len is not None:
+        #    self._update_inout_ports(node.args, [inout_wire], node.func_ty)
         return self._pack_returns([], NoneType())
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
@@ -671,7 +680,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         array_var = Variable(next(tmp_vars), array_ty, node)
         count_var = Variable(next(tmp_vars), int_type(), node)
         hugr_elt_ty = node.elt_ty.to_hugr(self.ctx)
-        # Initialise array with `None`s
+        # Initialise empty array.
         self.dfg[array_var] = self.builder.add_op(
             array_new_all_borrowed(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx))
         )
@@ -681,8 +690,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         with self._build_generators([node.generator], [array_var, count_var]):
             elt = self.visit(node.elt)
             array, count = self.dfg[array_var], self.dfg[count_var]
-            [], [self.dfg[array_var]] = self._build_method_call(
-                array_ty, "__setitem__", node, [array, count, elt], array_ty.args
+            idx = self.builder.add_op(convert_itousize(), count)
+            self.dfg[array_var] = self.builder.add_op(
+                array_return(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx)),
+                array,
+                idx,
+                elt,
             )
             # Update `count += 1`
             one = self.builder.load(hugr.std.int.IntVal(1, width=NumericType.INT_WIDTH))

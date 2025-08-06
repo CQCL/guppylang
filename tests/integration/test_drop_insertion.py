@@ -1,7 +1,7 @@
 from hugr.package import ModulePointer
 from guppylang.decorator import guppy
 from guppylang.std.array import array
-from guppylang.std._internal.compiler.tket_exts import GUPPY_EXTENSION
+from guppylang_internals.std._internal.compiler.tket_exts import GUPPY_EXTENSION
 from guppylang.std.lang import owned
 
 from hugr import tys, ops

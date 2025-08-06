@@ -17,7 +17,6 @@ from guppylang_internals.definition.value import CallReturnWires
 from guppylang_internals.error import InternalGuppyError
 from guppylang_internals.std._internal.compiler.arithmetic import convert_itousize
 from guppylang_internals.std._internal.compiler.prelude import (
-    build_expect_none,
     build_unwrap_right,
 )
 from guppylang_internals.tys.arg import ConstArg, TypeArg
@@ -212,6 +211,13 @@ def array_new_all_borrowed(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     return _instantiate_array_op("new_all_borrowed", elem_ty, length, [], [arr_ty])
 
 
+def array_clone(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array `clone` operation."""
+    assert elem_ty.type_bound() == ht.TypeBound.Copyable
+    arr_ty = array_type(elem_ty, length)
+    return _instantiate_array_op("clone", elem_ty, length, [arr_ty], [arr_ty, arr_ty])
+
+
 # ------------------------------------------------------
 # --------- Custom compilers for non-native ops --------
 # ------------------------------------------------------
@@ -264,9 +270,7 @@ class NewArrayCompiler(ArrayCompiler):
 
     def build_linear_array(self, elems: list[Wire]) -> Wire:
         """Lowers a call to `array.__new__` for linear arrays."""
-        return self.builder.add_op(
-            array_new(self.elem_ty, len(elems)), *elems
-        )
+        return self.builder.add_op(array_new(self.elem_ty, len(elems)), *elems)
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         if self.elem_ty.type_bound() == ht.TypeBound.Linear:
@@ -328,12 +332,21 @@ class ArrayGetitemCompiler(ArrayCompiler):
         length = ht.VariableArg(1, ht.BoundedNatParam())
 
         idx = func.add_op(convert_itousize(), func.inputs()[1])
-        opt_elem, arr = func.add_op(
-            array_get(elem_ty, length),
+
+        # As copyable elements can be used multiple times, we need to swap the element
+        # back after initially borrowing it to get the value.
+        # (`array_get` cannot be used to to current bool lowering limitations)
+        elem, arr = func.add_op(
+            array_borrow(elem_ty, length),
             func.inputs()[0],
             idx,
         )
-        elem = build_unwrap_right(func, opt_elem, "Array index out of bounds")
+        arr = func.add_op(
+            array_return(elem_ty, length),
+            arr,
+            idx,
+            elem,
+        )
 
         func.set_outputs(elem, arr)
 
@@ -522,40 +535,10 @@ class ArrayIterAsertAllUsedCompiler(ArrayCompiler):
     """Compiler for the `ArrayIter._assert_all_used` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
-        # For linear array iterators, map the array of optional elements to an
-        # `array[None, n]` that we can discard.
         if self.elem_ty.type_bound() == ht.TypeBound.Linear:
-            elem_opt_ty = ht.Option(self.elem_ty)
-            unit_ty = ht.UnitSum(1)
-            # Instantiate `unwrap_none` function
-            func = self.builder.load_function(
-                self.define_unwrap_none_helper(),
-                type_args=[ht.TypeTypeArg(self.elem_ty)],
-                instantiation=ht.FunctionType([elem_opt_ty], [unit_ty]),
-            )
-            # Map it over the array so that the resulting array is no longer linear and
-            # can be discarded
             [array_iter] = args
-            array, _ = self.builder.add_op(ops.UnpackTuple(), array_iter)
             self.builder.add_op(
-                array_map(elem_opt_ty, self.length, unit_ty), array, func
+                array_discard_all_borrowed(self.elem_ty, self.length),
+                array_iter,
             )
         return []
-
-    def define_unwrap_none_helper(self) -> hf.Function:
-        """Define an `unwrap_none` function that checks that the passed element is
-        indeed `None`."""
-        opt_ty = ht.Option(ht.Variable(0, ht.TypeBound.Linear))
-        unit_ty = ht.UnitSum(1)
-        func_ty = ht.PolyFuncType(
-            params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
-            body=ht.FunctionType([opt_ty], [unit_ty]),
-        )
-        func, already_defined = self.ctx.declare_global_func(
-            ARRAY_ITER_ASSERT_ALL_USED_HELPER, func_ty
-        )
-        if not already_defined:
-            err_msg = "ArrayIter._assert_all_used: array element has not been used"
-            build_expect_none(func, func.inputs()[0], err_msg)
-            func.set_outputs(func.add_op(ops.MakeTuple()))
-        return func

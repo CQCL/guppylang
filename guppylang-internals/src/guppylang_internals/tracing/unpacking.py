@@ -12,7 +12,6 @@ from guppylang_internals.compiler.core import CompilerContext
 from guppylang_internals.compiler.expr_compiler import python_value_to_hugr
 from guppylang_internals.error import GuppyComptimeError, GuppyError
 from guppylang_internals.std._internal.compiler.array import array_new, unpack_array
-from guppylang_internals.std._internal.compiler.prelude import build_unwrap
 from guppylang_internals.tracing.frozenlist import frozenlist
 from guppylang_internals.tracing.object import (
     GuppyObject,
@@ -179,10 +178,8 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
         case list(vs) if len(vs) > 0:
             assert is_array_type(obj._ty)
             elem_ty = get_element_type(obj._ty)
-            opt_wires = unpack_array(builder, obj._use_wire(None))
-            err = "Non-droppable array element has already been used"
-            for v, opt_wire in zip(vs, opt_wires, strict=True):
-                (wire,) = build_unwrap(builder, opt_wire, err).outputs()
+            wires = unpack_array(builder, obj._use_wire(None))
+            for v, wire in zip(vs, wires, strict=True):
                 update_packed_value(v, GuppyObject(elem_ty, wire), builder)
         case _:
             pass
