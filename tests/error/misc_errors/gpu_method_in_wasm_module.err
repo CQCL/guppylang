@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "$FILE", line 3, in <module>
+    @guppy.wasm_module("", 0)
+AttributeError: '_Guppy' object has no attribute 'wasm_module'
