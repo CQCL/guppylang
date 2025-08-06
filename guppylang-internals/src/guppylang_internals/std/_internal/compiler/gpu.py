@@ -8,60 +8,60 @@ from guppylang_internals.nodes import GlobalCall
 from guppylang_internals.std._internal.compiler.arithmetic import convert_itousize
 from guppylang_internals.std._internal.compiler.prelude import build_unwrap
 from guppylang_internals.std._internal.compiler.tket_exts import (
-    WASM_EXTENSION,
-    ConstWasmModule,
+    QSYSTEM_GPU_EXTENSION,
+    ConstGpuModule,
 )
 from guppylang_internals.tys.builtin import (
-    wasm_module_info,
+    gpu_module_info,
 )
 from guppylang_internals.tys.ty import (
     FunctionType,
 )
 
 
-class WasmModuleInitCompiler(CustomInoutCallCompiler):
-    """Compiler for initialising WASM modules.
+class GpuModuleInitCompiler(CustomInoutCallCompiler):
+    """Compiler for initialising GPU modules.
     Calls tket's "get_context" and unwraps the `Option` result.
-    Returns a `tket.wasm.context` wire.
+    Returns a `tket.gpu.context` wire.
     """
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
-        # Make a ConstWasmModule as a CustomConst
+        # Make a ConstGpuModule as a CustomConst
         assert len(args) == 1
         ctx_arg = args[0]
         ctx_wire = self.builder.add_op(convert_itousize(), ctx_arg)
 
-        ctx_ty = WASM_EXTENSION.get_type("context").instantiate([])
+        ctx_ty = QSYSTEM_GPU_EXTENSION.get_type("context").instantiate([])
         get_ctx_op = ops.ExtOp(
-            WASM_EXTENSION.get_op("get_context"),
+            QSYSTEM_GPU_EXTENSION.get_op("get_context"),
             ht.FunctionType([ht.USize()], [ht.Option(ctx_ty)]),
         )
         node = self.builder.add_op(get_ctx_op, ctx_wire)
         opt_w: Wire = node[0]
-        err = "Failed to spawn WASM context"
+        err = "Failed to spawn GPU context"
         out_node = build_unwrap(self.builder, opt_w, err)
         return CallReturnWires(regular_returns=[out_node], inout_returns=[])
 
 
-class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
-    """Compiler for discarding WASM contexts."""
+class GpuModuleDiscardCompiler(CustomInoutCallCompiler):
+    """Compiler for discarding GPU contexts."""
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         assert len(args) == 1
         ctx = args[0]
-        op = WASM_EXTENSION.get_op("dispose_context").instantiate([])
+        op = QSYSTEM_GPU_EXTENSION.get_op("dispose_context").instantiate([])
         self.builder.add_op(op, ctx)
         return CallReturnWires(regular_returns=[], inout_returns=[])
 
 
-class WasmModuleCallCompiler(CustomInoutCallCompiler):
-    """Compiler for WASM calls
-    When a wasm method is called in guppy, we turn it into 2 tket ops:
-    * lookup: wasm.module -> wasm.func
-    * call: wasm.context * wasm.func * inputs -> wasm.context * output
+class GpuModuleCallCompiler(CustomInoutCallCompiler):
+    """Compiler for GPU calls
+    When a GPU method is called in guppy, we turn it into 2 tket ops:
+    * lookup: gpu.module -> gpu.func
+    * call: gpu.context * gpu.func * inputs -> gpu.context * output
 
-    For the wasm.module that we use in lookup, a constant is created for each
-    call, using the wasm file information embedded in method's `self` argument.
+    For the gpu.module that we use in lookup, a constant is created for each
+    call, using the gpu file information embedded in method's `self` argument.
     """
 
     fn_name: str
@@ -71,62 +71,62 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         # The arguments should be:
-        # - a WASM context
-        # - any args meant for the WASM function
+        # - a GPU context
+        # - any args meant for the GPU function
         assert len(args) >= 1
-        module_ty = WASM_EXTENSION.get_type("module").instantiate([])
-        ctx_ty = WASM_EXTENSION.get_type("context").instantiate([])
+        module_ty = QSYSTEM_GPU_EXTENSION.get_type("module").instantiate([])
+        ctx_ty = QSYSTEM_GPU_EXTENSION.get_type("context").instantiate([])
 
         fn_name_arg = ht.StringArg(self.fn_name)
         # Function type without Inout context arg (for building)
         assert isinstance(self.node, GlobalCall)
         assert self.func is not None
-        wasm_sig = FunctionType(
+        gpu_sig = FunctionType(
             self.func.ty.inputs[1:],
             self.func.ty.output,
         ).to_hugr(self.ctx)
 
-        inputs_row_arg = ht.ListArg([ty.type_arg() for ty in wasm_sig.input])
-        output_row_arg = ht.ListArg([ty.type_arg() for ty in wasm_sig.output])
+        inputs_row_arg = ht.ListArg([ty.type_arg() for ty in gpu_sig.input])
+        output_row_arg = ht.ListArg([ty.type_arg() for ty in gpu_sig.output])
 
-        func_ty = WASM_EXTENSION.get_type("func").instantiate(
+        func_ty = QSYSTEM_GPU_EXTENSION.get_type("func").instantiate(
             [inputs_row_arg, output_row_arg]
         )
-        result_ty = WASM_EXTENSION.get_type("result").instantiate(
-            [ht.ListArg([*wasm_sig.output])]
+        result_ty = QSYSTEM_GPU_EXTENSION.get_type("result").instantiate(
+            [output_row_arg]
         )
 
-        # Get the WASM module information from the type
+        # Get the module information from the type
         selfarg = self.func.ty.inputs[0].ty
-        if info := wasm_module_info(selfarg):
-            const_module = self.builder.add_const(ConstWasmModule(*info))
+        if info := gpu_module_info(selfarg):
+            const_module = self.builder.add_const(ConstGpuModule(*info))
         else:
             raise InternalGuppyError(
-                "Expected cached signature to have WASM module as first arg"
+                "Expected cached signature to have GPU module as first arg"
             )
 
-        wasm_module = self.builder.load(const_module)
+        gpu_module = self.builder.load(const_module)
 
         # Lookup the function we want
-        wasm_opdef = WASM_EXTENSION.get_op("lookup").instantiate(
+        gpu_opdef = QSYSTEM_GPU_EXTENSION.get_op("lookup").instantiate(
             [fn_name_arg, inputs_row_arg, output_row_arg],
             ht.FunctionType([module_ty], [func_ty]),
         )
-        wasm_func = self.builder.add_op(wasm_opdef, wasm_module)
+        gpu_func = self.builder.add_op(gpu_opdef, gpu_module)
 
         # Call the function
-        call_op = WASM_EXTENSION.get_op("call").instantiate(
+        call_op = QSYSTEM_GPU_EXTENSION.get_op("call").instantiate(
             [inputs_row_arg, output_row_arg],
-            ht.FunctionType([ctx_ty, func_ty, *wasm_sig.input], [result_ty]),
+            ht.FunctionType([ctx_ty, func_ty, *gpu_sig.input], [result_ty]),
         )
 
-        result = self.builder.add_op(call_op, args[0], wasm_func, *args[1:])
+        result = self.builder.add_op(call_op, args[0], gpu_func, *args[1:])
 
-        read_opdef = WASM_EXTENSION.get_op("read_result").instantiate(
+        read_opdef = QSYSTEM_GPU_EXTENSION.get_op("read_result").instantiate(
             [output_row_arg],
-            ht.FunctionType([result_ty], [ctx_ty, *wasm_sig.output]),
+            ht.FunctionType([result_ty], [ctx_ty, *gpu_sig.output]),
         )
-        data = self.builder.add_op(read_opdef, result)
+        data = self.builder.add_op(read_opdef, result) # ctx + return types
         match list(data[:]):
             case [ctx]:
                 return CallReturnWires(regular_returns=[], inout_returns=[ctx])

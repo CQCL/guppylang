@@ -14,7 +14,7 @@ from guppylang_internals.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang_internals.error import GuppyError, InternalGuppyError
 from guppylang_internals.experimental import check_lists_enabled
 from guppylang_internals.std._internal.compiler.tket_bool import OpaqueBool
-from guppylang_internals.std._internal.compiler.tket_exts import WASM_EXTENSION
+from guppylang_internals.std._internal.compiler.tket_exts import QSYSTEM_GPU_EXTENSION, WASM_EXTENSION
 from guppylang_internals.tys.arg import Argument, ConstArg, TypeArg
 from guppylang_internals.tys.common import ToHugrContext
 from guppylang_internals.tys.const import Const, ConstValue
@@ -125,6 +125,34 @@ class WasmModuleTypeDef(OpaqueTypeDef):
     ) -> ht.Type:
         assert args == []
         ty = WASM_EXTENSION.get_type("context")
+        return ty.instantiate([])
+
+
+class GpuModuleTypeDef(OpaqueTypeDef):
+    # Identify the module to load
+    gpu_file: str
+    # Provide its hash to be sure
+    gpu_hash: int
+    # Provide an optional config file
+    gpu_config: str | None
+
+    def __init__(
+        self,
+        id: DefId,
+        name: str,
+        defined_at: ast.AST | None,
+        gpu_file: str,
+        gpu_hash: int,
+        gpu_config: str | None = None,
+    ) -> None:
+        super().__init__(id, name, defined_at, [], True, True, self.to_hugr)
+        self.gpu_file = gpu_file
+        self.gpu_hash = gpu_hash
+        self.gpu_config = gpu_config
+
+    def to_hugr(self, args: Sequence[TypeArg | ConstArg], _: ToHugrContext, /) -> ht.Type:
+        assert args == []
+        ty = QSYSTEM_GPU_EXTENSION.get_type("context")
         return ty.instantiate([])
 
 
@@ -348,6 +376,12 @@ def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
 def wasm_module_info(ty: Type) -> tuple[str, int] | None:
     if isinstance(ty, OpaqueType) and isinstance(ty.defn, WasmModuleTypeDef):
         return ty.defn.wasm_file, ty.defn.wasm_hash
+    return None
+
+
+def gpu_module_info(ty: Type) -> tuple[str, int, str | None] | None:
+    if isinstance(ty, OpaqueType) and isinstance(ty.defn, GpuModuleTypeDef):
+        return ty.defn.gpu_file, ty.defn.gpu_hash, ty.defn.gpu_config
     return None
 
 

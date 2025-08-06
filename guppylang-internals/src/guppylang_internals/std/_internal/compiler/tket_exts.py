@@ -4,6 +4,7 @@ from hugr import val
 from tket_exts import (
     debug,
     futures,
+    gpu,
     opaque_bool,
     qsystem,
     qsystem_random,
@@ -18,6 +19,7 @@ BOOL_EXTENSION = opaque_bool()
 DEBUG_EXTENSION = debug()
 FUTURES_EXTENSION = futures()
 QSYSTEM_EXTENSION = qsystem()
+QSYSTEM_GPU_EXTENSION = gpu()
 QSYSTEM_RANDOM_EXTENSION = qsystem_random()
 QSYSTEM_UTILS_EXTENSION = qsystem_utils()
 QUANTUM_EXTENSION = quantum()
@@ -30,6 +32,7 @@ TKET_EXTENSIONS = [
     DEBUG_EXTENSION,
     FUTURES_EXTENSION,
     QSYSTEM_EXTENSION,
+    QSYSTEM_GPU_EXTENSION,
     QSYSTEM_RANDOM_EXTENSION,
     QSYSTEM_UTILS_EXTENSION,
     QUANTUM_EXTENSION,
@@ -49,11 +52,36 @@ class ConstWasmModule(val.ExtensionValue):
     def to_value(self) -> val.Extension:
         ty = WASM_EXTENSION.get_type("module").instantiate([])
 
-        name = "tket.wasm.ConstWasmModule"
+        name = "tket.wasm.module"
         payload = {"name": self.wasm_file, "hash": self.wasm_hash}
         return val.Extension(name, typ=ty, val=payload, extensions=["tket.wasm"])
 
     def __str__(self) -> str:
         return (
-            f"ConstWasmModule(wasm_file={self.wasm_file}, wasm_hash={self.wasm_hash})"
+            f"tket.wasm.module(wasm_file={self.wasm_file}, wasm_hash={self.wasm_hash})"
+        )
+
+@dataclass(frozen=True)
+class ConstGpuModule(val.ExtensionValue):
+    """Python wrapper for the tket ConstWasmModule type"""
+
+    gpu_file: str
+    gpu_hash: int
+    gpu_config: str | None
+
+    def to_value(self) -> val.Extension:
+        ty = QSYSTEM_GPU_EXTENSION.get_type("module").instantiate([])
+
+        name = "tket.gpu.module"
+        payload = {
+            "name": self.gpu_file,
+            "hash": self.gpu_hash,
+            "config": self.gpu_config,
+        }
+        return val.Extension(name, typ=ty, val=payload, extensions=["tket.gpu"])
+
+    def __str__(self) -> str:
+        return (
+            f"tket.gpu.module(gpu_file={self.gpu_file}, gpu_hash={self.gpu_hash}, "
+            f"gpu_config={self.gpu_config})"
         )

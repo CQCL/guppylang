@@ -518,7 +518,7 @@ class BarrierChecker(CustomCallChecker):
         return with_loc(self.node, node), ret_ty
 
 
-class WasmCallChecker(CustomCallChecker):
+class GenericCallChecker(CustomCallChecker):
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
