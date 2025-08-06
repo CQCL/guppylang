@@ -11,7 +11,7 @@ from hugr.build.dfg import DfBase
 from guppylang_internals.ast_util import (
     AstNode,
     get_type,
-    has_empty_body,
+    # has_empty_body,
     with_loc,
     with_type,
 )
