@@ -149,8 +149,8 @@ def lower_op(
                 signature=he.OpDefSig(poly_func=ty),
                 lower_funcs=[
                     he.FixedHugr(
-                        ht.ExtensionSet(),
-                        compiled_defn,
+                        ht.ExtensionSet([ext.name for ext in compiled_defn.extensions]),
+                        compiled_defn,  # type: ignore[arg-type]
                     )
                 ],
             )
