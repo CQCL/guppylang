@@ -8,15 +8,14 @@ from typing import TYPE_CHECKING, Any, no_type_check
 
 from guppylang_internals.decorator import custom_function, extend_type
 from guppylang_internals.definition.custom import NoopCompiler
-from guppylang_internals.std._internal.checker import RangeChecker
 from guppylang_internals.tys.builtin import sized_iter_type_def
 
 from guppylang import guppy
 from guppylang.std.option import Option, nothing, some
 
 if TYPE_CHECKING:
-    from guppylang.std.lang import owned
-
+    from guppylang.std.lang import comptime, owned
+    from guppylang.std.num import nat
 
 L = guppy.type_var("L", copyable=False, droppable=False)
 n = guppy.nat_var("n")
@@ -52,6 +51,7 @@ class SizedIter:
 class Range:
     next: int
     stop: int
+    step: int
 
     @guppy
     def __iter__(self: Range) -> Range:
@@ -60,12 +60,47 @@ class Range:
     @guppy
     @no_type_check
     def __next__(self: Range) -> Option[tuple[int, Range]]:
-        if self.next < self.stop:
-            return some((self.next, Range(self.next + 1, self.stop)))
-        return nothing()
+        end = (self.next >= self.stop) if self.step >= 0 else (self.next <= self.stop)
+        if end:
+            return nothing()
+        return some((self.next, Range(self.next + self.step, self.stop, self.step)))
 
 
-@custom_function(checker=RangeChecker(), higher_order_value=False)
-def range(stop: int) -> Range:
-    """Limited version of python range().
-    Only a single argument (stop/limit) is supported."""
+@guppy
+@no_type_check
+def _range1(stop: int) -> Range:
+    return Range(0, stop, 1)
+
+
+@guppy
+@no_type_check
+def _range2(start: int, stop: int) -> Range:
+    return Range(start, stop, 1)
+
+
+@guppy
+@no_type_check
+def _range3(start: int, stop: int, step: int) -> Range:
+    return Range(start, stop, step)
+
+
+@guppy
+@no_type_check
+def _range_comptime(stop: nat @ comptime) -> "SizedIter[Range, stop]":  # noqa: F821 UP037
+    return SizedIter(Range(0, stop, 1))
+
+
+@guppy.overload(_range_comptime, _range1, _range2, _range3)
+def range(start: int, stop: int = 0, step: int = 1) -> Range:
+    """An iterator that yields a sequence of integers.
+
+    Behaves like the builtin Python `range` function. Concretely, the ``i``th yielded
+    number is ``start + i * step``. Numbers are yielded as long as they are
+
+    * ``< stop`` in the case where ``step >= 0``, or
+    * ``> stop`` otherwise.
+
+    ``start`` defaults to ``0`` and ``step`` defaults to ``1``. If the provided ``stop``
+    value is comptime known, then the returned iterator will have a static size
+    annotation and may for example be used inside array comprehensions.
+    """
