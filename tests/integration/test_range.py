@@ -30,7 +30,7 @@ def test_range(run_int_fn):
         return sum(x + 100 for x in r)
 
     run_int_fn(stop, args=[5], expected=expected(builtins.range(5)))
-    run_int_fn(stop, args=[-3], expected=expected(builtins.range(-1)))
+    run_int_fn(stop, args=[-3], expected=expected(builtins.range(-3)))
     run_int_fn(start, args=[2, 7], expected=expected(builtins.range(2, 7)))
     run_int_fn(start, args=[-2, 5], expected=expected(builtins.range(-2, 5)))
     run_int_fn(step, args=[1, 5, 2], expected=expected(builtins.range(1, 5, 2)))
