@@ -363,6 +363,26 @@ class TupleUnpack(ast.expr):
     _fields = ("pattern",)
 
 
+class ArrayUnpack(ast.expr):
+    """The LHS of an unpacking assignment of an array."""
+
+    #: The (possibly starred) unpacking pattern
+    pattern: UnpackPattern
+
+    #: Length of the array
+    length: int
+
+    #: Element type of the array
+    elt_type: Type
+
+    _fields = ("pattern",)
+
+    def __init__(self, pattern: UnpackPattern, length: int, elt_type: Type) -> None:
+        super().__init__(pattern)
+        self.length = length
+        self.elt_type = elt_type
+
+
 class IterableUnpack(ast.expr):
     """The LHS of an unpacking assignment of an iterable type."""
 
@@ -388,7 +408,7 @@ class IterableUnpack(ast.expr):
 
 
 #: Any unpacking operation.
-AnyUnpack = TupleUnpack | IterableUnpack
+AnyUnpack = TupleUnpack | ArrayUnpack | IterableUnpack
 
 
 class NestedFunctionDef(ast.FunctionDef):

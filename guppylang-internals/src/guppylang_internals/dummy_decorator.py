@@ -64,6 +64,11 @@ class _DummyGuppy:
         return None
 
 
+def _dummy_custom_decorator(*args: Any, **kwargs: Any) -> Any:
+    """Dummy version of custom decorators that are used during Sphinx builds."""
+    return lambda f: f
+
+
 def sphinx_running() -> bool:
     """Checks if guppylang was imported during a sphinx build."""
     # This is the most general solution available at the moment.

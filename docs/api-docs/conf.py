@@ -59,7 +59,7 @@ def _find_aliases(module):
     for name, x in inspect.getmembers(module):
         if _is_type_alias(x):
             aliases[name] = module
-        if inspect.ismodule(x) and x.__name__.startswith("guppylang."):
+        if inspect.ismodule(x) and x.__name__.startswith("guppylang_internals."):
             aliases |= _find_aliases(x)
     return aliases
 
