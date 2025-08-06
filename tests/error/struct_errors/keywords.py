@@ -6,4 +6,4 @@ class MyStruct(metaclass=type):
     x: int
 
 
-guppy.compile(MyStruct)
+MyStruct.compile()

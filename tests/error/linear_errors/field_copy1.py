@@ -14,4 +14,4 @@ def foo(s: MyStruct @owned) -> tuple[qubit, qubit]:
     return s.q, t.q
 
 
-guppy.compile(foo)
+foo.compile()

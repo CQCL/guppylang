@@ -7,7 +7,7 @@ from typing import Any
 
 from selene_hugr_qis_compiler import check_hugr
 
-from guppylang.tracing.object import GuppyDefinition
+from guppylang.defs import GuppyDefinition
 
 
 @pytest.fixture(scope="session")
@@ -46,8 +46,6 @@ def _emulate_fn(is_flt: bool = False):
     """Use selene to emulate a Guppy function."""
     from guppylang.decorator import guppy
     from guppylang.std.builtins import result
-    from selene_sim.build import build
-    from selene_sim.backends.bundled_simulators import Coinflip
 
     def f(f: GuppyDefinition, expected: Any, args: list[Any] | None = None):
         args = args or []
@@ -63,11 +61,8 @@ def _emulate_fn(is_flt: bool = False):
             result("_test_output", o)
 
         entry = flt_entry if is_flt else int_entry
-
-        em = guppy.compile(entry)
-        instance = build(em)
-        res = instance.run(Coinflip(42), n_qubits=0)
-        num = next(v for k, v in res if k == "_test_output")
+        res = entry.emulator(0).coinflip_sim().with_seed(42).run()
+        num = next(v for k, v in res.results[0].entries if k == "_test_output")
         if num != expected:
             raise LLVMException(
                 f"Expected value ({expected}) doesn't match actual value ({num})"
@@ -84,8 +79,8 @@ def run_int_fn():
 
 @pytest.fixture
 def run_float_fn_approx():
-    """Like run_int_fn, but takes optional additional parameters `rel`, `abs` and `nan_ok`
-    as per `pytest.approx`."""
+    """Like run_int_fn, but takes optional additional parameters `rel`, `abs`
+    and `nan_ok` as per `pytest.approx`."""
     run_fn = _emulate_fn(is_flt=True)
 
     def run_approx(

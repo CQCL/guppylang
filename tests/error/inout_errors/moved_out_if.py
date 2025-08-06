@@ -18,4 +18,4 @@ def test(s: MyStruct, b: bool) -> None:
         use(s.q)
 
 
-guppy.compile(test)
+test.compile()

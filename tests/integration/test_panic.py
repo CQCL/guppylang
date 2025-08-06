@@ -1,5 +1,5 @@
 from guppylang import guppy
-from guppylang.std.builtins import panic, exit
+from guppylang.std.builtins import panic, exit, comptime
 from tests.util import compile_guppy
 
 
@@ -35,16 +35,16 @@ def test_value(validate):
     def baz() -> None:
         return panic("I panicked!")
 
-    validate(guppy.compile(foo))
-    validate(guppy.compile(bar))
-    validate(guppy.compile(baz))
+    validate(foo.compile())
+    validate(bar.compile())
+    validate(baz.compile())
 
 
 def test_py_message(validate):
     @compile_guppy
     def main(x: int) -> None:
-        panic(py("I" + "panicked" + "!"))
-        exit(py("I" + "exited" + "!"), 0)
+        panic(comptime("I" + "panicked" + "!"))
+        exit(comptime("I" + "exited" + "!"), 0)
 
     validate(main)
 
@@ -54,7 +54,7 @@ def test_comptime_panic(validate):
     def main() -> None:
         panic("foo")
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_comptime_exit(validate):
@@ -62,4 +62,4 @@ def test_comptime_exit(validate):
     def main() -> None:
         exit("foo", 1)
 
-    validate(guppy.compile(main))
+    validate(main.compile())

@@ -6,4 +6,4 @@ def test() -> int:
     pass
 
 
-guppy.compile(test)
+test.compile()

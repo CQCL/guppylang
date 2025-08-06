@@ -16,4 +16,4 @@ def foo(b: bool) -> int:
     return 42
 
 
-guppy.compile(foo)
+foo.compile()

@@ -11,4 +11,4 @@ def main() -> None:
    barrier(q)
 
 
-guppy.compile(main)
+main.compile()

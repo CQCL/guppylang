@@ -7,4 +7,4 @@ def foo() -> nat:
     return -1
 
 
-guppy.compile(foo)
+foo.compile()

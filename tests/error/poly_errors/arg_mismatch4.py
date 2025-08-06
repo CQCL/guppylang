@@ -7,4 +7,4 @@ def main(x: array[int, bool]) -> None:
     pass
 
 
-guppy.compile(main)
+main.compile()

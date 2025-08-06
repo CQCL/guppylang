@@ -7,4 +7,4 @@ from guppylang.std.quantum import qubit
 def foo(x: list[qubit @owned]) -> qubit: ...
 
 
-guppy.compile(foo)
+foo.compile()

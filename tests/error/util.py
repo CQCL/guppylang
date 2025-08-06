@@ -9,8 +9,6 @@ import sys
 from hugr import tys
 from hugr.tys import TypeBound
 
-from guppylang.module import GuppyModule
-
 import guppylang.decorator as decorator
 
 

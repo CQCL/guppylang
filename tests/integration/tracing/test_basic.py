@@ -15,11 +15,9 @@ def test_flat(validate):
             x += i
         return x
 
-    hugr = guppy.compile(foo)
-    assert hugr.module.num_nodes() == 6
-    [const] = [
-        data.op for _, data in hugr.module.nodes() if isinstance(data.op, ops.Const)
-    ]
+    hugr = foo.compile().modules[0]
+    assert hugr.num_nodes() == 6
+    [const] = [data.op for _, data in hugr.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(const.val, IntVal)
     assert const.val.v == sum(i for i in range(10))
     validate(hugr)
@@ -30,7 +28,7 @@ def test_inputs(validate):
     def foo(x: int, y: float) -> tuple[int, float]:
         return x, y
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_recursion(validate):
@@ -39,7 +37,7 @@ def test_recursion(validate):
         # `foo` doesn't terminate but the compiler should!
         return foo(x)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_calls(validate):
@@ -59,7 +57,7 @@ def test_calls(validate):
     def regular2(x: int) -> int:
         return comptime1(x)
 
-    validate(guppy.compile(regular2))
+    validate(regular2.compile())
 
 
 def test_load_func(validate):
@@ -70,7 +68,7 @@ def test_load_func(validate):
     def test() -> Callable[[int], int]:
         return foo
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_inner_scope(validate):
@@ -89,5 +87,5 @@ def test_inner_scope(validate):
         return foo, bar
 
     foo, bar = make(42)
-    validate(guppy.compile(foo))
-    validate(guppy.compile(bar))
+    validate(foo.compile())
+    validate(bar.compile())

@@ -1,5 +1,5 @@
 from guppylang import guppy
-from guppylang.std.builtins import result, nat, array, comptime, panic
+from guppylang.std.builtins import result, nat, array, comptime
 from tests.util import compile_guppy
 
 
@@ -47,7 +47,7 @@ def test_array_generic(validate):
         result("c", y)
         result("d", z)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_array_drop_after_result(validate):
@@ -87,7 +87,7 @@ def test_comptime_tag_outside1(validate):
         for key, value in EXAMPLE_RESULTS:
             result(key, value)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_comptime_tag_outside2(validate):
@@ -97,4 +97,4 @@ def test_comptime_tag_outside2(validate):
     def main() -> None:
         result(EXAMPLE_RESULT[0], EXAMPLE_RESULT[1])
 
-    validate(guppy.compile(main))
+    validate(main.compile())

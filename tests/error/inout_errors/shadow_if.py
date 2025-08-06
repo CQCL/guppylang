@@ -8,4 +8,4 @@ def test(q: qubit, b: bool) -> None:
         q = qubit()
 
 
-guppy.compile(test)
+test.compile()

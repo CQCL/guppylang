@@ -8,4 +8,4 @@ def foo(x: T) -> None:
     y = T
 
 
-guppy.compile(foo)
+foo.compile()

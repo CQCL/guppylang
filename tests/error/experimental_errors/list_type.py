@@ -6,4 +6,4 @@ def main(x: list[int]) -> list[int]:
     return x
 
 
-guppy.compile(main)
+main.compile()

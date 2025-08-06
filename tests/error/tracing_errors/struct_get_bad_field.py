@@ -11,4 +11,4 @@ def test(s: S) -> int:
     return s.y
 
 
-guppy.compile(test)
+test.compile()

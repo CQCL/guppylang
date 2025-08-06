@@ -13,4 +13,4 @@ def test(q1: qubit @owned, q2: qubit @owned) -> tuple[qubit, qubit]:
     return q1, q2
 
 
-guppy.compile(test)
+test.compile()

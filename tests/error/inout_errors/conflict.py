@@ -14,4 +14,4 @@ def test() -> Callable[[qubit @owned], qubit]:
     return foo
 
 
-guppy.compile(test)
+test.compile()

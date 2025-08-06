@@ -2,10 +2,9 @@
 
 from typing import no_type_check
 
-from guppylang.decorator import guppy
 from guppylang.std.angles import angle
 
-from guppylang.std.builtins import owned, array, barrier
+from guppylang.std.builtins import owned, array, barrier, panic, result
 
 from guppylang.std import quantum as q
 from guppylang.std.quantum import (
@@ -50,7 +49,7 @@ def test_alloc(validate):
         q1, q2 = cx(q1, q2)
         return (measure(q1), measure(q2))
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_1qb_op(validate):
@@ -68,7 +67,7 @@ def test_1qb_op(validate):
         q = vdg(q)
         return q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_2qb_op(validate):
@@ -80,7 +79,7 @@ def test_2qb_op(validate):
         q1, q2 = ch(q1, q2)
         return (q1, q2)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_3qb_op(validate):
@@ -91,7 +90,7 @@ def test_3qb_op(validate):
         q1, q2, q3 = toffoli(q1, q2, q3)
         return (q1, q2, q3)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_measure_ops(validate):
@@ -105,7 +104,7 @@ def test_measure_ops(validate):
         b2 = measure(q2)
         return (b1, b2)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_parametric(validate):
@@ -130,7 +129,7 @@ def test_measure_array(validate):
         qs = array(qubit() for _ in range(10))
         return measure_array(qs)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_discard_array(validate):
@@ -141,7 +140,7 @@ def test_discard_array(validate):
         qs = array(qubit() for _ in range(10))
         discard_array(qs)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_panic_discard(validate):
@@ -153,7 +152,7 @@ def test_panic_discard(validate):
         q = qubit()
         panic("I panicked!", q)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_barrier(validate):
@@ -179,7 +178,7 @@ def test_barrier(validate):
         discard(q3)
         discard(q4)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_barrier_array(validate):
@@ -201,7 +200,7 @@ def test_barrier_array(validate):
         barrier(qs)
         discard_array(qs)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_barrier_struct(validate):
@@ -233,7 +232,7 @@ def test_barrier_struct(validate):
         discard(qs.q3)
         discard(qs.q4)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_barrier_misc(validate):
@@ -250,4 +249,4 @@ def test_barrier_misc(validate):
         result("c", x)
         result("c2", measure(q1))
 
-    validate(guppy.compile(test))
+    validate(test.compile())

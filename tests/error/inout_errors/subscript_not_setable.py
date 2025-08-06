@@ -20,4 +20,4 @@ def test(c: MyImmutableContainer) -> MyImmutableContainer:
     return c
 
 
-guppy.compile(test)
+test.compile()

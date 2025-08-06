@@ -7,7 +7,7 @@ class GuppyModule:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         err = (
             "Explicit Guppy modules are no longer supported. Use the regular `@guppy` "
-            "decorator without passing a module and use `guppy.compile(foo)` to "
+            "decorator without passing a module and use `foo.compile()` to "
             "compile Guppy functions."
         )
         raise RuntimeError(err)

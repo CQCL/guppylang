@@ -9,4 +9,4 @@ def test() -> None:
     h(q)
 
 
-guppy.compile(test)
+test.compile()

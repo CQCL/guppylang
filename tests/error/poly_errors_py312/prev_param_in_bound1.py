@@ -7,4 +7,4 @@ def main[T: (Copy, Drop), x: T]() -> None:
     ...
 
 
-guppy.compile(main)
+main.compile()

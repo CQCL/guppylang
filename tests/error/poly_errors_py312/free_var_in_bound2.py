@@ -8,4 +8,4 @@ class MyStruct[x: T]:
     pass
 
 
-guppy.compile(MyStruct)
+MyStruct.compile()

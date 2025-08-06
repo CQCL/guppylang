@@ -1,18 +1,18 @@
 """Snapshot tests for miette diagnostics rendering"""
 
-import pytest
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-from guppylang.diagnostic import (
+import pytest
+from guppylang_internals.diagnostic import (
     Diagnostic,
-    MietteRenderer,
-    Error,
-    Note,
     DiagnosticLevel,
+    Error,
+    MietteRenderer,
+    Note,
 )
-from guppylang.span import Loc, SourceMap, Span
+from guppylang_internals.span import Loc, SourceMap, Span
 
 file = "<unknown>"
 

@@ -7,4 +7,4 @@ from guppylang.decorator import guppy
 def foo(f: "Callable[None]") -> None: ...
 
 
-guppy.compile(foo)
+foo.compile()

@@ -6,4 +6,4 @@ def test(x: float) -> None:
     x(1)
 
 
-guppy.compile(test)
+test.compile()

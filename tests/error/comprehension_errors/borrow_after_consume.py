@@ -16,4 +16,4 @@ def foo(qs: list[qubit] @owned) -> list[int]:
     return [baz(q) for q in qs if bar(q)]
 
 
-guppy.compile(foo)
+foo.compile()

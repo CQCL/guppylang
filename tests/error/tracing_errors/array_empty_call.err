@@ -1,6 +1,6 @@
 Traceback (most recent call last):
   File "$FILE", line 15, in <module>
-    guppy.compile(test)
+    test.compile()
   File "$FILE", line 12, in test
     foo([])  # But we currently cannot infer the type here
-guppylang.error.GuppyComptimeError: Cannot infer the type of empty list
+guppylang_internals.error.GuppyComptimeError: Cannot infer the type of empty list

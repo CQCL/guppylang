@@ -1,6 +1,7 @@
 import pathlib
 import pytest
-from guppylang import guppy, qubit
+from guppylang import guppy
+from guppylang.std.quantum import qubit
 
 from tests.error.util import run_error_test
 

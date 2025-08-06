@@ -25,4 +25,4 @@ def test_misc_errors(file, capsys, snapshot):
 
 def test_extern_bad_type_syntax():
     with pytest.raises(SyntaxError, match="Not a valid Guppy type: `foo bar`"):
-        guppy.extern(name="x", ty="foo bar")
+        guppy._extern(name="x", ty="foo bar")

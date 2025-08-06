@@ -9,4 +9,4 @@ def foo() -> array[int, 10]: ...
 def main() -> None:
     foo()[0] = 22
 
-guppy.compile(main)
+main.compile()

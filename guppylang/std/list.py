@@ -7,19 +7,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic
 
-from guppylang.decorator import guppy
-from guppylang.definition.custom import NoopCompiler
-from guppylang.std._internal.checker import UnsupportedChecker
-from guppylang.std._internal.compiler.list import (
+from guppylang_internals.decorator import custom_function, extend_type, hugr_op
+from guppylang_internals.definition.custom import NoopCompiler
+from guppylang_internals.std._internal.checker import UnsupportedChecker
+from guppylang_internals.std._internal.compiler.list import (
     ListGetitemCompiler,
     ListLengthCompiler,
     ListPopCompiler,
     ListPushCompiler,
     ListSetitemCompiler,
 )
-from guppylang.std._internal.util import unsupported_op
+from guppylang_internals.std._internal.util import unsupported_op
+from guppylang_internals.tys.builtin import list_type_def
+
+from guppylang import guppy
 from guppylang.std.option import Option  # noqa: TCH001
-from guppylang.tys.builtin import list_type_def
 
 if TYPE_CHECKING:
     from guppylang.std.lang import owned
@@ -29,30 +31,30 @@ T = guppy.type_var("T")
 L = guppy.type_var("L", copyable=False, droppable=False)
 
 
-@guppy.extend_type(list_type_def)
+@extend_type(list_type_def)
 class list(Generic[T]):
     """Mutable sequence items with homogeneous types."""
 
-    @guppy.custom(ListGetitemCompiler())
+    @custom_function(ListGetitemCompiler())
     def __getitem__(self: list[L], idx: int) -> L: ...
 
-    @guppy.custom(ListSetitemCompiler())
+    @custom_function(ListSetitemCompiler())
     def __setitem__(self: list[L], idx: int, value: L @ owned) -> None: ...
 
-    @guppy.custom(ListLengthCompiler())
+    @custom_function(ListLengthCompiler())
     def __len__(self: list[L]) -> int: ...
 
-    @guppy.custom(checker=UnsupportedChecker(), higher_order_value=False)
+    @custom_function(checker=UnsupportedChecker(), higher_order_value=False)
     def __new__(x): ...
 
-    @guppy.custom(NoopCompiler())  # TODO: define via Guppy source instead
+    @custom_function(NoopCompiler())  # TODO: define via Guppy source instead
     def __iter__(self: list[L] @ owned) -> list[L]: ...
 
-    @guppy.hugr_op(unsupported_op("pop"))
+    @hugr_op(unsupported_op("pop"))
     def __next__(self: list[L] @ owned) -> Option[tuple[L, list[L]]]: ...  # type: ignore[type-arg]
 
-    @guppy.custom(ListPushCompiler())
+    @custom_function(ListPushCompiler())
     def append(self: list[L], item: L @ owned) -> None: ...
 
-    @guppy.custom(ListPopCompiler())
+    @custom_function(ListPopCompiler())
     def pop(self: list[L]) -> L: ...

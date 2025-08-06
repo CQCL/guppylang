@@ -17,4 +17,4 @@ def foo(s: MyStruct) -> tuple[MyStruct, bool]:
     return t, t.x == s.x
 
 
-guppy.compile(foo)
+foo.compile()

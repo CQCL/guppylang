@@ -6,4 +6,4 @@ def test(x: int) -> int:
     # constant is smallest positive value that fails
     return x + (1 << 63)
 
-guppy.compile(test)
+test.compile()

@@ -1,9 +1,6 @@
-from hugr.package import ModulePointer
-
 from guppylang.decorator import guppy
 from guppylang.std.angles import angle
 from guppylang.std.builtins import owned, array
-from guppylang.std.option import Option
 from guppylang.std.qsystem.random import make_discrete_distribution, RNG
 
 from guppylang.std.qsystem import MaybeLeaked, measure_leaked
@@ -19,7 +16,6 @@ from guppylang.std.qsystem.functional import (
     measure,
     qfree,
 )
-from tests.util import compile_guppy
 
 
 def test_qsystem(validate):  # type: ignore[no-untyped-def]
@@ -38,7 +34,7 @@ def test_qsystem(validate):  # type: ignore[no-untyped-def]
         qfree(q2)
         return b
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
@@ -61,7 +57,7 @@ def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
 
         return rint, rfloat, rint_bnd, rint_discrete, rangle, rcangle
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_measure_leaked(validate):  # type: ignore[no-untyped-def]
@@ -76,4 +72,4 @@ def test_measure_leaked(validate):  # type: ignore[no-untyped-def]
         b: bool = ml.to_result().unwrap()
         return b
 
-    validate(guppy.compile(test))
+    validate(test.compile())

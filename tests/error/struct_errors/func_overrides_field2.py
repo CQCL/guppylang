@@ -15,4 +15,4 @@ def main(s: MyStruct) -> None:
     s.x
 
 
-guppy.compile(main)
+main.compile()

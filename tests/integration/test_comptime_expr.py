@@ -7,7 +7,7 @@ from guppylang.decorator import guppy
 from guppylang.std.builtins import py, comptime, array, frozenarray, nat, owned
 from tests.util import compile_guppy
 
-tket2_installed = find_spec("tket2") is not None
+tket_installed = find_spec("tket") is not None
 
 
 def test_basic(validate):
@@ -17,7 +17,7 @@ def test_basic(validate):
     def foo() -> int:
         return comptime(x + 1)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_py_alias(validate):
@@ -27,7 +27,7 @@ def test_py_alias(validate):
     def foo() -> int:
         return py(x + 1)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_builtin(validate):
@@ -47,7 +47,7 @@ def test_if(validate):
             return 0
         return 1
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_redeclare_after(validate):
@@ -59,7 +59,7 @@ def test_redeclare_after(validate):
 
     x = False
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_tuple(validate):
@@ -145,6 +145,6 @@ def test_func_type_arg(validate):
     class Baz:
         xs: array[int, comptime(n)]
 
-    validate(guppy.compile(foo))
-    validate(guppy.compile(bar))
-    validate(guppy.compile(Baz))
+    validate(foo.compile())
+    validate(bar.compile())
+    validate(Baz.compile())
