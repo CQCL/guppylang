@@ -66,12 +66,14 @@ from guppylang_internals.std._internal.compiler.arithmetic import (
     convert_itousize,
 )
 from guppylang_internals.std._internal.compiler.array import (
+    array_clone,
     array_convert_from_std_array,
     array_convert_to_std_array,
     array_map,
     array_new,
     array_new_all_borrowed,
     array_return,
+    array_type,
     standard_array_type,
     unpack_array,
 )
@@ -556,11 +558,22 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             op_name = f"result_array_{base_name}"
             size_arg = node.array_len.to_arg().to_hugr(self.ctx)
             extra_args = [size_arg, *extra_args]
-            # As `borrow_array`s used by Guppy are, we need to clone it (knowing that
-            # all elements in it are copyable) to avoid linearity violations when
-            # both passing it to the result operation and returning it.
-            # value_wire, inout_wire = self.builder.add_op(array_clone(base_ty, 
-            # size_arg), value_wire)
+            # As `borrow_array`s used by Guppy are linear, we need to clone it (knowing
+            # that all elements in it are copyable) to avoid linearity violations when
+            # both passing it to the result operation and returning it (as an inout
+            # argument).
+            value_wire, inout_wire = self.builder.add_op(
+                array_clone(base_ty, size_arg), value_wire
+            )
+            func_ty = FunctionType(
+                [
+                    FuncInput(
+                        array_type(node.base_ty, node.array_len), InputFlags.Inout
+                    ),
+                ],
+                NoneType(),
+            )
+            self._update_inout_ports(node.args, iter([inout_wire]), func_ty)
             if is_bool_type(node.base_ty):
                 # We need to coerce a read on all the array elements if they are bools.
                 array_read = array_read_bool(self.ctx)
@@ -585,8 +598,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         op = ops.ExtOp(RESULT_EXTENSION.get_op(op_name), signature=sig, args=args)
 
         self.builder.add_op(op, value_wire)
-        # if node.array_len is not None:
-        #    self._update_inout_ports(node.args, [inout_wire], node.func_ty)
         return self._pack_returns([], NoneType())
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
