@@ -914,7 +914,7 @@ requires-dist = [
     { name = "guppylang-internals", editable = "guppylang-internals" },
     { name = "numpy", specifier = "~=2.0" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "selene-sim", specifier = ">=0.2.0rc1,<0.3" },
+    { name = "selene-sim", specifier = "~=0.2" },
     { name = "tket", marker = "extra == 'pytket'", specifier = ">=0.12.1" },
 ]
 provides-extras = ["pytket"]

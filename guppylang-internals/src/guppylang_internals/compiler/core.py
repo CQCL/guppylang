@@ -624,7 +624,6 @@ def track_hugr_side_effects() -> Iterator[None]:
 
 def qualified_name(type_def: he.TypeDef) -> str:
     """Returns the qualified name of a Hugr extension type.
-
     TODO: Remove once upstreamed, see https://github.com/CQCL/hugr/issues/2426
     """
     if type_def._extension is not None:
@@ -642,7 +641,6 @@ AFFINE_EXTENSION_TYS: list[str] = [
 
 def requires_drop(ty: ht.Type) -> bool:
     """Checks if a Hugr type requires an implicit drop op insertion.
-
     This is the case for linear Hugr types that correspond to affine Guppy types, or
     any other type containing one of those. See `AFFINE_EXTENSION_TYS`.
     """
@@ -677,7 +675,6 @@ def drop_op(ty: ht.Type) -> ops.ExtOp:
 
 def insert_drops(hugr: Hugr[OpVarCov]) -> None:
     """Inserts explicit drop ops for unconnected ports into the Hugr.
-
     TODO: This is a quick workaround until we can properly insert these drops during
       linearity checking. See https://github.com/CQCL/guppylang/issues/1082
     """
@@ -686,7 +683,7 @@ def insert_drops(hugr: Hugr[OpVarCov]) -> None:
         # Iterating over `node.outputs()` doesn't work reliably since it sometimes
         # raises an `IncompleteOp` exception. Instead, we query the number of out ports
         # and look them up by index. However, this method is *also* broken when
-        # isnpecting `FuncDefn` nodes due to https://github.com/CQCL/hugr/issues/2438.
+        # inspecting `FuncDefn` nodes due to https://github.com/CQCL/hugr/issues/2438.
         if isinstance(data.op, ops.FuncDefn):
             continue
         for i in range(hugr.num_out_ports(node)):

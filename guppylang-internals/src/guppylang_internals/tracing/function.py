@@ -70,8 +70,7 @@ def trace_function(
             for wire, inp in zip(builder.inputs(), ty.inputs, strict=True)
         ]
 
-        with exception_hook(tracing_except_hook):
-            mock_builtins(python_func)
+        with exception_hook(tracing_except_hook), mock_builtins(python_func):
             py_out = python_func(*inputs)
 
         try:
