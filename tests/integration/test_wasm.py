@@ -5,7 +5,7 @@ from guppylang.std.qsystem.wasm import spawn_wasm_contexts
 
 
 def test_wasm_functions(validate):
-    @wasm_module("", 42)
+    @wasm_module("")
     class MyWasm:
         @wasm
         def add_one(self: "MyWasm", x: int) -> int: ...
@@ -52,7 +52,7 @@ def test_wasm_methods(validate):
 def test_wasm_types(validate):
     n = guppy.nat_var("n")
 
-    @wasm_module("", 3)
+    @wasm_module(3)
     class MyWasm:
         @wasm
         def foo(self: "MyWasm", x: tuple[int, tuple[nat, float]], y: int) -> None: ...
@@ -69,7 +69,7 @@ def test_wasm_types(validate):
 
 
 def test_wasm_guppy_module(validate):
-    @wasm_module("", 42)
+    @wasm_module("")
     class MyWasm:
         @wasm
         def add_one(self: "MyWasm", x: int) -> int: ...
@@ -91,7 +91,7 @@ def test_wasm_guppy_module(validate):
 
 
 def test_comptime(validate):
-    @wasm_module("", 42)
+    @wasm_module("")
     class Foo:
         @wasm
         def goo(self: "Foo") -> int: ...

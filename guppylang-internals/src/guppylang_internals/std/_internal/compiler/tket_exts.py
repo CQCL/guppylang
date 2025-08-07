@@ -47,13 +47,13 @@ class ConstWasmModule(val.ExtensionValue):
     """Python wrapper for the tket ConstWasmModule type"""
 
     wasm_file: str
-    wasm_hash: int
+    wasm_hash: int | None
 
     def to_value(self) -> val.Extension:
         ty = WASM_EXTENSION.get_type("module").instantiate([])
 
-        name = "tket.wasm.module"
-        payload = {"name": self.wasm_file, "hash": self.wasm_hash}
+        name = "ConstWasmModule"
+        payload = {"module_filename": self.wasm_file}
         return val.Extension(name, typ=ty, val=payload, extensions=["tket.wasm"])
 
     def __str__(self) -> str:
@@ -66,16 +66,15 @@ class ConstGpuModule(val.ExtensionValue):
     """Python wrapper for the tket ConstWasmModule type"""
 
     gpu_file: str
-    gpu_hash: int
+    gpu_hash: int | None
     gpu_config: str | None
 
     def to_value(self) -> val.Extension:
         ty = QSYSTEM_GPU_EXTENSION.get_type("module").instantiate([])
 
-        name = "tket.gpu.module"
+        name = "ConstGpuModule"
         payload = {
             "name": self.gpu_file,
-            "hash": self.gpu_hash,
             "config": self.gpu_config,
         }
         return val.Extension(name, typ=ty, val=payload, extensions=["tket.gpu"])

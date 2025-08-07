@@ -189,7 +189,7 @@ def custom_type(
 
 
 def wasm_module(
-    filename: str, filehash: int
+    filename: str, filehash: int | None = None
 ) -> Callable[[builtins.type[T]], GuppyDefinition]:
     def type_def_wrapper(
         id: DefId,
@@ -208,7 +208,7 @@ def wasm_module(
     return f(filename, filehash, None)
 
 def gpu_module(
-    filename: str, filehash: int, config: str | None
+    filename: str, filehash: int | None = None, config: str | None = None
 ) -> Callable[[builtins.type[T]], GuppyDefinition]:
     def type_def_wrapper(
         id: DefId,
