@@ -8,4 +8,4 @@ def foo(qs: list[tuple[bool, qubit]] @owned) -> list[qubit]:
     return [q for b, q in qs if b]
 
 
-guppy.compile(foo)
+foo.compile()

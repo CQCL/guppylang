@@ -7,4 +7,4 @@ def foo(x: NonBool) -> int:
     return 1 if x else 0
 
 
-guppy.compile(foo)
+foo.compile()

@@ -1,8 +1,8 @@
-from guppylang.decorator import guppy
+from guppylang_internals.decorator import custom_function
 
 
-@guppy.custom()
+@custom_function()
 def foo(x): ...
 
 
-guppy.compile(foo)
+foo.compile()

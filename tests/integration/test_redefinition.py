@@ -1,6 +1,7 @@
 import pytest
 
 from guppylang.decorator import guppy
+from guppylang_internals.error import GuppyError
 
 
 def test_func_redefinition(validate):
@@ -12,7 +13,7 @@ def test_func_redefinition(validate):
     def test() -> bool:  # noqa: F811
         return False
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_method_redefinition(validate):
@@ -25,14 +26,14 @@ def test_method_redefinition(validate):
             return 1.0  # Type error on purpose
 
         @guppy
-        def foo(self: "Test") -> int:
+        def foo(self: "Test") -> int:  # noqa: F811
             return 1  # Type error on purpose
 
     @guppy
     def main(t: Test) -> int:
         return t.foo()
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_redefine_after_error(validate):
@@ -42,39 +43,37 @@ def test_redefine_after_error(validate):
 
     @guppy
     def foo() -> int:
-        return y
+        return y  # noqa: F821
 
-    try:
-        guppy.compile(foo)
-    except:
-        pass
+    with pytest.raises(GuppyError):
+        foo.compile()
 
     @guppy.struct
-    class Foo:
+    class Foo:  # noqa: F811
         x: int
 
     @guppy
     def foo(f: Foo) -> int:
         return f.x
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 @pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/456")
 def test_struct_redefinition(validate):
     @guppy.struct
     class Test:
-        x: "blah"  # Non-existing type
+        x: "blah"  # Non-existing type  # noqa: F821
 
     @guppy.struct
-    class Test:
+    class Test:  # noqa: F811
         y: int
 
     @guppy
     def main(x: int) -> Test:
         return Test(x)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 @pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/456")
@@ -88,7 +87,7 @@ def test_struct_method_redefinition(validate):
             return 1.0  # Type error on purpose
 
     @guppy.struct
-    class Test:
+    class Test:  # noqa: F811
         y: int
 
         @guppy
@@ -99,4 +98,4 @@ def test_struct_method_redefinition(validate):
     def main(x: int) -> int:
         return Test(x).bar()
 
-    validate(guppy.compile(main))
+    validate(main.compile())

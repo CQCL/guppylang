@@ -11,4 +11,4 @@ class StructB:
     y: "StructA"
 
 
-guppy.compile(StructB)
+StructB.compile()

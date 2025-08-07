@@ -8,4 +8,4 @@ from guppylang.std.builtins import owned
 def foo(f: Callable[[int @owned], None]) -> None: ...
 
 
-guppy.compile(foo)
+foo.compile()

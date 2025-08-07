@@ -2,8 +2,6 @@ from guppylang.decorator import guppy
 from guppylang.std.builtins import owned
 from guppylang.std.quantum import qubit
 
-import guppylang.std.quantum as quantum
-
 
 def test_basic(validate):
     @guppy.declare
@@ -14,7 +12,7 @@ def test_basic(validate):
         foo(q)
         return q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_mixed(validate):
@@ -26,7 +24,7 @@ def test_mixed(validate):
         q2 = foo(q1, q2)
         return q1, q2
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_local(validate):
@@ -39,7 +37,7 @@ def test_local(validate):
         f(q)
         return q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_nested_calls(validate):
@@ -51,7 +49,7 @@ def test_nested_calls(validate):
         # This is legal since function arguments and tuples are evaluated left to right
         return foo(foo(foo(0, q), q), q), q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_struct(validate):
@@ -79,8 +77,8 @@ def test_struct(validate):
         bar(a)
         return a
 
-    validate(guppy.compile(test1))
-    validate(guppy.compile(test2))
+    validate(test1.compile())
+    validate(test2.compile())
 
 
 def test_control_flow(validate):
@@ -116,7 +114,7 @@ def test_control_flow(validate):
             i += 1
         return q1, q2
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_tensor(validate):
@@ -153,7 +151,7 @@ def test_tensor(validate):
         c1 = (foo, (bar, baz))(a, b.x, c1.x, b, c1, c2)
         return a, b, c1, c2
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_basic_def(validate):
@@ -171,7 +169,7 @@ def test_basic_def(validate):
         foo(q)
         return q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_empty_def(validate):
@@ -184,7 +182,7 @@ def test_empty_def(validate):
         test(q)
         return q
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_mixed_def(validate):
@@ -198,7 +196,7 @@ def test_mixed_def(validate):
         foo(c)
         return e, b + d
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_move_back(validate):
@@ -230,7 +228,7 @@ def test_move_back(validate):
         use(t.q)
         return s
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_move_back_branch(validate):
@@ -265,7 +263,7 @@ def test_move_back_branch(validate):
         test(s, False, 5, qubit(), qubit())
         return s
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_self(validate):
@@ -286,7 +284,7 @@ def test_self(validate):
     def main(s: MyStruct) -> None:
         s.bar(False)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_subtype(validate):
@@ -299,7 +297,7 @@ def test_subtype(validate):
         foo(q)
         return q
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_shadow_check(validate):
@@ -311,7 +309,7 @@ def test_shadow_check(validate):
         if True:
             foo(i)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_self_qubit(validate):
@@ -324,7 +322,7 @@ def test_self_qubit(validate):
         qubit().discard()
         return result
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_non_terminating(validate):
@@ -360,6 +358,6 @@ def test_non_terminating(validate):
         while True:
             pass
 
-    validate(guppy.compile(test1))
-    validate(guppy.compile(test2))
-    validate(guppy.compile(test3))
+    validate(test1.compile())
+    validate(test2.compile())
+    validate(test3.compile())

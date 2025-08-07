@@ -67,7 +67,7 @@ def test_func_decl_name():
     @guppy.declare
     def func_name() -> None: ...
 
-    hugr = func_name.compile().module
+    hugr = func_name.compile().modules[0]
     [def_op] = [
         data.op for n, data in hugr.nodes() if isinstance(data.op, ops.FuncDecl)
     ]

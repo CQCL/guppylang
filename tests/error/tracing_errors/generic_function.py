@@ -9,4 +9,4 @@ def test(xs: array[int, n]) -> None:
     pass
 
 
-guppy.compile(test)
+test.compile()

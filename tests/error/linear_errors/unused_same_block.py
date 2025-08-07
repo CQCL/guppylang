@@ -10,4 +10,4 @@ def foo(q: qubit @owned) -> int:
     return x
 
 
-guppy.compile(foo)
+foo.compile()

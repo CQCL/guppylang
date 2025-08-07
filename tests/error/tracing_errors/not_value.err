@@ -1,6 +1,6 @@
 Traceback (most recent call last):
   File "$FILE", line 20, in <module>
-    guppy.compile(test)
+    test.compile()
   File "$FILE", line 17, in test
     foo(T)
-guppylang.error.GuppyComptimeError: Type `T` is not a value
+guppylang_internals.error.GuppyComptimeError: Type `T` is not a value

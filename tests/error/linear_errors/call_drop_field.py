@@ -18,4 +18,4 @@ def bar() -> qubit:
     return foo().q1
 
 
-guppy.compile(bar)
+bar.compile()

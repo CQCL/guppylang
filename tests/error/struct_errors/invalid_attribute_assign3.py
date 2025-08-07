@@ -12,4 +12,4 @@ def foo(s: MyStruct) -> None:
     s.x, a = (1, 2), 3
 
 
-guppy.compile(foo)
+foo.compile()

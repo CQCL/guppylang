@@ -7,4 +7,4 @@ class MyStruct[T: (Copy, Drop), x: T]:
     pass
 
 
-guppy.compile(MyStruct)
+MyStruct.compile()

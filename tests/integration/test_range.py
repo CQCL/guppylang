@@ -1,35 +1,40 @@
+import builtins
+
 from guppylang.decorator import guppy
 from guppylang.std.builtins import range, SizedIter, Range, py
 
 
 def test_range(run_int_fn):
     @guppy
-    def main() -> int:
+    def stop(stop: int) -> int:
         total = 0
-        for x in range(5):
+        for x in range(stop):
             total += x + 100  # Make the initial 0 obvious
         return total
 
     @guppy
-    def negative() -> int:
+    def start(start: int, stop: int) -> int:
         total = 0
-        for x in range(-3):
-            total += 100 + x
+        for x in range(start, stop):
+            total += x + 100
         return total
 
     @guppy
-    def non_static() -> int:
+    def step(start: int, stop: int, step: int) -> int:
         total = 0
-        n = 4
-        for x in range(n + 1):
-            total += x + 100  # Make the initial 0 obvious
+        for x in range(start, stop, step):
+            total += x + 100
         return total
 
-    run_int_fn(main, expected=510)
+    def expected(r) -> int:
+        return sum(x + 100 for x in r)
 
-    run_int_fn(negative, expected=0)
-
-    run_int_fn(non_static, expected=510)
+    run_int_fn(stop, args=[5], expected=expected(builtins.range(5)))
+    run_int_fn(stop, args=[-3], expected=expected(builtins.range(-3)))
+    run_int_fn(start, args=[2, 7], expected=expected(builtins.range(2, 7)))
+    run_int_fn(start, args=[-2, 5], expected=expected(builtins.range(-2, 5)))
+    run_int_fn(step, args=[1, 5, 2], expected=expected(builtins.range(1, 5, 2)))
+    run_int_fn(step, args=[5, -2, -1], expected=expected(builtins.range(5, -2, -1)))
 
 
 def test_static_size(validate):
@@ -37,7 +42,7 @@ def test_static_size(validate):
     def negative() -> SizedIter[Range, 10]:
         return range(10)
 
-    validate(guppy.compile(negative))
+    validate(negative.compile())
 
 
 def test_py_size(validate):
@@ -47,7 +52,7 @@ def test_py_size(validate):
     def negative() -> SizedIter[Range, 10]:
         return range(py(n))
 
-    validate(guppy.compile(negative))
+    validate(negative.compile())
 
 
 def test_static_generic_size(validate):
@@ -57,4 +62,4 @@ def test_static_generic_size(validate):
     def negative() -> SizedIter[Range, n]:
         return range(n)
 
-    validate(guppy.compile(negative))
+    validate(negative.compile())

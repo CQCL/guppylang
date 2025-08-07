@@ -28,4 +28,4 @@ def test_struct(validate):
     def main(s: StringStruct) -> None:
         StringStruct("Lorem Ipsum")
 
-    validate(guppy.compile(main))
+    validate(main.compile())

@@ -7,4 +7,4 @@ def foo(xs: array[int, 42]) -> int:
     return xs[1.0]
 
 
-guppy.compile(foo)
+foo.compile()

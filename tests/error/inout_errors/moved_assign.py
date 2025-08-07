@@ -9,4 +9,4 @@ def test(q: qubit) -> qubit:
     return r
 
 
-guppy.compile(test)
+test.compile()

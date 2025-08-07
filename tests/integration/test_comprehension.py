@@ -5,8 +5,9 @@ from guppylang.std.builtins import owned
 from guppylang.std.option import Option
 from guppylang.std.quantum import qubit
 from guppylang.std.quantum_functional import h, cx
+from guppylang_internals.decorator import custom_type
 
-from guppylang.tys.ty import NoneType
+from guppylang_internals.tys.ty import NoneType
 from tests.util import compile_guppy
 
 
@@ -23,7 +24,7 @@ def test_basic_linear(validate):
     def test(qs: list[qubit] @ owned) -> list[qubit]:
         return [h(q) for q in qs]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_guarded(validate):
@@ -51,7 +52,7 @@ def test_multiple_struct(validate):
     def test(ss: list[MyStruct] @ owned) -> list[qubit]:
         return [h(q) for s in ss for q in s.qs]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_tuple_pat(validate):
@@ -67,7 +68,7 @@ def test_tuple_pat_linear(validate):
     def test(qs: list[tuple[int, qubit, qubit]] @ owned) -> list[tuple[qubit, qubit]]:
         return [cx(q1, q2) for _, q1, q2 in qs]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_tuple_return(validate):
@@ -86,7 +87,7 @@ def test_dependent(validate):
     def test(xs: list[float]) -> list[float]:
         return [x * y for x in xs if x > 0 for y in process(x) if y > x]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_capture(validate):
@@ -107,7 +108,7 @@ def test_capture_struct(validate):
     def test(xs: list[int], s: MyStruct) -> list[int]:
         return [x + s.x for x in xs if x > s.y]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_scope(validate):
@@ -141,7 +142,7 @@ def test_nested_linear(validate):
     def test(qs: list[qubit] @ owned) -> list[qubit]:
         return [h(q) for q in [h(q) for q in qs]]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_classical_list_comp(validate):
@@ -149,7 +150,7 @@ def test_classical_list_comp(validate):
     def test(xs: list[int]) -> list[int]:
         return [x for x in xs]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_linear_discard(validate):
@@ -160,7 +161,7 @@ def test_linear_discard(validate):
     def test(qs: list[qubit] @ owned) -> list[None]:
         return [discard(q) for q in qs]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_linear_discard_struct(validate):
@@ -176,7 +177,7 @@ def test_linear_discard_struct(validate):
     def test(ss: list[MyStruct] @ owned) -> list[None]:
         return [discard(s.q1, s.q2) for s in ss]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_linear_consume_in_guard(validate):
@@ -187,7 +188,7 @@ def test_linear_consume_in_guard(validate):
     def test(qs: list[tuple[int, qubit]] @ owned) -> list[int]:
         return [x for x, q in qs if cond(q)]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_linear_consume_in_iter(validate):
@@ -198,18 +199,18 @@ def test_linear_consume_in_iter(validate):
     def test(qs: list[qubit] @ owned) -> list[int]:
         return [x for q in qs for x in make_list(q)]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_linear_next_nonlinear_iter(validate):
-    @guppy.type(NoneType().to_hugr())
+    @custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyIter:
         """An iterator that yields linear values but is not linear itself."""
 
         @guppy.declare
         def __next__(self: "MyIter") -> Option[tuple[qubit, "MyIter"]]: ...
 
-    @guppy.type(NoneType().to_hugr())
+    @custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyType:
         """Type that produces the iterator above."""
 
@@ -221,12 +222,14 @@ def test_linear_next_nonlinear_iter(validate):
         # We can use `mt` in an inner loop since it's not linear
         return [(x, q) for x in xs for q in mt]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_nonlinear_next_linear_iter(validate):
-    @guppy.type(
-        tys.Opaque(extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Any),
+    @custom_type(
+        tys.Opaque(
+            extension="prelude", id="qubit", args=[], bound=tys.TypeBound.Linear
+        ),
         copyable=False,
         droppable=False,
     )
@@ -236,7 +239,7 @@ def test_nonlinear_next_linear_iter(validate):
         @guppy.declare
         def __next__(self: "MyIter" @ owned) -> Option[tuple[int, "MyIter"]]: ...
 
-    @guppy.type(NoneType().to_hugr())
+    @custom_type(lambda _, ctx: NoneType().to_hugr(ctx))
     class MyType:
         """Type that produces the iterator above."""
 
@@ -248,7 +251,7 @@ def test_nonlinear_next_linear_iter(validate):
         # We can use `mt` in an outer loop since the target `x` is not linear
         return [(x, x + y) for x in mt for y in xs]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_borrow(validate):
@@ -259,7 +262,7 @@ def test_borrow(validate):
     def test(q: qubit, n: int) -> list[int]:
         return [foo(q) for _ in range(n)]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_borrow_nested(validate):
@@ -270,7 +273,7 @@ def test_borrow_nested(validate):
     def test(q: qubit, n: int, m: int) -> list[int]:
         return [foo(q) for _ in range(n) for _ in range(m)]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_borrow_guarded(validate):
@@ -281,7 +284,7 @@ def test_borrow_guarded(validate):
     def test(q: qubit, n: int) -> list[int]:
         return [foo(q) for i in range(n) if i % 2 == 0]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_borrow_twice(validate):
@@ -292,7 +295,7 @@ def test_borrow_twice(validate):
     def test(q: qubit, n: int) -> list[int]:
         return [foo(q) + foo(q) for _ in range(n)]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_borrow_in_guard(validate):
@@ -306,7 +309,7 @@ def test_borrow_in_guard(validate):
     def test(q: qubit, n: int) -> list[int]:
         return [foo(q) for _ in range(n) if bar(q)]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_borrow_in_iter(validate):
@@ -317,7 +320,7 @@ def test_borrow_in_iter(validate):
     def test(q: qubit @ owned) -> tuple[list[int], qubit]:
         return [foo(q) for _ in range(foo(q))], q
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_borrow_struct(validate):
@@ -333,7 +336,7 @@ def test_borrow_struct(validate):
     def test(s: MyStruct, n: int) -> list[int]:
         return [foo(s) for _ in range(n)]
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_borrow_and_consume(validate):
@@ -347,4 +350,4 @@ def test_borrow_and_consume(validate):
     def test(qs: list[qubit] @ owned) -> list[int]:
         return [foo(q) + bar(q) for q in qs]
 
-    validate(guppy.compile(test))
+    validate(test.compile())

@@ -15,4 +15,4 @@ def foo(q: qubit) -> None:
     guppy_circ(q)
 
 
-guppy.compile(foo)
+foo.compile()

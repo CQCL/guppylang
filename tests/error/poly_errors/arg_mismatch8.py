@@ -14,4 +14,4 @@ def main(x: float) -> None:
     f(x)
 
 
-guppy.compile(main)
+main.compile()

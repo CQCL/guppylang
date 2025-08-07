@@ -13,4 +13,4 @@ def foo(qs: list[tuple[qubit, bool]] @owned) -> list[qubit]:
     return rs
 
 
-guppy.compile(foo)
+foo.compile()

@@ -15,4 +15,4 @@ def foo(s: MyStruct) -> None:
     pass
 
 
-guppy.compile(foo)
+foo.compile()

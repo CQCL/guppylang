@@ -1,5 +1,4 @@
 from guppylang.decorator import guppy
-from tests.util import compile_guppy
 
 
 def test_factorial(validate):
@@ -23,9 +22,9 @@ def test_factorial(validate):
             return acc
         return factorial3(x - 1, acc * x)
 
-    validate(guppy.compile(factorial1), name="factorial1")
-    validate(guppy.compile(factorial2), name="factorial2")
-    validate(guppy.compile(factorial3), name="factorial3")
+    validate(factorial1.compile(), name="factorial1")
+    validate(factorial2.compile(), name="factorial2")
+    validate(factorial3.compile(), name="factorial3")
 
 
 def test_even_odd(validate):
@@ -41,5 +40,5 @@ def test_even_odd(validate):
             return False
         return is_even(x - 1)
 
-    validate(guppy.compile(is_odd))
-    validate(guppy.compile(is_even))
+    validate(is_odd.compile())
+    validate(is_even.compile())

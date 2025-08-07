@@ -6,15 +6,17 @@ from __future__ import annotations
 
 from typing import no_type_check
 
-from guppylang.decorator import guppy
-from guppylang.definition.custom import NoopCompiler
-from guppylang.std._internal.checker import DunderChecker
-from guppylang.std._internal.util import bool_logic_op
+from guppylang_internals.decorator import custom_function, extend_type, hugr_op
+from guppylang_internals.definition.custom import NoopCompiler
+from guppylang_internals.std._internal.checker import DunderChecker
+from guppylang_internals.std._internal.util import bool_logic_op
+from guppylang_internals.tys.builtin import bool_type_def
+
+from guppylang import guppy
 from guppylang.std.num import nat
-from guppylang.tys.builtin import bool_type_def
 
 
-@guppy.extend_type(bool_type_def)
+@extend_type(bool_type_def)
 class bool:
     """Booleans representing truth values.
 
@@ -24,13 +26,13 @@ class bool:
     ``False`` using the standard truth testing procedure.
     """
 
-    @guppy.hugr_op(bool_logic_op("and"))
+    @hugr_op(bool_logic_op("and"))
     def __and__(self: bool, other: bool) -> bool: ...
 
-    @guppy.custom(NoopCompiler())
+    @custom_function(NoopCompiler())
     def __bool__(self: bool) -> bool: ...
 
-    @guppy.hugr_op(bool_logic_op("eq"))
+    @hugr_op(bool_logic_op("eq"))
     def __eq__(self: bool, other: bool) -> bool: ...
 
     @guppy
@@ -51,11 +53,11 @@ class bool:
         #  See https://github.com/CQCL/guppylang/issues/707
         return nat(1) if self else nat(0)
 
-    @guppy.custom(checker=DunderChecker("__bool__"), higher_order_value=False)
+    @custom_function(checker=DunderChecker("__bool__"), higher_order_value=False)
     def __new__(x): ...
 
-    @guppy.hugr_op(bool_logic_op("or"))
+    @hugr_op(bool_logic_op("or"))
     def __or__(self: bool, other: bool) -> bool: ...
 
-    @guppy.hugr_op(bool_logic_op("xor"))
+    @hugr_op(bool_logic_op("xor"))
     def __xor__(self: bool, other: bool) -> bool: ...

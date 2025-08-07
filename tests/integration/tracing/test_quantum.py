@@ -3,6 +3,7 @@ from guppylang.decorator import guppy
 from guppylang.std.angles import angle
 from guppylang.std.builtins import array
 from guppylang.std.quantum import h, measure, cx, rz
+import itertools
 
 
 def test_basics(validate):
@@ -19,16 +20,16 @@ def test_basics(validate):
         cx(q1, q2)
         measure(q2)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_ladder(validate):
     @guppy.comptime
     def test(qs: array[qubit, 10]) -> None:
-        for q1, q2 in zip(qs[:-1], qs[1:]):
+        for q1, q2 in itertools.pairwise(qs):
             cx(q1, q2)
 
-    validate(guppy.compile(test))
+    validate(test.compile())
 
 
 def test_angles(validate):
@@ -38,4 +39,4 @@ def test_angles(validate):
             rz(q, theta)
             theta /= 2
 
-    validate(guppy.compile(test))
+    validate(test.compile())

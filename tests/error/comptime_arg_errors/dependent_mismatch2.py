@@ -11,4 +11,4 @@ def main(n: nat @comptime, m: nat @comptime) -> None:
     foo(n, array(i for i in range(m)))
 
 
-guppy.compile(main)
+main.compile()

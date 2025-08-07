@@ -12,4 +12,4 @@ def main(b: bool, m: nat) -> None:
         foo(m)
 
 
-guppy.compile(main)
+main.compile()

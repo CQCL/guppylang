@@ -7,4 +7,4 @@ def main() -> None:
     a = array(1, 2, 3)
     a[0] = "not an int"
 
-guppy.compile(main)
+main.compile()

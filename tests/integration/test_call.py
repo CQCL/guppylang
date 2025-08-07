@@ -1,5 +1,4 @@
 from guppylang.decorator import guppy
-from tests.util import compile_guppy
 
 
 def test_call(validate):
@@ -11,7 +10,7 @@ def test_call(validate):
     def bar() -> int:
         return foo()
 
-    validate(guppy.compile(bar))
+    validate(bar.compile())
 
 
 def test_call_back(validate):
@@ -23,7 +22,7 @@ def test_call_back(validate):
     def bar(x: int) -> int:
         return x
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_recursion(validate):
@@ -31,7 +30,7 @@ def test_recursion(validate):
     def main(x: int) -> int:
         return main(x)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_mutual_recursion(validate):
@@ -43,7 +42,7 @@ def test_mutual_recursion(validate):
     def bar(x: int) -> int:
         return foo(x)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())
 
 
 def test_unary_tuple(validate):
@@ -56,7 +55,7 @@ def test_unary_tuple(validate):
         (y,) = foo(x)
         return y
 
-    validate(guppy.compile(bar))
+    validate(bar.compile())
 
 
 def test_method_call(validate):
@@ -64,4 +63,4 @@ def test_method_call(validate):
     def foo(x: int) -> int:
         return x.__add__(2)
 
-    validate(guppy.compile(foo))
+    validate(foo.compile())

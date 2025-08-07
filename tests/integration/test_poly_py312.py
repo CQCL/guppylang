@@ -12,7 +12,7 @@ def test_function(validate):
     def main[S, T](x: S @ owned, y: T @ owned) -> tuple[T, S]:
         return y, x
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_struct(validate):
@@ -25,7 +25,26 @@ def test_struct(validate):
     def main(s: MyStruct[int, float]) -> float:
         return s.x + s.y
 
-    validate(guppy.compile(main))
+    validate(main.compile())
+
+
+def test_inner_frame(validate):
+    """See https://github.com/CQCL/guppylang/issues/1116"""
+
+    def make():
+        @guppy.struct
+        class MyStruct[T]:
+            @guppy
+            def foo(self: "MyStruct[int]") -> None:
+                pass
+
+        @guppy
+        def main() -> None:
+            MyStruct[int]().foo()
+
+        return main
+
+    validate(guppy.compile(make()))
 
 
 def test_copy_bound(validate):
@@ -37,7 +56,7 @@ def test_copy_bound(validate):
     def main[T: Copy](s: MyStruct[T]) -> tuple[T, T]:
         return s.x, s.x
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_drop_bound(validate):
@@ -49,7 +68,7 @@ def test_drop_bound(validate):
     def main[T: Drop](s: MyStruct[T] @ owned) -> None:
         pass
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_copy_and_drop_bound(validate):
@@ -61,7 +80,7 @@ def test_copy_and_drop_bound(validate):
     def main[T: (Copy, Drop)](s1: MyStruct[T], s2: MyStruct[T]) -> tuple[T, T]:
         return s1.x, s1.x
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_const_param(validate):
@@ -73,7 +92,7 @@ def test_const_param(validate):
     def main[T, n: nat](xs: array[T, n], s: MyStruct[T, n]) -> nat:
         return n
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_mixed_legacy_params(validate):
@@ -83,7 +102,7 @@ def test_mixed_legacy_params(validate):
     def main[S](x: S @ owned, y: T @ owned) -> tuple[T, S]:
         return y, x
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_reference_inside(validate):
@@ -92,4 +111,4 @@ def test_reference_inside(validate):
         x: Option[T] = nothing()
         nothing[T]()
 
-    validate(guppy.compile(main))
+    validate(main.compile())

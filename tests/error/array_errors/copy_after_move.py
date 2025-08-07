@@ -9,4 +9,4 @@ def main() -> None:
    zs = xs.copy()
 
 
-guppy.compile(main)
+main.compile()

@@ -40,6 +40,23 @@ def test_nat_literal(validate):
     validate(const)
 
 
+def test_int_bounds(run_int_fn):
+    @guppy
+    def main() -> int:
+        return 9_223_372_036_854_775_807 + -9_223_372_036_854_775_808
+
+    run_int_fn(main, -1)
+
+
+def test_nat_bounds(run_int_fn):
+    @guppy
+    def main() -> nat:
+        x: nat = 18_446_744_073_709_551_614
+        return x - x
+
+    run_int_fn(main, 0)
+
+
 def test_aug_assign(run_int_fn):
     @guppy
     def add(x: int) -> int:
@@ -105,7 +122,7 @@ def test_angle_arith(validate):
         a3 += 2 * a1
         return a3 / 3 == -a2
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_angle_arith_float(validate):
@@ -116,7 +133,7 @@ def test_angle_arith_float(validate):
         a3 += 2.2 * a1
         return a3 / 3.9 == -a2
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_implicit_coercion(validate):
@@ -136,7 +153,7 @@ def test_angle_float_coercion(validate):
         a = angle(f)
         return a, float(a)
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_angle_pi(validate):
@@ -147,7 +164,7 @@ def test_angle_pi(validate):
         a += 3 * pi / 2
         return a
 
-    validate(guppy.compile(main))
+    validate(main.compile())
 
 
 def test_shortcircuit_assign1(validate):
