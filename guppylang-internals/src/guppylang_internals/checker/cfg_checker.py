@@ -8,7 +8,7 @@ import ast
 import collections
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import ClassVar, Generic, TypeVar, cast
+from typing import ClassVar, Generic, TypeVar
 
 from guppylang_internals.ast_util import line_col
 from guppylang_internals.cfg.bb import BB
@@ -23,7 +23,6 @@ from guppylang_internals.checker.core import (
 )
 from guppylang_internals.checker.expr_checker import ExprSynthesizer, to_bool
 from guppylang_internals.checker.stmt_checker import StmtChecker
-from guppylang_internals.definition.value import ValueDef
 from guppylang_internals.diagnostic import Error, Note
 from guppylang_internals.error import GuppyError
 from guppylang_internals.tys.param import Parameter
@@ -115,7 +114,7 @@ def check_cfg(
         if bb in compiled:
             # If the BB was already compiled, we just have to check that the signatures
             # match.
-            check_rows_match(input_row, compiled[bb].sig.input_row, bb, globals)
+            check_rows_match(input_row, compiled[bb].sig.input_row, bb)
         else:
             # Otherwise, check the BB and enqueue its successors
             checked_bb = check_bb(
@@ -195,21 +194,6 @@ class BranchTypeError(Error):
         span_label: ClassVar[str] = "This is of type `{ty}`"
         ty: Type
 
-    @dataclass(frozen=True)
-    class GlobalHint(Note):
-        message: ClassVar[str] = (
-            "{ident} may be shadowing a global {defn.description} definition of type "
-            "`{defn.ty}` on some branches"
-        )
-        defn: ValueDef
-
-
-@dataclass(frozen=True)
-class GlobalShadowError(Error):
-    title: ClassVar[str] = "Global variable conditionally shadowed"
-    span_label: ClassVar[str] = "{ident} may be shadowing a global variable"
-    ident: str
-
 
 def check_bb(
     bb: BB,
@@ -245,23 +229,26 @@ def check_bb(
 
     for succ in bb.successors + bb.dummy_successors:
         for x, use_bb in cfg.live_before[succ].items():
-            # Check that the variables requested by the successor are defined
-            if (
-                x not in ctx.locals
-                and x not in ctx.globals
-                and x not in ctx.generic_params
-            ):
-                # If the variable is defined on *some* paths, we can give a more
-                # informative error message
-                if x in cfg.maybe_ass_before[use_bb]:
-                    err = VarMaybeNotDefinedError(use_bb.vars.used[x], x)
-                    if bad_branch := diagnose_maybe_undefined(use_bb, x, cfg):
-                        branch_expr, truth_value = bad_branch
-                        note = VarMaybeNotDefinedError.BadBranch(
-                            branch_expr, x, truth_value
-                        )
-                        err.add_sub_diagnostic(note)
-                    raise GuppyError(err)
+            # Check that the variables requested by the successor are defined. If `x` is
+            # a local variable, then we must be able to find it in the context.
+            # Following Python, locals are exactly those variables that are defined
+            # somewhere in the function body.
+            if x in cfg.assigned_somewhere:
+                if x not in ctx.locals:
+                    # If the variable is defined on *some* paths, we can give a more
+                    # informative error message
+                    if x in cfg.maybe_ass_before[use_bb]:
+                        err = VarMaybeNotDefinedError(use_bb.vars.used[x], x)
+                        if bad_branch := diagnose_maybe_undefined(use_bb, x, cfg):
+                            branch_expr, truth_value = bad_branch
+                            note = VarMaybeNotDefinedError.BadBranch(
+                                branch_expr, x, truth_value
+                            )
+                            err.add_sub_diagnostic(note)
+                        raise GuppyError(err)
+                    raise GuppyError(VarNotDefinedError(use_bb.vars.used[x], x))
+            # If x is not a local, then it must be a global or generic param
+            elif x not in ctx.globals and x not in ctx.generic_params:
                 raise GuppyError(VarNotDefinedError(use_bb.vars.used[x], x))
 
     # Finally, we need to compute the signature of the basic block
@@ -287,9 +274,7 @@ def check_bb(
     return checked_bb
 
 
-def check_rows_match(
-    row1: Row[Variable], row2: Row[Variable], bb: BB, globals: Globals
-) -> None:
+def check_rows_match(row1: Row[Variable], row2: Row[Variable], bb: BB) -> None:
     """Checks that the types of two rows match up.
 
     Otherwise, an error is thrown, alerting the user that a variable has different
@@ -299,10 +284,7 @@ def check_rows_match(
     for x in map1.keys() | map2.keys():
         # If block signature lengths don't match but no undefined error was thrown, some
         # variables may be shadowing global variables.
-        v1 = map1.get(x) or cast(ValueDef, globals[x])
-        assert isinstance(v1, Variable | ValueDef)
-        v2 = map2.get(x) or cast(ValueDef, globals[x])
-        assert isinstance(v2, Variable | ValueDef)
+        v1, v2 = map1[x], map2[x]
         if v1.ty != v2.ty:
             # In the error message, we want to mention the variable that was first
             # defined at the start.
@@ -320,31 +302,9 @@ def check_rows_match(
             # We don't add a location to the type hint for the global variable,
             # since it could lead to cross-file diagnostics (which are not
             # supported) or refer to long function definitions.
-            sub1 = (
-                BranchTypeError.TypeHint(v1.defined_at, v1.ty)
-                if isinstance(v1, Variable)
-                else BranchTypeError.GlobalHint(None, v1)
-            )
-            sub2 = (
-                BranchTypeError.TypeHint(v2.defined_at, v2.ty)
-                if isinstance(v2, Variable)
-                else BranchTypeError.GlobalHint(None, v2)
-            )
-            err.add_sub_diagnostic(sub1)
-            err.add_sub_diagnostic(sub2)
+            err.add_sub_diagnostic(BranchTypeError.TypeHint(v1.defined_at, v1.ty))
+            err.add_sub_diagnostic(BranchTypeError.TypeHint(v2.defined_at, v2.ty))
             raise GuppyError(err)
-        else:
-            # TODO: Remove once https://github.com/CQCL/guppylang/issues/827 is done.
-            # If either is a global variable, don't allow shadowing even if types match.
-            if not (isinstance(v1, Variable) and isinstance(v2, Variable)):
-                local_var = v1 if isinstance(v1, Variable) else v2
-                ident = (
-                    "Expression"
-                    if local_var.name.startswith("%")
-                    else f"Variable `{local_var.name}`"
-                )
-                glob_err = GlobalShadowError(local_var.defined_at, ident)
-                raise GuppyError(glob_err)
 
 
 def diagnose_maybe_undefined(
