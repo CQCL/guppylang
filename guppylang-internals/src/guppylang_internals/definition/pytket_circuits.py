@@ -412,7 +412,7 @@ def _signature_from_circuit(
                 assert isinstance(qubit, GuppyDefinition)
                 qubit_ty = cast(TypeDef, qubit.wrapped).check_instantiate([])
 
-                angle_defn = ENGINE.get_checked(angle.id)
+                angle_defn = ENGINE.get_checked(angle.id)  # type: ignore[attr-defined]
                 assert isinstance(angle_defn, TypeDef)
                 angle_ty = angle_defn.check_instantiate([])
 
