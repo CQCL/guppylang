@@ -1,4 +1,4 @@
 Traceback (most recent call last):
   File "$FILE", line 3, in <module>
-    @guppy.gpu_module("", 0)
+    @guppy.gpu_module("")
 AttributeError: '_Guppy' object has no attribute 'gpu_module'

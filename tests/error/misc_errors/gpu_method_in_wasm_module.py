@@ -1,6 +1,6 @@
 from guppylang import guppy
 
-@guppy.wasm_module("", 0)
+@guppy.wasm_module("")
 class MyClass:
     @guppy.gpu
     def foo(self: "MyClass", x: int) -> None:

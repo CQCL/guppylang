@@ -12,7 +12,7 @@ from guppylang_internals.std._internal.compiler.tket_exts import (
     ConstWasmModule,
 )
 from guppylang_internals.tys.builtin import (
-    wasm_module_info,
+    wasm_module_name,
 )
 from guppylang_internals.tys.ty import (
     FunctionType,
@@ -98,8 +98,9 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
 
         # Get the WASM module information from the type
         selfarg = self.func.ty.inputs[0].ty
-        if info := wasm_module_info(selfarg):
-            const_module = self.builder.add_const(ConstWasmModule(*info))
+        info = wasm_module_name(selfarg)
+        if info is not None:
+            const_module = self.builder.add_const(ConstWasmModule(info))
         else:
             raise InternalGuppyError(
                 "Expected cached signature to have WASM module as first arg"

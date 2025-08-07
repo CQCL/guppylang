@@ -106,7 +106,6 @@ class _NumericTypeDef(TypeDef, CompiledDef):
 
 class WasmModuleTypeDef(OpaqueTypeDef):
     wasm_file: str
-    wasm_hash: int
 
     def __init__(
         self,
@@ -114,11 +113,9 @@ class WasmModuleTypeDef(OpaqueTypeDef):
         name: str,
         defined_at: ast.AST | None,
         wasm_file: str,
-        wasm_hash: int,
     ) -> None:
         super().__init__(id, name, defined_at, [], True, True, self.to_hugr)
         self.wasm_file = wasm_file
-        self.wasm_hash = wasm_hash
 
     def to_hugr(
         self, args: Sequence[TypeArg | ConstArg], ctx: ToHugrContext
@@ -131,9 +128,7 @@ class WasmModuleTypeDef(OpaqueTypeDef):
 class GpuModuleTypeDef(OpaqueTypeDef):
     # Identify the module to load
     gpu_file: str
-    # Provide its hash to be sure
-    gpu_hash: int
-    # Provide an optional config file
+    # Identify the config file to load
     gpu_config: str | None
 
     def __init__(
@@ -142,12 +137,10 @@ class GpuModuleTypeDef(OpaqueTypeDef):
         name: str,
         defined_at: ast.AST | None,
         gpu_file: str,
-        gpu_hash: int,
         gpu_config: str | None = None,
     ) -> None:
         super().__init__(id, name, defined_at, [], True, True, self.to_hugr)
         self.gpu_file = gpu_file
-        self.gpu_hash = gpu_hash
         self.gpu_config = gpu_config
 
     def to_hugr(self, args: Sequence[TypeArg | ConstArg], _: ToHugrContext, /) -> ht.Type:
@@ -373,15 +366,15 @@ def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
     return isinstance(ty, OpaqueType) and ty.defn == sized_iter_type_def
 
 
-def wasm_module_info(ty: Type) -> tuple[str, int] | None:
+def wasm_module_name(ty: Type) -> str | None:
     if isinstance(ty, OpaqueType) and isinstance(ty.defn, WasmModuleTypeDef):
-        return ty.defn.wasm_file, ty.defn.wasm_hash
+        return ty.defn.wasm_file
     return None
 
 
-def gpu_module_info(ty: Type) -> tuple[str, int, str | None] | None:
+def gpu_module_info(ty: Type) -> tuple[str, str | None] | None:
     if isinstance(ty, OpaqueType) and isinstance(ty.defn, GpuModuleTypeDef):
-        return ty.defn.gpu_file, ty.defn.gpu_hash, ty.defn.gpu_config
+        return ty.defn.gpu_file, ty.defn.gpu_config
     return None
 
 

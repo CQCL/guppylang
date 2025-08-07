@@ -4,7 +4,7 @@ from guppylang.std.builtins import nat, comptime
 
 
 def test_gpu_functions(validate):
-    @gpu_module("", 42, "")
+    @gpu_module("module", "config")
     class MyModule:
         @gpu
         def add_one(self: "MyModule", x: int) -> int: ...
@@ -28,7 +28,7 @@ def test_gpu_functions(validate):
 
 
 def test_gpu_methods(validate):
-    @gpu_module("", 2, "")
+    @gpu_module("module", "config")
     class MyModule:
         @gpu
         def foo(self: "MyModule") -> int: ...
@@ -52,7 +52,7 @@ def test_gpu_methods(validate):
 def test_gpu_types(validate):
     n = guppy.nat_var("n")
 
-    @gpu_module("", 3, None)
+    @gpu_module("", None)
     class MyModule:
         @gpu
         def foo(self: "MyModule", x: int, y: float, z: nat) -> None: ...
@@ -69,7 +69,7 @@ def test_gpu_types(validate):
 
 
 def test_comptime(validate):
-    @gpu_module("", 42, None)
+    @gpu_module("module", None)
     class Foo:
         @gpu
         def goo(self: "Foo") -> int: ...

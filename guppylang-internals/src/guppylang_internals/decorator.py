@@ -189,53 +189,51 @@ def custom_type(
 
 
 def wasm_module(
-    filename: str, filehash: int | None = None
+        filename: str,
 ) -> Callable[[builtins.type[T]], GuppyDefinition]:
     def type_def_wrapper(
         id: DefId,
         name: str,
         defined_at: ast.AST | None,
         wasm_file: str,
-        wasm_hash: int,
         config: str | None,
     ) -> OpaqueTypeDef:
         assert config is None
-        return WasmModuleTypeDef(id, name, defined_at, wasm_file, wasm_hash)
+        return WasmModuleTypeDef(id, name, defined_at, wasm_file)
 
     f = ext_module_decorator(
         type_def_wrapper, WasmModuleInitCompiler(), WasmModuleDiscardCompiler()
     )
-    return f(filename, filehash, None)
+    return f(filename, None)
 
 def gpu_module(
-    filename: str, filehash: int | None = None, config: str | None = None
+    filename: str, config_filename: str | None
 ) -> Callable[[builtins.type[T]], GuppyDefinition]:
     def type_def_wrapper(
         id: DefId,
         name: str,
         defined_at: ast.AST | None,
         gpu_file: str,
-        gpu_hash: int,
         gpu_config: str | None,
     ) -> OpaqueTypeDef:
-        return GpuModuleTypeDef(id, name, defined_at, gpu_file, gpu_hash, gpu_config)
+        return GpuModuleTypeDef(id, name, defined_at, gpu_file, gpu_config)
 
     f = ext_module_decorator(
         type_def_wrapper, GpuModuleInitCompiler(), GpuModuleDiscardCompiler()
     )
-    return f(filename, filehash, config)
+    return f(filename, config_filename)
 
 def ext_module_decorator(
     type_def: Callable[
-        [DefId, str, ast.AST | None, str, int, str | None], OpaqueTypeDef
+        [DefId, str, ast.AST | None, str, str | None], OpaqueTypeDef
     ],
     init_compiler: CustomInoutCallCompiler,
     discard_compiler: CustomInoutCallCompiler,
-) -> Callable[[str, int, str | None], Callable[[builtins.type[T]], GuppyDefinition]]:
+) -> Callable[[str, str | None], Callable[[builtins.type[T]], GuppyDefinition]]:
     from guppylang.defs import GuppyDefinition
 
     def fun(
-        filename: str, filehash: int, module: str | None
+        filename: str, module: str | None
     ) -> Callable[[builtins.type[T]], GuppyDefinition]:
         def dec(cls: builtins.type[T]) -> GuppyDefinition:
             # N.B. Only one module per file and vice-versa
@@ -244,7 +242,6 @@ def ext_module_decorator(
                 cls.__name__,
                 None,
                 filename,
-                filehash,
                 module,
             )
 
