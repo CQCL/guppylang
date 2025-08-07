@@ -410,6 +410,9 @@ class ArrayGetitemCompiler(ArrayCompiler):
 class ArraySetitemCompiler(ArrayCompiler):
     """Compiler for the `array.__setitem__` function."""
 
+    def __init__(self, elem_first: bool = False):
+        self.elem_first = elem_first
+
     def _setitem_ty(self, bound: ht.TypeBound) -> ht.PolyFuncType:
         """Constructs a polymorphic function type for `__setitem__`"""
         # a(Option(T), N), int, T -> a(Option(T), N)
@@ -506,6 +509,8 @@ class ArraySetitemCompiler(ArrayCompiler):
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         [array, idx, elem] = args
+        if self.elem_first:
+            elem, idx = idx, elem
         if self.elem_ty.type_bound() == ht.TypeBound.Linear:
             func_ty = self._setitem_ty(ht.TypeBound.Linear)
             func, already_exists = self.ctx.declare_global_func(
