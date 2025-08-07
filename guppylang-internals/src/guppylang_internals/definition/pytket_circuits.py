@@ -7,6 +7,7 @@ from hugr import Node, Wire, envelope, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.envelope import EnvelopeConfig
+from hugr.std.float import FLOAT_T
 
 from guppylang_internals.ast_util import AstNode, has_empty_body, with_loc
 from guppylang_internals.checker.core import Context, Globals
@@ -37,6 +38,7 @@ from guppylang_internals.definition.value import (
     CompiledCallableDef,
     CompiledHugrNodeDef,
 )
+from guppylang_internals.engine import ENGINE
 from guppylang_internals.error import GuppyError, InternalGuppyError
 from guppylang_internals.nodes import GlobalCall
 from guppylang_internals.span import SourceMap, Span, ToSpan
@@ -230,7 +232,8 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     if self.use_arrays:
                         opt_param_wires = outer_func.add_op(
                             array_unpack(
-                                ht.Option(float_type().to_hugr(ctx)), q_reg.size
+                                ht.Option(ht.Tuple(float_type().to_hugr(ctx))),
+                                q_reg.size,
                             ),
                             lex_params[0],
                         )
@@ -248,7 +251,13 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     lex_names = sorted(param_order)
                     assert len(lex_names) == len(lex_params)
                     name_to_param = dict(zip(lex_names, lex_params, strict=True))
-                    param_wires = [name_to_param[name] for name in param_order]
+                    angle_wires = [name_to_param[name] for name in param_order]
+                    # Need to convert all angles to floats.
+                    for angle in angle_wires:
+                        [halfturns] = outer_func.add_op(
+                            ops.UnpackTuple([FLOAT_T]), angle
+                        )
+                        param_wires.append(halfturns)
 
                 # Pass all arguments to call node.
                 call_node = outer_func.call(
@@ -397,10 +406,15 @@ def _signature_from_circuit(
                 import tket  # type: ignore[import-untyped, import-not-found, unused-ignore]  # noqa: F401
 
                 from guppylang.defs import GuppyDefinition
+                from guppylang.std.angles import angle
                 from guppylang.std.quantum import qubit
 
                 assert isinstance(qubit, GuppyDefinition)
                 qubit_ty = cast(TypeDef, qubit.wrapped).check_instantiate([])
+
+                angle_defn = ENGINE.get_checked(angle.id)
+                assert isinstance(angle_defn, TypeDef)
+                angle_ty = angle_defn.check_instantiate([])
 
                 if use_arrays:
                     inputs = [
@@ -410,9 +424,7 @@ def _signature_from_circuit(
                     if len(input_circuit.free_symbols()) != 0:
                         inputs.append(
                             FuncInput(
-                                array_type(
-                                    float_type(), len(input_circuit.free_symbols())
-                                ),
+                                array_type(angle_ty, len(input_circuit.free_symbols())),
                                 InputFlags.NoFlags,
                             )
                         )
@@ -426,7 +438,7 @@ def _signature_from_circuit(
                     )
                 else:
                     param_inputs = [
-                        FuncInput(float_type(), InputFlags.NoFlags)
+                        FuncInput(angle_ty, InputFlags.NoFlags)
                         for _ in range(len(input_circuit.free_symbols()))
                     ]
                     circuit_signature = FunctionType(

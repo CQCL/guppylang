@@ -1,13 +1,13 @@
 """Tests for loading pytket circuits as functions."""
 
 from importlib.util import find_spec
-import math
 
 import pytest
 
 from guppylang.decorator import guppy
+from guppylang.std.angles import angle, pi
 from guppylang.std.quantum import qubit, discard_array, discard
-from guppylang.std.builtins import array, comptime
+from guppylang.std.builtins import array
 
 tket_installed = find_spec("tket") is not None
 
@@ -282,8 +282,8 @@ def test_symbolic(validate):
 
     @guppy
     def foo(q1: qubit, q2: qubit) -> tuple[bool, bool]:
-        alpha = 0.3
-        beta = 1.2
+        alpha = angle(0.3)
+        beta = angle(1.2)
         return guppy_circ(q1, q2, alpha, beta)
 
     validate(foo.compile())
@@ -309,7 +309,7 @@ def test_symbolic_array(validate):
 
     @guppy
     def foo(reg: array[qubit, 2]) -> array[bool, 2]:
-        params = array(0.3, 1.2)
+        params = array(angle(0.3), angle(1.2))
         return guppy_circ(reg, params)
 
     validate(foo.compile())
@@ -334,7 +334,7 @@ def test_symbolic_exec(validate, run_int_fn):
     @guppy
     def main() -> int:
         q = qubit()
-        res = int(flip(q, comptime(math.pi)))
+        res = int(flip(q, pi))
         discard(q)
         return res
 
@@ -342,6 +342,7 @@ def test_symbolic_exec(validate, run_int_fn):
     run_int_fn(main, 1, num_qubits=2)
 
 
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_exec(validate, run_int_fn):
     from pytket import Circuit
 
