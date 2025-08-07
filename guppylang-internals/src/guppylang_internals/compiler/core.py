@@ -8,12 +8,14 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import tket_exts
 from hugr import Hugr, Node, Wire, ops
+from hugr import ext as he
 from hugr import tys as ht
 from hugr.build import function as hf
 from hugr.build.dfg import DP, DefinitionBuilder, DfBase
 from hugr.hugr.base import OpVarCov
 from hugr.hugr.node_port import ToNode
 from hugr.std import PRELUDE
+from hugr.std.collections.array import EXTENSION as ARRAY_EXTENSION
 from typing_extensions import assert_never
 
 from guppylang_internals.checker.core import (
@@ -36,6 +38,7 @@ from guppylang_internals.definition.value import CompiledCallableDef
 from guppylang_internals.diagnostic import Error
 from guppylang_internals.engine import ENGINE
 from guppylang_internals.error import GuppyError, InternalGuppyError
+from guppylang_internals.std._internal.compiler.tket_exts import GUPPY_EXTENSION
 from guppylang_internals.tys.arg import ConstArg, TypeArg
 from guppylang_internals.tys.builtin import nat_type
 from guppylang_internals.tys.common import ToHugrContext
@@ -241,6 +244,11 @@ class CompilerContext(ToHugrContext):
             next_def = self.compiled[next_id, mono_args]
             with track_hugr_side_effects(), self.set_monomorphized_args(mono_args):
                 next_def.compile_inner(self)
+
+        # Insert explicit drops for affine types
+        # TODO: This is a quick workaround until we can properly insert these drops
+        #   during linearity checking. See https://github.com/CQCL/guppylang/issues/1082
+        insert_drops(self.module.hugr)
 
         return entry_compiled
 
@@ -611,3 +619,78 @@ def track_hugr_side_effects() -> Iterator[None]:
         yield
     finally:
         Hugr.add_node = hugr_add_node  # type: ignore[method-assign]
+
+
+def qualified_name(type_def: he.TypeDef) -> str:
+    """Returns the qualified name of a Hugr extension type.
+    TODO: Remove once upstreamed, see https://github.com/CQCL/hugr/issues/2426
+    """
+    if type_def._extension is not None:
+        return f"{type_def._extension.name}.{type_def.name}"
+    return type_def.name
+
+
+#: List of linear extension types that correspond to affine Guppy types and thus require
+#: insertion of an explicit drop operation.
+AFFINE_EXTENSION_TYS: list[str] = [
+    qualified_name(ARRAY_EXTENSION.get_type("array")),
+]
+
+
+def requires_drop(ty: ht.Type) -> bool:
+    """Checks if a Hugr type requires an implicit drop op insertion.
+    This is the case for linear Hugr types that correspond to affine Guppy types, or
+    any other type containing one of those. See `AFFINE_EXTENSION_TYS`.
+    """
+    match ty:
+        case ht.ExtType(type_def=type_def, args=args):
+            return qualified_name(type_def) in AFFINE_EXTENSION_TYS or any(
+                requires_drop(arg.ty) for arg in args if isinstance(arg, ht.TypeTypeArg)
+            )
+        case ht.Opaque(id=name, extension=extension, args=args):
+            qualified = f"{extension}.{name}" if extension else name
+            return qualified in AFFINE_EXTENSION_TYS or any(
+                requires_drop(arg.ty) for arg in args if isinstance(arg, ht.TypeTypeArg)
+            )
+        case ht.Sum(variant_rows=rows):
+            return any(requires_drop(ty) for row in rows for ty in row)
+        case ht.Variable(bound=bound):
+            return bound == ht.TypeBound.Linear
+        case ht.FunctionType():
+            return False
+        case ht.Alias():
+            raise InternalGuppyError("Alias should not be emitted!")
+        case _:
+            return False
+
+
+def drop_op(ty: ht.Type) -> ops.ExtOp:
+    """Returns the operation to drop affine values."""
+    return GUPPY_EXTENSION.get_op("drop").instantiate(
+        [ht.TypeTypeArg(ty)], ht.FunctionType([ty], [])
+    )
+
+
+def insert_drops(hugr: Hugr[OpVarCov]) -> None:
+    """Inserts explicit drop ops for unconnected ports into the Hugr.
+    TODO: This is a quick workaround until we can properly insert these drops during
+      linearity checking. See https://github.com/CQCL/guppylang/issues/1082
+    """
+    for node in hugr:
+        data = hugr[node]
+        # Iterating over `node.outputs()` doesn't work reliably since it sometimes
+        # raises an `IncompleteOp` exception. Instead, we query the number of out ports
+        # and look them up by index. However, this method is *also* broken when
+        # isnpecting `FuncDefn` nodes due to https://github.com/CQCL/hugr/issues/2438.
+        if isinstance(data.op, ops.FuncDefn):
+            continue
+        for i in range(hugr.num_out_ports(node)):
+            port = node.out(i)
+            kind = hugr.port_kind(port)
+            if (
+                next(iter(hugr.linked_ports(port)), None) is None
+                and isinstance(kind, ht.ValueKind)
+                and requires_drop(kind.ty)
+            ):
+                drop = hugr.add_node(drop_op(kind.ty), parent=data.parent)
+                hugr.add_link(port, drop.inp(0))
