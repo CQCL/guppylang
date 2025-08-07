@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
-from hugr import Node, Wire, envelope, ops, val
+from hugr import Node, Wire, envelope, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.envelope import EnvelopeConfig
@@ -203,8 +203,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                             res = outer_func.add_op(
                                 array_pop(elem_ty, length - i, True), array
                             )
-                            [elt_opt, array] = build_unwrap(outer_func, res, err)
-                            [elt] = build_unwrap(outer_func, elt_opt, err)
+                            [elt, array] = build_unwrap(outer_func, res, err)
                             elts.append(elt)
                         outer_func.add_op(array_discard_empty(elem_ty), array)
                         return elts
@@ -216,7 +215,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                         list(outer_func.inputs()),
                         strict=True,
                     ):
-                        input_list.extend(unpack(wire, ht.Option(ht.Qubit), q_reg.size))
+                        input_list.extend(unpack(wire, ht.Qubit, q_reg.size))
 
                 else:
                     # Otherwise pass inputs directly.
@@ -240,34 +239,23 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 ]
 
                 if self.use_arrays:
-
-                    def pack(elems: list[Wire], elem_ty: ht.Type, length: int) -> Wire:
-                        elem_opts = [
-                            outer_func.add_op(ops.Some(elem_ty), elem) for elem in elems
-                        ]
-                        return outer_func.add_op(
-                            array_new(ht.Option(elem_ty), length), *elem_opts
-                        )
-
                     array_wires: list[Wire] = []
                     wire_idx = 0
                     # First pack bool results into an array.
                     for c_reg in self.input_circuit.c_registers:
                         array_wires.append(
-                            pack(
-                                wires[wire_idx : wire_idx + c_reg.size],
-                                OpaqueBool,
-                                c_reg.size,
+                            outer_func.add_op(
+                                array_new(OpaqueBool, c_reg.size),
+                                *wires[wire_idx : wire_idx + c_reg.size],
                             )
                         )
                         wire_idx = wire_idx + c_reg.size
                     # Then the borrowed qubits also need to be put back into arrays.
                     for q_reg in self.input_circuit.q_registers:
                         array_wires.append(
-                            pack(
-                                wires[wire_idx : wire_idx + q_reg.size],
-                                ht.Qubit,
-                                q_reg.size,
+                            outer_func.add_op(
+                                array_new(ht.Qubit, q_reg.size),
+                                *wires[wire_idx : wire_idx + q_reg.size],
                             )
                         )
                         wire_idx = wire_idx + q_reg.size
