@@ -655,7 +655,7 @@ def requires_drop(ty: ht.Type) -> bool:
         case ht.Sum(variant_rows=rows):
             return any(requires_drop(ty) for row in rows for ty in row)
         case ht.Variable(bound=bound):
-            return bound == ht.TypeBound.Any
+            return bound == ht.TypeBound.Linear
         case ht.FunctionType():
             return False
         case ht.Alias():
