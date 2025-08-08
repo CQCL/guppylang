@@ -79,6 +79,11 @@ class TypeBase(ToHugr[ht.Type], Transformable["Type"], ABC):
         """The existential type variables contained in this type."""
         return set()
 
+    @cached_property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this type."""
+        return set()
+
     def substitute(self, subst: "Subst") -> "Type":
         """Substitutes existential variables in this type."""
         from guppylang_internals.tys.subst import Substituter
@@ -159,6 +164,11 @@ class ParametrizedTypeBase(TypeBase, ABC):
         return set().union(*(arg.unsolved_vars for arg in self.args))
 
     @cached_property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this type."""
+        return set().union(*(arg.bound_vars for arg in self.args))
+
+    @cached_property
     def hugr_bound(self) -> ht.TypeBound:
         """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
         if self.linear:
@@ -195,6 +205,11 @@ class BoundTypeVar(TypeBase, BoundVar):
         # We're conservative and don't require equatability for non-linear variables.
         # This is fine since Guppy doesn't use the equatable feature anyways.
         return ht.TypeBound.Copyable
+
+    @property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this type."""
+        return {self}
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
@@ -426,6 +441,14 @@ class FunctionType(ParametrizedTypeBase):
         """Whether the function is parametrized."""
         return len(self.params) > 0
 
+    @cached_property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this type."""
+        if self.parametrized:
+            # Ensures that we don't look inside quantifiers
+            return set()
+        return super().bound_vars
+
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
         return self
@@ -506,7 +529,7 @@ class FunctionType(ParametrizedTypeBase):
             # However, we have to down-shift the de Bruijn index.
             if arg is None:
                 param = param.with_idx(len(remaining_params))
-                remaining_params.append(param)
+                remaining_params.append(param.instantiate_bounds(full_inst))
                 arg = param.to_bound()
 
             # Set the `preserve` flag for instantiated tuples and None
