@@ -3,23 +3,17 @@
 ## [0.21.2](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.1...guppylang-v0.21.2) (2025-08-11)
 
 
-### ⚠ BREAKING CHANGES
-
-* RangeChecker has been deleted.
-
 ### Features
 
 * Add float parameter inputs to symbolic pytket circuits ([#1105](https://github.com/CQCL/guppylang/issues/1105)) ([34c546c](https://github.com/CQCL/guppylang/commit/34c546c3b5787beb839687fdbf4db8bc94f36c4a)), closes [#1076](https://github.com/CQCL/guppylang/issues/1076)
 * Allow custom start and step in `range` ([#1157](https://github.com/CQCL/guppylang/issues/1157)) ([a1b9333](https://github.com/CQCL/guppylang/commit/a1b9333712c74270d5efaaa72f83d6b09047c068))
-* Improve codegen for array unpacking ([#1106](https://github.com/CQCL/guppylang/issues/1106)) ([f375097](https://github.com/CQCL/guppylang/commit/f3750973a719b03d27668a3ae39f58c8424deffc))
-* Insert drop ops for affine values ([#1090](https://github.com/CQCL/guppylang/issues/1090)) ([083133e](https://github.com/CQCL/guppylang/commit/083133e809873fce265bb78547fc3e519cb66ea1))
 * pin to selene-sim 0.2.0 ([#1156](https://github.com/CQCL/guppylang/issues/1156)) ([08c52c0](https://github.com/CQCL/guppylang/commit/08c52c01f6034a315d03bd978f255358e6f92930))
+* Update to guppylang-internals 0.22.0
 
 
 ### Bug Fixes
 
 * **emulator:** pass runtime option to selene ([ac969e8](https://github.com/CQCL/guppylang/commit/ac969e8ce8d8bad90f9cfd9cb0470c62d08cfe79))
-* Fix builtins mock escaping the tracing scope ([#1161](https://github.com/CQCL/guppylang/issues/1161)) ([a27a5c1](https://github.com/CQCL/guppylang/commit/a27a5c19560d76e46678f846476ea86e873ac8ac))
 
 
 ### Documentation
@@ -27,10 +21,6 @@
 * Create CITATIONS.bib ([#1133](https://github.com/CQCL/guppylang/issues/1133)) ([ff5d354](https://github.com/CQCL/guppylang/commit/ff5d35407c5790953f12e27ad80150cc30e7f8c3))
 * fix some docstring formatting ([#1172](https://github.com/CQCL/guppylang/issues/1172)) ([f84b756](https://github.com/CQCL/guppylang/commit/f84b7565e7465f99d0fbb16f640a91cfe700a45e))
 
-
-### Code Refactoring
-
-* style change to cause version bump ([#1176](https://github.com/CQCL/guppylang/issues/1176)) ([84a56f7](https://github.com/CQCL/guppylang/commit/84a56f7d6987dd1812b6d3b0b9432ace319f7937))
 
 ## [0.21.1](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.0...guppylang-v0.21.1) (2025-08-05)
 
