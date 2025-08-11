@@ -3,6 +3,17 @@
 First release of `guppylang_internals` package containing refactored out internal components
 from `guppylang`.
 
+## [0.22.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.21.2...guppylang-internals-v0.22.0) (2025-08-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* RangeChecker has been deleted.
+
+### Code Refactoring
+
+* style change to cause version bump ([#1176](https://github.com/CQCL/guppylang/issues/1176)) ([84a56f7](https://github.com/CQCL/guppylang/commit/84a56f7d6987dd1812b6d3b0b9432ace319f7937))
+
 ## [0.21.2](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.21.1...guppylang-internals-v0.21.2) (2025-08-11)
 
 
