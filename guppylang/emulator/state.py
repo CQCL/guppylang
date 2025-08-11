@@ -102,11 +102,12 @@ class PartialVector(PartialState[StateVector]):
     ) -> None:
         """Initialize a PartialVector from a base state vector, total qubits, and
         specified qubits.
+
         Args:
             base_state: The state vector over all qubits in the system.
             total_qubits: Total number of qubits in the system
             specified_qubits: List of specified qubits in the state. Those not in this
-                list are considered traced out.
+            list are considered traced out.
         """
         self._inner = SeleneQuestState(
             state=base_state,

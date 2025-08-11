@@ -193,36 +193,38 @@ class _Guppy:
 
         Consider the following example:
 
-        ```
-        @guppy.declare
-        def variant1(x: int, y: int) -> int: ...
+        .. code-block:: python
 
-        @guppy.declare
-        def variant2(x: float) -> int: ...
+            @guppy.declare
+            def variant1(x: int, y: int) -> int: ...
 
-        @guppy.overload(variant1, variant2)
-        def combined(): ...
-        ```
+            @guppy.declare
+            def variant2(x: float) -> int: ...
+
+            @guppy.overload(variant1, variant2)
+            def combined(): ...
+
 
         Now, `combined` may be called with either one `float` or two `int` arguments,
         delegating to the implementation with the matching signature:
 
-        ```
-        combined(4.2)  # Calls `variant1`
-        combined(42, 43)  # Calls `variant2`
-        ```
+        .. code-block:: python
+
+            combined(4.2)  # Calls `variant1`
+            combined(42, 43)  # Calls `variant2`
+
 
         Note that the compiler will pick the *first* implementation with matching
         signature and ignore all following ones, even if they would also match. For
         example, if we added a third variant
 
-        ```
-        @guppy.declare
-        def variant3(x: int) -> int: ...
+        .. code-block:: python
 
-        @guppy.overload(variant1, variant2, variant3)
-        def combined_new(): ...
-        ```
+            @guppy.declare
+            def variant3(x: int) -> int: ...
+
+            @guppy.overload(variant1, variant2, variant3)
+            def combined_new(): ...
 
         then a call `combined_new(42)` will still select the `variant1` implementation
         `42` is a valid argument for `variant1` and `variant1` comes before `variant3`
