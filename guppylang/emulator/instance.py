@@ -214,6 +214,7 @@ class EmulatorInstance:
         """Run the Selene instance with the given simulator lazily."""
         return self._instance.run_shots(
             simulator=self.simulator,
+            runtime=self.runtime,
             n_qubits=self.n_qubits,
             n_shots=self.shots,
             event_hook=self._options._event_hook,
