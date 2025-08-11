@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 import inspect
-from typing import TYPE_CHECKING, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, ParamSpec, TypeVar, overload
 
 from hugr import ops
 from hugr import tys as ht
@@ -295,7 +295,35 @@ def ext_module_decorator(
 
     return fun
 
-def wasm(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+@overload
+def wasm(arg: Callable[P, T]) -> GuppyFunctionDefinition[P, T]: ...
+
+@overload
+def wasm(arg: int) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]: ...
+
+def wasm(arg: int | Callable[P, T]) -> GuppyFunctionDefinition[P, T] | Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
+    if isinstance(arg, int):
+        def wrapper(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+            return wasm_helper(arg, f)
+        return wrapper
+    else:
+        return wasm_helper(None, arg)
+
+@overload
+def gpu(arg: Callable[P, T]) -> GuppyFunctionDefinition[P, T]: ...
+
+@overload
+def gpu(arg: int) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]: ...
+
+def gpu(arg: int | Callable[P, T]) -> GuppyFunctionDefinition[P, T] | Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
+    if isinstance(arg, int):
+        def wrapper(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+            return gpu_helper(arg, f)
+        return wrapper
+    else:
+        return gpu_helper(None, arg)
+
+def wasm_helper(fn_id: int | None, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
     from guppylang.defs import GuppyFunctionDefinition
 
     func = RawWasmFunctionDef(
@@ -304,14 +332,14 @@ def wasm(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         None,
         f,
         GenericCallChecker(),
-        WasmModuleCallCompiler(f.__name__),
+        WasmModuleCallCompiler(f.__name__, fn_id),
         True,
         signature=None,
     )
     DEF_STORE.register_def(func, get_calling_frame())
     return GuppyFunctionDefinition(func)
 
-def gpu(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+def gpu_helper(fn_id: int | None, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
     from guppylang.defs import GuppyFunctionDefinition
 
     func = RawGpuFunctionDef(
@@ -320,7 +348,7 @@ def gpu(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         None,
         f,
         GenericCallChecker(),
-        GpuModuleCallCompiler(f.__name__),
+        GpuModuleCallCompiler(f.__name__, fn_id),
         True,
         signature=None,
     )

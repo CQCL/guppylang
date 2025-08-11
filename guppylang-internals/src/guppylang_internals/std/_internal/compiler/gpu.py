@@ -65,9 +65,11 @@ class GpuModuleCallCompiler(CustomInoutCallCompiler):
     """
 
     fn_name: str
+    fn_id: int | None
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, id_: int | None) -> None:
         self.fn_name = name
+        self.fn_id = id_
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         # The arguments should be:
@@ -77,7 +79,6 @@ class GpuModuleCallCompiler(CustomInoutCallCompiler):
         module_ty = QSYSTEM_GPU_EXTENSION.get_type("module").instantiate([])
         ctx_ty = QSYSTEM_GPU_EXTENSION.get_type("context").instantiate([])
 
-        fn_name_arg = ht.StringArg(self.fn_name)
         # Function type without Inout context arg (for building)
         assert isinstance(self.node, GlobalCall)
         assert self.func is not None
@@ -108,10 +109,18 @@ class GpuModuleCallCompiler(CustomInoutCallCompiler):
         gpu_module = self.builder.load(const_module)
 
         # Lookup the function we want
-        gpu_opdef = QSYSTEM_GPU_EXTENSION.get_op("lookup").instantiate(
-            [fn_name_arg, inputs_row_arg, output_row_arg],
-            ht.FunctionType([module_ty], [func_ty]),
-        )
+        if self.fn_id is None:
+            fn_name_arg = ht.StringArg(self.fn_name)
+            gpu_opdef = QSYSTEM_GPU_EXTENSION.get_op("lookup_by_name").instantiate(
+                [fn_name_arg, inputs_row_arg, output_row_arg],
+                ht.FunctionType([module_ty], [func_ty]),
+            )
+        else:
+            fn_id_arg = ht.BoundedNatArg(self.fn_id)
+            gpu_opdef = QSYSTEM_GPU_EXTENSION.get_op("lookup_by_id").instantiate(
+                [fn_id_arg, inputs_row_arg, output_row_arg],
+                ht.FunctionType([module_ty], [func_ty]),
+            )
         gpu_func = self.builder.add_op(gpu_opdef, gpu_module)
 
         # Call the function
