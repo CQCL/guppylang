@@ -114,7 +114,7 @@ def sdg(q: qubit @ owned) -> qubit:
 @guppy
 @no_type_check
 def vdg(q: qubit @ owned) -> qubit:
-    """Functional Vdg command."""
+    """Functional Vdg gate command."""
     quantum.vdg(q)
     return q
 
