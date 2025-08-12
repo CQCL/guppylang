@@ -34,11 +34,11 @@ jobs:
       matrix:
         target:
           - {
-            dir: ".",
+            dir: guppylang,
             component: guppylang,
             package: guppylang,
             lib: guppylang,
-            dist: dist
+            dist: ../dist
           }
           - {
             dir: guppylang-internals,
