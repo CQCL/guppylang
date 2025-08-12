@@ -90,22 +90,60 @@ def test_wasm_guppy_module(validate):
     validate(mod)
 
 
-def test_comptime(validate):
+def test_lookup_by_id(validate):
+    from hugr.ops import AsExtOp
+
     @wasm_module("")
-    class Foo:
-        @wasm
-        def goo(self: "Foo") -> int: ...
-
-    def hoo(x: int) -> int:
-        return x * x
-
-    @guppy.comptime
-    def ioo(x: int) -> int:
-        y = hoo(x)
-        foo = Foo(0)
-        z = foo.goo(y)
-        return hoo(z)
+    class MyWasm:
+        @wasm(1)
+        def foo(self: "MyWasm") -> int: ...
 
     @guppy
     def main() -> int:
-        comptime(ioo(42))
+        c = MyWasm(0)
+        x = c.foo()
+        c.discard()
+        return x
+
+    mod = main.compile()
+    validate(mod)
+
+    ops = set()
+    for hugr in mod.modules[:]:
+        for _, node in hugr.nodes():
+            match node.op:
+                case AsExtOp():
+                    ops |= {node.op.op_def().name}
+                case _:
+                    pass
+    assert "lookup_by_id" in ops
+    assert not "lookup_by_name" in ops
+
+def test_lookup_by_name(validate):
+    from hugr.ops import AsExtOp
+
+    @wasm_module("")
+    class MyWasm:
+        @wasm
+        def foo(self: "MyWasm") -> int: ...
+
+    @guppy
+    def main() -> int:
+        c = MyWasm(0)
+        x = c.foo()
+        c.discard()
+        return x
+
+    mod = main.compile()
+    validate(mod)
+
+    ops = set()
+    for hugr in mod.modules[:]:
+        for _, node in hugr.nodes():
+            match node.op:
+                case AsExtOp():
+                    ops |= {node.op.op_def().name}
+                case _:
+                    pass
+    assert "lookup_by_name" in ops
+    assert not "lookup_by_id" in ops

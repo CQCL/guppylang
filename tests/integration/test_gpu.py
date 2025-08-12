@@ -68,22 +68,60 @@ def test_gpu_types(validate):
     validate(mod)
 
 
-def test_comptime(validate):
-    @gpu_module("module", None)
-    class Foo:
-        @gpu
-        def goo(self: "Foo") -> int: ...
+def test_lookup_by_id(validate):
+    from hugr.ops import AsExtOp
 
-    def hoo(x: int) -> int:
-        return x * x
-
-    @guppy.comptime
-    def ioo(x: int) -> int:
-        y = hoo(x)
-        foo = Foo(0)
-        z = foo.goo(y)
-        return hoo(z)
+    @gpu_module("", None)
+    class MyGpu:
+        @gpu(1)
+        def foo(self: "MyGpu") -> int: ...
 
     @guppy
     def main() -> int:
-        comptime(ioo(42))
+        c = MyGpu(0)
+        x = c.foo()
+        c.discard()
+        return x
+
+    mod = main.compile()
+    validate(mod)
+
+    ops = set()
+    for hugr in mod.modules[:]:
+        for _, node in hugr.nodes():
+            match node.op:
+                case AsExtOp():
+                    ops |= {node.op.op_def().name}
+                case _:
+                    pass
+    assert "lookup_by_id" in ops
+    assert not "lookup_by_name" in ops
+
+def test_lookup_by_name(validate):
+    from hugr.ops import AsExtOp
+
+    @gpu_module("", None)
+    class MyGpu:
+        @gpu
+        def foo(self: "MyGpu") -> int: ...
+
+    @guppy
+    def main() -> int:
+        c = MyGpu(0)
+        x = c.foo()
+        c.discard()
+        return x
+
+    mod = main.compile()
+    validate(mod)
+
+    ops = set()
+    for hugr in mod.modules[:]:
+        for _, node in hugr.nodes():
+            match node.op:
+                case AsExtOp():
+                    ops |= {node.op.op_def().name}
+                case _:
+                    pass
+    assert "lookup_by_name" in ops
+    assert not "lookup_by_id" in ops
