@@ -54,7 +54,7 @@ def test_wasm_types(validate):
 
     @wasm_module("")
     class MyWasm:
-        @wasm
+        @wasm(42)
         def foo(self: "MyWasm", x: tuple[int, tuple[nat, float]], y: int) -> None: ...
 
     @guppy
@@ -74,7 +74,7 @@ def test_wasm_guppy_module(validate):
         @wasm
         def add_one(self: "MyWasm", x: int) -> int: ...
 
-        @wasm
+        @wasm(1)
         def swap(self: "MyWasm", x: int, y: float) -> tuple[float, int]: ...
 
     @guppy

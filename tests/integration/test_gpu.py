@@ -9,7 +9,7 @@ def test_gpu_functions(validate):
         @gpu
         def add_one(self: "MyModule", x: int) -> int: ...
 
-        @gpu
+        @gpu(42)
         def foo(self: "MyModule", x: int, y: float) -> int: ...
 
     @guppy
