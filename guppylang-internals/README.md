@@ -1,25 +1,55 @@
-# guppylang-internals
+# Guppy
 
-This packages contains the internals of the Guppy compiler. 
+[![pypi][]](https://pypi.org/project/guppylang/)
+[![codecov][]](https://codecov.io/gh/CQCL/guppylang)
+[![py-version][]](https://pypi.org/project/guppylang/)
 
-See `guppylang` for the package providing the user-facing language frontend.
+  [codecov]: https://img.shields.io/codecov/c/gh/CQCL/guppylang?logo=codecov
+  [py-version]: https://img.shields.io/pypi/pyversions/guppylang
+  [pypi]: https://img.shields.io/pypi/v/guppylang
 
-# Install
+Guppy is a quantum programming language that is fully embedded into Python.
+It allows you to write high-level hybrid quantum programs with classical control flow and mid-circuit measurements using Pythonic syntax:
 
-The package can be installed via `pip`.
+```python
+from guppylang import guppy
+from guppylang.std.builtins import owned
+from guppylang.std.quantum import cx, h, measure, qubit, x, z
 
-```sh
-pip install guppylang-internals
+
+@guppy
+def teleport(src: qubit @ owned, tgt: qubit) -> None:
+    """Teleports the state in `src` to `tgt`."""
+    # Create ancilla and entangle it with src and tgt
+    tmp = qubit()
+    h(tmp)
+    cx(tmp, tgt)
+    cx(src, tmp)
+
+    # Apply classical corrections
+    h(src)
+    if measure(src):
+        z(tgt)
+    if measure(tmp):
+        x(tgt)
+
+teleport.check()
 ```
 
-# Development
+More examples and tutorials are available [here][examples].
 
-See [DEVELOPMENT.md] information on how to develop and contribute to this package.
+[examples]: https://github.com/CQCL/guppylang/tree/main/examples
 
-  [DEVELOPMENT.md]: https://github.com/CQCL/guppylang/blob/main/DEVELOPMENT.md
+## Install
+
+Guppy can be installed via `pip`. Requires Python >= 3.10.
+
+```sh
+pip install guppylang
+```
 
 ## License
 
-This project is licensed under Apache License, Version 2.0 ([LICENCE][] or http://www.apache.org/licenses/LICENSE-2.0).
+This project is licensed under Apache License, Version 2.0 ([LICENCE][] or <http://www.apache.org/licenses/LICENSE-2.0>).
 
-  [LICENCE]: https://github.com/CQCL/guppylang/blob/main/LICENCE
+  [LICENCE]: ./LICENCE
