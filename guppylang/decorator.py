@@ -437,4 +437,4 @@ def get_calling_frame() -> FrameType:
     raise RuntimeError("Couldn't obtain stack frame for definition")
 
 
-guppy = cast(_Guppy, _DummyGuppy()) if sphinx_running() else _Guppy()
+# guppy = cast(_Guppy, _DummyGuppy()) if sphinx_running() else _Guppy()

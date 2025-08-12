@@ -68,7 +68,7 @@ class MissingReturnAnnotationError(Error):
 
 
 def check_global_func_def(
-    func_def: ast.FunctionDef, ty: FunctionType, globals: Globals
+    func_def: ast.FunctionDef, ty: FunctionType, globals: Globals, ctx: Context
 ) -> CheckedCFG[Place]:
     """Type checks a top-level function definition."""
     args = func_def.args.args
