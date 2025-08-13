@@ -41,6 +41,7 @@ from guppylang_internals.tys.builtin import (
     nat_type_def,
     none_type_def,
     option_type_def,
+    self_type_def,
     sized_iter_type_def,
     string_type_def,
     tuple_type_def,
@@ -51,6 +52,7 @@ if TYPE_CHECKING:
 
 BUILTIN_DEFS_LIST: list[RawDef] = [
     callable_type_def,
+    self_type_def,
     tuple_type_def,
     none_type_def,
     bool_type_def,

@@ -1,5 +1,7 @@
 """Reexports core types and functions that are available without an explicit import."""
 
+from typing_extensions import Self
+
 from guppylang.std.array import ArrayIter, FrozenarrayIter, array, frozenarray
 from guppylang.std.bool import bool
 from guppylang.std.iter import Range, SizedIter, range
@@ -154,6 +156,7 @@ __all__ = (
     "result",
     "reversed",
     "round",
+    "Self",
     "set",
     "setattr",
     "SizedIter",
