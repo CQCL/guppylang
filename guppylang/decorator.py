@@ -112,7 +112,7 @@ class _Guppy:
 
     @dataclass_transform()
     def struct(self, cls: builtins.type[T]) -> builtins.type[T]:
-        defn = RawStructDef(DefId.fresh(), cls.__name__, None, cls)
+        defn = RawStructDef(DefId.fresh(), cls.__name__, None, None, cls)
         frame = get_calling_frame()
         DEF_STORE.register_def(defn, frame)
         for val in cls.__dict__.values():
