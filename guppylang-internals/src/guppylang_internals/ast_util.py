@@ -106,6 +106,12 @@ def return_nodes_in_ast(node: Any) -> list[ast.Return]:
     return cast(list[ast.Return], found)
 
 
+def loop_in_ast(node: Any) -> list[ast.For | ast.While]:
+    """Returns all `For` and `While` nodes occurring in an AST."""
+    found = find_nodes(lambda n: isinstance(n, ast.For | ast.While), node)
+    return cast(list[ast.For | ast.While], found)
+
+
 def breaks_in_loop(node: Any) -> list[ast.Break]:
     """Returns all `Break` nodes occurring in a loop.
 
@@ -115,6 +121,17 @@ def breaks_in_loop(node: Any) -> list[ast.Break]:
         lambda n: isinstance(n, ast.Break), node, {ast.For, ast.While, ast.FunctionDef}
     )
     return cast(list[ast.Break], found)
+
+
+def loop_controls_in_loop(node: Any) -> list[ast.Break | ast.Continue]:
+    """Returns all `Break` nodes occurring in a loop.
+
+    Note that breaks in nested loops are excluded.
+    """
+    found = find_nodes(
+        lambda n: isinstance(n, ast.Break | ast.Continue), node, {ast.For, ast.While, ast.FunctionDef}
+    )
+    return cast(list[ast.Break | ast.Continue], found)
 
 
 class ContextAdjuster(ast.NodeTransformer):

@@ -3,6 +3,7 @@ from enum import Enum
 from types import FrameType
 from typing import TYPE_CHECKING
 
+from guppylang_internals.std._internal.compiler.tmp_modifier_exts import MODIFIER_EXTENSION
 import hugr.build.function as hf
 import hugr.std.collections.array
 import hugr.std.float
@@ -277,6 +278,7 @@ class CompilationEngine:
             *TKET_EXTENSIONS,
             guppylang_internals.compiler.hugr_extension.EXTENSION,
             *self.additional_extensions,
+            MODIFIER_EXTENSION, # TODO (k.hirata)
         ]
         # TODO replace with computed extensions after https://github.com/CQCL/guppylang/issues/550
         all_used_extensions = [

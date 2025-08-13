@@ -1,0 +1,289 @@
+{
+  "version": "0.1.0",
+  "name": "modifier",
+  "types": {},
+  "operations": {
+    "ControlModifier": {
+      "extension": "modifier",
+      "name": "ControlModifier",
+      "description": "Quantum control operation",
+      "signature": {
+        "params": [
+          {
+            "tp": "BoundedNat",
+            "bound": null
+          },
+          {
+            "tp": "List",
+            "param": {
+              "tp": "Type",
+              "b": "A"
+            }
+          },
+          {
+            "tp": "List",
+            "param": {
+              "tp": "Type",
+              "b": "A"
+            }
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "G",
+              "input": [
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 2,
+                  "b": "A"
+                }
+              ],
+              "output": [
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "A"
+                }
+              ]
+            }
+          ],
+          "output": [
+            {
+              "t": "G",
+              "input": [
+                {
+                  "t": "Opaque",
+                  "extension": "collections.array",
+                  "id": "array",
+                  "args": [
+                    {
+                      "tya": "Variable",
+                      "idx": 0,
+                      "cached_decl": {
+                        "tp": "BoundedNat",
+                        "bound": null
+                      }
+                    },
+                    {
+                      "tya": "Type",
+                      "ty": {
+                        "t": "Q"
+                      }
+                    }
+                  ],
+                  "bound": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 2,
+                  "b": "A"
+                }
+              ],
+              "output": [
+                {
+                  "t": "Opaque",
+                  "extension": "collections.array",
+                  "id": "array",
+                  "args": [
+                    {
+                      "tya": "Variable",
+                      "idx": 0,
+                      "cached_decl": {
+                        "tp": "BoundedNat",
+                        "bound": null
+                      }
+                    },
+                    {
+                      "tya": "Type",
+                      "ty": {
+                        "t": "Q"
+                      }
+                    }
+                  ],
+                  "bound": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "A"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "binary": false
+    },
+    "DaggerModifier": {
+      "extension": "modifier",
+      "name": "DaggerModifier",
+      "description": "Dagger Operator",
+      "signature": {
+        "params": [
+          {
+            "tp": "List",
+            "param": {
+              "tp": "Type",
+              "b": "A"
+            }
+          },
+          {
+            "tp": "List",
+            "param": {
+              "tp": "Type",
+              "b": "A"
+            }
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "G",
+              "input": [
+                {
+                  "t": "R",
+                  "i": 0,
+                  "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "A"
+                }
+              ],
+              "output": [
+                {
+                  "t": "R",
+                  "i": 0,
+                  "b": "A"
+                }
+              ]
+            }
+          ],
+          "output": [
+            {
+              "t": "G",
+              "input": [
+                {
+                  "t": "R",
+                  "i": 0,
+                  "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "A"
+                }
+              ],
+              "output": [
+                {
+                  "t": "R",
+                  "i": 0,
+                  "b": "A"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "binary": false
+    },
+    "PowerModifier": {
+      "extension": "modifier",
+      "name": "PowerModifier",
+      "description": "Power Operator",
+      "signature": {
+        "params": [
+          {
+            "tp": "List",
+            "param": {
+              "tp": "Type",
+              "b": "A"
+            }
+          },
+          {
+            "tp": "List",
+            "param": {
+              "tp": "Type",
+              "b": "C"
+            }
+          }
+        ],
+        "body": {
+          "input": [
+            {
+              "t": "G",
+              "input": [
+                {
+                  "t": "R",
+                  "i": 0,
+                  "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "C"
+                }
+              ],
+              "output": [
+                {
+                  "t": "R",
+                  "i": 0,
+                  "b": "A"
+                }
+              ]
+            },
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.int.types",
+              "id": "int",
+              "args": [
+                {
+                  "tya": "BoundedNat",
+                  "n": 6
+                }
+              ],
+              "bound": "C"
+            }
+          ],
+          "output": [
+            {
+              "t": "G",
+              "input": [
+                {
+                  "t": "R",
+                  "i": 0,
+                  "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "C"
+                }
+              ],
+              "output": [
+                {
+                  "t": "R",
+                  "i": 0,
+                  "b": "A"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "binary": false
+    }
+  }
+}
