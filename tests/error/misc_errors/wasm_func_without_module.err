@@ -1,9 +1,9 @@
-Error: WASM signature error (at $FILE:7:4)
+Error: WASM signature error (at $FILE:9:0)
   | 
-5 | class Foo:
-6 |     @wasm
-7 |     def foo(x: int) -> None: ...
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ First argument to WASM function should be a reference to a
-  |                                  WASM module. Found `int` instead
+7 | 
+8 | @wasm
+9 | def foo(x: int) -> None: ...
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ First argument to WASM function should be a reference to a
+  |                              WASM module. Found `int` instead
 
 Guppy compilation failed due to 1 previous error
