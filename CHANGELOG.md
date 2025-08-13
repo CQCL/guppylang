@@ -6,8 +6,6 @@ kernelspec:
 
 # Changelog
 
-## [0.21.2](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.1...guppylang-v0.21.2) (2025-08-11)
-
 The Guppy language is distributed via the [guppylang](https://pypi.org/project/guppylang/) pypi package.
 
 This changelog documents user-facing changes to the Guppy language excluding changes to the compiler internals. The Guppy compiler is versioned with the [guppylang-internals](https://pypi.org/project/guppylang-internals/) package.
@@ -16,6 +14,7 @@ This changelog documents user-facing changes to the Guppy language excluding cha
 
 As of August 2025, The Guppy language is undergoing rapid development and is currently unstable. There is a Guppy v1.0 stability [milestone](https://github.com/CQCL/guppylang/milestone/12) that is a work in progress and subject to change.
 
+## [0.21.2](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.1...guppylang-v0.21.2) (2025-08-11)
 
 ### Features
 
