@@ -109,6 +109,11 @@ class PartialVector(PartialState[StateVector]):
             specified_qubits: List of specified qubits in the state. Those not in this
             list are considered traced out.
         """
+        if len(base_state) != (1 << total_qubits):
+            raise ValueError(
+                f"Base state vector length ({len(base_state)}) does not match "
+                f"2 ** total_qubits ({1 << total_qubits})."
+            )
         self._inner = SeleneQuestState(
             state=base_state,
             total_qubits=total_qubits,
