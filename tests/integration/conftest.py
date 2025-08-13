@@ -27,6 +27,8 @@ def validate(request, export_test_cases_dir: Path):
             package = Package([package])
         # Validate via the json encoding
         package_bytes = package.to_bytes()
+        package_json = package.to_json()
+        Package.from_json(package_json)
 
         if export_test_cases_dir:
             file_name = f"{request.node.name}{f'_{name}' if name else ''}.hugr"
