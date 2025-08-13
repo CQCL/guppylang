@@ -54,7 +54,7 @@ class ConstWasmModule(val.ExtensionValue):
     def to_value(self) -> val.Extension:
         ty = WASM_EXTENSION.get_type("module").instantiate([])
 
-        name = "tket.wasm.module"
+        name = "ConstWasmModule"
         payload = {"module_filename": self.wasm_file}
         return val.Extension(name, typ=ty, val=payload, extensions=["tket.wasm"])
 
