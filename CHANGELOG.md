@@ -16,6 +16,7 @@ As of August 2025, The Guppy language is undergoing rapid development and is cur
 
 ## [0.21.2](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.1...guppylang-v0.21.2) (2025-08-11)
 
+
 ### Features
 
 * We can now pass a `start` and `step` for the [range](generated/guppylang.std.iter.range.rst) function just as we can in Python. ([#1157](https://github.com/CQCL/guppylang/issues/1157)) ([a1b9333](https://github.com/CQCL/guppylang/commit/a1b9333712c74270d5efaaa72f83d6b09047c068))
