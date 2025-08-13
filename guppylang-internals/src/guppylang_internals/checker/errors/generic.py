@@ -1,3 +1,4 @@
+from ast import Return
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -43,3 +44,12 @@ class ExpectedError(Error):
     @property
     def extra(self) -> str:
         return f", got {self.got}" if self.got else ""
+
+@dataclass(frozen=True)
+class ReturnUnderModifierError(Error):
+    title: ClassVar[str] = "Unexpected return"
+    span_label: ClassVar[str] = (
+        "Return values {returns} found under the with block {with_node}"
+    )
+    with_node: ClassVar[str]
+    returns: Return

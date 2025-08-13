@@ -136,7 +136,9 @@ def check_global_func_def(
     returns_none = isinstance(ty.output, NoneType)
     assert ty.input_names is not None
 
+    #   print("  ty @ ParsedFunctionDef.check_global_func_def = ", ty)
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
+    #   print("  cfg @ ParsedFunctionDef.check_global_func_def = ", cfg)
     inputs = [
         Variable(x, inp.ty, loc, inp.flags, is_func_input=True)
         for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)

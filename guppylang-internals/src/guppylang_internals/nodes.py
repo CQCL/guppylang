@@ -422,3 +422,34 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
         self.cfg = cfg
         self.ty = ty
         self.captured = captured
+
+
+class Modifier(ast.With):
+    cfg: "CFG"
+
+    def __init__(self, cfg: "CFG", *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.cfg = cfg
+
+
+class CheckedModifier(ast.With):
+    def_id: "DefId"
+    cfg: "CheckedCFG[Place]"
+    ty: FunctionType
+
+    captured: Mapping[str, tuple["Variable", AstNode]]
+
+    def __init__(
+        self,
+        def_id: "DefId",
+        cfg: "CheckedCFG[Place]",
+        ty: FunctionType,
+        captured: Mapping[str, tuple["Variable", AstNode]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.def_id = def_id
+        self.cfg = cfg
+        self.ty = ty
+        self.captured = captured

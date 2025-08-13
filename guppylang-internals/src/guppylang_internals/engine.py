@@ -195,6 +195,7 @@ class CompilationEngine:
         if id in self.checked:
             return self.checked[id]
         defn = self.get_parsed(id)
+        #   print("  defn @ CompilationEnging.get_checked = ", str(defn)[:50])
         if isinstance(defn, CheckableDef):
             defn = defn.check(Globals(DEF_STORE.frames[defn.id]))
         self.checked[id] = defn
@@ -222,6 +223,7 @@ class CompilationEngine:
         self.reset()
 
         defn = DEF_STORE.raw_defs[id]
+        #   print("  defn @ CompilationEnging.checked = ", str(defn)[:50])
         self.to_check_worklist = {
             defn.id: (
                 defn.parse(Globals(DEF_STORE.frames[defn.id]), DEF_STORE.sources)
@@ -229,6 +231,7 @@ class CompilationEngine:
                 else defn
             )
         }
+        #   print("[CheckPoint]: Successfully parsed definition:", defn.id)
         while self.types_to_check_worklist or self.to_check_worklist:
             # Types need to be checked first. This is because parsing e.g. a function
             # definition requires instantiating the types in its signature which can
@@ -238,6 +241,7 @@ class CompilationEngine:
             else:
                 id, _ = self.to_check_worklist.popitem()
             self.checked[id] = self.get_checked(id)
+        #   print("[CheckPoint]: Successfully checked:", defn.id)
 
     @pretty_errors
     def compile(self, id: DefId) -> ModulePointer:

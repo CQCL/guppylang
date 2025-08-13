@@ -102,6 +102,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
     def check(self, globals: Globals) -> "CheckedFunctionDef":
         """Type checks the body of the function."""
         # Add python variable scope to the globals
+        #   print("  self.ty @ ParsedFunctionDef.check = ", self.ty)
         cfg = check_global_func_def(self.defined_at, self.ty, globals)
         return CheckedFunctionDef(
             self.id,
