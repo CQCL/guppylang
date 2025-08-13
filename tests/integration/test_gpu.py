@@ -1,6 +1,7 @@
 from guppylang_internals.decorator import gpu_module, gpu
 from guppylang.decorator import guppy
 from guppylang.std.builtins import nat, comptime
+from guppylang.std.qsystem.gpu import spawn_gpu_contexts
 
 
 def test_gpu_functions(validate):
@@ -14,6 +15,7 @@ def test_gpu_functions(validate):
 
     @guppy
     def main() -> int:
+        [mod1, mod2] = spawn_gpu_contexts[2](MyModule)
         mod1 = MyModule(0)
         mod2 = MyModule(1)
         two = mod1.add_one(1)
