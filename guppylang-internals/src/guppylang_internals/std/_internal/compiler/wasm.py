@@ -56,9 +56,10 @@ class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
 
 class WasmModuleCallCompiler(CustomInoutCallCompiler):
     """Compiler for WASM calls
-    When a wasm method is called in guppy, we turn it into 2 tket ops:
+    When a wasm method is called in guppy, we turn it into 3 tket ops:
     * lookup: wasm.module -> wasm.func
-    * call: wasm.context * wasm.func * inputs -> wasm.context * output
+    * call: wasm.context * wasm.func * inputs -> wasm.result
+    * read_result: wasm.result -> wasm.context * outputs
 
     For the wasm.module that we use in lookup, a constant is created for each
     call, using the wasm file information embedded in method's `self` argument.

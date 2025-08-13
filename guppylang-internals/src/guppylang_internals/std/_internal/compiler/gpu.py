@@ -56,9 +56,10 @@ class GpuModuleDiscardCompiler(CustomInoutCallCompiler):
 
 class GpuModuleCallCompiler(CustomInoutCallCompiler):
     """Compiler for GPU calls
-    When a GPU method is called in guppy, we turn it into 2 tket ops:
+    When a GPU method is called in guppy, we turn it into 3 tket ops:
     * lookup: gpu.module -> gpu.func
-    * call: gpu.context * gpu.func * inputs -> gpu.context * output
+    * call: gpu.context * gpu.func * inputs -> gpu.result
+    * read_result: gpu.result -> gpu.context * outputs
 
     For the gpu.module that we use in lookup, a constant is created for each
     call, using the gpu file information embedded in method's `self` argument.
