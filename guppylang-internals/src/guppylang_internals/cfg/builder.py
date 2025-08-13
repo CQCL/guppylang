@@ -9,6 +9,7 @@ from guppylang_internals.ast_util import (
     AstVisitor,
     ContextAdjuster,
     find_nodes,
+    return_nodes_in_ast,
     set_location_from,
     template_replace,
     with_loc,
@@ -16,7 +17,7 @@ from guppylang_internals.ast_util import (
 from guppylang_internals.cfg.bb import BB, BBStatement
 from guppylang_internals.cfg.cfg import CFG
 from guppylang_internals.checker.core import Globals
-from guppylang_internals.checker.errors.generic import ExpectedError, UnsupportedError
+from guppylang_internals.checker.errors.generic import ExpectedError, ReturnUnderModifierError, UnsupportedError
 from guppylang_internals.diagnostic import Error
 from guppylang_internals.error import GuppyError, InternalGuppyError
 from guppylang_internals.experimental import check_lists_enabled
@@ -136,6 +137,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         Returns the BB in which the expression is available and adds the node to it.
         """
         if not isinstance(node, NestedFunctionDef) and node.value is not None:
+        # if node.value is not None:
             node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
         return bb
@@ -264,6 +266,28 @@ class CFGBuilder(AstVisitor[BB | None]):
         set_location_from(new_node, node)
         bb.statements.append(new_node)
         return bb
+
+    def visit_With(self, node: ast.With, bb: BB, jumps: Jumps) -> BB | None:
+        #   print("  ast.With @ CFGBuilder.visit_With = ", node)
+        for item in node.items:
+            # Check if `as` notation is not used
+            if item.optional_vars is not None:
+                raise GuppyError(UnsupportedError(item, "`as` found in with statements"))
+            item.context_expr, bb = ExprBuilder.build(item.context_expr, self.cfg, bb)
+
+        # Check if the body contains a return statement.
+        return_in_body = return_nodes_in_ast(node)
+        if len(return_in_body) != 0:
+            raise GuppyError(ReturnUnderModifierError(node, return_in_body[0]))
+
+        new_jumps = Jumps(return_bb=bb, continue_bb=None, break_bb=None)
+        cfg = CFGBuilder().build(node.body, True, self.globals)
+        # TODO
+        return bb
+
+        node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
+        pred, bb = ExprBuilder.build(node, self.cfg, bb)
+        bb.branch_pred = pred
 
     def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:
         # When adding support for new statements, we have to remember to use the
