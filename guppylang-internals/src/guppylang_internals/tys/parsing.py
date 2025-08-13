@@ -35,6 +35,8 @@ from guppylang_internals.tys.errors import (
     LinearConstParamError,
     ModuleMemberNotFoundError,
     NonLinearOwnedError,
+    SelfTyNotInMethodError,
+    WrongNumberOfTypeArgsError,
 )
 from guppylang_internals.tys.param import ConstParam, Parameter, TypeParam
 from guppylang_internals.tys.subst import BoundVarFinder
@@ -62,6 +64,10 @@ class TypeParsingCtx:
     #: Whether a previously unseen type parameters is allowed to be bound (i.e. is
     #: allowed to be added to `param_var_mapping`
     allow_free_vars: bool = False
+
+    #: When parsing types in the signature or body of a method, we also need access to
+    #: the type this method belongs to in order to resolve `Self` annotations.
+    self_ty: Type | None = None
 
 
 def arg_from_ast(node: AstNode, ctx: TypeParsingCtx) -> Argument:
@@ -171,6 +177,9 @@ def _arg_from_instantiated_defn(
 ) -> Argument:
     """Parses a globals definition with type args into an argument."""
     match defn:
+        # Special case for the `Self` type
+        case SelfTypeDef():
+            return TypeArg(_parse_self_type(arg_nodes, node, ctx))
         # Special case for the `Callable` type
         case CallableTypeDef():
             return TypeArg(_parse_callable_type(arg_nodes, node, ctx))
@@ -213,6 +222,22 @@ def _parse_delayed_annotation(ast_str: str, node: ast.Constant) -> ast.expr:
         raise GuppyError(InvalidTypeError(node)) from None
     else:
         return stmt.value
+
+
+def _parse_self_type(args: list[ast.expr], loc: AstNode, ctx: TypeParsingCtx) -> Type:
+    """Helper function to parse a `Self` type.
+
+    Returns the actual type `Self` refers to or emits a user error if we're not inside
+    a method.
+    """
+    if ctx.self_ty is None:
+        raise GuppyError(SelfTyNotInMethodError(loc))
+
+    # We don't allow specifying generic arguments of `Self`. This matches the behaviour
+    # of Python.
+    if args:
+        raise GuppyError(WrongNumberOfTypeArgsError(loc, 0, len(args), "Self"))
+    return ctx.self_ty
 
 
 def _parse_callable_type(
