@@ -39,7 +39,7 @@ def test_wasm_methods(validate):
 
     @guppy
     def main() -> int:
-        mod = MyWasm(0)
+        mod = MyWasm(1)
         x = mod.foo()
         y = mod.bar(x)
         mod.discard()
@@ -59,7 +59,7 @@ def test_wasm_types(validate):
 
     @guppy
     def main() -> None:
-        mod = MyWasm(0)
+        mod = MyWasm(1)
         mod.foo((0, (1, 2.0)), 3)
         mod.discard()
         return
@@ -100,7 +100,7 @@ def test_lookup_by_id(validate):
 
     @guppy
     def main() -> int:
-        c = MyWasm(0)
+        c = MyWasm(1)
         x = c.foo()
         c.discard()
         return x
@@ -129,7 +129,7 @@ def test_lookup_by_name(validate):
 
     @guppy
     def main() -> int:
-        c = MyWasm(0)
+        c = MyWasm(1)
         x = c.foo()
         c.discard()
         return x

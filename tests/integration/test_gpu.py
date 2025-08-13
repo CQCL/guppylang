@@ -14,12 +14,10 @@ def test_gpu_functions(validate):
 
     @guppy
     def main() -> int:
-        mod1 = MyModule(0)
-        mod2 = MyModule(1)
-        two = mod1.add_one(1)
-        two2 = mod2.foo(two, 3.0)
-        mod1.discard()
-        mod2.discard()
+        mod = MyModule()
+        two = mod.add_one(1)
+        two2 = mod.foo(two, 3.0)
+        mod.discard()
         return two + two2
         return 2
 
@@ -39,7 +37,7 @@ def test_gpu_methods(validate):
 
     @guppy
     def main() -> int:
-        mod = MyModule(0)
+        mod = MyModule()
         x = mod.foo()
         y = mod.bar(x)
         mod.discard()
@@ -59,7 +57,7 @@ def test_gpu_types(validate):
 
     @guppy
     def main() -> None:
-        mod = MyModule(0)
+        mod = MyModule()
         mod.foo(-1, 2.0, 3)
         mod.discard()
         return
@@ -78,7 +76,7 @@ def test_lookup_by_id(validate):
 
     @guppy
     def main() -> int:
-        c = MyGpu(0)
+        c = MyGpu()
         x = c.foo()
         c.discard()
         return x
@@ -107,7 +105,7 @@ def test_lookup_by_name(validate):
 
     @guppy
     def main() -> int:
-        c = MyGpu(0)
+        c = MyGpu()
         x = c.foo()
         c.discard()
         return x

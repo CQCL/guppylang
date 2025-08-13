@@ -1,5 +1,6 @@
 from hugr import Wire, ops
 from hugr import tys as ht
+from hugr.std.int import IntVal
 
 from guppylang_internals.definition.custom import CustomInoutCallCompiler
 from guppylang_internals.definition.value import CallReturnWires
@@ -27,9 +28,9 @@ class GpuModuleInitCompiler(CustomInoutCallCompiler):
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         # Make a ConstGpuModule as a CustomConst
-        assert len(args) == 1
-        ctx_arg = args[0]
-        ctx_wire = self.builder.add_op(convert_itousize(), ctx_arg)
+        assert len(args) == 0
+        int_wire = self.builder.load(IntVal(0, width=6))
+        ctx_wire = self.builder.add_op(convert_itousize(), int_wire)
 
         ctx_ty = QSYSTEM_GPU_EXTENSION.get_type("context").instantiate([])
         get_ctx_op = ops.ExtOp(

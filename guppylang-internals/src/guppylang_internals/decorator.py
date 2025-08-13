@@ -202,7 +202,7 @@ def wasm_module(
         return WasmModuleTypeDef(id, name, defined_at, wasm_file)
 
     f = ext_module_decorator(
-        type_def_wrapper, WasmModuleInitCompiler(), WasmModuleDiscardCompiler()
+        type_def_wrapper, WasmModuleInitCompiler(), WasmModuleDiscardCompiler(), True
     )
     return f(filename, None)
 
@@ -219,7 +219,7 @@ def gpu_module(
         return GpuModuleTypeDef(id, name, defined_at, gpu_file, gpu_config)
 
     f = ext_module_decorator(
-        type_def_wrapper, GpuModuleInitCompiler(), GpuModuleDiscardCompiler()
+        type_def_wrapper, GpuModuleInitCompiler(), GpuModuleDiscardCompiler(), False
     )
     return f(filename, config_filename)
 
@@ -229,6 +229,7 @@ def ext_module_decorator(
     ],
     init_compiler: CustomInoutCallCompiler,
     discard_compiler: CustomInoutCallCompiler,
+    init_arg: bool, # Whether the init function should take a nat argument
 ) -> Callable[[str, str | None], Callable[[builtins.type[T]], GuppyDefinition]]:
     from guppylang.defs import GuppyDefinition
 
@@ -252,11 +253,8 @@ def ext_module_decorator(
                 if isinstance(val, GuppyDefinition):
                     DEF_STORE.register_impl(ext_module.id, val.wrapped.name, val.id)
             # Add a constructor to the class
-            call_method = CustomFunctionDef(
-                DefId.fresh(),
-                "__new__",
-                None,
-                FunctionType(
+            if init_arg:
+                init_fn_ty = FunctionType(
                     [
                         FuncInput(
                             NumericType(NumericType.Kind.Nat),
@@ -264,7 +262,15 @@ def ext_module_decorator(
                         )
                     ],
                     ext_module_ty,
-                ),
+                )
+            else:
+                init_fn_ty = FunctionType([], ext_module_ty)
+
+            call_method = CustomFunctionDef(
+                DefId.fresh(),
+                "__new__",
+                None,
+                init_fn_ty,
                 DefaultCallChecker(),
                 init_compiler,
                 True,
