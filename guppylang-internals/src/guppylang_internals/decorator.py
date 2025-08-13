@@ -7,7 +7,7 @@ from hugr import ext as he
 from hugr import ops
 from hugr import tys as ht
 
-from guppylang.defs import GuppyDefinition
+from guppylang.defs import GuppyDefinition, GuppyFunctionDefinition
 from guppylang_internals.compiler.core import (
     CompilerContext,
     GlobalConstId,
@@ -23,6 +23,7 @@ from guppylang_internals.definition.custom import (
     RawCustomFunctionDef,
 )
 from guppylang_internals.definition.function import RawFunctionDef
+from guppylang_internals.definition.lowerable import RawLowerableFunctionDef
 from guppylang_internals.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang_internals.definition.wasm import RawWasmFunctionDef
 from guppylang_internals.dummy_decorator import _dummy_custom_decorator, sphinx_running
@@ -49,7 +50,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from types import FrameType
 
-    from guppylang.defs import GuppyFunctionDefinition
     from guppylang_internals.tys.arg import Argument
     from guppylang_internals.tys.param import Parameter
     from guppylang_internals.tys.subst import Inst
@@ -124,8 +124,10 @@ def hugr_op(
     return custom_function(OpCompiler(op), checker, higher_order_value, name, signature)
 
 
-def lower_op(
+def lowerable_op(
     hugr_ext: he.Extension,
+    checker: CustomCallChecker | None = None,
+    higher_order_value: bool = True,
 ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
     """Decorator to automatically generate a hugr OpDef and add to the user-provided
     hugr extension.
@@ -150,8 +152,9 @@ def lower_op(
                 lower_funcs=[
                     he.FixedHugr(
                         ht.ExtensionSet([ext.name for ext in compiled_defn.extensions]),
-                        compiled_defn,  # type: ignore[arg-type]
+                        module,
                     )
+                    for module in compiled_defn.modules
                 ],
             )
 
@@ -159,7 +162,20 @@ def lower_op(
 
             return ops.ExtOp(op_def, ty, [arg.to_hugr(ctx) for arg in inst])
 
-        return custom_function(OpCompiler(op))(f)
+        call_checker = checker or DefaultCallChecker()
+
+        func = RawLowerableFunctionDef(
+            DefId.fresh(),
+            f.__name__,
+            None,
+            f,
+            call_checker,
+            OpCompiler(op),
+            higher_order_value,
+            None,
+        )
+        DEF_STORE.register_def(func, get_calling_frame())
+        return GuppyFunctionDefinition(func)
 
     return dec
 
