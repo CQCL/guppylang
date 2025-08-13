@@ -7,8 +7,8 @@ node straight from the Python AST. We build a CFG, check it, and return a
 
 import ast
 import sys
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar
+from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from guppylang_internals.ast_util import return_nodes_in_ast, with_loc
 from guppylang_internals.cfg.bb import BB
@@ -17,13 +17,28 @@ from guppylang_internals.checker.cfg_checker import CheckedCFG, check_cfg
 from guppylang_internals.checker.core import Context, Globals, Place, Variable
 from guppylang_internals.checker.errors.generic import UnsupportedError
 from guppylang_internals.definition.common import DefId
+from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.diagnostic import Error, Help, Note
 from guppylang_internals.engine import DEF_STORE, ENGINE
 from guppylang_internals.error import GuppyError
 from guppylang_internals.experimental import check_capturing_closures_enabled
 from guppylang_internals.nodes import CheckedNestedFunctionDef, NestedFunctionDef
-from guppylang_internals.tys.parsing import TypeParsingCtx, parse_function_io_types
-from guppylang_internals.tys.ty import FunctionType, InputFlags, NoneType
+from guppylang_internals.tys.parsing import (
+    TypeParsingCtx,
+    check_function_arg,
+    parse_function_arg_ty,
+    type_from_ast,
+    type_with_flags_from_ast,
+)
+from guppylang_internals.tys.ty import (
+    ExistentialTypeVar,
+    FuncInput,
+    FunctionType,
+    InputFlags,
+    NoneType,
+    Type,
+    unify,
+)
 
 if sys.version_info >= (3, 12):
     from guppylang_internals.tys.parsing import parse_parameter
@@ -65,6 +80,52 @@ class MissingReturnAnnotationError(Error):
             "`-> None`."
         )
         func: str
+
+
+@dataclass(frozen=True)
+class InvalidSelfError(Error):
+    title: ClassVar[str] = "Invalid self annotation"
+    span_label: ClassVar[str] = "`{self_arg}` must be of type `{self_ty}`"
+    self_arg: str
+    self_ty: Type
+
+
+@dataclass(frozen=True)
+class RecursiveSelfError(Error):
+    title: ClassVar[str] = "Recursive self annotation"
+    span_label: ClassVar[str] = (
+        "Type of `{self_arg}` cannot recursively refer to `Self`"
+    )
+    self_arg: str
+
+
+@dataclass(frozen=True)
+class SelfParamsShadowedError(Error):
+    title: ClassVar[str] = "Shadowed generic parameters"
+    span_label: ClassVar[str] = (
+        "Cannot infer type for `{self_arg}` since parameter `{param}` of "
+        "`{ty_defn.name}` is shadowed"
+    )
+    param: str
+    ty_defn: "TypeDef"
+    self_arg: str
+
+    @dataclass(frozen=True)
+    class ExplicitHelp(Help):
+        span_label: ClassVar[str] = (
+            "Consider specifying the type explicitly: `{suggestion}`"
+        )
+
+        @property
+        def suggestion(self) -> str:
+            parent = self._parent
+            assert isinstance(parent, SelfParamsShadowedError)
+            params = (
+                f"[{', '.join(f'?{p.name}' for p in parent.ty_defn.params)}]"
+                if parent.ty_defn.params
+                else ""
+            )
+            return f'{parent.self_arg}: "{parent.ty_defn.name}{params}"'
 
 
 def check_global_func_def(
@@ -176,7 +237,9 @@ def check_nested_func_def(
     return with_loc(func_def, checked_def)
 
 
-def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType:
+def check_signature(
+    func_def: ast.FunctionDef, globals: Globals, def_id: DefId | None = None
+) -> FunctionType:
     """Checks the signature of a function definition and returns the corresponding
     Guppy type."""
     if len(func_def.args.posonlyargs) != 0:
@@ -211,24 +274,114 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
             param = parse_parameter(param_node, i, globals)
             param_var_mapping[param.name] = param
 
-    input_nodes = []
+    # Figure out if this is a method
+    self_defn: TypeDef | None = None
+    if def_id is not None and def_id in DEF_STORE.impl_parents:
+        self_defn = cast(TypeDef, ENGINE.get_checked(DEF_STORE.impl_parents[def_id]))
+        assert isinstance(self_defn, TypeDef)
+
+    inputs = []
     input_names = []
-    for inp in func_def.args.args:
-        ty_ast = inp.annotation
-        if ty_ast is None:
-            raise GuppyError(MissingArgAnnotationError(inp))
-        input_nodes.append(ty_ast)
-        input_names.append(inp.arg)
     ctx = TypeParsingCtx(globals, param_var_mapping, allow_free_vars=True)
-    inputs, output = parse_function_io_types(
-        input_nodes, func_def.returns, input_names, func_def, ctx
-    )
+    for i, arg in enumerate(func_def.args.args):
+        if self_defn and i == 0 and func_def.name != "__new__":
+            inp = parse_self_arg(arg, self_defn, param_var_mapping, globals)
+            ctx = replace(ctx, self_ty=inp.ty)
+        else:
+            if arg.annotation is None:
+                raise GuppyError(MissingArgAnnotationError(arg))
+            inp = parse_function_arg_ty(arg.annotation, arg.arg, ctx)
+        inputs.append(inp)
+        input_names.append(arg.arg)
+
+    output = type_from_ast(func_def.returns, ctx)
     return FunctionType(
         inputs,
         output,
         input_names,
         sorted(param_var_mapping.values(), key=lambda v: v.idx),
     )
+
+
+def parse_self_arg(
+    arg: ast.arg,
+    self_defn: TypeDef,
+    param_var_mapping: dict[str, "Parameter"],
+    globals: Globals,
+) -> FuncInput:
+    """Handles parsing of the `self` argument on methods.
+
+    This argument is special since its type annotation may be omitted. Furthermore, if a
+    type is provided then it must match the parent type.
+    """
+    assert self_defn.params is not None
+    if arg.annotation is None:
+        return handle_implicit_self_arg(arg, self_defn, param_var_mapping)
+
+    # If the user has provided an annotation for `self`, then we can go ahead and parse
+    # it. However, in the annotation the user is also allowed to use `Self`, so we have
+    # to specify a `self_ty` in the context.
+    self_ty_head = self_defn.check_instantiate(
+        [param.to_existential()[0] for param in self_defn.params]
+    )
+    self_ty_placeholder = ExistentialTypeVar.fresh(
+        "Self", copyable=self_ty_head.copyable, droppable=self_ty_head.droppable
+    )
+    ctx = TypeParsingCtx(
+        globals, param_var_mapping, allow_free_vars=True, self_ty=self_ty_placeholder
+    )
+    user_ty, user_flags = type_with_flags_from_ast(arg.annotation, ctx)
+
+    # If the user just annotates `self: Self` then we can fall back to the case where
+    # no annotation is provided at all
+    if user_ty == self_ty_placeholder:
+        return handle_implicit_self_arg(arg, self_defn, param_var_mapping, user_flags)
+
+    # Annotations like `self: Foo[Self]` would be an infinite type so doesn't make sense
+    if self_ty_placeholder in user_ty.unsolved_vars:
+        raise GuppyError(RecursiveSelfError(arg.annotation, arg.arg))
+
+    # Check that the annotation matches the parent type
+    subst = unify(user_ty, self_ty_head, {})
+    if subst is None:
+        raise GuppyError(InvalidSelfError(arg.annotation, arg.arg, self_ty_head))
+
+    return check_function_arg(user_ty, user_flags, arg, arg.arg, param_var_mapping)
+
+
+def handle_implicit_self_arg(
+    arg: ast.arg,
+    self_defn: TypeDef,
+    param_var_mapping: dict[str, "Parameter"],
+    flags: InputFlags = InputFlags.NoFlags,
+) -> FuncInput:
+    """Handles the case where no annotation for `self` is provided or where the user
+    write `self: Self`.
+
+    Generates the most generic annotation that is possible by making the function as
+    generic as the parent type.
+    """
+    # Check that the user hasn't shadowed some of the parent type parameters using a
+    # Python 3.12 style parameter declaration
+    assert self_defn.params is not None
+    shadowed_params = [
+        param for param in self_defn.params if param.name in param_var_mapping
+    ]
+    if shadowed_params:
+        param = shadowed_params.pop()
+        err = SelfParamsShadowedError(arg, param.name, self_defn, arg.arg)
+        err.add_sub_diagnostic(SelfParamsShadowedError.ExplicitHelp(arg))
+        raise GuppyError(err)
+
+    # The generic params inherited from the parent type should appear first in the
+    # parameter list, so we have to shift the existing ones
+    for name, param in param_var_mapping.items():
+        param_var_mapping[name] = param.with_idx(param.idx + len(self_defn.params))
+
+    param_var_mapping |= {param.name: param for param in self_defn.params}
+    self_args = [param.to_bound() for param in self_defn.params]
+    self_ty = self_defn.check_instantiate(self_args, loc=arg)
+    return check_function_arg(self_ty, flags, arg, arg.arg, param_var_mapping)
 
 
 def parse_function_with_docstring(
