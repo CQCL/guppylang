@@ -791,7 +791,7 @@ wheels = [
 
 [[package]]
 name = "guppylang"
-version = "0.21.1"
+version = "0.21.2"
 source = { editable = "." }
 dependencies = [
     { name = "guppylang-internals" },
@@ -869,7 +869,7 @@ requires-dist = [
     { name = "guppylang-internals", editable = "guppylang-internals" },
     { name = "numpy", specifier = "~=2.0" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "selene-sim", specifier = "~=0.2" },
+    { name = "selene-sim", specifier = "~=0.2.0" },
     { name = "tket", marker = "extra == 'pytket'", specifier = ">=0.12.1" },
 ]
 provides-extras = ["pytket"]
@@ -931,7 +931,7 @@ test = [
 
 [[package]]
 name = "guppylang-internals"
-version = "0.21.1"
+version = "0.22.0"
 source = { editable = "guppylang-internals" }
 dependencies = [
     { name = "hugr" },
