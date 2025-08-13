@@ -19,16 +19,42 @@ As of August 2025, The Guppy language is undergoing rapid development and is cur
 
 ### Features
 
-* Add float parameter inputs to symbolic pytket circuits ([#1105](https://github.com/CQCL/guppylang/issues/1105)) ([34c546c](https://github.com/CQCL/guppylang/commit/34c546c3b5787beb839687fdbf4db8bc94f36c4a)), closes [#1076](https://github.com/CQCL/guppylang/issues/1076)
-* Allow custom start and step in `range` ([#1157](https://github.com/CQCL/guppylang/issues/1157)) ([a1b9333](https://github.com/CQCL/guppylang/commit/a1b9333712c74270d5efaaa72f83d6b09047c068))
-* pin to selene-sim 0.2.0 ([#1156](https://github.com/CQCL/guppylang/issues/1156)) ([08c52c0](https://github.com/CQCL/guppylang/commit/08c52c01f6034a315d03bd978f255358e6f92930))
+* We can now pass a `start` and `step` for the [range](generated/guppylang.std.iter.range.rst) function just as we can in Python. ([#1157](https://github.com/CQCL/guppylang/issues/1157)) ([a1b9333](https://github.com/CQCL/guppylang/commit/a1b9333712c74270d5efaaa72f83d6b09047c068))
+* pin to selene-sim [0.2.0](https://github.com/CQCL/selene/releases/tag/v0.2.0) ([#1156](https://github.com/CQCL/guppylang/issues/1156)) ([08c52c0](https://github.com/CQCL/guppylang/commit/08c52c01f6034a315d03bd978f255358e6f92930))
 * Update to guppylang-internals 0.22.0
+* Support float parameters as inputs to symbolic circuits loaded with `guppy.load_pytket`. ([#1105](https://github.com/CQCL/guppylang/issues/1105)) ([34c546c](https://github.com/CQCL/guppylang/commit/34c546c3b5787beb839687fdbf4db8bc94f36c4a)), closes [#1076](https://github.com/CQCL/guppylang/issues/1076) (see example below).
 
+```{code-cell} ipython3
+from guppylang import guppy
+from guppylang.std.angles import pi
+from guppylang.std.quantum import qubit, rx, discard
+
+from pytket import Circuit
+from sympy import Symbol
+
+a = Symbol("alpha")
+
+circ = Circuit(1, 1)
+circ.Rx(a, 0)
+circ.Measure(0, 0)
+
+rx_func = guppy.load_pytket("rx", circ, use_arrays=False)
+
+@guppy
+def perform_rx_flip() -> int:
+    """Perform an X gate as Rx(q, pi)"""
+    q = qubit()
+    res = int(rx_func(q, pi))
+    discard(q)
+    return res
+
+perform_rx_flip.check()
+```
 
 ### Bug Fixes
 
 * **emulator:** pass runtime option to selene ([ac969e8](https://github.com/CQCL/guppylang/commit/ac969e8ce8d8bad90f9cfd9cb0470c62d08cfe79))
-
+* Fix a scoping issue with builtins functions [#1122](https://github.com/CQCL/guppylang/issues/1122)
 
 ### Documentation
 
