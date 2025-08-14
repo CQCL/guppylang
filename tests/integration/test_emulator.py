@@ -1,6 +1,7 @@
 from guppylang.decorator import guppy
 from guppylang.std.builtins import result
-from guppylang.std.quantum import qubit, measure, h
+from guppylang.std.debug import state_result
+from guppylang.std.quantum import qubit, measure, h, x
 from guppylang.emulator import EmulatorResult
 from selene_sim.backends.bundled_runtimes import SoftRZRuntime
 
@@ -28,7 +29,6 @@ def test_basic_emulation() -> None:
     res = main.emulator(1).statevector_sim().with_seed(42).run()
     expected = EmulatorResult([[("c", True)]])
     assert res == expected
-
 
 
 def test_all_options() -> None:
@@ -71,4 +71,19 @@ def test_all_options() -> None:
     assert isinstance(result, EmulatorResult)
 
 
-# TODO more tests
+def test_statevector() -> None:
+    @guppy
+    def main() -> None:
+        q = qubit()
+        x(q)
+        state_result("s", q)
+        state_result("s", q)
+        result("c", measure(q))
+
+    res = main.emulator(1).run()
+    (shot_states,) = res.partial_states()
+    assert len(shot_states) == 2
+    assert all(tag == "s" for tag, _ in shot_states)
+
+    # repeated tag causes overwrite
+    assert res.partial_state_dicts() == [{"s": shot_states[1][1]}]
