@@ -14,7 +14,7 @@ from guppylang_internals.definition.value import (
     ValueDef,
 )
 from guppylang_internals.span import SourceMap
-from guppylang_internals.tys.parsing import type_from_ast
+from guppylang_internals.tys.parsing import TypeParsingCtx, type_from_ast
 
 
 @dataclass(frozen=True)
@@ -33,7 +33,7 @@ class RawExternDef(ParsableDef):
             self.id,
             self.name,
             self.defined_at,
-            type_from_ast(self.type_ast, globals, {}),
+            type_from_ast(self.type_ast, TypeParsingCtx(globals)),
             self.symbol,
             self.constant,
             self.type_ast,

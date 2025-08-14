@@ -47,6 +47,27 @@ class CallableTypeDef(TypeDef, CompiledDef):
 
 
 @dataclass(frozen=True)
+class SelfTypeDef(TypeDef, CompiledDef):
+    """Type definition associated with the `Self` type on methods.
+
+    During type parsing, we make sure that this type is replaced with the concrete type
+    the method is attached to. Thus, we should never have instances of this type around.
+
+    In other words, this definition is only a marker so that type parsing doesn't have
+    to rely on matching against the string "Self". By making `Self` a definition, we can
+    use the existing identifier tracking system and also handle users shadowing the
+    `Self` binder or assigning `Self` to some other name.
+    """
+
+    name: Literal["Self"] = field(default="Self", init=False)
+
+    def check_instantiate(
+        self, args: Sequence[Argument], loc: AstNode | None = None
+    ) -> FunctionType:
+        raise InternalGuppyError("Tried to instantiate abstract `Self` type`")
+
+
+@dataclass(frozen=True)
 class _TupleTypeDef(TypeDef, CompiledDef):
     """Type definition associated with the builtin `tuple` type.
 
@@ -190,6 +211,7 @@ def _option_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
 
 
 callable_type_def = CallableTypeDef(DefId.fresh(), None, None)
+self_type_def = SelfTypeDef(DefId.fresh(), None, [])
 tuple_type_def = _TupleTypeDef(DefId.fresh(), None, None)
 none_type_def = _NoneTypeDef(DefId.fresh(), None, [])
 bool_type_def = OpaqueTypeDef(

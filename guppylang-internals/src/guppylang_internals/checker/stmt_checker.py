@@ -356,7 +356,7 @@ class StmtChecker(AstVisitor[BBStatement]):
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.stmt:
         if node.value is None:
             raise GuppyError(UnsupportedError(node, "Variable declarations"))
-        ty = type_from_ast(node.annotation, self.ctx.globals, self.ctx.generic_params)
+        ty = type_from_ast(node.annotation, self.ctx.parsing_ctx)
         node.value, subst = self._check_expr(node.value, ty)
         assert not ty.unsolved_vars  # `ty` must be closed!
         assert len(subst) == 0

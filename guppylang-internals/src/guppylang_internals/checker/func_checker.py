@@ -7,7 +7,7 @@ node straight from the Python AST. We build a CFG, check it, and return a
 
 import ast
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from guppylang_internals.ast_util import return_nodes_in_ast, with_loc
@@ -24,12 +24,14 @@ from guppylang_internals.error import GuppyError
 from guppylang_internals.experimental import check_capturing_closures_enabled
 from guppylang_internals.nodes import CheckedNestedFunctionDef, NestedFunctionDef
 from guppylang_internals.tys.parsing import (
+    TypeParsingCtx,
     check_function_arg,
     parse_function_arg_annotation,
     type_from_ast,
     type_with_flags_from_ast,
 )
 from guppylang_internals.tys.ty import (
+    ExistentialTypeVar,
     FuncInput,
     FunctionType,
     InputFlags,
@@ -64,6 +66,15 @@ class IllegalAssignError(Error):
 class MissingArgAnnotationError(Error):
     title: ClassVar[str] = "Missing type annotation"
     span_label: ClassVar[str] = "Argument requires a type annotation"
+
+
+@dataclass(frozen=True)
+class RecursiveSelfError(Error):
+    title: ClassVar[str] = "Recursive self annotation"
+    span_label: ClassVar[str] = (
+        "Type of `{self_arg}` cannot recursively refer to `Self`"
+    )
+    self_arg: str
 
 
 @dataclass(frozen=True)
@@ -271,23 +282,21 @@ def check_signature(
 
     inputs = []
     input_names = []
+    ctx = TypeParsingCtx(globals, param_var_mapping, allow_free_vars=True)
     for i, inp in enumerate(func_def.args.args):
         # Special handling for `self` arguments. Note that `__new__` is excluded here
         # since it's not a method so doesn't take `self`.
         if self_defn and i == 0 and func_def.name != "__new__":
-            input = parse_self_arg(inp, self_defn, param_var_mapping, globals)
+            input = parse_self_arg(inp, self_defn, ctx)
+            ctx = replace(ctx, self_ty=input.ty)
         else:
             ty_ast = inp.annotation
             if ty_ast is None:
                 raise GuppyError(MissingArgAnnotationError(inp))
-            input = parse_function_arg_annotation(
-                ty_ast, inp.arg, globals, param_var_mapping, allow_free_vars=True
-            )
+            input = parse_function_arg_annotation(ty_ast, inp.arg, ctx)
         inputs.append(input)
         input_names.append(inp.arg)
-    output = type_from_ast(
-        func_def.returns, globals, param_var_mapping, allow_free_vars=True
-    )
+    output = type_from_ast(func_def.returns, ctx)
     return FunctionType(
         inputs,
         output,
@@ -296,12 +305,7 @@ def check_signature(
     )
 
 
-def parse_self_arg(
-    arg: ast.arg,
-    self_defn: TypeDef,
-    param_var_mapping: dict[str, "Parameter"],
-    globals: Globals,
-) -> FuncInput:
+def parse_self_arg(arg: ast.arg, self_defn: TypeDef, ctx: TypeParsingCtx) -> FuncInput:
     """Handles parsing of the `self` argument on methods.
 
     This argument is special since its type annotation may be omitted. Furthermore, if a
@@ -309,29 +313,43 @@ def parse_self_arg(
     """
     assert self_defn.params is not None
     if arg.annotation is None:
-        return handle_implicit_self_arg(arg, self_defn, param_var_mapping)
+        return handle_implicit_self_arg(arg, self_defn, ctx)
 
-    # If the user has provided an annotation for `self`, then we go ahead and parse it
-    user_ty, user_flags = type_with_flags_from_ast(
-        arg.annotation, globals, param_var_mapping, allow_free_vars=True
-    )
-
-    # Check that the annotation matches the parent type. We can do this by unifying with
-    # the expected self type where all params are instantiated with unification vars
+    # If the user has provided an annotation for `self`, then we go ahead and parse it.
+    # However, in the annotation the user is also allowed to use `Self`, so we have to
+    # specify a `self_ty` in the context.
     self_ty_head = self_defn.check_instantiate(
         [param.to_existential()[0] for param in self_defn.params]
     )
+    self_ty_placeholder = ExistentialTypeVar.fresh(
+        "Self", copyable=self_ty_head.copyable, droppable=self_ty_head.droppable
+    )
+    assert ctx.self_ty is None
+    ctx = replace(ctx, self_ty=self_ty_placeholder)
+    user_ty, user_flags = type_with_flags_from_ast(arg.annotation, ctx)
+
+    # If the user just annotates `self: Self` then we can fall back to the case where
+    # no annotation is provided at all
+    if user_ty == self_ty_placeholder:
+        return handle_implicit_self_arg(arg, self_defn, ctx, user_flags)
+
+    # Annotations like `self: Foo[Self]` are not allowed (would be an infinite type)
+    if self_ty_placeholder in user_ty.unsolved_vars:
+        raise GuppyError(RecursiveSelfError(arg.annotation, arg.arg))
+
+    # Check that the annotation matches the parent type. We can do this by unifying with
+    # the expected self type where all params are instantiated with unification vars
     subst = unify(user_ty, self_ty_head, {})
     if subst is None:
         raise GuppyError(InvalidSelfError(arg.annotation, arg.arg, self_ty_head))
 
-    return check_function_arg(user_ty, user_flags, arg, arg.arg, param_var_mapping)
+    return check_function_arg(user_ty, user_flags, arg, arg.arg, ctx)
 
 
 def handle_implicit_self_arg(
     arg: ast.arg,
     self_defn: TypeDef,
-    param_var_mapping: dict[str, "Parameter"],
+    ctx: TypeParsingCtx,
     flags: InputFlags = InputFlags.NoFlags,
 ) -> FuncInput:
     """Handles the case where no annotation for `self` is provided.
@@ -343,7 +361,7 @@ def handle_implicit_self_arg(
     # Python 3.12 style parameter declaration
     assert self_defn.params is not None
     shadowed_params = [
-        param for param in self_defn.params if param.name in param_var_mapping
+        param for param in self_defn.params if param.name in ctx.param_var_mapping
     ]
     if shadowed_params:
         param = shadowed_params.pop()
@@ -353,13 +371,13 @@ def handle_implicit_self_arg(
 
     # The generic params inherited from the parent type should appear first in the
     # parameter list, so we have to shift the existing ones
-    for name, param in param_var_mapping.items():
-        param_var_mapping[name] = param.with_idx(param.idx + len(self_defn.params))
+    for name, param in ctx.param_var_mapping.items():
+        ctx.param_var_mapping[name] = param.with_idx(param.idx + len(self_defn.params))
 
-    param_var_mapping |= {param.name: param for param in self_defn.params}
+    ctx.param_var_mapping.update({param.name: param for param in self_defn.params})
     self_args = [param.to_bound() for param in self_defn.params]
     self_ty = self_defn.check_instantiate(self_args, loc=arg)
-    return check_function_arg(self_ty, flags, arg, arg.arg, param_var_mapping)
+    return check_function_arg(self_ty, flags, arg, arg.arg, ctx)
 
 
 def parse_function_with_docstring(
