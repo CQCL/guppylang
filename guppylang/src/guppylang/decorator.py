@@ -401,15 +401,15 @@ def custom_guppy_decorator(f: F) -> F:
 
     Example:
 
-    ```
-    @custom_guppy_decorator
-    def my_guppy(f):
-        # Some custom logic here ...
-        return guppy(f)
+    .. code-block:: python
 
-    @my_guppy
-    def main() -> int: ...
-    ```
+        @custom_guppy_decorator
+        def my_guppy(f):
+            # Some custom logic here ...
+            return guppy(f)
+
+        @my_guppy
+        def main() -> int: ...
 
     If the `custom_guppy_decorator` were missing, then the `@my_guppy` annotation would
     not produce a valid guppy definition.
