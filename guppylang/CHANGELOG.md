@@ -19,7 +19,7 @@ As of August 2025, The Guppy language is undergoing rapid development and is cur
 
 ### Features
 
-* We can now pass a `start` and `step` for the [range](../api/generated/guppylang.std.iter.range.rst) function just as we can in Python. ([#1157](https://github.com/CQCL/guppylang/issues/1157)) ([a1b9333](https://github.com/CQCL/guppylang/commit/a1b9333712c74270d5efaaa72f83d6b09047c068))
+* We can now pass a `start` and `step` for the [range](../../api/generated/guppylang.std.iter.range.rst) function just as we can in Python. ([#1157](https://github.com/CQCL/guppylang/issues/1157)) ([a1b9333](https://github.com/CQCL/guppylang/commit/a1b9333712c74270d5efaaa72f83d6b09047c068))
 * pin to selene-sim [0.2.0](https://github.com/CQCL/selene/releases/tag/v0.2.0) ([#1156](https://github.com/CQCL/guppylang/issues/1156)) ([08c52c0](https://github.com/CQCL/guppylang/commit/08c52c01f6034a315d03bd978f255358e6f92930))
 * Update to guppylang-internals 0.22.0
 * Support float parameters as inputs to symbolic circuits loaded with `guppy.load_pytket`. ([#1105](https://github.com/CQCL/guppylang/issues/1105)) ([34c546c](https://github.com/CQCL/guppylang/commit/34c546c3b5787beb839687fdbf4db8bc94f36c4a)), closes [#1076](https://github.com/CQCL/guppylang/issues/1076) (see example below).
@@ -89,12 +89,12 @@ to a program.
 * default HUGR output uses compressed binary encoding.
 * `guppylang.tracing.object.GuppyDefinition` moved to `guppylang.defs.GuppyDefinition` `guppylang.tracing.object.TypeVarGuppyDefinition` moved and renamed to `guppylang.defs.GuppyTypeVarDefinition`
 * All `to_hugr` methods on types, arguments, and parameters now require a `ToHugrContext` `CompileableDef.compile_outer` now requires a `ToHugrContext` `guppy.hugr_op` now passes the compiler context to the function generating the op `CheckedFunctionDef` now implements `MonomorphizableDef` instead of `CompileableDef` `CompilerContext.build_compiled_def` now requires an instantiation for the definition's type parameters The `ToHugrContext` protocol now requires two additional methods: `type_var_to_hugr` and `const_var_to_hugr` `CompilerContext.{compiled, worklist}` and `CompilationEngine.compiled` are now indexed by a tuple of `DefId` and optional `PartiallyMonomorphizedArgs`
-* Any [comptime](../language_guide/comptime.md) code that previously used constant integers outside the 64-bit signed integer range will now fail to compile.
+* Any [comptime](../../language_guide/comptime.md) code that previously used constant integers outside the 64-bit signed integer range will now fail to compile.
 * Capturing closures are now disabled by default. Enabling them requires calling `guppylang.enable_experimental_features()`, however note that they are not supported throughout the stack.
 
 ### Features
 
-* Add emulation of Guppy programs powered by the [Selene](https://github.com/CQCL/selene) framework ([#1127](https://github.com/CQCL/guppylang/issues/1127))([5e2f595](https://github.com/CQCL/guppylang/commit/5e2f5951dff8782f7bbfe656ed02edf761a66593)). See the [Getting Started](../../sphinx/getting_started.md) guide and the [Examples Gallery](../../sphinx/examples_index.md) for example usage. 
+* Add emulation of Guppy programs powered by the [Selene](https://github.com/CQCL/selene) framework ([#1127](https://github.com/CQCL/guppylang/issues/1127))([5e2f595](https://github.com/CQCL/guppylang/commit/5e2f5951dff8782f7bbfe656ed02edf761a66593)). See the [Getting Started](../../../sphinx/getting_started.md) guide and the [Examples Gallery](../../../sphinx/examples_index.md) for example usage. 
 * Add `Future` type ([#1075](https://github.com/CQCL/guppylang/issues/1075)) ([5ad7673](https://github.com/CQCL/guppylang/commit/5ad76734c58e6d0c48a487c0645a4265abf3763e))
 * add error when constant integer out of bounds ([#1084](https://github.com/CQCL/guppylang/issues/1084)) ([eee77ae](https://github.com/CQCL/guppylang/commit/eee77ae92d0490f9a6fc843b02729a4fc88ba16c))
 * Add guppy version metadata to hugr entrypoint ([#1039](https://github.com/CQCL/guppylang/issues/1039)) ([0eafbd9](https://github.com/CQCL/guppylang/commit/0eafbd9f8e52484ae823aba830c1d38d30dd9755)), closes [#1037](https://github.com/CQCL/guppylang/issues/1037)
@@ -179,17 +179,16 @@ main.compile()
 ### Features
 
 * `with_owned` std library function to temporarily take ownership of a borrowed value ([#994](https://github.com/CQCL/guppylang/issues/994)) ([7bf75df](https://github.com/CQCL/guppylang/commit/7bf75dff290b3b652c1939bffb86a915555207d2)), closes [#992](https://github.com/CQCL/guppylang/issues/992)
-* Add an [Either](../api/generated/guppylang.std.either.Either.rst) type to the standard library. ([#993](https://github.com/CQCL/guppylang/issues/993)) ([75c1804](https://github.com/CQCL/guppylang/commit/75c18045747017aaacad74f92fc92d4e0cd78182)), closes [#991](https://github.com/CQCL/guppylang/issues/991)
-* Added a [PriorityQueue](../api/generated/guppylang.std.collections.PriorityQueue.rst) structure to the standard library.
+* Add an [Either](../../api/generated/guppylang.std.either.Either.rst) type to the standard library. ([#993](https://github.com/CQCL/guppylang/issues/993)) ([75c1804](https://github.com/CQCL/guppylang/commit/75c18045747017aaacad74f92fc92d4e0cd78182)), closes [#991](https://github.com/CQCL/guppylang/issues/991)
+* Added a [PriorityQueue](../../api/generated/guppylang.std.collections.PriorityQueue.rst) structure to the standard library.
 * Guppy programs can now include `state_result` tags which can be used together with Selene to retrieve the statevector at a given point in the program execution ([#905](https://github.com/CQCL/guppylang/issues/905)) ([2217bbc](https://github.com/CQCL/guppylang/commit/2217bbc63d910a29b5a4f732d0c3224617ca8dcf)). See the example notebook on [Debugging with State Results](https://github.com/CQCL/guppylang/blob/main/examples/state_results.ipynb). 
 * Add optional signature argument to RawCustomFunctionDef ([#1005](https://github.com/CQCL/guppylang/issues/1005)) ([79e2d5b](https://github.com/CQCL/guppylang/commit/79e2d5b77acd09645f02755de2e6e4a40ce49b10)), closes [#1003](https://github.com/CQCL/guppylang/issues/1003)
 * Add PriorityQueue to standard library ([#1006](https://github.com/CQCL/guppylang/issues/1006)) ([4e609f0](https://github.com/CQCL/guppylang/commit/4e609f08933f4e0f4f459cf10f2ecca9079bb7aa))
 * Allow users to wrap `guppy` in their own decorator ([#1017](https://github.com/CQCL/guppylang/issues/1017)) ([f047c9b](https://github.com/CQCL/guppylang/commit/f047c9bd16fdb26e757365c0ae8d2ec019f0aa06))
 * Comptime `nat` arguments ([#1015](https://github.com/CQCL/guppylang/issues/1015)) ([d2a9a07](https://github.com/CQCL/guppylang/commit/d2a9a0736c7466f943f886040865216892e6d3f9))
 * **diagnostics:** add miette bindings for enhanced error rendering ([#998](https://github.com/CQCL/guppylang/issues/998)) ([c8f2724](https://github.com/CQCL/guppylang/commit/c8f2724c17ed2d7e7523c9c9564417d7962a62f9))
-* Function overloading via static dispatch ([#1000](https://github.com/CQCL/guppylang/issues/1000)) ([6f523d6](https://github.com/CQCL/guppylang/commit/6f523d6c1f5c207fbc8e256ef12c6600e7999d12)). See the corresponding section of the [language guide](../language_guide/functions.md#function-overloading--static-dispatch) for more information.
+* Function overloading via static dispatch ([#1000](https://github.com/CQCL/guppylang/issues/1000)) ([6f523d6](https://github.com/CQCL/guppylang/commit/6f523d6c1f5c207fbc8e256ef12c6600e7999d12)). See the corresponding section of the [language guide](../../language_guide/functions.md#function-overloading--static-dispatch) for more information.
 * Remove explicit Guppy modules ([#983](https://github.com/CQCL/guppylang/issues/983)) ([0b2e652](https://github.com/CQCL/guppylang/commit/0b2e652d5b4899785de13cb1e0568786777f40c0))
-
 
 ### Bug Fixes
 
