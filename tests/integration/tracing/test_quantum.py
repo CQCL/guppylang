@@ -1,8 +1,8 @@
 from guppylang import qubit
 from guppylang.decorator import guppy
 from guppylang.std.angles import angle
-from guppylang.std.builtins import array
-from guppylang.std.quantum import h, measure, cx, rz
+from guppylang.std.builtins import array, barrier
+from guppylang.std.quantum import h, measure, cx, rz, discard_array
 import itertools
 
 
@@ -40,3 +40,20 @@ def test_angles(validate):
             theta /= 2
 
     validate(test.compile())
+
+
+def test_barrier_wrapper(validate):
+    """Test workaround for https://github.com/CQCL/guppylang/issues/1189"""
+
+    @guppy
+    def barrier_wrapper(qs: array[qubit, 5]) -> None:
+        barrier(qs)
+
+    @guppy.comptime
+    def main() -> None:
+        qs = array(qubit() for _ in range(5))
+        barrier_wrapper(qs)
+        h(qs[0])
+        discard_array(qs)
+
+    validate(main.compile())
