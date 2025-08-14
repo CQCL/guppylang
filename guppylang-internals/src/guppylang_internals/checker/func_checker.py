@@ -31,6 +31,7 @@ from guppylang_internals.tys.parsing import (
     type_with_flags_from_ast,
 )
 from guppylang_internals.tys.ty import (
+    ExistentialTypeVar,
     FuncInput,
     FunctionType,
     InputFlags,
@@ -65,6 +66,15 @@ class IllegalAssignError(Error):
 class MissingArgAnnotationError(Error):
     title: ClassVar[str] = "Missing type annotation"
     span_label: ClassVar[str] = "Argument requires a type annotation"
+
+
+@dataclass(frozen=True)
+class RecursiveSelfError(Error):
+    title: ClassVar[str] = "Recursive self annotation"
+    span_label: ClassVar[str] = (
+        "Type of `{self_arg}` cannot recursively refer to `Self`"
+    )
+    self_arg: str
 
 
 @dataclass(frozen=True)
@@ -305,14 +315,30 @@ def parse_self_arg(arg: ast.arg, self_defn: TypeDef, ctx: TypeParsingCtx) -> Fun
     if arg.annotation is None:
         return handle_implicit_self_arg(arg, self_defn, ctx)
 
-    # If the user has provided an annotation for `self`, then we go ahead and parse it
-    user_ty, user_flags = type_with_flags_from_ast(arg.annotation, ctx)
-
-    # Check that the annotation matches the parent type. We can do this by unifying with
-    # the expected self type where all params are instantiated with unification vars
+    # If the user has provided an annotation for `self`, then we go ahead and parse it.
+    # However, in the annotation the user is also allowed to use `Self`, so we have to
+    # specify a `self_ty` in the context.
     self_ty_head = self_defn.check_instantiate(
         [param.to_existential()[0] for param in self_defn.params]
     )
+    self_ty_placeholder = ExistentialTypeVar.fresh(
+        "Self", copyable=self_ty_head.copyable, droppable=self_ty_head.droppable
+    )
+    assert ctx.self_ty is None
+    ctx = replace(ctx, self_ty=self_ty_placeholder)
+    user_ty, user_flags = type_with_flags_from_ast(arg.annotation, ctx)
+
+    # If the user just annotates `self: Self` then we can fall back to the case where
+    # no annotation is provided at all
+    if user_ty == self_ty_placeholder:
+        return handle_implicit_self_arg(arg, self_defn, ctx, user_flags)
+
+    # Annotations like `self: Foo[Self]` are not allowed (would be an infinite type)
+    if self_ty_placeholder in user_ty.unsolved_vars:
+        raise GuppyError(RecursiveSelfError(arg.annotation, arg.arg))
+
+    # Check that the annotation matches the parent type. We can do this by unifying with
+    # the expected self type where all params are instantiated with unification vars
     subst = unify(user_ty, self_ty_head, {})
     if subst is None:
         raise GuppyError(InvalidSelfError(arg.annotation, arg.arg, self_ty_head))
