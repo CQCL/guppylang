@@ -1,4 +1,5 @@
 from typing import Generic
+from typing_extensions import Self
 
 from guppylang import guppy
 
@@ -33,6 +34,38 @@ def test_implicit_self_generic(validate):
     @guppy
     def main(s: MyStruct[int, float]) -> int:
         return s.foo(1.5)
+
+    validate(main.compile())
+
+
+def test_explicit_self(validate):
+    @guppy.struct
+    class MyStruct:
+        @guppy
+        def foo(self, other: Self) -> Self:
+            return self
+
+    @guppy
+    def main(s: MyStruct) -> MyStruct:
+        return s.foo(s).foo(s.foo(MyStruct()))
+
+    validate(main.compile())
+
+
+def test_explicit_self_generic(validate):
+    T = guppy.type_var("T")
+
+    @guppy.struct
+    class MyStruct(Generic[T]):
+        x: T
+
+        @guppy
+        def foo(self) -> Self:
+            return self
+
+    @guppy
+    def main(s: MyStruct[int]) -> None:
+        s.foo().foo()
 
     validate(main.compile())
 
