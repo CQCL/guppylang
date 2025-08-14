@@ -176,7 +176,9 @@ def check_nested_func_def(
     return with_loc(func_def, checked_def)
 
 
-def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType:
+def check_signature(
+    func_def: ast.FunctionDef, globals: Globals, def_id: DefId | None = None
+) -> FunctionType:
     """Checks the signature of a function definition and returns the corresponding
     Guppy type."""
     if len(func_def.args.posonlyargs) != 0:
