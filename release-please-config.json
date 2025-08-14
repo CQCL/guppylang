@@ -7,7 +7,7 @@
   "include-component-in-tag": true,
   "include-v-in-tag": true,
   "packages": {
-    ".": {
+    "guppylang": {
       "release-type": "python",
       "component": "guppylang",
       "package-name": "guppylang",
