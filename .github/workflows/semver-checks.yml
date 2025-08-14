@@ -37,5 +37,5 @@ jobs:
 
       - uses: CQCL/hugrverse-actions/py-semver-checks@feat/py-semver-checks
         with:
-          packages: guppylang guppylang-internals/src/guppylang_internals
+          packages: guppylang/src/guppylang guppylang-internals/src/guppylang_internals
           token: ${{ secrets.HUGRBOT_PAT }}
