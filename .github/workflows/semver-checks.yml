@@ -19,7 +19,7 @@ env:
 
 jobs:
   semver-checks:
-    name: Python semver-checks 🐍
+    name: Check for breaking changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
