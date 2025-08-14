@@ -237,59 +237,62 @@ def _parse_callable_type(
     [inputs, output] = args
     if not isinstance(inputs, ast.List):
         raise GuppyError(err)
-    inouts, output = parse_function_io_types(
-        inputs.elts, output, None, loc, globals, param_var_mapping, allow_free_vars
-    )
-    return FunctionType(inouts, output)
+    inputs = [
+        parse_function_arg_annotation(
+            inp, None, globals, param_var_mapping, allow_free_vars
+        )
+        for inp in inputs.elts
+    ]
+    output = type_from_ast(output, globals, param_var_mapping, allow_free_vars)
+    return FunctionType(inputs, output)
 
 
-def parse_function_io_types(
-    input_nodes: list[ast.expr],
-    output_node: ast.expr,
-    input_names: list[str] | None,
-    loc: AstNode,
+def parse_function_arg_annotation(
+    annotation: ast.expr,
+    name: str | None,
     globals: Globals,
     param_var_mapping: dict[str, Parameter],
     allow_free_vars: bool = False,
-) -> tuple[list[FuncInput], Type]:
-    """Parses the inputs and output types of a function type.
+) -> FuncInput:
+    """Parses an annotation in the input of a function type."""
+    ty, flags = type_with_flags_from_ast(
+        annotation, globals, param_var_mapping, allow_free_vars
+    )
+    return check_function_arg(ty, flags, annotation, name, param_var_mapping)
 
-    This function takes care of parsing annotations and any related checks.
 
-    Returns the parsed input and output types.
-    """
-    inputs = []
-    for i, inp in enumerate(input_nodes):
-        ty, flags = type_with_flags_from_ast(
-            inp, globals, param_var_mapping, allow_free_vars
+def check_function_arg(
+    ty: Type,
+    flags: InputFlags,
+    loc: AstNode,
+    name: str | None,
+    param_var_mapping: dict[str, Parameter],
+) -> FuncInput:
+    """Given a function input type and its user-provided flags, checks if the flags
+    are valid and inserts implicit flags."""
+    if InputFlags.Owned in flags and ty.copyable:
+        raise GuppyError(NonLinearOwnedError(loc, ty))
+    if not ty.copyable and InputFlags.Owned not in flags:
+        flags |= InputFlags.Inout
+    if InputFlags.Comptime in flags:
+        if name is None:
+            raise GuppyError(CallableComptimeError(loc))
+
+        # Make sure we're not shadowing a type variable with the same name that was
+        # already used on the left. E.g
+        #
+        #    n = guppy.type_var("n")
+        #    def foo(xs: array[int, n], n: nat @comptime)
+        #
+        # TODO: In principle we could lift this restriction by tracking multiple
+        #  params referring to the same name in `param_var_mapping`, but not sure if
+        #  this would be worth it...
+        if name in param_var_mapping:
+            raise GuppyError(ComptimeArgShadowError(loc, name))
+        param_var_mapping[name] = ConstParam(
+            len(param_var_mapping), name, ty, from_comptime_arg=True
         )
-        if InputFlags.Owned in flags and ty.copyable:
-            raise GuppyError(NonLinearOwnedError(loc, ty))
-        if not ty.copyable and InputFlags.Owned not in flags:
-            flags |= InputFlags.Inout
-        if InputFlags.Comptime in flags:
-            if input_names is None:
-                raise GuppyError(CallableComptimeError(inp))
-            name = input_names[i]
-
-            # Make sure we're not shadowing a type variable with the same name that was
-            # already used on the left. E.g
-            #
-            #    n = guppy.type_var("n")
-            #    def foo(xs: array[int, n], n: nat @comptime)
-            #
-            # TODO: In principle we could lift this restriction by tracking multiple
-            #  params referring to the same name in `param_var_mapping`, but not sure if
-            #  this would be worth it...
-            if name in param_var_mapping:
-                raise GuppyError(ComptimeArgShadowError(inp, name))
-            param_var_mapping[name] = ConstParam(
-                len(param_var_mapping), name, ty, from_comptime_arg=True
-            )
-
-        inputs.append(FuncInput(ty, flags))
-    output = type_from_ast(output_node, globals, param_var_mapping, allow_free_vars)
-    return inputs, output
+    return FuncInput(ty, flags)
 
 
 if sys.version_info >= (3, 12):

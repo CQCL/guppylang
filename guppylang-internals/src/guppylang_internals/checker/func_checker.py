@@ -22,7 +22,7 @@ from guppylang_internals.engine import DEF_STORE, ENGINE
 from guppylang_internals.error import GuppyError
 from guppylang_internals.experimental import check_capturing_closures_enabled
 from guppylang_internals.nodes import CheckedNestedFunctionDef, NestedFunctionDef
-from guppylang_internals.tys.parsing import parse_function_io_types
+from guppylang_internals.tys.parsing import parse_function_arg_annotation, type_from_ast
 from guppylang_internals.tys.ty import FunctionType, InputFlags, NoneType
 
 if sys.version_info >= (3, 12):
@@ -211,22 +211,19 @@ def check_signature(func_def: ast.FunctionDef, globals: Globals) -> FunctionType
             param = parse_parameter(param_node, i, globals)
             param_var_mapping[param.name] = param
 
-    input_nodes = []
+    inputs = []
     input_names = []
     for inp in func_def.args.args:
         ty_ast = inp.annotation
         if ty_ast is None:
             raise GuppyError(MissingArgAnnotationError(inp))
-        input_nodes.append(ty_ast)
+        input = parse_function_arg_annotation(
+            ty_ast, inp.arg, globals, param_var_mapping, allow_free_vars=True
+        )
+        inputs.append(input)
         input_names.append(inp.arg)
-    inputs, output = parse_function_io_types(
-        input_nodes,
-        func_def.returns,
-        input_names,
-        func_def,
-        globals,
-        param_var_mapping,
-        True,
+    output = type_from_ast(
+        func_def.returns, globals, param_var_mapping, allow_free_vars=True
     )
     return FunctionType(
         inputs,
