@@ -7,7 +7,7 @@ node straight from the Python AST. We build a CFG, check it, and return a
 
 import ast
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from guppylang_internals.ast_util import return_nodes_in_ast, with_loc
@@ -278,6 +278,7 @@ def check_signature(
         # since it's not a method so doesn't take `self`.
         if self_defn and i == 0 and func_def.name != "__new__":
             input = parse_self_arg(inp, self_defn, ctx)
+            ctx = replace(ctx, self_ty=input.ty)
         else:
             ty_ast = inp.annotation
             if ty_ast is None:

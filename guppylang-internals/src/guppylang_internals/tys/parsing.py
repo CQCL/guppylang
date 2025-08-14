@@ -18,7 +18,7 @@ from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.engine import ENGINE
 from guppylang_internals.error import GuppyError
 from guppylang_internals.tys.arg import Argument, ConstArg, TypeArg
-from guppylang_internals.tys.builtin import CallableTypeDef, bool_type
+from guppylang_internals.tys.builtin import CallableTypeDef, SelfTypeDef, bool_type
 from guppylang_internals.tys.const import ConstValue
 from guppylang_internals.tys.errors import (
     CallableComptimeError,
@@ -35,6 +35,8 @@ from guppylang_internals.tys.errors import (
     LinearConstParamError,
     ModuleMemberNotFoundError,
     NonLinearOwnedError,
+    SelfTyNotInMethodError,
+    WrongNumberOfTypeArgsError,
 )
 from guppylang_internals.tys.param import ConstParam, Parameter, TypeParam
 from guppylang_internals.tys.subst import BoundVarFinder
@@ -62,6 +64,10 @@ class TypeParsingCtx:
     #: Whether a previously unseen type parameters is allowed to be bound (i.e. is
     #: allowed to be added to `param_var_mapping`
     allow_free_vars: bool = False
+
+    #: When parsing types in the signature or body of a method, we also need access to
+    #: the type this method belongs to in order to resolve `Self` annotations.
+    self_ty: Type | None = None
 
 
 def arg_from_ast(node: AstNode, ctx: TypeParsingCtx) -> Argument:
@@ -174,6 +180,9 @@ def _arg_from_instantiated_defn(
         # Special case for the `Callable` type
         case CallableTypeDef():
             return TypeArg(_parse_callable_type(arg_nodes, node, ctx))
+            # Special case for the `Callable` type
+        case SelfTypeDef():
+            return TypeArg(_parse_self_type(arg_nodes, node, ctx))
         # Either a defined type (e.g. `int`, `bool`, ...)
         case TypeDef() as defn:
             args = [arg_from_ast(arg_node, ctx) for arg_node in arg_nodes]
@@ -228,6 +237,22 @@ def _parse_callable_type(
     inputs = [parse_function_arg_annotation(inp, None, ctx) for inp in inputs.elts]
     output = type_from_ast(output, ctx)
     return FunctionType(inputs, output)
+
+
+def _parse_self_type(args: list[ast.expr], loc: AstNode, ctx: TypeParsingCtx) -> Type:
+    """Helper function to parse a `Self` type.
+
+    Returns the actual type `Self` refers to or emits a user error if we're not inside
+    a method.
+    """
+    if ctx.self_ty is None:
+        raise GuppyError(SelfTyNotInMethodError(loc))
+
+    # We don't allow specifying generic arguments of `Self`. This matches the behaviour
+    # of Python.
+    if args:
+        raise GuppyError(WrongNumberOfTypeArgsError(loc, 0, len(args), "Self"))
+    return ctx.self_ty
 
 
 def parse_function_arg_annotation(
