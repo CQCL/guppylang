@@ -19,7 +19,7 @@ As of August 2025, The Guppy language is undergoing rapid development and is cur
 
 ### Features
 
-* We can now pass a `start` and `step` for the [range](../generated/guppylang.std.iter.range.rst) function just as we can in Python. ([#1157](https://github.com/CQCL/guppylang/issues/1157)) ([a1b9333](https://github.com/CQCL/guppylang/commit/a1b9333712c74270d5efaaa72f83d6b09047c068))
+* We can now pass a `start` and `step` for the [range](../api/generated/guppylang.std.iter.range.rst) function just as we can in Python. ([#1157](https://github.com/CQCL/guppylang/issues/1157)) ([a1b9333](https://github.com/CQCL/guppylang/commit/a1b9333712c74270d5efaaa72f83d6b09047c068))
 * pin to selene-sim [0.2.0](https://github.com/CQCL/selene/releases/tag/v0.2.0) ([#1156](https://github.com/CQCL/guppylang/issues/1156)) ([08c52c0](https://github.com/CQCL/guppylang/commit/08c52c01f6034a315d03bd978f255358e6f92930))
 * Update to guppylang-internals 0.22.0
 * Support float parameters as inputs to symbolic circuits loaded with `guppy.load_pytket`. ([#1105](https://github.com/CQCL/guppylang/issues/1105)) ([34c546c](https://github.com/CQCL/guppylang/commit/34c546c3b5787beb839687fdbf4db8bc94f36c4a)), closes [#1076](https://github.com/CQCL/guppylang/issues/1076) (see example below).
@@ -179,8 +179,8 @@ main.compile()
 ### Features
 
 * `with_owned` std library function to temporarily take ownership of a borrowed value ([#994](https://github.com/CQCL/guppylang/issues/994)) ([7bf75df](https://github.com/CQCL/guppylang/commit/7bf75dff290b3b652c1939bffb86a915555207d2)), closes [#992](https://github.com/CQCL/guppylang/issues/992)
-* Add an [Either](../generated/guppylang.std.either.Either.rst) type to the standard library. ([#993](https://github.com/CQCL/guppylang/issues/993)) ([75c1804](https://github.com/CQCL/guppylang/commit/75c18045747017aaacad74f92fc92d4e0cd78182)), closes [#991](https://github.com/CQCL/guppylang/issues/991)
-* Added a [PriorityQueue](../generated/guppylang.std.collections.PriorityQueue.rst) structure to the standard library.
+* Add an [Either](../api/generated/guppylang.std.either.Either.rst) type to the standard library. ([#993](https://github.com/CQCL/guppylang/issues/993)) ([75c1804](https://github.com/CQCL/guppylang/commit/75c18045747017aaacad74f92fc92d4e0cd78182)), closes [#991](https://github.com/CQCL/guppylang/issues/991)
+* Added a [PriorityQueue](../api/generated/guppylang.std.collections.PriorityQueue.rst) structure to the standard library.
 * Guppy programs can now include `state_result` tags which can be used together with Selene to retrieve the statevector at a given point in the program execution ([#905](https://github.com/CQCL/guppylang/issues/905)) ([2217bbc](https://github.com/CQCL/guppylang/commit/2217bbc63d910a29b5a4f732d0c3224617ca8dcf)). See the example notebook on [Debugging with State Results](https://github.com/CQCL/guppylang/blob/main/examples/state_results.ipynb). 
 * Add optional signature argument to RawCustomFunctionDef ([#1005](https://github.com/CQCL/guppylang/issues/1005)) ([79e2d5b](https://github.com/CQCL/guppylang/commit/79e2d5b77acd09645f02755de2e6e4a40ce49b10)), closes [#1003](https://github.com/CQCL/guppylang/issues/1003)
 * Add PriorityQueue to standard library ([#1006](https://github.com/CQCL/guppylang/issues/1006)) ([4e609f0](https://github.com/CQCL/guppylang/commit/4e609f08933f4e0f4f459cf10f2ecca9079bb7aa))
