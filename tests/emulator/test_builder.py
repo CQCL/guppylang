@@ -152,7 +152,6 @@ def test_emulator_builder_immutability():
     assert builder.verbose is False
 
 
-
 def test_emulator_builder_reuse():
     """Test that the same builder can be used multiple times."""
     builder = EmulatorBuilder().with_name("reusable").with_verbose(True)
