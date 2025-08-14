@@ -56,9 +56,9 @@ class RawConstVarDef(ParamDef, ParsableDef):
     description: str = field(default="const variable", init=False)
 
     def parse(self, globals: Globals, sources: SourceMap) -> "ConstVarDef":
-        from guppylang_internals.tys.parsing import type_from_ast
+        from guppylang_internals.tys.parsing import TypeParsingCtx, type_from_ast
 
-        ty = type_from_ast(self.type_ast, globals, {})
+        ty = type_from_ast(self.type_ast, TypeParsingCtx(globals))
         if not ty.copyable or not ty.droppable:
             raise GuppyError(LinearConstVarError(self.type_ast, self.name, ty))
         return ConstVarDef(self.id, self.name, self.defined_at, ty)

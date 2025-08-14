@@ -946,7 +946,7 @@ def check_type_apply(ty: FunctionType, node: ast.Subscript, ctx: Context) -> Ins
         raise GuppyError(err)
 
     return [
-        param.check_arg(arg_from_ast(arg_expr, globals, ctx.generic_params), arg_expr)
+        param.check_arg(arg_from_ast(arg_expr, ctx.parsing_ctx), arg_expr)
         for arg_expr, param in zip(arg_exprs, ty.params, strict=True)
     ]
 
