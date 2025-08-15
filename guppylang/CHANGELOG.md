@@ -14,6 +14,25 @@ This changelog documents user-facing changes to the Guppy language excluding cha
 
 As of August 2025, The Guppy language is undergoing rapid development and is currently unstable. There is a Guppy v1.0 stability [milestone](https://github.com/CQCL/guppylang/milestone/12) that is a work in progress and subject to change.
 
+## [0.21.3](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.2...guppylang-v0.21.3) (2025-08-15)
+
+
+### Features
+
+* de-deprecate 'py' ([#1202](https://github.com/CQCL/guppylang/issues/1202)) ([32fbee1](https://github.com/CQCL/guppylang/commit/32fbee19124b1361f4fb0c2a0e836eaa3e39ca51))
+* export PartialState from emulator top level ([#1200](https://github.com/CQCL/guppylang/issues/1200)) ([9ac02b6](https://github.com/CQCL/guppylang/commit/9ac02b6be8f67c1916dcee61b647131b90b631b2))
+
+
+### Bug Fixes
+
+* cache state extraction to allow multiple access ([#1184](https://github.com/CQCL/guppylang/issues/1184)) ([ac4531c](https://github.com/CQCL/guppylang/commit/ac4531c02870f00edc135de613e84d01e1120760)), closes [#1183](https://github.com/CQCL/guppylang/issues/1183)
+
+
+### Documentation
+
+* fix changelog after directory move ([#1199](https://github.com/CQCL/guppylang/issues/1199)) ([2c8d8f8](https://github.com/CQCL/guppylang/commit/2c8d8f8886a3d37db432db86b5e5f0fde2ba4b6b))
+* fix changelog links and docstring formatting ([#1198](https://github.com/CQCL/guppylang/issues/1198)) ([85c6f78](https://github.com/CQCL/guppylang/commit/85c6f784b982ded6b001bd346d08690ceafca0b0))
+
 ## [0.21.2](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.1...guppylang-v0.21.2) (2025-08-11)
 
 
