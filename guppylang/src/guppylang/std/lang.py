@@ -14,14 +14,20 @@ class _Comptime:
         return other
 
 
-#: Function to tag compile-time evaluated Python expressions in a Guppy context.
-#:
-#: This function acts like the identity when execute in a Python context.
 comptime = _Comptime()
+"""
+Function to tag compile-time evaluated Python expressions in a Guppy context.
 
+This function acts like the identity when execute in a Python context.
+"""
 
-#: Alias for `comptime` expressions
 py = comptime
+"""
+Alias for `comptime` expressions.
+
+Function to tag compile-time evaluated Python expressions in a Guppy context.
+This function acts like the identity when execute in a Python context.
+"""
 
 
 class _Owned:
