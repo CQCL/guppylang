@@ -1,20 +1,60 @@
+---
+file_format: mystnb
+kernelspec:
+  name: python3
+---
+
 # Changelog
+
+The Guppy language is distributed via the [guppylang](https://pypi.org/project/guppylang/) pypi package.
+
+This changelog documents user-facing changes to the Guppy language excluding changes to the compiler internals. The Guppy compiler is versioned with the [guppylang-internals](https://pypi.org/project/guppylang-internals/) package.
+
+## Versioning Policy
+
+As of August 2025, The Guppy language is undergoing rapid development and is currently unstable. There is a Guppy v1.0 stability [milestone](https://github.com/CQCL/guppylang/milestone/12) that is a work in progress and subject to change.
 
 ## [0.21.2](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.1...guppylang-v0.21.2) (2025-08-11)
 
 
 ### Features
 
-* Add float parameter inputs to symbolic pytket circuits ([#1105](https://github.com/CQCL/guppylang/issues/1105)) ([34c546c](https://github.com/CQCL/guppylang/commit/34c546c3b5787beb839687fdbf4db8bc94f36c4a)), closes [#1076](https://github.com/CQCL/guppylang/issues/1076)
-* Allow custom start and step in `range` ([#1157](https://github.com/CQCL/guppylang/issues/1157)) ([a1b9333](https://github.com/CQCL/guppylang/commit/a1b9333712c74270d5efaaa72f83d6b09047c068))
-* pin to selene-sim 0.2.0 ([#1156](https://github.com/CQCL/guppylang/issues/1156)) ([08c52c0](https://github.com/CQCL/guppylang/commit/08c52c01f6034a315d03bd978f255358e6f92930))
+* We can now pass a `start` and `step` for the [range](../api/generated/guppylang.std.iter.range.rst) function just as we can in Python. ([#1157](https://github.com/CQCL/guppylang/issues/1157)) ([a1b9333](https://github.com/CQCL/guppylang/commit/a1b9333712c74270d5efaaa72f83d6b09047c068))
+* pin to selene-sim [0.2.0](https://github.com/CQCL/selene/releases/tag/v0.2.0) ([#1156](https://github.com/CQCL/guppylang/issues/1156)) ([08c52c0](https://github.com/CQCL/guppylang/commit/08c52c01f6034a315d03bd978f255358e6f92930))
 * Update to guppylang-internals 0.22.0
+* Support float parameters as inputs to symbolic circuits loaded with `guppy.load_pytket`. ([#1105](https://github.com/CQCL/guppylang/issues/1105)) ([34c546c](https://github.com/CQCL/guppylang/commit/34c546c3b5787beb839687fdbf4db8bc94f36c4a)), closes [#1076](https://github.com/CQCL/guppylang/issues/1076) (see example below).
 
+```{code-cell} ipython3
+from guppylang import guppy
+from guppylang.std.angles import pi
+from guppylang.std.quantum import qubit, rx, discard
+
+from pytket import Circuit
+from sympy import Symbol
+
+a = Symbol("alpha")
+
+circ = Circuit(1, 1)
+circ.Rx(a, 0)
+circ.Measure(0, 0)
+
+rx_func = guppy.load_pytket("rx", circ, use_arrays=False)
+
+@guppy
+def perform_rx_flip() -> int:
+    """Perform an X gate as Rx(q, pi)"""
+    q = qubit()
+    res = int(rx_func(q, pi))
+    discard(q)
+    return res
+
+perform_rx_flip.check()
+```
 
 ### Bug Fixes
 
 * **emulator:** pass runtime option to selene ([ac969e8](https://github.com/CQCL/guppylang/commit/ac969e8ce8d8bad90f9cfd9cb0470c62d08cfe79))
-
+* Fix a scoping issue with builtins functions [#1122](https://github.com/CQCL/guppylang/issues/1122)
 
 ### Documentation
 
@@ -43,15 +83,18 @@
 ### ⚠ BREAKING CHANGES
 
 * All compiler-internal and non-userfacing functionality is moved into a new `guppylang_internals` package
-* `guppy.compile(foo)` and `guppy.check(foo)` replaced with `foo.check()` and `foo.compile()`
+* `guppy.compile(foo)` and `guppy.check(foo)` are both now deprecated and will be removed in a future release. Their usage should be replaced with `foo.compile()` and `foo.check()`.
+* The `main` function no longer has a special status in Guppy. Any function which takes no arguments can be a valid entrypoint
+to a program.
 * default HUGR output uses compressed binary encoding.
 * `guppylang.tracing.object.GuppyDefinition` moved to `guppylang.defs.GuppyDefinition` `guppylang.tracing.object.TypeVarGuppyDefinition` moved and renamed to `guppylang.defs.GuppyTypeVarDefinition`
 * All `to_hugr` methods on types, arguments, and parameters now require a `ToHugrContext` `CompileableDef.compile_outer` now requires a `ToHugrContext` `guppy.hugr_op` now passes the compiler context to the function generating the op `CheckedFunctionDef` now implements `MonomorphizableDef` instead of `CompileableDef` `CompilerContext.build_compiled_def` now requires an instantiation for the definition's type parameters The `ToHugrContext` protocol now requires two additional methods: `type_var_to_hugr` and `const_var_to_hugr` `CompilerContext.{compiled, worklist}` and `CompilationEngine.compiled` are now indexed by a tuple of `DefId` and optional `PartiallyMonomorphizedArgs`
-* comptime code that previously used constant integers outside i64 will now fail to compile.
+* Any [comptime](../language_guide/comptime.md) code that previously used constant integers outside the 64-bit signed integer range will now fail to compile.
 * Capturing closures are now disabled by default. Enabling them requires calling `guppylang.enable_experimental_features()`, however note that they are not supported throughout the stack.
 
 ### Features
 
+* Add emulation of Guppy programs powered by the [Selene](https://github.com/CQCL/selene) framework ([#1127](https://github.com/CQCL/guppylang/issues/1127))([5e2f595](https://github.com/CQCL/guppylang/commit/5e2f5951dff8782f7bbfe656ed02edf761a66593)). See the [Getting Started](../../sphinx/getting_started.md) guide and the [Examples Gallery](../../sphinx/examples_index.md) for example usage. 
 * Add `Future` type ([#1075](https://github.com/CQCL/guppylang/issues/1075)) ([5ad7673](https://github.com/CQCL/guppylang/commit/5ad76734c58e6d0c48a487c0645a4265abf3763e))
 * add error when constant integer out of bounds ([#1084](https://github.com/CQCL/guppylang/issues/1084)) ([eee77ae](https://github.com/CQCL/guppylang/commit/eee77ae92d0490f9a6fc843b02729a4fc88ba16c))
 * Add guppy version metadata to hugr entrypoint ([#1039](https://github.com/CQCL/guppylang/issues/1039)) ([0eafbd9](https://github.com/CQCL/guppylang/commit/0eafbd9f8e52484ae823aba830c1d38d30dd9755)), closes [#1037](https://github.com/CQCL/guppylang/issues/1037)
@@ -67,7 +110,6 @@
 * store used extensions and versions in HUGR metadata ([#1049](https://github.com/CQCL/guppylang/issues/1049)) ([a9a300c](https://github.com/CQCL/guppylang/commit/a9a300c6d4e1f517002b4bf83885c2f6653efa70)), closes [#1048](https://github.com/CQCL/guppylang/issues/1048)
 * Support arbitrary const generics via monomorphisation ([#1033](https://github.com/CQCL/guppylang/issues/1033)) ([bcf9865](https://github.com/CQCL/guppylang/commit/bcf986539daf4794172e7b078d4bae432bed331f))
 * Support Python 3.12 generic syntax ([#1051](https://github.com/CQCL/guppylang/issues/1051)) ([ab2e118](https://github.com/CQCL/guppylang/commit/ab2e118e5d697f71d8226bc06ce9068e689fb367)), closes [#823](https://github.com/CQCL/guppylang/issues/823)
-* Top level compile + emulate Interface ([#1127](https://github.com/CQCL/guppylang/issues/1127)) ([5e2f595](https://github.com/CQCL/guppylang/commit/5e2f5951dff8782f7bbfe656ed02edf761a66593))
 * update to hugr-py v0.13 ([#1083](https://github.com/CQCL/guppylang/issues/1083)) ([8f071c8](https://github.com/CQCL/guppylang/commit/8f071c8c3c7bb88d0fbe79e41a7f5ccf768248ec))
 * use `core.` prefix for metadata keys ([#1055](https://github.com/CQCL/guppylang/issues/1055)) ([2bf0d68](https://github.com/CQCL/guppylang/commit/2bf0d68eefc1f1211130328555e1f288235baef3))
 
@@ -106,19 +148,46 @@
 
 ### ⚠ BREAKING CHANGES
 
-* Explicit `GuppyModule` declarations are no longer possible. Instead, use the regular `@guppy` decorator everywhere without passing an explicit module. Compilation is now triggered via the `guppy.compile` function, passing the to-be-compiled function as an argument.
+Explicit Guppy modules have been removed. Instead, use the regular `@guppy` decorator everywhere without passing an explicit module. Compilation is now triggered via the `.compile` method.
+
+#### 0.19.0 syntax
+
+```{code-cell} ipython3
+---
+tags: [skip-execution]
+---
+@guppy
+def main() -> None:
+    ...
+
+guppy.compile_module()
+```
+
+#### 0.20.0 syntax
+
+```{code-cell} ipython3
+---
+tags: [skip-execution]
+---
+@guppy
+def main() -> None:
+    ...
+
+main.compile()
+```
 
 ### Features
 
 * `with_owned` std library function to temporarily take ownership of a borrowed value ([#994](https://github.com/CQCL/guppylang/issues/994)) ([7bf75df](https://github.com/CQCL/guppylang/commit/7bf75dff290b3b652c1939bffb86a915555207d2)), closes [#992](https://github.com/CQCL/guppylang/issues/992)
-* Add `Either` type to the standard library ([#993](https://github.com/CQCL/guppylang/issues/993)) ([75c1804](https://github.com/CQCL/guppylang/commit/75c18045747017aaacad74f92fc92d4e0cd78182)), closes [#991](https://github.com/CQCL/guppylang/issues/991)
-* Add debug module with `state_result` function ([#905](https://github.com/CQCL/guppylang/issues/905)) ([2217bbc](https://github.com/CQCL/guppylang/commit/2217bbc63d910a29b5a4f732d0c3224617ca8dcf))
+* Add an [Either](../api/generated/guppylang.std.either.Either.rst) type to the standard library. ([#993](https://github.com/CQCL/guppylang/issues/993)) ([75c1804](https://github.com/CQCL/guppylang/commit/75c18045747017aaacad74f92fc92d4e0cd78182)), closes [#991](https://github.com/CQCL/guppylang/issues/991)
+* Added a [PriorityQueue](../api/generated/guppylang.std.collections.PriorityQueue.rst) structure to the standard library.
+* Guppy programs can now include `state_result` tags which can be used together with Selene to retrieve the statevector at a given point in the program execution ([#905](https://github.com/CQCL/guppylang/issues/905)) ([2217bbc](https://github.com/CQCL/guppylang/commit/2217bbc63d910a29b5a4f732d0c3224617ca8dcf)). See the example notebook on [Debugging with State Results](https://github.com/CQCL/guppylang/blob/main/examples/state_results.ipynb). 
 * Add optional signature argument to RawCustomFunctionDef ([#1005](https://github.com/CQCL/guppylang/issues/1005)) ([79e2d5b](https://github.com/CQCL/guppylang/commit/79e2d5b77acd09645f02755de2e6e4a40ce49b10)), closes [#1003](https://github.com/CQCL/guppylang/issues/1003)
 * Add PriorityQueue to standard library ([#1006](https://github.com/CQCL/guppylang/issues/1006)) ([4e609f0](https://github.com/CQCL/guppylang/commit/4e609f08933f4e0f4f459cf10f2ecca9079bb7aa))
 * Allow users to wrap `guppy` in their own decorator ([#1017](https://github.com/CQCL/guppylang/issues/1017)) ([f047c9b](https://github.com/CQCL/guppylang/commit/f047c9bd16fdb26e757365c0ae8d2ec019f0aa06))
 * Comptime `nat` arguments ([#1015](https://github.com/CQCL/guppylang/issues/1015)) ([d2a9a07](https://github.com/CQCL/guppylang/commit/d2a9a0736c7466f943f886040865216892e6d3f9))
 * **diagnostics:** add miette bindings for enhanced error rendering ([#998](https://github.com/CQCL/guppylang/issues/998)) ([c8f2724](https://github.com/CQCL/guppylang/commit/c8f2724c17ed2d7e7523c9c9564417d7962a62f9))
-* Function overloading via static dispatch ([#1000](https://github.com/CQCL/guppylang/issues/1000)) ([6f523d6](https://github.com/CQCL/guppylang/commit/6f523d6c1f5c207fbc8e256ef12c6600e7999d12))
+* Function overloading via static dispatch ([#1000](https://github.com/CQCL/guppylang/issues/1000)) ([6f523d6](https://github.com/CQCL/guppylang/commit/6f523d6c1f5c207fbc8e256ef12c6600e7999d12)). See the corresponding section of the [language guide](../language_guide/functions.md#function-overloading--static-dispatch) for more information.
 * Remove explicit Guppy modules ([#983](https://github.com/CQCL/guppylang/issues/983)) ([0b2e652](https://github.com/CQCL/guppylang/commit/0b2e652d5b4899785de13cb1e0568786777f40c0))
 
 

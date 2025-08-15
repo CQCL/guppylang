@@ -71,7 +71,8 @@ class array(builtins.list[_T], Generic[_T, _n]):
         return SizedIter(ArrayIter(self, 0))
 
     @custom_function(CopyInoutCompiler(), ArrayCopyChecker())
-    def copy(self: array[T, n]) -> array[T, n]: ...
+    def copy(self: array[T, n]) -> array[T, n]:
+        """Copy an array instance. Will only work if T is a copyable type."""
 
     def __new__(cls, *args: _T) -> builtins.list[_T]:  # type: ignore[no-redef]
         # Runtime array constructor that is used for comptime. We return an actual list

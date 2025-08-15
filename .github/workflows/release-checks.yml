@@ -44,7 +44,7 @@ jobs:
           uv pip install --no-sources guppylang-internals \
             --python-version ${{ env.PYTHON_HIGHEST }}
           # Install the local version of guppylang.
-          uv pip install -e . --no-deps \
+          uv pip install -e guppylang --no-deps \
             --python-version ${{ env.PYTHON_HIGHEST }}
           echo "\nDone! Installed dependencies:"
           uv pip list
@@ -64,7 +64,7 @@ jobs:
           uv pip install --no-sources guppylang-internals \
             --python-version ${{ env.PYTHON_HIGHEST }}
           # Install the local version of guppylang.
-          uv pip install -e . --no-deps \
+          uv pip install -e guppylang --no-deps \
             --python-version ${{ env.PYTHON_HIGHEST }}
           echo "\nDone! Installed dependencies:"
       - name: Rerun comptime expression tests and pytket lowering with tket installed
