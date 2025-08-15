@@ -14,6 +14,7 @@ from guppylang_internals.nodes import (
     DesugaredGeneratorExpr,
     DesugaredListComp,
     NestedFunctionDef,
+    Modifier,
 )
 
 if TYPE_CHECKING:
@@ -44,6 +45,7 @@ BBStatement = (
     | ast.Expr
     | ast.Return
     | NestedFunctionDef
+    | Modifier
 )
 
 

@@ -18,6 +18,7 @@ from guppylang_internals.compiler.expr_compiler import ExprCompiler
 from guppylang_internals.error import InternalGuppyError
 from guppylang_internals.nodes import (
     ArrayUnpack,
+    CheckedModifier,
     CheckedNestedFunctionDef,
     IterableUnpack,
     PlaceNode,
@@ -221,3 +222,8 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         var = Variable(node.name, node.ty, node)
         loaded_func = compile_local_func_def(node, self.dfg, self.ctx)
         self.dfg[var] = loaded_func
+
+    def visit_CheckedModifier(self, node: CheckedModifier) -> None:
+        from guppylang_internals.compiler.func_compiler import compile_modifier
+
+        compile_modifier(node, self.dfg, self.ctx, self.expr_compiler)

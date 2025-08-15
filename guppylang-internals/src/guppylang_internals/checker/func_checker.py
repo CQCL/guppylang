@@ -22,7 +22,7 @@ from guppylang_internals.diagnostic import Error, Help, Note
 from guppylang_internals.engine import DEF_STORE, ENGINE
 from guppylang_internals.error import GuppyError
 from guppylang_internals.experimental import check_capturing_closures_enabled
-from guppylang_internals.nodes import CheckedNestedFunctionDef, NestedFunctionDef
+from guppylang_internals.nodes import CheckedModifier, CheckedNestedFunctionDef, Modifier, NestedFunctionDef
 from guppylang_internals.tys.parsing import (
     TypeParsingCtx,
     check_function_arg,
@@ -136,9 +136,9 @@ def check_global_func_def(
     returns_none = isinstance(ty.output, NoneType)
     assert ty.input_names is not None
 
-    #   print("  ty @ ParsedFunctionDef.check_global_func_def = ", ty)
+    print("  ty @ ParsedFunctionDef.check_global_func_def = ", ty)
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
-    #   print("  cfg @ ParsedFunctionDef.check_global_func_def = ", cfg)
+    print("  cfg @ ParsedFunctionDef.check_global_func_def = ", cfg)
     inputs = [
         Variable(x, inp.ty, loc, inp.flags, is_func_input=True)
         for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
@@ -418,3 +418,86 @@ def inout_var_names(func_ty: FunctionType) -> list[str]:
         for inp, x in zip(func_ty.inputs, func_ty.input_names, strict=True)
         if InputFlags.Inout in inp.flags
     ]
+
+
+def check_modifier(
+    modifier: Modifier, bb: BB, ctx: Context
+) -> CheckedModifier:
+    """Type checks a modifier definition."""
+    print("[CheckPoint]: Checking modifier")
+    cfg = modifier.cfg
+
+    # Find captured variables
+    parent_cfg = bb.containing_cfg
+    def_ass_before = ctx.locals.keys()
+    maybe_ass_before = def_ass_before | parent_cfg.maybe_ass_before[bb]
+    print("  def_ass_before @ check_modifier = ", def_ass_before)
+    print("  maybe_ass_before @ check_modifier = ", maybe_ass_before)
+
+    cfg.analyze(def_ass_before, maybe_ass_before, [])
+    captured = {
+        x: (_set_inout_if_linear(ctx.locals[x]), using_bb.vars.used[x])
+        for x, using_bb in cfg.live_before[cfg.entry_bb].items()
+        if x in ctx.locals
+    }
+    print("  captured @ check_modifier = ", captured.keys())
+    print("  captured(Variables) @ check_modifier = ", captured.values())
+
+    # We allow to assign to captured variables unless it is daggered.
+    # Skipping this check for now.
+    # for bb in cfg.bbs:
+    #     for v, _ in captured.values():
+    #         x = v.name
+    #         if x in bb.vars.assigned:
+    #             err = IllegalAssignError(bb.vars.assigned[x], x)
+    #             err.add_sub_diagnostic(IllegalAssignError.DefHint(v.defined_at, x))
+    #             raise GuppyError(err)
+    # for i in list(stats.values()):
+    #     print("    stats[i].assigned = ", i.assigned)
+    #     print("    stats[i].used     = ", i.used, "\n")
+
+    # Construct inputs for checking the body CFG
+    inputs = [v for v, _ in captured.values()]
+    def_id = DefId.fresh()
+    globals = ctx.globals
+
+    # print("  v_stats @ check_modifier = ", v_stats)
+    # print("  stats @ check_modifier = ", stats)
+
+    # TODO: name for new function
+    print("  inputs @ check_modifier = ", inputs)
+    checked_cfg = check_cfg(cfg, inputs, NoneType(), {}, "__modified__", globals)
+    print("  input_row @ check_modifier ", checked_cfg.exit_bb.sig.input_row)
+    print("  output_rows @ check_modifier ", checked_cfg.exit_bb.sig.output_rows)
+    print("[CheckPoint]: End Checking CFG of modifier body")
+    func_ty = check_modifier_signature(checked_cfg.input_tys)
+
+    checked_modifier = CheckedModifier(
+        def_id,
+        checked_cfg,
+        func_ty,
+        captured,
+        **dict(ast.iter_fields(modifier)),
+    )
+    print("[CheckPoint]: End Checking modifier")
+    return with_loc(modifier, checked_modifier)
+
+def _set_inout_if_linear(
+    var: Variable
+) -> Variable:
+    """Set the `inout` flag if the variable is linear."""
+    if var.ty.linear:
+        return var.add_flags(InputFlags.Inout)
+    else:
+        return var
+
+def check_modifier_signature(
+    input_tys: list[Type]
+) -> FunctionType:
+    """Check and create the signature of a function definition for a body of a `With` block."""
+    # TODO: It could be inout or owned
+    func_ty = FunctionType(
+        [FuncInput(t, InputFlags.Inout if t.linear else InputFlags.NoFlags) for t in input_tys],
+        NoneType(),
+    )
+    return func_ty

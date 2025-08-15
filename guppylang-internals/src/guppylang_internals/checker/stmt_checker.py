@@ -58,6 +58,7 @@ from guppylang_internals.nodes import (
     DesugaredArrayComp,
     IterableUnpack,
     MakeIter,
+    Modifier,
     NestedFunctionDef,
     PlaceNode,
     TupleUnpack,
@@ -397,6 +398,20 @@ class StmtChecker(AstVisitor[BBStatement]):
         func_def = check_nested_func_def(node, self.bb, self.ctx)
         self.ctx.locals[func_def.name] = Variable(func_def.name, func_def.ty, func_def)
         return func_def
+
+    def visit_Modifier(self, node: Modifier) -> ast.stmt:
+        from guppylang_internals.checker.func_checker import check_modifier
+
+        if not self.bb:
+            raise InternalGuppyError("BB required to check with block!")
+
+        modifier = check_modifier(node, self.bb, self.ctx)
+        return modifier
+
+        #
+        # TODO (k.hirata): Depending on which modifier is used, we need more analysis to be done.
+        # E.g., if the modifier is a `DaggerModifier`, we need to check no assertion is used in the body.
+        #
 
     def visit_If(self, node: ast.If) -> None:
         raise InternalGuppyError("Control-flow statement should not be present here.")

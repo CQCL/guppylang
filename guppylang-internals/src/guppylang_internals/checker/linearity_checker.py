@@ -52,6 +52,7 @@ from guppylang_internals.error import GuppyError, GuppyTypeError
 from guppylang_internals.nodes import (
     AnyCall,
     BarrierExpr,
+    CheckedModifier,
     CheckedNestedFunctionDef,
     DesugaredArrayComp,
     DesugaredGenerator,
@@ -620,6 +621,13 @@ class BBLinearityChecker(ast.NodeVisitor):
                 self._reassign_single_inout_arg(place, use.node)
             elif not place.ty.copyable:
                 raise GuppyTypeError(ComprAlreadyUsedError(use.node, place, use.kind))
+
+    def visit_CheckedModifier(self, node: CheckedModifier) -> None:
+        # TODO(k.hirata)
+        # raise NotImplementedError(
+        #     "Linearity checking for `with` statements is not implemented yet."
+        # )
+        self.generic_visit(node)
 
 
 def leaf_places(place: Place) -> Iterator[Place]:
