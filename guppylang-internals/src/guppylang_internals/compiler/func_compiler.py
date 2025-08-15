@@ -1,13 +1,15 @@
 from typing import TYPE_CHECKING
 
-from hugr import Wire
+from guppylang_internals.compiler.expr_compiler import ExprCompiler
+from guppylang_internals.tys.ty import InputFlags
+from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.build.function import Function
 
 from guppylang_internals.compiler.cfg_compiler import compile_cfg
 from guppylang_internals.compiler.core import CompilerContext, DFContainer
 from guppylang_internals.compiler.hugr_extension import PartialOp
-from guppylang_internals.nodes import CheckedNestedFunctionDef
+from guppylang_internals.nodes import CheckedModifier, CheckedNestedFunctionDef, LocalCall
 
 if TYPE_CHECKING:
     from guppylang_internals.definition.function import CheckedFunctionDef
@@ -20,6 +22,7 @@ def compile_global_func_def(
 ) -> None:
     """Compiles a top-level function definition to Hugr."""
     cfg = compile_cfg(func.cfg, builder, builder.inputs(), ctx)
+    print("  compile_global_func_def: setting outputs for", func.name)
     builder.set_outputs(*cfg)
 
 
@@ -83,7 +86,8 @@ def compile_local_func_def(
             func.cfg,
             func_builder,
         )
-        ctx.worklist[func.def_id, mono_args] = None  # will compile the CFG later
+        # will compile the CFG later
+        ctx.worklist[func.def_id, mono_args] = None
 
     # Finally, load the function into the local data-flow graph
     loaded = dfg.builder.load_function(func_builder, closure_ty)
@@ -95,3 +99,62 @@ def compile_local_func_def(
         )
 
     return loaded
+
+
+def compile_modifier(
+    modifier: CheckedModifier,
+    dfg: DFContainer,
+    ctx: CompilerContext,
+    expr_compiler: ExprCompiler,
+) -> Wire:
+    print("  modifier.ty @ compile_modifier = ", modifier.ty)
+    func_ty = modifier.ty.to_hugr(ctx)
+    print("  func_ty @ compile_modifier = ", func_ty)
+    closure_ty = ht.FunctionType(
+        [*func_ty.input], func_ty.output)
+    func_builder = dfg.builder.module_root_builder().define_function(
+        str(modifier), closure_ty.input, closure_ty.output
+    )
+
+    # We treat the function like a normal global variable
+    from guppylang_internals.definition.function import CompiledFunctionDef
+    mono_args = ()
+
+    print("  modifier.ty @ compile_modifier = ", modifier.ty)
+    ctx.compiled[modifier.def_id, mono_args] = CompiledFunctionDef(
+        modifier.def_id,
+        str(modifier),
+        modifier,
+        mono_args,
+        modifier.ty,
+        None,
+        modifier.cfg,
+        func_builder,
+    )
+    ctx.worklist[modifier.def_id, mono_args] = None  # will compile the CFG later
+    print("  adding None to worklist with index [modifier.def_id] = ", modifier.def_id )
+
+    loaded = dfg.builder.load_function(func_builder, closure_ty)
+
+
+    captured = [v for v, _ in modifier.captured.values()]
+    args = [dfg[v] for v in captured]
+
+    ## TODO (k.hirata): ExtensionOp such as `ControlModifier` or `DaggerModifier` need to be inserted here
+    call = dfg.builder.add_op(
+        ops.CallIndirect(closure_ty),
+        loaded,
+        *args,
+    )
+    print("[CheckPoint]: CallIndirect operation created with ...")
+    wires = iter(call)
+    for arg in captured:
+        if InputFlags.Inout in arg.flags:
+            dfg[arg] = next(wires)
+    # print("  arg, wire = ", )
+    # print("     ")
+
+    # [print("  captured[i] @ compile_modifier = ", v.name, " ", v.flags) for v in captured]
+    # expr_compiler._update_inout_ports(captured, iter(args), modifier.ty)
+
+    return call
