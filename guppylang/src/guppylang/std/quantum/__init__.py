@@ -245,7 +245,7 @@ def sdg(q: qubit) -> None:
 @hugr_op(quantum_op("Vdg"))
 @no_type_check
 def vdg(q: qubit) -> None:
-    r"""V gate.
+    r"""Vdg gate.
 
     .. math::
       \mathrm{V}^\dagger= \frac{1}{\sqrt{2}}
