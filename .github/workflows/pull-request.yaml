@@ -36,7 +36,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -76,7 +76,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
