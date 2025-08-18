@@ -41,6 +41,28 @@ class PriorityQueue(Generic[T, MAX_SIZE]):  # type: ignore[misc]
 
     @guppy
     @no_type_check
+    def __iter__(
+        self: PriorityQueue[T, MAX_SIZE] @ owned,
+    ) -> PriorityQueue[T, MAX_SIZE]:
+        """Returns an iterator over the queued elements paired with their priority.
+
+        Elements are yielded in priority order.
+        """
+        return self
+
+    @guppy
+    @no_type_check
+    def __next__(
+        self: PriorityQueue[T, MAX_SIZE] @ owned,
+    ) -> Option[tuple[tuple[int, T], PriorityQueue[T, MAX_SIZE]]]:
+        if len(self) == 0:
+            self.discard_empty()
+            return nothing()
+        prio, val, new_queue = self.pop()
+        return some(((prio, val), new_queue))
+
+    @guppy
+    @no_type_check
     def push(
         self: PriorityQueue[T, MAX_SIZE] @ owned,
         value: T @ owned,
@@ -132,6 +154,19 @@ class PriorityQueue(Generic[T, MAX_SIZE]):  # type: ignore[misc]
             panic("PriorityQueue.peek: priority queue is empty")
         prio, val = self.buf[0].unwrap()
         return prio, val, PriorityQueue(self.buf, self.size)
+
+    @guppy
+    @no_type_check
+    def discard_empty(self: PriorityQueue[T, MAX_SIZE] @ owned) -> None:
+        """Discards a priority queue of potentially non-droppable elements assuming that
+        the queue is empty.
+
+        Panics if the queue is not empty.
+        """
+        if self.size > 0:
+            panic("PriorityQueue.discard_empty: priority queue is not empty")
+        for elem in self.buf:
+            elem.unwrap_nothing()
 
 
 @guppy
