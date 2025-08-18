@@ -154,7 +154,17 @@ def s(q: qubit) -> None:
 
 @hugr_op(quantum_op("V"))
 @no_type_check
-def v(q: qubit) -> None: ...
+def v(q: qubit) -> None:
+    r"""V gate.
+
+    .. math::
+      \mathrm{V}= \frac{1}{\sqrt{2}}
+       \begin{pmatrix}
+            1 & -i \\
+            -i & 1
+           \end{pmatrix}
+
+    """
 
 
 @hugr_op(quantum_op("X"))
@@ -234,7 +244,17 @@ def sdg(q: qubit) -> None:
 
 @hugr_op(quantum_op("Vdg"))
 @no_type_check
-def vdg(q: qubit) -> None: ...
+def vdg(q: qubit) -> None:
+    r"""V gate.
+
+    .. math::
+      \mathrm{V}^\dagger= \frac{1}{\sqrt{2}}
+       \begin{pmatrix}
+            1 & i \\
+            i & 1
+           \end{pmatrix}
+
+    """
 
 
 @custom_function(RotationCompiler("Rz"))

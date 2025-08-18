@@ -71,7 +71,7 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         Args:
             n_qubits: The number of qubits to allocate for the function.
             builder: An optional `EmulatorBuilder` to use for building the emulator
-                instance. If not provided, the default `EmulatorBuilder` will be used.
+            instance. If not provided, the default `EmulatorBuilder` will be used.
 
         Returns:
             An `EmulatorInstance` that can be used to run the function in an emulator.

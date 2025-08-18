@@ -9,13 +9,14 @@ building and configuring emulator instances, and processing emulation results.
 from .builder import EmulatorBuilder
 from .instance import EmulatorInstance
 from .result import EmulatorResult
-from .state import PartialVector, StateVector, TracedState
+from .state import PartialState, PartialVector, StateVector, TracedState
 
 __all__ = [
     "EmulatorInstance",
     "EmulatorResult",
     "EmulatorBuilder",
-    "TracedState",
     "PartialVector",
+    "PartialState",
     "StateVector",
+    "TracedState",
 ]

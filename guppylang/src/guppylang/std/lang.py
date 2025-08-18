@@ -2,8 +2,6 @@
 
 from typing import Any, Protocol
 
-from typing_extensions import deprecated
-
 
 class _Comptime:
     """Dummy class to support `@comptime` annotations and `comptime(...)` expressions"""
@@ -22,8 +20,8 @@ class _Comptime:
 comptime = _Comptime()
 
 
-#: Deprecated alias for `comptime` expressions
-py = deprecated("Use `comptime` instead")(comptime)
+#: Alias for `comptime` expressions
+py = comptime
 
 
 class _Owned:
