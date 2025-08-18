@@ -44,7 +44,10 @@ class PriorityQueue(Generic[T, MAX_SIZE]):  # type: ignore[misc]
     def __iter__(
         self: PriorityQueue[T, MAX_SIZE] @ owned,
     ) -> PriorityQueue[T, MAX_SIZE]:
-        """Returns an interator over the queued elements in priority order."""
+        """Returns an iterator over the queued elements paired with their priority.
+
+        Elements are yielded in priority order.
+        """
         return self
 
     @guppy
