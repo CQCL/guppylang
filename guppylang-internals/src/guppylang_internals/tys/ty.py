@@ -185,9 +185,9 @@ class BoundTypeVar(TypeBase, BoundVar):
     A bound type variables can be instantiated with a `TypeArg` argument.
     """
 
+    implements: Sequence[ProtocolInst]
     copyable: bool
     droppable: bool
-    implements: Sequence[ProtocolInst]
 
     @cached_property
     def hugr_bound(self) -> ht.TypeBound:
@@ -230,9 +230,9 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
     them with concrete types.
     """
 
+    implements: Sequence[ProtocolInst]
     copyable: bool
     droppable: bool
-    implements: Sequence[ProtocolInst]
 
     @classmethod
     def fresh(

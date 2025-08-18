@@ -82,7 +82,7 @@ class TypeParam(ParameterBase):
 
     must_be_copyable: bool
     must_be_droppable: bool
-    must_implement: Sequence[ProtocolInst]
+    must_implement: Sequence[ProtocolInst] = field(default_factory = list)
 
     @property
     def can_be_linear(self) -> bool:

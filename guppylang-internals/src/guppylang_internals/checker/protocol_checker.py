@@ -94,7 +94,7 @@ def check_protocol(ty: Type, protocol: ProtocolInst) -> tuple[ImplProof, Subst]:
         impl_sig, impl_vars = func.ty.unquantified()
         # TODO Make this a method
         # proto_sig_params = proto_sig.params
-        proto_sig = replace(proto_sig, params=[])
+        proto_sig = FunctionType(proto_sig.inputs, proto_sig.output, params=[])
         subst = unify(proto_sig, impl_sig, subst)
         if subst is None:
             raise "Signature Mismatch"
@@ -105,7 +105,7 @@ def check_protocol(ty: Type, protocol: ProtocolInst) -> tuple[ImplProof, Subst]:
     if any(x not in subst for arg in protocol.type_args for x in arg.unsolved_vars):
         raise "Couldn't figure out variables in protocol"
     subst = {x: subst[x] for arg in protocol.type_args for x in arg.unsolved_vars}
-    return ImplProof(member_impls), subst
+    return ConcreteImplProof(protocol, ty, member_impls), subst
 
 
 # TODO Move to engine
@@ -119,7 +119,7 @@ def get_instance_func(ty: Type | TypeDef, name: str) -> CallableDef | None:
             case TypeDef() as type_defn:
                 pass
             case BoundTypeVar() | ExistentialTypeVar() | SumType():
-                # TODO could have a bound that gives us a function 
+                # TODO could have a bound that gives us a function
                 # Maybe ProtocolFunctionDef / ProtocolCall ??
                 return None
             case NumericType(kind):
