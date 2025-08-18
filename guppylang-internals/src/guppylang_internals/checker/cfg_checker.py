@@ -238,15 +238,16 @@ def check_bb(
                     # If the variable is defined on *some* paths, we can give a more
                     # informative error message
                     if x in cfg.maybe_ass_before[use_bb]:
-                        err = VarMaybeNotDefinedError(use_bb.vars.used[x], x)
+                        err: Error = VarMaybeNotDefinedError(use_bb.vars.used[x], x)
                         if bad_branch := diagnose_maybe_undefined(use_bb, x, cfg):
                             branch_expr, truth_value = bad_branch
                             note = VarMaybeNotDefinedError.BadBranch(
                                 branch_expr, x, truth_value
                             )
                             err.add_sub_diagnostic(note)
-                        raise GuppyError(err)
-                    raise GuppyError(VarNotDefinedError(use_bb.vars.used[x], x))
+                    else:
+                        err = VarNotDefinedError(use_bb.vars.used[x], x)
+                    raise GuppyError(err)
             # If x is not a local, then it must be a global or generic param
             elif x not in ctx.globals and x not in ctx.generic_params:
                 raise GuppyError(VarNotDefinedError(use_bb.vars.used[x], x))
