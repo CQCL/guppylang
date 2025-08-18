@@ -8,8 +8,6 @@ from hugr import ops
 from hugr import tys as ht
 
 from guppylang.defs import GuppyDefinition, GuppyFunctionDefinition
-from guppylang_internals.checker.core import Globals
-from guppylang_internals.checker.func_checker import check_signature
 from guppylang_internals.compiler.core import (
     CompilerContext,
     GlobalConstId,
@@ -24,7 +22,7 @@ from guppylang_internals.definition.custom import (
     OpCompiler,
     RawCustomFunctionDef,
 )
-from guppylang_internals.definition.function import RawFunctionDef, parse_py_func
+from guppylang_internals.definition.function import RawFunctionDef
 from guppylang_internals.definition.lowerable import RawLowerableFunctionDef
 from guppylang_internals.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang_internals.definition.wasm import RawWasmFunctionDef
