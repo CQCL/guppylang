@@ -101,8 +101,6 @@ from guppylang_internals.nodes import (
     FieldAccessAndDrop,
     GenericParamValue,
     GlobalName,
-    IterEnd,
-    IterHasNext,
     IterNext,
     LocalCall,
     MakeIter,
@@ -784,14 +782,6 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 raise GuppyTypeError(err)
         return expr, ty
 
-    def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, Type]:
-        node.value, ty = self.synthesize(node.value)
-        flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
-        exp_sig = FunctionType([FuncInput(ty, flags)], TupleType([bool_type(), ty]))
-        return self.synthesize_instance_func(
-            node.value, [], "__hasnext__", "an iterator", exp_sig, True
-        )
-
     def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
@@ -801,14 +791,6 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         )
         return self.synthesize_instance_func(
             node.value, [], "__next__", "an iterator", exp_sig, True
-        )
-
-    def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, Type]:
-        node.value, ty = self.synthesize(node.value)
-        flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
-        exp_sig = FunctionType([FuncInput(ty, flags)], NoneType())
-        return self.synthesize_instance_func(
-            node.value, [], "__end__", "an iterator", exp_sig, True
         )
 
     def visit_ListComp(self, node: ast.ListComp) -> tuple[ast.expr, Type]:
