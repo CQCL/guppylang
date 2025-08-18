@@ -22,7 +22,11 @@ def test_stack(run_int_fn) -> None:
         stack.discard_empty()
         return s
 
-    run_int_fn(main, sum((i + 1) * x for i, x in enumerate(reversed(list(range(10))))))
+    run_int_fn(
+        main,
+        # multiplier * value for ordered values in the stack
+        sum((i + 1) * x for i, x in enumerate(reversed(list(range(10))))),
+    )
 
 
 def test_stack_iter(run_int_fn) -> None:
@@ -38,7 +42,11 @@ def test_stack_iter(run_int_fn) -> None:
             i += 1
         return s
 
-    run_int_fn(main, sum((i + 1) * x for i, x in enumerate(reversed(list(range(10))))))
+    run_int_fn(
+        main,
+        # multiplier * value for ordered values in the stack
+        sum((i + 1) * x for i, x in enumerate(reversed(list(range(10))))),
+    )
 
 
 def test_priority_queue(run_int_fn) -> None:
