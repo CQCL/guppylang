@@ -78,7 +78,7 @@ class EmulatorResult(QsysResult):
                 return x[0], PartialVector._from_inner(x[1])
 
             self._partial_states = [
-                list(map(to_partial, Quest.extract_states(shot.entries)))
+                list(map(to_partial, Quest.extract_states(shot)))
                 for shot in self.results
             ]
         return self._partial_states
