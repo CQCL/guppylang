@@ -68,10 +68,8 @@ def unify_args(xs: Sequence[Argument], ys: Sequence[Argument], subst: Subst) -> 
 
 def check_protocol(ty: Type, protocol: ProtocolInst) -> tuple[ImplProof, Subst]:
     # Invariant: ty and protocol might have unsolved variables
-    # TODO: Put this back!
-    #protocol_def = ENGINE.get_checked(protocol.definition.id)
-    #assert isinstance(protocol_def, CheckedProtocolDef)
-    protocol_def = protocol.definition
+    protocol_def = ENGINE.get_checked(protocol.definition)
+    assert isinstance(protocol_def, CheckedProtocolDef)
 
     if isinstance(ty, BoundTypeVar):
         candidates = []
@@ -99,7 +97,7 @@ def check_protocol(ty: Type, protocol: ProtocolInst) -> tuple[ImplProof, Subst]:
         proto_sig = FunctionType(proto_sig.inputs, proto_sig.output, params=[])
         subst = unify(proto_sig, impl_sig, subst)
         if subst is None:
-            raise ValueError(f"Signature Mismatch:\n  {repr(proto_sig)}\n  {repr(impl_sig)}")
+            raise "Signature Mismatch"
         if any(x not in subst for x in impl_vars):
             raise ""
         member_impls[name] = (func.id, [subst[x] for x in impl_vars])
