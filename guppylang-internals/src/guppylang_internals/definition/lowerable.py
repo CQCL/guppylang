@@ -35,16 +35,16 @@ class RawLowerableFunctionDef(RawCustomFunctionDef):
         call_checker: The custom call checker.
         call_compiler: The custom call compiler.
         higher_order_value: Whether the function may be used as a higher-order value.
-        signature: User-provided signature.
+        signature: Optional User-provided signature.
     """
 
     def parse(self, globals: "Globals", sources: SourceMap) -> "CustomFunctionDef":
-        """Parses and checks the signature of the custom function.
+        """Parses and checks the signature of the lowerable function.
 
         The signature is optional if custom type checking logic is provided by the user.
-        However, note that a signature must be provided by either annotation or as an
-        argument, if we want to use the function as a higher-order value. If a signature
-        is provided as an argument, this will override any annotation.
+        However, a signature *must* be provided to use the function as a higher-order
+        value (either by annotation or as an argument). If a signature is provided as an
+        argument, this will override any annotation.
 
         If no signature is provided, we fill in the dummy signature `() -> ()`. This
         type will never be inspected, since we rely on the provided custom checking
@@ -54,7 +54,7 @@ class RawLowerableFunctionDef(RawCustomFunctionDef):
         from guppylang_internals.definition.function import parse_py_func
 
         func_ast, _ = parse_py_func(self.python_func, sources)
-        sig = self._get_signature(func_ast, globals)
+        sig = self.signature or self._get_signature(func_ast, globals)
         ty = sig or FunctionType([], NoneType())
         return CustomFunctionDef(
             self.id,
