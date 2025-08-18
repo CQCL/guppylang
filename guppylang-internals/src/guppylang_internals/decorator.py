@@ -8,6 +8,8 @@ from hugr import ops
 from hugr import tys as ht
 
 from guppylang.defs import GuppyDefinition, GuppyFunctionDefinition
+from guppylang_internals.checker.core import Globals
+from guppylang_internals.checker.func_checker import check_signature
 from guppylang_internals.compiler.core import (
     CompilerContext,
     GlobalConstId,
@@ -22,7 +24,7 @@ from guppylang_internals.definition.custom import (
     OpCompiler,
     RawCustomFunctionDef,
 )
-from guppylang_internals.definition.function import RawFunctionDef
+from guppylang_internals.definition.function import RawFunctionDef, parse_py_func
 from guppylang_internals.definition.lowerable import RawLowerableFunctionDef
 from guppylang_internals.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang_internals.definition.wasm import RawWasmFunctionDef
@@ -144,22 +146,33 @@ def lowerable_op(
 
         compiled_defn = defn.compile()
 
-        def op(ty: ht.FunctionType, inst: Inst, ctx: CompilerContext) -> ops.DataflowOp:
-            op_def = he.OpDef(
-                name=f.__name__,
-                description=f.__doc__ or "",
-                signature=he.OpDefSig(poly_func=ty),
-                lower_funcs=[
-                    he.FixedHugr(
-                        ht.ExtensionSet([ext.name for ext in compiled_defn.extensions]),
-                        module,
-                    )
-                    for module in compiled_defn.modules
-                ],
+        try:
+            func_op = next(
+                data.op
+                for _, data in compiled_defn.modules[0].nodes()
+                if isinstance(data.op, ops.FuncDefn) and data.op.f_name == f.__name__
             )
+        except StopIteration as e:
+            raise NameError(
+                f"Function definition ({f.__name__}) not found in hugr."
+            ) from e
 
-            hugr_ext.add_op_def(op_def)
+        op_def = he.OpDef(
+            name=f.__name__,
+            description=f.__doc__ or "",
+            signature=he.OpDefSig(poly_func=func_op.signature),
+            lower_funcs=[
+                he.FixedHugr(
+                    ht.ExtensionSet([ext.name for ext in compiled_defn.extensions]),
+                    module,
+                )
+                for module in compiled_defn.modules
+            ],
+        )
 
+        hugr_ext.add_op_def(op_def)
+
+        def op(ty: ht.FunctionType, inst: Inst, ctx: CompilerContext) -> ops.DataflowOp:
             return ops.ExtOp(op_def, ty, [arg.to_hugr(ctx) for arg in inst])
 
         call_checker = checker or DefaultCallChecker()
