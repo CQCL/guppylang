@@ -1,9 +1,13 @@
 """
-Emulator module for GuppyLang.
+Emulation of Guppy programs powered by the selene-sim package.
 
-This module provides classes for building and executing emulators that can run
-Guppy programs. It includes functionality for extracting emulator state,
-building and configuring emulator instances, and processing emulation results.
+Provides a configurable interface for compiling Guppy functions
+into an emulator instance, and a configurable builder for setting
+instance options and executing.
+
+Emulation returns py:class:`EmulatorResult` objects, which contain the result output
+by the emulation.
+
 """
 
 from .builder import EmulatorBuilder
