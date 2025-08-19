@@ -12,6 +12,11 @@ from selene_sim.backends.bundled_simulators import Quest
 from .state import PartialVector
 
 if TYPE_CHECKING:
+    from collections import Counter
+    from collections.abc import Iterable
+
+    from hugr.qsystem.result import DataValue
+    from pytket.backends.backendresult import BackendResult
     from selene_quest_plugin.state import SeleneQuestState
 
 # Re-exports QsysResult, QsysShot, and TaggedResult - breaking changes to those upstream
@@ -54,6 +59,38 @@ class EmulatorResult(QsysResult):
 
     # cache for extracted partial states, since extraction cleans up the files
     _partial_states: list[list[tuple[str, PartialVector]]] | None = None
+    #: List of QsysShot objects, each representing a single shot's results.
+    results: list[QsysShot]
+
+    # Re-define parent methods for documentation purposes
+
+    def __init__(
+        self, results: Iterable[QsysShot | Iterable[TaggedResult]] | None = None
+    ):
+        super().__init__(results=results)
+
+    def register_counts(
+        self, strict_names: bool = False, strict_lengths: bool = False
+    ) -> dict[str, Counter[str]]:
+        return super().register_counts(
+            strict_names=strict_names, strict_lengths=strict_lengths
+        )
+
+    def register_bitstrings(
+        self, strict_names: bool = False, strict_lengths: bool = False
+    ) -> dict[str, list[str]]:
+        return super().register_bitstrings(
+            strict_names=strict_names, strict_lengths=strict_lengths
+        )
+
+    def to_pytket(self) -> BackendResult:
+        return super().to_pytket()
+
+    def collated_shots(self) -> list[dict[str, list[DataValue]]]:
+        return super().collated_shots()
+
+    def collated_counts(self) -> Counter[tuple[tuple[str, str], ...]]:
+        return super().collated_counts()
 
     def partial_state_dicts(self) -> list[dict[str, PartialVector]]:
         """Extract state results from shot results in to dictionaries.
