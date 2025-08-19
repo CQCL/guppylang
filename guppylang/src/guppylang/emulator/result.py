@@ -32,27 +32,27 @@ class EmulatorResult(QsysResult):
     r"""A result from running an emulator instance.
 
 
-    Collects data from `result("tag", val)` calls in the guppy program. Includes results
-    for all shots.
+    Collects data from ``result("tag", val)`` calls in the guppy program. Includes
+    results for all shots.
 
     Includes conversions to traditional distributions over bitstrings if a tagging
     convention is used, including conversion to a pytket BackendResult.
 
-    Under this convention, tags are assumed to be a name of a bit register unless
-    they fit the regex pattern `^([a-z][\w_]*)\[(\d+)\]$` (like `my_Reg[12]`) in which
+    Under this convention, tags are assumed to be a name of a bit register unless they
+    fit the regex pattern ``^([a-z][\w_]*)\[(\d+)\]$`` (like ``my_Reg[12]``) in which
     case they are assumed to refer to the nth element of a bit register.
 
-    For results of the form ``` result("<register>", value) ``` `value` can be `{0, 1}`,
-    wherein the register is assumed to be length 1, or lists over those values, wherein
-    the list is taken to be the value of the entire register.
+    For results of the form ``result("<register>", value)``, ``value`` can be ``{0, 1}``
+    , wherein the register is assumed to be length 1, or lists over those values,
+    wherein the list is taken to be the value of the entire register.
 
-    For results of the form ``` result("<register>[n]", value) ``` `value` can only be
-    `{0,1}`. The register is assumed to be at least `n+1` in size and unset elements are
-    assumed to be `0`.
+    For results of the form ``result("<register>[n]", value)`` ``value`` can only be
+    ``{0,1}``. The register is assumed to be at least `n+1` in size and unset elements
+    are assumed to be ``0``.
 
     Subsequent writes to the same register/element in the same shot will overwrite.
 
-    To convert to a `BackendResult` all registers must be present in all shots, and
+    To convert to a ``BackendResult`` all registers must be present in all shots, and
     register sizes cannot change between shots.
 
     """
