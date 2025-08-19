@@ -19,8 +19,7 @@ As of August 2025, The Guppy language is undergoing rapid development and is cur
 
 ### Features
 
-* de-deprecate 'py' ([#1202](https://github.com/CQCL/guppylang/issues/1202)) ([32fbee1](https://github.com/CQCL/guppylang/commit/32fbee19124b1361f4fb0c2a0e836eaa3e39ca51))
-* export PartialState from emulator top level ([#1200](https://github.com/CQCL/guppylang/issues/1200)) ([9ac02b6](https://github.com/CQCL/guppylang/commit/9ac02b6be8f67c1916dcee61b647131b90b631b2))
+* De-deprecate 'py' (still just a shorter alias for `comptime`) ([#1202](https://github.com/CQCL/guppylang/issues/1202)) ([32fbee1](https://github.com/CQCL/guppylang/commit/32fbee19124b1361f4fb0c2a0e836eaa3e39ca51))
 * Make collections iterable and discardable ([#1164](https://github.com/CQCL/guppylang/issues/1164)) ([eb5d817](https://github.com/CQCL/guppylang/commit/eb5d8173f59b0ccdf2402872deb4aabff7ff634b))
 
 
@@ -32,12 +31,8 @@ As of August 2025, The Guppy language is undergoing rapid development and is cur
 
 ### Documentation
 
-* extended emulator docs ([20651db](https://github.com/CQCL/guppylang/commit/20651db5663d00382d67ddccb44c1ee79caefb6a))
-* fix changelog after directory move ([#1199](https://github.com/CQCL/guppylang/issues/1199)) ([2c8d8f8](https://github.com/CQCL/guppylang/commit/2c8d8f8886a3d37db432db86b5e5f0fde2ba4b6b))
-* fix changelog links and docstring formatting ([#1198](https://github.com/CQCL/guppylang/issues/1198)) ([85c6f78](https://github.com/CQCL/guppylang/commit/85c6f784b982ded6b001bd346d08690ceafca0b0))
-* fix typo in qsystem reset function ([#1216](https://github.com/CQCL/guppylang/issues/1216)) ([b9210ad](https://github.com/CQCL/guppylang/commit/b9210ad5e6863f91c61a09d7f036e8f193d20bc4))
-* fix typo in Vdg gate definition ([#1203](https://github.com/CQCL/guppylang/issues/1203)) ([5dbe9f1](https://github.com/CQCL/guppylang/commit/5dbe9f1ddea3d37a107a580e74b3e86e72d96103))
-* use results sequence protocol for simplicity ([#1208](https://github.com/CQCL/guppylang/issues/1208)) ([f9c1aee](https://github.com/CQCL/guppylang/commit/f9c1aee38776c678660ede5495989ac4d75baaeb))
+* Extended emulator docs ([20651db](https://github.com/CQCL/guppylang/commit/20651db5663d00382d67ddccb44c1ee79caefb6a))
+* Several docstring fixes
 
 ## [0.21.2](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.1...guppylang-v0.21.2) (2025-08-11)
 
