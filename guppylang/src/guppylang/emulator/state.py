@@ -134,10 +134,10 @@ class PartialVector(PartialState[StateVector]):
     def state_distribution(
         self, zero_threshold: float = 1e-12
     ) -> list[TracedState[StateVector]]:
-        return self._inner.get_state_vector_distribution(zero_threshold=zero_threshold)
+        out = self._inner.get_state_vector_distribution(zero_threshold=zero_threshold)
 
-    def as_single_state(self, zero_threshold: float = 1e-12) -> StateVector:
-        return self._inner.get_single_state(zero_threshold=zero_threshold)
+        # force float to remove numpy types
+        return [TracedState(float(st.probability), st.state) for st in out]
 
     @classmethod
     def _from_inner(cls, inner: SeleneQuestState) -> Self:

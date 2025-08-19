@@ -6,13 +6,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from hugr.qsystem.result import QsysResult
+from hugr.qsystem.result import QsysResult, QsysShot, TaggedResult
 from selene_sim.backends.bundled_simulators import Quest
 
 from .state import PartialVector
 
 if TYPE_CHECKING:
     from selene_quest_plugin.state import SeleneQuestState
+
+# Re-exports QsysResult, QsysShot, and TaggedResult - breaking changes to those upstream
+# classes should be treated as breaking changes to this module.
+__all__ = [
+    "EmulatorResult",
+    "QsysShot",
+    "TaggedResult",
+]
 
 
 class EmulatorResult(QsysResult):
