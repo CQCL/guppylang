@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Generic
 
 import pytest
 
@@ -250,6 +251,22 @@ def test_type_apply_empty_tuple(validate):
     def main() -> None:
         # `()` is the type of an empty tuple (`tuple[]` is not syntactically valid)
         foo[()]
+
+    validate(main.compile())
+
+
+def test_type_apply_method(validate):
+    T = guppy.type_var("T")
+
+    @guppy.struct
+    class MyStruct(Generic[T]):
+        @guppy
+        def foo(self: "MyStruct[T]") -> None:
+            pass
+
+    @guppy
+    def main(s: MyStruct[int]) -> None:
+        s.foo[int]()
 
     validate(main.compile())
 
