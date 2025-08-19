@@ -49,7 +49,7 @@ class EmulatorInstance:
     """An emulator instance for running a compiled program.
 
 
-    Returned by `GuppyFunctionDefinition.emulator()`.
+    Returned by :py:class:`GuppyFunctionDefinition.emulator`.
     Contains configuration options for the emulator instance, such as the number of
     qubits, the number of shots, the simulator backend, and more.
     """
