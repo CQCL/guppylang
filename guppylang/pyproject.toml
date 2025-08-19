@@ -33,7 +33,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "guppylang-internals ~= 0.22.0",
+    "guppylang-internals ~= 0.23.0",
     "selene-sim~=0.2.0",
     "numpy~=2.0",
 ]
