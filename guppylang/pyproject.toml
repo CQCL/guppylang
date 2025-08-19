@@ -1,8 +1,8 @@
 [project]
-name = "guppylang-internals"
-version = "0.22.0"
+name = "guppylang"
+version = "0.21.2"
 requires-python = ">=3.10,<4"
-description = "Compiler internals for `guppylang` package."
+description = "Pythonic quantum-classical programming language"
 license = { file = "LICENCE" }
 readme = "README.md"
 authors = [
@@ -33,13 +33,18 @@ classifiers = [
 ]
 
 dependencies = [
-    "typing-extensions >=4.9.0,<5",
-    "tket-exts ~= 0.10.0",
-    "hugr ~= 0.13.1",
+    "guppylang-internals ~= 0.22.0",
+    "selene-sim~=0.2.0",
+    "numpy~=2.0",
 ]
 
+
 [project.optional-dependencies]
-pytket = ["pytket>=1.34"]
+pytket = ["pytket>=1.34", "tket >= 0.12.1"]
+
+[project.urls]
+homepage = "https://github.com/CQCL/guppylang"
+repository = "https://github.com/CQCL/guppylang"
 
 [build-system]
 requires = ["hatchling"]

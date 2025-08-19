@@ -47,7 +47,12 @@ def _emulate_fn(is_flt: bool = False):
     from guppylang.decorator import guppy
     from guppylang.std.builtins import result
 
-    def f(f: GuppyDefinition, expected: Any, args: list[Any] | None = None):
+    def f(
+        f: GuppyDefinition,
+        expected: Any,
+        num_qubits: int | None = None,
+        args: list[Any] | None = None,
+    ):
         args = args or []
 
         @guppy.comptime
@@ -61,8 +66,16 @@ def _emulate_fn(is_flt: bool = False):
             result("_test_output", o)
 
         entry = flt_entry if is_flt else int_entry
-        res = entry.emulator(0).coinflip_sim().with_seed(42).run()
-        num = next(v for k, v in res.results[0].entries if k == "_test_output")
+        if num_qubits:
+            res = (
+                entry.emulator(n_qubits=num_qubits)
+                .statevector_sim()
+                .with_seed(42)
+                .run()
+            )
+        else:
+            res = entry.emulator(0).coinflip_sim().with_seed(42).run()
+        num = next(v for k, v in res[0] if k == "_test_output")
         if num != expected:
             raise LLVMException(
                 f"Expected value ({expected}) doesn't match actual value ({num})"
@@ -86,6 +99,7 @@ def run_float_fn_approx():
     def run_approx(
         f: GuppyDefinition,
         expected: float,
+        num_qubits: int | None = None,
         args: list[Any] | None = None,
         *,
         rel: float | None = None,
@@ -95,6 +109,7 @@ def run_float_fn_approx():
         return run_fn(
             f,
             pytest.approx(expected, rel=rel, abs=abs, nan_ok=nan_ok),
+            num_qubits,
             args,
         )
 

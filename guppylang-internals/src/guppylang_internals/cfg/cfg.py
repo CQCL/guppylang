@@ -27,6 +27,9 @@ class BaseCFG(Generic[T]):
     ass_before: Result[DefAssignmentDomain[str]]
     maybe_ass_before: Result[MaybeAssignmentDomain[str]]
 
+    #: Set of variables defined in this CFG
+    assigned_somewhere: set[str]
+
     def __init__(
         self, bbs: list[T], entry_bb: T | None = None, exit_bb: T | None = None
     ):
@@ -38,6 +41,7 @@ class BaseCFG(Generic[T]):
         self.live_before = {}
         self.ass_before = {}
         self.maybe_ass_before = {}
+        self.assigned_somewhere = set()
 
     def ancestors(self, *bbs: T) -> Iterator[T]:
         """Returns an iterator over all ancestors of the given BBs in BFS order."""
@@ -101,6 +105,10 @@ class CFG(BaseCFG[BB]):
         inout_vars: list[str],
     ) -> dict[BB, VariableStats[str]]:
         stats = {bb: bb.compute_variable_stats() for bb in self.bbs}
+        # Locals are variables that are assigned somewhere inside the function
+        self.assigned_somewhere = def_ass_before.union(
+            maybe_ass_before, (x for bb in self.bbs for x in stats[bb].assigned)
+        )
         # Mark all borrowed variables as implicitly used in the exit BB
         stats[self.exit_bb].used |= {x: InoutReturnSentinel(var=x) for x in inout_vars}
         # This also means borrowed variables are always live, so we can use them as the

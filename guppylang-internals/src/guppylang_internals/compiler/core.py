@@ -118,7 +118,7 @@ class EntryMonomorphizeError(Error):
     title: ClassVar[str] = "Invalid entry point"
     span_label: ClassVar[str] = (
         "Function `{name}` is not a valid compilation entry point since the value of "
-        "generic paramater `{param}` is not known"
+        "generic parameter `{param}` is not known"
     )
     name: str
     param: Parameter
