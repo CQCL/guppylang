@@ -68,7 +68,7 @@ class RawFunctionDecl(ParsableDef):
     def parse(self, globals: Globals, sources: SourceMap) -> "CheckedFunctionDecl":
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func, sources)
-        ty = check_signature(func_ast, globals)
+        ty = check_signature(func_ast, globals, self.id)
         if not has_empty_body(func_ast):
             raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
         # Make sure we won't need monomorphization to compile this declaration
