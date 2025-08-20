@@ -233,7 +233,6 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                         list[str], hugr_func.metadata["TKET1.input_parameters"]
                     )
                     lex_names = sorted(param_order)
-                    assert len(lex_names) == len(lex_params)
                     name_to_param = dict(zip(lex_names, lex_params, strict=True))
                     angle_wires = [name_to_param[name] for name in param_order]
                     # Need to convert all angles to floats.
