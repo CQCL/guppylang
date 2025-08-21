@@ -9,12 +9,14 @@ from typing_extensions import Self
 from guppylang_internals.ast_util import AstNode, name_nodes_in_ast
 from guppylang_internals.nodes import (
     ComptimeExpr,
+    Control,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredGeneratorExpr,
     DesugaredListComp,
     NestedFunctionDef,
     Modifier,
+    Power,
 )
 
 if TYPE_CHECKING:
@@ -221,3 +223,16 @@ class VariableVisitor(ast.NodeVisitor):
 
         # The name of the function is now assigned
         self.stats.assigned[node.name] = node
+
+    def visit_Modifier(self, node: Modifier) -> None:
+        for item in node.control:
+            self.visit(item)
+        for item in node.power:
+            self.visit(item)
+
+    def visit_Control(self, node: Control) -> None:
+        for item in node.ctrl:
+            self.visit(item)
+    
+    def visit_Power(self, node: Power) -> None:
+        self.visit(node.iter)

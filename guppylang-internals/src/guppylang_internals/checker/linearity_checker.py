@@ -48,7 +48,7 @@ from guppylang_internals.checker.errors.linearity import (
 from guppylang_internals.definition.custom import CustomFunctionDef
 from guppylang_internals.definition.value import CallableDef
 from guppylang_internals.engine import DEF_STORE, ENGINE
-from guppylang_internals.error import GuppyError, GuppyTypeError
+from guppylang_internals.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang_internals.nodes import (
     AnyCall,
     BarrierExpr,
@@ -622,12 +622,69 @@ class BBLinearityChecker(ast.NodeVisitor):
             elif not place.ty.copyable:
                 raise GuppyTypeError(ComprAlreadyUsedError(use.node, place, use.kind))
 
+
     def visit_CheckedModifier(self, node: CheckedModifier) -> None:
-        # TODO(k.hirata)
-        # raise NotImplementedError(
-        #     "Linearity checking for `with` statements is not implemented yet."
-        # )
-        self.generic_visit(node)
+        # Linear usage of variables in a with statement
+        # ```
+        # with control(c1, c2, ...):
+        #   body(q1, q2, ...)
+        # ````
+        # is the same as to assume that this is a function call
+        # `WithCtrl(q1, q2, ..., c1, c2, ...)`
+        # where `WithCtrl` is a function that takes the control as mutable references
+        # ```
+        # def WithCtrl(q1, q2, ..., c1, c2, ...):
+        #   body(q1, q2, ...)
+        # ```
+
+        # check control
+        for ctrl in node.control:
+            for arg in ctrl.ctrl:
+                if isinstance(arg, PlaceNode):
+                    self.visit_PlaceNode(arg, use_kind=UseKind.BORROW, is_call_arg=None)
+                else: 
+                    ty = get_type(arg)
+                    err = UnnamedExprNotUsedError(arg, ty)
+                    err.add_sub_diagnostic(UnnamedExprNotUsedError.Fix(None))
+                    raise GuppyTypeError(err)
+
+        # check power
+        for power in node.power:
+            if isinstance(power.iter, PlaceNode):
+                self.visit_PlaceNode(power.iter, use_kind=UseKind.CONSUME, is_call_arg=None)
+            else:
+                self.visit(power.iter)
+
+        # check captured variables
+        for var, use in node.captured.values():
+            for place in leaf_places(var):
+                use_kind = UseKind.BORROW if InputFlags.Inout in var.flags else UseKind.CONSUME
+
+                x = place.id
+                if (prev_use := self.scope.used(x)) and not place.ty.copyable:
+                    err = AlreadyUsedError(use, place, use_kind)
+                    err.add_sub_diagnostic(
+                        AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
+                    )
+                    if has_explicit_copy(place.ty):
+                        err.add_sub_diagnostic(AlreadyUsedError.MakeCopy(None))
+                    raise GuppyError(err)
+                self.scope.use(x, node, use_kind)
+
+        # reassign controls
+        for ctrl in node.control:
+            for arg in ctrl.ctrl:
+                match arg:
+                    case PlaceNode(place=place):
+                        self._reassign_single_inout_arg(place, place.defined_at or arg)
+                    case arg:
+                        # TODO: I think this should not happen
+                        raise InternalGuppyError("Cannot reassign non-place control")
+        
+        # reassign captured variables
+        for var, use in node.captured.values():
+            if InputFlags.Inout in var.flags:
+                self._reassign_single_inout_arg(var, var.defined_at or use)
 
 
 def leaf_places(place: Place) -> Iterator[Place]:

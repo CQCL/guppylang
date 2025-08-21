@@ -117,6 +117,17 @@ def breaks_in_loop(node: Any) -> list[ast.Break]:
     return cast(list[ast.Break], found)
 
 
+def loop_controls_in_loop(node: Any) -> list[ast.Break | ast.Continue]:
+    """Returns all `Break` nodes occurring in a loop.
+
+    Note that breaks in nested loops are excluded.
+    """
+    found = find_nodes(
+        lambda n: isinstance(n, ast.Break | ast.Continue), node, {ast.For, ast.While, ast.FunctionDef}
+    )
+    return cast(list[ast.Break | ast.Continue], found)
+
+
 class ContextAdjuster(ast.NodeTransformer):
     """Updates the `ast.Context` indicating if expressions occur on the LHS or RHS."""
 

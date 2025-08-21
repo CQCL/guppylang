@@ -2,7 +2,7 @@ from ast import Return
 from dataclasses import dataclass
 from typing import ClassVar
 
-from guppylang_internals.diagnostic import Error
+from guppylang_internals.diagnostic import Error, Note
 
 
 @dataclass(frozen=True)
@@ -45,11 +45,30 @@ class ExpectedError(Error):
     def extra(self) -> str:
         return f", got {self.got}" if self.got else ""
 
+
 @dataclass(frozen=True)
 class ReturnUnderModifierError(Error):
     title: ClassVar[str] = "Unexpected return"
     span_label: ClassVar[str] = (
-        "Return values {returns} found under the with block {with_node}"
+        "Return statement found under a with block"
     )
-    with_node: ClassVar[str]
-    returns: Return
+
+
+@dataclass(frozen=True)
+class LoopCtrlUnderModifierError(Error):
+    title: ClassVar[str] = "Unexpected loop control"
+    span_label: ClassVar[str] = (
+        "{kind} found under a with block"
+    )
+    kind: str
+    
+
+@dataclass(frozen=True)
+class AssignUnderDagger(Error):
+    title: ClassVar[str] = "Assignment under dagger"
+    span_label: ClassVar[str] = (
+        "Assignment found under a with block that uses `dagger` modifier"
+    )
+    @dataclass(frozen=True)
+    class Dagger(Note):
+        span_label: ClassVar[str] = "dagger modifier is used here"
