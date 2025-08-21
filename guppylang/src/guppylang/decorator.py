@@ -90,6 +90,19 @@ class _Guppy:
         return GuppyFunctionDefinition(defn)
 
     def comptime(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+        """Registers a function to be executed at compile-time during Guppy compilation,
+        enabling the use of arbitrary Python features as long as they don't depend on
+        runtime values.
+
+        .. code-block:: python
+            from guppylang import guppy
+            from guppylang.std.builtins import array
+
+            @guppy.comptime
+            def print_arrays(arr1: array[str, 10], arr2: array[str, 10]) -> None:
+                for s1, s2 in zip(arr1, arr2):
+                    print(f"({s1}, {s2})")
+        """
         defn = RawTracedFunctionDef(DefId.fresh(), f.__name__, None, f)
         DEF_STORE.register_def(defn, get_calling_frame())
         return GuppyFunctionDefinition(defn)
@@ -112,6 +125,20 @@ class _Guppy:
 
     @dataclass_transform()
     def struct(self, cls: builtins.type[T]) -> builtins.type[T]:
+        """Registers a class as a Guppy struct.
+
+        .. code-block:: python
+            from guppylang import guppy
+
+            @guppy.struct
+            class MyStruct:
+                field1: int
+                field2: int
+
+            @guppy
+            def add_fields(self: "MyStruct") -> int:
+                return self.field2 + self.field2
+        """
         defn = RawStructDef(DefId.fresh(), cls.__name__, None, cls)
         frame = get_calling_frame()
         DEF_STORE.register_def(defn, frame)
@@ -133,7 +160,17 @@ class _Guppy:
         copyable: bool = True,
         droppable: bool = True,
     ) -> TypeVar:
-        """Creates a new type variable in a module."""
+        """Creates a new type variable.
+
+        .. code-block:: python
+            from guppylang import guppy
+
+            T = guppy.type_var("T")
+
+            @guppy
+            def identity(x: T) -> T:
+                return x
+        """
         defn = TypeVarDef(DefId.fresh(), name, None, copyable, droppable)
         DEF_STORE.register_def(defn, get_calling_frame())
         # We're pretending to return a `typing.TypeVar`, but in fact we return a special
@@ -141,7 +178,7 @@ class _Guppy:
         return GuppyTypeVarDefinition(defn, TypeVar(name))  # type: ignore[return-value]
 
     def nat_var(self, name: str) -> TypeVar:
-        """Creates a new const nat variable in a module."""
+        """Creates a new nat variable."""
         defn = ConstVarDef(DefId.fresh(), name, None, NumericType(NumericType.Kind.Nat))
         DEF_STORE.register_def(defn, get_calling_frame())
         # We're pretending to return a `typing.TypeVar`, but in fact we return a special
@@ -182,6 +219,7 @@ class _Guppy:
         return hugr_op(op, checker, higher_order_value, name, signature)
 
     def declare(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+        """Declares a Guppy function without defining it."""
         defn = RawFunctionDecl(DefId.fresh(), f.__name__, None, f)
         DEF_STORE.register_def(defn, get_calling_frame())
         return GuppyFunctionDefinition(defn)
@@ -298,7 +336,34 @@ class _Guppy:
     def pytket(
         self, input_circuit: Any
     ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
-        """Adds a pytket circuit function definition with explicit signature."""
+        """Backs a function declaration by the given pytket circuit. The declaration
+        signature needs to match the circuit definition in terms of number of qubit
+        inputs and measurement outputs.
+
+        There is no linearity checking inside pytket circuit functions. Any measurements
+        inside the circuit get returned as bools, but the qubits do not get consumed and
+        the  pytket circuit function does not require ownership. You should either make
+        sure you discard all qubits you know are measured during the circuit, or avoid
+        measurements in the circuit and measure in Guppy afterwards.
+
+        Note this decorator doesn't support passing inputs as arrays (use `load_pytket`
+        instead).
+
+        .. code-block:: python
+            from pytket import Circuit
+            from guppylang import guppy
+
+            circ = Circuit(1)
+            circ.H(0)
+            circ.measure_all()
+
+            @guppy.pytket(circ)
+            def guppy_circ(q: qubit) -> bool: ...
+
+            @guppy
+            def foo(q: qubit) -> bool:
+                return guppy_circ(q)"""
+
         err_msg = "Only pytket circuits can be passed to guppy.pytket"
         try:
             import pytket
@@ -323,7 +388,45 @@ class _Guppy:
         *,
         use_arrays: bool = True,
     ) -> GuppyFunctionDefinition[..., Any]:
-        """Adds a pytket circuit function definition with implicit signature."""
+        """Load a pytket :py:class:`~pytket.circuit.Circuit` as a Guppy function. By
+        default, each qubit register is represented by an array input (and each bit
+        register as an array output), with the order being determined lexicographically.
+        The default registers are 'q' and 'c' respectively. You can disable array usage
+        and pass individual qubits by passing `use_arrays=False`.
+
+        .. code-block:: python
+
+            from pytket import Circuit
+            from guppylang import guppy
+
+            circ = Circuit(2)
+            reg = circ.add_q_register("extra_reg", 3)
+            circ.measure_register(reg, "extra_bits")
+
+            guppy_circ = guppy.load_pytket("guppy_circ", circ)
+
+            @guppy
+            def foo(default_reg: array[qubit, 2],
+                    extra_reg: array[qubit, 3]) -> array[bool, 3]:
+                # Note that the default_reg name is 'q' so it has to come after 'e...'
+                # lexicographically.
+                return guppy_circ(extra_reg, default_reg)
+
+        Any symbolic parameters in the circuit need to be passed as a lexicographically
+        sorted array (if arrays are enabled, else individually in that order) as values
+        of type `angle`.
+
+        The function name is determined by the function variable you bind the `
+        load_pytket`method call to, however the name string passed to the method should
+        match this variable for error reporting purposes.
+
+        There is no linearity checking inside pytket circuit functions. Any measurements
+        inside the circuit get returned as bools, but the qubits do not get consumed and
+        the  pytket circuit function does not require ownership. You should either make
+        sure you discard all qubits you know are measured during the circuit, or avoid
+        measurements in the circuit and measure in Guppy afterwards.
+        """
+
         err_msg = "Only pytket circuits can be passed to guppy.load_pytket"
         try:
             import pytket
