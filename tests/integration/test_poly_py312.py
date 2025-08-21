@@ -2,7 +2,7 @@
 
 from guppylang import array
 from guppylang.decorator import guppy
-from guppylang.std.lang import Copy, Drop, owned
+from guppylang.std.lang import Copy, Drop, owned, comptime
 from guppylang.std.num import nat
 from guppylang.std.option import Option, nothing
 
@@ -110,5 +110,80 @@ def test_reference_inside(validate):
     def main[T: Drop]() -> None:
         x: Option[T] = nothing()
         nothing[T]()
+
+    validate(main.compile())
+
+
+def test_dependent_function(validate):
+    @guppy
+    def foo[T: (Copy, Drop), x: T]() -> T:
+        return x
+
+    @guppy
+    def main() -> float:
+        return foo[nat, 42]() + foo[float, 1.5]()
+
+    validate(main.compile())
+
+
+@guppy.struct
+class Phantom[T: (Copy, Drop), x: T]:
+    """Dummy struct with dependent parameters."""
+
+    @guppy
+    def get[T: (Copy, Drop), x: T](self: "Phantom[T, x]") -> T:
+        return x
+
+
+def test_dependent_struct(validate):
+    @guppy
+    def make_phantom[T: (Copy, Drop)](x: T @ comptime) -> "Phantom[T, x]":
+        return Phantom()
+
+    @guppy
+    def main(x: Phantom[bool, True]) -> float:
+        return 0.0 if x.get() else make_phantom(42).get() + make_phantom(1.5).get()
+
+    validate(main.compile())
+
+
+def test_dependent_comptime(validate):
+    T = guppy.type_var("T", copyable=True, droppable=True)
+
+    @guppy
+    def foo(x: T @ comptime, y: "Phantom[T, x]") -> T:
+        return y.get()
+
+    @guppy
+    def main() -> int:
+        return foo(42, Phantom())
+
+    validate(main.compile())
+
+
+def test_multi_dependent():
+    @guppy
+    def foo[T: (Copy, Drop), x: T, y: Phantom[T, x], z: Phantom[Phantom[T, x], y]]() -> tuple[T, T, T]:
+        return x, y.get(), z.get().get()
+
+    # We can't define a main that calls `foo` since we don't have comptime constructors
+    # for structs yet. We can check that `foo` type checks though
+    foo.check()
+
+
+def test_generic_tuple_chain(validate):
+    T = guppy.type_var("T", copyable=True, droppable=True)
+
+    @guppy
+    def bar(t: tuple[T, T] @ comptime, p: "Phantom[tuple[T, T], t]") -> T:
+        return p.get()[0]
+
+    @guppy
+    def foo(a: tuple[T, T] @ comptime) -> T:
+        return bar(a, Phantom())
+
+    @guppy
+    def main() -> int:
+        return foo(comptime((1, 2)))
 
     validate(main.compile())
