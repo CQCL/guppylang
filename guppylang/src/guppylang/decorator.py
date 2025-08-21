@@ -90,8 +90,8 @@ class _Guppy:
         return GuppyFunctionDefinition(defn)
 
     def comptime(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
-        """Registers a function to be executed at compile-time during Guppy compilation, 
-        enabling the use of arbitrary Python features as long as they don't depend on 
+        """Registers a function to be executed at compile-time during Guppy compilation,
+        enabling the use of arbitrary Python features as long as they don't depend on
         runtime values.
 
         .. code-block:: python
@@ -161,7 +161,7 @@ class _Guppy:
         droppable: bool = True,
     ) -> TypeVar:
         """Creates a new type variable.
-        
+
         .. code-block:: python
             from guppylang import guppy
 
@@ -219,7 +219,7 @@ class _Guppy:
         return hugr_op(op, checker, higher_order_value, name, signature)
 
     def declare(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
-        """ Declares a Guppy function without defining it."""
+        """Declares a Guppy function without defining it."""
         defn = RawFunctionDecl(DefId.fresh(), f.__name__, None, f)
         DEF_STORE.register_def(defn, get_calling_frame())
         return GuppyFunctionDefinition(defn)
@@ -336,17 +336,17 @@ class _Guppy:
     def pytket(
         self, input_circuit: Any
     ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
-        """Backs a function declaration by the given pytket circuit. The declaration 
-        signature needs to match the circuit definition in terms of number of qubit 
-        inputs and measurement outputs. 
+        """Backs a function declaration by the given pytket circuit. The declaration
+        signature needs to match the circuit definition in terms of number of qubit
+        inputs and measurement outputs.
 
         There is no linearity checking inside pytket circuit functions. Any measurements
         inside the circuit get returned as bools, but the qubits do not get consumed and
-        the  pytket circuit function does not require ownership. You should either make 
-        sure you discard all qubits you know are measured during the circuit, or avoid 
+        the  pytket circuit function does not require ownership. You should either make
+        sure you discard all qubits you know are measured during the circuit, or avoid
         measurements in the circuit and measure in Guppy afterwards.
-   
-        Note this decorator doesn't support passing inputs as arrays (use `load_pytket` 
+
+        Note this decorator doesn't support passing inputs as arrays (use `load_pytket`
         instead).
 
         .. code-block:: python
@@ -363,7 +363,7 @@ class _Guppy:
             @guppy
             def foo(q: qubit) -> bool:
                 return guppy_circ(q)"""
-        
+
         err_msg = "Only pytket circuits can be passed to guppy.pytket"
         try:
             import pytket
@@ -388,10 +388,10 @@ class _Guppy:
         *,
         use_arrays: bool = True,
     ) -> GuppyFunctionDefinition[..., Any]:
-        """Load a pytket :py:class:`~pytket.circuit.Circuit` as a Guppy function. By 
-        default, each qubit register is represented by an array input (and each bit 
-        register as an array output), with the order being determined lexicographically. 
-        The default registers are 'q' and 'c' respectively. You can disable array usage 
+        """Load a pytket :py:class:`~pytket.circuit.Circuit` as a Guppy function. By
+        default, each qubit register is represented by an array input (and each bit
+        register as an array output), with the order being determined lexicographically.
+        The default registers are 'q' and 'c' respectively. You can disable array usage
         and pass individual qubits by passing `use_arrays=False`.
 
         .. code-block:: python
@@ -406,24 +406,24 @@ class _Guppy:
             guppy_circ = guppy.load_pytket("guppy_circ", circ)
 
             @guppy
-            def foo(default_reg: array[qubit, 2], 
+            def foo(default_reg: array[qubit, 2],
                     extra_reg: array[qubit, 3]) -> array[bool, 3]:
                 # Note that the default_reg name is 'q' so it has to come after 'e...'
                 # lexicographically.
                 return guppy_circ(extra_reg, default_reg)
 
-        Any symbolic parameters in the circuit need to be passed as a lexicographically 
-        sorted array (if arrays are enabled, else individually in that order) as values 
+        Any symbolic parameters in the circuit need to be passed as a lexicographically
+        sorted array (if arrays are enabled, else individually in that order) as values
         of type `angle`.
 
         The function name is determined by the function variable you bind the `
-        load_pytket`method call to, however the name string passed to the method should 
+        load_pytket`method call to, however the name string passed to the method should
         match this variable for error reporting purposes.
 
         There is no linearity checking inside pytket circuit functions. Any measurements
         inside the circuit get returned as bools, but the qubits do not get consumed and
-        the  pytket circuit function does not require ownership. You should either make 
-        sure you discard all qubits you know are measured during the circuit, or avoid 
+        the  pytket circuit function does not require ownership. You should either make
+        sure you discard all qubits you know are measured during the circuit, or avoid
         measurements in the circuit and measure in Guppy afterwards.
         """
 
