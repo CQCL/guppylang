@@ -43,6 +43,7 @@ from guppylang_internals.checker.errors.type_errors import (
     StarredTupleUnpackError,
     TypeInferenceError,
     UnpackableError,
+    WithArgTypeMismatchError,
     WrongNumberOfUnpacksError,
 )
 from guppylang_internals.checker.expr_checker import (
@@ -81,6 +82,8 @@ from guppylang_internals.tys.ty import (
     ExistentialTypeVar,
     FunctionType,
     NoneType,
+    NumericType,
+    OpaqueType,
     StructType,
     TupleType,
     Type,
@@ -406,12 +409,25 @@ class StmtChecker(AstVisitor[BBStatement]):
             raise InternalGuppyError("BB required to check with block!")
 
         modifier = check_modifier(node, self.bb, self.ctx)
-        return modifier
 
-        #
-        # TODO (k.hirata): Depending on which modifier is used, we need more analysis to be done.
-        # E.g., if the modifier is a `DaggerModifier`, we need to check no assertion is used in the body.
-        #
+        for control in modifier.control:
+            ctrl = control.ctrl
+            for i in range(len(ctrl)):
+                ctrl[i], ty = self._synth_expr(ctrl[i])
+                if not is_quantum_ty(ty):
+                    raise GuppyError(WithArgTypeMismatchError(ctrl[i], ty, "quantum"))
+                ctrl[i], subst = self._check_expr(ctrl[i], ty)
+                assert len(subst) == 0
+
+        for power in node.power:
+            power.iter, ty = self._synth_expr(power.iter)
+            if not isinstance(ty, NumericType):
+                raise GuppyError(WithArgTypeMismatchError(power.iter, ty, "numeric"))
+            power.iter, subst = self._check_expr(power.iter, ty)
+            assert len(subst) == 0
+
+        # TODO: (k.hirata) Is there anything else to check here?
+        return modifier
 
     def visit_If(self, node: ast.If) -> None:
         raise InternalGuppyError("Control-flow statement should not be present here.")
@@ -477,3 +493,22 @@ def check_iter_unpack_has_static_size(expr: ast.expr, ctx: Context) -> int:
         case generic_size:
             err.add_sub_diagnostic(UnpackableError.GenericSize(None, generic_size))
             raise GuppyError(err)
+
+
+# FIXME: (k.hirata) Currently, we only check the qubit type and tuple of qubit types.
+# All the other types (e.g. Array) should be allowed
+def is_quantum_ty(ty: Type) -> bool:
+    match ty:
+        case OpaqueType():
+            return _adhoc_is_qubit_ty(ty)
+        case TupleType():
+            return all(is_quantum_ty(elt) for elt in ty.element_types)
+        case _:
+            return False
+
+# FIXME: (k.hirata) Currently, we check the string of the type name to see if it is a qubit type.
+# This is obviously a wrong way to do it, but it seems to be a bit tricky to fix.
+def _adhoc_is_qubit_ty(ty: Type) -> bool:
+    if not isinstance(ty, OpaqueType):
+        return False
+    return ty.defn.name == "qubit"

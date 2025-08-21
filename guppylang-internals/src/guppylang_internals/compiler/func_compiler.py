@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from guppylang_internals.compiler.expr_compiler import ExprCompiler
+from guppylang_internals.std._internal.compiler.tmp_modifier_exts import MODIFIER_EXTENSION
 from guppylang_internals.tys.ty import InputFlags
 from hugr import Wire, ops
 from hugr import tys as ht
@@ -101,6 +102,7 @@ def compile_local_func_def(
     return loaded
 
 
+# TODO: (k.hirata) WIP
 def compile_modifier(
     modifier: CheckedModifier,
     dfg: DFContainer,
@@ -134,16 +136,25 @@ def compile_modifier(
     ctx.worklist[modifier.def_id, mono_args] = None  # will compile the CFG later
     print("  adding None to worklist with index [modifier.def_id] = ", modifier.def_id )
 
-    loaded = dfg.builder.load_function(func_builder, closure_ty)
+    call = dfg.builder.load_function(func_builder, closure_ty)
 
 
     captured = [v for v, _ in modifier.captured.values()]
     args = [dfg[v] for v in captured]
 
     ## TODO (k.hirata): ExtensionOp such as `ControlModifier` or `DaggerModifier` need to be inserted here
+    # Currently, it puts dagger no matter what the modifier is.
+    op_name = "DaggerModifier"
+    dagger_ty = ht.FunctionType([func_ty], [func_ty])
+    input = ht.ListArg([t.type_arg() for t in func_ty.input])
+    output = ht.ListArg([t.type_arg() for t in func_ty.output])
+    call = dfg.builder.add_op(
+        ops.ExtOp(MODIFIER_EXTENSION.get_op(op_name), dagger_ty, [input, output]),
+        call,
+    )
     call = dfg.builder.add_op(
         ops.CallIndirect(closure_ty),
-        loaded,
+        call,
         *args,
     )
     print("[CheckPoint]: CallIndirect operation created with ...")
@@ -151,10 +162,5 @@ def compile_modifier(
     for arg in captured:
         if InputFlags.Inout in arg.flags:
             dfg[arg] = next(wires)
-    # print("  arg, wire = ", )
-    # print("     ")
-
-    # [print("  captured[i] @ compile_modifier = ", v.name, " ", v.flags) for v in captured]
-    # expr_compiler._update_inout_ports(captured, iter(args), modifier.ty)
 
     return call
