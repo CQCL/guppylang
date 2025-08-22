@@ -202,9 +202,10 @@ def test_qsystem():
         result("a", measure(a))
         result("b", measure(b))
 
-    res = _build_run(main, n_qubits=2, n_shots=1).results[0].entries
     # deterministic - should always be 0
-    assert res == [("a", 0), ("b", 0)]
+    res = _build_run(main, n_qubits=2, n_shots=3, seed=42)
+    for r in res.results:
+        assert r.entries == [("a", 0), ("b", 0)]
 
 
 def test_alloc_free():
