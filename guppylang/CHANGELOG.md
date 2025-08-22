@@ -14,6 +14,13 @@ This changelog documents user-facing changes to the Guppy language excluding cha
 
 As of August 2025, The Guppy language is undergoing rapid development and is currently unstable. There is a Guppy v1.0 stability [milestone](https://github.com/CQCL/guppylang/milestone/12) that is a work in progress and subject to change.
 
+## [0.21.4](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.3...guppylang-v0.21.4) (2025-08-22)
+
+
+### Documentation
+
+* use root README for pypi page ([#1227](https://github.com/CQCL/guppylang/issues/1227)) ([9790e03](https://github.com/CQCL/guppylang/commit/9790e03fd77c3393d71d386bbba856a5a7656a17))
+
 ## [0.21.3](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.2...guppylang-v0.21.3) (2025-08-19)
 
 
