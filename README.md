@@ -48,7 +48,7 @@ teleport.check()
 
 [examples]: ./examples/
 [guide]: https://docs.quantinuum.com/guppy/language_guide/language_guide_index.html
-[website]: https://docs.quantinuum.com/guppy/
+[website]: https://guppylang.org
 
 ## Install
 
