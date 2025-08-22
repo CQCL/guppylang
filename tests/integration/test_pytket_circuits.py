@@ -398,15 +398,6 @@ def test_qsystem_ops(validate):
         assert "tk1op" not in op_name
 
 
-def _build_run(
-    program: GuppyFunctionDefinition,
-    n_qubits: int = 4,
-    n_shots: int = 1,
-    seed: int | None = None,
-) -> EmulatorResult:
-    return program.emulator(n_qubits).with_shots(n_shots).with_seed(seed).run()
-
-
 @pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
 def test_qsystem_exec():
     from pytket import Circuit
@@ -415,13 +406,20 @@ def test_qsystem_exec():
     circ = Circuit(2)
     circ.H(0)
     circ.H(1)
+
+    # Full rotation, just an identity
+    # ZZMax() ∘ ZZPhase(3𝜋/2) = ZZPhase(2𝜋) = I
     circ.ZZMax(qubit0=1, qubit1=0)
     circ.ZZPhase(angle=sympify("(pi/2) * 3"), qubit0=0, qubit1=1)
+    # Another id operation
+    # PhasedX(2𝜋, -𝜋/3) = I
     circ.PhasedX(
         angle0=sympify("(3 * pi/2) / 3 - (-3 * pi/2)"),
         angle1=sympify("-(pi/3)"),
         qubit=0,
     )
+    # And again
+    # Rz(𝜋/2) ∘ Rz(-𝜋/2) = I
     circ.Rz(angle=sympify("(pi/2)"), qubit=0)
     circ.Rz(angle=sympify("(-pi/2)"), qubit=0)
     circ.H(0)
@@ -439,6 +437,6 @@ def test_qsystem_exec():
         result("a", measure(a))
         result("b", measure(b))
 
-    res = _build_run(main, n_qubits=2, n_shots=1).results[0].entries
     # deterministic - should always be 0
-    assert res == [("a", 0), ("b", 0)]
+    res = main.emulator(n_qubits=2).with_shots(1).run()
+    assert res.results[0].entries == [("a", 0), ("b", 0)]
