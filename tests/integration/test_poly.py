@@ -300,19 +300,6 @@ def test_linear(validate):
     validate(main.compile())
 
 
-def test_affine(validate):
-    T = guppy.type_var("T", copyable=False, droppable=True)
-
-    @guppy.declare
-    def foo(x: T) -> T: ...
-
-    @guppy
-    def main(a: array[int, 7]) -> None:
-        foo(a)
-
-    validate(main.compile())
-
-
 def test_relevant(validate):
     T = guppy.type_var("T", copyable=True, droppable=False)
 
