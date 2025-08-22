@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import hugr.build.function as hf
-from hugr import Node, Wire, envelope, val, ops
+from hugr import Node, Wire, envelope, ops, val
 from hugr import tys as ht
 from hugr.build.dfg import DefinitionBuilder, OpVar
 from hugr.envelope import EnvelopeConfig
@@ -46,7 +46,6 @@ from guppylang_internals.std._internal.compiler.array import (
     array_new,
     array_unpack,
 )
-from guppylang_internals.std._internal.compiler.prelude import build_unwrap
 from guppylang_internals.std._internal.compiler.tket_bool import OpaqueBool, make_opaque
 from guppylang_internals.tys.builtin import array_type, bool_type, float_type
 from guppylang_internals.tys.subst import Inst, Subst
