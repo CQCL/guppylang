@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ast
 import inspect
 from typing import TYPE_CHECKING, ParamSpec, TypeVar, overload
 
@@ -43,6 +42,7 @@ from guppylang_internals.tys.ty import (
 )
 
 if TYPE_CHECKING:
+    import ast
     import builtins
     from collections.abc import Callable, Sequence
     from types import FrameType

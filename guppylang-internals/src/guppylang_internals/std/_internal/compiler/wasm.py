@@ -8,7 +8,6 @@ from guppylang_internals.nodes import GlobalCall
 from guppylang_internals.std._internal.compiler.arithmetic import convert_itousize
 from guppylang_internals.std._internal.compiler.prelude import build_unwrap
 from guppylang_internals.std._internal.compiler.tket_exts import (
-    FUTURES_EXTENSION,
     WASM_EXTENSION,
     ConstWasmModule,
 )
