@@ -95,9 +95,7 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         func_ty = WASM_EXTENSION.get_type("func").instantiate(
             [inputs_row_arg, output_row_arg]
         )
-        result_ty = WASM_EXTENSION.get_type("result").instantiate(
-            [output_row_arg]
-        )
+        result_ty = WASM_EXTENSION.get_type("result").instantiate([output_row_arg])
 
         # Get the WASM module information from the type
         selfarg = self.func.ty.inputs[0].ty

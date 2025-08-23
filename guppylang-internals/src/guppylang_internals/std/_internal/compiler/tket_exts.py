@@ -56,6 +56,4 @@ class ConstWasmModule(val.ExtensionValue):
         return val.Extension(name, typ=ty, val=payload, extensions=["tket.wasm"])
 
     def __str__(self) -> str:
-        return (
-            f"tket.wasm.module(module_filename={self.wasm_file})"
-        )
+        return f"tket.wasm.module(module_filename={self.wasm_file})"

@@ -182,7 +182,7 @@ def custom_type(
 
 
 def wasm_module(
-        filename: str,
+    filename: str,
 ) -> Callable[[builtins.type[T]], GuppyDefinition]:
     def type_def_wrapper(
         id: DefId,
@@ -199,13 +199,12 @@ def wasm_module(
     )
     return f(filename, None)
 
+
 def ext_module_decorator(
-    type_def: Callable[
-        [DefId, str, ast.AST | None, str, str | None], OpaqueTypeDef
-    ],
+    type_def: Callable[[DefId, str, ast.AST | None, str, str | None], OpaqueTypeDef],
     init_compiler: CustomInoutCallCompiler,
     discard_compiler: CustomInoutCallCompiler,
-    init_arg: bool, # Whether the init function should take a nat argument
+    init_arg: bool,  # Whether the init function should take a nat argument
 ) -> Callable[[str, str | None], Callable[[builtins.type[T]], GuppyDefinition]]:
     from guppylang.defs import GuppyDefinition
 
@@ -257,9 +256,7 @@ def ext_module_decorator(
                 DefId.fresh(),
                 "discard",
                 None,
-                FunctionType(
-                    [FuncInput(ext_module_ty, InputFlags.Owned)], NoneType()
-                ),
+                FunctionType([FuncInput(ext_module_ty, InputFlags.Owned)], NoneType()),
                 DefaultCallChecker(),
                 discard_compiler,
                 False,
@@ -277,19 +274,30 @@ def ext_module_decorator(
 
     return fun
 
+
 @overload
 def wasm(arg: Callable[P, T]) -> GuppyFunctionDefinition[P, T]: ...
+
 
 @overload
 def wasm(arg: int) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]: ...
 
-def wasm(arg: int | Callable[P, T]) -> GuppyFunctionDefinition[P, T] | Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
+
+def wasm(
+    arg: int | Callable[P, T],
+) -> (
+    GuppyFunctionDefinition[P, T]
+    | Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]
+):
     if isinstance(arg, int):
+
         def wrapper(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
             return wasm_helper(arg, f)
+
         return wrapper
     else:
         return wasm_helper(None, arg)
+
 
 def wasm_helper(fn_id: int | None, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
     from guppylang.defs import GuppyFunctionDefinition
