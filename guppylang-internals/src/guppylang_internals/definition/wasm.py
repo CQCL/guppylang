@@ -11,7 +11,7 @@ from guppylang_internals.definition.custom import (
 )
 from guppylang_internals.error import GuppyError
 from guppylang_internals.span import SourceMap
-from guppylang_internals.tys.builtin import wasm_module_info
+from guppylang_internals.tys.builtin import wasm_module_name
 from guppylang_internals.tys.ty import (
     FuncInput,
     FunctionType,
@@ -30,7 +30,7 @@ class RawWasmFunctionDef(RawCustomFunctionDef):
     def sanitise_type(self, loc: AstNode | None, fun_ty: FunctionType) -> None:
         # Place to highlight in error messages
         match fun_ty.inputs[0]:
-            case FuncInput(ty=ty, flags=InputFlags.Inout) if wasm_module_info(
+            case FuncInput(ty=ty, flags=InputFlags.Inout) if wasm_module_name(
                 ty
             ) is not None:
                 pass

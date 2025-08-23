@@ -5,7 +5,7 @@ from guppylang.std.qsystem.wasm import spawn_wasm_contexts
 
 
 def test_wasm_functions(validate):
-    @wasm_module("", 42)
+    @wasm_module("module.wasm")
     class MyWasm:
         @wasm
         def add_one(self: "MyWasm", x: int) -> int: ...
@@ -28,7 +28,7 @@ def test_wasm_functions(validate):
 
 
 def test_wasm_methods(validate):
-    @wasm_module("", 2)
+    @wasm_module("module.wasm")
     class MyWasm:
         @wasm
         def foo(self: "MyWasm") -> int: ...
@@ -39,7 +39,7 @@ def test_wasm_methods(validate):
 
     @guppy
     def main() -> int:
-        mod = MyWasm(0)
+        mod = MyWasm(1)
         x = mod.foo()
         y = mod.bar(x)
         mod.discard()
@@ -52,14 +52,14 @@ def test_wasm_methods(validate):
 def test_wasm_types(validate):
     n = guppy.nat_var("n")
 
-    @wasm_module("", 3)
+    @wasm_module("")
     class MyWasm:
-        @wasm
+        @wasm(42)
         def foo(self: "MyWasm", x: tuple[int, tuple[nat, float]], y: int) -> None: ...
 
     @guppy
     def main() -> None:
-        mod = MyWasm(0)
+        mod = MyWasm(1)
         mod.foo((0, (1, 2.0)), 3)
         mod.discard()
         return
@@ -69,12 +69,12 @@ def test_wasm_types(validate):
 
 
 def test_wasm_guppy_module(validate):
-    @wasm_module("", 42)
+    @wasm_module("")
     class MyWasm:
         @wasm
         def add_one(self: "MyWasm", x: int) -> int: ...
 
-        @wasm
+        @wasm(1)
         def swap(self: "MyWasm", x: int, y: float) -> tuple[float, int]: ...
 
     @guppy
@@ -90,22 +90,60 @@ def test_wasm_guppy_module(validate):
     validate(mod)
 
 
-def test_comptime(validate):
-    @wasm_module("", 42)
-    class Foo:
-        @wasm
-        def goo(self: "Foo") -> int: ...
+def test_lookup_by_id(validate):
+    from hugr.ops import AsExtOp
 
-    def hoo(x: int) -> int:
-        return x * x
-
-    @guppy.comptime
-    def ioo(x: int) -> int:
-        y = hoo(x)
-        foo = Foo(0)
-        z = foo.goo(y)
-        return hoo(z)
+    @wasm_module("")
+    class MyWasm:
+        @wasm(1)
+        def foo(self: "MyWasm") -> int: ...
 
     @guppy
     def main() -> int:
-        comptime(ioo(42))
+        c = MyWasm(1)
+        x = c.foo()
+        c.discard()
+        return x
+
+    mod = main.compile()
+    validate(mod)
+
+    ops = set()
+    for hugr in mod.modules[:]:
+        for _, node in hugr.nodes():
+            match node.op:
+                case AsExtOp():
+                    ops |= {node.op.op_def().name}
+                case _:
+                    pass
+    assert "lookup_by_id" in ops
+    assert not "lookup_by_name" in ops
+
+def test_lookup_by_name(validate):
+    from hugr.ops import AsExtOp
+
+    @wasm_module("")
+    class MyWasm:
+        @wasm
+        def foo(self: "MyWasm") -> int: ...
+
+    @guppy
+    def main() -> int:
+        c = MyWasm(1)
+        x = c.foo()
+        c.discard()
+        return x
+
+    mod = main.compile()
+    validate(mod)
+
+    ops = set()
+    for hugr in mod.modules[:]:
+        for _, node in hugr.nodes():
+            match node.op:
+                case AsExtOp():
+                    ops |= {node.op.op_def().name}
+                case _:
+                    pass
+    assert "lookup_by_name" in ops
+    assert not "lookup_by_id" in ops

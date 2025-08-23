@@ -3,7 +3,7 @@ from guppylang_internals.decorator import wasm, wasm_module
 from guppylang.std.quantum import qubit
 
 
-@wasm_module("", 0)
+@wasm_module("")
 class Foo:
     @wasm
     def foo(self: "Foo", x: qubit) -> qubit: ...

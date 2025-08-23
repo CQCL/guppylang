@@ -47,16 +47,13 @@ class ConstWasmModule(val.ExtensionValue):
     """Python wrapper for the tket ConstWasmModule type"""
 
     wasm_file: str
-    wasm_hash: int
 
     def to_value(self) -> val.Extension:
         ty = WASM_EXTENSION.get_type("module").instantiate([])
 
-        name = "tket.wasm.ConstWasmModule"
-        payload = {"name": self.wasm_file, "hash": self.wasm_hash}
+        name = "ConstWasmModule"
+        payload = {"module_filename": self.wasm_file}
         return val.Extension(name, typ=ty, val=payload, extensions=["tket.wasm"])
 
     def __str__(self) -> str:
-        return (
-            f"ConstWasmModule(wasm_file={self.wasm_file}, wasm_hash={self.wasm_hash})"
-        )
+        return f"tket.wasm.module(module_filename={self.wasm_file})"
