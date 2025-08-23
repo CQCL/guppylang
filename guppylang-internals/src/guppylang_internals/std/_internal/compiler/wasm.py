@@ -13,7 +13,7 @@ from guppylang_internals.std._internal.compiler.tket_exts import (
     ConstWasmModule,
 )
 from guppylang_internals.tys.builtin import (
-    wasm_module_info,
+    wasm_module_name,
 )
 from guppylang_internals.tys.ty import (
     FunctionType,
@@ -57,18 +57,20 @@ class WasmModuleDiscardCompiler(CustomInoutCallCompiler):
 
 class WasmModuleCallCompiler(CustomInoutCallCompiler):
     """Compiler for WASM calls
-    When a wasm method is called in guppy, we turn it into 2 tket ops:
+    When a wasm method is called in guppy, we turn it into 3 tket ops:
     * lookup: wasm.module -> wasm.func
-    * call: wasm.context * wasm.func * inputs -> wasm.context * output
-
+    * call: wasm.context * wasm.func * inputs -> wasm.result
+    * read_result: wasm.result -> wasm.context * outputs
     For the wasm.module that we use in lookup, a constant is created for each
     call, using the wasm file information embedded in method's `self` argument.
     """
 
     fn_name: str
+    fn_id: int | None
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, id_: int | None) -> None:
         self.fn_name = name
+        self.fn_id = id_
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         # The arguments should be:
@@ -93,14 +95,15 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         func_ty = WASM_EXTENSION.get_type("func").instantiate(
             [inputs_row_arg, output_row_arg]
         )
-        future_ty = FUTURES_EXTENSION.get_type("Future").instantiate(
-            [ht.Tuple(*wasm_sig.output).type_arg()]
+        result_ty = WASM_EXTENSION.get_type("result").instantiate(
+            [output_row_arg]
         )
 
         # Get the WASM module information from the type
         selfarg = self.func.ty.inputs[0].ty
-        if info := wasm_module_info(selfarg):
-            const_module = self.builder.add_const(ConstWasmModule(*info))
+        info = wasm_module_name(selfarg)
+        if info is not None:
+            const_module = self.builder.add_const(ConstWasmModule(info))
         else:
             raise InternalGuppyError(
                 "Expected cached signature to have WASM module as first arg"
@@ -109,27 +112,38 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
         wasm_module = self.builder.load(const_module)
 
         # Lookup the function we want
-        wasm_opdef = WASM_EXTENSION.get_op("lookup").instantiate(
-            [fn_name_arg, inputs_row_arg, output_row_arg],
-            ht.FunctionType([module_ty], [func_ty]),
-        )
+        if self.fn_id is None:
+            fn_name_arg = ht.StringArg(self.fn_name)
+            wasm_opdef = WASM_EXTENSION.get_op("lookup_by_name").instantiate(
+                [fn_name_arg, inputs_row_arg, output_row_arg],
+                ht.FunctionType([module_ty], [func_ty]),
+            )
+        else:
+            fn_id_arg = ht.BoundedNatArg(self.fn_id)
+            wasm_opdef = WASM_EXTENSION.get_op("lookup_by_id").instantiate(
+                [fn_id_arg, inputs_row_arg, output_row_arg],
+                ht.FunctionType([module_ty], [func_ty]),
+            )
+
         wasm_func = self.builder.add_op(wasm_opdef, wasm_module)
 
         # Call the function
         call_op = WASM_EXTENSION.get_op("call").instantiate(
             [inputs_row_arg, output_row_arg],
-            ht.FunctionType([ctx_ty, func_ty, *wasm_sig.input], [ctx_ty, future_ty]),
+            ht.FunctionType([ctx_ty, func_ty, *wasm_sig.input], [result_ty]),
         )
 
-        ctx, future = self.builder.add_op(call_op, args[0], wasm_func, *args[1:])
+        result = self.builder.add_op(call_op, args[0], wasm_func, *args[1:])
 
-        read_opdef = FUTURES_EXTENSION.get_op("Read").instantiate(
-            [ht.Tuple(*wasm_sig.output).type_arg()],
-            ht.FunctionType([future_ty], [ht.Tuple(*wasm_sig.output)]),
+        read_opdef = WASM_EXTENSION.get_op("read_result").instantiate(
+            [output_row_arg],
+            ht.FunctionType([result_ty], [ctx_ty, *wasm_sig.output]),
         )
-        result = self.builder.add_op(read_opdef, future)
-        ws: list[Wire] = list(result[:])
-        node = self.builder.add_op(ops.UnpackTuple(wasm_sig.output), *ws)
-        ws: list[Wire] = list(node[:])
-
-        return CallReturnWires(regular_returns=ws, inout_returns=[ctx])
+        data = self.builder.add_op(read_opdef, result)
+        match list(data[:]):
+            case [ctx]:
+                return CallReturnWires(regular_returns=[], inout_returns=[ctx])
+            case [ctx, *values]:
+                return CallReturnWires(regular_returns=[*values], inout_returns=[ctx])
+            case _:
+                raise "impossible"
