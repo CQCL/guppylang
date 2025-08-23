@@ -146,4 +146,4 @@ class WasmModuleCallCompiler(CustomInoutCallCompiler):
             case [ctx, *values]:
                 return CallReturnWires(regular_returns=[*values], inout_returns=[ctx])
             case _:
-                raise "impossible"
+                raise AssertionError("impossible")

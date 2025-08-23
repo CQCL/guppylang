@@ -62,7 +62,7 @@ repos:
       - id: mypy-check
         name: mypy
         description: Check python code with `mypy`.
-        entry: uv run mypy guppylang
+        entry: uv run mypy guppylang guppylang-internals
         language: system
         files: \.py$
         pass_filenames: false
