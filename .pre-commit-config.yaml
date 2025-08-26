@@ -48,14 +48,14 @@ repos:
       - id: ruff-format
         name: ruff format
         description: Format python code with `ruff`.
-        entry: uv run ruff format guppylang
+        entry: uv run ruff format guppylang guppylang-internals
         language: system
         files: \.py$
         pass_filenames: false
       - id: ruff-check
         name: ruff
         description: Check python code with `ruff`.
-        entry: uv run ruff check --fix --exit-non-zero-on-fix guppylang
+        entry: uv run ruff check --fix --exit-non-zero-on-fix guppylang guppylang-internals
         language: system
         files: \.py$
         pass_filenames: false
