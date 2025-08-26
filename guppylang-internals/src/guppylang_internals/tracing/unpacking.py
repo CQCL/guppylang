@@ -1,7 +1,6 @@
 from typing import Any, TypeVar
 
 from hugr import ops
-from hugr import tys as ht
 from hugr.build.dfg import DfBase
 
 from guppylang_internals.ast_util import AstNode
@@ -13,7 +12,6 @@ from guppylang_internals.compiler.core import CompilerContext
 from guppylang_internals.compiler.expr_compiler import python_value_to_hugr
 from guppylang_internals.error import GuppyComptimeError, GuppyError
 from guppylang_internals.std._internal.compiler.array import array_new, unpack_array
-from guppylang_internals.std._internal.compiler.prelude import build_unwrap
 from guppylang_internals.tracing.frozenlist import frozenlist
 from guppylang_internals.tracing.object import (
     GuppyObject,
@@ -71,9 +69,7 @@ def unpack_guppy_object(
                     # them as Guppy objects here
                     return obj
                 elem_ty = get_element_type(ty)
-                opt_elems = unpack_array(builder, obj._use_wire(None))
-                err = "Non-copyable array element has already been used"
-                elems = [build_unwrap(builder, opt_elem, err) for opt_elem in opt_elems]
+                elems = unpack_array(builder, obj._use_wire(None))
                 obj_list = [
                     unpack_guppy_object(GuppyObject(elem_ty, wire), builder, frozen)
                     for wire in elems
@@ -128,11 +124,8 @@ def guppy_object_from_py(
                         f"Element at index {i + 1} does not match the type of "
                         f"previous elements. Expected `{elem_ty}`, got `{obj._ty}`."
                     )
-            hugr_elem_ty = ht.Option(elem_ty.to_hugr(ctx))
-            wires = [
-                builder.add_op(ops.Tag(1, hugr_elem_ty), obj._use_wire(None))
-                for obj in objs
-            ]
+            hugr_elem_ty = elem_ty.to_hugr(ctx)
+            wires = [obj._use_wire(None) for obj in objs]
             return GuppyObject(
                 array_type(elem_ty, len(vs)),
                 builder.add_op(array_new(hugr_elem_ty, len(vs)), *wires),
@@ -185,10 +178,8 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
         case list(vs) if len(vs) > 0:
             assert is_array_type(obj._ty)
             elem_ty = get_element_type(obj._ty)
-            opt_wires = unpack_array(builder, obj._use_wire(None))
-            err = "Non-droppable array element has already been used"
-            for v, opt_wire in zip(vs, opt_wires, strict=True):
-                (wire,) = build_unwrap(builder, opt_wire, err).outputs()
+            wires = unpack_array(builder, obj._use_wire(None))
+            for v, wire in zip(vs, wires, strict=True):
                 update_packed_value(v, GuppyObject(elem_ty, wire), builder)
         case _:
             pass
