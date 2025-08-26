@@ -1,6 +1,6 @@
 # guppylang-internals
 
-This packages contains the internals of the Guppy compiler. 
+This packages contains the internals of the Guppy compiler.
 
 See `guppylang` for the package providing the user-facing language frontend.
 
