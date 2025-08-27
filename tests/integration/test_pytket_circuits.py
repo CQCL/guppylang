@@ -438,6 +438,6 @@ def test_qsystem_exec():
         result("b", measure(b))
 
     # deterministic - should always be 0
-    res = main.emulator(n_qubits=2).with_shots(3).with_seed(42).run()
+    res = main.emulator(n_qubits=2).run()
     for r in res.results:
         assert r.entries == [("a", 0), ("b", 0)]
