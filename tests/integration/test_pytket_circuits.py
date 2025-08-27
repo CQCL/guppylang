@@ -408,20 +408,21 @@ def test_qsystem_exec():
     circ.H(1)
 
     # Full rotation, just an identity
-    # ZZMax() ∘ ZZPhase(3𝜋/2) = ZZPhase(2𝜋) = I
+    # ZZMax() ∘ ZZPhase(-7/2) = ZZPhase(-4) = I
     circ.ZZMax(qubit0=1, qubit1=0)
-    circ.ZZPhase(angle=sympify("(pi/2) * 3"), qubit0=0, qubit1=1)
+    circ.ZZPhase(angle=sympify("-(7/2)"), qubit0=0, qubit1=1)
     # Another id operation
-    # PhasedX(2𝜋, -𝜋/3) = I
+    # PhasedX(2, -1/3) = I
     circ.PhasedX(
-        angle0=sympify("(3 * pi/2) / 3 - (-3 * pi/2)"),
-        angle1=sympify("-(pi/3)"),
+        angle0=sympify("(3/2) / 3 - (-3 * 1/2)"),
+        angle1=sympify("-(1/3)"),
         qubit=0,
     )
     # And again
     # Rz(𝜋/2) ∘ Rz(-𝜋/2) = I
     circ.Rz(angle=sympify("(pi/2)"), qubit=0)
     circ.Rz(angle=sympify("(-pi/2)"), qubit=0)
+
     circ.H(0)
     circ.H(1)
 
