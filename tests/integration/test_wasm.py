@@ -3,10 +3,7 @@ from guppylang_internals.decorator import wasm, wasm_module
 from guppylang.std.builtins import nat, comptime
 from guppylang.std.qsystem.wasm import spawn_wasm_contexts
 
-import pytest
 
-
-@pytest.mark.skip(reason="WASM is currently disabled after tket update")
 def test_wasm_functions(validate):
     @wasm_module("module.wasm")
     class MyWasm:
@@ -30,7 +27,6 @@ def test_wasm_functions(validate):
     validate(mod)
 
 
-@pytest.mark.skip(reason="WASM is currently disabled after tket update")
 def test_wasm_methods(validate):
     @wasm_module("module.wasm")
     class MyWasm:
@@ -53,7 +49,6 @@ def test_wasm_methods(validate):
     validate(mod)
 
 
-@pytest.mark.skip(reason="WASM is currently disabled after tket update")
 def test_wasm_types(validate):
     n = guppy.nat_var("n")
 
@@ -73,7 +68,6 @@ def test_wasm_types(validate):
     validate(mod)
 
 
-@pytest.mark.skip(reason="WASM is currently disabled after tket update")
 def test_wasm_guppy_module(validate):
     @wasm_module("")
     class MyWasm:
