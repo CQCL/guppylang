@@ -68,24 +68,22 @@ class PartialState(Protocol[S]):
         ...
 
     def as_single_state(self, zero_threshold: float = 1e-12) -> S:
-        """If no qubits are traced out (len(specified_qubits) == total_qubits),
-        return the state as a single state vector.
+        """If the state is a single pure state return it.
 
         Args:
             zero_threshold: Threshold for considering a state amplitude to be zero.
                 Defaults to 1e-12.
         Raises:
-            NotSingleStateError: If the state has unspecified qubits.
+            NotSingleStateError: If the state is not a pure state.
         Returns:
             The state as a single state type.
         """
-        if len(self.specified_qubits) != self.total_qubits:
+        all_states = self.state_distribution(zero_threshold)
+        if len(all_states) != 1:
             raise NotSingleStateError(
                 total_qubits=self.total_qubits,
                 n_specified_qubits=len(self.specified_qubits),
             )
-        all_states = self.state_distribution(zero_threshold)
-        assert len(all_states) == 1, "Expected exactly one state in the distribution."
         return all_states[0].state
 
 
@@ -134,10 +132,10 @@ class PartialVector(PartialState[StateVector]):
     def state_distribution(
         self, zero_threshold: float = 1e-12
     ) -> list[TracedState[StateVector]]:
-        return self._inner.get_state_vector_distribution(zero_threshold=zero_threshold)
+        out = self._inner.get_state_vector_distribution(zero_threshold=zero_threshold)
 
-    def as_single_state(self, zero_threshold: float = 1e-12) -> StateVector:
-        return self._inner.get_single_state(zero_threshold=zero_threshold)
+        # force float to remove numpy types
+        return [TracedState(float(st.probability), st.state) for st in out]
 
     @classmethod
     def _from_inner(cls, inner: SeleneQuestState) -> Self:

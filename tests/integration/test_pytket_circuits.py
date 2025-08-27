@@ -368,3 +368,29 @@ def test_exec(validate, run_int_fn):
 
     validate(main.compile())
     run_int_fn(main, 1, num_qubits=2)
+
+
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
+def test_qsystem_ops(validate):
+    from pytket import Circuit
+
+    circ = Circuit(2)
+    circ.PhasedX(angle0=0.5, angle1=0.2, qubit=0)
+    circ.ZZPhase(angle=0.3, qubit0=0, qubit1=1)
+    circ.ZZMax(qubit0=1, qubit1=0)
+
+    @guppy.pytket(circ)
+    def guppy_circ(q1: qubit, q2: qubit) -> None: ...
+
+    @guppy
+    def foo(q1: qubit, q2: qubit) -> None:
+        guppy_circ(q1, q2)
+
+    compiled = foo.compile()
+    validate(compiled)
+
+    # Assert that we have no opaque (unrecognised) tket1 operations
+    hugr = compiled.modules[0]
+    for node in hugr.descendants(hugr.module_root):
+        op_name = hugr[node].op.name()
+        assert "tk1op" not in op_name

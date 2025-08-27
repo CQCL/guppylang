@@ -7,11 +7,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from guppylang.emulator.state import (
-    NotSingleStateError,
-    PartialState,
-    PartialVector,
-)
+from guppylang.emulator.state import NotSingleStateError, PartialVector
 
 
 def test_incompatible_init_params():
@@ -27,21 +23,6 @@ def test_not_single_state_error_str_representation():
         "Selene state is not a single state: total qubits 5 != specified qubits 3."
     )
     assert str(error) == expected
-
-
-def test_partial_state_as_single_state_raises_error_when_qubits_traced_out():
-    """Test as_single_state raises NotSingleStateError when qubits traced."""
-    # Create a mock implementation of PartialState
-    mock_state = Mock()
-    mock_state.total_qubits = 5
-    mock_state.specified_qubits = [0, 1, 2]  # 3 qubits specified out of 5
-
-    # Test the default implementation in the protocol
-    with pytest.raises(NotSingleStateError) as exc_info:
-        PartialState.as_single_state(mock_state)
-
-    assert exc_info.value.total_qubits == 5
-    assert exc_info.value.n_specified_qubits == 3
 
 
 @patch("guppylang.emulator.state.SeleneQuestState")
@@ -84,6 +65,9 @@ def test_partial_vector_state_distribution():
     """Test state_distribution method."""
     state = np.array([INV_ROOT_2, 0, 0, INV_ROOT_2], dtype=np.complex128)
     pv = PartialVector(state, total_qubits=2, specified_qubits=[0])
+
+    with pytest.raises(NotSingleStateError):
+        pv.as_single_state()
 
     result = pv.state_distribution(zero_threshold=1e-10)
 

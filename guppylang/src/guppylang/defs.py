@@ -67,6 +67,8 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         Calls `compile()` to get the HUGR package and then builds it using the
         provided `EmulatorBuilder` configuration or a default one.
 
+        See :py:mod:`guppylang.emulator` for more details on the emulator.
+
 
         Args:
             n_qubits: The number of qubits to allocate for the function.

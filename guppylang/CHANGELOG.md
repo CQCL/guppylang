@@ -14,6 +14,26 @@ This changelog documents user-facing changes to the Guppy language excluding cha
 
 As of August 2025, The Guppy language is undergoing rapid development and is currently unstable. There is a Guppy v1.0 stability [milestone](https://github.com/CQCL/guppylang/milestone/12) that is a work in progress and subject to change.
 
+## [0.21.3](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.2...guppylang-v0.21.3) (2025-08-19)
+
+
+### Features
+
+* De-deprecate 'py' (still just a shorter alias for `comptime`) ([#1202](https://github.com/CQCL/guppylang/issues/1202)) ([32fbee1](https://github.com/CQCL/guppylang/commit/32fbee19124b1361f4fb0c2a0e836eaa3e39ca51))
+* Make collections iterable and discardable ([#1164](https://github.com/CQCL/guppylang/issues/1164)) ([eb5d817](https://github.com/CQCL/guppylang/commit/eb5d8173f59b0ccdf2402872deb4aabff7ff634b))
+
+
+### Bug Fixes
+
+* cache state extraction to allow multiple access ([#1184](https://github.com/CQCL/guppylang/issues/1184)) ([ac4531c](https://github.com/CQCL/guppylang/commit/ac4531c02870f00edc135de613e84d01e1120760)), closes [#1183](https://github.com/CQCL/guppylang/issues/1183)
+* **emulator:** incorrect pure state check ([20651db](https://github.com/CQCL/guppylang/commit/20651db5663d00382d67ddccb44c1ee79caefb6a))
+
+
+### Documentation
+
+* Extended emulator docs ([20651db](https://github.com/CQCL/guppylang/commit/20651db5663d00382d67ddccb44c1ee79caefb6a))
+* Several docstring fixes
+
 ## [0.21.2](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.1...guppylang-v0.21.2) (2025-08-11)
 
 
@@ -88,7 +108,7 @@ perform_rx_flip.check()
 to a program.
 * default HUGR output uses compressed binary encoding.
 * `guppylang.tracing.object.GuppyDefinition` moved to `guppylang.defs.GuppyDefinition` `guppylang.tracing.object.TypeVarGuppyDefinition` moved and renamed to `guppylang.defs.GuppyTypeVarDefinition`
-* All `to_hugr` methods on types, arguments, and parameters now require a `ToHugrContext` `CompileableDef.compile_outer` now requires a `ToHugrContext` `guppy.hugr_op` now passes the compiler context to the function generating the op `CheckedFunctionDef` now implements `MonomorphizableDef` instead of `CompileableDef` `CompilerContext.build_compiled_def` now requires an instantiation for the definition's type parameters The `ToHugrContext` protocol now requires two additional methods: `type_var_to_hugr` and `const_var_to_hugr` `CompilerContext.{compiled, worklist}` and `CompilationEngine.compiled` are now indexed by a tuple of `DefId` and optional `PartiallyMonomorphizedArgs`
+* All `to_hugr` methods on types, arguments, and parameters now require a `ToHugrContext` `CompilableDef.compile_outer` now requires a `ToHugrContext` `guppy.hugr_op` now passes the compiler context to the function generating the op `CheckedFunctionDef` now implements `MonomorphizableDef` instead of `CompilableDef` `CompilerContext.build_compiled_def` now requires an instantiation for the definition's type parameters The `ToHugrContext` protocol now requires two additional methods: `type_var_to_hugr` and `const_var_to_hugr` `CompilerContext.{compiled, worklist}` and `CompilationEngine.compiled` are now indexed by a tuple of `DefId` and optional `PartiallyMonomorphizedArgs`
 * Any [comptime](../../language_guide/comptime.md) code that previously used constant integers outside the 64-bit signed integer range will now fail to compile.
 * Capturing closures are now disabled by default. Enabling them requires calling `guppylang.enable_experimental_features()`, however note that they are not supported throughout the stack.
 
