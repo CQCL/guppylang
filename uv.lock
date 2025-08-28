@@ -852,6 +852,7 @@ dependencies = [
     { name = "guppylang-internals" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "selene-hugr-qis-compiler" },
     { name = "selene-sim" },
 ]
 
@@ -866,6 +867,7 @@ requires-dist = [
     { name = "guppylang-internals", editable = "guppylang-internals" },
     { name = "numpy", specifier = "~=2.0" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
+    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.4" },
     { name = "selene-sim", specifier = "~=0.2.0" },
     { name = "tket", marker = "extra == 'pytket'", specifier = ">=0.12.5" },
 ]
@@ -3022,14 +3024,14 @@ wheels = [
 
 [[package]]
 name = "selene-hugr-qis-compiler"
-version = "0.2.0"
+version = "0.2.4"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ce/45/33b1bb93dd071edc297614ee85d5e8728d46ae042bec4838b64cf4e93769/selene_hugr_qis_compiler-0.2.0-cp310-abi3-macosx_13_0_arm64.whl", hash = "sha256:e01471ad92f9069c6a5c63f9aeaada56376a7c9edaaf6bb218e0e3f6142fcaab", size = 29518426, upload-time = "2025-08-05T14:31:50.119Z" },
-    { url = "https://files.pythonhosted.org/packages/10/5c/f7e71298c5c8da2d50b8ed549ac4dcd26b61e74d562a676d975ec82f0f4f/selene_hugr_qis_compiler-0.2.0-cp310-abi3-macosx_13_0_x86_64.whl", hash = "sha256:5e6fa02b5fd9288a7014b0b59e2922782722ac5696258759751af883293affad", size = 32200924, upload-time = "2025-08-05T14:31:52.818Z" },
-    { url = "https://files.pythonhosted.org/packages/7f/2b/b97785fd47bd8518d3488bdd0374f09f16419b5759966312c22a0c3d5663/selene_hugr_qis_compiler-0.2.0-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:949e00ba7f92e3c0fe55b9370a1e30ad0f2d62d1fc52d43216ab05ea7d0c7243", size = 32922716, upload-time = "2025-08-05T14:31:55.235Z" },
-    { url = "https://files.pythonhosted.org/packages/34/c5/01162052e4c955eef3282077a7153529fc83eeaaad948ce4d149423320f4/selene_hugr_qis_compiler-0.2.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:4d02536165d24a54608f00ee6675058dcd5f3098f54bd9bab16f912759105e8b", size = 33897951, upload-time = "2025-08-05T14:31:57.506Z" },
-    { url = "https://files.pythonhosted.org/packages/12/ec/a503595644750d7183c0fb5cc1565259413aea79a752bebfb0c513c17640/selene_hugr_qis_compiler-0.2.0-cp310-abi3-win_amd64.whl", hash = "sha256:32a9471626f26c9844618f3fe4fd7ec82103949961ee62e1512e7514afd3eb8f", size = 29220064, upload-time = "2025-08-05T14:32:00.216Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/66/73cc6dc040f62be6775fedf5ba9aac81ee8a3c6ba6b26adaf3b0899c67b1/selene_hugr_qis_compiler-0.2.4-cp310-abi3-macosx_13_0_arm64.whl", hash = "sha256:a0093d38654ad3ce94b8d76849ac635815b06e0b058db9337f228d328bbe6b5b", size = 29832928, upload-time = "2025-08-28T16:17:00.7Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/f6/6b00823b6e3e9f68502e5130ed09f3cc58a8d634e95c35d5efbe3ea6cf4c/selene_hugr_qis_compiler-0.2.4-cp310-abi3-macosx_13_0_x86_64.whl", hash = "sha256:835778d3dbdf91b0b7a51e03032638ed14b715c191a95adf991e9ee9b22e1e48", size = 32521827, upload-time = "2025-08-28T16:17:04.262Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/e8/336b49900593879bce61edbfb344918856f75b3472c4632e46c090a1bb35/selene_hugr_qis_compiler-0.2.4-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:300b54fab6d02e23c41f849a389bec5eff30cee07f184e9ff279ec6e3af6d853", size = 33277316, upload-time = "2025-08-28T16:17:06.71Z" },
+    { url = "https://files.pythonhosted.org/packages/d0/4b/598df29a9aae9b8564b6654bc9455ac8767e7b8425073afad635a9e8261e/selene_hugr_qis_compiler-0.2.4-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:95114f0254d010a08659e525c63f4a4534952bf91700a4943c9690c3d217fd39", size = 34248578, upload-time = "2025-08-28T16:17:09.321Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/69/35c81216689a41cc9662a06a3a3b260b9375944d4b294f1e6efebeab427a/selene_hugr_qis_compiler-0.2.4-cp310-abi3-win_amd64.whl", hash = "sha256:ede45bd254b71e0798f0911f98f3b7bbb2a28b204a1f548be55fc24ca1a6155f", size = 29537853, upload-time = "2025-08-28T16:17:11.931Z" },
 ]
 
 [[package]]
