@@ -7,6 +7,7 @@ from guppylang.std.quantum import (
     project_z,
     z,
     s,
+    rz,
     cx,
     crz,
     discard,
@@ -15,10 +16,12 @@ from guppylang.std.quantum import (
     h,
     x,
 )
-from guppylang.std.angles import pi
+from guppylang.std.angles import angle, pi
+from guppylang.std.qsystem import zz_max, zz_phase, phased_x, rz as qsystem_rz
 from guppylang.std.qsystem.utils import get_current_shot
 from guppylang.emulator import EmulatorResult
 from selene_sim.backends.bundled_runtimes import SoftRZRuntime
+
 
 from datetime import timedelta
 from selene_sim.backends.bundled_simulators import Stim
@@ -166,6 +169,43 @@ def test_4pi():
     # with buggy crz implementation which assumes angle is equivalent modulo 2pi,
     # it's always 1
     assert res == [("aux", 0)]
+
+
+def test_qsystem():
+    @guppy
+    def main() -> None:
+        a, b = qubit(), qubit()
+        h(a)
+        h(b)
+
+        # Full rotation, just an identity
+        zz_max(a, b)
+        zz_phase(
+            a,
+            b,
+            angle(1 / 2) * 3,
+        )
+
+        # Some here
+        # phased_x(2, 1/3) = I
+        phased_x(
+            a,
+            angle(3 / 2) / 3.0 - angle(-3 / 2),
+            -angle(1 / 3),
+        )
+        # Rz(-1/2) Rz(1/2) = I
+        rz(a, angle(1 / 2))
+        qsystem_rz(a, -angle(1 / 2))
+
+        h(a)
+        h(b)
+        result("a", measure(a))
+        result("b", measure(b))
+
+    # deterministic - should always be 0
+    res = _build_run(main, n_qubits=2)
+    for r in res.results:
+        assert r.entries == [("a", 0), ("b", 0)]
 
 
 def test_alloc_free():
