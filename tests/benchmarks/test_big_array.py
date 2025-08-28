@@ -272,3 +272,10 @@ def test_big_array_bytes(benchmark) -> None:
 
     b: bytes = benchmark(big_array_bytes, big_array_compile())
     benchmark.extra_info["bytes"] = len(b)
+
+
+def test_big_array_executable(benchmark) -> None:
+    def big_array_executable():
+        return main.emulator(n_q+n_a*n_q)
+
+    benchmark(big_array_executable)
