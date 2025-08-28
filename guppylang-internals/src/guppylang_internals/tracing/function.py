@@ -11,6 +11,7 @@ from guppylang_internals.checker.core import ComptimeVariable, Context, Locals, 
 from guppylang_internals.checker.errors.type_errors import TypeMismatchError
 from guppylang_internals.compiler.core import CompilerContext, DFContainer
 from guppylang_internals.compiler.expr_compiler import ExprCompiler
+from guppylang_internals.definition.custom import CustomFunctionDef
 from guppylang_internals.definition.value import CallableDef
 from guppylang_internals.diagnostic import Error
 from guppylang_internals.error import GuppyComptimeError, GuppyError, exception_hook
@@ -40,6 +41,13 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class TracingReturnError(Error):
     title: ClassVar[str] = "Error in comptime function return"
+    message: ClassVar[str] = "{msg}"
+    msg: str
+
+
+@dataclass(frozen=True)
+class VarArgsError(Error):
+    title: ClassVar[str] = "Varargs functions not supported in comptime"
     message: ClassVar[str] = "{msg}"
     msg: str
 
@@ -173,6 +181,12 @@ def trace_call(func: CallableDef, *args: Any) -> Any:
     # Update inouts
     # If the input types of the function aren't known, we can't check this.
     # This is the case for functions with a custom checker and no type annotations.
+    if isinstance(func, CustomFunctionDef) and not func.has_signature:
+        msg = f"Try wrapping `{func.name}` in a non-comptime @guppy function"
+        err = VarArgsError(call_node, msg)
+
+        raise GuppyError(err) from None
+
     if len(func.ty.inputs) != 0:
         for inp, arg, var in zip(func.ty.inputs, args, arg_vars, strict=True):
             if InputFlags.Inout in inp.flags:
