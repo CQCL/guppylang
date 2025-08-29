@@ -119,3 +119,46 @@ def test_type_apply(validate):
         g(42, m)
 
     validate(main.compile())
+
+
+def test_generic1(validate):
+    T = guppy.type_var("T", copyable=True, droppable=True)
+
+    @guppy
+    def foo(_x: T, y: T @comptime) -> T:
+        return y
+
+    @guppy
+    def main(x: nat, y: int, z: float) -> float:
+        return foo(x, 42) + foo(y, -10) + foo(z, 1.5)
+
+    validate(main.compile())
+
+
+def test_generic2(validate):
+    T = guppy.type_var("T", copyable=True, droppable=True)
+
+    @guppy
+    def foo(x: T @comptime) -> T:
+        return x
+
+    @guppy
+    def main() -> float:
+        return foo(42) + foo(1.5)
+
+    validate(main.compile())
+
+
+def test_generic_tuple(validate):
+    T = guppy.type_var("T", copyable=True, droppable=True)
+
+    @guppy
+    def foo(t: tuple[T, T] @ comptime) -> T:
+        x, _ = t
+        return x
+
+    @guppy
+    def main() -> bool:
+        return foo(comptime((True, False)))
+
+    validate(main.compile())
