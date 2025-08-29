@@ -89,3 +89,17 @@ def test_inner_scope(validate):
     foo, bar = make(42)
     validate(foo.compile())
     validate(bar.compile())
+
+
+def test_expr_id(run_int_fn):
+    """Using `comptime` expression inside traced functions should act as identity."""
+
+    def make(n: int):
+        @guppy.comptime
+        def foo() -> int:
+            return comptime(n)
+
+        return foo
+
+    foo = make(42)
+    run_int_fn(foo, 42)

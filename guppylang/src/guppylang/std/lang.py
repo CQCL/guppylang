@@ -1,13 +1,15 @@
 """Provides Python objects for builtin language keywords."""
 
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeVar
+
+T = TypeVar("T")
 
 
 class _Comptime:
     """Dummy class to support `@comptime` annotations and `comptime(...)` expressions"""
 
-    def __call__(self, *args: Any) -> Any:
-        return tuple(args)
+    def __call__(self, v: T) -> T:
+        return v
 
     def __rmatmul__(self, other: Any) -> Any:
         # This method is to make the Python interpreter happy with @comptime at runtime
