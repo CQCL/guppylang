@@ -2,8 +2,6 @@
 
 from importlib.util import find_spec
 
-from guppylang.defs import GuppyFunctionDefinition
-from guppylang.emulator.result import EmulatorResult
 import pytest
 
 from guppylang.decorator import guppy
