@@ -73,7 +73,7 @@ class RawFunctionDef(ParsableDef):
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func, sources)
-        ty = check_signature(func_ast, globals)
+        ty = check_signature(func_ast, globals, self.id)
         return ParsedFunctionDef(self.id, self.name, func_ast, ty, docstring)
 
 

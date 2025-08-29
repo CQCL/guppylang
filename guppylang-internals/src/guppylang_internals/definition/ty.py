@@ -18,6 +18,12 @@ class TypeDef(Definition):
 
     description: str = field(default="type", init=False)
 
+    #: Generic parameters of the type. This may be `None` for special types that are
+    #: more polymorphic than the regular type system allows (for example `tuple` and
+    #: `Callable`), or if this is a raw definition whose parameters are not determined
+    #: yet (for example a `RawStructDef`).
+    params: Sequence[Parameter] | None
+
     @abstractmethod
     def check_instantiate(
         self, args: Sequence[Argument], loc: AstNode | None = None
