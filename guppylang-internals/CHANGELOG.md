@@ -3,6 +3,17 @@
 First release of `guppylang_internals` package containing refactored out internal components
 from `guppylang`.
 
+## [0.24.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.23.0...guppylang-internals-v0.24.0) (2025-08-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* 
+
+### Bug Fixes
+
+* wasm module updates based on tested lowering ([#1230](https://github.com/CQCL/guppylang/issues/1230)) ([657cea2](https://github.com/CQCL/guppylang/commit/657cea27af00a9c02e8d1a3190db535bbd1e7981))
+
 ## [0.23.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.22.0...guppylang-internals-v0.23.0) (2025-08-19)
 
 
