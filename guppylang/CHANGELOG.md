@@ -14,6 +14,25 @@ This changelog documents user-facing changes to the Guppy language excluding cha
 
 As of August 2025, The Guppy language is undergoing rapid development and is currently unstable. There is a Guppy v1.0 stability [milestone](https://github.com/CQCL/guppylang/milestone/12) that is a work in progress and subject to change.
 
+## [0.22.0](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.3...guppylang-v0.22.0) (2025-08-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* 
+
+### Bug Fixes
+
+* comptime should act as identity in python context  ([#1240](https://github.com/CQCL/guppylang/issues/1240)) ([d800ad6](https://github.com/CQCL/guppylang/commit/d800ad6b9383a0e596a1af08b5618109bf223b92)), closes [#1239](https://github.com/CQCL/guppylang/issues/1239)
+* **emulator:** update selene compiler to pull in cz fix ([#1237](https://github.com/CQCL/guppylang/issues/1237)) ([550d6fc](https://github.com/CQCL/guppylang/commit/550d6fccdb6bb84c85cb3f65cbc46e02b0989ce2))
+* wasm module updates based on tested lowering ([#1230](https://github.com/CQCL/guppylang/issues/1230)) ([657cea2](https://github.com/CQCL/guppylang/commit/657cea27af00a9c02e8d1a3190db535bbd1e7981))
+* **wasm:** off by one error in WASM module ([#1236](https://github.com/CQCL/guppylang/issues/1236)) ([2ac81da](https://github.com/CQCL/guppylang/commit/2ac81daa3cfe4e96b04decd94b2ee517ae5249d5))
+
+
+### Documentation
+
+* use root README for pypi page ([#1227](https://github.com/CQCL/guppylang/issues/1227)) ([9790e03](https://github.com/CQCL/guppylang/commit/9790e03fd77c3393d71d386bbba856a5a7656a17))
+
 ## [0.21.3](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.2...guppylang-v0.21.3) (2025-08-19)
 
 
