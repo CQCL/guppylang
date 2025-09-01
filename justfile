@@ -69,9 +69,18 @@ bench_save path name:
 # Also, create a bencher BNF with custom metrics for the bytes and nodes of the
 # generated hugr, and upload it using the bencher `json` adapter.
 # Note: Needs the BENCHER_API_TOKEN env variable
-NOW :=`date +%s%n | tr -d '\n'`
+NOW := `date +%s%n | tr -d '\n'`
+BENCHER_PROJECT := "guppylang-benchmarks"
 bench_upload *BENCHER_FLAGS:
-    uv run pytest --benchmark-only --benchmark-json="{{NOW}}-pytest-benchmark.json"
-    bencher run --adapter python_pytest --file "{{NOW}}-pytest-benchmark.json" {{BENCHER_FLAGS}}
+    uv run pytest --benchmark-only --benchmark-json="{{NOW}}-pytest-benchmark.json" -k big_array_compile
+    bencher run \
+            --adapter python_pytest \
+            --file "{{NOW}}-pytest-benchmark.json" \
+            --project {{BENCHER_PROJECT}} \
+            {{BENCHER_FLAGS}}
     uv run python tests/bencher.py "{{NOW}}-pytest-benchmark.json" "{{NOW}}-bencher.json"
-    bencher run --file "{{NOW}}-bencher.json" --adapter json {{BENCHER_FLAGS}}
+    bencher run \
+            --file "{{NOW}}-bencher.json" \
+            --adapter json \
+            --project {{BENCHER_PROJECT}} \
+            {{BENCHER_FLAGS}}

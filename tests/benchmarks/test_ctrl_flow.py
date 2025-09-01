@@ -64,7 +64,7 @@ def test_many_ctrl_flow_check(benchmark) -> None:
     benchmark(many_ctrl_flow_check)
 
 
-def test_big_array_executable(benchmark) -> None:
+def test_many_ctrl_flow_executable(benchmark) -> None:
     def many_ctrl_flow_executable():
         return many_ctrl_flow.emulator(n_q)
 

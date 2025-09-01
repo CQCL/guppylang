@@ -4,28 +4,34 @@ on:
   push:
     branches: main
 
+env:
+  BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+  UV_VERSION: "0.6.6"
+
 jobs:
   benchmark_base_branch:
     name: Continuous Benchmarking with Bencher
     permissions:
       checks: write
     runs-on: ubuntu-latest
-    env:
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
 
       - name: Set up bencher
         uses: bencherdev/bencher@main
 
       - name: Set up Just
-        uses: taiki-e/setup-just@v1
-        with:
-          just-version: "latest"
+        uses: extractions/setup-just@v3
 
       - name: Track base branch benchmarks with Bencher
         run: |
           just bench_upload \
-               --github-actions '{{ secrets.GITHUB_TOKEN }}' \
                --testbed Linux \
                --branch main \
+               --github-actions '${{ secrets.GITHUB_TOKEN }}' \
