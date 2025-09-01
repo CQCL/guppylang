@@ -72,7 +72,7 @@ bench_save path name:
 NOW := `date +%s%n | tr -d '\n'`
 BENCHER_PROJECT := "guppylang-benchmarks"
 bench_upload *BENCHER_FLAGS:
-    uv run pytest --benchmark-only --benchmark-json="{{NOW}}-pytest-benchmark.json" -k big_array_compile
+    uv run pytest --benchmark-only --benchmark-json="{{NOW}}-pytest-benchmark.json"
     bencher run \
             --adapter python_pytest \
             --file "{{NOW}}-pytest-benchmark.json" \
