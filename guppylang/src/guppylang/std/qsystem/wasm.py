@@ -10,4 +10,4 @@ T = guppy.type_var("T", copyable=False, droppable=False)
 @guppy
 @no_type_check
 def spawn_wasm_contexts(n: nat @ comptime, spawn: Callable[[nat], T]) -> "array[T, n]":  # noqa: F821
-    return array(spawn(nat(ix + 1)) for ix in range(n))
+    return array(spawn(nat(ix)) for ix in range(n))

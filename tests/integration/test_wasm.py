@@ -1,6 +1,6 @@
 from guppylang import guppy
 from guppylang_internals.decorator import wasm, wasm_module
-from guppylang.std.builtins import nat, comptime
+from guppylang.std.builtins import nat
 from guppylang.std.qsystem.wasm import spawn_wasm_contexts
 
 
@@ -117,7 +117,7 @@ def test_lookup_by_id(validate):
                 case _:
                     pass
     assert "lookup_by_id" in ops
-    assert not "lookup_by_name" in ops
+    assert "lookup_by_name" not in ops
 
 def test_lookup_by_name(validate):
     from hugr.ops import AsExtOp
@@ -146,4 +146,4 @@ def test_lookup_by_name(validate):
                 case _:
                     pass
     assert "lookup_by_name" in ops
-    assert not "lookup_by_id" in ops
+    assert "lookup_by_id" not in ops

@@ -1,10 +1,8 @@
 from typing import no_type_check
 
-from hugr.package import ModulePointer, Package
+from hugr.package import Package
 
-from guppylang import GuppyModule
 from guppylang.decorator import guppy
-from guppylang.std import quantum
 from guppylang.std.builtins import array, py
 from guppylang.std.quantum import cx, discard_array, h, qubit
 
@@ -254,7 +252,6 @@ def big_array() -> array[qubit, 20]:
 
 
 def test_big_array_compile(benchmark) -> None:
-
     def big_array_compile() -> Package:
         return big_array.compile()
 

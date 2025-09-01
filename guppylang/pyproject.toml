@@ -35,12 +35,13 @@ classifiers = [
 dependencies = [
     "guppylang-internals ~= 0.23.0",
     "selene-sim~=0.2.0",
+    "selene-hugr-qis-compiler>=0.2.4",
     "numpy~=2.0",
 ]
 
 
 [project.optional-dependencies]
-pytket = ["pytket>=1.34", "tket >= 0.12.5"]
+pytket = ["pytket>=1.34", "tket >= 0.12.6"]
 
 [project.urls]
 homepage = "https://github.com/CQCL/guppylang"

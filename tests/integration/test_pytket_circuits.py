@@ -2,8 +2,6 @@
 
 from importlib.util import find_spec
 
-from guppylang.defs import GuppyFunctionDefinition
-from guppylang.emulator.result import EmulatorResult
 import pytest
 
 from guppylang.decorator import guppy
@@ -410,7 +408,7 @@ def test_qsystem_exec():
     # Full rotation, just an identity
     # ZZMax() ∘ ZZPhase(-7/2) = ZZPhase(-4) = I
     circ.ZZMax(qubit0=1, qubit1=0)
-    circ.ZZPhase(angle=sympify("-(7/2)"), qubit0=0, qubit1=1)
+    circ.ZZPhase(angle=sympify("(7/2)"), qubit0=0, qubit1=1)
     # Another id operation
     # PhasedX(2, -1/3) = I
     circ.PhasedX(
