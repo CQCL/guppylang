@@ -106,7 +106,6 @@ class _NumericTypeDef(TypeDef, CompiledDef):
 
 class WasmModuleTypeDef(OpaqueTypeDef):
     wasm_file: str
-    wasm_hash: int
 
     def __init__(
         self,
@@ -114,11 +113,9 @@ class WasmModuleTypeDef(OpaqueTypeDef):
         name: str,
         defined_at: ast.AST | None,
         wasm_file: str,
-        wasm_hash: int,
     ) -> None:
         super().__init__(id, name, defined_at, [], True, True, self.to_hugr)
         self.wasm_file = wasm_file
-        self.wasm_hash = wasm_hash
 
     def to_hugr(
         self, args: Sequence[TypeArg | ConstArg], ctx: ToHugrContext
@@ -342,9 +339,9 @@ def is_sized_iter_type(ty: Type) -> TypeGuard[OpaqueType]:
     return isinstance(ty, OpaqueType) and ty.defn == sized_iter_type_def
 
 
-def wasm_module_info(ty: Type) -> tuple[str, int] | None:
+def wasm_module_name(ty: Type) -> str | None:
     if isinstance(ty, OpaqueType) and isinstance(ty.defn, WasmModuleTypeDef):
-        return ty.defn.wasm_file, ty.defn.wasm_hash
+        return ty.defn.wasm_file
     return None
 
 

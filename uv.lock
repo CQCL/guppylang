@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <4"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -910,12 +910,13 @@ wheels = [
 
 [[package]]
 name = "guppylang"
-version = "0.21.2"
+version = "0.21.3"
 source = { editable = "guppylang" }
 dependencies = [
     { name = "guppylang-internals" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "selene-hugr-qis-compiler" },
     { name = "selene-sim" },
 ]
 
@@ -930,14 +931,15 @@ requires-dist = [
     { name = "guppylang-internals", editable = "guppylang-internals" },
     { name = "numpy", specifier = "~=2.0" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
+    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.4" },
     { name = "selene-sim", specifier = "~=0.2.0" },
-    { name = "tket", marker = "extra == 'pytket'", specifier = ">=0.12.1" },
+    { name = "tket", marker = "extra == 'pytket'", specifier = ">=0.12.6" },
 ]
 provides-extras = ["pytket"]
 
 [[package]]
 name = "guppylang-internals"
-version = "0.22.0"
+version = "0.23.0"
 source = { editable = "guppylang-internals" }
 dependencies = [
     { name = "hugr" },
@@ -954,7 +956,7 @@ pytket = [
 requires-dist = [
     { name = "hugr", specifier = "~=0.13.1" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "tket-exts", specifier = "~=0.10.0" },
+    { name = "tket-exts", git = "https://github.com/CQCL/tket2?subdirectory=tket-exts&rev=5f9560d" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
 provides-extras = ["pytket"]

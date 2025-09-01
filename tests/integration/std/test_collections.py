@@ -82,7 +82,7 @@ def test_priority_queue_iter(run_int_fn) -> None:
             pq = pq.push(i, 9 - i)
         s = 0
         multiplier = 1
-        for (priority, value) in pq:
+        for priority, value in pq:
             # use multiplier to ensure the correct order
             s += value * multiplier
             multiplier += 1
