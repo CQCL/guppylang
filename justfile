@@ -65,15 +65,10 @@ bench_save path name:
     uv run pytest --benchmark-only --benchmark-storage={{path}} --benchmark-save={{name}}
 
 
-# NOW := `date +%s%n | tr -d '\n'`
-NOW := "1756736812"
+NOW := `date +%s%n | tr -d '\n'`
 BENCHER_PROJECT := "guppylang-benchmarks"
 
-# Run benchmarks and upload the results using the bencher `python_pytest` adapter
-# (https://bencher.dev/docs/explanation/adapters/#-python-pytest).
-# Also, create a bencher BNF with custom metrics for the bytes and nodes of the
-# generated hugr, and upload it using the bencher `json` adapter.
-# Note: Needs the BENCHER_API_TOKEN env variable
+# Run benchmarks and upload the results using bencher_cli. Note: Needs the BENCHER_API_TOKEN env variable.
 bench_upload *BENCHER_FLAGS:
     uv run pytest --benchmark-only --benchmark-json="{{NOW}}-pytest-benchmark.json"
     bencher run \
@@ -90,7 +85,7 @@ bench_upload *BENCHER_FLAGS:
             --quiet \
             {{BENCHER_FLAGS}}
 
-# Similar to bench_upload, but will compare against the base (main)
+# Run benchmarks and compare the results using bencher_cli. Note: Needs the BENCHER_API_TOKEN env variable.
 bench_compare *BENCHER_FLAGS:
     uv run pytest --benchmark-only --benchmark-json="{{NOW}}-pytest-benchmark.json"
     bencher run \
@@ -119,3 +114,4 @@ bench_compare *BENCHER_FLAGS:
             --err \
             --quiet \
             {{BENCHER_FLAGS}}
+
