@@ -32,7 +32,7 @@ jobs:
 
       - name: Track PR Benchmarks with Bencher
         run: |
-          just bench_upload \
+          just bench_compare \
               --token '${{ secrets.BENCHER_API_TOKEN }}' \
               --branch "$GITHUB_HEAD_REF" \
               --start-point "$GITHUB_BASE_REF" \
@@ -40,5 +40,4 @@ jobs:
               --start-point-clone-thresholds \
               --start-point-reset \
               --testbed Linux \
-              --err \
               --github-actions '${{ secrets.GITHUB_TOKEN }}'

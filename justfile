@@ -64,23 +64,58 @@ bench *PYTEST_FLAGS:
 bench_save path name:
     uv run pytest --benchmark-only --benchmark-storage={{path}} --benchmark-save={{name}}
 
+
+# NOW := `date +%s%n | tr -d '\n'`
+NOW := "1756736812"
+BENCHER_PROJECT := "guppylang-benchmarks"
+
 # Run benchmarks and upload the results using the bencher `python_pytest` adapter
 # (https://bencher.dev/docs/explanation/adapters/#-python-pytest).
 # Also, create a bencher BNF with custom metrics for the bytes and nodes of the
 # generated hugr, and upload it using the bencher `json` adapter.
 # Note: Needs the BENCHER_API_TOKEN env variable
-NOW := `date +%s%n | tr -d '\n'`
-BENCHER_PROJECT := "guppylang-benchmarks"
 bench_upload *BENCHER_FLAGS:
     uv run pytest --benchmark-only --benchmark-json="{{NOW}}-pytest-benchmark.json"
     bencher run \
             --adapter python_pytest \
             --file "{{NOW}}-pytest-benchmark.json" \
             --project {{BENCHER_PROJECT}} \
+            --quiet \
             {{BENCHER_FLAGS}}
     uv run python tests/bencher.py "{{NOW}}-pytest-benchmark.json" "{{NOW}}-bencher.json"
     bencher run \
             --file "{{NOW}}-bencher.json" \
             --adapter json \
             --project {{BENCHER_PROJECT}} \
+            --quiet \
+            {{BENCHER_FLAGS}}
+
+# Similar to bench_upload, but will compare against the base (main)
+bench_compare *BENCHER_FLAGS:
+    uv run pytest --benchmark-only --benchmark-json="{{NOW}}-pytest-benchmark.json"
+    bencher run \
+            --project {{BENCHER_PROJECT}} \
+            --adapter python_pytest \
+            --file "{{NOW}}-pytest-benchmark.json" \
+            --average median \
+            --threshold-measure latency \
+            --threshold-test percentage \
+            --threshold-upper-boundary 0.05 \
+            --err \
+            --quiet \
+            {{BENCHER_FLAGS}}
+    uv run python tests/bencher.py "{{NOW}}-pytest-benchmark.json" "{{NOW}}-bencher.json"
+    bencher run \
+            --project {{BENCHER_PROJECT}} \
+            --adapter json \
+            --file "{{NOW}}-bencher.json" \
+            --average median \
+            --threshold-measure hugr_bytes \
+            --threshold-test percentage \
+            --threshold-upper-boundary 0.01 \
+            --threshold-measure hugr_nodes \
+            --threshold-test percentage \
+            --threshold-upper-boundary 0.01 \
+            --err \
+            --quiet \
             {{BENCHER_FLAGS}}
