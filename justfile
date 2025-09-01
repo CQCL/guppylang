@@ -63,3 +63,15 @@ bench *PYTEST_FLAGS:
 # Run benchmarks and save JSON data to path/name.json.
 bench_save path name:
     uv run pytest --benchmark-only --benchmark-storage={{path}} --benchmark-save={{name}}
+
+# Run benchmarks and upload the results using the bencher `python_pytest` adapter
+# (https://bencher.dev/docs/explanation/adapters/#-python-pytest).
+# Also, create a bencher BNF with custom metrics for the bytes and nodes of the
+# generated hugr, and upload it using the bencher `json` adapter.
+# Note: Needs the BENCHER_API_TOKEN env variable
+NOW :=`date +%s%n | tr -d '\n'`
+bench_upload *BENCHER_FLAGS:
+    uv run pytest --benchmark-only --benchmark-json="{{NOW}}-pytest-benchmark.json"
+    bencher run --adapter python_pytest --file "{{NOW}}-pytest-benchmark.json" {{BENCHER_FLAGS}}
+    uv run python tests/bencher.py "{{NOW}}-pytest-benchmark.json" "{{NOW}}-bencher.json"
+    bencher run --file "{{NOW}}-bencher.json" --adapter json {{BENCHER_FLAGS}}

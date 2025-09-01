@@ -1,16 +1,21 @@
 from typing import no_type_check
 
+from hugr.package import Package
+
 from guppylang.decorator import guppy
 from guppylang.std.builtins import array, py
 from guppylang.std.quantum import cx, discard_array, h, measure, project_z, qubit
 
 
+n_q = 20
+
+
 @guppy
 @no_type_check
 def many_ctrl_flow() -> None:
-    qs = array(qubit() for _ in range(py(20)))
+    qs = array(qubit() for _ in range(py(n_q)))
 
-    for i in range(py(20)):
+    for i in range(py(n_q)):
         h(qs[i])
 
     [q0, *qs0] = qs
@@ -43,8 +48,24 @@ def many_ctrl_flow() -> None:
         discard_array(qs0)
 
 
-def test_compile_many_ctrl_flow(benchmark):
-    def comp() -> None:
-        many_ctrl_flow.compile()
+def test_many_ctrl_flow_compile(benchmark):
+    def comp() -> Package:
+        return many_ctrl_flow.compile()
 
-    benchmark(comp)
+    hugr = benchmark(comp)
+    benchmark.extra_info["nodes"] = hugr.modules[0].num_nodes()
+    benchmark.extra_info["bytes"] = len(hugr.to_bytes())
+
+
+def test_many_ctrl_flow_check(benchmark) -> None:
+    def many_ctrl_flow_check():
+        return many_ctrl_flow.check()
+
+    benchmark(many_ctrl_flow_check)
+
+
+def test_big_array_executable(benchmark) -> None:
+    def many_ctrl_flow_executable():
+        return many_ctrl_flow.emulator(n_q)
+
+    benchmark(many_ctrl_flow_executable)
