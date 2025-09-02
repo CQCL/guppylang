@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from types import FrameType
 from typing import ClassVar
 
+from guppylang_internals.definition.protocol import ParsedProtocolDef
 from hugr import Wire, ops
 
 from guppylang_internals.ast_util import AstNode, annotate_location
@@ -116,7 +117,7 @@ class RawStructDef(TypeDef, ParsableDef):
 
     python_class: type
 
-    def parse(self, globals: Globals, sources: SourceMap) -> "ParsedStructDef":
+    def parse(self, globals: Globals, sources: SourceMap) -> "ParsedStructDef | ParsedProtocolDef":
         """Parses the raw class object into an AST and checks that it is well-formed."""
         frame = DEF_STORE.frames[self.id]
         cls_def = parse_py_class(self.python_class, frame, sources)
@@ -135,8 +136,9 @@ class RawStructDef(TypeDef, ParsableDef):
                     for idx, node in enumerate(cls_def.type_params)
                 ]
 
-        # The only base we allow is `Generic[...]` to specify generic parameters with
-        # the legacy syntax
+        # The only bases we allow are `Generic[...]` to specify generic parameters with
+        # the legacy syntax and `Protocol` to indicate that this is a protocol
+        protocol_base = False
         match cls_def.bases:
             case []:
                 pass
@@ -147,6 +149,8 @@ class RawStructDef(TypeDef, ParsableDef):
                     err.add_sub_diagnostic(RedundantParamsError.PrevSpec(params_span))
                     raise GuppyError(err)
                 params = params_from_ast(elems, globals)
+            case [base] if base.id == "Protocol": 
+                protocol_base = True
             case bases:
                 err = UnsupportedError(bases[0], "Struct inheritance", singular=True)
                 raise GuppyError(err)
@@ -193,6 +197,8 @@ class RawStructDef(TypeDef, ParsableDef):
             x = overridden.pop()
             raise GuppyError(DuplicateFieldError(used_func_names[x], self.name, x))
 
+        if protocol_base:
+            return ParsedProtocolDef(self.id, cls_def, params, fields)
         return ParsedStructDef(self.id, self.name, cls_def, params, fields)
 
     def check_instantiate(
