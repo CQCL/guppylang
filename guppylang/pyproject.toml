@@ -4,7 +4,7 @@ version = "0.21.3"
 requires-python = ">=3.10,<4"
 description = "Pythonic quantum-classical programming language"
 license = { file = "LICENCE" }
-readme = "README.md"
+readme = "../README.md"
 authors = [
     { name = "Mark Koch", email = "mark.koch@quantinuum.com" },
     { name = "TKET development team", email = "tket-support@quantinuum.com" },
@@ -35,12 +35,13 @@ classifiers = [
 dependencies = [
     "guppylang-internals ~= 0.23.0",
     "selene-sim~=0.2.0",
+    "selene-hugr-qis-compiler>=0.2.4",
     "numpy~=2.0",
 ]
 
 
 [project.optional-dependencies]
-pytket = ["pytket>=1.34", "tket >= 0.12.2"]
+pytket = ["pytket>=1.34", "tket >= 0.12.6"]
 
 [project.urls]
 homepage = "https://github.com/CQCL/guppylang"

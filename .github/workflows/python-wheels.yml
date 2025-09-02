@@ -20,7 +20,7 @@ on:
 
 env:
   # Pinned version for the uv package manager
-  UV_VERSION: "0.6.6"
+  UV_VERSION: "0.7.4"
 
 jobs:
   build-publish:
@@ -34,17 +34,17 @@ jobs:
       matrix:
         target:
           - {
-            dir: guppylang,
-            component: guppylang,
-            package: guppylang,
-            lib: guppylang,
-          }
+              dir: guppylang,
+              component: guppylang,
+              package: guppylang,
+              lib: guppylang,
+            }
           - {
-            dir: guppylang-internals,
-            component: guppylang-internals,
-            package: guppylang-internals,
-            lib: guppylang_internals,
-          }
+              dir: guppylang-internals,
+              component: guppylang-internals,
+              package: guppylang-internals,
+              lib: guppylang_internals,
+            }
     steps:
       # Check the release tag against the package name
       #
