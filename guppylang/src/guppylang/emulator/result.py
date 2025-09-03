@@ -13,7 +13,6 @@ from .state import PartialVector
 
 if TYPE_CHECKING:
     from collections import Counter
-    from collections.abc import Iterable
 
     from hugr.qsystem.result import DataValue
     from pytket.backends.backendresult import BackendResult
