@@ -4,19 +4,20 @@ Configuring and executing emulator instances for guppy programs.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Any, Iterator, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from hugr.qsystem.result import QsysShot
 from selene_sim.backends.bundled_error_models import IdealErrorModel
 from selene_sim.backends.bundled_runtimes import SimpleRuntime
 from selene_sim.backends.bundled_simulators import Coinflip, Quest, Stim
 from selene_sim.event_hooks import EventHook, NoEventHook
-from typing_extensions import Self
 from tqdm import tqdm
+from typing_extensions import Self
 
-from .result import EmulatorResult
 from .exceptions import EmulatorError
+from .result import EmulatorResult
 
 if TYPE_CHECKING:
     import datetime
@@ -216,13 +217,14 @@ class EmulatorInstance:
         result_stream = self._run_instance()
 
         all_results: list[QsysShot] = []
-        raised_exc: Exception | None = None
         for shot in self._iterate_shots(result_stream):
             shot_results = QsysShot()
             try:
                 for tag, value in shot:
                     shot_results.append(tag, value)
-            except Exception as e:
+            except Exception as e: # noqa: BLE001
+                # In this case, casting a wide net on exceptions is
+                # suitable.
                 raise EmulatorError(
                     completed_shots=EmulatorResult(all_results),
                     failing_shot=shot_results,
@@ -252,14 +254,15 @@ class EmulatorInstance:
     def _iterate_shots(
         self, result_stream: Iterator[Iterator[TaggedResult]]
     ) -> Iterator[Iterator[TaggedResult]]:
-        """Iterate over the shots in the result stream, optionally displaying a progress bar."""
+        """Iterate over the shots in the result stream, optionally displaying a progress
+        bar."""
         if hasattr(result_stream, "assert_called"):
             # catch mocks
             # TODO: this is breaking the 4th wall, and I don't like it.
             return iter([])
         elif self._options._display_progress_bar:
             return cast(
-                Iterator[Iterator[TaggedResult]],
+                "Iterator[Iterator[TaggedResult]]",
                 tqdm(result_stream, total=self.shots, desc="Emulating shots"),
             )
         else:
