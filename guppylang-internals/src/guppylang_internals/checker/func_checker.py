@@ -10,12 +10,12 @@ import sys
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, ClassVar, cast
 
-from guppylang_internals.ast_util import return_nodes_in_ast, with_loc
+from guppylang_internals.ast_util import loop_in_ast, return_nodes_in_ast, with_loc
 from guppylang_internals.cfg.bb import BB
 from guppylang_internals.cfg.builder import CFGBuilder
 from guppylang_internals.checker.cfg_checker import CheckedCFG, check_cfg
 from guppylang_internals.checker.core import Context, Globals, Place, Variable
-from guppylang_internals.checker.errors.generic import AssignUnderDagger, UnsupportedError
+from guppylang_internals.checker.errors.generic import AssignUnderDagger, LoopUnderDagger, UnsupportedError
 from guppylang_internals.definition.common import DefId
 from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.diagnostic import Error, Help, Note
@@ -438,6 +438,14 @@ def check_modifier(
 
     # We do not allow any assignments if it is daggered.
     if modifier.is_dagger():
+        for stmt in modifier.body:
+            loops = loop_in_ast(stmt)
+            if len(loops) != 0:
+                loop = next(iter(loops))
+                err = LoopUnderDagger(loop)
+                err.add_sub_diagnostic(LoopUnderDagger.Dagger(modifier.span_ctxt_manager()))
+                raise GuppyError(err)
+
         for cfg_bb in cfg.bbs:
             if cfg_bb.vars.assigned:
                 _, v = next(iter(cfg_bb.vars.assigned.items()))
@@ -445,10 +453,11 @@ def check_modifier(
                 err.add_sub_diagnostic(AssignUnderDagger.Dagger(modifier.span_ctxt_manager()))
                 raise GuppyError(err)
 
-        # TODO: check all the calls
+
+        # TODO (k.hirata): check all the calls
     
     if modifier.is_control():
-        # TODO: check all the calls
+        # TODO (k.hirata): check all the calls
         pass
     
     if modifier.is_power():

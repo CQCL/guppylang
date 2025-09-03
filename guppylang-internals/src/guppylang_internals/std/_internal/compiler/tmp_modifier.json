@@ -10,6 +10,10 @@
       "signature": {
         "params": [
           {
+            "tp": "BoundedNat",
+            "bound": null
+          },
+          {
             "tp": "List",
             "param": {
               "tp": "Type",
@@ -31,7 +35,12 @@
               "input": [
                 {
                   "t": "R",
-                  "i": 0,
+                  "i": 1,
+                  "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 2,
                   "b": "A"
                 }
               ],
@@ -49,17 +58,60 @@
               "t": "G",
               "input": [
                 {
-                  "t": "Q"
+                  "t": "Opaque",
+                  "extension": "collections.array",
+                  "id": "array",
+                  "args": [
+                    {
+                      "tya": "Variable",
+                      "idx": 0,
+                      "cached_decl": {
+                        "tp": "BoundedNat",
+                        "bound": null
+                      }
+                    },
+                    {
+                      "tya": "Type",
+                      "ty": {
+                        "t": "Q"
+                      }
+                    }
+                  ],
+                  "bound": "A"
                 },
                 {
                   "t": "R",
-                  "i": 0,
+                  "i": 1,
+                  "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 2,
                   "b": "A"
                 }
               ],
               "output": [
                 {
-                  "t": "Q"
+                  "t": "Opaque",
+                  "extension": "collections.array",
+                  "id": "array",
+                  "args": [
+                    {
+                      "tya": "Variable",
+                      "idx": 0,
+                      "cached_decl": {
+                        "tp": "BoundedNat",
+                        "bound": null
+                      }
+                    },
+                    {
+                      "tya": "Type",
+                      "ty": {
+                        "t": "Q"
+                      }
+                    }
+                  ],
+                  "bound": "A"
                 },
                 {
                   "t": "R",
@@ -103,12 +155,17 @@
                   "t": "R",
                   "i": 0,
                   "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "A"
                 }
               ],
               "output": [
                 {
                   "t": "R",
-                  "i": 1,
+                  "i": 0,
                   "b": "A"
                 }
               ]
@@ -122,12 +179,17 @@
                   "t": "R",
                   "i": 0,
                   "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "A"
                 }
               ],
               "output": [
                 {
                   "t": "R",
-                  "i": 1,
+                  "i": 0,
                   "b": "A"
                 }
               ]
@@ -154,7 +216,7 @@
             "tp": "List",
             "param": {
               "tp": "Type",
-              "b": "A"
+              "b": "C"
             }
           }
         ],
@@ -167,12 +229,17 @@
                   "t": "R",
                   "i": 0,
                   "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "C"
                 }
               ],
               "output": [
                 {
                   "t": "R",
-                  "i": 1,
+                  "i": 0,
                   "b": "A"
                 }
               ]
@@ -186,12 +253,17 @@
                   "t": "R",
                   "i": 0,
                   "b": "A"
+                },
+                {
+                  "t": "R",
+                  "i": 1,
+                  "b": "C"
                 }
               ],
               "output": [
                 {
                   "t": "R",
-                  "i": 1,
+                  "i": 0,
                   "b": "A"
                 }
               ]

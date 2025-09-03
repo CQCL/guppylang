@@ -1,6 +1,7 @@
 from guppylang.decorator import guppy
 
 
+# TODO: The error message is confusing.
 @guppy
 def test() -> int:
     with power(1):

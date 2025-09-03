@@ -101,6 +101,9 @@ def compile_local_func_def(
 
     return loaded
 
+DAGGER_OP_NAME = "DaggerModifier"
+CONTROL_OP_NAME = "ControlModifier"
+POWER_OP_NAME = "PowerModifier"
 
 # TODO: (k.hirata) WIP
 def compile_modifier(
@@ -138,20 +141,39 @@ def compile_modifier(
 
     call = dfg.builder.load_function(func_builder, closure_ty)
 
-
     captured = [v for v, _ in modifier.captured.values()]
     args = [dfg[v] for v in captured]
 
     ## TODO (k.hirata): ExtensionOp such as `ControlModifier` or `DaggerModifier` need to be inserted here
-    # Currently, it puts dagger no matter what the modifier is.
-    op_name = "DaggerModifier"
-    dagger_ty = ht.FunctionType([func_ty], [func_ty])
-    input = ht.ListArg([t.type_arg() for t in func_ty.input])
-    output = ht.ListArg([t.type_arg() for t in func_ty.output])
-    call = dfg.builder.add_op(
-        ops.ExtOp(MODIFIER_EXTENSION.get_op(op_name), dagger_ty, [input, output]),
-        call,
-    )
+    input_ty = ht.ListArg([t.type_arg() for t in func_ty.input])
+    output_ty = ht.ListArg([t.type_arg() for t in func_ty.output])
+
+    # WIP
+    if modifier.is_dagger():
+        dagger_ty = ht.FunctionType([func_ty], [func_ty])
+        tmp_emp_arg = ht.ListArg([])
+        call = dfg.builder.add_op(
+            ops.ExtOp(MODIFIER_EXTENSION.get_op(DAGGER_OP_NAME), dagger_ty, [input_ty, tmp_emp_arg]),
+            call,
+        )
+    if modifier.is_power():
+        power_ty = ht.FunctionType([func_ty], [func_ty])
+        tmp_emp_arg = ht.ListArg([])
+        call = dfg.builder.add_op(
+            ops.ExtOp(MODIFIER_EXTENSION.get_op(POWER_OP_NAME), power_ty, [input_ty, tmp_emp_arg]),
+            call,
+        )
+    if modifier.has_control():
+        # TODO: Make a big array to flatten control arguments.
+        control_ty = ht.FunctionType([func_ty], [func_ty])
+        # Placeholder
+        length = ht.BoundedNatArg(100)
+        tmp_emp_arg = ht.ListArg([])
+        call = dfg.builder.add_op(
+            ops.ExtOp(MODIFIER_EXTENSION.get_op(CONTROL_OP_NAME), control_ty, [length, input_ty, tmp_emp_arg]),
+            call,
+        )
+
     call = dfg.builder.add_op(
         ops.CallIndirect(closure_ty),
         call,

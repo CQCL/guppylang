@@ -539,3 +539,13 @@ class CheckedModifier(ast.With):
 
     def is_dagger(self) -> bool:
         return len(self.dagger) % 2 == 1
+    
+    def has_control(self) -> bool:
+        # This should be true if `len(self.control) > 0`, but we double-check that
+        for c in self.control:
+            if len(c.ctrl) > 0:
+                return True
+        return False
+
+    def is_power(self) -> bool:
+        return len(self.power) > 0
