@@ -222,7 +222,7 @@ class EmulatorInstance:
             try:
                 for tag, value in shot:
                     shot_results.append(tag, value)
-            except Exception as e: # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
                 # In this case, casting a wide net on exceptions is
                 # suitable.
                 raise EmulatorError(
