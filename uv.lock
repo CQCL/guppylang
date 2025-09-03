@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <4"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -13,7 +13,7 @@ members = [
     "guppylang-internals",
     "miette-py",
 ]
-overrides = [{ name = "selene-hugr-qis-compiler", path = "../selene/dist/selene_hugr_qis_compiler-0.2.1-cp310-abi3-macosx_11_0_arm64.whl" }]
+overrides = [{ name = "selene-hugr-qis-compiler", path = "../selene/dist/selene_hugr_qis_compiler-0.2.4-cp310-abi3-macosx_11_0_arm64.whl" }]
 
 [manifest.dependency-groups]
 dev = [
@@ -3135,10 +3135,10 @@ wheels = [
 
 [[package]]
 name = "selene-hugr-qis-compiler"
-version = "0.2.1"
-source = { path = "../selene/dist/selene_hugr_qis_compiler-0.2.1-cp310-abi3-macosx_11_0_arm64.whl" }
+version = "0.2.4"
+source = { path = "../selene/dist/selene_hugr_qis_compiler-0.2.4-cp310-abi3-macosx_11_0_arm64.whl" }
 wheels = [
-    { filename = "selene_hugr_qis_compiler-0.2.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:e6ad031cf986d78158ae0678a64f745c456fa16ec615f5a2e918d475de9e00c0" },
+    { filename = "selene_hugr_qis_compiler-0.2.4-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:153cd767ea9e60eaecc3af96068935fce600d04b43b6fb81f8b1dbbbbf5f7f58" },
 ]
 
 [[package]]
