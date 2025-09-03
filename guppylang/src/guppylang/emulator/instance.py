@@ -160,7 +160,7 @@ class EmulatorInstance:
         Defaults to False."""
         return self._with_option(_verbose=value)
 
-    def with_progress_bar(self, value: bool=True) -> Self:
+    def with_progress_bar(self, value: bool = True) -> Self:
         """Set whether to display a progress bar during the emulator execution.
         Defaults to False."""
         return self._with_option(_display_progress_bar=value)
@@ -216,7 +216,7 @@ class EmulatorInstance:
         result_stream = self._run_instance()
 
         all_results: list[QsysShot] = []
-        raised_exc: Exception|None = None
+        raised_exc: Exception | None = None
         for shot in self._iterate_shots(result_stream):
             shot_results = QsysShot()
             try:
@@ -249,14 +249,18 @@ class EmulatorInstance:
             n_processes=self.n_processes,
         )
 
-    def _iterate_shots(self, result_stream: Iterator[Iterator[TaggedResult]]) -> Iterator[Iterator[TaggedResult]]:
+    def _iterate_shots(
+        self, result_stream: Iterator[Iterator[TaggedResult]]
+    ) -> Iterator[Iterator[TaggedResult]]:
         """Iterate over the shots in the result stream, optionally displaying a progress bar."""
-        if hasattr(result_stream, 'assert_called'):
+        if hasattr(result_stream, "assert_called"):
             # catch mocks
             # TODO: this is breaking the 4th wall, and I don't like it.
             return iter([])
         elif self._options._display_progress_bar:
-            return cast(Iterator[Iterator[TaggedResult]],
-                        tqdm(result_stream, total=self.shots, desc="Emulating shots"))
+            return cast(
+                Iterator[Iterator[TaggedResult]],
+                tqdm(result_stream, total=self.shots, desc="Emulating shots"),
+            )
         else:
             return result_stream
