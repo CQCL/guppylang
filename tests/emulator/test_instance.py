@@ -284,8 +284,8 @@ def test_emulator_instance_stabilizer_sim():
     assert isinstance(new_instance.simulator, Stim)
 
 
-@patch("guppylang.emulator.instance.EmulatorResult")
-def test_emulator_instance_run(mock_emulator_result):
+@patch("guppylang.emulator.EmulatorInstance._iterate_shots")
+def test_emulator_instance_run(mock_iterate):
     """Test run method."""
     mock_selene_instance = Mock()
     n_qubits = 5
@@ -296,11 +296,10 @@ def test_emulator_instance_run(mock_emulator_result):
     mock_result_stream = Mock()
     mock_selene_instance.run_shots.return_value = mock_result_stream
 
-    result = instance.run()
+    instance.run()
 
     # Check that EmulatorResult was created with the result stream
-    mock_emulator_result.assert_called_once_with(mock_result_stream)
-    assert result == mock_emulator_result.return_value
+    mock_iterate.assert_called_once_with(mock_result_stream)
 
 
 def test_emulator_instance_run_instance():
@@ -419,7 +418,7 @@ def test_emulator_instance_full_configuration_workflow():
     mock_result_stream = Mock()
     mock_selene_instance.run_shots.return_value = mock_result_stream
 
-    with patch("guppylang.emulator.instance.EmulatorResult") as mock_result:
+    with patch("guppylang.emulator.EmulatorInstance._iterate_shots") as mock_result:
         instance.run()
 
         # Verify the call was made with all configured parameters

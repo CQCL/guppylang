@@ -137,12 +137,14 @@ Output is a uniform distribution over the two basis states of the qubit:
 """
 
 from .builder import EmulatorBuilder
+from .exceptions import EmulatorError
 from .instance import EmulatorInstance
 from .result import EmulatorResult, QsysShot, TaggedResult
 from .state import PartialState, PartialVector, StateVector, TracedState
 
 __all__ = [
     "EmulatorInstance",
+    "EmulatorError",
     "EmulatorResult",
     "QsysShot",
     "TaggedResult",

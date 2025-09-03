@@ -15,11 +15,12 @@ from guppylang.std.quantum import (
     measure,
     h,
     x,
+    t,
 )
 from guppylang.std.angles import angle, pi
 from guppylang.std.qsystem import zz_max, zz_phase, phased_x, rz as qsystem_rz
 from guppylang.std.qsystem.utils import get_current_shot
-from guppylang.emulator import EmulatorResult
+from guppylang.emulator import EmulatorResult, EmulatorError
 from selene_sim.backends.bundled_runtimes import SoftRZRuntime
 
 
@@ -27,12 +28,10 @@ from datetime import timedelta
 from selene_sim.backends.bundled_simulators import Stim
 from selene_sim.backends.bundled_error_models import IdealErrorModel
 from selene_sim.event_hooks import NoEventHook
+from selene_sim.exceptions import SelenePanicError
 
 
 import pytest
-
-
-from selene_sim.exceptions import SelenePanicError
 
 
 def test_basic_emulation() -> None:
@@ -241,38 +240,71 @@ def test_multi_alloc_free():
     assert res == [("c", 0)] * N
 
 
-def test_panic():
-    """Test a panic ends a shot early."""
-    N = 4
+def test_user_panic() -> None:
+    """Test a panic as issued explicitly by the user program.
+
+    This should abort the current shot and all subsequent shots, raising
+    an EmulatorError to provide access to completed shots, the failing shot,
+    and the underlying exception raised by Selene.
+    """
 
     @guppy
     def main() -> None:
-        for i in range(comptime(N)):
-            if i == 2:
-                panic("my panic")
-            result("c", i)
+        current_shot = get_current_shot()
+        result("before", current_shot)
+        if current_shot == 9:
+            panic("Panic at shot 9!")
+        result("after", current_shot)
 
-    with pytest.raises(SelenePanicError, match="my panic"):
-        _build_run(main, n_qubits=2)
+    with pytest.raises(EmulatorError, match="Panic at shot 9!") as exc_info:
+        main.emulator(1).with_shots(20).run()
+
+    exception: EmulatorError = exc_info.value
+    assert isinstance(exception.underlying_exception, SelenePanicError)
+    assert len(exception.completed_shots.results) == 9
+    assert exception.completed_shots == EmulatorResult(
+        [[("before", i), ("after", i)] for i in range(9)]
+    )
+    assert exception.failing_shot.entries == [("before", 9)]
 
 
-def test_panic_multishot():
-    """Test a panic cancels subsequent shots."""
-    N = 4
+def test_friendly_emulator_panic() -> None:
+    """Test a panic as issued by the emulator due to a configuration
+    issue.
+
+    As with the user panic, this should abort the current shot and all
+    subsequent shots, raising an EmulatorError to provide access to completed
+    shots, the failing shot, and the underlying exception raised by Selene.
+
+    But this time, the error isn't immediately apparent from the guppy
+    program itself. It is instead caused by the wrong choice of simulator
+    (a stabilizer simulator being used for a non-clifford circuit).
+
+    As the error is triggered within the emulator, we should see the error
+    details within the internal error provided by stdout and/or stderr.
+    """
 
     @guppy
     def main() -> None:
-        i = get_current_shot()
-
-        if i == 2:
-            panic("my panic")
-        result("c", i)
+        q = qubit()
+        current_shot = get_current_shot()
+        result("shot", current_shot)
+        if current_shot == 5:
+            t(q)
+        result("measurement", measure(q))
 
     with pytest.raises(
-        SelenePanicError,
-        match="my panic",
-    ):
-        _build_run(main, n_qubits=2, n_shots=N)
+        EmulatorError, match="not representable in stabiliser form"
+    ) as exc_info:
+        main.emulator(1).stabilizer_sim().with_shots(10).run()
+
+    exception: EmulatorError = exc_info.value
+    assert isinstance(exception.underlying_exception, SelenePanicError)
+    assert len(exception.completed_shots.results) == 5
+    assert exception.completed_shots == EmulatorResult(
+        [[("shot", i), ("measurement", False)] for i in range(5)]
+    )
+    assert exception.failing_shot.entries == [("shot", 5)]
 
 
 def test_exit():

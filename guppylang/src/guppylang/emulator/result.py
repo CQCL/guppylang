@@ -65,7 +65,7 @@ class EmulatorResult(QsysResult):
     # Re-define parent methods for documentation purposes
 
     def __init__(
-        self, results: Iterable[QsysShot | Iterable[TaggedResult]] | None = None
+            self, results: list[QsysShot] | None = None
     ):
         super().__init__(results=results)
 
