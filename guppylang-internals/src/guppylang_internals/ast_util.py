@@ -106,6 +106,12 @@ def return_nodes_in_ast(node: Any) -> list[ast.Return]:
     return cast(list[ast.Return], found)
 
 
+def loop_in_ast(node: Any) -> list[ast.For | ast.While]:
+    """Returns all `For` and `While` nodes occurring in an AST."""
+    found = find_nodes(lambda n: isinstance(n, ast.For | ast.While), node)
+    return cast(list[ast.For | ast.While], found)
+
+
 def breaks_in_loop(node: Any) -> list[ast.Break]:
     """Returns all `Break` nodes occurring in a loop.
 

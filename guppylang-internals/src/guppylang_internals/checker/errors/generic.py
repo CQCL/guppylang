@@ -72,3 +72,15 @@ class AssignUnderDagger(Error):
     @dataclass(frozen=True)
     class Dagger(Note):
         span_label: ClassVar[str] = "dagger modifier is used here"
+
+
+# TODO (k.hirata): This can be merged with AssignUnderDagger
+@dataclass(frozen=True)
+class LoopUnderDagger(Error):
+    title: ClassVar[str] = "Loop under dagger"
+    span_label: ClassVar[str] = (
+        "Loop found under a with block that uses `dagger` modifier"
+    )
+    @dataclass(frozen=True)
+    class Dagger(Note):
+        span_label: ClassVar[str] = "dagger modifier is used here"
