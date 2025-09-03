@@ -5,7 +5,7 @@ Configuring and executing emulator instances for guppy programs.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, cast
 
 from hugr.qsystem.result import QsysShot
 from selene_sim.backends.bundled_error_models import IdealErrorModel
@@ -215,7 +215,7 @@ class EmulatorInstance:
         By default runs one shot, this can be configured with `with_shots()`."""
         result_stream = self._run_instance()
 
-        all_results: list[list[TaggedResult]] = []
+        all_results: list[QsysShot] = []
         raised_exc: Exception|None = None
         for shot in self._iterate_shots(result_stream):
             shot_results = QsysShot()
@@ -254,8 +254,9 @@ class EmulatorInstance:
         if hasattr(result_stream, 'assert_called'):
             # catch mocks
             # TODO: this is breaking the 4th wall, and I don't like it.
-            return []
+            return iter([])
         elif self._options._display_progress_bar:
-            return tqdm(result_stream, total=self.shots, desc="Emulating shots")
+            return cast(Iterator[Iterator[TaggedResult]],
+                        tqdm(result_stream, total=self.shots, desc="Emulating shots"))
         else:
             return result_stream
