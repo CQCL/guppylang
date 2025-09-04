@@ -29,9 +29,12 @@ guppylang = { workspace = true }
 guppylang-internals = { workspace = true }
 miette-py = { workspace = true }
 
+tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", branch = "cr/compute-gpu" }
+tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", branch = "cr/compute-gpu" }
+
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "50a2bac" }
-# tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", rev = "aca944c" }
+# tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", branch = "cr/compute-gpu" }
 
 
 [build-system]
