@@ -10,9 +10,10 @@ from guppylang.std.quantum import cx, discard_array, h, qubit
 n_q = 20
 n_a = 5
 
+
 @guppy
 @no_type_check
-def main() -> array[qubit, py(n_q)]:
+def big_array() -> array[qubit, 20]:
     q = array(qubit() for _ in range(py(n_q)))
     a = array(array(qubit() for _ in range(py(n_a))) for _ in range(py(n_q)))
     h(a[7][2])
@@ -250,32 +251,24 @@ def main() -> array[qubit, py(n_q)]:
     return q
 
 
-def big_array_compile() -> Package:
-    return main.compile()
-
-
 def test_big_array_compile(benchmark) -> None:
+    def big_array_compile() -> Package:
+        return big_array.compile()
+
     hugr: Package = benchmark(big_array_compile)
     benchmark.extra_info["nodes"] = hugr.modules[0].num_nodes()
+    benchmark.extra_info["bytes"] = len(hugr.to_bytes())
 
 
 def test_big_array_check(benchmark) -> None:
     def big_array_check():
-        return main.check()
+        return big_array.check()
 
     benchmark(big_array_check)
 
 
-def test_big_array_bytes(benchmark) -> None:
-    def big_array_bytes(p: Package) -> bytes:
-        return p.to_bytes()
-
-    b: bytes = benchmark(big_array_bytes, big_array_compile())
-    benchmark.extra_info["bytes"] = len(b)
-
-
 def test_big_array_executable(benchmark) -> None:
     def big_array_executable():
-        return main.emulator(n_q+n_a*n_q)
+        return big_array.emulator(n_q + n_a * n_q)
 
     benchmark(big_array_executable)
