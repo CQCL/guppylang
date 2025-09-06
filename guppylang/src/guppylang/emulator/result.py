@@ -13,7 +13,6 @@ from .state import PartialVector
 
 if TYPE_CHECKING:
     from collections import Counter
-    from collections.abc import Iterable
 
     from hugr.qsystem.result import DataValue
     from pytket.backends.backendresult import BackendResult
@@ -64,9 +63,7 @@ class EmulatorResult(QsysResult):
 
     # Re-define parent methods for documentation purposes
 
-    def __init__(
-        self, results: Iterable[QsysShot | Iterable[TaggedResult]] | None = None
-    ):
+    def __init__(self, results: list[QsysShot] | None = None):
         super().__init__(results=results)
 
     def register_counts(
