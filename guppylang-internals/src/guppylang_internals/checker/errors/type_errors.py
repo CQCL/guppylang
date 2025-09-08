@@ -347,6 +347,6 @@ class IntOverflowError(Error):
 @dataclass(frozen=True)
 class WithArgTypeMismatchError(Error):
     title: ClassVar[str] = "Type mismatch"
-    span_label: ClassVar[str] = "Expected expression of {expected} type, got `{actual}`"
+    span_label: ClassVar[str] = "Expected expression of {expected}, got `{actual}`"
     actual: Type
     expected: str

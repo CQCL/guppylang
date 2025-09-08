@@ -294,15 +294,11 @@ class CFGBuilder(AstVisitor[BB | None]):
     def _visit_withitem(self, node: ast.withitem, bb: BB) -> ModifierKind:
         # Check that `as` notation is not used
         if node.optional_vars is not None:
-            # TODO: not accurete span provided
             span = Span(to_span(node.context_expr).start, to_span(node.optional_vars).end)
             raise GuppyError(UnsupportedError(
                 span, "`as` expression", singular=True))
 
         e = node.context_expr
-        if not isinstance(e, ast.Name | ast.Call):
-            raise GuppyError(UnexpectedError(
-                e, "expression", unexpected_in="a context manager"))
         match e:
             case ast.Name(id="dagger"):
                 kind = Dagger(e)
@@ -326,6 +322,9 @@ class CFGBuilder(AstVisitor[BB | None]):
                     raise GuppyError(
                         WrongNumberOfArgsError(span, 1, len(e.args)))
                 kind = Power(e, e.args[0])
+            case _:
+                raise GuppyError(UnexpectedError(
+                    e, "context manager", unexpected_in="a context manager"))
         return kind
     
     def _validate_modifier_body(self, modifier: ast.AST) -> None:

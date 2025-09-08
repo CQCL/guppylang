@@ -1,8 +1,8 @@
-Error: Type mismatch (at $FILE:6:17)
+Error: Type mismatch (at $FILE:7:20)
   | 
-4 | @guppy
 5 | def test() -> None:
-6 |     with control(True):
-  |                  ^^^^ Expected expression of quantum type, got `bool`
+6 |     x = qubit()
+7 |     with control(x, True):
+  |                     ^^^^ Expected expression of type `qubit`, got `bool`
 
 Guppy compilation failed due to 1 previous error

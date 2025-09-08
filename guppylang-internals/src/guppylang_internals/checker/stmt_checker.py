@@ -44,6 +44,7 @@ from guppylang_internals.checker.errors.type_errors import (
     TypeInferenceError,
     UnpackableError,
     WithArgTypeMismatchError,
+    WrongNumberOfArgsError,
     WrongNumberOfUnpacksError,
 )
 from guppylang_internals.checker.expr_checker import (
@@ -52,6 +53,7 @@ from guppylang_internals.checker.expr_checker import (
     check_place_assignable,
     synthesize_comprehension,
 )
+from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang_internals.nodes import (
     AnyUnpack,
@@ -75,7 +77,7 @@ from guppylang_internals.tys.builtin import (
     is_sized_iter_type,
     nat_type,
 )
-from guppylang_internals.tys.const import ConstValue
+from guppylang_internals.tys.const import Const, ConstValue
 from guppylang_internals.tys.parsing import type_from_ast
 from guppylang_internals.tys.subst import Subst
 from guppylang_internals.tys.ty import (
@@ -408,21 +410,34 @@ class StmtChecker(AstVisitor[BBStatement]):
         if not self.bb:
             raise InternalGuppyError("BB required to check with block!")
 
+        # check the mody of the modifier.
         modifier = check_modifier(node, self.bb, self.ctx)
 
+        # check the arguments of the control and power.
         for control in modifier.control:
             ctrl = control.ctrl
-            for i in range(len(ctrl)):
-                ctrl[i], ty = self._synth_expr(ctrl[i])
-                if not is_quantum_ty(ty):
-                    raise GuppyError(WithArgTypeMismatchError(ctrl[i], ty, "quantum"))
-                ctrl[i], subst = self._check_expr(ctrl[i], ty)
-                assert len(subst) == 0
+            ctrl[0], ty = self._synth_expr(ctrl[0])
+
+            if is_array_type(ty):
+                if len(ctrl) > 2:
+                    assert isinstance(control, ast.Call)
+                    span = Span(to_span(control.func).end, to_span(control).end)
+                    raise GuppyError(
+                        WrongNumberOfArgsError(span, 1, len(control.args)))
+                element_ty = get_element_type(ty)
+                if not _is_qubit_ty(element_ty):
+                    raise GuppyTypeError(WithArgTypeMismatchError(ctrl[0], ty, "type `array[qubit, _]`"))
+                control.qubit_num = get_array_length(ty)
+            else:
+                for i in range(len(ctrl)):
+                    ctrl[i], subst = self._check_expr(ctrl[i], _qubit_ty())
+                    assert len(subst) == 0
+                control.qubit_num = len(ctrl)
 
         for power in node.power:
             power.iter, ty = self._synth_expr(power.iter)
             if not isinstance(ty, NumericType):
-                raise GuppyError(WithArgTypeMismatchError(power.iter, ty, "numeric"))
+                raise GuppyTypeError(WithArgTypeMismatchError(power.iter, ty, "numeric type"))
             power.iter, subst = self._check_expr(power.iter, ty)
             assert len(subst) == 0
 
@@ -495,20 +510,14 @@ def check_iter_unpack_has_static_size(expr: ast.expr, ctx: Context) -> int:
             raise GuppyError(err)
 
 
-# FIXME: (k.hirata) Currently, we only check the qubit type and tuple of qubit types.
-# All the other types (e.g. Array) should be allowed
-def is_quantum_ty(ty: Type) -> bool:
-    match ty:
-        case OpaqueType():
-            return _adhoc_is_qubit_ty(ty)
-        case TupleType():
-            return all(is_quantum_ty(elt) for elt in ty.element_types)
-        case _:
-            return False
+def _qubit_ty() -> Type:
+    # TODO: Please check this does not cause circular import
+    from guppylang.defs import GuppyDefinition
+    from guppylang.std.quantum import qubit
+    assert isinstance(qubit, GuppyDefinition)
+    qubit_ty = cast(TypeDef, qubit.wrapped).check_instantiate([])
+    return qubit_ty
 
-# FIXME: (k.hirata) Currently, we check the string of the type name to see if it is a qubit type.
-# This is obviously a wrong way to do it, but it seems to be a bit tricky to fix.
-def _adhoc_is_qubit_ty(ty: Type) -> bool:
-    if not isinstance(ty, OpaqueType):
-        return False
-    return ty.defn.name == "qubit"
+
+def _is_qubit_ty(ty: Type) -> bool:
+    return ty == _qubit_ty()
