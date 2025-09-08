@@ -466,6 +466,7 @@ def check_modifier(
 
     # Construct inputs for checking the body CFG
     inputs = [v for v, _ in captured.values()]
+    inputs = linear_front_others_back(inputs)
     def_id = DefId.fresh()
     globals = ctx.globals
 
@@ -507,3 +508,10 @@ def check_modifier_signature(
         NoneType(),
     )
     return func_ty
+
+def linear_front_others_back(v: list[Variable]) -> list[Variable]:
+    """Reorder variables so that linear ones come first, preserving the relative order
+    of linear and non-linear variables."""
+    linear_vars = [x for x in v if x.ty.linear]
+    non_linear_vars = [x for x in v if not x.ty.linear]
+    return linear_vars + non_linear_vars

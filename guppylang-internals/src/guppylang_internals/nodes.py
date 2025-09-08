@@ -430,21 +430,22 @@ class Dagger(ast.expr):
     def __init__(self, node: ast.expr) -> None:
         super().__init__(**node.__dict__)
         
-
-class Control(ast.expr):
+class Control(ast.Call):
     """The control modifier"""
     ctrl: list[ast.expr]
+    qubit_num: int | Const | None
 
-    def __init__(self, node: ast.expr , ctrl: list[ast.expr]) -> None:
+    def __init__(self, node: ast.Call, ctrl: list[ast.expr]) -> None:
         super().__init__(**node.__dict__)
         self.ctrl = ctrl
+        self.qubit_num = None
 
 
-class Power(ast.expr):
+class Power(ast.Call):
     """The power modifier"""
     iter: ast.expr
 
-    def __init__(self, node: ast.expr, iter: ast.expr) -> None:
+    def __init__(self, node: ast.Call, iter: ast.expr) -> None:
         super().__init__(**node.__dict__)
         self.iter = iter
 

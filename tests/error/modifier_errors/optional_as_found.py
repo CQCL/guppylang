@@ -1,10 +1,10 @@
 from guppylang.decorator import guppy
 
 
+# TODO: The error message is confusing.
 @guppy
 def test() -> None:
-    x = qubit()
-    with control(x, True):
+    with power(1) as x:
         pass
 
 
