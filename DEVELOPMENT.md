@@ -32,7 +32,7 @@ To setup the environment manually you will need:
 - uv `>=0.6`: [docs.astral.sh](https://docs.astral.sh/uv/getting-started/installation/)
   - If you have an older manually installed `uv` version you can upgrade it with `uv self update`,
     or by following the instructions in your package manager.
-
+- bencher_cli: [bencer.dev](https://bencher.dev/docs/tutorial/quick-start/?adapter=json)
 
 Once you have these installed, you can install the required python dependencies and setup pre-commit hooks with:
 
@@ -57,6 +57,36 @@ just export-integration-tests
 ```
 
 Run `just` to see all available commands.
+
+## 🐰 Running the benchmarks
+
+To run the benchmarks using `pytest-benchmark`:
+
+```bash
+just bench
+# or, to specify a directory and name for the report to be saved locally
+just bench_save <dir> <name>
+```
+
+If you save the results, then you can compare them following
+[this approach](https://pytest-benchmark.readthedocs.io/en/latest/comparing.html).
+However, this would only let you compare the `latency` or running time,
+but not the other custom metrics like `hugr_bytes` and `hugr_nodes`.
+
+You can also upload benchmark results to the
+[guppylang-benchmarks](https://bencher.dev/console/projects/guppylang-benchmarks)
+bencher project with:
+
+```bash
+just bench_upload
+```
+
+And if you want to compare your local changes against the base benchmarks (main),
+including `latency`, `hugr_bytes` and `hugr_nodes` you can use:
+
+```bash
+just bench_compare
+```
 
 ## 💅 Coding Style
 
