@@ -31,9 +31,9 @@ miette-py = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "50a2bac" }
+selene-hugr-qis-compiler = { git = "https://github.com/CQCL/selene", subdirectory = "selene-compilers/hugr_qis", branch = "feat/compute-gpu" }
 tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", rev = "6f035f6" }
 tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", rev = "6f035f6" }
-
 
 [build-system]
 requires = ["hatchling"]
