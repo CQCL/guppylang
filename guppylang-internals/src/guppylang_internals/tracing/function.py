@@ -181,7 +181,16 @@ def trace_call(func: CallableDef, *args: Any) -> Any:
                 # concrete type and type checking has ensured that they unify.
                 ty = var.ty
                 inout_wire = state.dfg[var]
-                update_packed_value(arg, GuppyObject(ty, inout_wire), state.dfg.builder)
+                success = update_packed_value(
+                    arg, GuppyObject(ty, inout_wire), state.dfg.builder
+                )
+                if not success:
+                    # This means the user has passed an object that we cannot update,
+                    # e.g. calling `mem_swap(x, y)` where the inputs are plain Python
+                    # objects
+                    raise GuppyComptimeError(
+                        f"Cannot borrow Python object of type `{ty}` at comptime"
+                    )
 
     ret_obj = GuppyObject(ret_ty, ret_wire)
     return unpack_guppy_object(ret_obj, state.dfg.builder)
