@@ -13,11 +13,11 @@ from selene_quest_plugin.state import SeleneQuestState, TracedState
 from typing_extensions import Self
 
 __all__ = [
-    "TracedState",
     "NotSingleStateError",
     "PartialState",
     "PartialVector",
     "StateVector",
+    "TracedState",
 ]
 
 #: Type encoding a single state. e.g. StateVector for a state vector.
