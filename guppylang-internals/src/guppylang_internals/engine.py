@@ -138,18 +138,23 @@ class CompilationEngine:
     types_to_check_worklist: dict[DefId, ParsedDef]
     to_check_worklist: dict[DefId, ParsedDef]
 
+    def __init__(self) -> None:
+        """Resets the compilation cache."""
+        self.reset()
+        self.additional_extensions = []
+
     def reset(self) -> None:
         """Resets the compilation cache."""
         self.parsed = {}
         self.checked = {}
         self.compiled = {}
-        self.additional_extensions = []
         self.to_check_worklist = {}
         self.types_to_check_worklist = {}
 
     @pretty_errors
     def register_extension(self, extension: Extension) -> None:
-        self.additional_extensions.append(extension)
+        if extension not in self.additional_extensions:
+            self.additional_extensions.append(extension)
 
     @pretty_errors
     def get_parsed(self, id: DefId) -> ParsedDef:

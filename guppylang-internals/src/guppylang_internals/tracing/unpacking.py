@@ -150,13 +150,15 @@ def guppy_object_from_py(
             return GuppyObject(ty, builder.load(hugr_val))
 
 
-def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
+def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> bool:
     """Given a Python value `v` and a `GuppyObject` `obj` that was constructed from `v`
-    using `guppy_object_from_py`, updates the wires of any `GuppyObjects` contained in
-    `v` to the new wires specified by `obj`.
+    using `guppy_object_from_py`, tries to update the wires of any `GuppyObjects`
+    contained in `v` to the new wires specified by `obj`.
 
     Also resets the used flag on any of those updated wires. This corresponds to making
     the object available again since it now corresponds to a fresh wire.
+
+    Returns `True` if all wires could be updated, otherwise `False`.
     """
     match v:
         case GuppyObject() as v_obj:
@@ -172,23 +174,27 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> None:
             assert isinstance(obj._ty, TupleType)
             wires = builder.add_op(ops.UnpackTuple(), obj._use_wire(None)).outputs()
             for v, ty, wire in zip(vs, obj._ty.element_types, wires, strict=True):
-                update_packed_value(v, GuppyObject(ty, wire), builder)
+                success = update_packed_value(v, GuppyObject(ty, wire), builder)
+                if not success:
+                    return False
         case GuppyStructObject(_ty=ty, _field_values=values):
             assert obj._ty == ty
             wires = builder.add_op(ops.UnpackTuple(), obj._use_wire(None)).outputs()
-            for (
-                field,
-                wire,
-            ) in zip(ty.fields, wires, strict=True):
+            for field, wire in zip(ty.fields, wires, strict=True):
                 v = values[field.name]
-                update_packed_value(v, GuppyObject(field.ty, wire), builder)
+                success = update_packed_value(v, GuppyObject(field.ty, wire), builder)
+                if not success:
+                    values[field.name] = obj
         case list(vs) if len(vs) > 0:
             assert is_array_type(obj._ty)
             elem_ty = get_element_type(obj._ty)
             opt_wires = unpack_array(builder, obj._use_wire(None))
             err = "Non-droppable array element has already been used"
-            for v, opt_wire in zip(vs, opt_wires, strict=True):
+            for i, (v, opt_wire) in enumerate(zip(vs, opt_wires, strict=True)):
                 (wire,) = build_unwrap(builder, opt_wire, err).outputs()
-                update_packed_value(v, GuppyObject(elem_ty, wire), builder)
+                success = update_packed_value(v, GuppyObject(elem_ty, wire), builder)
+                if not success:
+                    vs[i] = obj
         case _:
-            pass
+            return False
+    return True
