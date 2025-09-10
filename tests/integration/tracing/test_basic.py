@@ -106,7 +106,7 @@ def test_expr_id(run_int_fn):
     run_int_fn(foo, 42)
 
 
-def test_inout_type_infer():
+def test_inout_type_infer(validate):
     """See https://github.com/CQCL/guppylang/issues/1249"""
     n = 10
 
@@ -117,5 +117,4 @@ def test_inout_type_infer():
         rng.shuffle(id)
         rng.discard()
 
-    main.compile()
-
+    validate(main.compile())
