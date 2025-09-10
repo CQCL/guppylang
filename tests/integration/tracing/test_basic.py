@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 from guppylang.decorator import guppy
 from guppylang.std.builtins import array, comptime
+from guppylang.std.qsystem.random import RNG
 
 from hugr import ops
 from hugr.std.int import IntVal
@@ -103,3 +104,18 @@ def test_expr_id(run_int_fn):
 
     foo = make(42)
     run_int_fn(foo, 42)
+
+
+def test_inout_type_infer():
+    """See https://github.com/CQCL/guppylang/issues/1249"""
+    n = 10
+
+    @guppy.comptime
+    def main() -> None:
+        id = array(i for i in range(n))
+        rng = RNG(0)
+        rng.shuffle(id)
+        rng.discard()
+
+    main.compile()
+
