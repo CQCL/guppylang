@@ -176,10 +176,12 @@ def trace_call(func: CallableDef, *args: Any) -> Any:
     if len(func.ty.inputs) != 0:
         for inp, arg, var in zip(func.ty.inputs, args, arg_vars, strict=True):
             if InputFlags.Inout in inp.flags:
+                # Note that `inp.ty` could refer to bound variables in the function
+                # signature. Instead, make sure to use `var.ty` which will always be a
+                # concrete type and type checking has ensured that they unify.
+                ty = var.ty
                 inout_wire = state.dfg[var]
-                update_packed_value(
-                    arg, GuppyObject(inp.ty, inout_wire), state.dfg.builder
-                )
+                update_packed_value(arg, GuppyObject(ty, inout_wire), state.dfg.builder)
 
     ret_obj = GuppyObject(ret_ty, ret_wire)
     return unpack_guppy_object(ret_obj, state.dfg.builder)
