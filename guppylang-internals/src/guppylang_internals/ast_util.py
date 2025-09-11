@@ -131,7 +131,10 @@ class ContextAdjuster(ast.NodeTransformer):
     def visit_Name(self, node: ast.Name) -> ast.Name:
         return with_loc(node, ast.Name(id=node.id, ctx=self.ctx))
 
-    def visit_Starred(self, node: ast.Starred) -> ast.Starred:
+    def visit_Starred(
+        self,
+        node: ast.Starred,
+    ) -> ast.Starred:
         return with_loc(node, ast.Starred(value=self.visit(node.value), ctx=self.ctx))
 
     def visit_Tuple(self, node: ast.Tuple) -> ast.Tuple:
@@ -234,7 +237,11 @@ def set_location_from(node: ast.AST, loc: ast.AST) -> None:
 
 
 def annotate_location(
-    node: ast.AST, source: str, file: str, line_offset: int, recurse: bool = True
+    node: ast.AST,
+    source: str,
+    file: str,
+    line_offset: int,
+    recurse: bool = True,
 ) -> None:
     node.line_offset = line_offset  # type: ignore[attr-defined]
     node.file = file  # type: ignore[attr-defined]

@@ -1,3 +1,5 @@
+![logo](assets/guppy_logo.svg)
+
 # Guppy
 
 [![pypi][]](https://pypi.org/project/guppylang/)
@@ -36,9 +38,17 @@ def teleport(src: qubit @ owned, tgt: qubit) -> None:
 teleport.check()
 ```
 
-More examples and tutorials are available [here][examples].
+## Documentation
+
+🌐 [Guppy website][website]
+
+📖 [Language guide][guide]
+
+📒 [Example notebooks][examples]
 
 [examples]: ./examples/
+[guide]: https://docs.quantinuum.com/guppy/language_guide/language_guide_index.html
+[website]: https://guppylang.org
 
 ## Install
 

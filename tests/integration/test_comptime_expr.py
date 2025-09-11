@@ -131,6 +131,17 @@ def test_strings(validate):
     validate(foo)
 
 
+def test_comprehension(validate):
+    """See https://github.com/CQCL/guppylang/issues/1207"""
+    py_lst = [x for x in range(10)]
+
+    @guppy
+    def main() -> None:
+        comptime([py_lst[i] for i in range(len(py_lst))])
+
+    main.check()
+
+
 def test_func_type_arg(validate):
     n = 10
 

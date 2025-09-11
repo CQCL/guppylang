@@ -10,6 +10,10 @@
     [ pkgs.zlib ]
   );
 
+  enterShell = ''
+    which bencher
+    [[ $? != 0 ]] && curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+    '';
 
   languages.python = {
     enable = true;
@@ -25,4 +29,5 @@
     enable = true;
     components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" ];
   };
+
 }
