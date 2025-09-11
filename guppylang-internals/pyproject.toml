@@ -46,4 +46,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", rev = "5f9560d" }
+tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", rev = "6f035f6" }
