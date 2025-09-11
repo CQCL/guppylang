@@ -169,7 +169,7 @@ class RawCustomFunctionDef(ParsableDef):
             raise GuppyError(NoSignatureError(node, self.name))
 
         if requires_type_annotation:
-            return check_signature(node, globals)
+            return check_signature(node, globals, self.id)
         else:
             return None
 

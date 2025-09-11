@@ -3,7 +3,7 @@ import inspect
 import linecache
 import sys
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import FrameType
 from typing import ClassVar
 
@@ -115,6 +115,7 @@ class RawStructDef(TypeDef, ParsableDef):
     """A raw struct type definition that has not been parsed yet."""
 
     python_class: type
+    params: None = field(default=None, init=False)  # Params not known yet
 
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedStructDef":
         """Parses the raw class object into an AST and checks that it is well-formed."""
