@@ -42,7 +42,13 @@ _T = TypeVar("_T")
 _n = TypeVar("_n")
 
 
-@extend_type(array_type_def)
+@extend_type(
+    array_type_def,
+    # Instruct the decorator to return the original class instead of the Guppy array
+    # definition. This allows us to customise the runtime behaviour of arrays in
+    # comptime to behave like lists.
+    return_class=True,
+)
 class array(builtins.list[_T], Generic[_T, _n]):
     """Sequence of homogeneous values with statically known fixed length."""
 

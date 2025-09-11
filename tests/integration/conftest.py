@@ -3,11 +3,12 @@ from hugr.package import Package, PackagePointer
 
 from pathlib import Path
 import pytest
-from typing import Any
+from typing import Any, Literal, assert_never
 
 from selene_hugr_qis_compiler import check_hugr
 
 from guppylang.defs import GuppyDefinition
+from guppylang.std.num import nat
 
 
 @pytest.fixture(scope="session")
@@ -42,7 +43,7 @@ class LLVMException(Exception):
     pass
 
 
-def _emulate_fn(is_flt: bool = False):
+def _emulate_fn(ty: Literal["int", "nat", "float"]):
     """Use selene to emulate a Guppy function."""
     from guppylang.decorator import guppy
     from guppylang.std.builtins import result
@@ -61,11 +62,24 @@ def _emulate_fn(is_flt: bool = False):
             result("_test_output", o)
 
         @guppy.comptime
+        def nat_entry() -> None:
+            o: nat = f(*(nat(arg) for arg in args))
+            result("_test_output", o)
+
+        @guppy.comptime
         def flt_entry() -> None:
             o: float = f(*args)
             result("_test_output", o)
 
-        entry = flt_entry if is_flt else int_entry
+        match ty:
+            case "int":
+                entry = int_entry
+            case "nat":
+                entry = nat_entry
+            case "float":
+                entry = flt_entry
+            case _:
+                assert_never(ty)
         if num_qubits:
             res = (
                 entry.emulator(n_qubits=num_qubits)
@@ -87,14 +101,20 @@ def _emulate_fn(is_flt: bool = False):
 @pytest.fixture
 def run_int_fn():
     """Emulate an integer function using the Guppy emulator."""
-    return _emulate_fn(is_flt=False)
+    return _emulate_fn(ty="int")
+
+
+@pytest.fixture
+def run_nat_fn():
+    """Emulate an unsigned integer function using the Guppy emulator."""
+    return _emulate_fn(ty="nat")
 
 
 @pytest.fixture
 def run_float_fn_approx():
     """Like run_int_fn, but takes optional additional parameters `rel`, `abs`
     and `nan_ok` as per `pytest.approx`."""
-    run_fn = _emulate_fn(is_flt=True)
+    run_fn = _emulate_fn(ty="float")
 
     def run_approx(
         f: GuppyDefinition,

@@ -1,5 +1,6 @@
 from guppylang.decorator import guppy
 from guppylang.std.angles import angle, pi
+from guppylang.std.num import nat
 
 from hugr.std.int import IntVal
 
@@ -45,6 +46,45 @@ def test_int(run_int_fn):
     run_int_fn(div, 20, args=[25, 10])
     run_int_fn(mod, 7, args=[8, 9])
     run_int_fn(pow, 16, args=[2, 100])
+
+
+def test_nat(run_nat_fn):
+    @guppy.comptime
+    def pos(x: nat) -> nat:
+        return +x
+
+    @guppy.comptime
+    def add(x: nat, y: nat) -> nat:
+        return nat(1) + (x + (y + nat(2)))
+
+    @guppy.comptime
+    def sub(x: nat, y: nat) -> nat:
+        return nat(10) - (x - (y - nat(2)))
+
+    @guppy.comptime
+    def mul(x: nat, y: nat) -> nat:
+        return nat(1) * (x * (y * nat(2)))
+
+    @guppy.comptime
+    def div(x: nat, y: nat) -> nat:
+        return nat(100) // (x // (y // nat(2)))
+
+    @guppy.comptime
+    def mod(x: nat, y: nat) -> nat:
+        return nat(15) % (x % (y % nat(10)))
+
+    @guppy.comptime
+    def pow(x: nat, y: nat) -> nat:
+        return nat(4) ** (x ** (y ** nat(0)))
+
+    run_nat_fn(pos, 10, args=[10])
+    run_nat_fn(add, 10, args=[3, 4])
+    run_nat_fn(sub, 9, args=[3, 4])
+    run_nat_fn(mul, 24, args=[3, 4])
+    run_nat_fn(div, 20, args=[25, 10])
+    # TODO: mod is broken: https://github.com/CQCL/guppylang/issues/1257
+    # run_nat_fn(mod, 7, args=[8, 9])
+    run_nat_fn(pow, 16, args=[2, 100])
 
 
 def test_float(validate, run_float_fn_approx):
@@ -154,12 +194,22 @@ def test_dunder_coercions(validate):
     def test6(x: float, y: int) -> float:
         return x + y
 
+    @guppy.comptime
+    def test7(x: nat, y: float) -> float:
+        return x + y
+
+    @guppy.comptime
+    def test8(x: float, y: nat) -> float:
+        return x + y
+
     validate(test1.compile())
     validate(test2.compile())
     validate(test3.compile())
     validate(test4.compile())
     validate(test5.compile())
     validate(test6.compile())
+    validate(test7.compile())
+    validate(test8.compile())
 
 
 def test_const(validate):
