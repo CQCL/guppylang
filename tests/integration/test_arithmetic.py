@@ -77,7 +77,7 @@ def test_nat(validate):
     ) -> tuple[nat, bool, int, float, float]:
         b, c, d, e = nat(b), nat(c), nat(d), nat(e)
         x = a + b * c // d - e
-        y = e / b
+        y = e / b % a
         return x, bool(x), int(x), float(x), y
 
     validate(foo)
