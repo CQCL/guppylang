@@ -34,6 +34,7 @@ from guppylang_internals.ast_util import (
     AstNode,
     AstVisitor,
     breaks_in_loop,
+    get_type,
     get_type_opt,
     return_nodes_in_ast,
     with_loc,
@@ -1214,7 +1215,14 @@ def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
     """Instantiates quantified type arguments in a function."""
     assert len(ty.params) == len(inst)
     if len(inst) > 0:
-        node = with_loc(node, TypeApply(value=with_type(ty, node), inst=inst))
+        # Partial applications need to be instantiated on the inside
+        if isinstance(node, PartialApply):
+            full_ty = get_type(node.func)
+            assert isinstance(full_ty, FunctionType)
+            assert full_ty.params == ty.params
+            node.func = instantiate_poly(node.func, full_ty, inst)
+        else:
+            node = with_loc(node, TypeApply(value=with_type(ty, node), inst=inst))
         return with_type(ty.instantiate(inst), node)
     return with_type(ty, node)
 
