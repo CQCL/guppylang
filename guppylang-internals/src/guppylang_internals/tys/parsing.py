@@ -36,7 +36,6 @@ from guppylang_internals.tys.errors import (
     NonLinearOwnedError,
 )
 from guppylang_internals.tys.param import ConstParam, Parameter, TypeParam
-from guppylang_internals.tys.subst import BoundVarFinder
 from guppylang_internals.tys.ty import (
     FuncInput,
     FunctionType,
@@ -294,7 +293,13 @@ def parse_function_io_types(
 
 if sys.version_info >= (3, 12):
 
-    def parse_parameter(node: ast.type_param, idx: int, globals: Globals) -> Parameter:
+    def parse_parameter(
+        node: ast.type_param,
+        idx: int,
+        globals: Globals,
+        param_var_mapping: dict[str, Parameter],
+        allow_free_vars: bool = False,
+    ) -> Parameter:
         """Parses a `Variable: Bound` generic type parameter declaration."""
         if isinstance(node, ast.TypeVarTuple | ast.ParamSpec):
             raise GuppyError(UnsupportedError(node, "Variadic generic parameters"))
@@ -326,21 +331,9 @@ if sys.version_info >= (3, 12):
                 )
             # Otherwise, it must be a const parameter
             case bound:
-                # For now, we don't allow the types of const params to refer to previous
-                # parameters, so we pass an empty dict as the `param_var_mapping`.
-                # TODO: In the future we might want to allow stuff like
-                #   `def foo[T, XS: array[T, 42]]` and so on
-                ty = type_from_ast(bound, globals, {}, allow_free_vars=False)
+                ty = type_from_ast(bound, globals, param_var_mapping, allow_free_vars)
                 if not ty.copyable or not ty.droppable:
                     raise GuppyError(LinearConstParamError(bound, ty))
-
-                # TODO: For now we can only do `nat` const args since they lower to
-                #  Hugr bounded nats. Extend to arbitrary types via monomorphization.
-                #  See https://github.com/CQCL/guppylang/issues/1008
-                if ty != NumericType(NumericType.Kind.Nat):
-                    raise GuppyError(
-                        UnsupportedError(bound, f"`{ty}` generic parameters")
-                    )
                 return ConstParam(idx, node.name, ty)
 
 
@@ -366,16 +359,6 @@ def type_with_flags_from_ast(
                 flags |= InputFlags.Comptime
                 if not ty.copyable or not ty.droppable:
                     raise GuppyError(LinearComptimeError(node.right, ty))
-                # For now, we don't allow comptime annotations on generic inputs
-                # TODO: In the future we might want to allow stuff like
-                #  `def foo[T: (Copy, Discard](x: T @comptime)`.
-                #   Also see the todo in `parse_parameter`.
-                var_finder = BoundVarFinder()
-                ty.visit(var_finder)
-                if var_finder.bound_vars:
-                    raise GuppyError(
-                        UnsupportedError(node.left, "Generic comptime arguments")
-                    )
             case _:
                 raise GuppyError(InvalidFlagError(node.right))
         return ty, flags
