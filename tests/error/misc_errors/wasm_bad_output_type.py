@@ -2,7 +2,7 @@ from guppylang import guppy
 from guppylang_internals.decorator import wasm, wasm_module
 from guppylang.module import GuppyModule
 
-@wasm_module("", 0)
+@wasm_module("")
 class Foo:
     @wasm
     def foo(self: "Foo") -> bool: ...

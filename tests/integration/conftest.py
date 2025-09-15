@@ -75,7 +75,7 @@ def _emulate_fn(is_flt: bool = False):
             )
         else:
             res = entry.emulator(0).coinflip_sim().with_seed(42).run()
-        num = next(v for k, v in res.results[0].entries if k == "_test_output")
+        num = next(v for k, v in res[0] if k == "_test_output")
         if num != expected:
             raise LLVMException(
                 f"Expected value ({expected}) doesn't match actual value ({num})"

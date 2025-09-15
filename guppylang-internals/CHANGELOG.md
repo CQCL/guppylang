@@ -3,6 +3,23 @@
 First release of `guppylang_internals` package containing refactored out internal components
 from `guppylang`.
 
+## [0.23.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.22.0...guppylang-internals-v0.23.0) (2025-08-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* `check_rows_match` no longer takes `globals` Deleted `GlobalShadowError` and `BranchTypeError.GlobalHint`
+
+### Bug Fixes
+
+* Fix globals vs locals scoping behaviour to match Python ([#1169](https://github.com/CQCL/guppylang/issues/1169)) ([a6a91ca](https://github.com/CQCL/guppylang/commit/a6a91ca32ad7c67bf1d733eb26c016a2662256ef))
+* Fix scoping issues with comprehensions in comptime expressions ([#1218](https://github.com/CQCL/guppylang/issues/1218)) ([0b990e2](https://github.com/CQCL/guppylang/commit/0b990e2b006c31352675004aec63a857f03a0793))
+
+
+### Documentation
+
+* use results sequence protocol for simplicity ([#1208](https://github.com/CQCL/guppylang/issues/1208)) ([f9c1aee](https://github.com/CQCL/guppylang/commit/f9c1aee38776c678660ede5495989ac4d75baaeb))
+
 ## [0.22.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.21.2...guppylang-internals-v0.22.0) (2025-08-11)
 
 

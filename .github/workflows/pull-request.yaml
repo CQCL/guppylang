@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
     branches:
-      - '**'
+      - "**"
   merge_group:
     types: [checks_requested]
   workflow_dispatch: {}
@@ -14,8 +14,7 @@ on:
 env:
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
-  UV_VERSION: "0.6.6"
-
+  UV_VERSION: "0.7.4"
 
 jobs:
   check:
@@ -26,7 +25,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [ '3.10', '3.12' ]
+        python-version: ["3.10", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -42,16 +41,16 @@ jobs:
           enable-cache: true
 
       - name: Install Guppy
-        run: uv sync --frozen --python ${{ env.PYTHON_VERSION }} 
+        run: uv sync --frozen --python ${{ env.PYTHON_VERSION }}
 
       - name: Type check with mypy
         run: uv run mypy guppylang guppylang-internals
 
       - name: Check formatting with ruff
-        run: uv run ruff format --check guppylang guppylang-internals
+        run: uv run ruff format --check
 
       - name: Lint with ruff
-        run: uv run ruff check guppylang guppylang-internals
+        run: uv run ruff check
 
       - name: Run tests
         run: uv run pytest
@@ -66,7 +65,7 @@ jobs:
     name: Check Python (3.13) with coverage
     runs-on: ubuntu-latest
     env:
-      PYTHON_VERSION: '3.13'
+      PYTHON_VERSION: "3.13"
 
     steps:
       - uses: actions/checkout@v4

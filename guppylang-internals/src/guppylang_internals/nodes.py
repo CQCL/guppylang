@@ -166,33 +166,10 @@ class MakeIter(ast.expr):
         self.unwrap_size_hint = unwrap_size_hint
 
 
-class IterHasNext(ast.expr):
-    """Checks if an iterator has a next element using the `__hasnext__` magic method.
-
-    This node is inserted in `for` loops and list comprehensions.
-    """
-
-    value: ast.expr
-
-    _fields = ("value",)
-
-
 class IterNext(ast.expr):
     """Obtains the next element of an iterator using the `__next__` magic method.
 
     This node is inserted in `for` loops and list comprehensions.
-    """
-
-    value: ast.expr
-
-    _fields = ("value",)
-
-
-class IterEnd(ast.expr):
-    """Finalises an iterator using the `__end__` magic method.
-
-    This node is inserted in `for` loops and list comprehensions. It is needed to
-    consume linear iterators once they are finished.
     """
 
     value: ast.expr

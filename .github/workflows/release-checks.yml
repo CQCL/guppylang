@@ -13,7 +13,7 @@ on:
 
 env:
   # Pinned version for the uv package manager
-  UV_VERSION: "0.6.6"
+  UV_VERSION: "0.7.4"
   # The highest and lowest supported Python versions, used for testing
   PYTHON_HIGHEST: "3.13"
   PYTHON_LOWEST: "3.10"
@@ -44,7 +44,7 @@ jobs:
           uv pip install --no-sources guppylang-internals \
             --python-version ${{ env.PYTHON_HIGHEST }}
           # Install the local version of guppylang.
-          uv pip install -e . --no-deps \
+          uv pip install -e guppylang --no-deps \
             --python-version ${{ env.PYTHON_HIGHEST }}
           echo "\nDone! Installed dependencies:"
           uv pip list
@@ -64,9 +64,8 @@ jobs:
           uv pip install --no-sources guppylang-internals \
             --python-version ${{ env.PYTHON_HIGHEST }}
           # Install the local version of guppylang.
-          uv pip install -e . --no-deps \
+          uv pip install -e guppylang --no-deps \
             --python-version ${{ env.PYTHON_HIGHEST }}
           echo "\nDone! Installed dependencies:"
       - name: Rerun comptime expression tests and pytket lowering with tket installed
         run: uv run --no-sync pytest tests/integration/test_comptime_expr.py tests/error/test_comptime_expr_errors.py tests/integration/test_pytket_circuits.py
-
