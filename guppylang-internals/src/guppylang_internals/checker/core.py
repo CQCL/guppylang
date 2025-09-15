@@ -54,6 +54,7 @@ from guppylang_internals.tys.ty import (
 
 if TYPE_CHECKING:
     from guppylang_internals.definition.struct import StructField
+    from guppylang_internals.tys.parsing import TypeParsingCtx
 
 
 #: A "place" is a description for a storage location of a local value that users
@@ -506,6 +507,13 @@ class Context(NamedTuple):
     globals: Globals
     locals: Locals[str, Variable]
     generic_params: dict[str, Parameter]
+
+    @property
+    def parsing_ctx(self) -> "TypeParsingCtx":
+        """A type parsing context derived from this checking context."""
+        from guppylang_internals.tys.parsing import TypeParsingCtx
+
+        return TypeParsingCtx(self.globals, self.generic_params)
 
 
 class DummyEvalDict(dict[str, Any]):

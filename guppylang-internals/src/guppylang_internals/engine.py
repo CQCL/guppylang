@@ -41,6 +41,7 @@ from guppylang_internals.tys.builtin import (
     nat_type_def,
     none_type_def,
     option_type_def,
+    self_type_def,
     sized_iter_type_def,
     string_type_def,
     tuple_type_def,
@@ -51,6 +52,7 @@ if TYPE_CHECKING:
 
 BUILTIN_DEFS_LIST: list[RawDef] = [
     callable_type_def,
+    self_type_def,
     tuple_type_def,
     none_type_def,
     bool_type_def,
@@ -84,12 +86,14 @@ class DefinitionStore:
 
     raw_defs: dict[DefId, RawDef]
     impls: defaultdict[DefId, dict[str, DefId]]
+    impl_parents: dict[DefId, DefId]
     frames: dict[DefId, FrameType]
     sources: SourceMap
 
     def __init__(self) -> None:
         self.raw_defs = {defn.id: defn for defn in BUILTIN_DEFS_LIST}
         self.impls = defaultdict(dict)
+        self.impl_parents = {}
         self.frames = {}
         self.sources = SourceMap()
 
@@ -99,7 +103,9 @@ class DefinitionStore:
             self.frames[defn.id] = frame
 
     def register_impl(self, ty_id: DefId, name: str, impl_id: DefId) -> None:
+        assert impl_id not in self.impl_parents, "Already an impl"
         self.impls[ty_id][name] = impl_id
+        self.impl_parents[impl_id] = ty_id
         # Update the frame of the definition to the frame of the defining class
         if impl_id in self.frames:
             frame = self.frames[impl_id].f_back
