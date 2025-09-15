@@ -6,7 +6,6 @@ from guppylang.decorator import guppy
 from guppylang.std.builtins import array, py
 from guppylang.std.quantum import cx, discard_array, h, qubit
 
-
 n_q = 20
 n_a = 5
 
