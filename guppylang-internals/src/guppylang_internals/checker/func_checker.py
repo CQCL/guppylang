@@ -241,7 +241,12 @@ def check_signature(
     func_def: ast.FunctionDef, globals: Globals, def_id: DefId | None = None
 ) -> FunctionType:
     """Checks the signature of a function definition and returns the corresponding
-    Guppy type."""
+    Guppy type.
+
+    If this is a method, then the `DefId` of the associated parent type should also be
+    passed. This will be used to check or infer the type annotation for the `self`
+    argument.
+    """
     if len(func_def.args.posonlyargs) != 0:
         raise GuppyError(
             UnsupportedError(func_def.args.posonlyargs[0], "Positional-only parameters")
