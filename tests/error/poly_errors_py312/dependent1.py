@@ -7,4 +7,9 @@ class MyStruct[T: (Copy, Drop), x: T]:
     pass
 
 
-MyStruct.compile()
+@guppy
+def main(x: MyStruct[bool, 42]) -> None:
+    pass
+
+
+main.compile()

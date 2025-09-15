@@ -5,13 +5,13 @@ T = guppy.type_var("T", copyable=True, droppable=True)
 
 
 @guppy
-def foo(q: T @comptime) -> T:
-    return T
+def foo(x: T @ comptime) -> None:
+    pass
 
 
 @guppy
-def main() -> int:
-    return foo(42)
+def main(x: T @ comptime, y: T @ comptime) -> None:
+    foo[T, x](y)
 
 
 main.compile()
