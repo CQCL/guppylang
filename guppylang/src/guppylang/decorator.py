@@ -12,7 +12,6 @@ from guppylang_internals.compiler.core import (
 from guppylang_internals.decorator import (
     custom_function,
     custom_type,
-    extend_type,
     hugr_op,
 )
 from guppylang_internals.definition.common import DefId
@@ -111,7 +110,9 @@ class _Guppy:
     def extend_type(self, defn: TypeDef) -> Callable[[type], type]:
         # Set `return_class=True` to match the old behaviour until this deprecated
         # method is removed
-        return extend_type(defn, return_class=True)
+        import guppylang_internals.decorator
+
+        return guppylang_internals.decorator.extend_type(defn, return_class=True)
 
     @deprecated("Use @guppylang_internal.decorator.custom_type instead.")
     def type(
