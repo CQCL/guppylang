@@ -119,6 +119,7 @@ def test_lookup_by_id(validate):
     assert "lookup_by_id" in ops
     assert "lookup_by_name" not in ops
 
+
 def test_lookup_by_name(validate):
     from hugr.ops import AsExtOp
 

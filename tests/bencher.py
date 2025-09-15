@@ -1,12 +1,13 @@
-import sys
 import json
+import sys
+from pathlib import Path
 
 
 def create_bencher_BMF(pytest_benchmark_file: str, bencher_file: str) -> None:
     """Creates a BMF json file by parsing the results from a pytest-benchmark run,
     including custom metrics."""
 
-    with open(pytest_benchmark_file) as results_file:
+    with Path(pytest_benchmark_file).open() as results_file:
         results_json = json.load(results_file)
 
     BMF = {}
@@ -26,7 +27,7 @@ def create_bencher_BMF(pytest_benchmark_file: str, bencher_file: str) -> None:
                 nodes_info = extra_info["nodes"]
                 BMF[name]["hugr_nodes"] = {"value": nodes_info}
 
-    with open(bencher_file, "w") as bmf_file:
+    with Path(bencher_file).open("w") as bmf_file:
         json.dump(BMF, bmf_file)
 
 

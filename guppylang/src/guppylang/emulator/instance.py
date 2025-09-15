@@ -4,15 +4,19 @@ Configuring and executing emulator instances for guppy programs.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
+from hugr.qsystem.result import QsysShot
 from selene_sim.backends.bundled_error_models import IdealErrorModel
 from selene_sim.backends.bundled_runtimes import SimpleRuntime
 from selene_sim.backends.bundled_simulators import Coinflip, Quest, Stim
 from selene_sim.event_hooks import EventHook, NoEventHook
+from tqdm import tqdm
 from typing_extensions import Self
 
+from .exceptions import EmulatorError
 from .result import EmulatorResult
 
 if TYPE_CHECKING:
@@ -42,6 +46,7 @@ class _Options:
     _event_hook: EventHook = field(default_factory=NoEventHook)
     # unstable:
     _results_logfile: Path | None = None
+    _display_progress_bar: bool = False
 
 
 @dataclass(frozen=True)
@@ -156,6 +161,11 @@ class EmulatorInstance:
         Defaults to False."""
         return self._with_option(_verbose=value)
 
+    def with_progress_bar(self, value: bool = True) -> Self:
+        """Set whether to display a progress bar during the emulator execution.
+        Defaults to False."""
+        return self._with_option(_display_progress_bar=value)
+
     def with_timeout(self, value: datetime.timedelta | None) -> Self:
         """Set the timeout for the emulator execution.
         Defaults to None (no timeout)."""
@@ -206,9 +216,22 @@ class EmulatorInstance:
         By default runs one shot, this can be configured with `with_shots()`."""
         result_stream = self._run_instance()
 
-        # TODO progress bar on consuming iterator?
-
-        return EmulatorResult(result_stream)
+        all_results: list[QsysShot] = []
+        for shot in self._iterate_shots(result_stream):
+            shot_results = QsysShot()
+            try:
+                for tag, value in shot:
+                    shot_results.append(tag, value)
+            except Exception as e:  # noqa: BLE001
+                # In this case, casting a wide net on exceptions is
+                # suitable.
+                raise EmulatorError(
+                    completed_shots=EmulatorResult(all_results),
+                    failing_shot=shot_results,
+                    underlying_exception=e,
+                ) from None
+            all_results.append(shot_results)
+        return EmulatorResult(all_results)
 
     def _run_instance(self) -> Iterator[Iterator[TaggedResult]]:
         """Run the Selene instance with the given simulator lazily."""
@@ -227,3 +250,16 @@ class EmulatorInstance:
             shot_increment=self.shot_increment,
             n_processes=self.n_processes,
         )
+
+    def _iterate_shots(
+        self, result_stream: Iterator[Iterator[TaggedResult]]
+    ) -> Iterator[Iterator[TaggedResult]]:
+        """Iterate over the shots in the result stream, optionally displaying a progress
+        bar."""
+        if self._options._display_progress_bar:
+            return cast(
+                "Iterator[Iterator[TaggedResult]]",
+                tqdm(result_stream, total=self.shots, desc="Emulating shots"),
+            )
+        else:
+            return result_stream
