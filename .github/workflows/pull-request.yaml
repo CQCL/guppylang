@@ -47,10 +47,10 @@ jobs:
         run: uv run mypy guppylang guppylang-internals
 
       - name: Check formatting with ruff
-        run: uv run ruff format --check guppylang guppylang-internals
+        run: uv run ruff format --check
 
       - name: Lint with ruff
-        run: uv run ruff check guppylang guppylang-internals
+        run: uv run ruff check
 
       - name: Run tests
         run: uv run pytest
@@ -92,4 +92,3 @@ jobs:
           files: coverage.xml
           name: python
           token: ${{ secrets.CODECOV_TOKEN }}
-
