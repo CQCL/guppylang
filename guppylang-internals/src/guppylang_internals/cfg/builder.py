@@ -38,7 +38,7 @@ from guppylang_internals.nodes import (
     Power,
 )
 from guppylang_internals.span import Span, to_span
-from guppylang_internals.tys.ty import NoneType
+from guppylang_internals.tys.ty import NoneType, UnitaryFlags
 
 # In order to build expressions, need an endless stream of unique temporary variables
 # to store intermediate results
@@ -70,7 +70,7 @@ class CFGBuilder(AstVisitor[BB | None]):
     cfg: CFG
     globals: Globals
 
-    def build(self, nodes: list[ast.stmt], returns_none: bool, globals: Globals) -> CFG:
+    def build(self, nodes: list[ast.stmt], returns_none: bool, globals: Globals, unitary_flags = UnitaryFlags.NoFlags) -> CFG:
         """Builds a CFG from a list of ast nodes.
 
         We also require the expected number of return ports for the whole CFG. This is
@@ -78,6 +78,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         variables.
         """
         self.cfg = CFG()
+        self.cfg.unitary_flags = unitary_flags
         self.globals = globals
 
         final_bb = self.visit_stmts(
@@ -262,6 +263,7 @@ class CFGBuilder(AstVisitor[BB | None]):
 
         func_ty = check_signature(node, self.globals)
         returns_none = isinstance(func_ty.output, NoneType)
+        # TODO (k.hirata): unitary_flags
         cfg = CFGBuilder().build(node.body, returns_none, self.globals)
 
         new_node = NestedFunctionDef(
@@ -277,15 +279,39 @@ class CFGBuilder(AstVisitor[BB | None]):
     def visit_With(self, node: ast.With, bb: BB, jumps: Jumps) -> BB | None:
         self._validate_modifier_body(node)
 
-        cfg = CFGBuilder().build(node.body, True, self.globals)
+        dagger, control, power = [], [], []
+
+        for item in node.items:
+            kind = self._visit_withitem(item, bb)
+            match kind:
+                case Dagger():
+                    dagger.append(kind)
+                case Control():
+                    control.append(kind)
+                case Power():
+                    power.append(kind)
+                case _:
+                    raise TypeError(f"Unknown modifier kind: {kind}")
+        
+        # TODO: flag should be sum of its parent's
+        flag = UnitaryFlags.NoFlags
+        if len(control) > 0:
+            flag |= UnitaryFlags.Control
+        if len(dagger) % 2 == 1:
+            flag |= UnitaryFlags.Dagger
+        if len(power) > 0:
+            flag |= UnitaryFlags.Power
+
+        print("  is_dager @ builder.visit_with", len(dagger))
+        print("  unitary_flags @ builder.visit_with:", flag)
+        cfg = CFGBuilder().build(node.body, True, self.globals, unitary_flags=flag)
         new_node = Modifier(
             cfg=cfg,
             **dict(ast.iter_fields(node)),
         )
-
-        for item in node.items:
-            modifier_kind = self._visit_withitem(item, bb)
-            new_node.push_kind(modifier_kind)
+        new_node.control = control
+        new_node.dagger = dagger
+        new_node.power = power
 
         set_location_from(new_node, node)
         bb.statements.append(new_node)

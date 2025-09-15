@@ -50,6 +50,7 @@ from guppylang_internals.tys.ty import (
     FunctionType,
     NoneType,
     NumericType,
+    UnitaryFlags,
 )
 from hugr import ops
 from hugr import tys as ht
@@ -84,10 +85,28 @@ __all__ = ("guppy", "custom_guppy_decorator")
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
-    def __call__(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
-        defn = RawFunctionDef(DefId.fresh(), f.__name__, None, f)
-        DEF_STORE.register_def(defn, get_calling_frame())
-        return GuppyFunctionDefinition(defn)
+    # TODO (k.hirata):
+    #
+    # def __call__(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+    #     defn = RawFunctionDef(DefId.fresh(), f.__name__, None, f)
+    #     DEF_STORE.register_def(defn, get_calling_frame())
+    #     return GuppyFunctionDefinition(defn)
+    # 
+    # trying to support both `@guppy` and `@guppy(unitary_flags=...)` styles
+    def __call__(
+        self,
+        f: Callable[P, T] | None = None,
+        unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags,
+    ) -> GuppyFunctionDefinition[P, T] | Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
+        def register(fn: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+            defn = RawFunctionDef(DefId.fresh(), fn.__name__, None, fn, unitary_flags=unitary_flags)
+            DEF_STORE.register_def(defn, get_calling_frame())
+            return GuppyFunctionDefinition(defn)
+        if f is None:
+            return register
+        else:
+            return register(f)
+
 
     def comptime(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         defn = RawTracedFunctionDef(DefId.fresh(), f.__name__, None, f)
@@ -181,10 +200,20 @@ class _Guppy:
     ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
         return hugr_op(op, checker, higher_order_value, name, signature)
 
-    def declare(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
-        defn = RawFunctionDecl(DefId.fresh(), f.__name__, None, f)
-        DEF_STORE.register_def(defn, get_calling_frame())
-        return GuppyFunctionDefinition(defn)
+    def declare(
+        self,
+        f: Callable[P, T] | None = None,
+        unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags
+    ) -> GuppyFunctionDefinition[P, T] | Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
+        def register(fn: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+            defn = RawFunctionDecl(DefId.fresh(), fn.__name__, None, fn, unitary_flags=unitary_flags)
+            DEF_STORE.register_def(defn, get_calling_frame())
+            return GuppyFunctionDefinition(defn)
+        if f is None:
+            return register
+        else:
+            return register(f)
+        
 
     def overload(
         self, *funcs: Any

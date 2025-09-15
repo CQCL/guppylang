@@ -79,6 +79,7 @@ from guppylang_internals.tys.builtin import (
 )
 from guppylang_internals.tys.const import Const, ConstValue
 from guppylang_internals.tys.parsing import type_from_ast
+from guppylang_internals.tys.qubit import is_qubit_ty, qubit_ty
 from guppylang_internals.tys.subst import Subst
 from guppylang_internals.tys.ty import (
     ExistentialTypeVar,
@@ -400,6 +401,7 @@ class StmtChecker(AstVisitor[BBStatement]):
         if not self.bb:
             raise InternalGuppyError("BB required to check nested function def!")
 
+        # unitary_flags: (k.hirata)
         func_def = check_nested_func_def(node, self.bb, self.ctx)
         self.ctx.locals[func_def.name] = Variable(func_def.name, func_def.ty, func_def)
         return func_def
@@ -425,12 +427,12 @@ class StmtChecker(AstVisitor[BBStatement]):
                     raise GuppyError(
                         WrongNumberOfArgsError(span, 1, len(control.args)))
                 element_ty = get_element_type(ty)
-                if not _is_qubit_ty(element_ty):
+                if not is_qubit_ty(element_ty):
                     raise GuppyTypeError(WithArgTypeMismatchError(ctrl[0], ty, "type `array[qubit, _]`"))
                 control.qubit_num = get_array_length(ty)
             else:
                 for i in range(len(ctrl)):
-                    ctrl[i], subst = self._check_expr(ctrl[i], _qubit_ty())
+                    ctrl[i], subst = self._check_expr(ctrl[i], qubit_ty())
                     assert len(subst) == 0
                 control.qubit_num = len(ctrl)
 
@@ -508,16 +510,3 @@ def check_iter_unpack_has_static_size(expr: ast.expr, ctx: Context) -> int:
         case generic_size:
             err.add_sub_diagnostic(UnpackableError.GenericSize(None, generic_size))
             raise GuppyError(err)
-
-
-def _qubit_ty() -> Type:
-    # TODO: Please check this does not cause circular import
-    from guppylang.defs import GuppyDefinition
-    from guppylang.std.quantum import qubit
-    assert isinstance(qubit, GuppyDefinition)
-    qubit_ty = cast(TypeDef, qubit.wrapped).check_instantiate([])
-    return qubit_ty
-
-
-def _is_qubit_ty(ty: Type) -> bool:
-    return ty == _qubit_ty()

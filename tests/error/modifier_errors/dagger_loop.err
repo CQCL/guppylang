@@ -1,11 +1,11 @@
-Error: Loop under dagger (at $FILE:7:8)
+Error: Loop in dagger (at $FILE:7:8)
   | 
 5 | def test() -> None:
 6 |     with dagger:
 7 |         for _ in range(46):
   |         ^^^^^^^^^^^^^^^^^^^
 8 |             pass
-  | ^^^^^^^^^^^^^^^^ Loop found under a with block that uses `dagger` modifier
+  | ^^^^^^^^^^^^^^^^ Loop found in a dagger context
   | 
 6 |     with dagger:
   |          ------ dagger modifier is used here

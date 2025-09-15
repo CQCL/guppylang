@@ -42,6 +42,7 @@ from guppylang_internals.tys.ty import (
     InputFlags,
     NoneType,
     Type,
+    UnitaryFlags,
     type_to_row,
 )
 
@@ -112,6 +113,8 @@ class RawCustomFunctionDef(ParsableDef):
 
     signature: FunctionType | None
 
+    unitary_flags: UnitaryFlags = field(default=UnitaryFlags.NoFlags)
+
     description: str = field(default="function", init=False)
 
     def parse(self, globals: "Globals", sources: SourceMap) -> "CustomFunctionDef":
@@ -134,6 +137,7 @@ class RawCustomFunctionDef(ParsableDef):
             raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
         sig = self.signature or self._get_signature(func_ast, globals)
         ty = sig or FunctionType([], NoneType())
+        object.__setattr__(ty, "unitary_flags", self.unitary_flags)
         return CustomFunctionDef(
             self.id,
             self.name,
