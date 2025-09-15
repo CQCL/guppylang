@@ -11,6 +11,7 @@ from selene_sim.backends.bundled_simulators import Coinflip
 from selene_soft_rz_runtime_plugin import SoftRZRuntimePlugin
 
 from guppylang.emulator.instance import EmulatorInstance
+from guppylang.emulator.result import EmulatorResult
 
 
 def test_emulator_instance_init():
@@ -296,7 +297,7 @@ def test_emulator_instance_run(mock_iterate):
     mock_result_stream = Mock()
     mock_selene_instance.run_shots.return_value = mock_result_stream
 
-    instance.run()
+    assert instance.run() == EmulatorResult()
 
     # Check that EmulatorResult was created with the result stream
     mock_iterate.assert_called_once_with(mock_result_stream)

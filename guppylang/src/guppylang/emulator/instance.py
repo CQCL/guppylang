@@ -256,11 +256,7 @@ class EmulatorInstance:
     ) -> Iterator[Iterator[TaggedResult]]:
         """Iterate over the shots in the result stream, optionally displaying a progress
         bar."""
-        if hasattr(result_stream, "assert_called"):
-            # catch mocks
-            # TODO: this is breaking the 4th wall, and I don't like it.
-            return iter([])
-        elif self._options._display_progress_bar:
+        if self._options._display_progress_bar:
             return cast(
                 "Iterator[Iterator[TaggedResult]]",
                 tqdm(result_stream, total=self.shots, desc="Emulating shots"),
