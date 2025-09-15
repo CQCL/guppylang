@@ -82,8 +82,7 @@ def test_nat(run_nat_fn):
     run_nat_fn(sub, 9, args=[3, 4])
     run_nat_fn(mul, 24, args=[3, 4])
     run_nat_fn(div, 20, args=[25, 10])
-    # TODO: mod is broken: https://github.com/CQCL/guppylang/issues/1257
-    # run_nat_fn(mod, 7, args=[8, 9])
+    run_nat_fn(mod, 7, args=[8, 9])
     run_nat_fn(pow, 16, args=[2, 100])
 
 
