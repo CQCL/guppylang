@@ -122,15 +122,19 @@ def hugr_op(
     return custom_function(OpCompiler(op), checker, higher_order_value, name, signature)
 
 
-def extend_type(defn: TypeDef) -> Callable[[type], type]:
-    """Decorator to add new instance functions to a type."""
+def extend_type(defn: TypeDef, return_class: bool = False) -> Callable[[type], type]:
+    """Decorator to add new instance functions to a type.
+
+    By default, returns a `GuppyDefinition` object referring to the type. Alternatively,
+    `return_class=True` can be set to return the decorated class unchanged.
+    """
     from guppylang.defs import GuppyDefinition
 
     def dec(c: type) -> type:
         for val in c.__dict__.values():
             if isinstance(val, GuppyDefinition):
                 DEF_STORE.register_impl(defn.id, val.wrapped.name, val.id)
-        return c
+        return c if return_class else GuppyDefinition(defn)  # type: ignore[return-value]
 
     return dec
 
