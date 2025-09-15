@@ -261,7 +261,7 @@ def test_user_panic() -> None:
 
     exception: EmulatorError = exc_info.value
     assert isinstance(exception.underlying_exception, SelenePanicError)
-    assert len(exception.completed_shots.results) == 9
+    assert exception.failed_shot_index == 9
     assert exception.completed_shots == EmulatorResult(
         [[("before", i), ("after", i)] for i in range(9)]
     )
@@ -300,7 +300,7 @@ def test_friendly_emulator_panic() -> None:
 
     exception: EmulatorError = exc_info.value
     assert isinstance(exception.underlying_exception, SelenePanicError)
-    assert len(exception.completed_shots.results) == 5
+    assert exception.failed_shot_index == 5
     assert exception.completed_shots == EmulatorResult(
         [[("shot", i), ("measurement", False)] for i in range(5)]
     )

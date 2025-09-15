@@ -18,3 +18,8 @@ class EmulatorError(Exception):
         self.completed_shots = completed_shots
         self.failing_shot = failing_shot
         self.underlying_exception = underlying_exception
+
+    @property
+    def failed_shot_index(self) -> int:
+        """The index of the shot that failed."""
+        return len(self.completed_shots.results)
