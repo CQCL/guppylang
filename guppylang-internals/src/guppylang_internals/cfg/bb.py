@@ -230,6 +230,17 @@ class VariableVisitor(ast.NodeVisitor):
         for item in node.power:
             self.visit(item)
 
+        # Similarly to nested functions
+        from guppylang_internals.cfg.analysis import LivenessAnalysis
+        stats = {bb: bb.compute_variable_stats() for bb in node.cfg.bbs}
+        live = LivenessAnalysis(stats).run(node.cfg.bbs)
+        assigned_before_in_bb = self.stats.assigned.keys() 
+        self.stats.used |= {
+            x: using_bb.vars.used[x]
+            for x, using_bb in live[node.cfg.entry_bb].items()
+            if x not in assigned_before_in_bb
+        }
+
     def visit_Control(self, node: Control) -> None:
         for item in node.ctrl:
             self.visit(item)

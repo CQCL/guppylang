@@ -38,6 +38,7 @@ from guppylang_internals.tys.ty import (
     NoneType,
     Type,
     unify,
+    UnitaryFlags,
 )
 
 if sys.version_info >= (3, 12):
@@ -136,7 +137,7 @@ def check_global_func_def(
     returns_none = isinstance(ty.output, NoneType)
     assert ty.input_names is not None
 
-    cfg = CFGBuilder().build(func_def.body, returns_none, globals)
+    cfg = CFGBuilder().build(func_def.body, returns_none, globals, ty.unitary_flags)
     inputs = [
         Variable(x, inp.ty, loc, inp.flags, is_func_input=True)
         for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
@@ -151,8 +152,10 @@ def check_global_func_def(
 
 def check_nested_func_def(
     func_def: NestedFunctionDef, bb: BB, ctx: Context
+    # unitary_flags: (k.hirata)
 ) -> CheckedNestedFunctionDef:
     """Type checks a local (nested) function definition."""
+    # unitary_flags: (k.hirata)
     func_ty = check_signature(func_def, ctx.globals)
     assert func_ty.input_names is not None
 
@@ -213,6 +216,7 @@ def check_nested_func_def(
             from guppylang.defs import GuppyDefinition
             from guppylang_internals.definition.function import ParsedFunctionDef
 
+            # TODO (k.hirata): unitary_flags
             func = ParsedFunctionDef(def_id, func_def.name, func_def, func_ty, None)
             DEF_STORE.register_def(func, None)
             ENGINE.parsed[def_id] = func
@@ -238,7 +242,7 @@ def check_nested_func_def(
 
 
 def check_signature(
-    func_def: ast.FunctionDef, globals: Globals, def_id: DefId | None = None
+    func_def: ast.FunctionDef, globals: Globals, def_id: DefId | None = None, unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags,
 ) -> FunctionType:
     """Checks the signature of a function definition and returns the corresponding
     Guppy type.
@@ -247,6 +251,7 @@ def check_signature(
     passed. This will be used to check or infer the type annotation for the `self`
     argument.
     """
+    # TODO:(k.hirata) unitary_flags
     if len(func_def.args.posonlyargs) != 0:
         raise GuppyError(
             UnsupportedError(func_def.args.posonlyargs[0], "Positional-only parameters")
@@ -307,6 +312,7 @@ def check_signature(
         output,
         input_names,
         sorted(param_var_mapping.values(), key=lambda v: v.idx),
+        unitary_flags=unitary_flags,
     )
 
 
@@ -450,7 +456,7 @@ def check_modifier(
             if cfg_bb.vars.assigned:
                 _, v = next(iter(cfg_bb.vars.assigned.items()))
                 err = AssignUnderDagger(v)
-                err.add_sub_diagnostic(AssignUnderDagger.Dagger(modifier.span_ctxt_manager()))
+                err.add_sub_diagnostic(AssignUnderDagger.Modifier(modifier.span_ctxt_manager()))
                 raise GuppyError(err)
 
 

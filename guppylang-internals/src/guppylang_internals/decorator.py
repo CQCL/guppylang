@@ -39,6 +39,7 @@ from guppylang_internals.tys.ty import (
     InputFlags,
     NoneType,
     NumericType,
+    UnitaryFlags,
 )
 
 if TYPE_CHECKING:
@@ -75,6 +76,7 @@ def custom_function(
     higher_order_value: bool = True,
     name: str = "",
     signature: FunctionType | None = None,
+    unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags,
 ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
     """Decorator to add custom typing or compilation behaviour to function decls.
 
@@ -86,6 +88,8 @@ def custom_function(
 
     def dec(f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         call_checker = checker or DefaultCallChecker()
+        if signature is not None:
+            object.__setattr__(signature, "unitary_flags", unitary_flags)
         func = RawCustomFunctionDef(
             DefId.fresh(),
             name or f.__name__,
@@ -95,6 +99,7 @@ def custom_function(
             compiler or NotImplementedCallCompiler(),
             higher_order_value,
             signature,
+            unitary_flags
         )
         DEF_STORE.register_def(func, get_calling_frame())
         return GuppyFunctionDefinition(func)
@@ -108,6 +113,7 @@ def hugr_op(
     higher_order_value: bool = True,
     name: str = "",
     signature: FunctionType | None = None,
+    unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags,
 ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
     """Decorator to annotate function declarations as HUGR ops.
 
@@ -119,7 +125,7 @@ def hugr_op(
             value.
         name: The name of the function.
     """
-    return custom_function(OpCompiler(op), checker, higher_order_value, name, signature)
+    return custom_function(OpCompiler(op), checker, higher_order_value, name, signature, unitary_flags=unitary_flags)
 
 
 def extend_type(defn: TypeDef, return_class: bool = False) -> Callable[[type], type]:

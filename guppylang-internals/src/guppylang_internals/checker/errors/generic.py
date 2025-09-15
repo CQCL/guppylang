@@ -65,12 +65,12 @@ class LoopCtrlUnderModifierError(Error):
 
 @dataclass(frozen=True)
 class AssignUnderDagger(Error):
-    title: ClassVar[str] = "Assignment under dagger"
+    title: ClassVar[str] = "Assignment in dagger"
     span_label: ClassVar[str] = (
-        "Assignment found under a with block that uses `dagger` modifier"
+        "Assignment found in a dagger context"
     )
     @dataclass(frozen=True)
-    class Dagger(Note):
+    class Modifier(Note):
         span_label: ClassVar[str] = "dagger modifier is used here"
 
 

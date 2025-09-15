@@ -3,15 +3,10 @@ from guppylang.decorator import guppy
 from guppylang.std.quantum import qubit
 
 
-@guppy.declare(unitary_flags=UnitaryFlags.Dagger)
-def use(q: qubit) -> None: ...
-
-
-@guppy
+@guppy(unitary_flags=UnitaryFlags.Dagger)
 def test() -> None:
-    a = qubit()
-    with dagger:
-        use(a)
+    for _ in range(3):
+        pass
 
 
 test.compile()

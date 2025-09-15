@@ -466,17 +466,6 @@ class Modifier(ast.With):
         self.control = []
         self.power = []
 
-    def push_kind(self, kind: ModifierKind) -> None:
-        """Pushes a modifier kind onto the modifier."""
-        if isinstance(kind, Dagger):
-            self.dagger.append(kind)
-        elif isinstance(kind, Control):
-            self.control.append(kind)
-        elif isinstance(kind, Power):
-            self.power.append(kind)
-        else:
-            raise TypeError(f"Unknown modifier kind: {kind}")
-
     def is_dagger(self) -> bool:
         return len(self.dagger) % 2 == 1
 
