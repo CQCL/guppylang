@@ -42,6 +42,9 @@ dependencies = [
 ]
 
 
+[tool.uv.sources]
+selene-hugr-qis-compiler = { git = "https://github.com/CQCL/selene", subdirectory = "selene-compilers/hugr_qis", branch = "feat/compute-gpu" }
+
 [project.optional-dependencies]
 pytket = ["pytket>=1.34", "tket >= 0.12.7"]
 
