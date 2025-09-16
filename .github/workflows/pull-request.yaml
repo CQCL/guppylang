@@ -43,7 +43,7 @@ jobs:
       - name: Install LLVM
         uses: KyleMayes/install-llvm-action@v2
         with:
-          directory: .llvm
+          directory: ${{ runner.temp }}/llvm
           version: "14.0"
       - name: Set LLVM_SYS_140_PREFIX
         run: echo "LLVM_SYS_140_PREFIX=${{ env.LLVM_PATH }}" >> $GITHUB_ENV
@@ -98,7 +98,7 @@ jobs:
       - name: Install LLVM
         uses: KyleMayes/install-llvm-action@v2
         with:
-          directory: .llvm
+          directory: ${{ runner.temp }}/llvm
           version: "14.0"
       - name: Set LLVM_SYS_140_PREFIX
         run: echo "LLVM_SYS_140_PREFIX=${{ env.LLVM_PATH }}" >> $GITHUB_ENV
