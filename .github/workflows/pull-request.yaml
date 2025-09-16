@@ -43,9 +43,11 @@ jobs:
       - name: Install LLVM
         uses: KyleMayes/install-llvm-action@v2
         with:
+          directory: .llvm
           version: "14.0"
       - name: Set LLVM_SYS_140_PREFIX
         run: echo "LLVM_SYS_140_PREFIX=${{ env.LLVM_PATH }}" >> $GITHUB_ENV
+
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -86,6 +88,20 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      # We need to install llvm due to the way that we're pulling in the
+      # selene-hugr-qis-compiler dependency for testing. Since we use an
+      # unreleased version for testing, and have to compile it ourselves.
+      #
+      # Once the released version points to the correct versions of tket, we can
+      # use the released version and drop this from CI.
+      - name: Install LLVM
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          directory: .llvm
+          version: "14.0"
+      - name: Set LLVM_SYS_140_PREFIX
+        run: echo "LLVM_SYS_140_PREFIX=${{ env.LLVM_PATH }}" >> $GITHUB_ENV
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
