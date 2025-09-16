@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from types import FrameType
 from typing import ClassVar
 
-from guppylang_internals.definition.protocol import ParsedProtocolDef
 from hugr import Wire, ops
 
 from guppylang_internals.ast_util import AstNode, annotate_location
@@ -110,6 +109,12 @@ class NonGuppyMethodError(Error):
     def __post_init__(self) -> None:
         self.add_sub_diagnostic(NonGuppyMethodError.Suggestion(None))
 
+@dataclass(frozen=True)
+class ProtocolHint(Help):
+        message: ClassVar[str] = (
+            "Add a `@guppy.protocol` annotation to turn this struct into a protocol"
+        )
+
 
 @dataclass(frozen=True)
 class RawStructDef(TypeDef, ParsableDef):
@@ -117,7 +122,7 @@ class RawStructDef(TypeDef, ParsableDef):
 
     python_class: type
 
-    def parse(self, globals: Globals, sources: SourceMap) -> "ParsedStructDef | ParsedProtocolDef":
+    def parse(self, globals: Globals, sources: SourceMap) -> "ParsedStructDef":
         """Parses the raw class object into an AST and checks that it is well-formed."""
         frame = DEF_STORE.frames[self.id]
         cls_def = parse_py_class(self.python_class, frame, sources)
@@ -137,8 +142,7 @@ class RawStructDef(TypeDef, ParsableDef):
                 ]
 
         # The only bases we allow are `Generic[...]` to specify generic parameters with
-        # the legacy syntax and `Protocol` to indicate that this is a protocol
-        protocol_base = False
+        # the legacy syntax
         match cls_def.bases:
             case []:
                 pass
@@ -150,7 +154,9 @@ class RawStructDef(TypeDef, ParsableDef):
                     raise GuppyError(err)
                 params = params_from_ast(elems, globals)
             case [base] if base.id == "Protocol": 
-                protocol_base = True
+                err = UnsupportedError(bases[0], "Protocol base", singular=True)
+                err.add_sub_diagnostic(ProtocolHint(None))
+                raise GuppyError(err)
             case bases:
                 err = UnsupportedError(bases[0], "Struct inheritance", singular=True)
                 raise GuppyError(err)
@@ -197,8 +203,6 @@ class RawStructDef(TypeDef, ParsableDef):
             x = overridden.pop()
             raise GuppyError(DuplicateFieldError(used_func_names[x], self.name, x))
 
-        if protocol_base:
-            return ParsedProtocolDef(self.id, cls_def, params, fields)
         return ParsedStructDef(self.id, self.name, cls_def, params, fields)
 
     def check_instantiate(

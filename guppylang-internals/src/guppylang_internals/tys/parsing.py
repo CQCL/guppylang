@@ -13,6 +13,7 @@ from guppylang_internals.checker.core import Context, Globals, Locals, PythonObj
 from guppylang_internals.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang_internals.definition.common import Definition
 from guppylang_internals.definition.parameter import ParamDef
+from guppylang_internals.definition.protocol import ParsedProtocolDef
 from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.engine import ENGINE
 from guppylang_internals.error import GuppyError
@@ -200,6 +201,14 @@ def _arg_from_instantiated_defn(
                 else:
                     raise GuppyError(FreeTypeVarError(node, defn))
             return param_var_mapping[defn.name].to_bound()
+        # Or a protocol (e.g `Iterator[T]`, ...)
+        # # TODO: Checking for a parsed definition here is not nice - should this be it's own kind of param?
+        case ParsedProtocolDef() as defn:
+            args = [
+                arg_from_ast(arg_node, globals, param_var_mapping, allow_free_vars)
+                for arg_node in arg_nodes
+            ]
+            # TODO: Return protocol type arg.
         case defn:
             err = ExpectedError(node, "a type", got=f"{defn.description} `{defn.name}`")
             raise GuppyError(err)

@@ -4,7 +4,7 @@ from typing import Protocol
 
 def test_basic(validate):
 
-    @guppy.struct
+    @guppy.protocol
     class MyProto(Protocol):
 
         @guppy.declare
@@ -20,6 +20,11 @@ def test_basic(validate):
     @guppy 
     def bar(a: MyProto) -> str:
         return a.foo(42)
+    
+    @guppy
+    def main() -> str:
+        mt = MyType()   
+        return bar(mt)
 
-    validate(bar.compile())
+    validate(main.compile())
 
