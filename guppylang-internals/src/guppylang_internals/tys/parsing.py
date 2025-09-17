@@ -13,7 +13,7 @@ from guppylang_internals.checker.core import Context, Globals, Locals, PythonObj
 from guppylang_internals.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang_internals.definition.common import Definition
 from guppylang_internals.definition.parameter import ParamDef
-from guppylang_internals.definition.protocol import ParsedProtocolDef
+from guppylang_internals.definition.protocol import ProtocolDef
 from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.engine import ENGINE
 from guppylang_internals.error import GuppyError
@@ -37,6 +37,7 @@ from guppylang_internals.tys.errors import (
     NonLinearOwnedError,
 )
 from guppylang_internals.tys.param import ConstParam, Parameter, TypeParam
+from guppylang_internals.tys.protocol import ProtocolInst
 from guppylang_internals.tys.subst import BoundVarFinder
 from guppylang_internals.tys.ty import (
     FuncInput,
@@ -47,6 +48,37 @@ from guppylang_internals.tys.ty import (
     TupleType,
     Type,
 )
+
+def _try_get_protocol_defn(
+        node: AstNode,
+        globals: Globals,
+        param_var_mapping: dict[str, Parameter],
+        allow_free_vars: bool = False
+) -> tuple[ProtocolDef, list[Argument]] | None:
+    """Tries to parse an AST expression into a protocol definition."""
+    from guppylang_internals.checker.cfg_checker import VarNotDefinedError
+
+    # Unparameterised protocol
+    if defn := _try_parse_defn(node, globals):
+        if isinstance(defn, ProtocolDef):
+            return (defn, [])
+        return None
+
+    # Parameterised protocol
+    if isinstance(node, ast.Subscript) and (
+        defn := _try_parse_defn(node.value, globals)
+    ):
+        if isinstance(defn, ProtocolDef):
+            arg_nodes = (
+                node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+            )
+            args = [
+                arg_from_ast(arg_node, globals, param_var_mapping, allow_free_vars)
+                for arg_node in arg_nodes
+            ]
+            return (defn, args)
+        return None
+
 
 
 def arg_from_ast(
@@ -164,7 +196,6 @@ def _try_parse_defn(node: AstNode, globals: Globals) -> Definition | None:
         case _:
             return None
 
-
 def _arg_from_instantiated_defn(
     defn: Definition,
     arg_nodes: list[ast.expr],
@@ -201,14 +232,6 @@ def _arg_from_instantiated_defn(
                 else:
                     raise GuppyError(FreeTypeVarError(node, defn))
             return param_var_mapping[defn.name].to_bound()
-        # Or a protocol (e.g `Iterator[T]`, ...)
-        # # TODO: Checking for a parsed definition here is not nice - should this be it's own kind of param?
-        case ParsedProtocolDef() as defn:
-            args = [
-                arg_from_ast(arg_node, globals, param_var_mapping, allow_free_vars)
-                for arg_node in arg_nodes
-            ]
-            # TODO: Return protocol type arg.
         case defn:
             err = ExpectedError(node, "a type", got=f"{defn.description} `{defn.name}`")
             raise GuppyError(err)
@@ -333,8 +356,13 @@ if sys.version_info >= (3, 12):
                 return TypeParam(
                     idx, node.name, must_be_copyable=True, must_be_droppable=True
                 )
-            # Otherwise, it must be a const parameter
+            # Otherwise, it is either a protocol or a const parameter
             case bound:
+                defn = _try_get_protocol_defn(bound, globals, {}, allow_free_vars=False)
+                if defn is not None:
+                    proto, args = defn
+                    inst = proto.check_instantiate(args, node)
+                    return TypeParam(idx, node.name, must_be_copyable=False, must_be_droppable=False, must_implement=[inst])
                 # For now, we don't allow the types of const params to refer to previous
                 # parameters, so we pass an empty dict as the `param_var_mapping`.
                 # TODO: In the future we might want to allow stuff like

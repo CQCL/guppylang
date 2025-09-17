@@ -102,7 +102,7 @@ class TypeParam(ParameterBase):
             case ConstArg(const):
                 err = ExpectedError(loc, "a type", got=f"value of type `{const.ty}`")
                 raise GuppyTypeError(err)
-            # TODO Protocol checking 
+
             case TypeArg(ty):
                 if self.must_be_copyable and not ty.copyable:
                     err = ExpectedError(
@@ -118,6 +118,16 @@ class TypeParam(ParameterBase):
                         got=f"type `{ty}` which is not implicitly droppable",
                     )
                     raise GuppyTypeError(err)
+                # TODO Protocol checking 
+                if self.must_implement:
+                    for proto in self.must_implement:
+                        if not ty.implements(proto):
+                            err = ExpectedError(
+                                loc,
+                                f"a type implementing the protocol `{proto.definition}`", # TODO Get name from DefId
+                                got=f"type `{ty}` which does not implement the protocol",
+                            )
+                            raise GuppyTypeError(err)
                 return arg
 
     def to_existential(self) -> tuple[Argument, ExistentialVar]:

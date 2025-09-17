@@ -1,11 +1,20 @@
 from guppylang.decorator import guppy
 
-from typing import Protocol
+def test_def(validate):
+
+    @guppy.protocol
+    class MyProto:
+
+        @guppy.declare
+        def foo(self: "MyProto", x: int) -> str: ...
+
+    validate(MyProto.compile())
+
 
 def test_basic(validate):
 
     @guppy.protocol
-    class MyProto(Protocol):
+    class MyProto:
 
         @guppy.declare
         def foo(self: "MyProto", x: int) -> str: ...
@@ -18,7 +27,7 @@ def test_basic(validate):
             return str(x)
 
     @guppy 
-    def bar(a: MyProto) -> str:
+    def bar[M: MyProto](a: M) -> str:
         return a.foo(42)
     
     @guppy
