@@ -243,6 +243,18 @@
                   "b": "A"
                 }
               ]
+            },
+            {
+              "t": "Opaque",
+              "extension": "arithmetic.int.types",
+              "id": "int",
+              "args": [
+                {
+                  "tya": "BoundedNat",
+                  "n": 6
+                }
+              ],
+              "bound": "C"
             }
           ],
           "output": [
