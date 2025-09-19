@@ -14,6 +14,41 @@ This changelog documents user-facing changes to the Guppy language excluding cha
 
 As of August 2025, The Guppy language is undergoing rapid development and is currently unstable. There is a Guppy v1.0 stability [milestone](https://github.com/CQCL/guppylang/milestone/12) that is a work in progress and subject to change.
 
+## [0.21.4](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.3...guppylang-v0.21.4) (2025-09-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* `guppylang_internals.decorator.extend_type` now returns a `GuppyDefinition` by default. To get the previous behaviour of returning the annotated class unchanged, pass `return_class=True`.
+* 
+
+### Features
+
+* Add `Result` type ([#1171](https://github.com/CQCL/guppylang/issues/1171)) ([a36630e](https://github.com/CQCL/guppylang/commit/a36630eac71c85e255cdce8b44ee1f04d250677d)), closes [#1170](https://github.com/CQCL/guppylang/issues/1170)
+* Bump selene-hugr-qis-compiler version ([#1267](https://github.com/CQCL/guppylang/issues/1267)) ([aff2d1b](https://github.com/CQCL/guppylang/commit/aff2d1b36174ace86fc5234e79540d472d1482b2))
+* Preserve previous results upon error ([#1245](https://github.com/CQCL/guppylang/issues/1245)) ([2fa9969](https://github.com/CQCL/guppylang/commit/2fa996919d61430f26da982039b5ac81d599eab1))
+
+
+### Bug Fixes
+
+* comptime should act as identity in python context  ([#1240](https://github.com/CQCL/guppylang/issues/1240)) ([d800ad6](https://github.com/CQCL/guppylang/commit/d800ad6b9383a0e596a1af08b5618109bf223b92)), closes [#1239](https://github.com/CQCL/guppylang/issues/1239)
+* **emulator:** update selene compiler to pull in cz fix ([#1237](https://github.com/CQCL/guppylang/issues/1237)) ([550d6fc](https://github.com/CQCL/guppylang/commit/550d6fccdb6bb84c85cb3f65cbc46e02b0989ce2))
+* Fix `nat` constructor in comptime functions ([#1258](https://github.com/CQCL/guppylang/issues/1258)) ([e257b6f](https://github.com/CQCL/guppylang/commit/e257b6fc2fe3793d6d8f63feca83bf5ed6643673))
+* Fix signature of `nat.__mod__` ([#1259](https://github.com/CQCL/guppylang/issues/1259)) ([fe7d4b2](https://github.com/CQCL/guppylang/commit/fe7d4b2955362a347e0fba8b02e02833e70faa06)), closes [#1257](https://github.com/CQCL/guppylang/issues/1257)
+* Use qualified `extend_type` function ([#1263](https://github.com/CQCL/guppylang/issues/1263)) ([6878b0b](https://github.com/CQCL/guppylang/commit/6878b0b9ffd61b5e13f01f7679b9516b5d466693))
+* wasm module updates based on tested lowering ([#1230](https://github.com/CQCL/guppylang/issues/1230)) ([657cea2](https://github.com/CQCL/guppylang/commit/657cea27af00a9c02e8d1a3190db535bbd1e7981))
+* **wasm:** off by one error in WASM module ([#1236](https://github.com/CQCL/guppylang/issues/1236)) ([2ac81da](https://github.com/CQCL/guppylang/commit/2ac81daa3cfe4e96b04decd94b2ee517ae5249d5))
+
+
+### Documentation
+
+* use root README for pypi page ([#1227](https://github.com/CQCL/guppylang/issues/1227)) ([9790e03](https://github.com/CQCL/guppylang/commit/9790e03fd77c3393d71d386bbba856a5a7656a17))
+
+
+### Miscellaneous Chores
+
+* update internals dependency to 0.24 ([#1268](https://github.com/CQCL/guppylang/issues/1268)) ([153afa1](https://github.com/CQCL/guppylang/commit/153afa17e4f533433a4f2849a6b0e4d14f25a67a))
+
 ## [0.21.3](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.2...guppylang-v0.21.3) (2025-08-19)
 
 
