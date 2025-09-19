@@ -17,15 +17,9 @@ As of August 2025, The Guppy language is undergoing rapid development and is cur
 ## [0.21.4](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.3...guppylang-v0.21.4) (2025-09-19)
 
 
-### ⚠ BREAKING CHANGES
-
-* `guppylang_internals.decorator.extend_type` now returns a `GuppyDefinition` by default. To get the previous behaviour of returning the annotated class unchanged, pass `return_class=True`.
-* 
-
 ### Features
 
 * Add `Result` type ([#1171](https://github.com/CQCL/guppylang/issues/1171)) ([a36630e](https://github.com/CQCL/guppylang/commit/a36630eac71c85e255cdce8b44ee1f04d250677d)), closes [#1170](https://github.com/CQCL/guppylang/issues/1170)
-* Bump selene-hugr-qis-compiler version ([#1267](https://github.com/CQCL/guppylang/issues/1267)) ([aff2d1b](https://github.com/CQCL/guppylang/commit/aff2d1b36174ace86fc5234e79540d472d1482b2))
 * Preserve previous results upon error ([#1245](https://github.com/CQCL/guppylang/issues/1245)) ([2fa9969](https://github.com/CQCL/guppylang/commit/2fa996919d61430f26da982039b5ac81d599eab1))
 
 
