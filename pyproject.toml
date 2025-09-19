@@ -17,7 +17,7 @@ test = [
     "pytest-xdist>=3.8.0",
     "ipykernel >=6.29.5,<7",
     "miette-py",
-    "selene-hugr-qis-compiler>=0.2.0rc4, <0.3",
+    "selene-hugr-qis-compiler>=0.2.5, <0.3",
 ]
 pytket_integration = [{ include-group = "test" }, "guppylang[pytket]"]
 
