@@ -3,6 +3,40 @@
 First release of `guppylang_internals` package containing refactored out internal components
 from `guppylang`.
 
+## [0.24.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.23.0...guppylang-internals-v0.24.0) (2025-09-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* `guppylang_internals.decorator.extend_type` now returns a `GuppyDefinition` by default. To get the previous behaviour of returning the annotated class unchanged, pass `return_class=True`.
+* `TypeDef`s now require a `params` field
+* guppylang_internals.ty.parsing.parse_function_io_types replaced with parse_function_arg_annotation and check_function_arg
+* Significant changes to the WASM decorators, types and operations
+* Deleted `guppylang_internals.nodes.{IterHasNext, IterEnd}`
+* guppylang_internals.tracing.unpacking.update_packed_value now returns a bool signalling whether the operation was successful.
+* `CompilationEngine` now initialises all it's fields
+* Calling `CompilationEngine.reset` no longer nullifies `additional_extensions`
+* `CompilationEngine.register_extension` no longer adds duplicates to the `additional_extensions` list
+
+### Features
+
+* Infer type of `self` arguments ([#1192](https://github.com/CQCL/guppylang/issues/1192)) ([51f5a2b](https://github.com/CQCL/guppylang/commit/51f5a2b3a9b06bc4ab054f32a4d07f7395df8ff4))
+
+
+### Bug Fixes
+
+* Add init to CompilationEngine; don't trash additional_extensions ([#1256](https://github.com/CQCL/guppylang/issues/1256)) ([e413748](https://github.com/CQCL/guppylang/commit/e413748532db3895cab4925a222177a4fa3fd61b))
+* Allow generic specialization of methods ([#1206](https://github.com/CQCL/guppylang/issues/1206)) ([93936cc](https://github.com/CQCL/guppylang/commit/93936cc275c56dd856d11fabc7aac20176304147)), closes [#1182](https://github.com/CQCL/guppylang/issues/1182)
+* Correctly update borrowed values after calls and catch cases where it's impossible ([#1253](https://github.com/CQCL/guppylang/issues/1253)) ([3ec5462](https://github.com/CQCL/guppylang/commit/3ec54627729b49689da006a743e9e2c359cd3728))
+* Fix `nat` constructor in comptime functions ([#1258](https://github.com/CQCL/guppylang/issues/1258)) ([e257b6f](https://github.com/CQCL/guppylang/commit/e257b6fc2fe3793d6d8f63feca83bf5ed6643673))
+* Fix incorrect leak error for borrowing functions in comptime ([#1252](https://github.com/CQCL/guppylang/issues/1252)) ([855244e](https://github.com/CQCL/guppylang/commit/855244e2d5e3aeb04c2028f9f2310dba0e74210a)), closes [#1249](https://github.com/CQCL/guppylang/issues/1249)
+* wasm module updates based on tested lowering ([#1230](https://github.com/CQCL/guppylang/issues/1230)) ([657cea2](https://github.com/CQCL/guppylang/commit/657cea27af00a9c02e8d1a3190db535bbd1e7981))
+
+
+### Miscellaneous Chores
+
+* Delete unused old iterator AST nodes ([#1215](https://github.com/CQCL/guppylang/issues/1215)) ([2310897](https://github.com/CQCL/guppylang/commit/231089750e33cf70754e5218feed64053c558c17))
+
 ## [0.23.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.22.0...guppylang-internals-v0.23.0) (2025-08-19)
 
 
