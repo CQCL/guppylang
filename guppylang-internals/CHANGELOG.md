@@ -10,10 +10,13 @@ from `guppylang`.
 
 * `guppylang_internals.decorator.extend_type` now returns a `GuppyDefinition` by default. To get the previous behaviour of returning the annotated class unchanged, pass `return_class=True`.
 * `TypeDef`s now require a `params` field
-* 
+* guppylang_internals.ty.parsing.parse_function_io_types replaced with parse_function_arg_annotation and check_function_arg
+* Significant changes to the WASM decorators, types and operations
 * Deleted `guppylang_internals.nodes.{IterHasNext, IterEnd}`
-* 
-* 
+* guppylang_internals.tracing.unpacking.update_packed_value now returns a bool signalling whether the operation was successful.
+* `CompilationEngine` now initialises all it's fields
+* Calling `CompilationEngine.reset` no longer nullifies `additional_extensions`
+* `CompilationEngine.register_extension` no longer adds duplicates to the `additional_extensions` list
 
 ### Features
 
