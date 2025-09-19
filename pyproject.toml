@@ -17,7 +17,7 @@ test = [
     "pytest-xdist>=3.8.0",
     "ipykernel >=6.29.5,<7",
     "miette-py",
-    "selene-hugr-qis-compiler>=0.2.0rc4, <0.3",
+    "selene-hugr-qis-compiler>=0.2.5, <0.3",
 ]
 pytket_integration = [{ include-group = "test" }, "guppylang[pytket]"]
 
@@ -32,7 +32,6 @@ miette-py = { workspace = true }
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "50a2bac" }
 # tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", rev = "aca944c" }
-selene-hugr-qis-compiler = { git = "https://github.com/CQCL/selene", subdirectory = "selene-compilers/hugr_qis", branch = "feat/compute-gpu" }
 
 [build-system]
 requires = ["hatchling"]
