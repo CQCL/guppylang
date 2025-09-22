@@ -14,6 +14,16 @@ This changelog documents user-facing changes to the Guppy language excluding cha
 
 As of August 2025, The Guppy language is undergoing rapid development and is currently unstable. There is a Guppy v1.0 stability [milestone](https://github.com/CQCL/guppylang/milestone/12) that is a work in progress and subject to change.
 
+## [0.21.5](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.4...guppylang-v0.21.5) (2025-09-22)
+
+> [!WARNING]  
+> The `.compile()` method now assumes the function being compiled is an execution entrypoint and therefore checks it takes no arguments.
+> If you have an existing workflow that produces a HUGR with a non-executable function this will break, use `compile_function` instead.
+
+### Features
+
+* `compile_entrypoint` and `compile_function` methods ([#1271](https://github.com/CQCL/guppylang/issues/1271)) ([44883e2](https://github.com/CQCL/guppylang/commit/44883e20ed3bdbad69a73b939aec53b250dbc166))
+
 ## [0.21.4](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.3...guppylang-v0.21.4) (2025-09-19)
 
 
