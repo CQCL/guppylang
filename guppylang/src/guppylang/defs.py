@@ -127,6 +127,15 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         return self.compile_entrypoint()
 
     def compile_entrypoint(self) -> Package:
+        """
+        Compiles an execution entrypoint function definition to a HUGR package
+
+        Returns:
+            Package: The compiled package object.
+        Raises:
+            GuppyError: If the entrypoint has arguments.
+        """
+
         pack = self.compile_function()
         # entrypoint cannot be polymorphic
         monomorphized_id = (self.id, ())
