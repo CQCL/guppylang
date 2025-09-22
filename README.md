@@ -1,4 +1,4 @@
-![logo](assets/guppy_logo.svg)
+![logo](https://raw.githubusercontent.com/CQCL/guppylang/refs/heads/main/assets/guppy_logo.svg)
 
 # Guppy
 
