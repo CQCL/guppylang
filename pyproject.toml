@@ -1,51 +1,3 @@
-[project]
-name = "guppylang"
-version = "0.21.1"
-requires-python = ">=3.10,<4"
-description = "Pythonic quantum-classical programming language"
-license = { file = "LICENCE" }
-readme = "quickstart.md"
-authors = [
-    { name = "Mark Koch", email = "mark.koch@quantinuum.com" },
-    { name = "TKET development team", email = "tket-support@quantinuum.com" },
-]
-maintainers = [
-    { name = "Mark Koch", email = "mark.koch@quantinuum.com" },
-    { name = "TKET development team", email = "tket-support@quantinuum.com" },
-]
-
-classifiers = [
-    "Development Status :: 3 - Alpha",
-
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "Topic :: Software Development :: Compilers",
-
-    "License :: OSI Approved :: Apache Software License",
-
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-    "Programming Language :: Python :: 3 :: Only",
-]
-
-dependencies = [
-    "guppylang-internals ~= 0.21.1",
-    "selene-sim>=0.2.0rc1,<0.3",
-    "numpy~=2.0",
-]
-
-
-[project.optional-dependencies]
-pytket = ["pytket>=1.34", "tket >= 0.12.1"]
-
-[project.urls]
-homepage = "https://github.com/CQCL/guppylang"
-repository = "https://github.com/CQCL/guppylang"
-
 [dependency-groups]
 docs = ["furo>=2024.8.6", "sphinx >=7.2.6,<9"]
 dev = [
@@ -65,21 +17,21 @@ test = [
     "pytest-xdist>=3.8.0",
     "ipykernel >=6.29.5,<7",
     "miette-py",
-    "selene-hugr-qis-compiler>=0.2.0rc4, <0.3",
+    "selene-hugr-qis-compiler>=0.2.5, <0.3",
 ]
 pytket_integration = [{ include-group = "test" }, "guppylang[pytket]"]
 
 [tool.uv.workspace]
-members = ["guppylang-internals", "miette-py"]
+members = ["guppylang", "guppylang-internals", "miette-py"]
 
 [tool.uv.sources]
+guppylang = { workspace = true }
 guppylang-internals = { workspace = true }
 miette-py = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "50a2bac" }
 # tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", rev = "aca944c" }
-
 
 [build-system]
 requires = ["hatchling"]

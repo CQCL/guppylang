@@ -70,8 +70,7 @@ def trace_function(
             for wire, inp in zip(builder.inputs(), ty.inputs, strict=True)
         ]
 
-        with exception_hook(tracing_except_hook):
-            mock_builtins(python_func)
+        with exception_hook(tracing_except_hook), mock_builtins(python_func):
             py_out = python_func(*inputs)
 
         try:
@@ -177,10 +176,21 @@ def trace_call(func: CallableDef, *args: Any) -> Any:
     if len(func.ty.inputs) != 0:
         for inp, arg, var in zip(func.ty.inputs, args, arg_vars, strict=True):
             if InputFlags.Inout in inp.flags:
+                # Note that `inp.ty` could refer to bound variables in the function
+                # signature. Instead, make sure to use `var.ty` which will always be a
+                # concrete type and type checking has ensured that they unify.
+                ty = var.ty
                 inout_wire = state.dfg[var]
-                update_packed_value(
-                    arg, GuppyObject(inp.ty, inout_wire), state.dfg.builder
+                success = update_packed_value(
+                    arg, GuppyObject(ty, inout_wire), state.dfg.builder
                 )
+                if not success:
+                    # This means the user has passed an object that we cannot update,
+                    # e.g. calling `mem_swap(x, y)` where the inputs are plain Python
+                    # objects
+                    raise GuppyComptimeError(
+                        f"Cannot borrow Python object of type `{ty}` at comptime"
+                    )
 
     ret_obj = GuppyObject(ret_ty, ret_wire)
     return unpack_guppy_object(ret_obj, state.dfg.builder)

@@ -39,6 +39,9 @@ def test_float(validate):
 
     validate(test.compile())
 
+    # Outside the function, we have the regular builtin
+    assert float is builtins.float
+
 
 def test_int(validate):
     @guppy.comptime
@@ -60,6 +63,7 @@ def test_int(validate):
 
         for v in (True, False, 42, "-123"):
             assert int(v) == builtins.int(v)
+        assert int("1000", 2) == builtins.int("1000", 2)
 
         # But they are not identical
         assert int is not builtins.int
@@ -72,6 +76,9 @@ def test_int(validate):
         return int(x)
 
     validate(test.compile())
+
+    # Outside the function, we have the regular builtin
+    assert int is builtins.int
 
 
 def test_len(validate):
@@ -105,3 +112,6 @@ def test_len(validate):
         return len(s)
 
     validate(test.compile())
+
+    # Outside the function, we have the regular builtin
+    assert len is builtins.len

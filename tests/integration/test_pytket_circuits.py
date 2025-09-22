@@ -5,8 +5,9 @@ from importlib.util import find_spec
 import pytest
 
 from guppylang.decorator import guppy
-from guppylang.std.quantum import qubit, discard_array
-from guppylang.std.builtins import array
+from guppylang.std.angles import angle, pi
+from guppylang.std.quantum import qubit, discard_array, discard, measure
+from guppylang.std.builtins import array, result
 
 tket_installed = find_spec("tket") is not None
 
@@ -259,3 +260,183 @@ def test_compile_load(validate):
     pytket_func = guppy.load_pytket("guppy_circ", circ, use_arrays=False)
 
     validate(pytket_func.compile())
+
+
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
+def test_symbolic(validate):
+    from pytket import Circuit, OpType
+    from pytket.passes import AutoRebase
+    from sympy import Symbol
+
+    a = Symbol("alpha")
+    b = Symbol("beta")
+
+    circ = Circuit(2)
+    circ.YYPhase(b, 0, 1)
+    circ.Rx(a, 0)
+    circ.measure_all()
+
+    AutoRebase({OpType.CX, OpType.Rz, OpType.H}).apply(circ)
+
+    guppy_circ = guppy.load_pytket("guppy_circ", circ, use_arrays=False)
+
+    @guppy
+    def foo(q1: qubit, q2: qubit) -> tuple[bool, bool]:
+        alpha = angle(0.3)
+        beta = angle(1.2)
+        return guppy_circ(q1, q2, alpha, beta)
+
+    validate(foo.compile())
+
+
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
+def test_symbolic_array(validate):
+    from pytket import Circuit, OpType
+    from pytket.passes import AutoRebase
+    from sympy import Symbol
+
+    a = Symbol("alpha")
+    b = Symbol("beta")
+
+    circ = Circuit(2)
+    circ.YYPhase(b, 0, 1)
+    circ.Rx(a, 0)
+    circ.measure_all()
+
+    AutoRebase({OpType.CX, OpType.Rz, OpType.H}).apply(circ)
+
+    guppy_circ = guppy.load_pytket("guppy_circ", circ)
+
+    @guppy
+    def foo(reg: array[qubit, 2]) -> array[bool, 2]:
+        params = array(angle(0.3), angle(1.2))
+        return guppy_circ(reg, params)
+
+    validate(foo.compile())
+
+
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
+def test_symbolic_exec(validate, run_int_fn):
+    from pytket import Circuit, OpType
+    from pytket.passes import AutoRebase
+    from sympy import Symbol
+
+    a = Symbol("alpha")
+
+    circ = Circuit(1)
+    circ.Rx(a, 0)
+    circ.measure_all()
+
+    AutoRebase({OpType.CX, OpType.Rz, OpType.H}).apply(circ)
+
+    flip = guppy.load_pytket("flip", circ, use_arrays=False)
+
+    @guppy
+    def main() -> int:
+        q = qubit()
+        res = int(flip(q, pi))
+        discard(q)
+        return res
+
+    validate(main.compile())
+    run_int_fn(main, 1, num_qubits=2)
+
+
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
+def test_exec(validate, run_int_fn):
+    from pytket import Circuit
+
+    circ = Circuit(2, 2)
+    circ.X(0)
+    circ.measure_all()
+
+    guppy_circ = guppy.load_pytket("guppy_circ", circ, use_arrays=False)
+
+    @guppy
+    def foo(q1: qubit, q2: qubit) -> tuple[bool, bool]:
+        res = guppy_circ(q1, q2)
+        return res
+
+    @guppy
+    def main() -> int:
+        q1 = qubit()
+        q2 = qubit()
+        res = foo(q1, q2)
+        discard(q1)
+        discard(q2)
+        return int(res[0])
+
+    validate(main.compile())
+    run_int_fn(main, 1, num_qubits=2)
+
+
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
+def test_qsystem_ops(validate):
+    from pytket import Circuit
+
+    circ = Circuit(2)
+    circ.PhasedX(angle0=0.5, angle1=0.2, qubit=0)
+    circ.ZZPhase(angle=0.3, qubit0=0, qubit1=1)
+    circ.ZZMax(qubit0=1, qubit1=0)
+
+    @guppy.pytket(circ)
+    def guppy_circ(q1: qubit, q2: qubit) -> None: ...
+
+    @guppy
+    def foo(q1: qubit, q2: qubit) -> None:
+        guppy_circ(q1, q2)
+
+    compiled = foo.compile()
+    validate(compiled)
+
+    # Assert that we have no opaque (unrecognised) tket1 operations
+    hugr = compiled.modules[0]
+    for node in hugr.descendants(hugr.module_root):
+        op_name = hugr[node].op.name()
+        assert "tk1op" not in op_name
+
+
+@pytest.mark.skipif(not tket_installed, reason="Tket is not installed")
+def test_qsystem_exec():
+    from pytket import Circuit
+    from sympy import sympify
+
+    circ = Circuit(2)
+    circ.H(0)
+    circ.H(1)
+
+    # Full rotation, just an identity
+    # ZZMax() ∘ ZZPhase(-7/2) = ZZPhase(-4) = I
+    circ.ZZMax(qubit0=1, qubit1=0)
+    circ.ZZPhase(angle=sympify("(7/2)"), qubit0=0, qubit1=1)
+    # Another id operation
+    # PhasedX(2, -1/3) = I
+    circ.PhasedX(
+        angle0=sympify("(3/2) / 3 - (-3 * 1/2)"),
+        angle1=sympify("-(1/3)"),
+        qubit=0,
+    )
+    # And again
+    # Rz(𝜋/2) ∘ Rz(-𝜋/2) = I
+    circ.Rz(angle=sympify("(pi/2)"), qubit=0)
+    circ.Rz(angle=sympify("(-pi/2)"), qubit=0)
+
+    circ.H(0)
+    circ.H(1)
+
+    @guppy.pytket(circ)
+    def guppy_circ(q1: qubit, q2: qubit) -> None: ...
+
+    @guppy
+    def main() -> None:
+        a, b = qubit(), qubit()
+
+        guppy_circ(a, b)
+
+        result("a", measure(a))
+        result("b", measure(b))
+
+    # deterministic - should always be 0
+    res = main.emulator(n_qubits=2).run()
+    for r in res.results:
+        assert r.entries == [("a", 0), ("b", 0)]

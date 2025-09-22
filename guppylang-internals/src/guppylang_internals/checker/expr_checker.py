@@ -34,6 +34,7 @@ from guppylang_internals.ast_util import (
     AstNode,
     AstVisitor,
     breaks_in_loop,
+    get_type,
     get_type_opt,
     return_nodes_in_ast,
     with_loc,
@@ -101,8 +102,6 @@ from guppylang_internals.nodes import (
     FieldAccessAndDrop,
     GenericParamValue,
     GlobalName,
-    IterEnd,
-    IterHasNext,
     IterNext,
     LocalCall,
     MakeIter,
@@ -784,14 +783,6 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
                 raise GuppyTypeError(err)
         return expr, ty
 
-    def visit_IterHasNext(self, node: IterHasNext) -> tuple[ast.expr, Type]:
-        node.value, ty = self.synthesize(node.value)
-        flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
-        exp_sig = FunctionType([FuncInput(ty, flags)], TupleType([bool_type(), ty]))
-        return self.synthesize_instance_func(
-            node.value, [], "__hasnext__", "an iterator", exp_sig, True
-        )
-
     def visit_IterNext(self, node: IterNext) -> tuple[ast.expr, Type]:
         node.value, ty = self.synthesize(node.value)
         flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
@@ -801,14 +792,6 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         )
         return self.synthesize_instance_func(
             node.value, [], "__next__", "an iterator", exp_sig, True
-        )
-
-    def visit_IterEnd(self, node: IterEnd) -> tuple[ast.expr, Type]:
-        node.value, ty = self.synthesize(node.value)
-        flags = InputFlags.Owned if not ty.copyable else InputFlags.NoFlags
-        exp_sig = FunctionType([FuncInput(ty, flags)], NoneType())
-        return self.synthesize_instance_func(
-            node.value, [], "__end__", "an iterator", exp_sig, True
         )
 
     def visit_ListComp(self, node: ast.ListComp) -> tuple[ast.expr, Type]:
@@ -945,7 +928,7 @@ def check_type_apply(ty: FunctionType, node: ast.Subscript, ctx: Context) -> Ins
         err.add_sub_diagnostic(WrongNumberOfArgsError.SignatureHint(None, ty))
         raise GuppyError(err)
 
-    inst = [arg_from_ast(node, globals, ctx.generic_params) for node in arg_exprs]
+    inst = [arg_from_ast(node, ctx.parsing_ctx) for node in arg_exprs]
     check_all_args(ty.params, inst, "", node, arg_exprs)
     return inst
 
@@ -1235,7 +1218,14 @@ def instantiate_poly(node: ast.expr, ty: FunctionType, inst: Inst) -> ast.expr:
     """Instantiates quantified type arguments in a function."""
     assert len(ty.params) == len(inst)
     if len(inst) > 0:
-        node = with_loc(node, TypeApply(value=with_type(ty, node), inst=inst))
+        # Partial applications need to be instantiated on the inside
+        if isinstance(node, PartialApply):
+            full_ty = get_type(node.func)
+            assert isinstance(full_ty, FunctionType)
+            assert full_ty.params == ty.params
+            node.func = instantiate_poly(node.func, full_ty, inst)
+        else:
+            node = with_loc(node, TypeApply(value=with_type(ty, node), inst=inst))
         return with_type(ty.instantiate(inst), node)
     return with_type(ty, node)
 
@@ -1312,11 +1302,7 @@ def eval_comptime_expr(node: ComptimeExpr, ctx: Context) -> Any:
         raise GuppyError(ComptimeExprNotCPythonError(node))
 
     try:
-        python_val = eval(  # noqa: S307
-            ast.unparse(node.value),
-            None,
-            DummyEvalDict(ctx, node.value),
-        )
+        python_val = eval(ast.unparse(node.value), DummyEvalDict(ctx, node.value))  # noqa: S307
     except DummyEvalDict.GuppyVarUsedError as e:
         raise GuppyError(ComptimeExprNotStaticError(e.node or node, e.var)) from None
     except Exception as e:
