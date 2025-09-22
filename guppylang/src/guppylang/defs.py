@@ -11,7 +11,7 @@ from typing import Any, ClassVar, Generic, ParamSpec, TypeVar, cast
 
 import guppylang_internals
 from guppylang_internals.definition.value import CompiledCallableDef
-from guppylang_internals.diagnostic import Error
+from guppylang_internals.diagnostic import Error, Note
 from guppylang_internals.engine import ENGINE, CoreMetadataKeys
 from guppylang_internals.error import GuppyError
 from guppylang_internals.span import Span, to_span
@@ -48,6 +48,14 @@ class EntrypointArgsError(Error):
         "Entrypoint function must have no input parameters, found ({input_names})."
     )
     args: Sequence[str]
+
+    @dataclass(frozen=True)
+    class AlternateHint(Note):
+        message: ClassVar[str] = (
+            "If the function is not an execution entrypoint,"
+            " consider using `{function_name}.compile_function()`"
+        )
+        function_name: str
 
     @property
     def input_names(self) -> str:
@@ -136,6 +144,10 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
                 EntrypointArgsError(
                     span=span,
                     args=compiled_def.ty.input_names or "",
+                ).add_sub_diagnostic(
+                    EntrypointArgsError.AlternateHint(
+                        None, function_name=defined_at.name
+                    )
                 )
             )
         return pack
