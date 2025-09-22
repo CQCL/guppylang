@@ -20,7 +20,7 @@ def test_basics(validate):
         cx(q1, q2)
         measure(q2)
 
-    validate(foo.compile())
+    validate(foo.compile_function())
 
 
 def test_ladder(validate):
@@ -29,7 +29,7 @@ def test_ladder(validate):
         for q1, q2 in itertools.pairwise(qs):
             cx(q1, q2)
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_angles(validate):
@@ -39,4 +39,4 @@ def test_angles(validate):
             rz(q, theta)
             theta /= 2
 
-    validate(test.compile())
+    validate(test.compile_function())

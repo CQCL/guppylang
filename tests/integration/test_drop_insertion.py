@@ -1,11 +1,10 @@
-from hugr.package import ModulePointer
 from guppylang.decorator import guppy
 from guppylang.std.array import array
 from guppylang_internals.std._internal.compiler.tket_exts import GUPPY_EXTENSION
 from guppylang.std.lang import owned
 
 from hugr import tys, ops
-
+from hugr.package import Package
 from hugr.std.collections.array import Array
 
 
@@ -22,9 +21,9 @@ def make() -> AffineTy:
     """Creates an instance of `AffineTy`."""
 
 
-def num_drops(ptr: ModulePointer) -> int:
+def num_drops(pkg: Package) -> int:
     drop_op = GUPPY_EXTENSION.get_op("drop")
-    h = ptr.module
+    h = pkg.modules[0]
     n = 0
     for node in h:
         match h[node].op:
@@ -39,7 +38,7 @@ def test_drop(validate):
     def main(x: AffineTy @ owned) -> None:
         pass
 
-    hugr = guppy.compile(main)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 1
     validate(hugr)
 
@@ -59,7 +58,7 @@ def test_drop_nested(validate):
     ) -> None:
         pass
 
-    hugr = guppy.compile(main)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 4
     validate(hugr)
 
@@ -72,7 +71,7 @@ def test_drop_inout(validate):
     def main() -> None:
         foo(make())  # Drops inout return
 
-    hugr = guppy.compile(main)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 1
     validate(hugr)
 
@@ -86,7 +85,7 @@ def test_drop_comprehension(validate):
         array(foo(x) for _ in range(10))
         # Drops x and the resulting array
 
-    hugr = guppy.compile(main)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 2
     validate(hugr)
 
@@ -98,7 +97,7 @@ def test_drop_reassign(validate):
         x = make()  # Drops previous x
         return x
 
-    hugr = guppy.compile(main)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 1
     validate(hugr)
 
@@ -111,7 +110,7 @@ def test_drop_if(validate):
             x = make()  # Drops previous x
         return x
 
-    hugr = guppy.compile(main)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 1
     validate(hugr)
 
@@ -134,6 +133,6 @@ def test_drop_while(validate):
             x = make()  # Drops x
         return y
 
-    hugr = guppy.compile(main)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 4
     validate(hugr)
