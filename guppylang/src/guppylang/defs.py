@@ -44,7 +44,9 @@ def _update_generator_metadata(hugr: Hugr[Any]) -> None:
 @dataclass(frozen=True)
 class EntrypointArgsError(Error):
     title: ClassVar[str] = "Entrypoint function has arguments"
-    span_label: ClassVar[str] = "Entrypoint function has arguments: {input_names}."
+    span_label: ClassVar[str] = (
+        "Entrypoint function must have no input parameters, found {input_names}."
+    )
     args: Sequence[str]
 
     @property
