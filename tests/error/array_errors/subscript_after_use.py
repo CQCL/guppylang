@@ -12,4 +12,4 @@ def main(qs: array[qubit, 42] @owned) -> array[qubit, 42]:
     return foo(qs, qs[0])
 
 
-main.compile(entrypoint=False)
+main.compile_function()

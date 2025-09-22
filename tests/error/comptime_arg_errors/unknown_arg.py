@@ -12,4 +12,4 @@ def main(b: bool, m: nat) -> None:
         foo(m)
 
 
-main.compile(entrypoint=False)
+main.compile_function()

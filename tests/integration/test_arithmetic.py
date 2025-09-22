@@ -122,7 +122,7 @@ def test_angle_arith(validate):
         a3 += 2 * a1
         return a3 / 3 == -a2
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_angle_arith_float(validate):
@@ -133,7 +133,7 @@ def test_angle_arith_float(validate):
         a3 += 2.2 * a1
         return a3 / 3.9 == -a2
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_implicit_coercion(validate):
@@ -153,7 +153,7 @@ def test_angle_float_coercion(validate):
         a = angle(f)
         return a, float(a)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_angle_pi(validate):
@@ -164,7 +164,7 @@ def test_angle_pi(validate):
         a += 3 * pi / 2
         return a
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_shortcircuit_assign1(validate):

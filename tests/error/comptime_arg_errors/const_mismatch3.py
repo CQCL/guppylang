@@ -12,4 +12,4 @@ def main(n: nat @ comptime, m: nat @ comptime) -> None:
     foo[n](m)
 
 
-main.compile(entrypoint=False)
+main.compile_function()

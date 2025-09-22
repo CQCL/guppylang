@@ -12,7 +12,7 @@ def test_id(validate):
     def identity(x: T) -> T:
         return x
 
-    validate(identity.compile(entrypoint=False))
+    validate(identity.compile_function())
 
 
 def test_nonlinear(validate):
@@ -22,7 +22,7 @@ def test_nonlinear(validate):
     def copy(x: T) -> tuple[T, T]:
         return x, x
 
-    validate(copy.compile(entrypoint=False))
+    validate(copy.compile_function())
 
 
 def test_apply(validate):
@@ -33,7 +33,7 @@ def test_apply(validate):
     def apply(f: Callable[[S], T], x: S) -> T:
         return f(x)
 
-    validate(apply.compile(entrypoint=False))
+    validate(apply.compile_function())
 
 
 def test_annotate(validate):
@@ -44,7 +44,7 @@ def test_annotate(validate):
         y: T = x
         return y
 
-    validate(identity.compile(entrypoint=False))
+    validate(identity.compile_function())
 
 
 def test_recurse(validate):
@@ -54,7 +54,7 @@ def test_recurse(validate):
     def empty() -> T:
         return empty()
 
-    validate(empty.compile(entrypoint=False))
+    validate(empty.compile_function())
 
 
 def test_call(validate):
@@ -68,7 +68,7 @@ def test_call(validate):
     def main() -> float:
         return identity(5) + identity(42.0)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_nat(validate):
@@ -79,7 +79,7 @@ def test_nat(validate):
     def foo(xs: array[T, n] @ owned) -> array[T, n]:
         return xs
 
-    validate(foo.compile(entrypoint=False))
+    validate(foo.compile_function())
 
 
 def test_nat_use(validate):
@@ -89,7 +89,7 @@ def test_nat_use(validate):
     def foo(xs: array[int, n]) -> int:
         return int(n)
 
-    validate(foo.compile(entrypoint=False))
+    validate(foo.compile_function())
 
 
 def test_nat_call(validate):
@@ -104,7 +104,7 @@ def test_nat_call(validate):
     def main() -> tuple[array[int, 10], array[float, 20]]:
         return foo(), foo()
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_nat_recurse(validate):
@@ -114,7 +114,7 @@ def test_nat_recurse(validate):
     def empty() -> array[int, n]:
         return empty()
 
-    validate(empty.compile(entrypoint=False))
+    validate(empty.compile_function())
 
 
 def test_type_apply(validate):
@@ -128,7 +128,7 @@ def test_type_apply(validate):
     def identity(x: array[T, n]) -> array[T, n]:
         return foo[T, n](x)
 
-    validate(identity.compile(entrypoint=False))
+    validate(identity.compile_function())
 
 
 def test_custom_func_higher_order(validate):
@@ -140,4 +140,4 @@ def test_custom_func_higher_order(validate):
         f = nothing[T]
         return f()
 
-    validate(foo.compile(entrypoint=False))
+    validate(foo.compile_function())

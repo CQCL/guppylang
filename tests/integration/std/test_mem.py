@@ -12,4 +12,4 @@ def test_with_owned(validate):
 
         return with_owned(q, helper)
 
-    validate(measure_and_reset.compile(entrypoint=False))
+    validate(measure_and_reset.compile_function())

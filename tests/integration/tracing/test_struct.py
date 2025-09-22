@@ -117,4 +117,4 @@ def test_load_constructor(validate):
     def test() -> Callable[[int], S]:
         return S
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())

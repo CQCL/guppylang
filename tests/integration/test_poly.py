@@ -24,7 +24,7 @@ def test_id(validate):
     def main(x: int) -> int:
         return foo(x)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_id_nested(validate):
@@ -37,7 +37,7 @@ def test_id_nested(validate):
     def main(x: int) -> int:
         return foo(foo(foo(x)))
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_use_twice(validate):
@@ -51,7 +51,7 @@ def test_use_twice(validate):
         foo(x)
         foo(y)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_define_twice(validate):
@@ -69,7 +69,7 @@ def test_define_twice(validate):
         foo(x)
         foo(y)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_return_tuple_implicit(validate):
@@ -82,7 +82,7 @@ def test_return_tuple_implicit(validate):
     def main(x: int) -> tuple[int, int]:
         return foo((x, 0))
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_same_args(validate):
@@ -95,7 +95,7 @@ def test_same_args(validate):
     def main(x: int) -> None:
         foo(x, 42)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_different_args(validate):
@@ -109,7 +109,7 @@ def test_different_args(validate):
     def main(x: int, y: float) -> float:
         return foo(x, y, (x, y)) + foo(y, 42.0, (0.0, y))
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_nat_args(validate):
@@ -122,7 +122,7 @@ def test_nat_args(validate):
     def main(x: array[int, 42]) -> array[int, 42]:
         return foo(x)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_infer_basic(validate):
@@ -135,7 +135,7 @@ def test_infer_basic(validate):
     def main() -> None:
         x: int = foo()
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_infer_list(validate):
@@ -149,7 +149,7 @@ def test_infer_list(validate):
         xs: list[int] = [foo()]
         ys = [1.0, foo()]
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_infer_nested(validate):
@@ -165,7 +165,7 @@ def test_infer_nested(validate):
     def main() -> None:
         x: int = bar(foo())
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_infer_left_to_right(validate):
@@ -182,7 +182,7 @@ def test_infer_left_to_right(validate):
     def main() -> None:
         bar(42, foo(), False, foo())
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_type_apply_basic(validate):
@@ -202,7 +202,7 @@ def test_type_apply_basic(validate):
         z = bar[float, int](y, x)
         return x, y, z
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_type_apply_higher_order(validate):
@@ -225,7 +225,7 @@ def test_type_apply_higher_order(validate):
         z = h(y, x)
         return x, y, z
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_type_apply_nat(validate):
@@ -238,7 +238,7 @@ def test_type_apply_nat(validate):
     def main() -> int:
         return foo[0](array()) + foo[2](array(1, 2))
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_type_apply_empty_tuple(validate):
@@ -252,7 +252,7 @@ def test_type_apply_empty_tuple(validate):
         # `()` is the type of an empty tuple (`tuple[]` is not syntactically valid)
         foo[()]
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_type_apply_method(validate):
@@ -268,7 +268,7 @@ def test_type_apply_method(validate):
     def main(s: MyStruct[int]) -> None:
         s.foo[int]()
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_pass_poly_basic(validate):
@@ -284,7 +284,7 @@ def test_pass_poly_basic(validate):
     def main() -> None:
         foo(bar)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_pass_poly_cross(validate):
@@ -301,7 +301,7 @@ def test_pass_poly_cross(validate):
     def main() -> None:
         foo(bar)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_linear(validate):
@@ -314,7 +314,7 @@ def test_linear(validate):
     def main(q: qubit) -> qubit:
         return foo(q)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_affine(validate):
@@ -327,7 +327,7 @@ def test_affine(validate):
     def main(a: array[int, 7]) -> None:
         foo(a)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_relevant(validate):
@@ -344,7 +344,7 @@ def test_relevant(validate):
         r_copy = r
         return foo(r_copy)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_pass_nonlinear(validate):
@@ -357,7 +357,7 @@ def test_pass_nonlinear(validate):
     def main(x: int) -> None:
         foo(x)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_pass_linear(validate):
@@ -373,7 +373,7 @@ def test_pass_linear(validate):
     def main() -> None:
         foo(bar)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_custom_higher_order():
@@ -407,4 +407,4 @@ def test_higher_order_value(validate):
         f = foo if b else bar
         return f(42)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())

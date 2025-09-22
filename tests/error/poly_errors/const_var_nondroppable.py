@@ -23,4 +23,4 @@ def main(_: Struct[X]) -> None:
     pass
 
 
-main.compile(entrypoint=False)
+main.compile_function()

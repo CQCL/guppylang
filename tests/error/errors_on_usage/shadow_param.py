@@ -11,4 +11,4 @@ def main(b: bool) -> nat:
     return n
 
 
-main.compile(entrypoint=False)
+main.compile_function()

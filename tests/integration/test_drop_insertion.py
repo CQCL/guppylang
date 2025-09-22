@@ -38,7 +38,7 @@ def test_drop(validate):
     def main(x: AffineTy @ owned) -> None:
         pass
 
-    hugr = main.compile(entrypoint=False)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 1
     validate(hugr)
 
@@ -58,7 +58,7 @@ def test_drop_nested(validate):
     ) -> None:
         pass
 
-    hugr = main.compile(entrypoint=False)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 4
     validate(hugr)
 
@@ -71,7 +71,7 @@ def test_drop_inout(validate):
     def main() -> None:
         foo(make())  # Drops inout return
 
-    hugr = main.compile(entrypoint=False)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 1
     validate(hugr)
 
@@ -85,7 +85,7 @@ def test_drop_comprehension(validate):
         array(foo(x) for _ in range(10))
         # Drops x and the resulting array
 
-    hugr = main.compile(entrypoint=False)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 2
     validate(hugr)
 
@@ -97,7 +97,7 @@ def test_drop_reassign(validate):
         x = make()  # Drops previous x
         return x
 
-    hugr = main.compile(entrypoint=False)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 1
     validate(hugr)
 
@@ -110,7 +110,7 @@ def test_drop_if(validate):
             x = make()  # Drops previous x
         return x
 
-    hugr = main.compile(entrypoint=False)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 1
     validate(hugr)
 
@@ -133,6 +133,6 @@ def test_drop_while(validate):
             x = make()  # Drops x
         return y
 
-    hugr = main.compile(entrypoint=False)
+    hugr = main.compile_function()
     assert num_drops(hugr) == 4
     validate(hugr)

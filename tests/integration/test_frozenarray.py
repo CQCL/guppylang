@@ -123,4 +123,4 @@ def test_nested_struct(validate):
                 s += x
         return s
 
-    validate(foo.compile(entrypoint=False))
+    validate(foo.compile_function())

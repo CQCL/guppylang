@@ -13,4 +13,4 @@ def main(x: bool, y: tuple[bool]) -> None:
     foo(x, y)
 
 
-main.compile(entrypoint=False)
+main.compile_function()

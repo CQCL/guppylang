@@ -93,7 +93,7 @@ def test_unreachable_leak(validate):
         # This return would leak, but we don't complain since it's unreachable:
         return 0
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_unreachable_leak2(validate):
@@ -103,7 +103,7 @@ def test_unreachable_leak2(validate):
             # This would leak, but we don't complain since it's unreachable:
             q = qubit()
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_unreachable_copy(validate):
@@ -116,4 +116,4 @@ def test_unreachable_copy(validate):
             # unreachable:
             h(q)
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())

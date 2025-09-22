@@ -59,7 +59,7 @@ class EntrypointArgsError(Error):
 class GuppyDefinition(TracingDefMixin):
     """A general Guppy definition."""
 
-    def compile(self, *, entrypoint: bool = True) -> Package:
+    def compile(self) -> Package:
         """Compile a Guppy definition to HUGR."""
         package: Package = ENGINE.compile(self.id).package
         for mod in package.modules:
@@ -98,20 +98,17 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         Returns:
             An `EmulatorInstance` that can be used to run the function in an emulator.
         """
-        mod = self.compile(entrypoint=True)
+        mod = self.compile()
 
         builder = builder or EmulatorBuilder()
         return builder.build(mod, n_qubits=n_qubits)
 
-    def compile(self, *, entrypoint: bool = True) -> Package:
+    def compile(self) -> Package:
         """
-        Compiles a function definition to a HUGR package.
+        Compiles an execution entrypoint function definition to a HUGR package
 
-        If `entrypoint` is True, checks that the entrypoint does not have any arguments.
+        Equivalent to :py:meth:`GuppyDefinition.compile_entrypoint`.
 
-        Args:
-            entrypoint (bool, optional): Whether to treat this definition
-              as the entrypoint. Defaults to True.
 
         Returns:
             Package: The compiled package object.
@@ -119,16 +116,18 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
             GuppyError: If the entrypoint has arguments.
         """
 
-        pack = super().compile(entrypoint=entrypoint)
+        return self.compile_entrypoint()
+
+    def compile_entrypoint(self) -> Package:
+        pack = self.compile_function()
         # entrypoint cannot be polymorphic
         monomorphized_id = (self.id, ())
         compiled_def = ENGINE.compiled.get(monomorphized_id)
         if (
-            entrypoint
-            and isinstance(compiled_def, CompiledCallableDef)
+            isinstance(compiled_def, CompiledCallableDef)
             and len(compiled_def.ty.inputs) > 0
         ):
-            # Check if the entrypoint being has arguments
+            # Check if the entrypoint has arguments
             defined_at = cast(ast.FunctionDef, compiled_def.defined_at)
             start = to_span(defined_at.args.args[0])
             end = to_span(defined_at.args.args[-1])
@@ -140,6 +139,15 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
                 )
             )
         return pack
+
+    def compile_function(self) -> Package:
+        """Compile a Guppy function definition to HUGR.
+
+
+        Returns:
+            Package: The compiled package object.
+        """
+        return super().compile()
 
 
 @dataclass(frozen=True)

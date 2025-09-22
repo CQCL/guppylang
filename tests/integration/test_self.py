@@ -15,7 +15,7 @@ def test_implicit_self(validate):
     def main(s: MyStruct) -> None:
         s.foo()
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_implicit_self_generic(validate):
@@ -35,7 +35,7 @@ def test_implicit_self_generic(validate):
     def main(s: MyStruct[int, float]) -> int:
         return s.foo(1.5)
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_explicit_self(validate):
@@ -49,7 +49,7 @@ def test_explicit_self(validate):
     def main(s: MyStruct) -> MyStruct:
         return s.foo(s).foo(s.foo(MyStruct()))
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_explicit_self_generic(validate):
@@ -67,7 +67,7 @@ def test_explicit_self_generic(validate):
     def main(s: MyStruct[int]) -> None:
         s.foo().foo()
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 def test_more_generic(validate):
@@ -92,4 +92,4 @@ def test_more_generic(validate):
         a, b = s.foo(a, s.x)
         return a + b
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())

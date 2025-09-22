@@ -12,7 +12,7 @@ def test_extern_float(validate):
     def main() -> float:
         return ext + ext
 
-    package = main.compile(entrypoint=False)
+    package = main.compile_function()
     validate(package)
 
     hg = package.modules[0]
@@ -28,7 +28,7 @@ def test_extern_alt_symbol(validate):
     def main() -> int:
         return ext
 
-    package = main.compile(entrypoint=False)
+    package = main.compile_function()
     validate(package)
 
     hg = package.modules[0]
@@ -45,7 +45,7 @@ def test_extern_tuple(validate):
         x, y = ext
         return x + y
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
 
 
 @pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/827")
@@ -58,4 +58,4 @@ def test_extern_conditional_assign(validate):
             x = 4
         return x
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())

@@ -7,4 +7,4 @@ def main(q: qubit @comptime) -> None:
     pass
 
 
-main.compile(entrypoint=False)
+main.compile_function()

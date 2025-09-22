@@ -34,7 +34,7 @@ def test_qsystem(validate):  # type: ignore[no-untyped-def]
         qfree(q2)
         return b
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
@@ -57,7 +57,7 @@ def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
 
         return rint, rfloat, rint_bnd, rint_discrete, rangle, rcangle
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_measure_leaked(validate):  # type: ignore[no-untyped-def]
@@ -72,4 +72,4 @@ def test_measure_leaked(validate):  # type: ignore[no-untyped-def]
         b: bool = ml.to_result().unwrap()
         return b
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())

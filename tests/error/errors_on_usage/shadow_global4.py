@@ -13,4 +13,4 @@ def main(b: bool) -> None:
         return x
 
 
-main.compile(entrypoint=False)
+main.compile_function()

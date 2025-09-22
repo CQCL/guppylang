@@ -24,7 +24,7 @@ def test_basic_linear(validate):
     def test(qs: list[qubit] @ owned) -> list[qubit]:
         return [h(q) for q in qs]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_guarded(validate):
@@ -52,7 +52,7 @@ def test_multiple_struct(validate):
     def test(ss: list[MyStruct] @ owned) -> list[qubit]:
         return [h(q) for s in ss for q in s.qs]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_tuple_pat(validate):
@@ -68,7 +68,7 @@ def test_tuple_pat_linear(validate):
     def test(qs: list[tuple[int, qubit, qubit]] @ owned) -> list[tuple[qubit, qubit]]:
         return [cx(q1, q2) for _, q1, q2 in qs]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_tuple_return(validate):
@@ -87,7 +87,7 @@ def test_dependent(validate):
     def test(xs: list[float]) -> list[float]:
         return [x * y for x in xs if x > 0 for y in process(x) if y > x]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_capture(validate):
@@ -108,7 +108,7 @@ def test_capture_struct(validate):
     def test(xs: list[int], s: MyStruct) -> list[int]:
         return [x + s.x for x in xs if x > s.y]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_scope(validate):
@@ -142,7 +142,7 @@ def test_nested_linear(validate):
     def test(qs: list[qubit] @ owned) -> list[qubit]:
         return [h(q) for q in [h(q) for q in qs]]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_classical_list_comp(validate):
@@ -150,7 +150,7 @@ def test_classical_list_comp(validate):
     def test(xs: list[int]) -> list[int]:
         return [x for x in xs]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_linear_discard(validate):
@@ -161,7 +161,7 @@ def test_linear_discard(validate):
     def test(qs: list[qubit] @ owned) -> list[None]:
         return [discard(q) for q in qs]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_linear_discard_struct(validate):
@@ -177,7 +177,7 @@ def test_linear_discard_struct(validate):
     def test(ss: list[MyStruct] @ owned) -> list[None]:
         return [discard(s.q1, s.q2) for s in ss]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_linear_consume_in_guard(validate):
@@ -188,7 +188,7 @@ def test_linear_consume_in_guard(validate):
     def test(qs: list[tuple[int, qubit]] @ owned) -> list[int]:
         return [x for x, q in qs if cond(q)]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_linear_consume_in_iter(validate):
@@ -199,7 +199,7 @@ def test_linear_consume_in_iter(validate):
     def test(qs: list[qubit] @ owned) -> list[int]:
         return [x for q in qs for x in make_list(q)]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_linear_next_nonlinear_iter(validate):
@@ -222,7 +222,7 @@ def test_linear_next_nonlinear_iter(validate):
         # We can use `mt` in an inner loop since it's not linear
         return [(x, q) for x in xs for q in mt]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_nonlinear_next_linear_iter(validate):
@@ -251,7 +251,7 @@ def test_nonlinear_next_linear_iter(validate):
         # We can use `mt` in an outer loop since the target `x` is not linear
         return [(x, x + y) for x in mt for y in xs]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_borrow(validate):
@@ -262,7 +262,7 @@ def test_borrow(validate):
     def test(q: qubit, n: int) -> list[int]:
         return [foo(q) for _ in range(n)]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_borrow_nested(validate):
@@ -273,7 +273,7 @@ def test_borrow_nested(validate):
     def test(q: qubit, n: int, m: int) -> list[int]:
         return [foo(q) for _ in range(n) for _ in range(m)]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_borrow_guarded(validate):
@@ -284,7 +284,7 @@ def test_borrow_guarded(validate):
     def test(q: qubit, n: int) -> list[int]:
         return [foo(q) for i in range(n) if i % 2 == 0]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_borrow_twice(validate):
@@ -295,7 +295,7 @@ def test_borrow_twice(validate):
     def test(q: qubit, n: int) -> list[int]:
         return [foo(q) + foo(q) for _ in range(n)]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_borrow_in_guard(validate):
@@ -309,7 +309,7 @@ def test_borrow_in_guard(validate):
     def test(q: qubit, n: int) -> list[int]:
         return [foo(q) for _ in range(n) if bar(q)]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_borrow_in_iter(validate):
@@ -320,7 +320,7 @@ def test_borrow_in_iter(validate):
     def test(q: qubit @ owned) -> tuple[list[int], qubit]:
         return [foo(q) for _ in range(foo(q))], q
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_borrow_struct(validate):
@@ -336,7 +336,7 @@ def test_borrow_struct(validate):
     def test(s: MyStruct, n: int) -> list[int]:
         return [foo(s) for _ in range(n)]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())
 
 
 def test_borrow_and_consume(validate):
@@ -350,4 +350,4 @@ def test_borrow_and_consume(validate):
     def test(qs: list[qubit] @ owned) -> list[int]:
         return [foo(q) + bar(q) for q in qs]
 
-    validate(test.compile(entrypoint=False))
+    validate(test.compile_function())

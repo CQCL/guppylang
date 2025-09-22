@@ -22,9 +22,9 @@ def test_factorial(validate):
             return acc
         return factorial3(x - 1, acc * x)
 
-    validate(factorial1.compile(entrypoint=False), name="factorial1")
-    validate(factorial2.compile(entrypoint=False), name="factorial2")
-    validate(factorial3.compile(entrypoint=False), name="factorial3")
+    validate(factorial1.compile_function(), name="factorial1")
+    validate(factorial2.compile_function(), name="factorial2")
+    validate(factorial3.compile_function(), name="factorial3")
 
 
 def test_even_odd(validate):
@@ -40,5 +40,5 @@ def test_even_odd(validate):
             return False
         return is_even(x - 1)
 
-    validate(is_odd.compile(entrypoint=False))
-    validate(is_even.compile(entrypoint=False))
+    validate(is_odd.compile_function())
+    validate(is_even.compile_function())

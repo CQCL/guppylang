@@ -12,4 +12,4 @@ def test_read(validate):
         z.discard()
         return 0
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())

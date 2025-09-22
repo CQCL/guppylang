@@ -18,4 +18,4 @@ def main(b: bool) -> None:
     bar()
 
 
-main.compile(entrypoint=False)
+main.compile_function()

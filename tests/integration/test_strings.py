@@ -28,4 +28,4 @@ def test_struct(validate):
     def main(s: StringStruct) -> None:
         StringStruct("Lorem Ipsum")
 
-    validate(main.compile(entrypoint=False))
+    validate(main.compile_function())
