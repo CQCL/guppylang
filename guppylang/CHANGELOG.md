@@ -16,6 +16,9 @@ As of August 2025, The Guppy language is undergoing rapid development and is cur
 
 ## [0.21.5](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.4...guppylang-v0.21.5) (2025-09-22)
 
+> [!WARNING]  
+> The `.compile()` method now assumes the function being compiled is an execution entrypoint and therefore checks it takes no arguments.
+> If you have an existing workflow that produces a HUGR with a non-executable function this will break, use `compile_function` instead.
 
 ### Features
 
