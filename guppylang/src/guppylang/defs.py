@@ -4,12 +4,12 @@ These are the objects returned by the `@guppy` decorator. They should not be con
 with the compiler-internal definition objects in the `definitions` module.
 """
 
+import ast
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, Generic, ParamSpec, TypeVar, cast
 
 import guppylang_internals
-from guppylang_internals.definition.function import CheckedFunctionDef
 from guppylang_internals.definition.value import CompiledCallableDef
 from guppylang_internals.diagnostic import Error
 from guppylang_internals.engine import ENGINE, CoreMetadataKeys
@@ -45,7 +45,7 @@ def _update_generator_metadata(hugr: Hugr[Any]) -> None:
 class EntrypointArgsError(Error):
     title: ClassVar[str] = "Entrypoint function has arguments"
     span_label: ClassVar[str] = (
-        "Entrypoint function must have no input parameters, found {input_names}."
+        "Entrypoint function must have no input parameters, found ({input_names})."
     )
     args: Sequence[str]
 
@@ -129,9 +129,9 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
             and len(compiled_def.ty.inputs) > 0
         ):
             # Check if the entrypoint being has arguments
-            checked = cast(CheckedFunctionDef, ENGINE.checked[self.id])
-            start = to_span(checked.defined_at.args.args[0])
-            end = to_span(checked.defined_at.args.args[-1])
+            defined_at = cast(ast.FunctionDef, compiled_def.defined_at)
+            start = to_span(defined_at.args.args[0])
+            end = to_span(defined_at.args.args[-1])
             span = Span(start=start.start, end=end.end)
             raise GuppyError(
                 EntrypointArgsError(
