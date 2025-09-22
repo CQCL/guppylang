@@ -62,7 +62,7 @@ def test_result_panic(validate):
         exit("Foo!", 1)
         result("c", 10.5)
 
-    compiled = test.compile()
+    compiled = test.compile_function()
     validate(compiled)
 
     # Check that we have the expected order edges between the results
@@ -83,7 +83,7 @@ def test_qalloc_qfree(validate):
         q2 = qubit()
         measure(q2)
 
-    compiled = test.compile()
+    compiled = test.compile_function()
     validate(compiled)
 
     # Check that we have the expected order edges between the allocations and frees
@@ -109,7 +109,7 @@ def test_call(validate):
         f = my_discard
         f(q2)
 
-    compiled = test.compile()
+    compiled = test.compile_function()
     validate(compiled)
 
     # Check that we have the expected order edges between the allocations and calls
@@ -130,7 +130,7 @@ def test_nested(validate):
         qs2 = array(qubit() for _ in range(10))
         array(discard(q) for q in qs2)
 
-    compiled = test.compile()
+    compiled = test.compile_function()
     validate(compiled)
 
     # Check that we have the expected order edges between the comprehension tail loops

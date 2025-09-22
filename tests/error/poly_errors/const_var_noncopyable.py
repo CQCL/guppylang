@@ -16,4 +16,4 @@ def main(_: Struct[Q]) -> None:
     pass
 
 
-main.compile()
+main.compile_function()

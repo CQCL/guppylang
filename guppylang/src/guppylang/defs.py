@@ -4,11 +4,17 @@ These are the objects returned by the `@guppy` decorator. They should not be con
 with the compiler-internal definition objects in the `definitions` module.
 """
 
+import ast
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, Generic, ParamSpec, TypeVar, cast
 
 import guppylang_internals
+from guppylang_internals.definition.value import CompiledCallableDef
+from guppylang_internals.diagnostic import Error, Note
 from guppylang_internals.engine import ENGINE, CoreMetadataKeys
+from guppylang_internals.error import GuppyError
+from guppylang_internals.span import Span, to_span
 from guppylang_internals.tracing.object import TracingDefMixin
 from guppylang_internals.tracing.util import hide_trace
 from hugr.hugr import Hugr
@@ -33,6 +39,28 @@ def _update_generator_metadata(hugr: Hugr[Any]) -> None:
         "name": f"guppylang (guppylang-internals-v{guppylang_internals.__version__})",
         "version": guppylang.__version__,
     }
+
+
+@dataclass(frozen=True)
+class EntrypointArgsError(Error):
+    title: ClassVar[str] = "Entrypoint function has arguments"
+    span_label: ClassVar[str] = (
+        "Entrypoint function must have no input parameters, found ({input_names})."
+    )
+    args: Sequence[str]
+
+    @dataclass(frozen=True)
+    class AlternateHint(Note):
+        message: ClassVar[str] = (
+            "If the function is not an execution entrypoint,"
+            " consider using `{function_name}.compile_function()`"
+        )
+        function_name: str
+
+    @property
+    def input_names(self) -> str:
+        """Returns a comma-separated list of input names."""
+        return ", ".join(f"`{x}`" for x in self.args)
 
 
 @dataclass(frozen=True)
@@ -82,6 +110,65 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
 
         builder = builder or EmulatorBuilder()
         return builder.build(mod, n_qubits=n_qubits)
+
+    def compile(self) -> Package:
+        """
+        Compiles an execution entrypoint function definition to a HUGR package
+
+        Equivalent to :py:meth:`GuppyDefinition.compile_entrypoint`.
+
+
+        Returns:
+            Package: The compiled package object.
+        Raises:
+            GuppyError: If the entrypoint has arguments.
+        """
+
+        return self.compile_entrypoint()
+
+    def compile_entrypoint(self) -> Package:
+        """
+        Compiles an execution entrypoint function definition to a HUGR package
+
+        Returns:
+            Package: The compiled package object.
+        Raises:
+            GuppyError: If the entrypoint has arguments.
+        """
+
+        pack = self.compile_function()
+        # entrypoint cannot be polymorphic
+        monomorphized_id = (self.id, ())
+        compiled_def = ENGINE.compiled.get(monomorphized_id)
+        if (
+            isinstance(compiled_def, CompiledCallableDef)
+            and len(compiled_def.ty.inputs) > 0
+        ):
+            # Check if the entrypoint has arguments
+            defined_at = cast(ast.FunctionDef, compiled_def.defined_at)
+            start = to_span(defined_at.args.args[0])
+            end = to_span(defined_at.args.args[-1])
+            span = Span(start=start.start, end=end.end)
+            raise GuppyError(
+                EntrypointArgsError(
+                    span=span,
+                    args=compiled_def.ty.input_names or "",
+                ).add_sub_diagnostic(
+                    EntrypointArgsError.AlternateHint(
+                        None, function_name=defined_at.name
+                    )
+                )
+            )
+        return pack
+
+    def compile_function(self) -> Package:
+        """Compile a Guppy function definition to HUGR.
+
+
+        Returns:
+            Package: The compiled package object.
+        """
+        return super().compile()
 
 
 @dataclass(frozen=True)

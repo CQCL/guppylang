@@ -19,7 +19,7 @@ def test_flat(validate):
             x += i
         return x
 
-    hugr = foo.compile().modules[0]
+    hugr = foo.compile_function().modules[0]
     assert hugr.num_nodes() == 6
     [const] = [data.op for _, data in hugr.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(const.val, IntVal)
@@ -32,7 +32,7 @@ def test_inputs(validate):
     def foo(x: int, y: float) -> tuple[int, float]:
         return x, y
 
-    validate(foo.compile())
+    validate(foo.compile_function())
 
 
 def test_recursion(validate):
@@ -41,7 +41,7 @@ def test_recursion(validate):
         # `foo` doesn't terminate but the compiler should!
         return foo(x)
 
-    validate(foo.compile())
+    validate(foo.compile_function())
 
 
 def test_calls(validate):
@@ -61,7 +61,7 @@ def test_calls(validate):
     def regular2(x: int) -> int:
         return comptime1(x)
 
-    validate(regular2.compile())
+    validate(regular2.compile_function())
 
 
 def test_load_func(validate):
@@ -72,7 +72,7 @@ def test_load_func(validate):
     def test() -> Callable[[int], int]:
         return foo
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_inner_scope(validate):
@@ -91,8 +91,8 @@ def test_inner_scope(validate):
         return foo, bar
 
     foo, bar = make(42)
-    validate(foo.compile())
-    validate(bar.compile())
+    validate(foo.compile_function())
+    validate(bar.compile_function())
 
 
 def test_expr_id(run_int_fn):
@@ -123,7 +123,7 @@ def test_inout_type_infer(validate):
         assert all(isinstance(x, GuppyObject) for x in id)
         rng.discard()
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def mem_swap_array(validate):
@@ -135,4 +135,4 @@ def mem_swap_array(validate):
         assert isinstance(xs[0], GuppyObject)
         assert isinstance(ys[0], GuppyObject)
 
-    validate(main.compile())
+    validate(main.compile_function())

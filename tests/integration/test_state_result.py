@@ -77,7 +77,7 @@ def test_struct_access(validate):
         discard(qs.q3)
         discard(qs.q4)
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_array(validate):
@@ -101,4 +101,4 @@ def test_generic_array(validate):
         cx(qs[0], qs[1])
         state_result("tag", qs)
 
-    validate(main.compile())
+    validate(main.compile_function())
