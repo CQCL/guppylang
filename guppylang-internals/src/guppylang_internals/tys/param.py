@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from guppylang_internals.tys.subst import PartialInst
     from guppylang_internals.tys.ty import Type
 
-
 # We define the `Parameter` type as a union of all `ParameterBase` subclasses defined
 # below. This models an algebraic data type and enables exhaustiveness checking in
 # pattern matches etc.
@@ -173,12 +172,6 @@ class ConstParam(ParameterBase):
     #: annotated argument in a function signature.
     from_comptime_arg: bool = field(default=False, kw_only=True)
 
-    def __post_init__(self) -> None:
-        if self.ty.unsolved_vars:
-            raise InternalGuppyError(
-                "Attempted to create constant param with unsolved type"
-            )
-
     def with_idx(self, idx: int) -> "ConstParam":
         """Returns a copy of the parameter with a new index."""
         return ConstParam(idx, self.name, self.ty)
@@ -188,13 +181,16 @@ class ConstParam(ParameterBase):
 
         Raises a user error if the argument is not valid.
         """
+        from guppylang_internals.tys.ty import unify
+
         match arg:
             case ConstArg(const):
-                if const.ty != self.ty:
+                subst = unify(const.ty, self.ty, {})
+                if subst is None:
                     raise GuppyTypeError(
                         TypeMismatchError(loc, self.ty, const.ty, kind="argument")
                     )
-                return arg
+                return ConstArg(replace(const, ty=const.ty.substitute(subst)))
             case TypeArg(ty=ty):
                 err = ExpectedError(
                     loc, f"expression of type `{self.ty}`", got=f"type `{ty}`"
