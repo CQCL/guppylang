@@ -182,8 +182,7 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> bool:
             assert is_array_type(obj._ty)
             elem_ty = get_element_type(obj._ty)
             wires = unpack_array(builder, obj._use_wire(None))
-            err = "Non-droppable array element has already been used"
-            for i, (v, wire) in enumerate(zip(vs, opt_wires, strict=True)):
+            for i, (v, wire) in enumerate(zip(vs, wires, strict=True)):
                 success = update_packed_value(v, GuppyObject(elem_ty, wire), builder)
                 if not success:
                     vs[i] = obj
