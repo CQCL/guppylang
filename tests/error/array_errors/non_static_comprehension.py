@@ -7,4 +7,4 @@ def main(n: int) -> None:
     array(i for i in range(n))
 
 
-main.compile()
+main.compile_function()

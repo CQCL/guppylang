@@ -13,7 +13,7 @@ on:
 
 env:
   # Pinned version for the uv package manager
-  UV_VERSION: "0.6.6"
+  UV_VERSION: "0.7.4"
   # The highest and lowest supported Python versions, used for testing
   PYTHON_HIGHEST: "3.13"
   PYTHON_LOWEST: "3.10"
@@ -27,7 +27,7 @@ jobs:
     # release-please always uses this branch name.
     if: ${{ github.event_name == 'workflow_dispatch' || github.head_ref == 'release-please--branches--main--components--guppylang' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: mozilla-actions/sccache-action@v0.0.9
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
@@ -69,4 +69,3 @@ jobs:
           echo "\nDone! Installed dependencies:"
       - name: Rerun comptime expression tests and pytket lowering with tket installed
         run: uv run --no-sync pytest tests/integration/test_comptime_expr.py tests/error/test_comptime_expr_errors.py tests/integration/test_pytket_circuits.py
-

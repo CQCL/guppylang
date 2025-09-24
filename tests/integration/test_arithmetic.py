@@ -77,7 +77,7 @@ def test_nat(validate):
     ) -> tuple[nat, bool, int, float, float]:
         b, c, d, e = nat(b), nat(c), nat(d), nat(e)
         x = a + b * c // d - e
-        y = e / b
+        y = e / b % a
         return x, bool(x), int(x), float(x), y
 
     validate(foo)
@@ -122,7 +122,7 @@ def test_angle_arith(validate):
         a3 += 2 * a1
         return a3 / 3 == -a2
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_angle_arith_float(validate):
@@ -133,7 +133,7 @@ def test_angle_arith_float(validate):
         a3 += 2.2 * a1
         return a3 / 3.9 == -a2
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_implicit_coercion(validate):
@@ -153,7 +153,7 @@ def test_angle_float_coercion(validate):
         a = angle(f)
         return a, float(a)
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_angle_pi(validate):
@@ -164,7 +164,7 @@ def test_angle_pi(validate):
         a += 3 * pi / 2
         return a
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_shortcircuit_assign1(validate):

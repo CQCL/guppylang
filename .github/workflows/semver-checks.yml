@@ -15,14 +15,14 @@ on:
 env:
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
-  UV_VERSION: "0.6.6"
+  UV_VERSION: "0.7.4"
 
 jobs:
   semver-checks:
     name: Check for breaking changes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install rust toolchain

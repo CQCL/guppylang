@@ -19,4 +19,4 @@ def main(_: Struct[T, n, X]) -> None:
     pass
 
 
-main.compile()
+main.compile_function()

@@ -19,14 +19,14 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  UV_VERSION: "0.6.6"
+  UV_VERSION: "0.7.4"
 
 jobs:
   build:
     name: Build docs.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
 
@@ -41,7 +41,7 @@ jobs:
           cd docs
           ./build.sh
       - name: Upload artifact.
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./docs/build/
 
@@ -51,15 +51,15 @@ jobs:
     needs: build
     if: always() && needs.build.result == 'failure' && github.event_name == 'push'
     secrets:
-        GITHUB_PAT: ${{ secrets.HUGRBOT_PAT }}
+      GITHUB_PAT: ${{ secrets.HUGRBOT_PAT }}
     with:
-        title: "💥 Doc builds fail on main"
-        body: |
-            The doc building workflow has failed on the main branch.
+      title: "💥 Doc builds fail on main"
+      body: |
+        The doc building workflow has failed on the main branch.
 
-            [Please investigate](https://github.com/CQCL/guppylang/actions/runs/${{ github.run_id }}).
-        unique-label: "docs-fail"
-        other-labels: "bug"
+        [Please investigate](https://github.com/CQCL/guppylang/actions/runs/${{ github.run_id }}).
+      unique-label: "docs-fail"
+      other-labels: "bug"
 
   publish:
     name: Publish docs.

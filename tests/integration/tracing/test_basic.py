@@ -2,9 +2,13 @@ from collections.abc import Callable
 
 from guppylang.decorator import guppy
 from guppylang.std.builtins import array, comptime
+from guppylang.std.mem import mem_swap
+from guppylang.std.qsystem.random import RNG
 
 from hugr import ops
 from hugr.std.int import IntVal
+
+from guppylang_internals.tracing.object import GuppyObject
 
 
 def test_flat(validate):
@@ -15,7 +19,7 @@ def test_flat(validate):
             x += i
         return x
 
-    hugr = foo.compile().modules[0]
+    hugr = foo.compile_function().modules[0]
     assert hugr.num_nodes() == 6
     [const] = [data.op for _, data in hugr.nodes() if isinstance(data.op, ops.Const)]
     assert isinstance(const.val, IntVal)
@@ -28,7 +32,7 @@ def test_inputs(validate):
     def foo(x: int, y: float) -> tuple[int, float]:
         return x, y
 
-    validate(foo.compile())
+    validate(foo.compile_function())
 
 
 def test_recursion(validate):
@@ -37,7 +41,7 @@ def test_recursion(validate):
         # `foo` doesn't terminate but the compiler should!
         return foo(x)
 
-    validate(foo.compile())
+    validate(foo.compile_function())
 
 
 def test_calls(validate):
@@ -57,7 +61,7 @@ def test_calls(validate):
     def regular2(x: int) -> int:
         return comptime1(x)
 
-    validate(regular2.compile())
+    validate(regular2.compile_function())
 
 
 def test_load_func(validate):
@@ -68,7 +72,7 @@ def test_load_func(validate):
     def test() -> Callable[[int], int]:
         return foo
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_inner_scope(validate):
@@ -87,8 +91,8 @@ def test_inner_scope(validate):
         return foo, bar
 
     foo, bar = make(42)
-    validate(foo.compile())
-    validate(bar.compile())
+    validate(foo.compile_function())
+    validate(bar.compile_function())
 
 
 def test_expr_id(run_int_fn):
@@ -103,3 +107,32 @@ def test_expr_id(run_int_fn):
 
     foo = make(42)
     run_int_fn(foo, 42)
+
+
+def test_inout_type_infer(validate):
+    """See https://github.com/CQCL/guppylang/issues/1249"""
+    n = 10
+
+    @guppy.comptime
+    def main() -> None:
+        id = array(i for i in range(n))
+        rng = RNG(0)
+        rng.shuffle(id)
+        # After the shuffle, all list elements should be Guppy objects.
+        # See https://github.com/CQCL/guppylang/issues/1251
+        assert all(isinstance(x, GuppyObject) for x in id)
+        rng.discard()
+
+    validate(main.compile_function())
+
+
+def mem_swap_array(validate):
+    @guppy.comptime
+    def main() -> None:
+        xs = [1]
+        ys = [2]
+        mem_swap(xs, ys)
+        assert isinstance(xs[0], GuppyObject)
+        assert isinstance(ys[0], GuppyObject)
+
+    validate(main.compile_function())

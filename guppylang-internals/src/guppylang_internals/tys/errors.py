@@ -117,6 +117,12 @@ class InvalidCallableTypeError(Error):
 
 
 @dataclass(frozen=True)
+class SelfTyNotInMethodError(Error):
+    title: ClassVar[str] = "Invalid type"
+    span_label: ClassVar[str] = "`Self` type annotations are only allowed in methods"
+
+
+@dataclass(frozen=True)
 class NonLinearOwnedError(Error):
     title: ClassVar[str] = "Invalid annotation"
     span_label: ClassVar[str] = "Classical type `{ty}` cannot be owned"

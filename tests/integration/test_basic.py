@@ -67,7 +67,7 @@ def test_func_decl_name():
     @guppy.declare
     def func_name() -> None: ...
 
-    hugr = func_name.compile().modules[0]
+    hugr = func_name.compile_function().modules[0]
     [def_op] = [
         data.op for n, data in hugr.nodes() if isinstance(data.op, ops.FuncDecl)
     ]
@@ -81,7 +81,7 @@ def test_compile_again():
     def identity(x: int) -> int:
         return x
 
-    hugr = identity.compile().module
+    hugr = identity.compile_function().module
 
     # Compiling again should return the same Hugr
-    assert hugr is identity.compile()
+    assert hugr is identity.compile_function()

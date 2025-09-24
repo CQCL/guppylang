@@ -13,7 +13,7 @@ def test_basic(validate):
     def foo() -> Callable[[int], bool]:
         return bar
 
-    validate(foo.compile())
+    validate(foo.compile_function())
 
 
 def test_call_1(validate):
@@ -29,7 +29,7 @@ def test_call_1(validate):
     def baz() -> bool:
         return foo()()
 
-    validate(baz.compile())
+    validate(baz.compile_function())
 
 
 def test_call_2(validate):
@@ -45,7 +45,7 @@ def test_call_2(validate):
     def baz(y: int) -> None:
         return foo()(y)(y)
 
-    validate(baz.compile())
+    validate(baz.compile_function())
 
 
 def test_conditional(validate):
@@ -63,7 +63,7 @@ def test_conditional(validate):
             baz = bar
         return baz()
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_method(validate):
@@ -72,7 +72,7 @@ def test_method(validate):
         f = x.__add__
         return f(1), f
 
-    validate(foo.compile())
+    validate(foo.compile_function())
 
 
 def test_nested(validate):
@@ -98,7 +98,7 @@ def test_nested_capture_struct(validate):
 
         return bar
 
-    validate(foo.compile())
+    validate(foo.compile_function())
 
 
 def test_curry(validate):
@@ -133,7 +133,7 @@ def test_curry(validate):
         uncurried(x, y)
         curry(uncurry(curry(gt)))(y)(x)
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_y_combinator(validate):
@@ -154,4 +154,4 @@ def test_y_combinator(validate):
     def fac(x: int) -> int:
         return Y(fac_)(x)
 
-    validate(fac.compile())
+    validate(fac.compile_function())

@@ -20,7 +20,7 @@ on:
 
 env:
   # Pinned version for the uv package manager
-  UV_VERSION: "0.6.6"
+  UV_VERSION: "0.7.4"
 
 jobs:
   build-publish:
@@ -34,17 +34,17 @@ jobs:
       matrix:
         target:
           - {
-            dir: guppylang,
-            component: guppylang,
-            package: guppylang,
-            lib: guppylang,
-          }
+              dir: guppylang,
+              component: guppylang,
+              package: guppylang,
+              lib: guppylang,
+            }
           - {
-            dir: guppylang-internals,
-            component: guppylang-internals,
-            package: guppylang-internals,
-            lib: guppylang_internals,
-          }
+              dir: guppylang-internals,
+              component: guppylang-internals,
+              package: guppylang-internals,
+              lib: guppylang_internals,
+            }
     steps:
       # Check the release tag against the package name
       #
@@ -56,7 +56,7 @@ jobs:
         env:
           SHOULD_RUN: ${{ github.event_name != 'release' || ( github.ref_type == 'tag' && startsWith(github.ref, format('refs/tags/{0}-v', matrix.target.component)) ) }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         if: ${{ steps.check-tag.outputs.run == 'true' }}
       - name: Run sccache-cache
         if: ${{ steps.check-tag.outputs.run == 'true' }}

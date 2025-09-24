@@ -84,7 +84,7 @@ class RawPytketDef(ParsableDef):
         if not has_empty_body(func_ast):
             # Function stub should have empty body.
             raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
-        stub_signature = check_signature(func_ast, globals)
+        stub_signature = check_signature(func_ast, globals, self.id)
 
         # Compare signatures.
         circuit_signature = _signature_from_circuit(self.input_circuit, self.defined_at)
