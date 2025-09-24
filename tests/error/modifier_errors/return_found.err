@@ -3,6 +3,6 @@ Error: Unexpected return (at $FILE:7:8)
 5 | def test() -> None:
 6 |     with dagger:
 7 |         return
-  |         ^^^^^^ Return statement found under a with block
+  |         ^^^^^^ Return statement found in a with block
 
 Guppy compilation failed due to 1 previous error

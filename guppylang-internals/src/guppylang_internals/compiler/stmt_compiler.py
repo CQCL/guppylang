@@ -224,6 +224,6 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         self.dfg[var] = loaded_func
 
     def visit_CheckedModifier(self, node: CheckedModifier) -> None:
-        from guppylang_internals.compiler.func_compiler import compile_modifier
+        from guppylang_internals.compiler.modifier_compiler import compile_modifier
 
         compile_modifier(node, self.dfg, self.ctx, self.expr_compiler)

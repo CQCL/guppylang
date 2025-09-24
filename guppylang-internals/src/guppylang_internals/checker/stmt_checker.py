@@ -407,7 +407,7 @@ class StmtChecker(AstVisitor[BBStatement]):
         return func_def
 
     def visit_Modifier(self, node: Modifier) -> ast.stmt:
-        from guppylang_internals.checker.func_checker import check_modifier
+        from guppylang_internals.checker.modifier_checker import check_modifier
 
         if not self.bb:
             raise InternalGuppyError("BB required to check with block!")

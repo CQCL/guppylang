@@ -3,6 +3,6 @@ Error: Unexpected loop control (at $FILE:8:12)
 6 |     for i in range(123):
 7 |         with dagger:
 8 |             continue
-  |             ^^^^^^^^ Continue found under a with block
+  |             ^^^^^^^^ Continue found in a with block
 
 Guppy compilation failed due to 1 previous error
