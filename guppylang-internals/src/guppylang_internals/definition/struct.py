@@ -111,6 +111,13 @@ class NonGuppyMethodError(Error):
 
 
 @dataclass(frozen=True)
+class ProtocolHint(Help):
+    message: ClassVar[str] = (
+        "Add a `@guppy.protocol` annotation to turn this struct into a protocol"
+    )
+
+
+@dataclass(frozen=True)
 class RawStructDef(TypeDef, ParsableDef):
     """A raw struct type definition that has not been parsed yet."""
 
@@ -148,6 +155,10 @@ class RawStructDef(TypeDef, ParsableDef):
                     err.add_sub_diagnostic(RedundantParamsError.PrevSpec(params_span))
                     raise GuppyError(err)
                 params = params_from_ast(elems, globals)
+            case [base] if isinstance(base, ast.Name) and base.id == "Protocol":
+                err = UnsupportedError(base, "Protocol base", singular=True)
+                err.add_sub_diagnostic(ProtocolHint(None))
+                raise GuppyError(err)
             case bases:
                 err = UnsupportedError(bases[0], "Struct inheritance", singular=True)
                 raise GuppyError(err)
