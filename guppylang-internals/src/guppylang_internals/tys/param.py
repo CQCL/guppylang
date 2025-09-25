@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypeAlias
 
+from guppylang_internals.checker.protocol_checker import check_protocol
 from hugr import tys as ht
 from typing_extensions import Self
 
@@ -82,7 +83,7 @@ class TypeParam(ParameterBase):
 
     must_be_copyable: bool
     must_be_droppable: bool
-    must_implement: Sequence[ProtocolInst] = field(default_factory = list)
+    must_implement: Sequence[ProtocolInst] = field(default_factory=list)
 
     @property
     def can_be_linear(self) -> bool:
@@ -117,7 +118,9 @@ class TypeParam(ParameterBase):
                         got=f"type `{ty}` which is not implicitly droppable",
                     )
                     raise GuppyTypeError(err)
-                # TODO: Protocol checking.
+                if self.must_implement:
+                    for proto in self.must_implement:
+                        proof, subst = check_protocol(ty, proto)  
                 return arg
 
     def to_existential(self) -> tuple[Argument, ExistentialVar]:

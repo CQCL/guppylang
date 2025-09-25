@@ -5,7 +5,6 @@ from enum import Enum, Flag, auto
 from functools import cached_property, total_ordering
 from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
-from guppylang_internals.tys.protocol import ProtocolInst
 import hugr.std.float
 import hugr.std.int
 from hugr import tys as ht
@@ -22,6 +21,7 @@ from guppylang_internals.tys.common import (
 )
 from guppylang_internals.tys.const import Const, ConstValue, ExistentialConstVar
 from guppylang_internals.tys.param import ConstParam, Parameter
+from guppylang_internals.tys.protocol import ProtocolInst
 from guppylang_internals.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:

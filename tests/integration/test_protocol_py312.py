@@ -11,7 +11,7 @@ def test_def():
     MyProto.compile()
 
 
-@pytest.mark.skip("TODO: Enable once full implementation is done")
+# @pytest.mark.skip("TODO: Enable once full implementation is done")
 def test_basic(validate):
     @guppy.protocol
     class MyProto:
