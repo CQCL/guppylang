@@ -51,6 +51,7 @@ from guppylang_internals.checker.expr_checker import (
     check_place_assignable,
     synthesize_comprehension,
 )
+from guppylang_internals.engine import ENGINE
 from guppylang_internals.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang_internals.nodes import (
     AnyUnpack,
@@ -321,7 +322,7 @@ class StmtChecker(AstVisitor[BBStatement]):
                     )
                     raise GuppyError(err)
 
-        elif self.ctx.globals.get_instance_func(ty, "__iter__"):
+        elif ENGINE.get_instance_func(ty, "__iter__"):
             size = check_iter_unpack_has_static_size(expr, self.ctx)
             # Create a dummy variable and assign the expression to it. This helps us to
             # wire it up correctly during Hugr generation.
