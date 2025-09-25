@@ -1,20 +1,17 @@
 import ast
-from contextlib import contextmanager
 from typing import Any
 
 from guppylang_internals.ast_util import get_type
 from guppylang_internals.checker.cfg_checker import CheckedBB, CheckedCFG
-from guppylang_internals.checker.core import Globals, Place
-from guppylang_internals.checker.errors.generic import AssignUnderDagger, LoopUnderDagger
-from guppylang_internals.checker.linearity_checker import Scope
-from guppylang_internals.definition.custom import CustomFunctionDef
+from guppylang_internals.checker.core import Place, contains_subscript
+from guppylang_internals.checker.errors.generic import AssignUnderDagger, LoopUnderDagger, UnsupportedError
 from guppylang_internals.definition.value import CallableDef
 from guppylang_internals.engine import ENGINE
 from guppylang_internals.error import GuppyError, GuppyTypeError
-from guppylang_internals.nodes import AnyCall, BarrierExpr, CheckedModifier, GlobalCall, LocalCall, ResultExpr, StateResultExpr, TensorCall
+from guppylang_internals.nodes import AnyCall, BarrierExpr, GlobalCall, LocalCall, PlaceNode, ResultExpr, StateResultExpr, SubscriptAccessAndDrop, TensorCall
 from guppylang_internals.tys.errors import UnitaryCallError
-from guppylang_internals.tys.qubit import contain_qubit_ty, is_qubit_ty
-from guppylang_internals.tys.ty import FuncInput, FunctionType, Type, UnitaryFlags
+from guppylang_internals.tys.qubit import contain_qubit_ty
+from guppylang_internals.tys.ty import FunctionType, UnitaryFlags
 
 
 class BBUnitaryChecker(ast.NodeVisitor):
@@ -29,15 +26,14 @@ class BBUnitaryChecker(ast.NodeVisitor):
 
     def _check_classical_args(self, args: list[ast.expr]) -> bool:
         for arg in args:
+            self.visit(arg)
             if contain_qubit_ty(get_type(arg)):
                 return False
         return True
 
     def _check_call(self, node: AnyCall, ty: FunctionType) -> None:
         classic = self._check_classical_args(node.args)
-        flag_ok =  self.flags in ty.unitary_flags
-        print("    classic:", classic, "flag_ok:", flag_ok)
-        print("    ty.unitary_flags:", ty.unitary_flags, "current flags:", self.flags)
+        flag_ok = self.flags in ty.unitary_flags
         if not classic and not flag_ok:
             raise GuppyTypeError(
                 UnitaryCallError(node, self.flags & (~ty.unitary_flags))
@@ -86,12 +82,20 @@ class BBUnitaryChecker(ast.NodeVisitor):
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         self._check_assign(node)
 
-    def visit_For(self, node: ast.For) -> Any:
+    def visit_For(self, node: ast.For) -> None:
         if UnitaryFlags.Dagger in self.flags:
             raise GuppyError(
                 LoopUnderDagger(node)
             )
         self.generic_visit(node)
+
+    def visit_PlaceNode(self, node: PlaceNode) -> None:
+        print("Visiting Place:", node.place)
+        if UnitaryFlags.Dagger in self.flags:
+            if contains_subscript(node.place):
+                raise GuppyError(
+                    UnsupportedError(node, "index access", True, "dagger context")
+                )
 
 
 def check_cfg_unitary(

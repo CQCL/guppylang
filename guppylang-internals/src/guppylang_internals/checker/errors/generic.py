@@ -50,7 +50,7 @@ class ExpectedError(Error):
 class ReturnUnderModifierError(Error):
     title: ClassVar[str] = "Unexpected return"
     span_label: ClassVar[str] = (
-        "Return statement found under a with block"
+        "Return statement found in a with block"
     )
 
 
@@ -58,7 +58,7 @@ class ReturnUnderModifierError(Error):
 class LoopCtrlUnderModifierError(Error):
     title: ClassVar[str] = "Unexpected loop control"
     span_label: ClassVar[str] = (
-        "{kind} found under a with block"
+        "{kind} found in a with block"
     )
     kind: str
     

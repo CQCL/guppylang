@@ -302,8 +302,6 @@ class CFGBuilder(AstVisitor[BB | None]):
         if len(power) > 0:
             flag |= UnitaryFlags.Power
 
-        print("  is_dager @ builder.visit_with", len(dagger))
-        print("  unitary_flags @ builder.visit_with:", flag)
         cfg = CFGBuilder().build(node.body, True, self.globals, unitary_flags=flag)
         new_node = Modifier(
             cfg=cfg,

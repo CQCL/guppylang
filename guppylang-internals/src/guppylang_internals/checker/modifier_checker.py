@@ -6,7 +6,7 @@ from guppylang_internals.ast_util import loop_in_ast, with_loc
 from guppylang_internals.cfg.bb import BB
 from guppylang_internals.checker.cfg_checker import check_cfg
 from guppylang_internals.checker.core import Context, Variable
-from guppylang_internals.checker.errors.generic import AssignUnderDagger, LoopUnderDagger
+from guppylang_internals.checker.errors.generic import AssignUnderDagger, LoopUnderDagger, UnsupportedError
 from guppylang_internals.definition.common import DefId
 from guppylang_internals.error import GuppyError
 from guppylang_internals.nodes import CheckedModifier, Modifier
@@ -38,23 +38,24 @@ def check_modifier(
             if len(loops) != 0:
                 loop = next(iter(loops))
                 err = LoopUnderDagger(loop)
-                err.add_sub_diagnostic(LoopUnderDagger.Dagger(modifier.span_ctxt_manager()))
+                err.add_sub_diagnostic(LoopUnderDagger.Dagger(
+                    modifier.span_ctxt_manager()))
                 raise GuppyError(err)
 
         for cfg_bb in cfg.bbs:
             if cfg_bb.vars.assigned:
                 _, v = next(iter(cfg_bb.vars.assigned.items()))
                 err = AssignUnderDagger(v)
-                err.add_sub_diagnostic(AssignUnderDagger.Modifier(modifier.span_ctxt_manager()))
+                err.add_sub_diagnostic(AssignUnderDagger.Modifier(
+                    modifier.span_ctxt_manager()))
                 raise GuppyError(err)
 
-
         # TODO (k.hirata): check all the calls
-    
+
     if modifier.is_control():
         # TODO (k.hirata): check all the calls
         pass
-    
+
     if modifier.is_power():
         # Do we need to check anything here?
         pass
@@ -67,7 +68,8 @@ def check_modifier(
 
     # TODO: (k.hirata) Ad hoc name for new function
     # This name is printed, for example, when the linearity checker fails in the modifier body
-    checked_cfg = check_cfg(cfg, inputs, NoneType(), {}, "__modified__()", globals)
+    checked_cfg = check_cfg(cfg, inputs, NoneType(),
+                            {}, "__modified__()", globals)
     func_ty = check_modifier_signature(checked_cfg.input_tys)
 
     checked_modifier = CheckedModifier(
@@ -99,10 +101,12 @@ def check_modifier_signature(
     """Check and create the signature of a function definition for a body of a `With` block."""
     # TODO: It could be inout or owned
     func_ty = FunctionType(
-        [FuncInput(t, InputFlags.Inout if t.linear else InputFlags.NoFlags) for t in input_tys],
+        [FuncInput(t, InputFlags.Inout if t.linear else InputFlags.NoFlags)
+         for t in input_tys],
         NoneType(),
     )
     return func_ty
+
 
 def linear_front_others_back(v: list[Variable]) -> list[Variable]:
     """Reorder variables so that linear ones come first, preserving the relative order
