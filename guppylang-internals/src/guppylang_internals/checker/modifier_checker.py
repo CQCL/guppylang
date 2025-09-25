@@ -89,7 +89,7 @@ def _set_inout_if_linear(
     var: Variable
 ) -> Variable:
     """Set the `inout` flag if the variable is linear."""
-    if var.ty.linear:
+    if not var.ty.copyable:
         return var.add_flags(InputFlags.Inout)
     else:
         return var
