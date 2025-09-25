@@ -5,6 +5,7 @@ from enum import Enum, Flag, auto
 from functools import cached_property, total_ordering
 from typing import TYPE_CHECKING, ClassVar, TypeAlias, cast
 
+from guppylang_internals.tys.protocol import ProtocolInst
 import hugr.std.float
 import hugr.std.int
 from hugr import tys as ht
@@ -184,6 +185,7 @@ class BoundTypeVar(TypeBase, BoundVar):
     A bound type variables can be instantiated with a `TypeArg` argument.
     """
 
+    implements: Sequence[ProtocolInst]
     copyable: bool
     droppable: bool
 
@@ -228,6 +230,7 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
     them with concrete types.
     """
 
+    implements: Sequence[ProtocolInst]
     copyable: bool
     droppable: bool
 
@@ -821,6 +824,7 @@ def _unify_var(
         return unify(var, subst[t], subst)
     if var in t.unsolved_vars:
         return None
+    # TODO: Check that `t`` implements all protocols required by `var`.
     return {var: t, **subst}
 
 

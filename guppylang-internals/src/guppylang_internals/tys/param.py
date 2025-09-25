@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypeAlias
 
+from guppylang_internals.definition.protocol import ProtocolInst
 from hugr import tys as ht
 from typing_extensions import Self
 
@@ -79,6 +80,7 @@ class ParameterBase(ToHugr[ht.TypeParam], ABC):
 class TypeParam(ParameterBase):
     """A parameter of kind type. Used to define generic functions and types."""
 
+    must_implement: Sequence[ProtocolInst] = field(default_factory = list)
     must_be_copyable: bool
     must_be_droppable: bool
 
@@ -115,6 +117,7 @@ class TypeParam(ParameterBase):
                         got=f"type `{ty}` which is not implicitly droppable",
                     )
                     raise GuppyTypeError(err)
+                # TODO: Protocol checking.
                 return arg
 
     def to_existential(self) -> tuple[Argument, ExistentialVar]:
