@@ -101,7 +101,7 @@ def check_modifier_signature(
     """Check and create the signature of a function definition for a body of a `With` block."""
     # TODO: It could be inout or owned
     func_ty = FunctionType(
-        [FuncInput(t, InputFlags.Inout if t.linear else InputFlags.NoFlags)
+        [FuncInput(t, InputFlags.Inout if not t.copyable else InputFlags.NoFlags)
          for t in input_tys],
         NoneType(),
     )
@@ -111,6 +111,6 @@ def check_modifier_signature(
 def linear_front_others_back(v: list[Variable]) -> list[Variable]:
     """Reorder variables so that linear ones come first, preserving the relative order
     of linear and non-linear variables."""
-    linear_vars = [x for x in v if x.ty.linear]
-    non_linear_vars = [x for x in v if not x.ty.linear]
+    linear_vars = [x for x in v if not x.ty.copyable]
+    non_linear_vars = [x for x in v if x.ty.copyable]
     return linear_vars + non_linear_vars
