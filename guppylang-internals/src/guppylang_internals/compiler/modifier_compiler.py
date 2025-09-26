@@ -4,6 +4,7 @@
 from guppylang_internals.ast_util import get_type
 from guppylang_internals.checker.modifier_checker import linear_front_others_back
 from guppylang_internals.compiler.expr_compiler import ExprCompiler, array_unwrap_elem, array_wrap_elem
+from guppylang_internals.definition.function import add_unitarity_metadata
 from guppylang_internals.std._internal.compiler.array import array_convert_from_std_array, array_convert_to_std_array, array_map, array_new, standard_array_type, unpack_array
 from guppylang_internals.std._internal.compiler.tmp_modifier_exts import MODIFIER_EXTENSION
 from guppylang_internals.tys.builtin import int_type, is_array_type
@@ -49,6 +50,7 @@ def compile_modifier(
     func_builder = dfg.builder.module_root_builder().define_function(
         str(modifier), hugr_ty.input, hugr_ty.output
     )
+    add_unitarity_metadata(func_builder.parent_node, modifier.ty.unitary_flags)
     mono_args = ()
     ctx.compiled[modifier.def_id, mono_args] = CompiledFunctionDef(
         modifier.def_id,

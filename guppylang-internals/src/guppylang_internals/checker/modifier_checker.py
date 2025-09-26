@@ -10,7 +10,7 @@ from guppylang_internals.checker.errors.generic import AssignUnderDagger, LoopUn
 from guppylang_internals.definition.common import DefId
 from guppylang_internals.error import GuppyError
 from guppylang_internals.nodes import CheckedModifier, Modifier
-from guppylang_internals.tys.ty import FuncInput, FunctionType, InputFlags, NoneType, Type
+from guppylang_internals.tys.ty import FuncInput, FunctionType, InputFlags, NoneType, Type, UnitaryFlags
 
 
 def check_modifier(
@@ -70,7 +70,7 @@ def check_modifier(
     # This name is printed, for example, when the linearity checker fails in the modifier body
     checked_cfg = check_cfg(cfg, inputs, NoneType(),
                             {}, "__modified__()", globals)
-    func_ty = check_modifier_signature(checked_cfg.input_tys)
+    func_ty = check_modifier_signature(modifier, checked_cfg.input_tys)
 
     checked_modifier = CheckedModifier(
         def_id,
@@ -96,14 +96,23 @@ def _set_inout_if_linear(
 
 
 def check_modifier_signature(
+    modifier: Modifier,
     input_tys: list[Type]
 ) -> FunctionType:
     """Check and create the signature of a function definition for a body of a `With` block."""
     # TODO: It could be inout or owned
+    unitary_flags = UnitaryFlags.NoFlags
+    if modifier.is_dagger():
+        unitary_flags |= UnitaryFlags.Dagger
+    if modifier.is_control():
+        unitary_flags |= UnitaryFlags.Control
+    if modifier.is_power():
+        unitary_flags |= UnitaryFlags.Power
     func_ty = FunctionType(
         [FuncInput(t, InputFlags.Inout if not t.copyable else InputFlags.NoFlags)
          for t in input_tys],
         NoneType(),
+        unitary_flags=unitary_flags,
     )
     return func_ty
 
