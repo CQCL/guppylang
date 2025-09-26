@@ -114,4 +114,3 @@ bench_compare *BENCHER_FLAGS:
             --err \
             --quiet \
             {{BENCHER_FLAGS}}
-
