@@ -29,11 +29,11 @@ export-integration-tests directory="guppy-exports":
 
 # Auto-fix all clippy warnings.
 fix:
-    uv run ruff check --fix guppylang guppylang-internals
+    uv run ruff check --fix
 
 # Format the code.
 format:
-    uv run ruff format guppylang guppylang-internals
+    uv run ruff format
 
 # Generate a test coverage report.
 coverage:
