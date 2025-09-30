@@ -18,7 +18,13 @@ from guppylang_internals.ast_util import (
 from guppylang_internals.cfg.bb import BB, BBStatement
 from guppylang_internals.cfg.cfg import CFG
 from guppylang_internals.checker.core import Globals
-from guppylang_internals.checker.errors.generic import ExpectedError, LoopCtrlUnderModifierError, ReturnUnderModifierError, UnexpectedError, UnsupportedError
+from guppylang_internals.checker.errors.generic import (
+    ExpectedError,
+    LoopCtrlUnderModifierError,
+    ReturnUnderModifierError,
+    UnexpectedError,
+    UnsupportedError
+)
 from guppylang_internals.checker.errors.type_errors import WrongNumberOfArgsError
 from guppylang_internals.diagnostic import Error
 from guppylang_internals.error import GuppyError, InternalGuppyError
