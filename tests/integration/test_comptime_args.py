@@ -125,7 +125,7 @@ def test_generic1(validate):
     T = guppy.type_var("T", copyable=True, droppable=True)
 
     @guppy
-    def foo(_x: T, y: T @comptime) -> T:
+    def foo(_x: T, y: T @ comptime) -> T:
         return y
 
     @guppy
@@ -139,7 +139,7 @@ def test_generic2(validate):
     T = guppy.type_var("T", copyable=True, droppable=True)
 
     @guppy
-    def foo(x: T @comptime) -> T:
+    def foo(x: T @ comptime) -> T:
         return x
 
     @guppy

@@ -137,7 +137,7 @@ class Phantom[T: (Copy, Drop), x: T]:
 
 def test_dependent_struct(run_float_fn_approx):
     @guppy
-    def make_phantom[T: (Copy, Drop)](x: T @ comptime) -> "Phantom[T, x]":
+    def make_phantom[T: (Copy, Drop)](x: T @ comptime) -> "Phantom[T, x]":  # noqa: F821
         return Phantom()
 
     @guppy
@@ -155,7 +155,7 @@ def test_dependent_comptime(validate):
     T = guppy.type_var("T", copyable=True, droppable=True)
 
     @guppy
-    def foo(x: T @ comptime, y: "Phantom[T, x]") -> T:
+    def foo(x: T @ comptime, y: "Phantom[T, x]") -> T:  # noqa: F821
         return y.get()
 
     @guppy
@@ -167,7 +167,12 @@ def test_dependent_comptime(validate):
 
 def test_multi_dependent():
     @guppy
-    def foo[T: (Copy, Drop), x: T, y: Phantom[T, x], z: Phantom[Phantom[T, x], y]]() -> tuple[T, T, T]:
+    def foo[
+        T: (Copy, Drop),
+        x: T,
+        y: Phantom[T, x],
+        z: Phantom[Phantom[T, x], y],
+    ]() -> tuple[T, T, T]:
         return x, y.get(), z.get().get()
 
     # We can't define a main that calls `foo` since we don't have comptime constructors
@@ -179,7 +184,7 @@ def test_generic_tuple_chain(validate):
     T = guppy.type_var("T", copyable=True, droppable=True)
 
     @guppy
-    def bar(t: tuple[T, T] @ comptime, p: "Phantom[tuple[T, T], t]") -> T:
+    def bar(t: tuple[T, T] @ comptime, p: "Phantom[tuple[T, T], t]") -> T:  # noqa: F821
         return p.get()[0]
 
     @guppy
