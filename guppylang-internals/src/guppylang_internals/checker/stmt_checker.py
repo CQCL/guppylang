@@ -43,6 +43,8 @@ from guppylang_internals.checker.errors.type_errors import (
     StarredTupleUnpackError,
     TypeInferenceError,
     UnpackableError,
+    WithArgTypeMismatchError,
+    WrongNumberOfArgsError,
     WrongNumberOfUnpacksError,
 )
 from guppylang_internals.checker.expr_checker import (
@@ -51,6 +53,7 @@ from guppylang_internals.checker.expr_checker import (
     check_place_assignable,
     synthesize_comprehension,
 )
+from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang_internals.nodes import (
     AnyUnpack,
@@ -58,6 +61,7 @@ from guppylang_internals.nodes import (
     DesugaredArrayComp,
     IterableUnpack,
     MakeIter,
+    Modifier,
     NestedFunctionDef,
     PlaceNode,
     TupleUnpack,
@@ -73,13 +77,16 @@ from guppylang_internals.tys.builtin import (
     is_sized_iter_type,
     nat_type,
 )
-from guppylang_internals.tys.const import ConstValue
+from guppylang_internals.tys.const import Const, ConstValue
 from guppylang_internals.tys.parsing import type_from_ast
+from guppylang_internals.tys.qubit import is_qubit_ty, qubit_ty
 from guppylang_internals.tys.subst import Subst
 from guppylang_internals.tys.ty import (
     ExistentialTypeVar,
     FunctionType,
     NoneType,
+    NumericType,
+    OpaqueType,
     StructType,
     TupleType,
     Type,
@@ -397,6 +404,45 @@ class StmtChecker(AstVisitor[BBStatement]):
         func_def = check_nested_func_def(node, self.bb, self.ctx)
         self.ctx.locals[func_def.name] = Variable(func_def.name, func_def.ty, func_def)
         return func_def
+
+    def visit_Modifier(self, node: Modifier) -> ast.stmt:
+        from guppylang_internals.checker.modifier_checker import check_modifier
+
+        if not self.bb:
+            raise InternalGuppyError("BB required to check with block!")
+
+        # check the mody of the modifier.
+        modifier = check_modifier(node, self.bb, self.ctx)
+
+        # check the arguments of the control and power.
+        for control in modifier.control:
+            ctrl = control.ctrl
+            ctrl[0], ty = self._synth_expr(ctrl[0])
+
+            if is_array_type(ty):
+                if len(ctrl) > 2:
+                    assert isinstance(control, ast.Call)
+                    span = Span(to_span(control.func).end, to_span(control).end)
+                    raise GuppyError(
+                        WrongNumberOfArgsError(span, 1, len(control.args)))
+                element_ty = get_element_type(ty)
+                if not is_qubit_ty(element_ty):
+                    raise GuppyTypeError(WithArgTypeMismatchError(ctrl[0], ty, "type `array[qubit, _]`"))
+                control.qubit_num = get_array_length(ty)
+            else:
+                for i in range(len(ctrl)):
+                    ctrl[i], subst = self._check_expr(ctrl[i], qubit_ty())
+                    assert len(subst) == 0
+                control.qubit_num = len(ctrl)
+
+        for power in node.power:
+            power.iter, ty = self._synth_expr(power.iter)
+            if not isinstance(ty, NumericType):
+                raise GuppyTypeError(WithArgTypeMismatchError(power.iter, ty, "numeric type"))
+            power.iter, subst = self._check_expr(power.iter, ty)
+            assert len(subst) == 0
+
+        return modifier
 
     def visit_If(self, node: ast.If) -> None:
         raise InternalGuppyError("Control-flow statement should not be present here.")
