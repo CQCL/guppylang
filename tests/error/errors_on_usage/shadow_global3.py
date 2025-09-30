@@ -20,4 +20,4 @@ def main(b: bool) -> None:
     bar()
 
 
-main.compile()
+main.compile_function()

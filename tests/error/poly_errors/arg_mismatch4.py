@@ -7,4 +7,4 @@ def main(x: array[int, bool]) -> None:
     pass
 
 
-main.compile()
+main.compile_function()

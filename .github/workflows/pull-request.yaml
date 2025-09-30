@@ -28,7 +28,7 @@ jobs:
         python-version: ["3.10", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install rust toolchain
@@ -68,7 +68,7 @@ jobs:
       PYTHON_VERSION: "3.13"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install rust toolchain

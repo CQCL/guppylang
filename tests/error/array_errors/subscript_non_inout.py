@@ -9,4 +9,4 @@ def main(qs: array[qubit, 42]) -> tuple[qubit, array[qubit, 42]]:
     return q, qs
 
 
-main.compile()
+main.compile_function()

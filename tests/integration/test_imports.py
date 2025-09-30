@@ -8,7 +8,7 @@ def test_import_func(validate):
     def test(x: int) -> int:
         return f(x) + g()
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_import_type(validate):
@@ -19,7 +19,7 @@ def test_import_type(validate):
         # Check that we've correctly imported the __neg__ method
         return -x
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_func_alias(validate):
@@ -29,7 +29,7 @@ def test_func_alias(validate):
     def test(x: int) -> int:
         return g(x)
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_type_alias(validate):
@@ -40,7 +40,7 @@ def test_type_alias(validate):
         # Check that we still have the __neg__ method
         return -x
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_type_transitive(validate):
@@ -52,7 +52,7 @@ def test_type_transitive(validate):
         x = g()  # Type of x was defined in `mod_a`
         return int(-x)  # Call method that was defined in `mod_a`
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_type_transitive_conflict(validate):
@@ -64,7 +64,7 @@ def test_type_transitive_conflict(validate):
         ty_a = g()  # g returns a type with the same name `MyType`
         return +ty_b
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_func_transitive(validate):
@@ -75,7 +75,7 @@ def test_func_transitive(validate):
     def test(x: int) -> int:
         return h(x)
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_qualified(validate):
@@ -86,7 +86,7 @@ def test_qualified(validate):
     def test(x: int, y: bool) -> tuple[int, bool]:
         return mod_a.f(x), mod_b.f(y)
 
-    validate(test.compile())
+    validate(test.compile_function())
 
 
 def test_qualified_types(validate):
@@ -97,4 +97,4 @@ def test_qualified_types(validate):
     def test(x: mod_a.MyType, y: mod_b.MyType) -> tuple[mod_a.MyType, mod_b.MyType]:
         return -x, +y
 
-    validate(test.compile())
+    validate(test.compile_function())

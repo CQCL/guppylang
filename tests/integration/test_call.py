@@ -10,7 +10,7 @@ def test_call(validate):
     def bar() -> int:
         return foo()
 
-    validate(bar.compile())
+    validate(bar.compile_function())
 
 
 def test_call_back(validate):
@@ -22,7 +22,7 @@ def test_call_back(validate):
     def bar(x: int) -> int:
         return x
 
-    validate(foo.compile())
+    validate(foo.compile_function())
 
 
 def test_recursion(validate):
@@ -30,7 +30,7 @@ def test_recursion(validate):
     def main(x: int) -> int:
         return main(x)
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_mutual_recursion(validate):
@@ -42,7 +42,7 @@ def test_mutual_recursion(validate):
     def bar(x: int) -> int:
         return foo(x)
 
-    validate(foo.compile())
+    validate(foo.compile_function())
 
 
 def test_unary_tuple(validate):
@@ -55,7 +55,7 @@ def test_unary_tuple(validate):
         (y,) = foo(x)
         return y
 
-    validate(bar.compile())
+    validate(bar.compile_function())
 
 
 def test_method_call(validate):
@@ -63,4 +63,4 @@ def test_method_call(validate):
     def foo(x: int) -> int:
         return x.__add__(2)
 
-    validate(foo.compile())
+    validate(foo.compile_function())

@@ -11,4 +11,4 @@ def main(b: bool) -> float:
     return x
 
 
-main.compile()
+main.compile_function()

@@ -14,4 +14,4 @@ def main(x: float) -> None:
     f(x)
 
 
-main.compile()
+main.compile_function()

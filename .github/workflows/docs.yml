@@ -26,7 +26,7 @@ jobs:
     name: Build docs.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
 
@@ -41,7 +41,7 @@ jobs:
           cd docs
           ./build.sh
       - name: Upload artifact.
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./docs/build/
 

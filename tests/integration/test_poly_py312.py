@@ -12,7 +12,7 @@ def test_function(validate):
     def main[S, T](x: S @ owned, y: T @ owned) -> tuple[T, S]:
         return y, x
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_struct(validate):
@@ -25,7 +25,7 @@ def test_struct(validate):
     def main(s: MyStruct[int, float]) -> float:
         return s.x + s.y
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_inner_frame(validate):
@@ -44,7 +44,7 @@ def test_inner_frame(validate):
 
         return main
 
-    validate(guppy.compile(make()))
+    validate(make().compile_function())
 
 
 def test_copy_bound(validate):
@@ -56,7 +56,7 @@ def test_copy_bound(validate):
     def main[T: Copy](s: MyStruct[T]) -> tuple[T, T]:
         return s.x, s.x
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_drop_bound(validate):
@@ -68,7 +68,7 @@ def test_drop_bound(validate):
     def main[T: Drop](s: MyStruct[T] @ owned) -> None:
         pass
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_copy_and_drop_bound(validate):
@@ -80,7 +80,7 @@ def test_copy_and_drop_bound(validate):
     def main[T: (Copy, Drop)](s1: MyStruct[T], s2: MyStruct[T]) -> tuple[T, T]:
         return s1.x, s1.x
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_const_param(validate):
@@ -92,7 +92,7 @@ def test_const_param(validate):
     def main[T, n: nat](xs: array[T, n], s: MyStruct[T, n]) -> nat:
         return n
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_mixed_legacy_params(validate):
@@ -102,7 +102,7 @@ def test_mixed_legacy_params(validate):
     def main[S](x: S @ owned, y: T @ owned) -> tuple[T, S]:
         return y, x
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_reference_inside(validate):
@@ -111,7 +111,7 @@ def test_reference_inside(validate):
         x: Option[T] = nothing()
         nothing[T]()
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_dependent_function(validate):
@@ -123,7 +123,7 @@ def test_dependent_function(validate):
     def main() -> float:
         return foo[nat, 42]() + foo[float, 1.5]()
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 @guppy.struct
@@ -144,7 +144,7 @@ def test_dependent_struct(validate):
     def main(x: Phantom[bool, True]) -> float:
         return 0.0 if x.get() else make_phantom(42).get() + make_phantom(1.5).get()
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_dependent_comptime(validate):
@@ -158,7 +158,7 @@ def test_dependent_comptime(validate):
     def main() -> int:
         return foo(42, Phantom())
 
-    validate(main.compile())
+    validate(main.compile_function())
 
 
 def test_multi_dependent():
@@ -186,4 +186,4 @@ def test_generic_tuple_chain(validate):
     def main() -> int:
         return foo(comptime((1, 2)))
 
-    validate(main.compile())
+    validate(main.compile_function())
