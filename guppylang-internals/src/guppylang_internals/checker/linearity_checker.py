@@ -678,7 +678,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                     case PlaceNode(place=place):
                         self._reassign_single_inout_arg(place, place.defined_at or arg)
                     case arg:
-                        # TODO: I think this should not happen
+                        # This is not supposed to happen
                         raise InternalGuppyError("Cannot reassign non-place control")
         
         # reassign captured variables
