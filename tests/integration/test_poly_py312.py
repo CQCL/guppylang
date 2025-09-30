@@ -135,16 +135,20 @@ class Phantom[T: (Copy, Drop), x: T]:
         return x
 
 
-def test_dependent_struct(validate):
+def test_dependent_struct(run_float_fn_approx):
     @guppy
     def make_phantom[T: (Copy, Drop)](x: T @ comptime) -> "Phantom[T, x]":
         return Phantom()
 
     @guppy
-    def main(x: Phantom[bool, True]) -> float:
+    def foo(x: Phantom[bool, True]) -> float:
         return 0.0 if x.get() else make_phantom(42).get() + make_phantom(1.5).get()
 
-    validate(main.compile_function())
+    @guppy
+    def main() -> float:
+        return foo(Phantom())
+
+    run_float_fn_approx(main, 0)
 
 
 def test_dependent_comptime(validate):
