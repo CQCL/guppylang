@@ -23,10 +23,11 @@ can be used to infer a type for an expression.
 import ast
 import sys
 import traceback
+from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import replace
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, NoReturn, cast, Sequence
+from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 from typing_extensions import assert_never
 
@@ -74,13 +75,13 @@ from guppylang_internals.checker.errors.type_errors import (
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
     NotCallableError,
+    ParameterInferenceError,
     TupleIndexOutOfBoundsError,
     TypeApplyNotGenericError,
     TypeInferenceError,
     TypeMismatchError,
     UnaryOperatorNotDefinedError,
     WrongNumberOfArgsError,
-    ParameterInferenceError,
 )
 from guppylang_internals.definition.common import Definition
 from guppylang_internals.definition.ty import TypeDef
