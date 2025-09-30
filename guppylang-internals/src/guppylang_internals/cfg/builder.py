@@ -22,7 +22,7 @@ from guppylang_internals.checker.errors.generic import ExpectedError, LoopCtrlUn
 from guppylang_internals.checker.errors.type_errors import WrongNumberOfArgsError
 from guppylang_internals.diagnostic import Error
 from guppylang_internals.error import GuppyError, InternalGuppyError
-from guppylang_internals.experimental import check_lists_enabled
+from guppylang_internals.experimental import check_lists_enabled, check_modifiers_enabled
 from guppylang_internals.nodes import (
     ComptimeExpr,
     Control,
@@ -275,6 +275,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         return bb
 
     def visit_With(self, node: ast.With, bb: BB, jumps: Jumps) -> BB | None:
+        check_modifiers_enabled(node)
         self._validate_modifier_body(node)
 
         dagger, control, power = [], [], []
