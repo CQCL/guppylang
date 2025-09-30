@@ -22,7 +22,7 @@ def run_error_test(file, capsys, snapshot):
     file = pathlib.Path(file)
 
     with pytest.raises(Exception) as exc_info:
-        importlib.import_module(f"tests.error.{file.parent.name}.{file.name}")
+        importlib.import_module(f"tests.error.{file.parent.name}.{file.stem}")
 
     # Remove the importlib frames from the traceback by skipping beginning frames until
     # we end up in the executed file
