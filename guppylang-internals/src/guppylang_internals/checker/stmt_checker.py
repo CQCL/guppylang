@@ -53,7 +53,6 @@ from guppylang_internals.checker.expr_checker import (
     check_place_assignable,
     synthesize_comprehension,
 )
-from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang_internals.nodes import (
     AnyUnpack,
@@ -77,7 +76,7 @@ from guppylang_internals.tys.builtin import (
     is_sized_iter_type,
     nat_type,
 )
-from guppylang_internals.tys.const import Const, ConstValue
+from guppylang_internals.tys.const import ConstValue
 from guppylang_internals.tys.parsing import type_from_ast
 from guppylang_internals.tys.qubit import is_qubit_ty, qubit_ty
 from guppylang_internals.tys.subst import Subst
@@ -86,7 +85,6 @@ from guppylang_internals.tys.ty import (
     FunctionType,
     NoneType,
     NumericType,
-    OpaqueType,
     StructType,
     TupleType,
     Type,

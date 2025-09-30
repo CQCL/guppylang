@@ -59,7 +59,7 @@ def check_modifier(
     def_id = DefId.fresh()
     globals = ctx.globals
 
-    # TODO: Ad hoc name for new function
+    # TODO: Ad hoc name for the new function
     # This name could be printed in error messages, for example,
     # when the linearity checker fails in the modifier body
     checked_cfg = check_cfg(cfg, inputs, NoneType(),
