@@ -321,17 +321,17 @@ class CFGBuilder(AstVisitor[BB | None]):
         e = node.context_expr
         match e:
             case ast.Name(id="dagger"):
-                kind = Dagger(e)
+                return Dagger(e)
             case ast.Call(func=ast.Name(id="dagger")):
                 if len(e.args) != 0:
                     span = Span(to_span(e.args[0]).start, to_span(e.args[-1]).end)
                     raise GuppyError(
                         WrongNumberOfArgsError(span, 0, len(e.args)))
-                kind = Dagger(e)
+                return Dagger(e)
             case ast.Call(func=ast.Name(id="control")):
                 for arg in e.args:
                     arg, bb = ExprBuilder.build(arg, self.cfg, bb)
-                kind = Control(e, e.args)
+                return Control(e, e.args)
             case ast.Call(func=ast.Name(id="power")):
                 if len(e.args) == 0:
                     span = Span(to_span(e.func).end, to_span(e).end)
@@ -341,11 +341,10 @@ class CFGBuilder(AstVisitor[BB | None]):
                     span = Span(to_span(e.args[1]).start, to_span(e.args[-1]).end)
                     raise GuppyError(
                         WrongNumberOfArgsError(span, 1, len(e.args)))
-                kind = Power(e, e.args[0])
+                return Power(e, e.args[0])
             case _:
                 raise GuppyError(UnexpectedError(
                     e, "context manager", unexpected_in="a context manager"))
-        return kind
     
     def _validate_modifier_body(self, modifier: ast.AST) -> None:
         # Check if the body contains a return statement.
