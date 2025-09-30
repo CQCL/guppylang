@@ -10,7 +10,7 @@ from guppylang_internals.checker.errors.generic import AssignUnderDagger, LoopUn
 from guppylang_internals.definition.common import DefId
 from guppylang_internals.error import GuppyError
 from guppylang_internals.nodes import CheckedModifier, Modifier
-from guppylang_internals.tys.ty import FuncInput, FunctionType, InputFlags, NoneType, Type, UnitaryFlags
+from guppylang_internals.tys.ty import FuncInput, FunctionType, InputFlags, NoneType, Type
 
 
 def check_modifier(
