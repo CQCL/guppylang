@@ -52,7 +52,7 @@ from guppylang_internals.error import GuppyError, GuppyTypeError, InternalGuppyE
 from guppylang_internals.nodes import (
     AnyCall,
     BarrierExpr,
-    CheckedModifier,
+    CheckedModifiedBlock,
     CheckedNestedFunctionDef,
     DesugaredArrayComp,
     DesugaredGenerator,
@@ -622,7 +622,7 @@ class BBLinearityChecker(ast.NodeVisitor):
             elif not place.ty.copyable:
                 raise GuppyTypeError(ComprAlreadyUsedError(use.node, place, use.kind))
 
-    def visit_CheckedModifier(self, node: CheckedModifier) -> None:
+    def visit_CheckedModifiedBlock(self, node: CheckedModifiedBlock) -> None:
         # Linear usage of variables in a with statement
         # ```
         # with control(c1, c2, ...):

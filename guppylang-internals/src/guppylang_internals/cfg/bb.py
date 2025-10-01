@@ -9,14 +9,12 @@ from typing_extensions import Self
 from guppylang_internals.ast_util import AstNode, name_nodes_in_ast
 from guppylang_internals.nodes import (
     ComptimeExpr,
-    Control,
     DesugaredArrayComp,
     DesugaredGenerator,
     DesugaredGeneratorExpr,
     DesugaredListComp,
-    Modifier,
+    ModifiedBlock,
     NestedFunctionDef,
-    Power,
 )
 
 if TYPE_CHECKING:
@@ -47,7 +45,7 @@ BBStatement = (
     | ast.Expr
     | ast.Return
     | NestedFunctionDef
-    | Modifier
+    | ModifiedBlock
 )
 
 
@@ -224,7 +222,7 @@ class VariableVisitor(ast.NodeVisitor):
         # The name of the function is now assigned
         self.stats.assigned[node.name] = node
 
-    def visit_Modifier(self, node: Modifier) -> None:
+    def visit_ModifiedBlock(self, node: ModifiedBlock) -> None:
         for item in node.control:
             self.visit(item)
         for item in node.power:
@@ -241,10 +239,3 @@ class VariableVisitor(ast.NodeVisitor):
             for x, using_bb in live[node.cfg.entry_bb].items()
             if x not in assigned_before_in_bb
         }
-
-    def visit_Control(self, node: Control) -> None:
-        for item in node.ctrl:
-            self.visit(item)
-
-    def visit_Power(self, node: Power) -> None:
-        self.visit(node.iter)

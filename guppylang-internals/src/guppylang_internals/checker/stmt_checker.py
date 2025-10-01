@@ -60,7 +60,7 @@ from guppylang_internals.nodes import (
     DesugaredArrayComp,
     IterableUnpack,
     MakeIter,
-    Modifier,
+    ModifiedBlock,
     NestedFunctionDef,
     PlaceNode,
     TupleUnpack,
@@ -403,17 +403,17 @@ class StmtChecker(AstVisitor[BBStatement]):
         self.ctx.locals[func_def.name] = Variable(func_def.name, func_def.ty, func_def)
         return func_def
 
-    def visit_Modifier(self, node: Modifier) -> ast.stmt:
-        from guppylang_internals.checker.modifier_checker import check_modifier
+    def visit_ModifiedBlock(self, node: ModifiedBlock) -> ast.stmt:
+        from guppylang_internals.checker.modifier_checker import check_modified_block
 
         if not self.bb:
             raise InternalGuppyError("BB required to check with block!")
 
-        # check the mody of the modifier.
-        modifier = check_modifier(node, self.bb, self.ctx)
+        # check the body of the modified block
+        modified_block = check_modified_block(node, self.bb, self.ctx)
 
         # check the arguments of the control and power.
-        for control in modifier.control:
+        for control in modified_block.control:
             ctrl = control.ctrl
             ctrl[0], ty = self._synth_expr(ctrl[0])
 
@@ -443,7 +443,7 @@ class StmtChecker(AstVisitor[BBStatement]):
             power.iter, subst = self._check_expr(power.iter, ty)
             assert len(subst) == 0
 
-        return modifier
+        return modified_block
 
     def visit_If(self, node: ast.If) -> None:
         raise InternalGuppyError("Control-flow statement should not be present here.")

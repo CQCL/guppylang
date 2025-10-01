@@ -12,7 +12,7 @@ from guppylang_internals.checker.errors.generic import (
 )
 from guppylang_internals.definition.common import DefId
 from guppylang_internals.error import GuppyError
-from guppylang_internals.nodes import CheckedModifier, Modifier
+from guppylang_internals.nodes import CheckedModifiedBlock, ModifiedBlock
 from guppylang_internals.tys.ty import (
     FuncInput,
     FunctionType,
@@ -22,9 +22,11 @@ from guppylang_internals.tys.ty import (
 )
 
 
-def check_modifier(modifier: Modifier, bb: BB, ctx: Context) -> CheckedModifier:
+def check_modified_block(
+    modified_block: ModifiedBlock, bb: BB, ctx: Context
+) -> CheckedModifiedBlock:
     """Type checks a modifier definition."""
-    cfg = modifier.cfg
+    cfg = modified_block.cfg
 
     # Find captured variables
     parent_cfg = bb.containing_cfg
@@ -39,14 +41,14 @@ def check_modifier(modifier: Modifier, bb: BB, ctx: Context) -> CheckedModifier:
     }
 
     # We do not allow any assignments if it is daggered.
-    if modifier.is_dagger():
-        for stmt in modifier.body:
+    if modified_block.is_dagger():
+        for stmt in modified_block.body:
             loops = loop_in_ast(stmt)
             if len(loops) != 0:
                 loop = next(iter(loops))
                 loop_err = LoopUnderDagger(loop)
                 loop_err.add_sub_diagnostic(
-                    LoopUnderDagger.Dagger(modifier.span_ctxt_manager())
+                    LoopUnderDagger.Dagger(modified_block.span_ctxt_manager())
                 )
                 raise GuppyError(loop_err)
 
@@ -55,7 +57,7 @@ def check_modifier(modifier: Modifier, bb: BB, ctx: Context) -> CheckedModifier:
                 _, v = next(iter(cfg_bb.vars.assigned.items()))
                 assign_err = AssignUnderDagger(v)
                 assign_err.add_sub_diagnostic(
-                    AssignUnderDagger.Modifier(modifier.span_ctxt_manager())
+                    AssignUnderDagger.Modifier(modified_block.span_ctxt_manager())
                 )
                 raise GuppyError(assign_err)
 
@@ -72,19 +74,19 @@ def check_modifier(modifier: Modifier, bb: BB, ctx: Context) -> CheckedModifier:
     # This name could be printed in error messages, for example,
     # when the linearity checker fails in the modifier body
     checked_cfg = check_cfg(cfg, inputs, NoneType(), {}, "__modified__()", globals)
-    func_ty = check_modifier_signature(modifier, checked_cfg.input_tys)
+    func_ty = check_modified_block_signature(checked_cfg.input_tys)
 
-    checked_modifier = CheckedModifier(
+    checked_modifier = CheckedModifiedBlock(
         def_id,
         checked_cfg,
         func_ty,
         captured,
-        modifier.dagger,
-        modifier.control,
-        modifier.power,
-        **dict(ast.iter_fields(modifier)),
+        modified_block.dagger,
+        modified_block.control,
+        modified_block.power,
+        **dict(ast.iter_fields(modified_block)),
     )
-    return with_loc(modifier, checked_modifier)
+    return with_loc(modified_block, checked_modifier)
 
 
 def _set_inout_if_linear(var: Variable) -> Variable:
@@ -95,7 +97,7 @@ def _set_inout_if_linear(var: Variable) -> Variable:
         return var
 
 
-def check_modifier_signature(modifier: Modifier, input_tys: list[Type]) -> FunctionType:
+def check_modified_block_signature(input_tys: list[Type]) -> FunctionType:
     """Check and create the signature of a function definition for a body
     of a `With` block."""
 

@@ -438,6 +438,8 @@ class Control(ast.Call):
     ctrl: list[ast.expr]
     qubit_num: int | Const | None
 
+    _fields = ("ctrl",)
+
     def __init__(self, node: ast.Call, ctrl: list[ast.expr]) -> None:
         super().__init__(**node.__dict__)
         self.ctrl = ctrl
@@ -449,15 +451,17 @@ class Power(ast.Call):
 
     iter: ast.expr
 
+    _fields = ("iter",)
+
     def __init__(self, node: ast.Call, iter: ast.expr) -> None:
         super().__init__(**node.__dict__)
         self.iter = iter
 
 
-ModifierKind = Dagger | Control | Power
+Modifier = Dagger | Control | Power
 
 
-class Modifier(ast.With):
+class ModifiedBlock(ast.With):
     cfg: "CFG"
     dagger: list[Dagger]
     control: list[Control]
@@ -485,8 +489,19 @@ class Modifier(ast.With):
             to_span(self.items[-1].context_expr).end,
         )
 
+    def push_modifier(self, modifier: Modifier) -> None:
+        """Pushes a modifier kind onto the modifier."""
+        if isinstance(modifier, Dagger):
+            self.dagger.append(modifier)
+        elif isinstance(modifier, Control):
+            self.control.append(modifier)
+        elif isinstance(modifier, Power):
+            self.power.append(modifier)
+        else:
+            raise TypeError(f"Unknown modifier: {modifier}")
 
-class CheckedModifier(ast.With):
+
+class CheckedModifiedBlock(ast.With):
     def_id: "DefId"
     cfg: "CheckedCFG[Place]"
     dagger: list[Dagger]
@@ -522,17 +537,6 @@ class CheckedModifier(ast.With):
     def __str__(self) -> str:
         # generate a function name from the def_id
         return f"__WithBlock__({self.def_id})"
-
-    def push_kind(self, kind: ModifierKind) -> None:
-        """Pushes a modifier kind onto the modifier."""
-        if isinstance(kind, Dagger):
-            self.dagger.append(kind)
-        elif isinstance(kind, Control):
-            self.control.append(kind)
-        elif isinstance(kind, Power):
-            self.power.append(kind)
-        else:
-            raise TypeError(f"Unknown modifier kind: {kind}")
 
     def is_dagger(self) -> bool:
         return len(self.dagger) % 2 == 1

@@ -41,8 +41,8 @@ from guppylang_internals.nodes import (
     DesugaredListComp,
     IterNext,
     MakeIter,
+    ModifiedBlock,
     Modifier,
-    ModifierKind,
     NestedFunctionDef,
     Power,
 )
@@ -154,7 +154,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         Returns the BB in which the expression is available and adds the node to it.
         """
         if (
-            not isinstance(node, NestedFunctionDef | Modifier)
+            not isinstance(node, NestedFunctionDef | ModifiedBlock)
             and node.value is not None
         ):
             node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
@@ -288,36 +288,23 @@ class CFGBuilder(AstVisitor[BB | None]):
 
     def visit_With(self, node: ast.With, bb: BB, jumps: Jumps) -> BB | None:
         check_modifiers_enabled(node)
-        self._validate_modifier_body(node)
-
-        dagger, control, power = [], [], []
-
-        for item in node.items:
-            kind = self._visit_withitem(item, bb)
-            match kind:
-                case Dagger():
-                    dagger.append(kind)
-                case Control():
-                    control.append(kind)
-                case Power():
-                    power.append(kind)
-                case _:
-                    raise TypeError(f"Unknown modifier kind: {kind}")
+        self._validate_modified_block(node)
 
         cfg = CFGBuilder().build(node.body, True, self.globals)
-        new_node = Modifier(
+        new_node = ModifiedBlock(
             cfg=cfg,
             **dict(ast.iter_fields(node)),
         )
-        new_node.control = control
-        new_node.dagger = dagger
-        new_node.power = power
+
+        for item in node.items:
+            modifier = self._visit_withitem(item, bb)
+            new_node.push_modifier(modifier)
 
         set_location_from(new_node, node)
         bb.statements.append(new_node)
         return bb
 
-    def _visit_withitem(self, node: ast.withitem, bb: BB) -> ModifierKind:
+    def _visit_withitem(self, node: ast.withitem, bb: BB) -> Modifier:
         # Check that `as` notation is not used
         if node.optional_vars is not None:
             span = Span(
@@ -353,13 +340,13 @@ class CFGBuilder(AstVisitor[BB | None]):
                     )
                 )
 
-    def _validate_modifier_body(self, modifier: ast.AST) -> None:
+    def _validate_modified_block(self, node: ast.With) -> None:
         # Check if the body contains a return statement.
-        return_in_body = return_nodes_in_ast(modifier)
+        return_in_body = return_nodes_in_ast(node)
         if len(return_in_body) != 0:
             raise GuppyError(ReturnUnderModifierError(return_in_body[0]))
 
-        loop_controls_in_body = loop_controls_in_loop(modifier)
+        loop_controls_in_body = loop_controls_in_loop(node)
         if len(loop_controls_in_body) != 0:
             lc = loop_controls_in_body[0]
             kind = lc.__class__.__name__
