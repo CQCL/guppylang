@@ -179,20 +179,6 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         unpack = ArrayUnpack(lhs.pattern, length, lhs.compr.elt_ty)
         self._assign_array(unpack, array)
 
-    @_assign.register
-    def _assign_iterable(self, lhs: IterableUnpack, port: Wire) -> None:
-        """Handles assignment where the RHS is an iterable that should be unpacked."""
-        # Collect the RHS into an array by building the comprehension and then fall back
-        # to the array case above
-        assert isinstance(lhs.compr.length, ConstValue)
-        length = lhs.compr.length.value
-        assert isinstance(length, int)
-
-        self.dfg[lhs.rhs_var.place] = port
-        array = self.expr_compiler.visit_DesugaredArrayComp(lhs.compr)
-        unpack = ArrayUnpack(lhs.pattern, length, lhs.compr.elt_ty)
-        self._assign_array(unpack, array)
-
     def visit_Assign(self, node: ast.Assign) -> None:
         [target] = node.targets
         port = self.expr_compiler.compile(node.value, self.dfg)

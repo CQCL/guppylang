@@ -73,7 +73,6 @@ from guppylang_internals.std._internal.compiler.array import (
     array_new,
     array_new_all_borrowed,
     array_return,
-    array_type,
     standard_array_type,
     unpack_array,
 )
@@ -94,6 +93,7 @@ from guppylang_internals.std._internal.compiler.tket_bool import (
 )
 from guppylang_internals.tys.arg import ConstArg
 from guppylang_internals.tys.builtin import (
+    array_type,
     bool_type,
     get_element_type,
     int_type,

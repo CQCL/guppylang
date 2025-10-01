@@ -165,17 +165,25 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> bool:
             assert isinstance(obj._ty, NoneType)
         case tuple(vs):
             assert isinstance(obj._ty, TupleType)
-            wires = builder.add_op(ops.UnpackTuple(), obj._use_wire(None)).outputs()
-            for v, ty, wire in zip(vs, obj._ty.element_types, wires, strict=True):
-                success = update_packed_value(v, GuppyObject(ty, wire), builder)
+            wire_iterator = builder.add_op(
+                ops.UnpackTuple(), obj._use_wire(None)
+            ).outputs()
+            for v, ty, out_wire in zip(
+                vs, obj._ty.element_types, wire_iterator, strict=True
+            ):
+                success = update_packed_value(v, GuppyObject(ty, out_wire), builder)
                 if not success:
                     return False
         case GuppyStructObject(_ty=ty, _field_values=values):
             assert obj._ty == ty
-            wires = builder.add_op(ops.UnpackTuple(), obj._use_wire(None)).outputs()
-            for field, wire in zip(ty.fields, wires, strict=True):
+            wire_iterator = builder.add_op(
+                ops.UnpackTuple(), obj._use_wire(None)
+            ).outputs()
+            for field, out_wire in zip(ty.fields, wire_iterator, strict=True):
                 v = values[field.name]
-                success = update_packed_value(v, GuppyObject(field.ty, wire), builder)
+                success = update_packed_value(
+                    v, GuppyObject(field.ty, out_wire), builder
+                )
                 if not success:
                     values[field.name] = obj
         case list(vs) if len(vs) > 0:

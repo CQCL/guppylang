@@ -221,13 +221,14 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 if has_params:
                     lex_params: list[Wire] = list(outer_func.inputs()[offset:])
                     if self.use_arrays:
-                        lex_params = outer_func.add_op(
+                        unpack_result = outer_func.add_op(
                             array_unpack(
                                 ht.Tuple(float_type().to_hugr(ctx)),
                                 q_reg.size,
                             ),
                             lex_params[0],
                         )
+                        lex_params = list(unpack_result)
                     param_order = cast(
                         list[str], hugr_func.metadata["TKET1.input_parameters"]
                     )
