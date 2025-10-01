@@ -44,8 +44,8 @@ from guppylang_internals.tys.arg import ConstArg, TypeArg
 from guppylang_internals.tys.builtin import nat_type
 from guppylang_internals.tys.common import ToHugrContext
 from guppylang_internals.tys.const import BoundConstVar, ConstValue
-from guppylang_internals.tys.param import ConstParam, Parameter, TypeParam
-from guppylang_internals.tys.subst import Inst
+from guppylang_internals.tys.param import ConstParam, Parameter
+from guppylang_internals.tys.subst import Inst, Instantiator
 from guppylang_internals.tys.ty import (
     BoundTypeVar,
     NumericType,
@@ -222,10 +222,10 @@ class CompilerContext(ToHugrContext):
         match ENGINE.get_checked(defn.id):
             case MonomorphizableDef(params=params) as defn:
                 # Entry point is not allowed to require monomorphization
-                for param in params:
-                    if requires_monomorphization(param):
-                        err = EntryMonomorphizeError(defn.defined_at, defn.name, param)
-                        raise GuppyError(err)
+                if mono_params := require_monomorphization(params):
+                    mono_param = mono_params.pop()
+                    err = EntryMonomorphizeError(defn.defined_at, defn.name, mono_param)
+                    raise GuppyError(err)
                 # Thus, the partial monomorphization for the entry point is always empty
                 entry_mono_args = tuple(None for _ in params)
                 entry_compiled = defn.monomorphize(self.module, entry_mono_args, self)
@@ -468,19 +468,27 @@ def is_return_var(x: str) -> bool:
     return x.startswith("%ret")
 
 
-def requires_monomorphization(param: Parameter) -> bool:
-    """Checks if a type parameter must be monomorphized before compiling to Hugr.
+def require_monomorphization(params: Sequence[Parameter]) -> set[Parameter]:
+    """Returns the subset of type parameters that must be monomorphized before compiling
+    to Hugr.
 
     This is required for some Guppy language features that cannot be encoded in Hugr
-    yet. Currently, this only applies to non-nat const parameters.
+    yet. Currently, this applies to:
+    * non-nat const parameters
+    * parameters that occur in the type of const parameters
     """
-    match param:
-        case TypeParam():
-            return False
-        case ConstParam(ty=ty):
-            return ty != NumericType(NumericType.Kind.Nat)
-        case x:
-            return assert_never(x)
+    mono_params: set[Parameter] = set()
+    for param in params:
+        match param:
+            case ConstParam(ty=ty) if ty != NumericType(NumericType.Kind.Nat):
+                mono_params.add(param)
+                # If the constant type refers to any bound variables, then those will
+                # need to be monomorphized as well
+                for var in ty.bound_vars:
+                    mono_params.add(params[var.idx])
+            case _:
+                pass
+    return mono_params
 
 
 def partially_monomorphize_args(
@@ -494,27 +502,36 @@ def partially_monomorphize_args(
 
     Also takes care of normalising bound variables w.r.t. the current monomorphization.
     """
-    mono_args: list[Argument | None] = []
-    rem_args = []
+    # Normalise args w.r.t. the current outer monomorphisation
+    if ctx.current_mono_args is not None:
+        instantiator = Instantiator(ctx.current_mono_args, allow_partial=True)
+        args = [arg.transform(instantiator) for arg in args]
+
+    # Filter args depending on whether they need monomorphization or not. For this, we
+    # can't purely rely on the `require_monomorphization` function above since the
+    # instantiation also needs to be taken into account. For example, consider
+    # a function `def foo[T, x: T](...)`. Normally, both parameters would need to be
+    # monomorphized. However, if we instantiate `T := nat`, suddenly `x` no longer needs
+    # be monomorphized since we can use bounded nats in Hugr. Thus, we have to replicate
+    # the behaviour of `require_monomorphization` while taking `args` into account.
+    mono_args: list[Argument | None] = [None] * len(args)
     for param, arg in zip(params, args, strict=True):
-        if requires_monomorphization(param):
-            # The constant could still refer to a bound variable, so we need to
-            # instantiate it w.r.t. to the current monomorphization
-            match arg:
-                case ConstArg(const=BoundConstVar(idx=idx)):
-                    assert ctx.current_mono_args is not None
-                    inst = ctx.current_mono_args[idx]
-                    assert inst is not None
-                    mono_args.append(inst)
-                case TypeArg():
-                    # TODO: Once we also have type args that require monomorphization,
-                    #  we'll need to downshift de Bruijn indices here as well
-                    raise NotImplementedError
-                case arg:
-                    mono_args.append(arg)
-        else:
-            mono_args.append(None)
-            rem_args.append(arg)
+        match param, param.instantiate_bounds(args):
+            case ConstParam(ty=original_ty), ConstParam(ty=inst_ty):
+                # If the original const type is not `nat`, then all variables occurring
+                # in the type need to be monomorphised
+                if original_ty != nat_type():
+                    for var in original_ty.bound_vars:
+                        mono_args[var.idx] = args[var.idx]
+                # If the const type is still not `nat` after normalisation, then the
+                # const arg itself also needs to be monomorphized
+                if inst_ty != nat_type():
+                    mono_args[param.idx] = arg
+
+    # Mono-arguments should not refer to any bound variables
+    assert all(mono_arg is None or not mono_arg.bound_vars for mono_arg in mono_args)
+
+    rem_args = [arg for i, arg in enumerate(args) if mono_args[i] is None]
     return tuple(mono_args), rem_args
 
 

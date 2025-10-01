@@ -282,11 +282,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return defn.load(self.dfg, self.ctx, node)
 
     def visit_GenericParamValue(self, node: GenericParamValue) -> Wire:
-        match node.param.ty:
+        assert self.ctx.current_mono_args is not None
+        param = node.param.instantiate_bounds(self.ctx.current_mono_args)
+        match param.ty:
             case NumericType(NumericType.Kind.Nat):
                 # Generic nat parameters are encoded using Hugr bounded nat parameters,
                 # so they are not monomorphized when compiling to Hugr
-                arg = node.param.to_bound().to_hugr(self.ctx)
+                arg = param.to_bound().to_hugr(self.ctx)
                 load_nat = hugr.std.PRELUDE.get_op("load_nat").instantiate(
                     [arg], ht.FunctionType([], [ht.USize()])
                 )
@@ -294,7 +296,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 return self.builder.add_op(convert_ifromusize(), usize)
             case ty:
                 # Look up monomorphization
-                assert self.ctx.current_mono_args is not None
                 match self.ctx.current_mono_args[node.param.idx]:
                     case ConstArg(const=ConstValue(value=v)):
                         val = python_value_to_hugr(v, ty, self.ctx)

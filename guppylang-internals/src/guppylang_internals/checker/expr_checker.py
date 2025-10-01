@@ -130,7 +130,7 @@ from guppylang_internals.tys.builtin import (
     string_type,
 )
 from guppylang_internals.tys.const import Const, ConstValue
-from guppylang_internals.tys.param import ConstParam, TypeParam
+from guppylang_internals.tys.param import ConstParam, TypeParam, check_all_args
 from guppylang_internals.tys.parsing import arg_from_ast
 from guppylang_internals.tys.subst import Inst, Subst
 from guppylang_internals.tys.ty import (
@@ -928,10 +928,9 @@ def check_type_apply(ty: FunctionType, node: ast.Subscript, ctx: Context) -> Ins
         err.add_sub_diagnostic(WrongNumberOfArgsError.SignatureHint(None, ty))
         raise GuppyError(err)
 
-    return [
-        param.check_arg(arg_from_ast(arg_expr, ctx.parsing_ctx), arg_expr)
-        for arg_expr, param in zip(arg_exprs, ty.params, strict=True)
-    ]
+    inst = [arg_from_ast(node, ctx.parsing_ctx) for node in arg_exprs]
+    check_all_args(ty.params, inst, "", node, arg_exprs)
+    return inst
 
 
 def check_num_args(
@@ -975,15 +974,17 @@ def type_check_args(
     comptime_args = iter(func_ty.comptime_args)
     for inp, func_inp in zip(inputs, func_ty.inputs, strict=True):
         a, s = ExprChecker(ctx).check(inp, func_inp.ty.substitute(subst), "argument")
+        subst |= s
         if InputFlags.Inout in func_inp.flags and isinstance(a, PlaceNode):
             a.place = check_place_assignable(
                 a.place, ctx, a, "able to borrow subscripted elements"
             )
         if InputFlags.Comptime in func_inp.flags:
             comptime_arg = next(comptime_args)
-            s = check_comptime_arg(a, comptime_arg.const, func_inp.ty, s)
+            const = comptime_arg.const.substitute(subst)
+            s = check_comptime_arg(a, const, func_inp.ty.substitute(subst), subst)
+            subst |= s
         new_args.append(a)
-        subst |= s
     assert next(comptime_args, None) is None
 
     # If the argument check succeeded, this means that we must have found instantiations
@@ -1197,6 +1198,8 @@ def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
     Makes sure that the linearity requirements are satisfied.
     """
     for param, arg in zip(func_ty.params, inst, strict=True):
+        param = param.instantiate_bounds(inst)
+
         # Give a more informative error message for linearity issues
         if isinstance(param, TypeParam) and isinstance(arg, TypeArg):
             if param.must_be_copyable and not arg.ty.copyable:

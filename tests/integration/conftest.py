@@ -20,7 +20,7 @@ def export_test_cases_dir(request):
     return r
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def validate(request, export_test_cases_dir: Path):
     def validate_impl(package: Package | PackagePointer | Hugr, name=None):
         if isinstance(package, PackagePointer):
