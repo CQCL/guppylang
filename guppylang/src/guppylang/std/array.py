@@ -106,7 +106,7 @@ class ArrayIter(Generic[L, n]):
         _array_discard_all_used(self.xs)
         return nothing()
 
-    
+
 @custom_function(ArrayIterAsertAllUsedCompiler())
 def _array_discard_all_used(xs: array[L, n] @ owned) -> None: ...
 

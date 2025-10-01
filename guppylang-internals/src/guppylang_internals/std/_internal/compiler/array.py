@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 import hugr
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.std.collections.borrow_array import EXTENSION
 
-from guppylang_internals.compiler.core import (
-    GlobalConstId,
-)
 from guppylang_internals.definition.custom import CustomCallCompiler
 from guppylang_internals.definition.value import CallReturnWires
 from guppylang_internals.error import InternalGuppyError
@@ -20,10 +17,8 @@ from guppylang_internals.std._internal.compiler.prelude import (
     build_unwrap_right,
 )
 from guppylang_internals.tys.arg import ConstArg, TypeArg
-from guppylang_internals.tys.builtin import int_type
 
 if TYPE_CHECKING:
-    from hugr.build import function as hf
     from hugr.build.dfg import DfBase
 
 
@@ -282,7 +277,7 @@ class NewArrayCompiler(ArrayCompiler):
 class ArrayGetitemCompiler(ArrayCompiler):
     """Compiler for the `array.__getitem__` function."""
 
-    def _build_classical_getitem(self, array: Wire, idx: Wire) -> None:
+    def _build_classical_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Constructs `__getitem__` for classical arrays."""
         idx = self.builder.add_op(convert_itousize(), idx)
 
@@ -306,7 +301,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
             inout_returns=[arr],
         )
 
-    def _build_linear_getitem(self, array: Wire, idx: Wire) -> None:
+    def _build_linear_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Constructs `array.__getitem__` for linear arrays."""
         idx = self.builder.add_op(convert_itousize(), idx)
         elem, arr = self.builder.add_op(
@@ -335,7 +330,9 @@ class ArrayGetitemCompiler(ArrayCompiler):
 class ArraySetitemCompiler(ArrayCompiler):
     """Compiler for the `array.__setitem__` function."""
 
-    def _build_classical_setitem(self, array: Wire, idx: Wire, elem: Wire) -> None:
+    def _build_classical_setitem(
+        self, array: Wire, idx: Wire, elem: Wire
+    ) -> CallReturnWires:
         """Constructs `__setitem__` for classical arrays."""
         idx = self.builder.add_op(convert_itousize(), idx)
         result = self.builder.add_op(
@@ -351,7 +348,9 @@ class ArraySetitemCompiler(ArrayCompiler):
             inout_returns=[arr],
         )
 
-    def _build_linear_setitem(self, array: Wire, idx: Wire, elem: Wire) -> None:
+    def _build_linear_setitem(
+        self, array: Wire, idx: Wire, elem: Wire
+    ) -> CallReturnWires:
         """Constructs `array.__setitem__` for linear arrays."""
         idx = self.builder.add_op(convert_itousize(), idx)
         arr = self.builder.add_op(
@@ -364,36 +363,6 @@ class ArraySetitemCompiler(ArrayCompiler):
         return CallReturnWires(
             regular_returns=[],
             inout_returns=[arr],
-        )
-
-    def _build_call_setitem(
-        self,
-        func: hf.Function,
-        array: Wire,
-        idx: Wire,
-        elem: Wire,
-    ) -> CallReturnWires:
-        """Inserts a call to `array.__setitem__`."""
-        concrete_func_ty = ht.FunctionType(
-            input=[
-                array_type(self.elem_ty, self.length),
-                int_type().to_hugr(self.ctx),
-                self.elem_ty,
-            ],
-            output=[array_type(self.elem_ty, self.length)],
-        )
-        type_args = [ht.TypeTypeArg(self.elem_ty), self.length]
-        func_call = self.builder.call(
-            func.parent_node,
-            array,
-            idx,
-            elem,
-            instantiation=concrete_func_ty,
-            type_args=type_args,
-        )
-        return CallReturnWires(
-            regular_returns=[],
-            inout_returns=list(func_call.outputs()),
         )
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
