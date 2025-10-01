@@ -23,12 +23,15 @@ from guppylang_internals.checker.errors.generic import (
     LoopCtrlUnderModifierError,
     ReturnUnderModifierError,
     UnexpectedError,
-    UnsupportedError
+    UnsupportedError,
 )
 from guppylang_internals.checker.errors.type_errors import WrongNumberOfArgsError
 from guppylang_internals.diagnostic import Error
 from guppylang_internals.error import GuppyError, InternalGuppyError
-from guppylang_internals.experimental import check_lists_enabled, check_modifiers_enabled
+from guppylang_internals.experimental import (
+    check_lists_enabled,
+    check_modifiers_enabled,
+)
 from guppylang_internals.nodes import (
     ComptimeExpr,
     Control,
@@ -38,9 +41,9 @@ from guppylang_internals.nodes import (
     DesugaredListComp,
     IterNext,
     MakeIter,
+    Modifier,
     ModifierKind,
     NestedFunctionDef,
-    Modifier,
     Power,
 )
 from guppylang_internals.span import Span, to_span
@@ -150,7 +153,10 @@ class CFGBuilder(AstVisitor[BB | None]):
         Builds the expression and mutates `node.value` to point to the built expression.
         Returns the BB in which the expression is available and adds the node to it.
         """
-        if not isinstance(node, NestedFunctionDef | Modifier) and node.value is not None:
+        if (
+            not isinstance(node, NestedFunctionDef | Modifier)
+            and node.value is not None
+        ):
             node.value, bb = ExprBuilder.build(node.value, self.cfg, bb)
         bb.statements.append(node)
         return bb
@@ -297,7 +303,7 @@ class CFGBuilder(AstVisitor[BB | None]):
                     power.append(kind)
                 case _:
                     raise TypeError(f"Unknown modifier kind: {kind}")
-        
+
         cfg = CFGBuilder().build(node.body, True, self.globals)
         new_node = Modifier(
             cfg=cfg,
@@ -314,9 +320,10 @@ class CFGBuilder(AstVisitor[BB | None]):
     def _visit_withitem(self, node: ast.withitem, bb: BB) -> ModifierKind:
         # Check that `as` notation is not used
         if node.optional_vars is not None:
-            span = Span(to_span(node.context_expr).start, to_span(node.optional_vars).end)
-            raise GuppyError(UnsupportedError(
-                span, "`as` expression", singular=True))
+            span = Span(
+                to_span(node.context_expr).start, to_span(node.optional_vars).end
+            )
+            raise GuppyError(UnsupportedError(span, "`as` expression", singular=True))
 
         e = node.context_expr
         match e:
@@ -325,8 +332,7 @@ class CFGBuilder(AstVisitor[BB | None]):
             case ast.Call(func=ast.Name(id="dagger")):
                 if len(e.args) != 0:
                     span = Span(to_span(e.args[0]).start, to_span(e.args[-1]).end)
-                    raise GuppyError(
-                        WrongNumberOfArgsError(span, 0, len(e.args)))
+                    raise GuppyError(WrongNumberOfArgsError(span, 0, len(e.args)))
                 return Dagger(e)
             case ast.Call(func=ast.Name(id="control")):
                 for arg in e.args:
@@ -335,17 +341,18 @@ class CFGBuilder(AstVisitor[BB | None]):
             case ast.Call(func=ast.Name(id="power")):
                 if len(e.args) == 0:
                     span = Span(to_span(e.func).end, to_span(e).end)
-                    raise GuppyError(
-                        WrongNumberOfArgsError(span, 1, len(e.args)))
+                    raise GuppyError(WrongNumberOfArgsError(span, 1, len(e.args)))
                 elif len(e.args) != 1:
                     span = Span(to_span(e.args[1]).start, to_span(e.args[-1]).end)
-                    raise GuppyError(
-                        WrongNumberOfArgsError(span, 1, len(e.args)))
+                    raise GuppyError(WrongNumberOfArgsError(span, 1, len(e.args)))
                 return Power(e, e.args[0])
             case _:
-                raise GuppyError(UnexpectedError(
-                    e, "context manager", unexpected_in="a context manager"))
-    
+                raise GuppyError(
+                    UnexpectedError(
+                        e, "context manager", unexpected_in="a context manager"
+                    )
+                )
+
     def _validate_modifier_body(self, modifier: ast.AST) -> None:
         # Check if the body contains a return statement.
         return_in_body = return_nodes_in_ast(modifier)
@@ -357,7 +364,6 @@ class CFGBuilder(AstVisitor[BB | None]):
             lc = loop_controls_in_body[0]
             kind = lc.__class__.__name__
             raise GuppyError(LoopCtrlUnderModifierError(lc, kind))
-
 
     def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:
         # When adding support for new statements, we have to remember to use the

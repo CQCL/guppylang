@@ -1,21 +1,28 @@
-"""Type checking code for modifiers.
-"""
+"""Type checking code for modifiers."""
 
 import ast
+
 from guppylang_internals.ast_util import loop_in_ast, with_loc
 from guppylang_internals.cfg.bb import BB
 from guppylang_internals.checker.cfg_checker import check_cfg
 from guppylang_internals.checker.core import Context, Variable
-from guppylang_internals.checker.errors.generic import AssignUnderDagger, LoopUnderDagger, UnsupportedError
+from guppylang_internals.checker.errors.generic import (
+    AssignUnderDagger,
+    LoopUnderDagger,
+)
 from guppylang_internals.definition.common import DefId
 from guppylang_internals.error import GuppyError
 from guppylang_internals.nodes import CheckedModifier, Modifier
-from guppylang_internals.tys.ty import FuncInput, FunctionType, InputFlags, NoneType, Type
+from guppylang_internals.tys.ty import (
+    FuncInput,
+    FunctionType,
+    InputFlags,
+    NoneType,
+    Type,
+)
 
 
-def check_modifier(
-    modifier: Modifier, bb: BB, ctx: Context
-) -> CheckedModifier:
+def check_modifier(modifier: Modifier, bb: BB, ctx: Context) -> CheckedModifier:
     """Type checks a modifier definition."""
     cfg = modifier.cfg
 
@@ -37,18 +44,20 @@ def check_modifier(
             loops = loop_in_ast(stmt)
             if len(loops) != 0:
                 loop = next(iter(loops))
-                err = LoopUnderDagger(loop)
-                err.add_sub_diagnostic(LoopUnderDagger.Dagger(
-                    modifier.span_ctxt_manager()))
-                raise GuppyError(err)
+                loop_err = LoopUnderDagger(loop)
+                loop_err.add_sub_diagnostic(
+                    LoopUnderDagger.Dagger(modifier.span_ctxt_manager())
+                )
+                raise GuppyError(loop_err)
 
         for cfg_bb in cfg.bbs:
             if cfg_bb.vars.assigned:
                 _, v = next(iter(cfg_bb.vars.assigned.items()))
-                err = AssignUnderDagger(v)
-                err.add_sub_diagnostic(AssignUnderDagger.Modifier(
-                    modifier.span_ctxt_manager()))
-                raise GuppyError(err)
+                assign_err = AssignUnderDagger(v)
+                assign_err.add_sub_diagnostic(
+                    AssignUnderDagger.Modifier(modifier.span_ctxt_manager())
+                )
+                raise GuppyError(assign_err)
 
     # The other checks are done in unitary checking.
     # e.g. call to non-unitary function in a unitary modifier.
@@ -62,8 +71,7 @@ def check_modifier(
     # TODO: Ad hoc name for the new function
     # This name could be printed in error messages, for example,
     # when the linearity checker fails in the modifier body
-    checked_cfg = check_cfg(cfg, inputs, NoneType(),
-                            {}, "__modified__()", globals)
+    checked_cfg = check_cfg(cfg, inputs, NoneType(), {}, "__modified__()", globals)
     func_ty = check_modifier_signature(modifier, checked_cfg.input_tys)
 
     checked_modifier = CheckedModifier(
@@ -79,9 +87,7 @@ def check_modifier(
     return with_loc(modifier, checked_modifier)
 
 
-def _set_inout_if_linear(
-    var: Variable
-) -> Variable:
+def _set_inout_if_linear(var: Variable) -> Variable:
     """Set the `inout` flag if the variable is linear."""
     if not var.ty.copyable:
         return var.add_flags(InputFlags.Inout)
@@ -89,14 +95,15 @@ def _set_inout_if_linear(
         return var
 
 
-def check_modifier_signature(
-    modifier: Modifier,
-    input_tys: list[Type]
-) -> FunctionType:
-    """Check and create the signature of a function definition for a body of a `With` block."""
+def check_modifier_signature(modifier: Modifier, input_tys: list[Type]) -> FunctionType:
+    """Check and create the signature of a function definition for a body
+    of a `With` block."""
+
     func_ty = FunctionType(
-        [FuncInput(t, InputFlags.Inout if not t.copyable else InputFlags.NoFlags)
-         for t in input_tys],
+        [
+            FuncInput(t, InputFlags.Inout if not t.copyable else InputFlags.NoFlags)
+            for t in input_tys
+        ],
         NoneType(),
     )
     return func_ty

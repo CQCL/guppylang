@@ -129,7 +129,9 @@ def loop_controls_in_loop(node: Any) -> list[ast.Break | ast.Continue]:
     Note that breaks in nested loops are excluded.
     """
     found = find_nodes(
-        lambda n: isinstance(n, ast.Break | ast.Continue), node, {ast.For, ast.While, ast.FunctionDef}
+        lambda n: isinstance(n, ast.Break | ast.Continue),
+        node,
+        {ast.For, ast.While, ast.FunctionDef},
     )
     return cast(list[ast.Break | ast.Continue], found)
 

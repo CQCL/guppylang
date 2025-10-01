@@ -427,11 +427,14 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
 
 class Dagger(ast.expr):
     """The dagger modifier"""
+
     def __init__(self, node: ast.expr) -> None:
         super().__init__(**node.__dict__)
-        
+
+
 class Control(ast.Call):
     """The control modifier"""
+
     ctrl: list[ast.expr]
     qubit_num: int | Const | None
 
@@ -443,6 +446,7 @@ class Control(ast.Call):
 
 class Power(ast.Call):
     """The power modifier"""
+
     iter: ast.expr
 
     def __init__(self, node: ast.Call, iter: ast.expr) -> None:
@@ -471,12 +475,15 @@ class Modifier(ast.With):
 
     def is_control(self) -> bool:
         return len(self.control) > 0
-    
+
     def is_power(self) -> bool:
         return len(self.power) > 0
-    
+
     def span_ctxt_manager(self) -> Span:
-        return Span(to_span(self.items[0].context_expr).start, to_span(self.items[-1].context_expr).end)
+        return Span(
+            to_span(self.items[0].context_expr).start,
+            to_span(self.items[-1].context_expr).end,
+        )
 
 
 class CheckedModifier(ast.With):
@@ -515,7 +522,7 @@ class CheckedModifier(ast.With):
     def __str__(self) -> str:
         # generate a function name from the def_id
         return f"__WithBlock__({self.def_id})"
-    
+
     def push_kind(self, kind: ModifierKind) -> None:
         """Pushes a modifier kind onto the modifier."""
         if isinstance(kind, Dagger):
@@ -529,13 +536,9 @@ class CheckedModifier(ast.With):
 
     def is_dagger(self) -> bool:
         return len(self.dagger) % 2 == 1
-    
+
     def has_control(self) -> bool:
-        # This should be true if `len(self.control) > 0`, but we double-check that
-        for c in self.control:
-            if len(c.ctrl) > 0:
-                return True
-        return False
+        return any(len(c.ctrl) > 0 for c in self.control)
 
     def is_power(self) -> bool:
         return len(self.power) > 0

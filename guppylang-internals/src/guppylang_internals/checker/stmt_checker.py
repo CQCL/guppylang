@@ -421,11 +421,12 @@ class StmtChecker(AstVisitor[BBStatement]):
                 if len(ctrl) > 2:
                     assert isinstance(control, ast.Call)
                     span = Span(to_span(control.func).end, to_span(control).end)
-                    raise GuppyError(
-                        WrongNumberOfArgsError(span, 1, len(control.args)))
+                    raise GuppyError(WrongNumberOfArgsError(span, 1, len(control.args)))
                 element_ty = get_element_type(ty)
                 if not is_qubit_ty(element_ty):
-                    raise GuppyTypeError(WithArgTypeMismatchError(ctrl[0], ty, "type `array[qubit, _]`"))
+                    raise GuppyTypeError(
+                        WithArgTypeMismatchError(ctrl[0], ty, "type `array[qubit, _]`")
+                    )
                 control.qubit_num = get_array_length(ty)
             else:
                 for i in range(len(ctrl)):
@@ -436,7 +437,9 @@ class StmtChecker(AstVisitor[BBStatement]):
         for power in node.power:
             power.iter, ty = self._synth_expr(power.iter)
             if not isinstance(ty, NumericType):
-                raise GuppyTypeError(WithArgTypeMismatchError(power.iter, ty, "numeric type"))
+                raise GuppyTypeError(
+                    WithArgTypeMismatchError(power.iter, ty, "numeric type")
+                )
             power.iter, subst = self._check_expr(power.iter, ty)
             assert len(subst) == 0
 

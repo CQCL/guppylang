@@ -622,14 +622,14 @@ class BBLinearityChecker(ast.NodeVisitor):
             elif not place.ty.copyable:
                 raise GuppyTypeError(ComprAlreadyUsedError(use.node, place, use.kind))
 
-
     def visit_CheckedModifier(self, node: CheckedModifier) -> None:
         # Linear usage of variables in a with statement
         # ```
         # with control(c1, c2, ...):
         #   body(q1, q2, ...) # captured variables
         # ````
-        # is the same as to assume that this is a function call `WithCtrl(q1, q2, ..., c1, c2, ...)`
+        # is the same as to assume that this is a function call
+        # `WithCtrl(q1, q2, ..., c1, c2, ...)`
         # where `WithCtrl` is a function that takes the control as mutable references.
         # Therefore, we apply the same linearity rules as for function arguments.
         # ```
@@ -642,33 +642,37 @@ class BBLinearityChecker(ast.NodeVisitor):
             for arg in ctrl.ctrl:
                 if isinstance(arg, PlaceNode):
                     self.visit_PlaceNode(arg, use_kind=UseKind.BORROW, is_call_arg=None)
-                else: 
+                else:
                     ty = get_type(arg)
-                    err = UnnamedExprNotUsedError(arg, ty)
-                    err.add_sub_diagnostic(UnnamedExprNotUsedError.Fix(None))
-                    raise GuppyTypeError(err)
+                    unnamed_err = UnnamedExprNotUsedError(arg, ty)
+                    unnamed_err.add_sub_diagnostic(UnnamedExprNotUsedError.Fix(None))
+                    raise GuppyTypeError(unnamed_err)
 
         # check power
         for power in node.power:
             if isinstance(power.iter, PlaceNode):
-                self.visit_PlaceNode(power.iter, use_kind=UseKind.CONSUME, is_call_arg=None)
+                self.visit_PlaceNode(
+                    power.iter, use_kind=UseKind.CONSUME, is_call_arg=None
+                )
             else:
                 self.visit(power.iter)
 
         # check captured variables
         for var, use in node.captured.values():
             for place in leaf_places(var):
-                use_kind = UseKind.BORROW if InputFlags.Inout in var.flags else UseKind.CONSUME
+                use_kind = (
+                    UseKind.BORROW if InputFlags.Inout in var.flags else UseKind.CONSUME
+                )
 
                 x = place.id
                 if (prev_use := self.scope.used(x)) and not place.ty.copyable:
-                    err = AlreadyUsedError(use, place, use_kind)
-                    err.add_sub_diagnostic(
+                    used_err = AlreadyUsedError(use, place, use_kind)
+                    used_err.add_sub_diagnostic(
                         AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
                     )
                     if has_explicit_copy(place.ty):
-                        err.add_sub_diagnostic(AlreadyUsedError.MakeCopy(None))
-                    raise GuppyError(err)
+                        used_err.add_sub_diagnostic(AlreadyUsedError.MakeCopy(None))
+                    raise GuppyError(used_err)
                 self.scope.use(x, node, use_kind)
 
         # reassign controls
@@ -680,7 +684,7 @@ class BBLinearityChecker(ast.NodeVisitor):
                     case arg:
                         # This is not supposed to happen
                         raise InternalGuppyError("Cannot reassign non-place control")
-        
+
         # reassign captured variables
         for var, use in node.captured.values():
             if InputFlags.Inout in var.flags:

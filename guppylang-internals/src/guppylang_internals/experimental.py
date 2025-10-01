@@ -91,6 +91,7 @@ def check_capturing_closures_enabled(loc: AstNode | None = None) -> None:
     if not EXPERIMENTAL_FEATURES_ENABLED:
         raise GuppyError(UnsupportedError(loc, "Capturing closures"))
 
+
 def check_modifiers_enabled(loc: AstNode | None = None) -> None:
     if not EXPERIMENTAL_FEATURES_ENABLED:
         raise GuppyError(ExperimentalFeatureError(loc, "Modifiers"))

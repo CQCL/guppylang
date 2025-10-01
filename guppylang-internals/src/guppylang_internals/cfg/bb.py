@@ -14,8 +14,8 @@ from guppylang_internals.nodes import (
     DesugaredGenerator,
     DesugaredGeneratorExpr,
     DesugaredListComp,
-    NestedFunctionDef,
     Modifier,
+    NestedFunctionDef,
     Power,
 )
 
@@ -232,9 +232,10 @@ class VariableVisitor(ast.NodeVisitor):
 
         # Similarly to nested functions
         from guppylang_internals.cfg.analysis import LivenessAnalysis
+
         stats = {bb: bb.compute_variable_stats() for bb in node.cfg.bbs}
         live = LivenessAnalysis(stats).run(node.cfg.bbs)
-        assigned_before_in_bb = self.stats.assigned.keys() 
+        assigned_before_in_bb = self.stats.assigned.keys()
         self.stats.used |= {
             x: using_bb.vars.used[x]
             for x, using_bb in live[node.cfg.entry_bb].items()
@@ -244,6 +245,6 @@ class VariableVisitor(ast.NodeVisitor):
     def visit_Control(self, node: Control) -> None:
         for item in node.ctrl:
             self.visit(item)
-    
+
     def visit_Power(self, node: Power) -> None:
         self.visit(node.iter)
