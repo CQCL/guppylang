@@ -20,9 +20,8 @@ from guppylang_internals.cfg.cfg import CFG
 from guppylang_internals.checker.core import Globals
 from guppylang_internals.checker.errors.generic import (
     ExpectedError,
-    LoopCtrlUnderModifierError,
-    ReturnUnderModifierError,
-    UnexpectedError,
+    UnexpectedInWithBlockError,
+    UnknownModifierError,
     UnsupportedError,
 )
 from guppylang_internals.checker.errors.type_errors import WrongNumberOfArgsError
@@ -297,14 +296,14 @@ class CFGBuilder(AstVisitor[BB | None]):
         )
 
         for item in node.items:
-            modifier = self._visit_withitem(item, bb)
+            modifier, bb = self._visit_withitem(item, bb)
             new_node.push_modifier(modifier)
 
         set_location_from(new_node, node)
         bb.statements.append(new_node)
         return bb
 
-    def _visit_withitem(self, node: ast.withitem, bb: BB) -> Modifier:
+    def _visit_withitem(self, node: ast.withitem, bb: BB) -> tuple[Modifier, BB]:
         # Check that `as` notation is not used
         if node.optional_vars is not None:
             span = Span(
@@ -313,18 +312,22 @@ class CFGBuilder(AstVisitor[BB | None]):
             raise GuppyError(UnsupportedError(span, "`as` expression", singular=True))
 
         e = node.context_expr
+        modifier: Modifier
         match e:
             case ast.Name(id="dagger"):
-                return Dagger(e)
+                return Dagger(e), bb
             case ast.Call(func=ast.Name(id="dagger")):
                 if len(e.args) != 0:
                     span = Span(to_span(e.args[0]).start, to_span(e.args[-1]).end)
                     raise GuppyError(WrongNumberOfArgsError(span, 0, len(e.args)))
-                return Dagger(e)
+                modifier = Dagger(e)
             case ast.Call(func=ast.Name(id="control")):
-                for arg in e.args:
-                    arg, bb = ExprBuilder.build(arg, self.cfg, bb)
-                return Control(e, e.args)
+                if len(e.args) == 0:
+                    span = Span(to_span(e.func).end, to_span(e).end)
+                    raise GuppyError(WrongNumberOfArgsError(span, 1, len(e.args)))
+                for i, arg in enumerate(e.args):
+                    e.args[i], bb = ExprBuilder.build(arg, self.cfg, bb)
+                modifier = Control(e, e.args)
             case ast.Call(func=ast.Name(id="power")):
                 if len(e.args) == 0:
                     span = Span(to_span(e.func).end, to_span(e).end)
@@ -332,25 +335,35 @@ class CFGBuilder(AstVisitor[BB | None]):
                 elif len(e.args) != 1:
                     span = Span(to_span(e.args[1]).start, to_span(e.args[-1]).end)
                     raise GuppyError(WrongNumberOfArgsError(span, 1, len(e.args)))
-                return Power(e, e.args[0])
+                e.args[0], bb = ExprBuilder.build(e.args[0], self.cfg, bb)
+                modifier = Power(e, e.args[0])
             case _:
-                raise GuppyError(
-                    UnexpectedError(
-                        e, "context manager", unexpected_in="a context manager"
-                    )
-                )
+                raise GuppyError(UnknownModifierError(e))
+        return modifier, bb
 
     def _validate_modified_block(self, node: ast.With) -> None:
         # Check if the body contains a return statement.
         return_in_body = return_nodes_in_ast(node)
         if len(return_in_body) != 0:
-            raise GuppyError(ReturnUnderModifierError(return_in_body[0]))
+            err = UnexpectedInWithBlockError(return_in_body[0], "return", "Return")
+            span = Span(
+                to_span(node.items[0].context_expr).start,
+                to_span(node.items[-1].context_expr).end,
+            )
+            err.add_sub_diagnostic(UnexpectedInWithBlockError.Modifier(span))
+            raise GuppyError(err)
 
         loop_controls_in_body = loop_controls_in_loop(node)
         if len(loop_controls_in_body) != 0:
             lc = loop_controls_in_body[0]
             kind = lc.__class__.__name__
-            raise GuppyError(LoopCtrlUnderModifierError(lc, kind))
+            err = UnexpectedInWithBlockError(lc, "loop control", kind)
+            span = Span(
+                to_span(node.items[0].context_expr).start,
+                to_span(node.items[-1].context_expr).end,
+            )
+            err.add_sub_diagnostic(UnexpectedInWithBlockError.Modifier(span))
+            raise GuppyError(err)
 
     def generic_visit(self, node: ast.AST, bb: BB, jumps: Jumps) -> BB | None:
         # When adding support for new statements, we have to remember to use the

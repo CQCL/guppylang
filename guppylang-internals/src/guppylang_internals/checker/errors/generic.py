@@ -46,16 +46,23 @@ class ExpectedError(Error):
 
 
 @dataclass(frozen=True)
-class ReturnUnderModifierError(Error):
-    title: ClassVar[str] = "Unexpected return"
-    span_label: ClassVar[str] = "Return statement found in a with block"
+class UnknownModifierError(Error):
+    title: ClassVar[str] = "Unknown modifier"
+    span_label: ClassVar[str] = (
+        "Expected one of {{dagger, control(...), or power(...)}}"
+    )
 
 
 @dataclass(frozen=True)
-class LoopCtrlUnderModifierError(Error):
-    title: ClassVar[str] = "Unexpected loop control"
-    span_label: ClassVar[str] = "{kind} found in a with block"
+class UnexpectedInWithBlockError(Error):
+    title: ClassVar[str] = "Unexpected {kind}"
+    span_label: ClassVar[str] = "{things} found in a with block"
     kind: str
+    things: str
+
+    @dataclass(frozen=True)
+    class Modifier(Note):
+        span_label: ClassVar[str] = "modifier is used here"
 
 
 @dataclass(frozen=True)

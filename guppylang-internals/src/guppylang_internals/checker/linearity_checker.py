@@ -48,7 +48,7 @@ from guppylang_internals.checker.errors.linearity import (
 from guppylang_internals.definition.custom import CustomFunctionDef
 from guppylang_internals.definition.value import CallableDef
 from guppylang_internals.engine import DEF_STORE, ENGINE
-from guppylang_internals.error import GuppyError, GuppyTypeError, InternalGuppyError
+from guppylang_internals.error import GuppyError, GuppyTypeError
 from guppylang_internals.nodes import (
     AnyCall,
     BarrierExpr,
@@ -678,12 +678,8 @@ class BBLinearityChecker(ast.NodeVisitor):
         # reassign controls
         for ctrl in node.control:
             for arg in ctrl.ctrl:
-                match arg:
-                    case PlaceNode(place=place):
-                        self._reassign_single_inout_arg(place, place.defined_at or arg)
-                    case arg:
-                        # This is not supposed to happen
-                        raise InternalGuppyError("Cannot reassign non-place control")
+                assert isinstance(arg, PlaceNode)  # Checked above
+                self._reassign_single_inout_arg(arg.place, arg.place.defined_at or arg)
 
         # reassign captured variables
         for var, use in node.captured.values():

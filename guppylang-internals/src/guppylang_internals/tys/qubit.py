@@ -7,6 +7,7 @@ from guppylang_internals.tys.common import Visitor
 from guppylang_internals.tys.ty import OpaqueType, Type
 
 
+@functools.cache
 def qubit_ty() -> Type:
     """Returns the qubit type. Beware that this function imports guppylang definitions,
     so, if called before the definitions are registered,

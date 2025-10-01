@@ -35,7 +35,7 @@ def check_modified_block(
 
     cfg.analyze(def_ass_before, maybe_ass_before, [])
     captured = {
-        x: (_set_inout_if_linear(ctx.locals[x]), using_bb.vars.used[x])
+        x: (_set_inout_if_non_copyable(ctx.locals[x]), using_bb.vars.used[x])
         for x, using_bb in cfg.live_before[cfg.entry_bb].items()
         if x in ctx.locals
     }
@@ -66,7 +66,7 @@ def check_modified_block(
 
     # Construct inputs for checking the body CFG
     inputs = [v for v, _ in captured.values()]
-    inputs = linear_front_others_back(inputs)
+    inputs = non_copyable_front_others_back(inputs)
     def_id = DefId.fresh()
     globals = ctx.globals
 
@@ -89,8 +89,8 @@ def check_modified_block(
     return with_loc(modified_block, checked_modifier)
 
 
-def _set_inout_if_linear(var: Variable) -> Variable:
-    """Set the `inout` flag if the variable is linear."""
+def _set_inout_if_non_copyable(var: Variable) -> Variable:
+    """Set the `inout` flag if the variable is non-copyable."""
     if not var.ty.copyable:
         return var.add_flags(InputFlags.Inout)
     else:
@@ -111,7 +111,7 @@ def check_modified_block_signature(input_tys: list[Type]) -> FunctionType:
     return func_ty
 
 
-def linear_front_others_back(v: list[Variable]) -> list[Variable]:
+def non_copyable_front_others_back(v: list[Variable]) -> list[Variable]:
     """Reorder variables so that linear ones come first, preserving the relative order
     of linear and non-linear variables."""
     linear_vars = [x for x in v if not x.ty.copyable]

@@ -415,10 +415,12 @@ class StmtChecker(AstVisitor[BBStatement]):
         # check the arguments of the control and power.
         for control in modified_block.control:
             ctrl = control.ctrl
+            # This case is handled during CFG construction.
+            assert len(ctrl) > 0
             ctrl[0], ty = self._synth_expr(ctrl[0])
 
             if is_array_type(ty):
-                if len(ctrl) > 2:
+                if len(ctrl) > 1:
                     assert isinstance(control, ast.Call)
                     span = Span(to_span(control.func).end, to_span(control).end)
                     raise GuppyError(WrongNumberOfArgsError(span, 1, len(control.args)))
