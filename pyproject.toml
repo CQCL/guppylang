@@ -23,7 +23,7 @@ pytket_integration = [{ include-group = "test" }, "guppylang[pytket]"]
 
 [tool.uv]
 override-dependencies = [
-    "selene-hugr-qis-compiler @ file:///Users/tatiana.sedelnikov/Documents/Code/selene/dist/selene_hugr_qis_compiler-0.2.4-cp310-abi3-macosx_11_0_arm64.whl",
+    "selene-hugr-qis-compiler @ file:///Users/tatiana.sedelnikov/Documents/Code/selene/dist/selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl",
 ]
 
 [tool.uv.workspace]

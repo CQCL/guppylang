@@ -103,11 +103,12 @@ class ArrayIter(Generic[L, n]):
         if self.i < int(n):
             elem = _array_unsafe_getitem(self.xs, self.i)
             return some((elem, ArrayIter(self.xs, self.i + 1)))
-        self._assert_all_used()
+        _array_discard_all_used(self.xs)
         return nothing()
 
-    @custom_function(ArrayIterAsertAllUsedCompiler())
-    def _assert_all_used(self: ArrayIter[L, n] @ owned) -> None: ...
+    
+@custom_function(ArrayIterAsertAllUsedCompiler())
+def _array_discard_all_used(xs: array[L, n] @ owned) -> None: ...
 
 
 @custom_function(ArrayGetitemCompiler())

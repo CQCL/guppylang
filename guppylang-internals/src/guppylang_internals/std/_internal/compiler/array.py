@@ -407,19 +407,14 @@ class ArraySetitemCompiler(ArrayCompiler):
         raise InternalGuppyError("Call compile_with_inouts instead")
 
 
-ARRAY_ITER_ASSERT_ALL_USED_HELPER: Final[GlobalConstId] = GlobalConstId.fresh(
-    "ArrayIter._assert_all_used.helper"
-)
-
-
 class ArrayIterAsertAllUsedCompiler(ArrayCompiler):
     """Compiler for the `ArrayIter._assert_all_used` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         if self.elem_ty.type_bound() == ht.TypeBound.Linear:
-            [array_iter] = args
+            [arr] = args
             self.builder.add_op(
                 array_discard_all_borrowed(self.elem_ty, self.length),
-                array_iter,
+                arr,
             )
         return []
