@@ -66,20 +66,10 @@ class UnexpectedInWithBlockError(Error):
 
 
 @dataclass(frozen=True)
-class AssignUnderDagger(Error):
-    title: ClassVar[str] = "Assignment in dagger"
-    span_label: ClassVar[str] = "Assignment found in a dagger context"
-
-    @dataclass(frozen=True)
-    class Modifier(Note):
-        span_label: ClassVar[str] = "dagger modifier is used here"
-
-
-# TODO: It might be better to merge this error with AssignUnderDagger
-@dataclass(frozen=True)
-class LoopUnderDagger(Error):
-    title: ClassVar[str] = "Loop in dagger"
-    span_label: ClassVar[str] = "Loop found in a dagger context"
+class InvalidUnderDagger(Error):
+    title: ClassVar[str] = "Invalid expression in dagger"
+    span_label: ClassVar[str] = "{things} found in a dagger context"
+    things: str
 
     @dataclass(frozen=True)
     class Dagger(Note):

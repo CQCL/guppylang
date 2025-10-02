@@ -3,7 +3,7 @@ Error: Unexpected loop control (at $FILE:8:12)
 6 |     for i in range(123):
 7 |         with dagger:
 8 |             continue
-  |             ^^^^^^^^ Continue found in a with block
+  |             ^^^^^^^^ Continue found in a `With` block
   | 
 7 |         with dagger:
   |              ------ modifier is used here

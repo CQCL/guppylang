@@ -6,10 +6,7 @@ from guppylang_internals.ast_util import loop_in_ast, with_loc
 from guppylang_internals.cfg.bb import BB
 from guppylang_internals.checker.cfg_checker import check_cfg
 from guppylang_internals.checker.core import Context, Variable
-from guppylang_internals.checker.errors.generic import (
-    AssignUnderDagger,
-    LoopUnderDagger,
-)
+from guppylang_internals.checker.errors.generic import InvalidUnderDagger
 from guppylang_internals.definition.common import DefId
 from guppylang_internals.error import GuppyError
 from guppylang_internals.nodes import CheckedModifiedBlock, ModifiedBlock
@@ -46,20 +43,20 @@ def check_modified_block(
             loops = loop_in_ast(stmt)
             if len(loops) != 0:
                 loop = next(iter(loops))
-                loop_err = LoopUnderDagger(loop)
-                loop_err.add_sub_diagnostic(
-                    LoopUnderDagger.Dagger(modified_block.span_ctxt_manager())
+                err = InvalidUnderDagger(loop, "Loop")
+                err.add_sub_diagnostic(
+                    InvalidUnderDagger.Dagger(modified_block.span_ctxt_manager())
                 )
-                raise GuppyError(loop_err)
+                raise GuppyError(err)
 
         for cfg_bb in cfg.bbs:
             if cfg_bb.vars.assigned:
                 _, v = next(iter(cfg_bb.vars.assigned.items()))
-                assign_err = AssignUnderDagger(v)
-                assign_err.add_sub_diagnostic(
-                    AssignUnderDagger.Modifier(modified_block.span_ctxt_manager())
+                err = InvalidUnderDagger(v, "Assignment")
+                err.add_sub_diagnostic(
+                    InvalidUnderDagger.Dagger(modified_block.span_ctxt_manager())
                 )
-                raise GuppyError(assign_err)
+                raise GuppyError(err)
 
     # The other checks are done in unitary checking.
     # e.g. call to non-unitary function in a unitary modifier.

@@ -1,4 +1,4 @@
-Error: Loop in dagger (at $FILE:7:8)
+Error: Invalid expression in dagger (at $FILE:7:8)
   | 
 5 | def test() -> None:
 6 |     with dagger:
