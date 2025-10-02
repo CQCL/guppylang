@@ -81,14 +81,16 @@ class EmulatorBuilder:
         to selene_sim.build as kwargs.
 
         For example:
-        ```
+
+        .. code-block:: python
+
             .with_build_arg("build_method", "via-llvm_ir")
-        ```
 
         is equivalent to
-        ```
+
+        .. code-block:: python
+
             selene_sim.build(..., build_method="via-llvm_ir")
-        ```
 
         which saves LLVM IR into the build directory rather than
         saving bitcode.
