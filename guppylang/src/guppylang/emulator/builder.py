@@ -5,7 +5,7 @@ Compiling and building emulator instances for guppy programs.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import selene_sim
 from typing_extensions import Self
@@ -39,6 +39,7 @@ class EmulatorBuilder:
     _progress_bar: bool = False
     _strict: bool = False
     _save_planner: bool = False
+    _custom_args: dict[str, Any] | None = None
 
     @property
     def name(self) -> str | None:
@@ -56,6 +57,11 @@ class EmulatorBuilder:
         """Whether to print verbose output during the build process."""
         return self._verbose
 
+    @property
+    def custom_args(self) -> dict[str, Any] | None:
+        """Custom build arguments passed to selene_sim.build."""
+        return dict(self._custom_args) if self._custom_args is not None else None
+
     def with_name(self, value: str | None) -> Self:
         """Set the name for the emulator instance."""
         return replace(self, _name=value)
@@ -68,6 +74,29 @@ class EmulatorBuilder:
     def with_verbose(self, value: bool) -> Self:
         """Set whether to print verbose output during the build process."""
         return replace(self, _verbose=value)
+
+    def with_build_arg(self, key: str, value: Any) -> Self:
+        """Selene builds may support additional customisable arguments,
+        e.g. to override the choice of compilation route. This is passed
+        to selene_sim.build as kwargs.
+
+        For example:
+        ```
+            .with_build_arg("build_method", "via-llvm_ir")
+        ```
+
+        is equivalent to
+        ```
+            selene_sim.build(..., build_method="via-llvm_ir")
+        ```
+
+        which saves LLVM IR into the build directory rather than
+        saving bitcode.
+        """
+        if self._custom_args is None:
+            return replace(self, _custom_args={key: value})
+        else:
+            return replace(self, _custom_args=self._custom_args | {key: value})
 
     def build(self, package: Package, n_qubits: int) -> EmulatorInstance:
         """Build an EmulatorInstance from a compiled package.
@@ -91,6 +120,7 @@ class EmulatorBuilder:
             progress_bar=self._progress_bar,
             strict=self._strict,
             save_planner=self._save_planner,
+            **self._custom_args or {},
         )
 
         return EmulatorInstance(_instance=instance, _n_qubits=n_qubits)
