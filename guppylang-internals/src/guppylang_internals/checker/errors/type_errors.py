@@ -342,11 +342,3 @@ class IntOverflowError(Error):
     @property
     def signed_unsigned(self) -> str:
         return "signed" if self.signed else "unsigned"
-
-
-@dataclass(frozen=True)
-class WithArgTypeMismatchError(Error):
-    title: ClassVar[str] = "Type mismatch"
-    span_label: ClassVar[str] = "Expected expression of {expected}, got `{actual}`"
-    actual: Type
-    expected: str

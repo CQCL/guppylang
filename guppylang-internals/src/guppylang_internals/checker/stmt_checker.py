@@ -42,8 +42,8 @@ from guppylang_internals.checker.errors.type_errors import (
     MissingReturnValueError,
     StarredTupleUnpackError,
     TypeInferenceError,
+    TypeMismatchError,
     UnpackableError,
-    WithArgTypeMismatchError,
     WrongNumberOfArgsError,
     WrongNumberOfUnpacksError,
 )
@@ -67,8 +67,10 @@ from guppylang_internals.nodes import (
     UnpackPattern,
 )
 from guppylang_internals.span import Span, to_span
+from guppylang_internals.tys.arg import TypeArg
 from guppylang_internals.tys.builtin import (
     array_type,
+    array_type_def,
     get_array_length,
     get_element_type,
     get_iter_size,
@@ -77,6 +79,7 @@ from guppylang_internals.tys.builtin import (
     nat_type,
 )
 from guppylang_internals.tys.const import ConstValue
+from guppylang_internals.tys.param import ConstParam
 from guppylang_internals.tys.parsing import type_from_ast
 from guppylang_internals.tys.qubit import is_qubit_ty, qubit_ty
 from guppylang_internals.tys.subst import Subst
@@ -421,14 +424,19 @@ class StmtChecker(AstVisitor[BBStatement]):
 
             if is_array_type(ty):
                 if len(ctrl) > 1:
-                    assert isinstance(control, ast.Call)
                     span = Span(to_span(control.func).end, to_span(control).end)
                     raise GuppyError(WrongNumberOfArgsError(span, 1, len(control.args)))
                 element_ty = get_element_type(ty)
                 if not is_qubit_ty(element_ty):
-                    raise GuppyTypeError(
-                        WithArgTypeMismatchError(ctrl[0], ty, "type `array[qubit, _]`")
+                    dummy_array_ty = array_type_def.check_instantiate(
+                        [
+                            TypeArg(qubit_ty()),
+                            ConstParam(
+                                1, "n", NumericType(NumericType.Kind.Nat)
+                            ).to_existential()[0],
+                        ]
                     )
+                    raise GuppyTypeError(TypeMismatchError(ctrl[0], dummy_array_ty, ty))
                 control.qubit_num = get_array_length(ty)
             else:
                 for i in range(len(ctrl)):
@@ -438,9 +446,9 @@ class StmtChecker(AstVisitor[BBStatement]):
 
         for power in node.power:
             power.iter, ty = self._synth_expr(power.iter)
-            if not isinstance(ty, NumericType):
+            if not isinstance(ty, NumericType) or not ty.kind == NumericType.Kind.Nat:
                 raise GuppyTypeError(
-                    WithArgTypeMismatchError(power.iter, ty, "numeric type")
+                    TypeMismatchError(power.iter, NumericType(NumericType.Kind.Nat), ty)
                 )
             power.iter, subst = self._check_expr(power.iter, ty)
             assert len(subst) == 0

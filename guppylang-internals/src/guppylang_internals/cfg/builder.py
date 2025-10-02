@@ -296,14 +296,15 @@ class CFGBuilder(AstVisitor[BB | None]):
         )
 
         for item in node.items:
-            modifier, bb = self._visit_withitem(item, bb)
+            item.context_expr, bb = ExprBuilder.build(item.context_expr, self.cfg, bb)
+            modifier = self._handle_withitem(item)
             new_node.push_modifier(modifier)
 
         set_location_from(new_node, node)
         bb.statements.append(new_node)
         return bb
 
-    def _visit_withitem(self, node: ast.withitem, bb: BB) -> tuple[Modifier, BB]:
+    def _handle_withitem(self, node: ast.withitem) -> Modifier:
         # Check that `as` notation is not used
         if node.optional_vars is not None:
             span = Span(
@@ -315,7 +316,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         modifier: Modifier
         match e:
             case ast.Name(id="dagger"):
-                return Dagger(e), bb
+                modifier = Dagger(e)
             case ast.Call(func=ast.Name(id="dagger")):
                 if len(e.args) != 0:
                     span = Span(to_span(e.args[0]).start, to_span(e.args[-1]).end)
@@ -325,8 +326,6 @@ class CFGBuilder(AstVisitor[BB | None]):
                 if len(e.args) == 0:
                     span = Span(to_span(e.func).end, to_span(e).end)
                     raise GuppyError(WrongNumberOfArgsError(span, 1, len(e.args)))
-                for i, arg in enumerate(e.args):
-                    e.args[i], bb = ExprBuilder.build(arg, self.cfg, bb)
                 modifier = Control(e, e.args)
             case ast.Call(func=ast.Name(id="power")):
                 if len(e.args) == 0:
@@ -335,11 +334,10 @@ class CFGBuilder(AstVisitor[BB | None]):
                 elif len(e.args) != 1:
                     span = Span(to_span(e.args[1]).start, to_span(e.args[-1]).end)
                     raise GuppyError(WrongNumberOfArgsError(span, 1, len(e.args)))
-                e.args[0], bb = ExprBuilder.build(e.args[0], self.cfg, bb)
                 modifier = Power(e, e.args[0])
             case _:
                 raise GuppyError(UnknownModifierError(e))
-        return modifier, bb
+        return modifier
 
     def _validate_modified_block(self, node: ast.With) -> None:
         # Check if the body contains a return statement.

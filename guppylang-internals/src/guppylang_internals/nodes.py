@@ -446,14 +446,14 @@ class Control(ast.Call):
         self.qubit_num = None
 
 
-class Power(ast.Call):
+class Power(ast.expr):
     """The power modifier"""
 
     iter: ast.expr
 
     _fields = ("iter",)
 
-    def __init__(self, node: ast.Call, iter: ast.expr) -> None:
+    def __init__(self, node: ast.expr, iter: ast.expr) -> None:
         super().__init__(**node.__dict__)
         self.iter = iter
 

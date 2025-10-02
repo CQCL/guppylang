@@ -115,7 +115,7 @@ def loop_in_ast(node: Any) -> list[ast.For | ast.While]:
 
 
 def breaks_in_loop(node: Any) -> list[ast.Break]:
-    """Returns all `Break` and `Continue` nodes occurring in a loop.
+    """Returns all `Break` nodes occurring in a loop.
 
     Note that breaks in nested loops are excluded.
     """
@@ -126,7 +126,7 @@ def breaks_in_loop(node: Any) -> list[ast.Break]:
 
 
 def loop_controls_in_loop(node: Any) -> list[ast.Break | ast.Continue]:
-    """Returns all `Break` nodes occurring in a loop.
+    """Returns all `Break` and `Continue` nodes occurring in a loop.
 
     Note that breaks in nested loops are excluded.
     """
