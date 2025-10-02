@@ -67,10 +67,8 @@ from guppylang_internals.nodes import (
     UnpackPattern,
 )
 from guppylang_internals.span import Span, to_span
-from guppylang_internals.tys.arg import TypeArg
 from guppylang_internals.tys.builtin import (
     array_type,
-    array_type_def,
     get_array_length,
     get_element_type,
     get_iter_size,
@@ -78,8 +76,7 @@ from guppylang_internals.tys.builtin import (
     is_sized_iter_type,
     nat_type,
 )
-from guppylang_internals.tys.const import ConstValue
-from guppylang_internals.tys.param import ConstParam
+from guppylang_internals.tys.const import ConstValue, ExistentialConstVar
 from guppylang_internals.tys.parsing import type_from_ast
 from guppylang_internals.tys.qubit import is_qubit_ty, qubit_ty
 from guppylang_internals.tys.subst import Subst
@@ -428,14 +425,10 @@ class StmtChecker(AstVisitor[BBStatement]):
                     raise GuppyError(WrongNumberOfArgsError(span, 1, len(control.args)))
                 element_ty = get_element_type(ty)
                 if not is_qubit_ty(element_ty):
-                    dummy_array_ty = array_type_def.check_instantiate(
-                        [
-                            TypeArg(qubit_ty()),
-                            ConstParam(
-                                1, "n", NumericType(NumericType.Kind.Nat)
-                            ).to_existential()[0],
-                        ]
+                    n = ExistentialConstVar.fresh(
+                        "n", NumericType(NumericType.Kind.Nat)
                     )
+                    dummy_array_ty = array_type(qubit_ty(), n)
                     raise GuppyTypeError(TypeMismatchError(ctrl[0], dummy_array_ty, ty))
                 control.qubit_num = get_array_length(ty)
             else:
@@ -445,12 +438,9 @@ class StmtChecker(AstVisitor[BBStatement]):
                 control.qubit_num = len(ctrl)
 
         for power in node.power:
-            power.iter, ty = self._synth_expr(power.iter)
-            if not isinstance(ty, NumericType) or not ty.kind == NumericType.Kind.Nat:
-                raise GuppyTypeError(
-                    TypeMismatchError(power.iter, NumericType(NumericType.Kind.Nat), ty)
-                )
-            power.iter, subst = self._check_expr(power.iter, ty)
+            power.iter, subst = self._check_expr(
+                power.iter, NumericType(NumericType.Kind.Nat)
+            )
             assert len(subst) == 0
 
         return modified_block

@@ -56,7 +56,7 @@ class UnknownModifierError(Error):
 @dataclass(frozen=True)
 class UnexpectedInWithBlockError(Error):
     title: ClassVar[str] = "Unexpected {kind}"
-    span_label: ClassVar[str] = "{things} found in a with block"
+    span_label: ClassVar[str] = "{things} found in a `With` block"
     kind: str
     things: str
 
