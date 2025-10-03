@@ -1,11 +1,11 @@
 """Hugr generation for modifiers."""
 
-from guppylang_internals.compiler.cfg_compiler import compile_cfg
 from hugr import Wire, ops
 from hugr import tys as ht
 
 from guppylang_internals.ast_util import get_type
 from guppylang_internals.checker.modifier_checker import non_copyable_front_others_back
+from guppylang_internals.compiler.cfg_compiler import compile_cfg
 from guppylang_internals.compiler.core import CompilerContext, DFContainer
 from guppylang_internals.compiler.expr_compiler import (
     ExprCompiler,
