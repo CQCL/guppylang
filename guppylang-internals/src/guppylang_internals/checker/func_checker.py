@@ -134,12 +134,12 @@ def check_global_func_def(
     """Type checks a top-level function definition."""
     args = func_def.args.args
     returns_none = isinstance(ty.output, NoneType)
-    assert ty.input_names is not None
+    assert all(inp.name is not None for inp in ty.inputs)
 
     cfg = CFGBuilder().build(func_def.body, returns_none, globals)
     inputs = [
-        Variable(x, inp.ty, loc, inp.flags, is_func_input=True)
-        for x, inp, loc in zip(ty.input_names, ty.inputs, args, strict=True)
+        Variable(cast(str, inp.name), inp.ty, loc, inp.flags, is_func_input=True)
+        for inp, loc in zip(ty.inputs, args, strict=True)
         # Comptime inputs are turned into generic args, so are not included here
         if InputFlags.Comptime not in inp.flags
     ]
@@ -194,10 +194,14 @@ def check_nested_func_def(
 
     # Construct inputs for checking the body CFG
     inputs = [v for v, _ in captured.values()] + [
-        Variable(x, inp.ty, func_def.args.args[i], inp.flags, is_func_input=True)
-        for i, (x, inp) in enumerate(
-            zip(func_ty.input_names, func_ty.inputs, strict=True)
+        Variable(
+            cast(str, inp.name),
+            inp.ty,
+            func_def.args.args[i],
+            inp.flags,
+            is_func_input=True,
         )
+        for i, inp in enumerate(func_ty.inputs)
         # Comptime inputs are turned into generic args, so are not included here
         if InputFlags.Comptime not in inp.flags
     ]
@@ -305,7 +309,6 @@ def check_signature(
     return FunctionType(
         inputs,
         output,
-        input_names,
         sorted(param_var_mapping.values(), key=lambda v: v.idx),
     )
 
