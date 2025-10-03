@@ -26,6 +26,7 @@ def test_emulator_builder_default_initialization():
     assert builder._progress_bar is False
     assert builder._strict is False
     assert builder._save_planner is False
+    assert builder._custom_args is None
 
 
 @patch("guppylang.emulator.builder.selene_sim")
@@ -86,6 +87,7 @@ def test_emulator_builder_build_with_custom_parameters(
         .with_name("custom_emulator")
         .with_build_dir(build_dir)
         .with_verbose(True)
+        .with_build_arg("build_method", "via-llvm-ir")
     )
 
     n_qubits = 10
@@ -104,6 +106,7 @@ def test_emulator_builder_build_with_custom_parameters(
         progress_bar=False,
         strict=False,
         save_planner=False,
+        build_method="via-llvm-ir",
     )
 
     # Check that EmulatorInstance was created correctly
@@ -138,18 +141,22 @@ def test_emulator_builder_immutability():
     new_builder1 = builder.with_name("test1")
     new_builder2 = builder.with_build_dir(Path("./build"))
     new_builder3 = builder.with_verbose(True)
+    new_builder4 = builder.with_build_arg("custom_arg", 42)
 
     # All should be different objects
     assert new_builder1 is not builder
     assert new_builder2 is not builder
     assert new_builder3 is not builder
+    assert new_builder4 is not builder
     assert new_builder1 is not new_builder2
     assert new_builder2 is not new_builder3
+    assert new_builder3 is not new_builder4
 
     # Original should be unchanged
     assert builder.name is None
     assert builder.build_dir is None
     assert builder.verbose is False
+    assert builder.custom_args is None
 
 
 def test_emulator_builder_reuse():
