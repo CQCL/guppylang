@@ -3,6 +3,23 @@
 First release of `guppylang_internals` package containing refactored out internal components
 from `guppylang`.
 
+## [0.25.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.24.0...guppylang-internals-v0.25.0) (2025-10-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* `checker.core.requires_monomorphization` renamed into `require_monomorphization` and now operating on all parameters simultaneously `tys.subst.BoundVarFinder` removed. Instead, use the new `bound_vars` property on types, arguments, and consts. `tys.parsing.parse_parameter` now requires a `param_var_mapping`.
+
+### Features
+
+* modifiers in CFG and its type checker (experimental) ([#1281](https://github.com/CQCL/guppylang/issues/1281)) ([fe85018](https://github.com/CQCL/guppylang/commit/fe8501854507c3c43cec2f26bba75198766a4a17))
+* Turn type parameters into dependent telescopes ([#1154](https://github.com/CQCL/guppylang/issues/1154)) ([b56e056](https://github.com/CQCL/guppylang/commit/b56e056a6b4795c778ed8124a09a194fb1d97dda))
+
+
+### Bug Fixes
+
+* Detect unsolved generic parameters even if they are unused ([#1279](https://github.com/CQCL/guppylang/issues/1279)) ([f830db0](https://github.com/CQCL/guppylang/commit/f830db00c416cfc1e9fe7ec70c612b6b558aa740)), closes [#1273](https://github.com/CQCL/guppylang/issues/1273)
+
 ## [0.24.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.23.0...guppylang-internals-v0.24.0) (2025-09-19)
 
 
