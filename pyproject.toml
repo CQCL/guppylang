@@ -31,7 +31,7 @@ miette-py = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "50a2bac" }
-# tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", rev = "aca944c" }
+tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", rev = "73ff49b" }
 
 [build-system]
 requires = ["hatchling"]
