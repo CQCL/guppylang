@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, ClassVar
 from hugr import Wire, ops
 from hugr import tys as ht
 from hugr.build.dfg import DfBase
+from hugr.std.collections.borrow_array import EXTENSION as BORROW_ARRAY_EXTENSION
 
 from guppylang_internals.ast_util import (
     AstNode,
@@ -23,6 +24,7 @@ from guppylang_internals.compiler.core import (
     DFContainer,
     GlobalConstId,
     partially_monomorphize_args,
+    qualified_name,
 )
 from guppylang_internals.definition.common import ParsableDef
 from guppylang_internals.definition.value import CallReturnWires, CompiledCallableDef
@@ -489,4 +491,34 @@ class CopyInoutCompiler(CustomInoutCallCompiler):
     """Call compiler for functions that are noops but only want to borrow arguments."""
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        assert len(self.ty.input) == 1
+        inp_ty = self.ty.input[0]
+        if inp_ty.type_bound() == ht.TypeBound.Linear:
+            copies = self._handle_affine_type(inp_ty, args)
+            return CallReturnWires(
+                regular_returns=[copies[0]], inout_returns=[copies[1]]
+            )
         return CallReturnWires(regular_returns=args, inout_returns=args)
+
+    # Affine types in Guppy backed by a linear Hugr type need to be copied explicitly.
+    def _handle_affine_type(self, ty: ht.Type, args: list[Wire]) -> list[Wire]:
+        match ty:
+            case ht.ExtType(type_def=type_def, args=type_args):
+                # TODO: Handle affine extension types more generally.
+                if qualified_name(type_def) == qualified_name(
+                    BORROW_ARRAY_EXTENSION.get_type("borrow_array")
+                ):
+                    assert len(type_args) == 2
+                    # Manually instantiate here to avoid circular import and use
+                    # type args directly.
+                    clone_op = BORROW_ARRAY_EXTENSION.get_op("clone").instantiate(
+                        type_args,
+                        ht.FunctionType(self.ty.input, self.ty.output),
+                    )
+                    return list(self.builder.add_op(clone_op, *args))
+            case _:
+                raise InternalGuppyError(
+                    f"Type `{ty}` needs an explicit handler in the `copy` compiler as "
+                    "it is an affine Guppy type backed by a linear Hugr type."
+                )
+        return []

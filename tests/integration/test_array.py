@@ -333,7 +333,7 @@ def test_copy3(run_int_fn):
     run_int_fn(main, expected=1)
 
 
-def test_copy_struct(run_int_fn, validate):
+def test_copy_struct(run_int_fn):
     @guppy.struct
     class S:
         a: array[int, 1]
@@ -344,7 +344,16 @@ def test_copy_struct(run_int_fn, validate):
         ys = xs[0].a.copy()
         return ys[0]
 
-    validate(main.compile())
+    run_int_fn(main, expected=1)
+
+
+def test_copy_inside(run_int_fn):
+    @guppy
+    def main() -> int:
+        xs = array(array(1), array(1))
+        ys = xs[0].copy()
+        return ys[0]
+
     run_int_fn(main, expected=1)
 
 

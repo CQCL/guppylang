@@ -377,7 +377,7 @@ class ArraySetitemCompiler(ArrayCompiler):
 
 
 class ArrayIterAsertAllUsedCompiler(ArrayCompiler):
-    """Compiler for the `ArrayIter._assert_all_used` method."""
+    """Compiler for the `_array_discard_all_used` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         if self.elem_ty.type_bound() == ht.TypeBound.Linear:
