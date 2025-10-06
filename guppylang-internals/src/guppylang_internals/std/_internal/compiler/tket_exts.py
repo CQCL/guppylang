@@ -8,7 +8,6 @@ from tket_exts import (
     global_phase,
     guppy,
     modifier,
-    opaque_bool,
     qsystem,
     qsystem_random,
     qsystem_utils,

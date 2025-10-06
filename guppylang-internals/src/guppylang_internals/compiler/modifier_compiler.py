@@ -1,6 +1,6 @@
 """Hugr generation for modifiers."""
 
-from hugr import Wire, ops
+from hugr import Node, Wire, ops
 from hugr import tys as ht
 
 from guppylang_internals.ast_util import get_type
@@ -36,9 +36,13 @@ def compile_modified_block(
     CONTROL_OP_NAME = "ControlModifier"
     POWER_OP_NAME = "PowerModifier"
 
-    # Define types
+    dagger_op_def = MODIFIER_EXTENSION.get_op(DAGGER_OP_NAME)
+    control_op_def = MODIFIER_EXTENSION.get_op(CONTROL_OP_NAME)
+    power_op_def = MODIFIER_EXTENSION.get_op(POWER_OP_NAME)
+
     body_ty = modified_block.ty
-    # TODO: Shouldn't this be `to_hugr_poly`?
+    # TODO: Shouldn't this be `to_hugr_poly` since it can contain
+    # a variable with a generic type?
     hugr_ty = body_ty.to_hugr(ctx)
     in_out_ht = [
         fn_inp.ty.to_hugr(ctx)
@@ -70,20 +74,33 @@ def compile_modified_block(
     captured = non_copyable_front_others_back(captured)
     args = [dfg[v] for v in captured]
 
-    if modified_block.is_dagger():
+    # Apply modifiers
+    if modified_block.has_dagger():
         dagger_ty = ht.FunctionType([hugr_ty], [hugr_ty])
         call = dfg.builder.add_op(
             ops.ExtOp(
-                MODIFIER_EXTENSION.get_op(DAGGER_OP_NAME),
+                dagger_op_def,
                 dagger_ty,
                 [in_out_arg, other_in_arg],
             ),
             call,
         )
+    if modified_block.has_power():
+        power_ty = ht.FunctionType([hugr_ty, int_type().to_hugr(ctx)], [hugr_ty])
+        for power in modified_block.power:
+            num = expr_compiler.compile(power.iter, dfg)
+            call = dfg.builder.add_op(
+                ops.ExtOp(
+                    power_op_def,
+                    power_ty,
+                    [in_out_arg, other_in_arg],
+                ),
+                call,
+                num,
+            )
     qubit_num_args = []
     if modified_block.has_control():
         for control in modified_block.control:
-            # definition of types
             assert control.qubit_num is not None
             qubit_num: ht.TypeArg
             if isinstance(control.qubit_num, int):
@@ -98,54 +115,47 @@ def compile_modified_block(
             output_fn_ty = ht.FunctionType(
                 [std_array, *hugr_ty.input], [std_array, *hugr_ty.output]
             )
-            op = MODIFIER_EXTENSION.get_op(CONTROL_OP_NAME).instantiate(
-                [qubit_num, in_out_arg, other_in_arg],
+            op = ops.ExtOp(
+                control_op_def,
                 ht.FunctionType([input_fn_ty], [output_fn_ty]),
+                [qubit_num, in_out_arg, other_in_arg],
             )
             call = dfg.builder.add_op(op, call)
             # update types
             in_out_arg = ht.ListArg([std_array.type_arg(), *in_out_arg.elems])
             hugr_ty = output_fn_ty
-    if modified_block.is_power():
-        power_ty = ht.FunctionType([hugr_ty, int_type().to_hugr(ctx)], [hugr_ty])
-        for power in modified_block.power:
-            num = expr_compiler.compile(power.iter, dfg)
-            call = dfg.builder.add_op(
-                ops.ExtOp(
-                    MODIFIER_EXTENSION.get_op(POWER_OP_NAME),
-                    power_ty,
-                    [in_out_arg, other_in_arg],
-                ),
-                call,
-                num,
-            )
 
     # Prepare control arguments
     ctrl_args: list[Wire] = []
+    unwrap: Node | None = None
     for i, control in enumerate(modified_block.control):
         if is_array_type(get_type(control.ctrl[0])):
-            input_array = expr_compiler.compile(control.ctrl[0], dfg)
-
-            unwrap = array_unwrap_elem(ctx)
-            unwrap = dfg.builder.load_function(
+            control_array = expr_compiler.compile(control.ctrl[0], dfg)
+            # if `unwrap` function is already loaded, reuse it, otherwise create it
+            if unwrap is None:
+                unwrap = dfg.builder.load_function(
+                    array_unwrap_elem(ctx),
+                    instantiation=ht.FunctionType([ht.Option(ht.Qubit)], [ht.Qubit]),
+                    type_args=[ht.TypeTypeArg(ht.Qubit)],
+                )
+            control_array = dfg.builder.add_op(
+                array_map(ht.Option(ht.Qubit), qubit_num_args[i], ht.Qubit),
+                control_array,
                 unwrap,
-                instantiation=ht.FunctionType([ht.Option(ht.Qubit)], [ht.Qubit]),
-                type_args=[ht.TypeTypeArg(ht.Qubit)],
             )
-            map_op = array_map(ht.Option(ht.Qubit), qubit_num_args[i], ht.Qubit)
-            unwrapped_array = dfg.builder.add_op(map_op, input_array, unwrap)
-
-            unwrapped_array = dfg.builder.add_op(
-                array_convert_to_std_array(ht.Qubit, qubit_num_args[i]), unwrapped_array
+            control_array = dfg.builder.add_op(
+                array_convert_to_std_array(ht.Qubit, qubit_num_args[i]), control_array
             )
-
-            ctrl_args.extend(unwrapped_array)
+            ctrl_args.append(control_array)
         else:
             cs = [expr_compiler.compile(c, dfg) for c in control.ctrl]
-            c_node = dfg.builder.add_op(array_new(ht.Qubit, len(control.ctrl)), *cs)
-            val_to_std = array_convert_to_std_array(ht.Qubit, qubit_num_args[i])
-            c_node = dfg.builder.add_op(val_to_std, *c_node)
-            ctrl_args.append(c_node)
+            control_array = dfg.builder.add_op(
+                array_new(ht.Qubit, len(control.ctrl)), *cs
+            )
+            control_array = dfg.builder.add_op(
+                array_convert_to_std_array(ht.Qubit, qubit_num_args[i]), *control_array
+            )
+            ctrl_args.append(control_array)
 
     # Call
     call = dfg.builder.add_op(
@@ -157,33 +167,36 @@ def compile_modified_block(
     outports = iter(call)
 
     # Unpack controls
+    wrap: Node | None = None
     for i, control in enumerate(modified_block.control):
         outport = next(outports)
         if is_array_type(get_type(control.ctrl[0])):
-            result_array = dfg.builder.add_op(
+            control_array = dfg.builder.add_op(
                 array_convert_from_std_array(ht.Qubit, qubit_num_args[i]), outport
             )
-
-            wrap = array_wrap_elem(ctx)
-            wrap = dfg.builder.load_function(
+            if wrap is None:
+                wrap = dfg.builder.load_function(
+                    array_wrap_elem(ctx),
+                    instantiation=ht.FunctionType([ht.Qubit], [ht.Option(ht.Qubit)]),
+                    type_args=[ht.TypeTypeArg(ht.Qubit)],
+                )
+            control_array = dfg.builder.add_op(
+                array_map(ht.Qubit, qubit_num_args[i], ht.Option(ht.Qubit)),
+                control_array,
                 wrap,
-                instantiation=ht.FunctionType([ht.Qubit], [ht.Option(ht.Qubit)]),
-                type_args=[ht.TypeTypeArg(ht.Qubit)],
             )
-            map_op = array_map(ht.Qubit, qubit_num_args[i], ht.Option(ht.Qubit))
-            new_c = dfg.builder.add_op(map_op, result_array, wrap)
 
             c = control.ctrl[0]
             assert isinstance(c, PlaceNode)
-
-            dfg[c.place] = new_c
+            dfg[c.place] = control_array
         else:
-            val_from_std = array_convert_from_std_array(ht.Qubit, qubit_num_args[i])
-            std_arr = dfg.builder.add_op(val_from_std, outport)
-            unpacked = unpack_array(dfg.builder, std_arr)
-            for c, wire in zip(control.ctrl, unpacked, strict=False):
+            control_array = dfg.builder.add_op(
+                array_convert_from_std_array(ht.Qubit, qubit_num_args[i]), outport
+            )
+            unpacked = unpack_array(dfg.builder, control_array)
+            for c, new_c in zip(control.ctrl, unpacked, strict=False):
                 assert isinstance(c, PlaceNode)
-                dfg[c.place] = wire
+                dfg[c.place] = new_c
 
     for arg in captured:
         if InputFlags.Inout in arg.flags:
