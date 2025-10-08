@@ -1,0 +1,8 @@
+Error: Invalid expression in dagger (at $FILE:9:13)
+  | 
+7 | @guppy
+8 | def test() -> None:
+9 |     for _ in range(3):
+  |              ^^^^^^^^ Assignment found in a dagger context
+
+Guppy compilation failed due to 1 previous error

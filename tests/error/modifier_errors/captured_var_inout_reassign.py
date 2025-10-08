@@ -2,7 +2,8 @@ from guppylang.decorator import guppy
 from guppylang.std.quantum import qubit, UnitaryFlags
 
 
-@guppy.declare(unitary_flags=UnitaryFlags.Dagger)
+@guppy.with_unitary_flags(UnitaryFlags.Dagger)
+@guppy.declare
 def use(q: qubit) -> None: ...
 
 

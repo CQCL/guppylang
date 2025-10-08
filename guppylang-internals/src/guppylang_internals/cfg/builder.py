@@ -309,7 +309,7 @@ class CFGBuilder(AstVisitor[BB | None]):
             new_node.push_modifier(modifier)
 
         # TODO: its parent's flags need to be added too
-        unitary_flags = new_node.add_flags(UnitaryFlags.NoFlags)
+        unitary_flags = new_node.flags()
         object.__setattr__(cfg, "unitary_flags", unitary_flags)
 
         set_location_from(new_node, node)

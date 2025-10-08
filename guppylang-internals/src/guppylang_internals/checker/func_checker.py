@@ -256,7 +256,6 @@ def check_signature(
     passed. This will be used to check or infer the type annotation for the `self`
     argument.
     """
-    # TODO:(k.hirata) unitary_flags
     if len(func_def.args.posonlyargs) != 0:
         raise GuppyError(
             UnsupportedError(func_def.args.posonlyargs[0], "Positional-only parameters")

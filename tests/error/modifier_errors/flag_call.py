@@ -1,15 +1,15 @@
-from guppylang_internals.tys.ty import UnitaryFlags
 from guppylang.decorator import guppy
-from guppylang.std.quantum import qubit
+from guppylang.std.quantum import qubit, UnitaryFlags
 
 
 @guppy.declare
 def foo(x: qubit) -> None: ...
 
 
-@guppy(unitary_flags=UnitaryFlags.Dagger)
+@guppy.with_unitary_flags(UnitaryFlags.Dagger)
+@guppy
 def test(x: qubit) -> None:
     foo(x)
 
 
-test.compile()
+test.compile_function()

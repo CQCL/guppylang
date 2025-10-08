@@ -4,6 +4,7 @@ import inspect
 from collections.abc import Callable, Sequence
 from types import FrameType
 from typing import Any, ParamSpec, TypeVar, cast
+from dataclasses import replace
 
 from guppylang_internals.ast_util import annotate_location
 from guppylang_internals.compiler.core import (
@@ -84,26 +85,10 @@ __all__ = ("guppy", "custom_guppy_decorator")
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
-    # trying to support both `@guppy` and `@guppy(unitary_flags=...)` styles
-    def __call__(
-        self,
-        f: Callable[P, T] | None = None,
-        unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags,
-    ) -> (
-        GuppyFunctionDefinition[P, T]
-        | Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]
-    ):
-        def register(fn: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
-            defn = RawFunctionDef(
-                DefId.fresh(), fn.__name__, None, fn, unitary_flags=unitary_flags
-            )
-            DEF_STORE.register_def(defn, get_calling_frame())
-            return GuppyFunctionDefinition(defn)
-
-        if f is None:
-            return register
-        else:
-            return register(f)
+    def __call__(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
+        defn = RawFunctionDef(DefId.fresh(), f.__name__, None, f)
+        DEF_STORE.register_def(defn, get_calling_frame())
+        return GuppyFunctionDefinition(defn)
 
     def comptime(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         """Registers a function to be executed at compile-time during Guppy compilation,
@@ -185,7 +170,7 @@ class _Guppy:
         .. code-block:: python
             from guppylang import guppy
 
-            T = guppy.type_var("T")
+            T = guppy.ty
 
             @guppy
             def identity(x: T) -> T:
@@ -238,27 +223,11 @@ class _Guppy:
     ) -> Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]:
         return hugr_op(op, checker, higher_order_value, name, signature)
 
-    def declare(
-        self,
-        f: Callable[P, T] | None = None,
-        unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags,
-    ) -> (
-        GuppyFunctionDefinition[P, T]
-        | Callable[[Callable[P, T]], GuppyFunctionDefinition[P, T]]
-    ):
+    def declare(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
         """Declares a Guppy function without defining it."""
-
-        def register(fn: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
-            defn = RawFunctionDecl(
-                DefId.fresh(), fn.__name__, None, fn, unitary_flags=unitary_flags
-            )
-            DEF_STORE.register_def(defn, get_calling_frame())
-            return GuppyFunctionDefinition(defn)
-
-        if f is None:
-            return register
-        else:
-            return register(f)
+        defn = RawFunctionDecl(DefId.fresh(), f.__name__, None, f)
+        DEF_STORE.register_def(defn, get_calling_frame())
+        return GuppyFunctionDefinition(defn)
 
     def overload(
         self, *funcs: Any
@@ -479,6 +448,48 @@ class _Guppy:
         )
         DEF_STORE.register_def(defn, get_calling_frame())
         return GuppyFunctionDefinition(defn)
+
+    def with_unitary_flags(
+        self, flags: UnitaryFlags
+    ) -> Callable[[GuppyFunctionDefinition[P, T]], GuppyFunctionDefinition[P, T]]:
+        """Wrap a Guppy function with specific unitarity annotations.
+
+        .. code-block:: python
+
+            from guppylang import guppy
+            from guppylang.std.quantum import qubit, h, UnitaryFlags
+
+            @guppy.with_unitary_flags(UnitaryFlags.Unitary)
+            @guppy
+            def apply_h(q: qubit) -> None:
+                h(q)
+        """
+
+        def decorator(
+            func: GuppyFunctionDefinition[P, T]
+        ) -> GuppyFunctionDefinition[P, T]:
+            if not isinstance(func, GuppyFunctionDefinition):
+                raise TypeError(
+                    "@guppy.with_unitary_flags must be applied above @guppy"
+                )
+
+            wrapped = func.wrapped
+            # In future we may want to support other function-like definitions here
+            # if not isinstance(wrapped, AnyRawFunctionDef):
+            if not isinstance(wrapped, RawFunctionDef | RawCustomFunctionDef | RawFunctionDecl):
+                raise TypeError(
+                    f"Object `{func}` does not have a unitarity annotation"
+                )
+
+            if wrapped.unitary_flags == flags:
+                return func
+
+            updated = replace(wrapped, unitary_flags=flags)
+            DEF_STORE.raw_defs[updated.id] = updated
+            return GuppyFunctionDefinition(updated)
+
+        return decorator
+
 
 
 def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.expr:

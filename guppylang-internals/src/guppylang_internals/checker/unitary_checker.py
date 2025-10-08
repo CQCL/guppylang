@@ -93,11 +93,6 @@ class BBUnitaryChecker(ast.NodeVisitor):
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         self._check_assign(node)
 
-    def visit_For(self, node: ast.For) -> None:
-        if UnitaryFlags.Dagger in self.flags:
-            raise GuppyError(InvalidUnderDagger(node, "Loop"))
-        self.generic_visit(node)
-
     def visit_PlaceNode(self, node: PlaceNode) -> None:
         if UnitaryFlags.Dagger in self.flags and contains_subscript(node.place):
             raise GuppyError(

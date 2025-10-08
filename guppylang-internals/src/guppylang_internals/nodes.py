@@ -506,7 +506,8 @@ class ModifiedBlock(ast.With):
         else:
             raise TypeError(f"Unknown modifier: {modifier}")
 
-    def add_flags(self, flags: UnitaryFlags) -> UnitaryFlags:
+    def flags(self) -> UnitaryFlags:
+        flags = UnitaryFlags.NoFlags
         if self.is_dagger():
             flags |= UnitaryFlags.Dagger
         if self.is_control():

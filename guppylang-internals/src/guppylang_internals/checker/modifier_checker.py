@@ -4,6 +4,7 @@ import ast
 
 from guppylang_internals.ast_util import loop_in_ast, with_loc
 from guppylang_internals.cfg.bb import BB
+from guppylang_internals.cfg.cfg import CFG
 from guppylang_internals.checker.cfg_checker import check_cfg
 from guppylang_internals.checker.core import Context, Variable
 from guppylang_internals.checker.errors.generic import InvalidUnderDagger
@@ -100,8 +101,7 @@ def check_modified_block_signature(
 ) -> FunctionType:
     """Check and create the signature of a function definition for a body
     of a `With` block."""
-    # TODO (k.hirata): set unitary flags
-    unitary_flags = UnitaryFlags.NoFlags
+    unitary_flags = modified_block.flags()
 
     func_ty = FunctionType(
         [

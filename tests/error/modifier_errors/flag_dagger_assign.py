@@ -2,7 +2,8 @@ from guppylang.decorator import guppy
 from guppylang.std.quantum import UnitaryFlags
 
 
-@guppy(unitary_flags=UnitaryFlags.Dagger)
+@guppy.with_unitary_flags(UnitaryFlags.Dagger)
+@guppy
 def test() -> None:
     x = 3
 
