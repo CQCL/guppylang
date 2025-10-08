@@ -83,7 +83,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         nodes: list[ast.stmt],
         returns_none: bool,
         globals: Globals,
-        uniraty_flags: UnitaryFlags = UnitaryFlags.NoFlags,
+        unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags,
     ) -> CFG:
         """Builds a CFG from a list of ast nodes.
 
@@ -92,7 +92,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         variables.
         """
         self.cfg = CFG()
-        self.cfg.unitary_flags = uniraty_flags
+        self.cfg.unitary_flags = unitary_flags
         self.globals = globals
 
         final_bb = self.visit_stmts(
