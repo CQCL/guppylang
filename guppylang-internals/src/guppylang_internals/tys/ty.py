@@ -382,6 +382,21 @@ class InputFlags(Flag):
     Comptime = auto()
 
 
+class UnitaryFlags(Flag):
+    """Flags that can be set on functions to indicate their unitary properties.
+
+    The flags indicate under which conditions a function can be used
+    in a unitary context.
+    """
+
+    NoFlags = 0
+    Control = auto()
+    Dagger = auto()
+    Power = auto()
+
+    Unitary = Control | Dagger | Power
+
+
 @dataclass(frozen=True)
 class FuncInput:
     """A single input of a function type."""
@@ -407,6 +422,8 @@ class FunctionType(ParametrizedTypeBase):
     intrinsically_droppable: bool = field(default=True, init=True)
     hugr_bound: ht.TypeBound = field(default=ht.TypeBound.Copyable, init=False)
 
+    unitary_flags: UnitaryFlags = field(default=UnitaryFlags.NoFlags, init=True)
+
     def __init__(
         self,
         inputs: Sequence[FuncInput],
@@ -414,6 +431,7 @@ class FunctionType(ParametrizedTypeBase):
         input_names: Sequence[str] | None = None,
         params: Sequence[Parameter] | None = None,
         comptime_args: Sequence[ConstArg] | None = None,
+        unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags,
     ) -> None:
         # We need a custom __init__ to set the args
         args: list[Argument] = [TypeArg(inp.ty) for inp in inputs]
@@ -435,6 +453,7 @@ class FunctionType(ParametrizedTypeBase):
         object.__setattr__(self, "output", output)
         object.__setattr__(self, "input_names", input_names or [])
         object.__setattr__(self, "params", params)
+        object.__setattr__(self, "unitary_flags", unitary_flags)
 
     @property
     def parametrized(self) -> bool:

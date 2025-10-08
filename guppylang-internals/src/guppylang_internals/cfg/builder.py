@@ -46,7 +46,7 @@ from guppylang_internals.nodes import (
     Power,
 )
 from guppylang_internals.span import Span, to_span
-from guppylang_internals.tys.ty import NoneType
+from guppylang_internals.tys.ty import NoneType, UnitaryFlags
 
 # In order to build expressions, need an endless stream of unique temporary variables
 # to store intermediate results
@@ -78,7 +78,13 @@ class CFGBuilder(AstVisitor[BB | None]):
     cfg: CFG
     globals: Globals
 
-    def build(self, nodes: list[ast.stmt], returns_none: bool, globals: Globals) -> CFG:
+    def build(
+        self,
+        nodes: list[ast.stmt],
+        returns_none: bool,
+        globals: Globals,
+        uniraty_flags: UnitaryFlags = UnitaryFlags.NoFlags,
+    ) -> CFG:
         """Builds a CFG from a list of ast nodes.
 
         We also require the expected number of return ports for the whole CFG. This is
@@ -86,6 +92,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         variables.
         """
         self.cfg = CFG()
+        self.unitary_flags = uniraty_flags
         self.globals = globals
 
         final_bb = self.visit_stmts(
@@ -273,6 +280,7 @@ class CFGBuilder(AstVisitor[BB | None]):
 
         func_ty = check_signature(node, self.globals)
         returns_none = isinstance(func_ty.output, NoneType)
+        # No UnitaryFlags are assigned to nested functions
         cfg = CFGBuilder().build(node.body, returns_none, self.globals)
 
         new_node = NestedFunctionDef(
@@ -299,6 +307,10 @@ class CFGBuilder(AstVisitor[BB | None]):
             item.context_expr, bb = ExprBuilder.build(item.context_expr, self.cfg, bb)
             modifier = self._handle_withitem(item)
             new_node.push_modifier(modifier)
+
+        unitary_flags = UnitaryFlags.NoFlags
+        # TODO (k.hirata): set unitary_flags properly
+        object.__setattr__(cfg, "unitary_flags", unitary_flags)
 
         set_location_from(new_node, node)
         bb.statements.append(new_node)
