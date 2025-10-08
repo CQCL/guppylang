@@ -9,7 +9,13 @@ from guppylang_internals.ast_util import AstNode
 from guppylang_internals.span import Span, to_span
 from guppylang_internals.tys.const import Const
 from guppylang_internals.tys.subst import Inst
-from guppylang_internals.tys.ty import FunctionType, StructType, TupleType, Type
+from guppylang_internals.tys.ty import (
+    FunctionType,
+    StructType,
+    TupleType,
+    Type,
+    UnitaryFlags,
+)
 
 if TYPE_CHECKING:
     from guppylang_internals.cfg.cfg import CFG
@@ -499,6 +505,15 @@ class ModifiedBlock(ast.With):
             self.power.append(modifier)
         else:
             raise TypeError(f"Unknown modifier: {modifier}")
+
+    def add_flags(self, flags: UnitaryFlags) -> UnitaryFlags:
+        if self.is_dagger():
+            flags |= UnitaryFlags.Dagger
+        if self.is_control():
+            flags |= UnitaryFlags.Control
+        if self.is_power():
+            flags |= UnitaryFlags.Power
+        return flags
 
 
 class CheckedModifiedBlock(ast.With):

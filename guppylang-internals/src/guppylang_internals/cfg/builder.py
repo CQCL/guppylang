@@ -92,7 +92,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         variables.
         """
         self.cfg = CFG()
-        self.unitary_flags = uniraty_flags
+        self.cfg.unitary_flags = uniraty_flags
         self.globals = globals
 
         final_bb = self.visit_stmts(
@@ -308,8 +308,8 @@ class CFGBuilder(AstVisitor[BB | None]):
             modifier = self._handle_withitem(item)
             new_node.push_modifier(modifier)
 
-        unitary_flags = UnitaryFlags.NoFlags
-        # TODO (k.hirata): set unitary_flags properly
+        # TODO: its parent's flags need to be added too
+        unitary_flags = new_node.add_flags(UnitaryFlags.NoFlags)
         object.__setattr__(cfg, "unitary_flags", unitary_flags)
 
         set_location_from(new_node, node)

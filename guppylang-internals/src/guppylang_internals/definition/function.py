@@ -175,7 +175,7 @@ class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
         func_def = module.module_root_builder().define_function(
             self.name, hugr_ty.body.input, hugr_ty.body.output, hugr_ty.params
         )
-        add_unitarity_metadata(func_def.parent_node, mono_ty.unitary_flags)
+        add_unitarity_metadata(func_def.parent_node, self.ty.unitary_flags)
         return CompiledFunctionDef(
             self.id,
             self.name,

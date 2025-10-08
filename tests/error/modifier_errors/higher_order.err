@@ -1,0 +1,8 @@
+Error: Unitary constraint violation (at $FILE:18:8)
+   | 
+16 |     q = qubit()
+17 |     with dagger:
+18 |         test_ho(h, q)
+   |         ^^^^^^^^^^^^^ This function cannot be called in a dagger context
+
+Guppy compilation failed due to 1 previous error

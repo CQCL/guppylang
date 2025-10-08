@@ -84,13 +84,6 @@ __all__ = ("guppy", "custom_guppy_decorator")
 class _Guppy:
     """Class for the `@guppy` decorator."""
 
-    # TODO (k.hirata):
-    #
-    # def __call__(self, f: Callable[P, T]) -> GuppyFunctionDefinition[P, T]:
-    #     defn = RawFunctionDef(DefId.fresh(), f.__name__, None, f)
-    #     DEF_STORE.register_def(defn, get_calling_frame())
-    #     return GuppyFunctionDefinition(defn)
-    #
     # trying to support both `@guppy` and `@guppy(unitary_flags=...)` styles
     def __call__(
         self,
