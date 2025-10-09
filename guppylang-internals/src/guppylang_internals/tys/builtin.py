@@ -177,13 +177,10 @@ def _array_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
     assert isinstance(ty_arg, TypeArg)
     assert isinstance(len_arg, ConstArg)
 
-    # Linear elements are turned into an optional to enable unsafe indexing.
-    # See `ArrayGetitemCompiler` for details.
-    # Same also for classical arrays, see https://github.com/CQCL/guppylang/issues/629
-    elem_ty = ht.Option(ty_arg.ty.to_hugr(ctx))
+    elem_ty = ty_arg.ty.to_hugr(ctx)
     hugr_arg = len_arg.to_hugr(ctx)
 
-    return hugr.std.collections.value_array.ValueArray(elem_ty, hugr_arg)
+    return hugr.std.collections.borrow_array.BorrowArray(elem_ty, hugr_arg)
 
 
 def _frozenarray_to_hugr(args: Sequence[Argument], ctx: ToHugrContext) -> ht.Type:
