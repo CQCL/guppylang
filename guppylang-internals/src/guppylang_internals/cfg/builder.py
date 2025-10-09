@@ -308,7 +308,10 @@ class CFGBuilder(AstVisitor[BB | None]):
             modifier = self._handle_withitem(item)
             new_node.push_modifier(modifier)
 
-        # TODO: its parent's flags need to be added too
+        # FIXME: Currently, the unitary flags is not set correctly if there are nested
+        # `with` blocks. This is because the inner block's unitary flags are not
+        # propagated from the outer block. The following line should calculate the sum
+        # of the unitary flags of the outer block and modifiers of this `with` block.
         unitary_flags = new_node.flags()
         object.__setattr__(cfg, "unitary_flags", unitary_flags)
 
