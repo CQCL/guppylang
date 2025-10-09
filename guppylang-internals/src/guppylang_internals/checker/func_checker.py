@@ -156,10 +156,8 @@ def check_nested_func_def(
     func_def: NestedFunctionDef,
     bb: BB,
     ctx: Context,
-    # unitary_flags: (k.hirata)
 ) -> CheckedNestedFunctionDef:
     """Type checks a local (nested) function definition."""
-    # unitary_flags: (k.hirata)
     func_ty = check_signature(func_def, ctx.globals)
     assert func_ty.input_names is not None
 
@@ -220,7 +218,6 @@ def check_nested_func_def(
             from guppylang.defs import GuppyDefinition
             from guppylang_internals.definition.function import ParsedFunctionDef
 
-            # TODO (k.hirata): unitary_flags
             func = ParsedFunctionDef(def_id, func_def.name, func_def, func_ty, None)
             DEF_STORE.register_def(func, None)
             ENGINE.parsed[def_id] = func
