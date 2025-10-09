@@ -2,9 +2,9 @@ import ast
 import builtins
 import inspect
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 from types import FrameType
 from typing import Any, ParamSpec, TypeVar, cast
-from dataclasses import replace
 
 from guppylang_internals.ast_util import annotate_location
 from guppylang_internals.compiler.core import (
@@ -466,7 +466,7 @@ class _Guppy:
         """
 
         def decorator(
-            func: GuppyFunctionDefinition[P, T]
+            func: GuppyFunctionDefinition[P, T],
         ) -> GuppyFunctionDefinition[P, T]:
             if not isinstance(func, GuppyFunctionDefinition):
                 raise TypeError(
@@ -476,10 +476,10 @@ class _Guppy:
             wrapped = func.wrapped
             # In future we may want to support other function-like definitions here
             # if not isinstance(wrapped, AnyRawFunctionDef):
-            if not isinstance(wrapped, RawFunctionDef | RawCustomFunctionDef | RawFunctionDecl):
-                raise TypeError(
-                    f"Object `{func}` does not have a unitarity annotation"
-                )
+            if not isinstance(
+                wrapped, RawFunctionDef | RawCustomFunctionDef | RawFunctionDecl
+            ):
+                raise TypeError(f"Object `{func}` does not have a unitarity annotation")
 
             if wrapped.unitary_flags == flags:
                 return func
@@ -489,7 +489,6 @@ class _Guppy:
             return GuppyFunctionDefinition(updated)
 
         return decorator
-
 
 
 def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.expr:

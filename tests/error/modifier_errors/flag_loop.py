@@ -6,7 +6,7 @@ from guppylang.std.array import array
 @guppy.with_unitary_flags(UnitaryFlags.Dagger)
 @guppy
 def test() -> None:
-    while True:
+    for _ in range(10):
         pass
 
 

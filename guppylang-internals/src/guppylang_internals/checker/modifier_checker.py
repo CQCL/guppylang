@@ -4,7 +4,6 @@ import ast
 
 from guppylang_internals.ast_util import loop_in_ast, with_loc
 from guppylang_internals.cfg.bb import BB
-from guppylang_internals.cfg.cfg import CFG
 from guppylang_internals.checker.cfg_checker import check_cfg
 from guppylang_internals.checker.core import Context, Variable
 from guppylang_internals.checker.errors.generic import InvalidUnderDagger
@@ -17,7 +16,6 @@ from guppylang_internals.tys.ty import (
     InputFlags,
     NoneType,
     Type,
-    UnitaryFlags,
 )
 
 

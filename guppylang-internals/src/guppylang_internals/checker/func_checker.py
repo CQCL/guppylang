@@ -16,6 +16,7 @@ from guppylang_internals.cfg.builder import CFGBuilder
 from guppylang_internals.checker.cfg_checker import CheckedCFG, check_cfg
 from guppylang_internals.checker.core import Context, Globals, Place, Variable
 from guppylang_internals.checker.errors.generic import UnsupportedError
+from guppylang_internals.checker.unitary_checker import check_invalid_under_dagger
 from guppylang_internals.definition.common import DefId
 from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.diagnostic import Error, Help, Note
@@ -137,6 +138,7 @@ def check_global_func_def(
     returns_none = isinstance(ty.output, NoneType)
     assert ty.input_names is not None
 
+    check_invalid_under_dagger(func_def, ty.unitary_flags)
     cfg = CFGBuilder().build(func_def.body, returns_none, globals, ty.unitary_flags)
     inputs = [
         Variable(x, inp.ty, loc, inp.flags, is_func_input=True)

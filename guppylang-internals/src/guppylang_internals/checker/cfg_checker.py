@@ -10,7 +10,7 @@ from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import ClassVar, Generic, TypeVar
 
-from guppylang_internals.ast_util import line_col, loop_in_ast
+from guppylang_internals.ast_util import line_col
 from guppylang_internals.cfg.bb import BB
 from guppylang_internals.cfg.cfg import CFG, BaseCFG
 from guppylang_internals.checker.core import (
@@ -21,13 +21,12 @@ from guppylang_internals.checker.core import (
     V,
     Variable,
 )
-from guppylang_internals.checker.errors.generic import InvalidUnderDagger
 from guppylang_internals.checker.expr_checker import ExprSynthesizer, to_bool
 from guppylang_internals.checker.stmt_checker import StmtChecker
 from guppylang_internals.diagnostic import Error, Note
 from guppylang_internals.error import GuppyError
 from guppylang_internals.tys.param import Parameter
-from guppylang_internals.tys.ty import InputFlags, Type, UnitaryFlags
+from guppylang_internals.tys.ty import InputFlags, Type
 
 Row = Sequence[V]
 
@@ -88,8 +87,6 @@ def check_cfg(
     ass_before = {v.name for v in inputs}
     inout_vars = [v for v in inputs if InputFlags.Inout in v.flags]
     cfg.analyze(ass_before, ass_before, [v.name for v in inout_vars])
-
-    check_invalid_in_dagger(cfg)
 
     # We start by compiling the entry BB
     checked_cfg: CheckedCFG[Variable] = CheckedCFG([v.ty for v in inputs], return_ty)
@@ -356,28 +353,3 @@ def reverse_enumerate(xs: list[T]) -> Iterator[tuple[int, T]]:
     """
     for i in range(len(xs) - 1, -1, -1):
         yield i, xs[i]
-
-# TODO (k.hirata): This function is supposed to detect loops and assignments in daggered blocks.
-# However, this has to be called much earlier since the builder already deconstructs loops
-# to CFGs.
-# def check_invalid_in_dagger(cfg: CFG) -> None:
-#     """Check that there are no invalid constructs in a daggered CFG.
-#     This checker checks the case the UnitaryFlags is given by
-#     annotation (i.e., not inferred from `with dagger:`).
-#     """
-#     if UnitaryFlags.Dagger not in cfg.unitary_flags:
-#         return
-
-#     for cfg_bb in cfg.bbs:
-#         for stmt in cfg_bb.statements:
-#             loops = loop_in_ast(stmt)
-#             if len(loops) != 0:
-#                 loop = next(iter(loops))
-#                 err = InvalidUnderDagger(loop, "Loop")
-#                 raise GuppyError(err)
-#                 # Note: sub-diagnostic for dagger context is not available here
-
-#         if cfg_bb.vars.assigned:
-#             _, v = next(iter(cfg_bb.vars.assigned.items()))
-#             err = InvalidUnderDagger(v, "Assignment")
-#             raise GuppyError(err)
