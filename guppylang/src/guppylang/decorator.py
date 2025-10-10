@@ -2,6 +2,7 @@ import ast
 import builtins
 import inspect
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 from types import FrameType
 from typing import Any, ParamSpec, TypeVar, cast
 
@@ -49,6 +50,7 @@ from guppylang_internals.tys.ty import (
     FunctionType,
     NoneType,
     NumericType,
+    UnitaryFlags,
 )
 from hugr import ops
 from hugr import tys as ht
@@ -168,7 +170,7 @@ class _Guppy:
         .. code-block:: python
             from guppylang import guppy
 
-            T = guppy.type_var("T")
+            T = guppy.ty
 
             @guppy
             def identity(x: T) -> T:
@@ -446,6 +448,47 @@ class _Guppy:
         )
         DEF_STORE.register_def(defn, get_calling_frame())
         return GuppyFunctionDefinition(defn)
+
+    def with_unitary_flags(
+        self, flags: UnitaryFlags
+    ) -> Callable[[GuppyFunctionDefinition[P, T]], GuppyFunctionDefinition[P, T]]:
+        """Wrap a Guppy function with specific unitarity annotations.
+
+        .. code-block:: python
+
+            from guppylang import guppy
+            from guppylang.std.quantum import qubit, h, UnitaryFlags
+
+            @guppy.with_unitary_flags(UnitaryFlags.Unitary)
+            @guppy
+            def apply_h(q: qubit) -> None:
+                h(q)
+        """
+
+        def decorator(
+            func: GuppyFunctionDefinition[P, T],
+        ) -> GuppyFunctionDefinition[P, T]:
+            if not isinstance(func, GuppyFunctionDefinition):
+                raise TypeError(
+                    "@guppy.with_unitary_flags must be applied above @guppy"
+                )
+
+            wrapped = func.wrapped
+            # In future we may want to support other function-like definitions here
+            # if not isinstance(wrapped, AnyRawFunctionDef):
+            if not isinstance(
+                wrapped, RawFunctionDef | RawCustomFunctionDef | RawFunctionDecl
+            ):
+                raise TypeError(f"Object `{func}` does not have a unitarity annotation")
+
+            if wrapped.unitary_flags == flags:
+                return func
+
+            updated = replace(wrapped, unitary_flags=flags)
+            DEF_STORE.raw_defs[updated.id] = updated
+            return GuppyFunctionDefinition(updated)
+
+        return decorator
 
 
 def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.expr:

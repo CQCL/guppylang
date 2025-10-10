@@ -1,5 +1,5 @@
 from guppylang.decorator import guppy
-from guppylang.std.quantum import qubit
+from guppylang.std.quantum import qubit, UnitaryFlags
 from guppylang.std.num import nat
 from guppylang.std.builtins import owned
 from guppylang.std.array import array
@@ -101,6 +101,7 @@ def test_nested_modifiers(validate):
 def test_free_linear_variable_in_modifier(validate):
     T = guppy.type_var("T", copyable=False, droppable=False)
 
+    @guppy.with_unitary_flags(UnitaryFlags.Control)
     @guppy.declare
     def use(a: T) -> None: ...
 
@@ -122,9 +123,6 @@ def test_free_copyable_variable_in_modifier(validate):
 
     @guppy.declare
     def use(a: T) -> None: ...
-
-    @guppy.declare
-    def discard(a: T @ owned) -> None: ...
 
     @guppy
     def bar(q: array[qubit, 3]) -> None:
