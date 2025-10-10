@@ -538,11 +538,11 @@ class CheckedModifiedBlock(ast.With):
         # generate a function name from the def_id
         return f"__WithBlock__({self.def_id})"
 
-    def is_dagger(self) -> bool:
+    def has_dagger(self) -> bool:
         return len(self.dagger) % 2 == 1
 
     def has_control(self) -> bool:
         return any(len(c.ctrl) > 0 for c in self.control)
 
-    def is_power(self) -> bool:
+    def has_power(self) -> bool:
         return len(self.power) > 0
