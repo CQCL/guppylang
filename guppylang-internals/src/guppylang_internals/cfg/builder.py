@@ -311,7 +311,8 @@ class CFGBuilder(AstVisitor[BB | None]):
         # FIXME: Currently, the unitary flags is not set correctly if there are nested
         # `with` blocks. This is because the outer block's unitary flags are not
         # propagated to the outer block. The following line should calculate the sum
-        # of the unitary flags of the outer block and modifiers applied in this `with` block.
+        # of the unitary flags of the outer block and modifiers applied in this
+        # `with` block.
         unitary_flags = new_node.flags()
         object.__setattr__(cfg, "unitary_flags", unitary_flags)
 
