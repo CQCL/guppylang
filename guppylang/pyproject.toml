@@ -1,7 +1,7 @@
 [project]
 name = "guppylang"
 version = "0.21.5"
-requires-python = ">=3.10,<4"
+requires-python = ">=3.10,<3.14"
 description = "Pythonic quantum-classical programming language"
 license = { file = "LICENCE" }
 readme = "../README.md"
