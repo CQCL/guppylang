@@ -46,6 +46,8 @@ def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
         rint = rng.random_int()
         rfloat = rng.random_float()
         rint_bnd = rng.random_int_bounded(100)
+        rng.random_advance(-1)
+        rint_bnd = rng.random_int_bounded(100)
         ar = array(qubit() for _ in range(5))
         rng.shuffle(ar)
         _ = measure_array(ar)

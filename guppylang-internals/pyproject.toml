@@ -38,6 +38,9 @@ dependencies = [
     "hugr ~= 0.13.1",
 ]
 
+[tool.uv.sources]
+tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", branch = "feat-random_advance" }
+
 [project.optional-dependencies]
 pytket = ["pytket>=1.34"]
 
