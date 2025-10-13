@@ -1,5 +1,4 @@
 import ast
-from typing import Any
 
 from guppylang_internals.ast_util import find_nodes, get_type, loop_in_ast
 from guppylang_internals.checker.cfg_checker import CheckedBB, CheckedCFG
