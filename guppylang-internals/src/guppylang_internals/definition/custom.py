@@ -137,7 +137,7 @@ class RawCustomFunctionDef(ParsableDef):
             raise GuppyError(BodyNotEmptyError(func_ast.body[0], self.name))
         sig = self.signature or self._get_signature(func_ast, globals)
         ty = sig or FunctionType([], NoneType())
-        object.__setattr__(ty, "unitary_flags", self.unitary_flags)
+        ty = ty.with_unitary_flags(self.unitary_flags)
         return CustomFunctionDef(
             self.id,
             self.name,

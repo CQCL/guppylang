@@ -580,6 +580,19 @@ class FunctionType(ParametrizedTypeBase):
         exs = [param.to_existential() for param in self.params]
         return self.instantiate([arg for arg, _ in exs]), [var for _, var in exs]
 
+    def with_unitary_flags(self, flags: UnitaryFlags) -> "FunctionType":
+        """Returns a copy of this function type with the specified unitary flags."""
+        # N.B. we can't use `dataclasses.replace` here since `FunctionType` has a custom
+        # constructor
+        return FunctionType(
+            self.inputs,
+            self.output,
+            self.input_names,
+            self.params,
+            self.comptime_args,
+            flags,
+        )
+
 
 @dataclass(frozen=True, init=False)
 class TupleType(ParametrizedTypeBase):

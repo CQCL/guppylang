@@ -313,8 +313,7 @@ class CFGBuilder(AstVisitor[BB | None]):
         # propagated to the outer block. The following line should calculate the sum
         # of the unitary flags of the outer block and modifiers applied in this
         # `with` block.
-        unitary_flags = new_node.flags()
-        object.__setattr__(cfg, "unitary_flags", unitary_flags)
+        cfg.unitary_flags = new_node.flags()
 
         set_location_from(new_node, node)
         bb.statements.append(new_node)
