@@ -170,7 +170,7 @@ class _Guppy:
         .. code-block:: python
             from guppylang import guppy
 
-            T = guppy.ty
+            T = guppy.type_var("T")
 
             @guppy
             def identity(x: T) -> T:
