@@ -12,6 +12,7 @@ from guppylang_internals.compiler.expr_compiler import (
     array_unwrap_elem,
     array_wrap_elem,
 )
+from guppylang_internals.definition.function import add_unitarity_metadata
 from guppylang_internals.nodes import CheckedModifiedBlock, PlaceNode
 from guppylang_internals.std._internal.compiler.array import (
     array_convert_from_std_array,
@@ -61,6 +62,7 @@ def compile_modified_block(
     func_builder = dfg.builder.module_root_builder().define_function(
         str(modified_block), hugr_ty.input, hugr_ty.output
     )
+    add_unitarity_metadata(func_builder.parent_node, modified_block.ty.unitary_flags)
 
     # compile body
     cfg = compile_cfg(modified_block.cfg, func_builder, func_builder.inputs(), ctx)
