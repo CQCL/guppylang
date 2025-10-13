@@ -106,8 +106,7 @@ class BBUnitaryChecker(ast.NodeVisitor):
         # StateResult is always allowed
         pass
 
-    def _check_assign(self, node: Any) -> None:
-        assert isinstance(node, ast.Assign | ast.AnnAssign | ast.AugAssign)
+    def _check_assign(self, node: ast.Assign | ast.AnnAssign | ast.AugAssign) -> None:
         if UnitaryFlags.Dagger in self.flags:
             raise GuppyError(InvalidUnderDagger(node, "Assignment"))
         if node.value is not None:
