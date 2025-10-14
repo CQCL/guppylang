@@ -46,8 +46,6 @@ def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
         rint = rng.random_int()
         rfloat = rng.random_float()
         rint_bnd = rng.random_int_bounded(100)
-        rng.random_advance(-1)
-        rint_bnd = rng.random_int_bounded(100)
         ar = array(qubit() for _ in range(5))
         rng.shuffle(ar)
         _ = measure_array(ar)
@@ -60,6 +58,24 @@ def test_qsystem_random(validate):  # type: ignore[no-untyped-def]
         return rint, rfloat, rint_bnd, rint_discrete, rangle, rcangle
 
     validate(test.compile_function())
+
+
+def test_random_advance(validate, run_int_fn):  # type: ignore[no-untyped-def]
+    """Validate behavior of random_advance from qsystem random extension."""
+
+    @guppy
+    def test() -> int:
+        rng = RNG(42)
+        rint_bnd1 = rng.random_int_bounded(100)
+        rng.random_advance(-1)
+        rint_bnd2 = rng.random_int_bounded(100)
+        same = rint_bnd1 == rint_bnd2
+        rng.discard()
+
+        return int(same)
+
+    validate(test.compile_function())
+    run_int_fn(test, 1)
 
 
 def test_measure_leaked(validate):  # type: ignore[no-untyped-def]

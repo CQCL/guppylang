@@ -29,7 +29,7 @@ dev = [
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff", specifier = ">=0.6.2,<0.7" },
-    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.5,<0.3" },
+    { name = "selene-hugr-qis-compiler", git = "https://github.com/CQCL/tket2?subdirectory=qis-compiler&rev=eed16e8" },
 ]
 docs = [
     { name = "furo", specifier = ">=2024.8.6" },
@@ -54,7 +54,7 @@ pytket-integration = [
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
-    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.5,<0.3" },
+    { name = "selene-hugr-qis-compiler", git = "https://github.com/CQCL/tket2?subdirectory=qis-compiler&rev=eed16e8" },
 ]
 test = [
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
@@ -65,7 +65,7 @@ test = [
     { name = "pytest-notebook", specifier = ">=0.10.0,<0.11" },
     { name = "pytest-snapshot", specifier = ">=0.9.0,<1" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
-    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.5,<0.3" },
+    { name = "selene-hugr-qis-compiler", git = "https://github.com/CQCL/tket2?subdirectory=qis-compiler&rev=eed16e8" },
 ]
 
 [[package]]
@@ -867,7 +867,7 @@ requires-dist = [
     { name = "guppylang-internals", editable = "guppylang-internals" },
     { name = "numpy", specifier = "~=2.0" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "selene-hugr-qis-compiler", specifier = ">=0.2.5" },
+    { name = "selene-hugr-qis-compiler", git = "https://github.com/CQCL/tket2?subdirectory=qis-compiler&rev=eed16e8" },
     { name = "selene-sim", specifier = "~=0.2.3" },
     { name = "tket", marker = "extra == 'pytket'", specifier = ">=0.12.7" },
     { name = "tqdm", specifier = ">=4.67.1" },
@@ -3026,15 +3026,8 @@ wheels = [
 
 [[package]]
 name = "selene-hugr-qis-compiler"
-version = "0.2.5"
-source = { registry = "https://pypi.org/simple" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/00/157bdf40450d001e4f79b123daa5dad2c87df3a47a6106ec6a12edae45d0/selene_hugr_qis_compiler-0.2.5-cp310-abi3-macosx_13_0_arm64.whl", hash = "sha256:47dcfcffe22c25c1d86d76a13ecd482fa9129d0f27a0a81fc05bfaf950466d52", size = 29954967, upload-time = "2025-09-19T13:51:11.231Z" },
-    { url = "https://files.pythonhosted.org/packages/d5/97/79cbbad3145f764447271a06ad3249f0e3a56c038737ff88a2540c5e7da7/selene_hugr_qis_compiler-0.2.5-cp310-abi3-macosx_13_0_x86_64.whl", hash = "sha256:933c9c4442ca3b4a417207a07eb060ec1f0c4e067ac97b3e17d7ddded56706bc", size = 32664238, upload-time = "2025-09-19T13:51:14.566Z" },
-    { url = "https://files.pythonhosted.org/packages/13/f8/991dcf416d532fb615217bd7e36bf6e644902996e98901d98da01451f7bb/selene_hugr_qis_compiler-0.2.5-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:a2feaa540a55a1eb4f55560047490972792c5f1566001d36b7255ef9278ab99a", size = 33386743, upload-time = "2025-09-19T13:51:17.572Z" },
-    { url = "https://files.pythonhosted.org/packages/c9/3f/eba5186d414422a39ace5a9130eb9b64c660e52915383140dce47642e732/selene_hugr_qis_compiler-0.2.5-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:66f11cf182d5b6e451ef7742e1b7057dfb94b18770c8664ec09d896d142589c3", size = 34325891, upload-time = "2025-09-19T13:51:20.801Z" },
-    { url = "https://files.pythonhosted.org/packages/d0/11/3ffa7e0ffc8db38356606afa0211efcc393c8eefbd7d98dac1a7e5ea7853/selene_hugr_qis_compiler-0.2.5-cp310-abi3-win_amd64.whl", hash = "sha256:ee5f72d287c95dc231690c70b248c2283877e82ade8a1f612ec9d82329cdd647", size = 29677888, upload-time = "2025-09-19T13:51:24.403Z" },
-]
+version = "0.2.6"
+source = { git = "https://github.com/CQCL/tket2?subdirectory=qis-compiler&rev=eed16e8#eed16e8c57541ea23af6241290aa47d37583cfc4" }
 
 [[package]]
 name = "selene-sim"
