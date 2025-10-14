@@ -488,23 +488,25 @@ class NoopCompiler(CustomCallCompiler):
 
 
 class CopyInoutCompiler(CustomInoutCallCompiler):
-    """Call compiler for functions that are noops but only want to borrow arguments."""
+    """Call compiler for functions that borrow one argument to copy it."""
 
     def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
         assert len(self.ty.input) == 1
         inp_ty = self.ty.input[0]
         if inp_ty.type_bound() == ht.TypeBound.Linear:
-            copies = self._handle_affine_type(inp_ty, args)
+            (arg,) = args
+            copies = self._handle_affine_type(inp_ty, arg)
             return CallReturnWires(
                 regular_returns=[copies[0]], inout_returns=[copies[1]]
             )
         return CallReturnWires(regular_returns=args, inout_returns=args)
 
     # Affine types in Guppy backed by a linear Hugr type need to be copied explicitly.
-    def _handle_affine_type(self, ty: ht.Type, args: list[Wire]) -> list[Wire]:
+    # TODO: Handle affine extension types more generally (borrow arrays are currently
+    # the only case).
+    def _handle_affine_type(self, ty: ht.Type, arg: Wire) -> list[Wire]:
         match ty:
             case ht.ExtType(type_def=type_def, args=type_args):
-                # TODO: Handle affine extension types more generally.
                 if qualified_name(type_def) == qualified_name(
                     BORROW_ARRAY_EXTENSION.get_type("borrow_array")
                 ):
@@ -515,10 +517,10 @@ class CopyInoutCompiler(CustomInoutCallCompiler):
                         type_args,
                         ht.FunctionType(self.ty.input, self.ty.output),
                     )
-                    return list(self.builder.add_op(clone_op, *args))
+                    return list(self.builder.add_op(clone_op, arg))
             case _:
-                raise InternalGuppyError(
-                    f"Type `{ty}` needs an explicit handler in the `copy` compiler as "
-                    "it is an affine Guppy type backed by a linear Hugr type."
-                )
-        return []
+                pass
+        raise InternalGuppyError(
+            f"Type `{ty}` needs an explicit handler in the `copy` compiler as "
+            "it is an affine Guppy type backed by a linear Hugr type."
+        )

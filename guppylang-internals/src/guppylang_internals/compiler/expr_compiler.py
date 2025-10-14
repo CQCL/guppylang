@@ -67,13 +67,13 @@ from guppylang_internals.std._internal.compiler.arithmetic import (
 )
 from guppylang_internals.std._internal.compiler.array import (
     array_clone,
-    array_convert_from_std_array,
-    array_convert_to_std_array,
     array_map,
     array_new,
-    array_new_all_borrowed,
-    array_return,
+    array_to_std_array,
+    barray_new_all_borrowed,
+    barray_return,
     standard_array_type,
+    std_array_to_array,
     unpack_array,
 )
 from guppylang_internals.std._internal.compiler.list import (
@@ -584,7 +584,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 base_ty = ht.Bool
             # Turn `borrow_array` into regular `array`
             value_wire = self.builder.add_op(
-                array_convert_to_std_array(base_ty, size_arg), value_wire
+                array_to_std_array(base_ty, size_arg), value_wire
             )
             hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
         else:
@@ -648,13 +648,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             )
             # Turn into standard array from value array.
             qubit_arr_in = self.builder.add_op(
-                array_convert_to_std_array(ht.Qubit, num_qubits_arg), qubit_arr_in
+                array_to_std_array(ht.Qubit, num_qubits_arg), qubit_arr_in
             )
 
             qubit_arr_out = self.builder.add_op(op, qubit_arr_in)
 
             qubit_arr_out = self.builder.add_op(
-                array_convert_from_std_array(ht.Qubit, num_qubits_arg), qubit_arr_out
+                std_array_to_array(ht.Qubit, num_qubits_arg), qubit_arr_out
             )
             qubits_out = unpack_array(self.builder, qubit_arr_out)
         else:
@@ -694,7 +694,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         hugr_elt_ty = node.elt_ty.to_hugr(self.ctx)
         # Initialise empty array.
         self.dfg[array_var] = self.builder.add_op(
-            array_new_all_borrowed(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx))
+            barray_new_all_borrowed(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx))
         )
         self.dfg[count_var] = self.builder.load(
             hugr.std.int.IntVal(0, width=NumericType.INT_WIDTH)
@@ -704,7 +704,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             array, count = self.dfg[array_var], self.dfg[count_var]
             idx = self.builder.add_op(convert_itousize(), count)
             self.dfg[array_var] = self.builder.add_op(
-                array_return(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx)),
+                barray_return(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx)),
                 array,
                 idx,
                 elt,
@@ -910,15 +910,11 @@ def apply_array_op_with_conversions(
         input_array = builder.add_op(map_op, input_array, array_read)
         elem_ty = ht.Bool
 
-    input_array = builder.add_op(
-        array_convert_to_std_array(elem_ty, size_arg), input_array
-    )
+    input_array = builder.add_op(std_array_to_array(elem_ty, size_arg), input_array)
 
     result_array = builder.add_op(op, input_array)
 
-    result_array = builder.add_op(
-        array_convert_from_std_array(elem_ty, size_arg), result_array
-    )
+    result_array = builder.add_op(array_to_std_array(elem_ty, size_arg), result_array)
 
     if convert_bool:
         array_make_opaque = array_make_opaque_bool(ctx)

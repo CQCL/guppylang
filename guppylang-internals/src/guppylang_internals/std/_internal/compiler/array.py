@@ -42,7 +42,7 @@ def _instantiate_array_op(
 def array_type(elem_ty: ht.Type, length: ht.TypeArg) -> ht.ExtType:
     """Returns the hugr type of a fixed length array.
 
-    This is the `borrow_array` type used by Guppy.
+    This is the linear `borrow_array` type used by Guppy.
     """
     elem_arg = ht.TypeTypeArg(elem_ty)
     return EXTENSION.types["borrow_array"].instantiate([length, elem_arg])
@@ -154,9 +154,9 @@ def array_repeat(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     )
 
 
-def array_convert_to_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+def array_to_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array operation to convert the `borrow_array` type used by Guppy into
-    the regular `array` in Hugr.
+    the a standard `array`.
     """
     return EXTENSION.get_op("to_array").instantiate(
         [length, ht.TypeTypeArg(elem_ty)],
@@ -166,8 +166,8 @@ def array_convert_to_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtO
     )
 
 
-def array_convert_from_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
-    """Returns an array operation to convert the `array` type used by Hugr into the
+def std_array_to_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array operation to convert the standard `array` type into the
     `borrow_array` type used by Guppy.
     """
     return EXTENSION.get_op("from_array").instantiate(
@@ -178,7 +178,7 @@ def array_convert_from_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.Ex
     )
 
 
-def array_borrow(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+def barray_borrow(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array `borrow` operation."""
     arr_ty = array_type(elem_ty, length)
     return _instantiate_array_op(
@@ -186,7 +186,7 @@ def array_borrow(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     )
 
 
-def array_return(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+def barray_return(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array `return` operation."""
     arr_ty = array_type(elem_ty, length)
     return _instantiate_array_op(
@@ -194,20 +194,21 @@ def array_return(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     )
 
 
-def array_discard_all_borrowed(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
-    """Returns an array `borrow` operation."""
+def barray_discard_all_borrowed(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array `discard_all_borrowed` operation."""
     arr_ty = array_type(elem_ty, length)
     return _instantiate_array_op("discard_all_borrowed", elem_ty, length, [arr_ty], [])
 
 
-def array_new_all_borrowed(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
-    """Returns an array `borrow` operation."""
+def barray_new_all_borrowed(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
+    """Returns an array `new_all_borrowed` operation."""
     arr_ty = array_type(elem_ty, length)
     return _instantiate_array_op("new_all_borrowed", elem_ty, length, [], [arr_ty])
 
 
 def array_clone(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
-    """Returns an array `clone` operation."""
+    """Returns an array `clone` operation for arrays none of whose elements are
+    borrowed."""
     assert elem_ty.type_bound() == ht.TypeBound.Copyable
     arr_ty = array_type(elem_ty, length)
     return _instantiate_array_op("clone", elem_ty, length, [arr_ty], [arr_ty, arr_ty])
@@ -285,12 +286,12 @@ class ArrayGetitemCompiler(ArrayCompiler):
         # back after initially borrowing it to get the value.
         # (`array_get` cannot be used to to current bool lowering limitations)
         elem, arr = self.builder.add_op(
-            array_borrow(self.elem_ty, self.length),
+            barray_borrow(self.elem_ty, self.length),
             array,
             idx,
         )
         arr = self.builder.add_op(
-            array_return(self.elem_ty, self.length),
+            barray_return(self.elem_ty, self.length),
             arr,
             idx,
             elem,
@@ -305,7 +306,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
         """Constructs `array.__getitem__` for linear arrays."""
         idx = self.builder.add_op(convert_itousize(), idx)
         elem, arr = self.builder.add_op(
-            array_borrow(self.elem_ty, self.length),
+            barray_borrow(self.elem_ty, self.length),
             array,
             idx,
         )
@@ -354,7 +355,7 @@ class ArraySetitemCompiler(ArrayCompiler):
         """Constructs `array.__setitem__` for linear arrays."""
         idx = self.builder.add_op(convert_itousize(), idx)
         arr = self.builder.add_op(
-            array_return(self.elem_ty, self.length),
+            barray_return(self.elem_ty, self.length),
             array,
             idx,
             elem,
@@ -376,14 +377,14 @@ class ArraySetitemCompiler(ArrayCompiler):
         raise InternalGuppyError("Call compile_with_inouts instead")
 
 
-class ArrayIterAsertAllUsedCompiler(ArrayCompiler):
+class ArrayDiscardAllUsedCompiler(ArrayCompiler):
     """Compiler for the `_array_discard_all_used` method."""
 
     def compile(self, args: list[Wire]) -> list[Wire]:
         if self.elem_ty.type_bound() == ht.TypeBound.Linear:
             [arr] = args
             self.builder.add_op(
-                array_discard_all_borrowed(self.elem_ty, self.length),
+                barray_discard_all_borrowed(self.elem_ty, self.length),
                 arr,
             )
         return []

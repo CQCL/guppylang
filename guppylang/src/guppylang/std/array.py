@@ -16,8 +16,8 @@ from guppylang_internals.decorator import custom_function, extend_type
 from guppylang_internals.definition.custom import CopyInoutCompiler
 from guppylang_internals.std._internal.checker import ArrayCopyChecker, NewArrayChecker
 from guppylang_internals.std._internal.compiler.array import (
+    ArrayDiscardAllUsedCompiler,
     ArrayGetitemCompiler,
-    ArrayIterAsertAllUsedCompiler,
     ArraySetitemCompiler,
     NewArrayCompiler,
 )
@@ -107,7 +107,7 @@ class ArrayIter(Generic[L, n]):
         return nothing()
 
 
-@custom_function(ArrayIterAsertAllUsedCompiler())
+@custom_function(ArrayDiscardAllUsedCompiler())
 def _array_discard_all_used(xs: array[L, n] @ owned) -> None: ...
 
 
