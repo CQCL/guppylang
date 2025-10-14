@@ -6,6 +6,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from guppylang_internals.ast_util import AstNode
+from guppylang_internals.span import Span, to_span
 from guppylang_internals.tys.const import Const
 from guppylang_internals.tys.subst import Inst
 from guppylang_internals.tys.ty import FunctionType, StructType, TupleType, Type
@@ -422,3 +423,126 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
         self.cfg = cfg
         self.ty = ty
         self.captured = captured
+
+
+class Dagger(ast.expr):
+    """The dagger modifier"""
+
+    def __init__(self, node: ast.expr) -> None:
+        super().__init__(**node.__dict__)
+
+
+class Control(ast.Call):
+    """The control modifier"""
+
+    ctrl: list[ast.expr]
+    qubit_num: int | Const | None
+
+    _fields = ("ctrl",)
+
+    def __init__(self, node: ast.Call, ctrl: list[ast.expr]) -> None:
+        super().__init__(**node.__dict__)
+        self.ctrl = ctrl
+        self.qubit_num = None
+
+
+class Power(ast.expr):
+    """The power modifier"""
+
+    iter: ast.expr
+
+    _fields = ("iter",)
+
+    def __init__(self, node: ast.expr, iter: ast.expr) -> None:
+        super().__init__(**node.__dict__)
+        self.iter = iter
+
+
+Modifier = Dagger | Control | Power
+
+
+class ModifiedBlock(ast.With):
+    cfg: "CFG"
+    dagger: list[Dagger]
+    control: list[Control]
+    power: list[Power]
+
+    def __init__(self, cfg: "CFG", *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.cfg = cfg
+        self.dagger = []
+        self.control = []
+        self.power = []
+
+    def is_dagger(self) -> bool:
+        return len(self.dagger) % 2 == 1
+
+    def is_control(self) -> bool:
+        return len(self.control) > 0
+
+    def is_power(self) -> bool:
+        return len(self.power) > 0
+
+    def span_ctxt_manager(self) -> Span:
+        return Span(
+            to_span(self.items[0].context_expr).start,
+            to_span(self.items[-1].context_expr).end,
+        )
+
+    def push_modifier(self, modifier: Modifier) -> None:
+        """Pushes a modifier kind onto the modifier."""
+        if isinstance(modifier, Dagger):
+            self.dagger.append(modifier)
+        elif isinstance(modifier, Control):
+            self.control.append(modifier)
+        elif isinstance(modifier, Power):
+            self.power.append(modifier)
+        else:
+            raise TypeError(f"Unknown modifier: {modifier}")
+
+
+class CheckedModifiedBlock(ast.With):
+    def_id: "DefId"
+    cfg: "CheckedCFG[Place]"
+    dagger: list[Dagger]
+    control: list[Control]
+    power: list[Power]
+
+    #: The type of the body of With block.
+    ty: FunctionType
+    #: Mapping from names to variables captured in the body.
+    captured: Mapping[str, tuple["Variable", AstNode]]
+
+    def __init__(
+        self,
+        def_id: "DefId",
+        cfg: "CheckedCFG[Place]",
+        ty: FunctionType,
+        captured: Mapping[str, tuple["Variable", AstNode]],
+        dagger: list[Dagger],
+        control: list[Control],
+        power: list[Power],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.def_id = def_id
+        self.cfg = cfg
+        self.ty = ty
+        self.captured = captured
+        self.dagger = dagger
+        self.control = control
+        self.power = power
+
+    def __str__(self) -> str:
+        # generate a function name from the def_id
+        return f"__WithBlock__({self.def_id})"
+
+    def is_dagger(self) -> bool:
+        return len(self.dagger) % 2 == 1
+
+    def has_control(self) -> bool:
+        return any(len(c.ctrl) > 0 for c in self.control)
+
+    def is_power(self) -> bool:
+        return len(self.power) > 0

@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
+import tket_exts
 from hugr import val
 from tket_exts import (
     debug,
     futures,
     guppy,
-    opaque_bool,
     qsystem,
     qsystem_random,
     qsystem_utils,
@@ -15,7 +15,7 @@ from tket_exts import (
     wasm,
 )
 
-BOOL_EXTENSION = opaque_bool()
+BOOL_EXTENSION = tket_exts.bool()
 DEBUG_EXTENSION = debug()
 FUTURES_EXTENSION = futures()
 GUPPY_EXTENSION = guppy()

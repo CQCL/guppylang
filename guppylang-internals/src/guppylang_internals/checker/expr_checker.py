@@ -23,6 +23,7 @@ can be used to infer a type for an expression.
 import ast
 import sys
 import traceback
+from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import replace
 from types import ModuleType
@@ -74,6 +75,7 @@ from guppylang_internals.checker.errors.type_errors import (
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
     NotCallableError,
+    ParameterInferenceError,
     TupleIndexOutOfBoundsError,
     TypeApplyNotGenericError,
     TypeInferenceError,
@@ -149,6 +151,7 @@ from guppylang_internals.tys.ty import (
     parse_function_tensor,
     unify,
 )
+from guppylang_internals.tys.var import ExistentialVar
 
 if TYPE_CHECKING:
     from guppylang_internals.diagnostic import SubDiagnostic
@@ -1104,7 +1107,7 @@ def synthesize_call(
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
-    inst = [subst[v].to_arg() for v in free_vars]
+    inst = check_all_solved(subst, free_vars, func_ty, node)
 
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
@@ -1183,13 +1186,36 @@ def check_call(
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
-    inst = [subst[v].to_arg() for v in free_vars]
+    inst = check_all_solved(subst, free_vars, func_ty, node)
     subst = {v: t for v, t in subst.items() if v in ty.unsolved_vars}
 
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
 
     return inputs, subst, inst
+
+
+def check_all_solved(
+    subst: Subst,
+    free_vars: Sequence[ExistentialVar],
+    func_ty: FunctionType,
+    loc: AstNode,
+) -> Inst:
+    """Checks that a substitution solves all parameters of a function.
+
+    Using 3.12 generic syntax, users can declare parameters that don't occur in the
+    signature. Those will remain unsolved, even after unifying all function arguments,
+    so we have to perform this extra check.
+
+    Returns an instantiation of all free variables, or emits a user error if some are
+    not solved.
+    """
+    for v in free_vars:
+        if v not in subst:
+            err = ParameterInferenceError(loc, v.display_name)
+            err.add_sub_diagnostic(ParameterInferenceError.SignatureHint(None, func_ty))
+            raise GuppyTypeInferenceError(err)
+    return [subst[v].to_arg() for v in free_vars]
 
 
 def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
