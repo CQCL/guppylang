@@ -39,7 +39,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", branch = "feat-random_advance" }
+tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", rev = "eed16e8" }
 
 [project.optional-dependencies]
 pytket = ["pytket>=1.34"]
