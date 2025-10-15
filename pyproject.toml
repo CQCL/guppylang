@@ -23,7 +23,7 @@ pytket_integration = [{ include-group = "test" }, "guppylang[pytket]"]
 
 [tool.uv]
 override-dependencies = [
-    "selene-hugr-qis-compiler @ file:///Users/tatiana.sedelnikov/Documents/Code/selene/dist/selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl",
+    "selene-hugr-qis-compiler @ file:///Users/tatiana.sedelnikov/Documents/Code/tket2/dist/selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl",
 ]
 
 [tool.uv.workspace]
@@ -36,7 +36,7 @@ miette-py = { workspace = true }
 
 # Uncomment these to test the latest dependency version during development
 # hugr = { git = "https://github.com/CQCL/hugr", subdirectory = "hugr-py", rev = "50a2bac" }
-# tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", rev = "aca944c" }
+tket = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-py", rev = "fb0b188" }
 
 [build-system]
 requires = ["hatchling"]

@@ -646,7 +646,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             qubit_arr_in = self.builder.add_op(
                 array_new(ht.Qubit, len(node.args) - 1), *qubits_in
             )
-            # Turn into standard array from value array.
+            # Turn into standard array from borrow array.
             qubit_arr_in = self.builder.add_op(
                 array_to_std_array(ht.Qubit, num_qubits_arg), qubit_arr_in
             )
@@ -910,11 +910,11 @@ def apply_array_op_with_conversions(
         input_array = builder.add_op(map_op, input_array, array_read)
         elem_ty = ht.Bool
 
-    input_array = builder.add_op(std_array_to_array(elem_ty, size_arg), input_array)
+    input_array = builder.add_op(array_to_std_array(elem_ty, size_arg), input_array)
 
     result_array = builder.add_op(op, input_array)
 
-    result_array = builder.add_op(array_to_std_array(elem_ty, size_arg), result_array)
+    result_array = builder.add_op(std_array_to_array(elem_ty, size_arg), result_array)
 
     if convert_bool:
         array_make_opaque = array_make_opaque_bool(ctx)

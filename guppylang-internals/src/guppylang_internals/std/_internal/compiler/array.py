@@ -182,7 +182,7 @@ def barray_borrow(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
     """Returns an array `borrow` operation."""
     arr_ty = array_type(elem_ty, length)
     return _instantiate_array_op(
-        "borrow", elem_ty, length, [arr_ty, ht.USize()], [elem_ty, arr_ty]
+        "borrow", elem_ty, length, [arr_ty, ht.USize()], [arr_ty, elem_ty]
     )
 
 
@@ -285,7 +285,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
         # As copyable elements can be used multiple times, we need to swap the element
         # back after initially borrowing it to get the value.
         # (`array_get` cannot be used to to current bool lowering limitations)
-        elem, arr = self.builder.add_op(
+        arr, elem = self.builder.add_op(
             barray_borrow(self.elem_ty, self.length),
             array,
             idx,
@@ -305,7 +305,7 @@ class ArrayGetitemCompiler(ArrayCompiler):
     def _build_linear_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
         """Constructs `array.__getitem__` for linear arrays."""
         idx = self.builder.add_op(convert_itousize(), idx)
-        elem, arr = self.builder.add_op(
+        arr, elem = self.builder.add_op(
             barray_borrow(self.elem_ty, self.length),
             array,
             idx,
