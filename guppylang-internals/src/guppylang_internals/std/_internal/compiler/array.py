@@ -275,7 +275,46 @@ class NewArrayCompiler(ArrayCompiler):
             return [self.build_classical_array(args)]
 
 
-class ArrayGetitemCompiler(ArrayCompiler):
+class ArrayBorrowCompiler(ArrayCompiler):
+    """Compiler for the `array.__borrow__` function."""
+
+    def _build_borrow(self, array: Wire, idx: Wire) -> CallReturnWires:
+        """Constructs `borrow_array.borrow` for linear-typed arrays."""
+        idx = self.builder.add_op(convert_itousize(), idx)
+        arr, elem = self.builder.add_op(
+            barray_borrow(self.elem_ty, self.length),
+            array,
+            idx,
+        )
+        return CallReturnWires(
+            regular_returns=[elem],
+            inout_returns=[arr],
+        )
+
+    def _build(self, array: Wire, idx: Wire) -> CallReturnWires:
+        # This (super)class handles only ArrayIter, which is output as
+        # Hugr-polymorphic with a Linear TypeParam.
+        assert self.elem_ty.type_bound() == ht.TypeBound.Linear
+        # HOWEVER note that even if we monomorphized in guppy and needed to handle
+        # copyable ArrayIter, we could still use just a borrow (not the more complex
+        # _build_classical_getitem), as ArrayIter ends with a discard-all-borrowed.
+        return self._build_borrow(array, idx)
+
+    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
+        [array, idx] = args
+        [elem_ty_arg, _] = self.type_args
+        assert isinstance(elem_ty_arg, TypeArg)
+        assert elem_ty_arg.ty.copyable == (
+            self.elem_ty.type_bound() == ht.TypeBound.Copyable
+        )
+
+        return self._build(array, idx)
+
+    def compile(self, args: list[Wire]) -> list[Wire]:
+        raise InternalGuppyError("Call compile_with_inouts instead")
+
+
+class ArrayGetitemCompiler(ArrayBorrowCompiler):
     """Compiler for the `array.__getitem__` function, used for both classical and
     linear arrays e.g. when pulling out arguments to pass to a function.
     (In the linear, non-owned, case they will be replaced afterwards.)"""
@@ -304,40 +343,10 @@ class ArrayGetitemCompiler(ArrayCompiler):
             inout_returns=[arr],
         )
 
-    def _build_borrow(self, array: Wire, idx: Wire) -> CallReturnWires:
-        """Constructs `borrow_array.borrow` for linear-typed arrays."""
-        idx = self.builder.add_op(convert_itousize(), idx)
-        arr, elem = self.builder.add_op(
-            barray_borrow(self.elem_ty, self.length),
-            array,
-            idx,
-        )
-        return CallReturnWires(
-            regular_returns=[elem],
-            inout_returns=[arr],
-        )
-
-    def compile_with_inouts(self, args: list[Wire]) -> CallReturnWires:
-        [array, idx] = args
-        [elem_ty_arg, _] = self.type_args
-        assert isinstance(elem_ty_arg, TypeArg)
-        if not elem_ty_arg.ty.copyable:
-            return self._build_borrow(array, idx)
-        else:
+    def _build(self, array: Wire, idx: Wire) -> CallReturnWires:
+        if self.elem_ty.type_bound() == ht.TypeBound.Copyable:
             return self._build_classical_getitem(array, idx)
-
-    def compile(self, args: list[Wire]) -> list[Wire]:
-        raise InternalGuppyError("Call compile_with_inouts instead")
-
-
-class ArrayBorrowCompiler(ArrayGetitemCompiler):
-    """Compiler for the `array.__borrow__` function only, used for ArrayIter."""
-
-    def _build_classical_getitem(self, array: Wire, idx: Wire) -> CallReturnWires:
-        raise InternalGuppyError("ArrayIter is Hugr-polymorphic with Linear TypeParam")
-        # Note that even if we monomorphized in guppy and needed to handle copyable
-        # here, we could still use just a borrow (not the more complex
-        # _build_classical_getitem), as ArrayIter ends with a discard-all-borrowed.
+        return self._build_borrow(array, idx)
 
 
 class ArraySetitemCompiler(ArrayCompiler):
