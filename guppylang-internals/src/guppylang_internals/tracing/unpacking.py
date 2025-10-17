@@ -1,7 +1,6 @@
 from typing import Any, TypeVar
 
 from hugr import ops
-from hugr import tys as ht
 from hugr.build.dfg import DfBase
 
 from guppylang_internals.ast_util import AstNode
@@ -13,7 +12,6 @@ from guppylang_internals.compiler.core import CompilerContext
 from guppylang_internals.compiler.expr_compiler import python_value_to_hugr
 from guppylang_internals.error import GuppyComptimeError, GuppyError
 from guppylang_internals.std._internal.compiler.array import array_new, unpack_array
-from guppylang_internals.std._internal.compiler.prelude import build_unwrap
 from guppylang_internals.tracing.frozenlist import frozenlist
 from guppylang_internals.tracing.object import (
     GuppyObject,
@@ -71,9 +69,7 @@ def unpack_guppy_object(
                     # them as Guppy objects here
                     return obj
                 elem_ty = get_element_type(ty)
-                opt_elems = unpack_array(builder, obj._use_wire(None))
-                err = "Non-copyable array element has already been used"
-                elems = [build_unwrap(builder, opt_elem, err) for opt_elem in opt_elems]
+                elems = unpack_array(builder, obj._use_wire(None))
                 obj_list = [
                     unpack_guppy_object(GuppyObject(elem_ty, wire), builder, frozen)
                     for wire in elems
@@ -128,11 +124,8 @@ def guppy_object_from_py(
                         f"Element at index {i + 1} does not match the type of "
                         f"previous elements. Expected `{elem_ty}`, got `{obj._ty}`."
                     )
-            hugr_elem_ty = ht.Option(elem_ty.to_hugr(ctx))
-            wires = [
-                builder.add_op(ops.Tag(1, hugr_elem_ty), obj._use_wire(None))
-                for obj in objs
-            ]
+            hugr_elem_ty = elem_ty.to_hugr(ctx)
+            wires = [obj._use_wire(None) for obj in objs]
             return GuppyObject(
                 array_type(elem_ty, len(vs)),
                 builder.add_op(array_new(hugr_elem_ty, len(vs)), *wires),
@@ -172,26 +165,32 @@ def update_packed_value(v: Any, obj: "GuppyObject", builder: DfBase[P]) -> bool:
             assert isinstance(obj._ty, NoneType)
         case tuple(vs):
             assert isinstance(obj._ty, TupleType)
-            wires = builder.add_op(ops.UnpackTuple(), obj._use_wire(None)).outputs()
-            for v, ty, wire in zip(vs, obj._ty.element_types, wires, strict=True):
-                success = update_packed_value(v, GuppyObject(ty, wire), builder)
+            wire_iterator = builder.add_op(
+                ops.UnpackTuple(), obj._use_wire(None)
+            ).outputs()
+            for v, ty, out_wire in zip(
+                vs, obj._ty.element_types, wire_iterator, strict=True
+            ):
+                success = update_packed_value(v, GuppyObject(ty, out_wire), builder)
                 if not success:
                     return False
         case GuppyStructObject(_ty=ty, _field_values=values):
             assert obj._ty == ty
-            wires = builder.add_op(ops.UnpackTuple(), obj._use_wire(None)).outputs()
-            for field, wire in zip(ty.fields, wires, strict=True):
+            wire_iterator = builder.add_op(
+                ops.UnpackTuple(), obj._use_wire(None)
+            ).outputs()
+            for field, out_wire in zip(ty.fields, wire_iterator, strict=True):
                 v = values[field.name]
-                success = update_packed_value(v, GuppyObject(field.ty, wire), builder)
+                success = update_packed_value(
+                    v, GuppyObject(field.ty, out_wire), builder
+                )
                 if not success:
                     values[field.name] = obj
         case list(vs) if len(vs) > 0:
             assert is_array_type(obj._ty)
             elem_ty = get_element_type(obj._ty)
-            opt_wires = unpack_array(builder, obj._use_wire(None))
-            err = "Non-droppable array element has already been used"
-            for i, (v, opt_wire) in enumerate(zip(vs, opt_wires, strict=True)):
-                (wire,) = build_unwrap(builder, opt_wire, err).outputs()
+            wires = unpack_array(builder, obj._use_wire(None))
+            for i, (v, wire) in enumerate(zip(vs, wires, strict=True)):
                 success = update_packed_value(v, GuppyObject(elem_ty, wire), builder)
                 if not success:
                     vs[i] = obj

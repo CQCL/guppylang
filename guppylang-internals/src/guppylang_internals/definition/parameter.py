@@ -38,14 +38,21 @@ class ParamDef(Definition):
 class TypeVarDef(ParamDef, CompiledDef):
     """A type variable definition."""
 
-    must_be_copyable: bool
-    must_be_droppable: bool
+    copyable: bool
+    droppable: bool
 
     description: str = field(default="type variable", init=False)
 
     def to_param(self, idx: int) -> TypeParam:
         """Creates a parameter from this definition."""
-        return TypeParam(idx, self.name, self.must_be_copyable, self.must_be_droppable)
+        is_affine = not self.copyable and self.droppable
+        return TypeParam(
+            idx,
+            self.name,
+            must_be_copyable=self.copyable,
+            must_be_droppable=self.droppable,
+            is_affine=is_affine,
+        )
 
 
 @dataclass(frozen=True)
