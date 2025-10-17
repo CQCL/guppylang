@@ -974,7 +974,7 @@ requires-dist = [
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
     { name = "selene-hugr-qis-compiler", specifier = ">=0.2.5" },
     { name = "selene-sim", specifier = "~=0.2.3" },
-    { name = "tket", marker = "extra == 'pytket'", git = "https://github.com/CQCL/tket2?subdirectory=tket-py&rev=fb0b188" },
+    { name = "tket", marker = "extra == 'pytket'", git = "https://github.com/CQCL/tket2?subdirectory=tket-py&rev=e704c19" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "types-tqdm", specifier = ">=4.67.0.20250809" },
 ]
@@ -3247,7 +3247,7 @@ name = "selene-hugr-qis-compiler"
 version = "0.2.6"
 source = { path = "../tket2/dist/selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl" }
 wheels = [
-    { filename = "selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:a0e5c5e1aa6311d17ed65c9fd14734234e5c585a877623ca3736b2d4464ceb44" },
+    { filename = "selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:d218b4fec1dacc72dc2e0b478a46c45e6437995007850273941ce5dba4eae684" },
 ]
 
 [[package]]
@@ -3531,7 +3531,7 @@ wheels = [
 [[package]]
 name = "tket"
 version = "0.12.7"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket-py&rev=fb0b188#fb0b188f771ee4e36c11a0c3c47ab5cce1c9c60f" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket-py&rev=e704c19#e704c191b251c031119bbcc19df3996cbf7c02d7" }
 dependencies = [
     { name = "hugr" },
     { name = "pytket" },
@@ -3542,12 +3542,12 @@ dependencies = [
 [[package]]
 name = "tket-eccs"
 version = "0.5.1"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket-eccs&rev=fb0b188#fb0b188f771ee4e36c11a0c3c47ab5cce1c9c60f" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket-eccs&rev=e704c19#e704c191b251c031119bbcc19df3996cbf7c02d7" }
 
 [[package]]
 name = "tket-exts"
 version = "0.11.0"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket-exts&rev=fb0b188#fb0b188f771ee4e36c11a0c3c47ab5cce1c9c60f" }
+source = { git = "https://github.com/CQCL/tket2?subdirectory=tket-exts&rev=e704c19#e704c191b251c031119bbcc19df3996cbf7c02d7" }
 dependencies = [
     { name = "hugr" },
 ]

@@ -282,21 +282,12 @@ class ArrayGetitemCompiler(ArrayCompiler):
         """Constructs `__getitem__` for classical arrays."""
         idx = self.builder.add_op(convert_itousize(), idx)
 
-        # As copyable elements can be used multiple times, we need to swap the element
-        # back after initially borrowing it to get the value.
-        # (`array_get` cannot be used to to current bool lowering limitations)
-        arr, elem = self.builder.add_op(
-            barray_borrow(self.elem_ty, self.length),
+        opt_elem, arr = self.builder.add_op(
+            array_get(self.elem_ty, self.length),
             array,
             idx,
         )
-        arr = self.builder.add_op(
-            barray_return(self.elem_ty, self.length),
-            arr,
-            idx,
-            elem,
-        )
-
+        elem = build_unwrap_right(self.builder, opt_elem, "Array index out of bounds")
         return CallReturnWires(
             regular_returns=[elem],
             inout_returns=[arr],
