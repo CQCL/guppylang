@@ -219,7 +219,8 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 ]
 
                 # Symbolic parameters (if present) get passed after qubits and bools.
-                has_params = len(self.input_circuit.free_symbols()) != 0
+                num_params = len(self.input_circuit.free_symbols())
+                has_params = num_params != 0
                 if has_params and "TKET1.input_parameters" not in hugr_func.metadata:
                     raise InternalGuppyError(
                         "Parameter metadata is missing from pytket circuit HUGR"
@@ -233,7 +234,7 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                         opt_param_wires = outer_func.add_op(
                             array_unpack(
                                 ht.Option(ht.Tuple(float_type().to_hugr(ctx))),
-                                q_reg.size,
+                                num_params,
                             ),
                             lex_params[0],
                         )
