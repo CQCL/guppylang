@@ -17,14 +17,10 @@ test = [
     "pytest-xdist>=3.8.0",
     "ipykernel >=6.29.5,<7",
     "miette-py",
-    "selene-hugr-qis-compiler>=0.2.5, <0.3",
 ]
 pytket_integration = [{ include-group = "test" }, "guppylang[pytket]"]
 
 [tool.uv]
-override-dependencies = [
-    "selene-hugr-qis-compiler @ file:///Users/seyon/ng/tket2proto/dist/selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl",
-]
 
 [tool.uv.workspace]
 members = ["guppylang", "guppylang-internals", "miette-py"]
