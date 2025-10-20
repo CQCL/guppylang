@@ -298,7 +298,7 @@ def test_symbolic_array(validate):
     a = Symbol("alpha")
     b = Symbol("beta")
 
-    circ = Circuit(2)
+    circ = Circuit(3)
     circ.YYPhase(b, 0, 1)
     circ.Rx(a, 0)
     circ.measure_all()
@@ -308,7 +308,7 @@ def test_symbolic_array(validate):
     guppy_circ = guppy.load_pytket("guppy_circ", circ)
 
     @guppy
-    def foo(reg: array[qubit, 2]) -> array[bool, 2]:
+    def foo(reg: array[qubit, 3]) -> array[bool, 3]:
         params = array(angle(0.3), angle(1.2))
         return guppy_circ(reg, params)
 

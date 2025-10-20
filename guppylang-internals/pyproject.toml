@@ -34,12 +34,12 @@ classifiers = [
 
 dependencies = [
     "typing-extensions >=4.9.0,<5",
-    "tket-exts ~= 0.11.0",
-    "hugr ~= 0.13.1",
+    "tket-exts ~= 0.12.0",
+    "hugr ~= 0.14.0",
 ]
 
 [tool.uv.sources]
-tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", rev = "eed16e8" }
+# tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", rev = "eed16e8" }
 
 [project.optional-dependencies]
 pytket = ["pytket>=1.34"]
