@@ -13,7 +13,10 @@ members = [
     "guppylang-internals",
     "miette-py",
 ]
-overrides = [{ name = "selene-hugr-qis-compiler", path = "../tket2/dist/selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl" }]
+overrides = [
+    { name = "selene-hugr-qis-compiler", path = "../tket2proto/dist/selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl" },
+    { name = "tket-exts", git = "https://github.com/cqcl/tket2.git?subdirectory=tket-exts&rev=release-please--branches--main--components--tket-exts" },
+]
 
 [manifest.dependency-groups]
 dev = [
@@ -999,7 +1002,7 @@ pytket = [
 requires-dist = [
     { name = "hugr", specifier = "~=0.14.0" },
     { name = "pytket", marker = "extra == 'pytket'", specifier = ">=1.34" },
-    { name = "tket-exts", specifier = "~=0.11.0" },
+    { name = "tket-exts", specifier = "~=0.12.0" },
     { name = "typing-extensions", specifier = ">=4.9.0,<5" },
 ]
 provides-extras = ["pytket"]
@@ -3245,9 +3248,9 @@ wheels = [
 [[package]]
 name = "selene-hugr-qis-compiler"
 version = "0.2.6"
-source = { path = "../tket2/dist/selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl" }
+source = { path = "../tket2proto/dist/selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl" }
 wheels = [
-    { filename = "selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:d218b4fec1dacc72dc2e0b478a46c45e6437995007850273941ce5dba4eae684" },
+    { filename = "selene_hugr_qis_compiler-0.2.6-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:1d93f8cd686b4d01cc03b8e3a094760a02875b6f1ec520ef0f712e52798bb86a" },
 ]
 
 [[package]]
@@ -3546,8 +3549,8 @@ source = { git = "https://github.com/CQCL/tket2?subdirectory=tket-eccs&rev=e704c
 
 [[package]]
 name = "tket-exts"
-version = "0.11.0"
-source = { git = "https://github.com/CQCL/tket2?subdirectory=tket-exts&rev=e704c19#e704c191b251c031119bbcc19df3996cbf7c02d7" }
+version = "0.12.0"
+source = { git = "https://github.com/cqcl/tket2.git?subdirectory=tket-exts&rev=release-please--branches--main--components--tket-exts#64560db4c9c545af23bd1f0413f259d8d1e96a0b" }
 dependencies = [
     { name = "hugr" },
 ]
