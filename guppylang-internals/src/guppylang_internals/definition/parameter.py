@@ -51,7 +51,7 @@ class TypeVarDef(ParamDef, CompiledDef):
             self.name,
             must_be_copyable=self.copyable,
             must_be_droppable=self.droppable,
-            is_affine=is_affine,
+            is_affine2=is_affine,
         )
 
 
