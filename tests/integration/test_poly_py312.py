@@ -65,8 +65,12 @@ def test_drop_bound(validate):
         x: T
 
     @guppy
-    def main[T: Drop](s: MyStruct[T] @ owned) -> None:
+    def helper[T: Drop](s: MyStruct[T] @ owned) -> None:
         pass
+
+    @guppy
+    def main(s: MyStruct[array[int, 5]] @ owned) -> None:
+        helper(s)
 
     validate(main.compile_function())
 
