@@ -87,14 +87,7 @@ class TypeParam(ParameterBase):
     # field is used as a hack to deal with lowering affine types to linear HUGR types.
     must_be_copyable: bool
     must_be_droppable: bool
-    is_affine2: bool | None = None
-
-    @property
-    def is_affine(self) -> bool:
-        affine = False if self.is_affine2 is None else self.is_affine2
-        if affine == (not self.must_be_copyable and self.must_be_droppable):
-            return affine
-        assert False, f"Affine: {affine}, Copyable: {self.must_be_copyable}, Droppable: {self.must_be_droppable}"
+    is_affine: bool | None = None
 
     @property
     def can_be_linear(self) -> bool:
