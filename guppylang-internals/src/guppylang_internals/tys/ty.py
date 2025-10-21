@@ -59,12 +59,7 @@ class TypeBase(ToHugr[ht.Type], Transformable["Type"], ABC):
     @cached_property
     @abstractmethod
     def hugr_bound(self) -> ht.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`.
-
-        This needs to be specified explicitly, since opaque nonlinear types in a Hugr
-        extension could be either declared as copyable or equatable. If we don't get the
-        bound exactly right during serialisation, the Hugr validator will complain.
-        """
+        """The Hugr bound of this type, i.e. `Any` or `Copyable`."""
 
     @abstractmethod
     def cast(self) -> "Type":
@@ -170,8 +165,8 @@ class ParametrizedTypeBase(TypeBase, ABC):
 
     @cached_property
     def hugr_bound(self) -> ht.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
-        if self.linear:
+        """The Hugr bound of this type, i.e. `Any` or `Copyable`."""
+        if self.linear or self.affine:
             return ht.TypeBound.Linear
         return ht.TypeBound.join(
             *(arg.ty.hugr_bound for arg in self.args if isinstance(arg, TypeArg))
@@ -199,11 +194,9 @@ class BoundTypeVar(TypeBase, BoundVar):
 
     @cached_property
     def hugr_bound(self) -> ht.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
-        if self.linear:
+        """The Hugr bound of this type, i.e. `Any` or `Copyable`."""
+        if self.linear or self.affine:
             return ht.TypeBound.Linear
-        # We're conservative and don't require equatability for non-linear variables.
-        # This is fine since Guppy doesn't use the equatable feature anyways.
         return ht.TypeBound.Copyable
 
     @property
@@ -674,7 +667,7 @@ class OpaqueType(ParametrizedTypeBase):
 
     @property
     def hugr_bound(self) -> ht.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
+        """The Hugr bound of this type, i.e. `Any` or `Copyable`."""
         if self.defn.bound is not None:
             return self.defn.bound
         return super().hugr_bound
