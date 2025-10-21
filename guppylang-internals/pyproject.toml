@@ -38,9 +38,6 @@ dependencies = [
     "hugr ~= 0.14.0",
 ]
 
-[tool.uv.sources]
-# tket-exts = { git = "https://github.com/CQCL/tket2", subdirectory = "tket-exts", rev = "eed16e8" }
-
 [project.optional-dependencies]
 pytket = ["pytket>=1.34"]
 
