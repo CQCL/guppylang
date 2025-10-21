@@ -16,6 +16,7 @@ from hugr.hugr.base import OpVarCov
 from hugr.hugr.node_port import ToNode
 from hugr.std import PRELUDE
 from hugr.std.collections.array import EXTENSION as ARRAY_EXTENSION
+from hugr.std.collections.borrow_array import EXTENSION as BORROW_ARRAY_EXTENSION
 from typing_extensions import assert_never
 
 from guppylang_internals.checker.core import (
@@ -247,7 +248,7 @@ class CompilerContext(ToHugrContext):
 
         # Insert explicit drops for affine types
         # TODO: This is a quick workaround until we can properly insert these drops
-        #   during linearity checking. See https://github.com/CQCL/guppylang/issues/1082
+        # during linearity checking. See https://github.com/CQCL/guppylang/issues/1082
         insert_drops(self.module.hugr)
 
         return entry_compiled
@@ -651,6 +652,7 @@ def qualified_name(type_def: he.TypeDef) -> str:
 #: insertion of an explicit drop operation.
 AFFINE_EXTENSION_TYS: list[str] = [
     qualified_name(ARRAY_EXTENSION.get_type("array")),
+    qualified_name(BORROW_ARRAY_EXTENSION.get_type("borrow_array")),
 ]
 
 
@@ -698,7 +700,7 @@ def insert_drops(hugr: Hugr[OpVarCov]) -> None:
         # Iterating over `node.outputs()` doesn't work reliably since it sometimes
         # raises an `IncompleteOp` exception. Instead, we query the number of out ports
         # and look them up by index. However, this method is *also* broken when
-        # isnpecting `FuncDefn` nodes due to https://github.com/CQCL/hugr/issues/2438.
+        # inspecting `FuncDefn` nodes due to https://github.com/CQCL/hugr/issues/2438.
         if isinstance(data.op, ops.FuncDefn):
             continue
         for i in range(hugr.num_out_ports(node)):
