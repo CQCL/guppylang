@@ -20,6 +20,8 @@ test = [
 ]
 pytket_integration = [{ include-group = "test" }, "guppylang[pytket]"]
 
+[tool.uv]
+
 [tool.uv.workspace]
 members = ["guppylang", "guppylang-internals", "miette-py"]
 
