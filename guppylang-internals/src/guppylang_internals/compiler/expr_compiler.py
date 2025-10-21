@@ -901,7 +901,7 @@ def apply_array_op_with_conversions(
 
     Transformations:
     1. (Optional) Converts from / to opaque bool to / from Hugr bool.
-    2. Converts from / to value array to / from standard Hugr array.
+    2. Converts from / to borrow array to / from standard Hugr array.
     """
     if convert_bool:
         array_read = array_read_bool(ctx)

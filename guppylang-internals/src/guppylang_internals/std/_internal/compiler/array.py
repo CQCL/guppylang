@@ -155,8 +155,8 @@ def array_repeat(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
 
 
 def array_to_std_array(elem_ty: ht.Type, length: ht.TypeArg) -> ops.ExtOp:
-    """Returns an array operation to convert the `borrow_array` type used by Guppy into
-    the a standard `array`.
+    """Returns an array operation to convert a value of the `borrow_array` type
+    used by Guppy into a standard `array`.
     """
     return EXTENSION.get_op("to_array").instantiate(
         [length, ht.TypeTypeArg(elem_ty)],
