@@ -83,8 +83,8 @@ class ParameterBase(ToHugr[ht.TypeParam], ABC):
 class TypeParam(ParameterBase):
     """A parameter of kind type. Used to define generic functions and types."""
 
-    # TODO: This should be refactored as this is hard to reason about. The optional
-    # field is used as a hack to deal with lowering affine types to linear HUGR types.
+    # TODO: `is_affine` here is not right, but suffices to hide
+    # https://github.com/CQCL/guppylang/issues/1306 in the current testsuite.
     must_be_copyable: bool
     must_be_droppable: bool
     is_affine: bool | None = None
