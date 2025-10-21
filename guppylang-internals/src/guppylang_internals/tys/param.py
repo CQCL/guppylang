@@ -88,7 +88,7 @@ class TypeParam(ParameterBase):
 
     @property
     def is_affine(self) -> bool:
-        """Types that may be linear but must have a Drop."""
+        """True if the type may not be copied, but can definitely be dropped."""
         return not self.must_be_copyable and self.must_be_droppable
 
     @property

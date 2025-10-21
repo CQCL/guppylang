@@ -111,9 +111,14 @@ def test_mixed_legacy_params(validate):
 
 def test_reference_inside(validate):
     @guppy
-    def main[T: Drop]() -> None:
+    def helper[T: Drop]() -> None:
         x: Option[T] = nothing()
         nothing[T]()
+
+    # Just check we can instantiate a Drop type-parameter with a classical type.
+    @guppy
+    def main() -> None:
+        helper[int]()
 
     validate(main.compile_function())
 
