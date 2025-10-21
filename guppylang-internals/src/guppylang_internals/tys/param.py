@@ -83,11 +83,13 @@ class ParameterBase(ToHugr[ht.TypeParam], ABC):
 class TypeParam(ParameterBase):
     """A parameter of kind type. Used to define generic functions and types."""
 
-    # TODO: `is_affine` here is not right, but suffices to hide
-    # https://github.com/CQCL/guppylang/issues/1306 in the current testsuite.
     must_be_copyable: bool
     must_be_droppable: bool
-    is_affine: bool | None = None
+
+    @property
+    def is_affine(self) -> bool:
+        """Types that may be linear but must have a Drop."""
+        return not self.must_be_copyable and self.must_be_droppable
 
     @property
     def can_be_linear(self) -> bool:

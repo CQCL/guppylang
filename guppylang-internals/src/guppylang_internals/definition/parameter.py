@@ -45,13 +45,11 @@ class TypeVarDef(ParamDef, CompiledDef):
 
     def to_param(self, idx: int) -> TypeParam:
         """Creates a parameter from this definition."""
-        is_affine = not self.copyable and self.droppable
         return TypeParam(
             idx,
             self.name,
             must_be_copyable=self.copyable,
             must_be_droppable=self.droppable,
-            is_affine=is_affine,
         )
 
 
