@@ -160,4 +160,8 @@ def test_nested(validate):
     [l1, l2, l3, l4] = [
         node for node, data in hugr.nodes() if isinstance(data.op, ops.TailLoop)
     ]
-    check_order(hugr, [l1, l2, l3, l4])
+    [inp, out] = hugr.children(hugr[l1].parent)[:2]
+    check_order(hugr, [inp, l1, l2, l3, l4, out])
+
+    for loop in [l1, l2, l3, l4]:
+        check_order(hugr, hugr.children(loop)[:2])
