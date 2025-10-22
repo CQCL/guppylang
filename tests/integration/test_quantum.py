@@ -132,6 +132,36 @@ def test_measure_array(validate):
     validate(test.compile_function())
 
 
+def test_measure_result(validate):
+    from hugr import ops
+
+    @guppy
+    def main() -> None:
+        q = qubit()
+        q = f(q)
+        b = measure(q)
+
+        result("b", b)
+
+    @guppy
+    def f(q: qubit @ owned) -> qubit:
+        return q
+
+    program = main.compile()
+    hugr = program.modules[0]
+    # Find the result op and check it has an outgoing order link to the Output node
+    found = False
+    for node, data in hugr.nodes():
+        if isinstance(data.op, ops.ExtOp):
+            if data.op.op_def().qualified_name().startswith("tket.result"):
+                found = True
+                # This raises if there is no outgoing order link:
+                next_ord = next(hugr.outgoing_order_links(node))
+                assert isinstance(hugr[next_ord].op, ops.Output)
+    assert found, "Result op not found in the compiled program"
+    validate(program)
+
+
 def test_discard_array(validate):
     """Build and discard array."""
 
