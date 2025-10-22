@@ -134,7 +134,7 @@ def test_loop_multiline_args(validate):
     def foo() -> None:
         for _ in range(
             1
-        ):
+        ):  # Really really really long comment to force linter to split line
             pass
 
     validate(foo)
