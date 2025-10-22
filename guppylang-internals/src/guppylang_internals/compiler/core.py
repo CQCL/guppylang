@@ -619,24 +619,27 @@ def track_hugr_side_effects() -> Iterator[None]:
         if parent is None:
             return
 
-        prev = prev_node_with_side_effect.get(parent)
-        # Don't record the "last" Case or side-effecting DataflowBlock: we cannot add
-        # Order edges, but Conditional/CFG semantics ensure execution if appropriate.
-        if not isinstance(hugr[parent].op, ops.Conditional | ops.CFG):
-            prev_node_with_side_effect[parent] = (node, hugr)
+        if prev := prev_node_with_side_effect.get(parent):
+            prev_node = prev[0]
+        else:
+            # This is the first side-effectful op in this DFG. Recurse on the parent
+            # since the parent is also considered side-effectful now. We shouldn't walk
+            # up through function definitions (only the Module is above)
+            if not isinstance(hugr[parent].op, ops.FuncDefn):
+                handle_side_effect(parent, hugr)
+                # For DataflowBlocks and Cases, recurse to mark their containing CFG
+                # or Conditional as side-effectful as well, but there is nothing to do
+                # locally: we cannot add order edges, but Conditional/CFG semantics
+                # ensure execution if appropriate.
+                if isinstance(hugr[parent].op, ops.Conditional | ops.CFG):
+                    return
+            prev_node = hugr.children(parent)[0]
+            assert isinstance(hugr[prev_node].op, ops.Input)
 
-        if prev:
-            # Avoid self-loops for containers when recursing up the hierarchy
-            if prev[0] != node:
-                hugr.add_order_link(prev[0], node)
-            # Parent will already have been marked side-effectful, do not recurse.
-        elif not isinstance(hugr[parent].op, ops.FuncDefn):
-            # If this is the first side-effectful op in this DFG, make a recursive
-            # call with the parent since the parent is also considered side-
-            # effectful now. We shouldn't walk up through function definitions,
-            # but we walk up through DataflowBlocks and Cases so their containing
-            # CFGs or Conditionals are marked side-effectful as well.
-            handle_side_effect(parent, hugr)
+        # Add edge, but avoid self-loops for containers when recursing up the hierarchy.
+        if prev_node != node:
+            hugr.add_order_link(prev_node, node)
+            prev_node_with_side_effect[parent] = (node, hugr)
 
     # Monkey-patch the `add_node` method
     Hugr.add_node = hugr_add_node_with_order  # type: ignore[method-assign]
