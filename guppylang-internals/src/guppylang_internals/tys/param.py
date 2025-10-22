@@ -87,11 +87,6 @@ class TypeParam(ParameterBase):
     must_be_droppable: bool
 
     @property
-    def is_affine(self) -> bool:
-        """True if the type may not be copied, but can definitely be dropped."""
-        return not self.must_be_copyable and self.must_be_droppable
-
-    @property
     def can_be_linear(self) -> bool:
         """Whether this type should be treated linearly."""
         return not self.must_be_copyable and not self.must_be_droppable
@@ -159,9 +154,9 @@ class TypeParam(ParameterBase):
     def to_hugr(self, ctx: ToHugrContext) -> ht.TypeParam:
         """Computes the Hugr representation of the parameter."""
         return ht.TypeTypeParam(
-            bound=ht.TypeBound.Linear
-            if self.can_be_linear or self.is_affine
-            else ht.TypeBound.Copyable
+            bound=ht.TypeBound.Copyable
+            if self.must_be_copyable
+            else ht.TypeBound.Linear
         )
 
     def __str__(self) -> str:
