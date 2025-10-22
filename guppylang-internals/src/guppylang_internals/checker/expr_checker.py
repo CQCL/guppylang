@@ -465,8 +465,13 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         # A `value.attr` attribute access. Unfortunately, the `attr` is just a string,
         # not an AST node, so we have to compute its span by hand. This is fine since
         # linebreaks are not allowed in the identifier following the `.`
+        # Attributes for loops are not confined to a single line. If the node span is
+        # not confined to a single line, we return the entire attribute span.
         span = to_span(node)
-        attr_span = Span(span.end.shift_left(len(node.attr)), span.end)
+        if span.start.line == span.end.line:
+            attr_span = Span(span.end.shift_left(len(node.attr)), span.end)
+        else:
+            attr_span = span
         if module := self._is_python_module(node.value):
             if node.attr in module.__dict__:
                 val = module.__dict__[node.attr]

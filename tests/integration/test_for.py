@@ -127,3 +127,12 @@ def test_nested_loop_break_continue(validate):
         return p
 
     validate(foo)
+
+
+def test_loop_multiline_args(validate):
+    @compile_guppy
+    def foo() -> None:
+        for _ in range(1):
+            pass
+
+    validate(foo)
