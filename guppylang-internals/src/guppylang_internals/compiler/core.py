@@ -595,7 +595,7 @@ def track_hugr_side_effects() -> Iterator[None]:
     # Remember original `Hugr.add_node` method that is monkey-patched below.
     hugr_add_node = Hugr.add_node
     # Last node with potential side effects for each dataflow parent
-    prev_node_with_side_effect: dict[Node, Node] = {}
+    prev_node_with_side_effect: dict[Node, tuple[Node, Hugr[Any]]] = {}
 
     def hugr_add_node_with_order(
         self: Hugr[OpVarCov],
@@ -618,21 +618,36 @@ def track_hugr_side_effects() -> Iterator[None]:
         parent = hugr[node].parent
         if parent is None:
             return
-        if prev := prev_node_with_side_effect.get(parent):
-            hugr.add_order_link(prev, node)
-        else:
+
+        prev = prev_node_with_side_effect.get(parent)
+        # Don't record the "last" Case or side-effecting DataflowBlock: we cannot add
+        # Order edges, but Conditional/CFG semantics ensure execution if appropriate.
+        if not isinstance(hugr[parent].op, ops.Conditional | ops.CFG):
+            prev_node_with_side_effect[parent] = (node, hugr)
+
+        if prev:
+            # Avoid self-loops for containers when recursing up the hierarchy
+            if prev[0] != node:
+                hugr.add_order_link(prev[0], node)
+            # Parent will already have been marked side-effectful, do not recurse.
+        elif not isinstance(hugr[parent].op, ops.FuncDefn):
             # If this is the first side-effectful op in this DFG, make a recursive
             # call with the parent since the parent is also considered side-
-            # effectful now. We shouldn't walk up through function definitions
-            # or basic blocks though
-            if not isinstance(hugr[parent].op, ops.FuncDefn | ops.DataflowBlock):
-                handle_side_effect(parent, hugr)
-        prev_node_with_side_effect[parent] = node
+            # effectful now. We shouldn't walk up through function definitions,
+            # but we walk up through DataflowBlocks and Cases so their containing
+            # CFGs or Conditionals are marked side-effectful as well.
+            handle_side_effect(parent, hugr)
 
     # Monkey-patch the `add_node` method
     Hugr.add_node = hugr_add_node_with_order  # type: ignore[method-assign]
     try:
         yield
+        for parent, (last, hugr) in prev_node_with_side_effect.items():
+            # Connect the last side-effecting node to Output
+            outp = hugr.children(parent)[1]
+            assert isinstance(hugr[outp].op, ops.Output)
+            assert last != outp
+            hugr.add_order_link(last, outp)
     finally:
         Hugr.add_node = hugr_add_node  # type: ignore[method-assign]
 
