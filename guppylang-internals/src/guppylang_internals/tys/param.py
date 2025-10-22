@@ -83,11 +83,8 @@ class ParameterBase(ToHugr[ht.TypeParam], ABC):
 class TypeParam(ParameterBase):
     """A parameter of kind type. Used to define generic functions and types."""
 
-    # TODO: `is_affine` here is not right, but suffices to hide
-    # https://github.com/CQCL/guppylang/issues/1306 in the current testsuite.
     must_be_copyable: bool
     must_be_droppable: bool
-    is_affine: bool | None = None
 
     @property
     def can_be_linear(self) -> bool:
@@ -157,9 +154,9 @@ class TypeParam(ParameterBase):
     def to_hugr(self, ctx: ToHugrContext) -> ht.TypeParam:
         """Computes the Hugr representation of the parameter."""
         return ht.TypeTypeParam(
-            bound=ht.TypeBound.Linear
-            if self.can_be_linear or self.is_affine
-            else ht.TypeBound.Copyable
+            bound=ht.TypeBound.Copyable
+            if self.must_be_copyable
+            else ht.TypeBound.Linear
         )
 
     def __str__(self) -> str:
