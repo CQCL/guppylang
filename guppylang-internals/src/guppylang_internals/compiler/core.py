@@ -1,6 +1,5 @@
 import itertools
 from abc import ABC
-from collections import defaultdict
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -596,9 +595,7 @@ def track_hugr_side_effects() -> Iterator[None]:
     # Remember original `Hugr.add_node` method that is monkey-patched below.
     hugr_add_node = Hugr.add_node
     # Last node with potential side effects for each dataflow parent
-    prev_node_with_side_effect: defaultdict[Node, Node | None] = defaultdict(
-        lambda: None
-    )
+    prev_node_with_side_effect: dict[Node, Node] = {}
 
     def hugr_add_node_with_order(
         self: Hugr[OpVarCov],
@@ -620,7 +617,7 @@ def track_hugr_side_effects() -> Iterator[None]:
         effect."""
         parent = hugr[node].parent
         if parent is not None:
-            if prev := prev_node_with_side_effect[parent]:
+            if prev := prev_node_with_side_effect.get(parent):
                 hugr.add_order_link(prev, node)
             else:
                 # If this is the first side-effectful op in this DFG, make a recursive
