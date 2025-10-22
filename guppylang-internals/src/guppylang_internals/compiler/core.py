@@ -616,17 +616,18 @@ def track_hugr_side_effects() -> Iterator[None]:
         """Performs the actual order-edge insertion, assuming that `node` has a side-
         effect."""
         parent = hugr[node].parent
-        if parent is not None:
-            if prev := prev_node_with_side_effect.get(parent):
-                hugr.add_order_link(prev, node)
-            else:
-                # If this is the first side-effectful op in this DFG, make a recursive
-                # call with the parent since the parent is also considered side-
-                # effectful now. We shouldn't walk up through function definitions
-                # or basic blocks though
-                if not isinstance(hugr[parent].op, ops.FuncDefn | ops.DataflowBlock):
-                    handle_side_effect(parent, hugr)
-            prev_node_with_side_effect[parent] = node
+        if parent is None:
+            return
+        if prev := prev_node_with_side_effect.get(parent):
+            hugr.add_order_link(prev, node)
+        else:
+            # If this is the first side-effectful op in this DFG, make a recursive
+            # call with the parent since the parent is also considered side-
+            # effectful now. We shouldn't walk up through function definitions
+            # or basic blocks though
+            if not isinstance(hugr[parent].op, ops.FuncDefn | ops.DataflowBlock):
+                handle_side_effect(parent, hugr)
+        prev_node_with_side_effect[parent] = node
 
     # Monkey-patch the `add_node` method
     Hugr.add_node = hugr_add_node_with_order  # type: ignore[method-assign]
