@@ -53,6 +53,28 @@ def check_order(hugr: Hugr, nodes: list[Node]) -> None:
     assert len(nodes) == 0
 
 
+def test_input_result_output(validate):
+    @guppy
+    def main() -> None:
+        q = qubit()
+        q = f(q)
+        b = measure(q)
+
+        result("b", b)
+
+    @guppy
+    def f(q: qubit @ owned) -> qubit:
+        return q
+
+    program = main.compile()
+    validate(program)
+
+    hugr = program.modules[0]
+    [r] = find_ext_nodes(hugr, RESULT_EXTENSION.get_op("result_bool").qualified_name())
+    [inp, out] = hugr.children(hugr[r].parent)[:2]
+    check_order(hugr, [inp, r, out])
+
+
 def test_result_panic(validate):
     @guppy
     def test() -> None:
