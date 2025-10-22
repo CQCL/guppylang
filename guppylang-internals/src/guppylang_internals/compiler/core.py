@@ -616,8 +616,7 @@ def track_hugr_side_effects() -> Iterator[None]:
         """Performs the actual order-edge insertion, assuming that `node` has a side-
         effect."""
         parent = hugr[node].parent
-        if parent is None:
-            return
+        assert parent is not None
 
         if prev := prev_node_with_side_effect.get(parent):
             prev_node = prev[0]
