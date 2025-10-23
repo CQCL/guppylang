@@ -1,6 +1,5 @@
 import itertools
 from abc import ABC
-from collections import defaultdict
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -583,6 +582,9 @@ def may_have_side_effect(op: ops.Op) -> bool:
             # precise answer
             return True
         case _:
+            # There is no need to handle TailLoop (in case of non-termination) since
+            # TailLoops are only generated for array comprehensions which must have
+            # statically-guaranteed (finite) size. TODO revisit this for lists.
             return False
 
 
@@ -596,9 +598,7 @@ def track_hugr_side_effects() -> Iterator[None]:
     # Remember original `Hugr.add_node` method that is monkey-patched below.
     hugr_add_node = Hugr.add_node
     # Last node with potential side effects for each dataflow parent
-    prev_node_with_side_effect: defaultdict[Node, Node | None] = defaultdict(
-        lambda: None
-    )
+    prev_node_with_side_effect: dict[Node, tuple[Node, Hugr[Any]]] = {}
 
     def hugr_add_node_with_order(
         self: Hugr[OpVarCov],
@@ -619,22 +619,40 @@ def track_hugr_side_effects() -> Iterator[None]:
         """Performs the actual order-edge insertion, assuming that `node` has a side-
         effect."""
         parent = hugr[node].parent
-        if parent is not None:
-            if prev := prev_node_with_side_effect[parent]:
-                hugr.add_order_link(prev, node)
-            else:
-                # If this is the first side-effectful op in this DFG, make a recursive
-                # call with the parent since the parent is also considered side-
-                # effectful now. We shouldn't walk up through function definitions
-                # or basic blocks though
-                if not isinstance(hugr[parent].op, ops.FuncDefn | ops.DataflowBlock):
-                    handle_side_effect(parent, hugr)
-            prev_node_with_side_effect[parent] = node
+        assert parent is not None
+
+        if prev := prev_node_with_side_effect.get(parent):
+            prev_node = prev[0]
+        else:
+            # This is the first side-effectful op in this DFG. Recurse on the parent
+            # since the parent is also considered side-effectful now. We shouldn't walk
+            # up through function definitions (only the Module is above)
+            if not isinstance(hugr[parent].op, ops.FuncDefn):
+                handle_side_effect(parent, hugr)
+                # For DataflowBlocks and Cases, recurse to mark their containing CFG
+                # or Conditional as side-effectful as well, but there is nothing to do
+                # locally: we cannot add order edges, but Conditional/CFG semantics
+                # ensure execution if appropriate.
+                if isinstance(hugr[parent].op, ops.Conditional | ops.CFG):
+                    return
+            prev_node = hugr.children(parent)[0]
+            assert isinstance(hugr[prev_node].op, ops.Input)
+
+        # Add edge, but avoid self-loops for containers when recursing up the hierarchy.
+        if prev_node != node:
+            hugr.add_order_link(prev_node, node)
+            prev_node_with_side_effect[parent] = (node, hugr)
 
     # Monkey-patch the `add_node` method
     Hugr.add_node = hugr_add_node_with_order  # type: ignore[method-assign]
     try:
         yield
+        for parent, (last, hugr) in prev_node_with_side_effect.items():
+            # Connect the last side-effecting node to Output
+            outp = hugr.children(parent)[1]
+            assert isinstance(hugr[outp].op, ops.Output)
+            assert last != outp
+            hugr.add_order_link(last, outp)
     finally:
         Hugr.add_node = hugr_add_node  # type: ignore[method-assign]
 
