@@ -44,4 +44,4 @@ jobs:
               --start-point-reset \
               --start-point-max-versions 1 \
               --testbed Linux \
-              --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+              --github-actions '${{ secrets.GITHUB_TOKEN }}'
