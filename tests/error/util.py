@@ -4,6 +4,7 @@ import pathlib
 import re
 import sys
 
+from guppylang_internals.decorator import custom_type
 import pytest
 import sys
 from hugr import tys
@@ -49,7 +50,7 @@ def run_error_test(file, capsys, snapshot):
     snapshot.assert_match(err, file.with_suffix(".err").name)
 
 
-@decorator.guppy.type(
+@custom_type(
     tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable)
 )
 class NonBool:

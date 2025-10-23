@@ -17,4 +17,4 @@ def main(f: Foo[int]) -> None:
     f.foo(1.5)
 
 
-guppy.compile(main)
+main.compile()
