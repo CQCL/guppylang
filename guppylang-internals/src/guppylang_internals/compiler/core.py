@@ -582,6 +582,9 @@ def may_have_side_effect(op: ops.Op) -> bool:
             # precise answer
             return True
         case _:
+            # There is no need to handle TailLoop (in case of non-termination) since
+            # TailLoops are only generated for array comprehensions which must have
+            # statically-guaranteed (finite) size. TODO revisit this for lists.
             return False
 
 
