@@ -42,5 +42,6 @@ jobs:
               --start-point-hash '${{ github.event.pull_request.base.sha }}' \
               --start-point-clone-thresholds \
               --start-point-reset \
+              --start-point-max-versions 1 \
               --testbed Linux \
-              --github-actions '${{ secrets.GITHUB_TOKEN }}'
+              --github-actions '${{ secrets.GITHUB_TOKEN }}' \
