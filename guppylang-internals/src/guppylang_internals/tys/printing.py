@@ -165,10 +165,10 @@ def _wrap(s: str, inside_row: bool) -> str:
 
 def signature_to_str(name: str, sig: FunctionType) -> str:
     """Displays a function signature in Python syntax including the function name."""
-    assert sig.input_names is not None
+    assert all(inp.name is not None for inp in sig.inputs)
     s = f"def {name}("
     s += ", ".join(
-        f"{name}: {inp.ty}{TypePrinter._print_flags(inp.flags)}"
-        for name, inp in zip(sig.input_names, sig.inputs, strict=True)
+        f"{inp.name}: {inp.ty}{TypePrinter._print_flags(inp.flags)}"
+        for inp in sig.inputs
     )
     return s + ") -> " + str(sig.output)
