@@ -5,7 +5,7 @@ on:
     types: [opened, reopened, edited, synchronize]
 
 env:
-  UV_VERSION: "0.7.4"
+  UV_VERSION: "0.9.5"
 
 jobs:
   benchmark_pr_branch:
