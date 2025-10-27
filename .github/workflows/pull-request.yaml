@@ -14,7 +14,7 @@ on:
 env:
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
-  UV_VERSION: "0.7.4"
+  UV_VERSION: "0.9.5"
 
 jobs:
   check:

@@ -20,7 +20,7 @@ on:
 
 env:
   # Pinned version for the uv package manager
-  UV_VERSION: "0.7.4"
+  UV_VERSION: "0.9.5"
 
 jobs:
   build-publish:
