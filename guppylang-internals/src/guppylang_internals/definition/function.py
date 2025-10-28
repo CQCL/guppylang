@@ -177,7 +177,7 @@ class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
         func_def = module.module_root_builder().define_function(
             self.name, hugr_ty.body.input, hugr_ty.body.output, hugr_ty.params
         )
-        add_unitarity_metadata(func_def.parent_node, self.ty.unitary_flags)
+        add_unitarity_metadata(func_def, self.ty.unitary_flags)
         return CompiledFunctionDef(
             self.id,
             self.name,
@@ -307,13 +307,6 @@ def parse_source(source_lines: list[str], line_offset: int) -> tuple[str, ast.AS
     return source, node, line_offset
 
 
-def add_unitarity_metadata(node: Node, flags: UnitaryFlags) -> None:
-    code = 0
-    if flags & UnitaryFlags.Dagger:
-        code |= 1
-    if flags & UnitaryFlags.Control:
-        code |= 2
-    if flags & UnitaryFlags.Power:
-        code |= 4
-
-    node.metadata["unitary"] = code
+def add_unitarity_metadata(func: hf.Function, flags: UnitaryFlags) -> None:
+    """Stores unitarity annotations in the metadate of a Hugr function definition."""
+    func.metadata["unitary"] = flags.value
