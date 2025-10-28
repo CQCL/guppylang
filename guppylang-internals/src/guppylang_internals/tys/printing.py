@@ -165,7 +165,7 @@ def _wrap(s: str, inside_row: bool) -> str:
 
 def signature_to_str(name: str, sig: FunctionType) -> str:
     """Displays a function signature in Python syntax including the function name."""
-    assert all(inp.name is not None for inp in sig.inputs)
+    assert sig.input_names is not None
     s = f"def {name}("
     s += ", ".join(
         f"{inp.name}: {inp.ty}{TypePrinter._print_flags(inp.flags)}"
