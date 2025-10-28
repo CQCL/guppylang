@@ -3,6 +3,31 @@
 First release of `guppylang_internals` package containing refactored out internal components
 from `guppylang`.
 
+## [0.25.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.24.0...guppylang-internals-v0.25.0) (2025-10-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* (guppy-internals) Arrays are now lowered to `borrow_array`s instead of `value_array`s so elements do no longer need to be wrapped in options during lowering.
+* `checker.core.requires_monomorphization` renamed into `require_monomorphization` and now operating on all parameters simultaneously `tys.subst.BoundVarFinder` removed. Instead, use the new `bound_vars` property on types, arguments, and consts. `tys.parsing.parse_parameter` now requires a `param_var_mapping`.
+
+### Features
+
+* compiler for modifiers ([#1287](https://github.com/CQCL/guppylang/issues/1287)) ([439ff1a](https://github.com/CQCL/guppylang/commit/439ff1ae6bd872bb7a6eb5441110d2febebd1e47))
+* modifiers in CFG and its type checker (experimental) ([#1281](https://github.com/CQCL/guppylang/issues/1281)) ([fe85018](https://github.com/CQCL/guppylang/commit/fe8501854507c3c43cec2f26bba75198766a4a17))
+* Turn type parameters into dependent telescopes ([#1154](https://github.com/CQCL/guppylang/issues/1154)) ([b56e056](https://github.com/CQCL/guppylang/commit/b56e056a6b4795c778ed8124a09a194fb1d97dda))
+* update hugr, tket-exts and tket ([#1305](https://github.com/CQCL/guppylang/issues/1305)) ([6990d85](https://github.com/CQCL/guppylang/commit/6990d850170e6901f60ef1d1e718c99349105b56))
+* Use `borrow_array` instead of `value_array` for array lowering ([#1166](https://github.com/CQCL/guppylang/issues/1166)) ([f9ef42b](https://github.com/CQCL/guppylang/commit/f9ef42b2baf61c3e1c2cfcf7bd1f3bcac33a1a25))
+
+
+### Bug Fixes
+
+* compilation of affine-bounded type variables ([#1308](https://github.com/CQCL/guppylang/issues/1308)) ([49ecb49](https://github.com/CQCL/guppylang/commit/49ecb497bf450d0853baec1de9c516a3804a80eb))
+* Detect unsolved generic parameters even if they are unused ([#1279](https://github.com/CQCL/guppylang/issues/1279)) ([f830db0](https://github.com/CQCL/guppylang/commit/f830db00c416cfc1e9fe7ec70c612b6b558aa740)), closes [#1273](https://github.com/CQCL/guppylang/issues/1273)
+* Fix bug in symbolic pytket circuit loading with arrays ([#1302](https://github.com/CQCL/guppylang/issues/1302)) ([e6b90e8](https://github.com/CQCL/guppylang/commit/e6b90e8e4d275d36514a75e87eb097383495a291)), closes [#1298](https://github.com/CQCL/guppylang/issues/1298)
+* Improve track_hugr_side_effects, adding Order edges from/to Input/Output ([#1311](https://github.com/CQCL/guppylang/issues/1311)) ([3c6ce7a](https://github.com/CQCL/guppylang/commit/3c6ce7aaf7a1c93c6412501976fc97afd61a062d))
+* multiline loop arguments  ([#1309](https://github.com/CQCL/guppylang/issues/1309)) ([836ef72](https://github.com/CQCL/guppylang/commit/836ef722d8f8bdb02c56e5f06934246a718e68d3))
+
 ## [0.24.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.23.0...guppylang-internals-v0.24.0) (2025-09-19)
 
 
