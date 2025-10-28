@@ -55,10 +55,10 @@ def check_invalid_under_dagger(
 
 
 class BBUnitaryChecker(ast.NodeVisitor):
-    flags: UnitaryFlags
-
     """AST visitor that checks whether the modifiers (dagger, control, power)
     are applicable."""
+
+    flags: UnitaryFlags
 
     def check(self, bb: CheckedBB[Place], unitary_flags: UnitaryFlags) -> None:
         self.flags = unitary_flags
@@ -131,6 +131,7 @@ def check_cfg_unitary(
     cfg: CheckedCFG[Place],
     unitary_flags: UnitaryFlags,
 ) -> None:
+    """Checks that the given unitary flags are valid for a CFG."""
     bb_checker = BBUnitaryChecker()
     for bb in cfg.bbs:
         bb_checker.check(bb, unitary_flags)
