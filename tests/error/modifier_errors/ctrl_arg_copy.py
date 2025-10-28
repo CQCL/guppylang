@@ -1,5 +1,5 @@
 from guppylang.decorator import guppy
-from guppylang.std.quantum import qubit, owned, UnitaryFlags
+from guppylang.std.quantum import qubit, owned
 
 
 @guppy.declare

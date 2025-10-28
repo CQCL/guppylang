@@ -1,6 +1,5 @@
 from guppylang.decorator import guppy
-from guppylang.std.quantum import qubit, UnitaryFlags
-from guppylang.std.array import array
+from guppylang.std.quantum import qubit
 
 
 @guppy(power=True)

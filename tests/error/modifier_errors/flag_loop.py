@@ -1,6 +1,4 @@
 from guppylang.decorator import guppy
-from guppylang.std.quantum import UnitaryFlags
-from guppylang.std.array import array
 
 
 @guppy(dagger=True)

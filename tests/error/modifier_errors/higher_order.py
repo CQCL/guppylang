@@ -1,4 +1,3 @@
-from guppylang_internals.tys.ty import UnitaryFlags
 from guppylang.decorator import guppy
 from guppylang.std.quantum import qubit, h, discard
 from collections.abc import Callable

@@ -1,5 +1,4 @@
 from guppylang.decorator import guppy
-from guppylang.std.quantum import UnitaryFlags
 
 
 @guppy(dagger=True)
