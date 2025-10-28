@@ -1,12 +1,12 @@
-Error: Copy violation (at $FILE:18:12)
+Error: Copy violation (at $FILE:17:12)
    | 
-16 |     q = qubit()
-17 |     with control(q):
-18 |         use(q)
+15 |     q = qubit()
+16 |     with control(q):
+17 |         use(q)
    |             ^ Variable `q` with non-copyable type `qubit` cannot be
    |               borrowed ...
    | 
-17 |     with control(q):
+16 |     with control(q):
    |                  - since it was already borrowed here
 
 Guppy compilation failed due to 1 previous error

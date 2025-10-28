@@ -3,8 +3,7 @@ from guppylang.std.quantum import qubit, UnitaryFlags
 from guppylang.std.array import array
 
 
-@guppy.with_unitary_flags(UnitaryFlags.Power)
-@guppy
+@guppy(power=True)
 def foo(q: qubit) -> None:
     pass
 

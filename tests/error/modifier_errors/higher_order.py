@@ -5,8 +5,7 @@ from collections.abc import Callable
 
 
 # The flag is required to be used in dagger context
-@guppy.with_unitary_flags(UnitaryFlags.Dagger)
-@guppy
+@guppy(dagger=True)
 def test_ho(f: Callable[[qubit], None], q: qubit) -> None:
     # There is no way to use specify flags for f
     f(q)

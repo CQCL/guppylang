@@ -6,8 +6,7 @@ from guppylang.std.quantum import qubit, owned, UnitaryFlags
 def discard(q: qubit @ owned) -> None: ...
 
 
-@guppy.with_unitary_flags(UnitaryFlags.Control)
-@guppy.declare
+@guppy.declare(control=True)
 def use(q: qubit) -> None: ...
 
 

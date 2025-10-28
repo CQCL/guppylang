@@ -2,8 +2,7 @@ from guppylang.decorator import guppy
 from guppylang.std.quantum import qubit, owned, UnitaryFlags
 
 
-@guppy.with_unitary_flags(UnitaryFlags.Dagger)
-@guppy.declare
+@guppy.declare(dagger=True)
 def discard(q: qubit @ owned) -> None: ...
 
 

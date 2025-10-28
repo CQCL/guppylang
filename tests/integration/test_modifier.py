@@ -101,8 +101,7 @@ def test_nested_modifiers(validate):
 def test_free_linear_variable_in_modifier(validate):
     T = guppy.type_var("T", copyable=False, droppable=False)
 
-    @guppy.with_unitary_flags(UnitaryFlags.Control)
-    @guppy.declare
+    @guppy.declare(control=True)
     def use(a: T) -> None: ...
 
     @guppy.declare

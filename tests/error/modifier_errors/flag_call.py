@@ -6,8 +6,7 @@ from guppylang.std.quantum import qubit, UnitaryFlags
 def foo(x: qubit) -> None: ...
 
 
-@guppy.with_unitary_flags(UnitaryFlags.Dagger)
-@guppy
+@guppy(dagger=True)
 def test(x: qubit) -> None:
     foo(x)
 
