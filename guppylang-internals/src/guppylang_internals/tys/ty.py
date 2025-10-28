@@ -431,6 +431,13 @@ class FunctionType(ParametrizedTypeBase):
             ]
         args += comptime_args
 
+        # Either all inputs must have unique names, or none of them have names
+        names = set(inp.name for inp in inputs if inp.name is not None)
+        if len(names) not in (0, len(inputs)):
+            raise InternalGuppyError(
+                "Tried to construct FunctionType with invalid input names"
+            )
+
         object.__setattr__(self, "args", args)
         object.__setattr__(self, "comptime_args", comptime_args)
         object.__setattr__(self, "inputs", inputs)
@@ -900,6 +907,9 @@ def function_tensor_signature(tys: list[FunctionType]) -> FunctionType:
     outputs: list[Type] = []
     for fun_ty in tys:
         assert not fun_ty.parametrized
-        inputs.extend(fun_ty.inputs)
+        for inp in fun_ty.inputs:
+            # Forget the function names since they might be non-unique across the
+            # tensored functions
+            inputs.append(replace(inp, name=None))
         outputs.extend(type_to_row(fun_ty.output))
     return FunctionType(inputs, row_to_type(outputs))
