@@ -1,24 +1,19 @@
 """Hugr generation for modifiers."""
 
-from hugr import Node, Wire, ops
+from hugr import Wire, ops
 from hugr import tys as ht
 
 from guppylang_internals.ast_util import get_type
 from guppylang_internals.checker.modifier_checker import non_copyable_front_others_back
 from guppylang_internals.compiler.cfg_compiler import compile_cfg
 from guppylang_internals.compiler.core import CompilerContext, DFContainer
-from guppylang_internals.compiler.expr_compiler import (
-    ExprCompiler,
-    array_unwrap_elem,
-    array_wrap_elem,
-)
+from guppylang_internals.compiler.expr_compiler import ExprCompiler
 from guppylang_internals.nodes import CheckedModifiedBlock, PlaceNode
 from guppylang_internals.std._internal.compiler.array import (
-    array_convert_from_std_array,
-    array_convert_to_std_array,
-    array_map,
     array_new,
+    array_to_std_array,
     standard_array_type,
+    std_array_to_array,
     unpack_array,
 )
 from guppylang_internals.std._internal.compiler.tket_exts import MODIFIER_EXTENSION
@@ -127,24 +122,11 @@ def compile_modified_block(
 
     # Prepare control arguments
     ctrl_args: list[Wire] = []
-    unwrap: Node | None = None
     for i, control in enumerate(modified_block.control):
         if is_array_type(get_type(control.ctrl[0])):
             control_array = expr_compiler.compile(control.ctrl[0], dfg)
-            # if `unwrap` function is already loaded, reuse it, otherwise create it
-            if unwrap is None:
-                unwrap = dfg.builder.load_function(
-                    array_unwrap_elem(ctx),
-                    instantiation=ht.FunctionType([ht.Option(ht.Qubit)], [ht.Qubit]),
-                    type_args=[ht.TypeTypeArg(ht.Qubit)],
-                )
             control_array = dfg.builder.add_op(
-                array_map(ht.Option(ht.Qubit), qubit_num_args[i], ht.Qubit),
-                control_array,
-                unwrap,
-            )
-            control_array = dfg.builder.add_op(
-                array_convert_to_std_array(ht.Qubit, qubit_num_args[i]), control_array
+                array_to_std_array(ht.Qubit, qubit_num_args[i]), control_array
             )
             ctrl_args.append(control_array)
         else:
@@ -153,7 +135,7 @@ def compile_modified_block(
                 array_new(ht.Qubit, len(control.ctrl)), *cs
             )
             control_array = dfg.builder.add_op(
-                array_convert_to_std_array(ht.Qubit, qubit_num_args[i]), *control_array
+                array_to_std_array(ht.Qubit, qubit_num_args[i]), *control_array
             )
             ctrl_args.append(control_array)
 
@@ -167,31 +149,18 @@ def compile_modified_block(
     outports = iter(call)
 
     # Unpack controls
-    wrap: Node | None = None
     for i, control in enumerate(modified_block.control):
         outport = next(outports)
         if is_array_type(get_type(control.ctrl[0])):
             control_array = dfg.builder.add_op(
-                array_convert_from_std_array(ht.Qubit, qubit_num_args[i]), outport
+                std_array_to_array(ht.Qubit, qubit_num_args[i]), outport
             )
-            if wrap is None:
-                wrap = dfg.builder.load_function(
-                    array_wrap_elem(ctx),
-                    instantiation=ht.FunctionType([ht.Qubit], [ht.Option(ht.Qubit)]),
-                    type_args=[ht.TypeTypeArg(ht.Qubit)],
-                )
-            control_array = dfg.builder.add_op(
-                array_map(ht.Qubit, qubit_num_args[i], ht.Option(ht.Qubit)),
-                control_array,
-                wrap,
-            )
-
             c = control.ctrl[0]
             assert isinstance(c, PlaceNode)
             dfg[c.place] = control_array
         else:
             control_array = dfg.builder.add_op(
-                array_convert_from_std_array(ht.Qubit, qubit_num_args[i]), outport
+                std_array_to_array(ht.Qubit, qubit_num_args[i]), outport
             )
             unpacked = unpack_array(dfg.builder, control_array)
             for c, new_c in zip(control.ctrl, unpacked, strict=False):
