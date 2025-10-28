@@ -194,14 +194,8 @@ def check_nested_func_def(
 
     # Construct inputs for checking the body CFG
     inputs = [v for v, _ in captured.values()] + [
-        Variable(
-            cast(str, inp.name),
-            inp.ty,
-            func_def.args.args[i],
-            inp.flags,
-            is_func_input=True,
-        )
-        for i, inp in enumerate(func_ty.inputs)
+        Variable(cast(str, inp.name), inp.ty, arg, inp.flags, is_func_input=True)
+        for arg, inp in zip(func_def.args.args, func_ty.inputs, strict=True)
         # Comptime inputs are turned into generic args, so are not included here
         if InputFlags.Comptime not in inp.flags
     ]
