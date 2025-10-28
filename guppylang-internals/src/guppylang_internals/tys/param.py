@@ -154,7 +154,9 @@ class TypeParam(ParameterBase):
     def to_hugr(self, ctx: ToHugrContext) -> ht.TypeParam:
         """Computes the Hugr representation of the parameter."""
         return ht.TypeTypeParam(
-            bound=ht.TypeBound.Linear if self.can_be_linear else ht.TypeBound.Copyable
+            bound=ht.TypeBound.Copyable
+            if self.must_be_copyable
+            else ht.TypeBound.Linear
         )
 
     def __str__(self) -> str:

@@ -1,5 +1,6 @@
 from guppylang.decorator import guppy
 from guppylang.std.array import array
+from guppylang_internals.decorator import custom_type
 from guppylang_internals.std._internal.compiler.tket_exts import GUPPY_EXTENSION
 from guppylang.std.lang import owned
 
@@ -8,7 +9,7 @@ from hugr.package import Package
 from hugr.std.collections.array import Array
 
 
-@guppy.type(Array(tys.Unit, 1), copyable=False, droppable=True)
+@custom_type(Array(tys.Unit, 1), copyable=False, droppable=True)
 class AffineTy:
     """A dummy affine type that lowers to a linear Hugr array.
 
