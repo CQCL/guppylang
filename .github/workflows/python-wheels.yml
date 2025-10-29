@@ -68,8 +68,8 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-      - name: Install Python 3.14
-        run: uv python install 3.14
+      - name: Install Python 3.13
+        run: uv python install 3.13
         if: ${{ steps.check-tag.outputs.run == 'true' }}
 
       - name: Build sdist and wheels
