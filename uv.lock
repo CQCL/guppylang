@@ -978,7 +978,7 @@ provides-extras = ["pytket"]
 
 [[package]]
 name = "guppylang-internals"
-version = "0.24.0"
+version = "0.25.0"
 source = { editable = "guppylang-internals" }
 dependencies = [
     { name = "hugr" },
