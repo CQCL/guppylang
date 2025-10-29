@@ -17,15 +17,11 @@ As of August 2025, The Guppy language is undergoing rapid development and is cur
 ## [0.21.6](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.5...guppylang-v0.21.6) (2025-10-29)
 
 
-### ⚠ BREAKING CHANGES
-
-* (guppy-internals) Arrays are now lowered to `borrow_array`s instead of `value_array`s so elements do no longer need to be wrapped in options during lowering.
-
 ### Features
 
 * implement str() for PartialVector  ([d85efc9](https://github.com/CQCL/guppylang/commit/d85efc971c81f60eb6e7f2881623803ff45b43d1)), closes [#1225](https://github.com/CQCL/guppylang/issues/1225)
 * **qsystem:** add `RNG.random_advance()` ([#1295](https://github.com/CQCL/guppylang/issues/1295)) ([f6271a2](https://github.com/CQCL/guppylang/commit/f6271a29768241e6e285f05c3eb3ccd2db9d12ac))
-* Use `borrow_array` instead of `value_array` for array lowering ([#1166](https://github.com/CQCL/guppylang/issues/1166)) ([f9ef42b](https://github.com/CQCL/guppylang/commit/f9ef42b2baf61c3e1c2cfcf7bd1f3bcac33a1a25))
+* Use `borrow_array` instead of `value_array` for array HUGR codegen ([#1166](https://github.com/CQCL/guppylang/issues/1166)) ([f9ef42b](https://github.com/CQCL/guppylang/commit/f9ef42b2baf61c3e1c2cfcf7bd1f3bcac33a1a25))
 
 ## [0.21.5](https://github.com/CQCL/guppylang/compare/guppylang-v0.21.4...guppylang-v0.21.5) (2025-09-22)
 
