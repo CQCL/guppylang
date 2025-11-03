@@ -347,6 +347,16 @@ def test_copy_struct(run_int_fn):
     run_int_fn(main, expected=1)
 
 
+def test_copy_inside(run_int_fn):
+    @guppy
+    def main() -> int:
+        xs = array(array(1), array(1))
+        ys = xs[0].copy()
+        return ys[0]
+
+    run_int_fn(main, expected=1)
+
+
 def test_copy_const(run_int_fn):
     @guppy
     def main() -> int:

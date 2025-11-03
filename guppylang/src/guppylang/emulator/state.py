@@ -143,3 +143,10 @@ class PartialVector(PartialState[StateVector]):
         obj = cls.__new__(cls)
         obj._inner = inner
         return obj
+
+    def __str__(self) -> str:
+        #  don't print base state as it may be large
+        return (
+            f"PartialVector(total_qubits={self.total_qubits}, "
+            f"specified_qubits={self.specified_qubits})"
+        )

@@ -46,7 +46,6 @@ from guppylang_internals.std._internal.compiler.array import (
     array_new,
     array_unpack,
 )
-from guppylang_internals.std._internal.compiler.prelude import build_unwrap
 from guppylang_internals.std._internal.compiler.tket_bool import OpaqueBool, make_opaque
 from guppylang_internals.tys.builtin import array_type, bool_type, float_type
 from guppylang_internals.tys.subst import Inst, Subst
@@ -195,17 +194,9 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                     # them into separate wires.
                     for i, q_reg in enumerate(self.input_circuit.q_registers):
                         reg_wire = outer_func.inputs()[i]
-                        opt_elem_wires = outer_func.add_op(
-                            array_unpack(ht.Option(ht.Qubit), q_reg.size), reg_wire
+                        elem_wires = outer_func.add_op(
+                            array_unpack(ht.Qubit, q_reg.size), reg_wire
                         )
-                        elem_wires = [
-                            build_unwrap(
-                                outer_func,
-                                opt_elem,
-                                "Internal error: unwrapping of array element failed",
-                            )
-                            for opt_elem in opt_elem_wires
-                        ]
                         input_list.extend(elem_wires)
 
                 else:
@@ -231,26 +222,17 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 if has_params:
                     lex_params: list[Wire] = list(outer_func.inputs()[offset:])
                     if self.use_arrays:
-                        opt_param_wires = outer_func.add_op(
+                        unpack_result = outer_func.add_op(
                             array_unpack(
-                                ht.Option(ht.Tuple(float_type().to_hugr(ctx))),
-                                num_params,
+                                ht.Tuple(float_type().to_hugr(ctx)), num_params
                             ),
                             lex_params[0],
                         )
-                        lex_params = [
-                            build_unwrap(
-                                outer_func,
-                                opt_param,
-                                "Internal error: unwrapping of array element failed",
-                            )
-                            for opt_param in opt_param_wires
-                        ]
+                        lex_params = list(unpack_result)
                     param_order = cast(
                         list[str], hugr_func.metadata["TKET1.input_parameters"]
                     )
                     lex_names = sorted(param_order)
-                    assert len(lex_names) == len(lex_params)
                     name_to_param = dict(zip(lex_names, lex_params, strict=True))
                     angle_wires = [name_to_param[name] for name in param_order]
                     # Need to convert all angles to floats.
@@ -281,34 +263,23 @@ class ParsedPytketDef(CallableDef, CompilableDef):
                 ]
 
                 if self.use_arrays:
-
-                    def pack(elems: list[Wire], elem_ty: ht.Type, length: int) -> Wire:
-                        elem_opts = [
-                            outer_func.add_op(ops.Some(elem_ty), elem) for elem in elems
-                        ]
-                        return outer_func.add_op(
-                            array_new(ht.Option(elem_ty), length), *elem_opts
-                        )
-
                     array_wires: list[Wire] = []
                     wire_idx = 0
                     # First pack bool results into an array.
                     for c_reg in self.input_circuit.c_registers:
                         array_wires.append(
-                            pack(
-                                wires[wire_idx : wire_idx + c_reg.size],
-                                OpaqueBool,
-                                c_reg.size,
+                            outer_func.add_op(
+                                array_new(OpaqueBool, c_reg.size),
+                                *wires[wire_idx : wire_idx + c_reg.size],
                             )
                         )
                         wire_idx = wire_idx + c_reg.size
                     # Then the borrowed qubits also need to be put back into arrays.
                     for q_reg in self.input_circuit.q_registers:
                         array_wires.append(
-                            pack(
-                                wires[wire_idx : wire_idx + q_reg.size],
-                                ht.Qubit,
-                                q_reg.size,
+                            outer_func.add_op(
+                                array_new(ht.Qubit, q_reg.size),
+                                *wires[wire_idx : wire_idx + q_reg.size],
                             )
                         )
                         wire_idx = wire_idx + q_reg.size

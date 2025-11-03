@@ -9,4 +9,4 @@ def build():
     return foo
 
 
-guppy.compile(build())
+build().compile()  # type: ignore
