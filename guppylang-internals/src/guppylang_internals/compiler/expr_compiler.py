@@ -63,6 +63,7 @@ from guppylang_internals.nodes import (
 from guppylang_internals.std._internal.compiler.arithmetic import (
     UnsignedIntVal,
     convert_ifromusize,
+    convert_itousize,
 )
 from guppylang_internals.std._internal.compiler.array import (
     array_convert_from_std_array,
@@ -77,9 +78,9 @@ from guppylang_internals.std._internal.compiler.list import (
     list_new,
 )
 from guppylang_internals.std._internal.compiler.prelude import (
-    build_error,
     build_panic,
     build_unwrap,
+    make_error,
     panic,
 )
 from guppylang_internals.std._internal.compiler.tket_bool import (
@@ -592,7 +593,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._pack_returns([], NoneType())
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
-        err = build_error(self.builder, node.signal, node.msg)
+        signal = self.visit(node.signal)
+        signal_usize = self.builder.add_op(convert_itousize(), signal)
+        msg = self.visit(node.msg)
+        err = self.builder.add_op(make_error(), signal_usize, msg)
         in_tys = [get_type(e).to_hugr(self.ctx) for e in node.values]
         out_tys = [ty.to_hugr(self.ctx) for ty in type_to_row(get_type(node))]
         args = [self.visit(e) for e in node.values]

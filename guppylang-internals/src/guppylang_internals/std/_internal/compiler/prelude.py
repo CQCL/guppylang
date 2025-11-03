@@ -73,6 +73,14 @@ def panic(
     return ops.ExtOp(op_def, sig, args)
 
 
+def make_error() -> ops.ExtOp:
+    """Returns an operation that makes an error."""
+    op_def = hugr.std.PRELUDE.get_op("MakeError")
+    args: list[ht.TypeArg] = []
+    sig = ht.FunctionType([ht.USize(), hugr.std.prelude.STRING_T], [error_type()])
+    return ops.ExtOp(op_def, sig, args)
+
+
 # ------------------------------------------------------
 # --------- Custom compilers for non-native ops --------
 # ------------------------------------------------------
@@ -90,7 +98,7 @@ def build_panic(
     return builder.add_op(op, err, *args)
 
 
-def build_error(builder: DfBase[P], signal: int, msg: str) -> Wire:
+def build_static_error(builder: DfBase[P], signal: int, msg: str) -> Wire:
     """Constructs and loads a static error value."""
     val = ErrorVal(signal, msg)
     return builder.load(builder.add_const(val))
@@ -111,7 +119,7 @@ def build_unwrap_right(
     assert isinstance(result_ty, ht.Sum)
     [left_tys, right_tys] = result_ty.variant_rows
     with conditional.add_case(0) as case:
-        error = build_error(case, error_signal, error_msg)
+        error = build_static_error(case, error_signal, error_msg)
         case.set_outputs(*build_panic(case, left_tys, right_tys, error, *case.inputs()))
     with conditional.add_case(1) as case:
         case.set_outputs(*case.inputs())
@@ -134,7 +142,7 @@ def build_unwrap_left(
     with conditional.add_case(0) as case:
         case.set_outputs(*case.inputs())
     with conditional.add_case(1) as case:
-        error = build_error(case, error_signal, error_msg)
+        error = build_static_error(case, error_signal, error_msg)
         case.set_outputs(*build_panic(case, right_tys, left_tys, error, *case.inputs()))
     return conditional.to_node()
 
