@@ -13,7 +13,7 @@
   enterShell = ''
     which bencher
     [[ $? != 0 ]] && curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
-    '';
+  '';
 
   languages.python = {
     enable = true;
@@ -22,6 +22,7 @@
       sync.enable = true;
     };
     venv.enable = true;
+    version = "3.14";
   };
 
   languages.rust = {

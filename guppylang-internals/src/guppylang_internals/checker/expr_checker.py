@@ -465,8 +465,15 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         # A `value.attr` attribute access. Unfortunately, the `attr` is just a string,
         # not an AST node, so we have to compute its span by hand. This is fine since
         # linebreaks are not allowed in the identifier following the `.`
+        # The only exception are attributes accesses that are generated during
+        # desugaring (for example for iterators in `for` loops). Since those just
+        # inherit the span of the sugared code, we could have line breaks there.
+        # See https://github.com/CQCL/guppylang/issues/1301
         span = to_span(node)
-        attr_span = Span(span.end.shift_left(len(node.attr)), span.end)
+        if span.start.line == span.end.line:
+            attr_span = Span(span.end.shift_left(len(node.attr)), span.end)
+        else:
+            attr_span = span
         if module := self._is_python_module(node.value):
             if node.attr in module.__dict__:
                 val = module.__dict__[node.attr]

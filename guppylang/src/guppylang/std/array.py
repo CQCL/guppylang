@@ -16,8 +16,8 @@ from guppylang_internals.decorator import custom_function, extend_type
 from guppylang_internals.definition.custom import CopyInoutCompiler
 from guppylang_internals.std._internal.checker import ArrayCopyChecker, NewArrayChecker
 from guppylang_internals.std._internal.compiler.array import (
+    ArrayDiscardAllUsedCompiler,
     ArrayGetitemCompiler,
-    ArrayIterAsertAllUsedCompiler,
     ArraySetitemCompiler,
     NewArrayCompiler,
 )
@@ -103,11 +103,12 @@ class ArrayIter(Generic[L, n]):
         if self.i < int(n):
             elem = _array_unsafe_getitem(self.xs, self.i)
             return some((elem, ArrayIter(self.xs, self.i + 1)))
-        self._assert_all_used()
+        _array_discard_all_used(self.xs)
         return nothing()
 
-    @custom_function(ArrayIterAsertAllUsedCompiler())
-    def _assert_all_used(self: ArrayIter[L, n] @ owned) -> None: ...
+
+@custom_function(ArrayDiscardAllUsedCompiler())
+def _array_discard_all_used(xs: array[L, n] @ owned) -> None: ...
 
 
 @custom_function(ArrayGetitemCompiler())

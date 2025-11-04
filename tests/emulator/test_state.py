@@ -54,6 +54,7 @@ def test_partial_vector_properties():
     state = np.array([1, 0, 0, 0, 0, 0, 0, 0], dtype=np.complex128)
     pv = PartialVector(state, total_qubits=3, specified_qubits=[0, 1, 2])
 
+    assert str(pv) == "PartialVector(total_qubits=3, specified_qubits=[0, 1, 2])"
     assert pv.total_qubits == 3
     assert pv.specified_qubits == [0, 1, 2]
 
