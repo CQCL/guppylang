@@ -2,15 +2,17 @@ from guppylang.decorator import guppy
 from guppylang.std.quantum import qubit
 
 
-@guppy.declare(dagger=True)
-def use(q: qubit) -> None: ...
+@guppy(power=True)
+def foo(q: qubit) -> None:
+    pass
 
 
 @guppy
 def test() -> None:
-    a = qubit()
+    q = qubit()
     with dagger:
-        use(a)
+        with power(2):
+            foo(q)
 
 
 test.compile()
