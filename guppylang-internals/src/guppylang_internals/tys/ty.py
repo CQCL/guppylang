@@ -587,7 +587,6 @@ class FunctionType(ParametrizedTypeBase):
         return FunctionType(
             self.inputs,
             self.output,
-            self.input_names,
             self.params,
             self.comptime_args,
             flags,
