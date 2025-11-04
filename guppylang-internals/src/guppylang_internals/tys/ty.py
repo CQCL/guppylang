@@ -909,6 +909,6 @@ def function_tensor_signature(tys: list[FunctionType]) -> FunctionType:
         assert not fun_ty.parametrized
         # Forget the function input names since they might be non-unique across the
         # tensored functions
-        inputs.extend([replace(inp, name=None) for inp in inputs])
+        inputs.extend([replace(inp, name=None) for inp in fun_ty.inputs])
         outputs.extend(type_to_row(fun_ty.output))
     return FunctionType(inputs, row_to_type(outputs))
