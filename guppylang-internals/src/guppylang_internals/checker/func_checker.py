@@ -292,7 +292,6 @@ def check_signature(
         assert isinstance(self_defn, TypeDef)
 
     inputs = []
-    input_names = []
     ctx = TypeParsingCtx(globals, param_var_mapping, allow_free_vars=True)
     for i, inp in enumerate(func_def.args.args):
         # Special handling for `self` arguments. Note that `__new__` is excluded here
@@ -306,7 +305,6 @@ def check_signature(
                 raise GuppyError(MissingArgAnnotationError(inp))
             input = parse_function_arg_annotation(ty_ast, inp.arg, ctx)
         inputs.append(input)
-        input_names.append(inp.arg)
     output = type_from_ast(func_def.returns, ctx)
     return FunctionType(
         inputs,
