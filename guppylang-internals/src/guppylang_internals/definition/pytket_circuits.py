@@ -370,6 +370,7 @@ def _signature_from_circuit(
     use_arrays: bool = False,
 ) -> FunctionType:
     """Helper function for inferring a function signature from a pytket circuit."""
+    # May want to set proper unitary flags in the future.
     try:
         import pytket
 

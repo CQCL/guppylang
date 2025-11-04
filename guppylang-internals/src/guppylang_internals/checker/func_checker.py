@@ -16,6 +16,7 @@ from guppylang_internals.cfg.builder import CFGBuilder
 from guppylang_internals.checker.cfg_checker import CheckedCFG, check_cfg
 from guppylang_internals.checker.core import Context, Globals, Place, Variable
 from guppylang_internals.checker.errors.generic import UnsupportedError
+from guppylang_internals.checker.unitary_checker import check_invalid_under_dagger
 from guppylang_internals.definition.common import DefId
 from guppylang_internals.definition.ty import TypeDef
 from guppylang_internals.diagnostic import Error, Help, Note
@@ -37,6 +38,7 @@ from guppylang_internals.tys.ty import (
     InputFlags,
     NoneType,
     Type,
+    UnitaryFlags,
     unify,
 )
 
@@ -136,7 +138,8 @@ def check_global_func_def(
     returns_none = isinstance(ty.output, NoneType)
     assert all(inp.name is not None for inp in ty.inputs)
 
-    cfg = CFGBuilder().build(func_def.body, returns_none, globals)
+    check_invalid_under_dagger(func_def, ty.unitary_flags)
+    cfg = CFGBuilder().build(func_def.body, returns_none, globals, ty.unitary_flags)
     inputs = [
         Variable(cast(str, inp.name), inp.ty, loc, inp.flags, is_func_input=True)
         for inp, loc in zip(ty.inputs, args, strict=True)
@@ -150,7 +153,9 @@ def check_global_func_def(
 
 
 def check_nested_func_def(
-    func_def: NestedFunctionDef, bb: BB, ctx: Context
+    func_def: NestedFunctionDef,
+    bb: BB,
+    ctx: Context,
 ) -> CheckedNestedFunctionDef:
     """Type checks a local (nested) function definition."""
     func_ty = check_signature(func_def, ctx.globals)
@@ -236,7 +241,10 @@ def check_nested_func_def(
 
 
 def check_signature(
-    func_def: ast.FunctionDef, globals: Globals, def_id: DefId | None = None
+    func_def: ast.FunctionDef,
+    globals: Globals,
+    def_id: DefId | None = None,
+    unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags,
 ) -> FunctionType:
     """Checks the signature of a function definition and returns the corresponding
     Guppy type.
@@ -304,6 +312,7 @@ def check_signature(
         inputs,
         output,
         sorted(param_var_mapping.values(), key=lambda v: v.idx),
+        unitary_flags=unitary_flags,
     )
 
 

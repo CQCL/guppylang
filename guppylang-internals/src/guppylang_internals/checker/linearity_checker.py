@@ -880,6 +880,7 @@ def check_cfg_linearity(
     result_cfg.maybe_ass_before = {
         checked[bb]: cfg.maybe_ass_before[bb] for bb in cfg.bbs
     }
+    result_cfg.unitary_flags = cfg.unitary_flags
     for bb in cfg.bbs:
         checked[bb].predecessors = [checked[pred] for pred in bb.predecessors]
         checked[bb].successors = [checked[succ] for succ in bb.successors]

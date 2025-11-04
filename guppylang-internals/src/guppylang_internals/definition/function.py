@@ -43,7 +43,7 @@ from guppylang_internals.error import GuppyError
 from guppylang_internals.nodes import GlobalCall
 from guppylang_internals.span import SourceMap
 from guppylang_internals.tys.subst import Inst, Subst
-from guppylang_internals.tys.ty import FunctionType, Type, type_to_row
+from guppylang_internals.tys.ty import FunctionType, Type, UnitaryFlags, type_to_row
 
 if TYPE_CHECKING:
     from guppylang_internals.tys.param import Parameter
@@ -70,10 +70,14 @@ class RawFunctionDef(ParsableDef):
 
     description: str = field(default="function", init=False)
 
+    unitary_flags: UnitaryFlags = field(default=UnitaryFlags.NoFlags, kw_only=True)
+
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func, sources)
-        ty = check_signature(func_ast, globals, self.id)
+        ty = check_signature(
+            func_ast, globals, self.id, unitary_flags=self.unitary_flags
+        )
         return ParsedFunctionDef(self.id, self.name, func_ast, ty, docstring)
 
 
@@ -173,6 +177,7 @@ class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
         func_def = module.module_root_builder().define_function(
             self.name, hugr_ty.body.input, hugr_ty.body.output, hugr_ty.params
         )
+        add_unitarity_metadata(func_def, self.ty.unitary_flags)
         return CompiledFunctionDef(
             self.id,
             self.name,
@@ -300,3 +305,8 @@ def parse_source(source_lines: list[str], line_offset: int) -> tuple[str, ast.AS
     else:
         node = ast.parse(source).body[0]
     return source, node, line_offset
+
+
+def add_unitarity_metadata(func: hf.Function, flags: UnitaryFlags) -> None:
+    """Stores unitarity annotations in the metadate of a Hugr function definition."""
+    func.metadata["unitary"] = flags.value
