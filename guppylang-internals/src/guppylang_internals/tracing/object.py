@@ -539,6 +539,16 @@ class TracingDefMixin(DunderMixin):
 
     def to_guppy_object(self) -> GuppyObject:
         state = get_tracing_state()
+        defn = ENGINE.get_checked(self.id)
+        # TODO: For generic functions, we need to know an instantiation for their type
+        #  parameters. Maybe we should pass them to `to_guppy_object`? Either way, this
+        #  will require some more plumbing of type inference information through the
+        #  comptime logic. For now, let's just bail on generic functions.
+        #  See https://github.com/CQCL/guppylang/issues/1336
+        if isinstance(defn, CallableDef) and defn.ty.parametrized:
+            raise GuppyComptimeError(
+                f"Using generic functions as higher-order values is not supported"
+            )
         defn, [] = state.ctx.build_compiled_def(self.id, type_args=[])
         if isinstance(defn, CompiledValueDef):
             wire = defn.load(state.dfg, state.ctx, state.node)
