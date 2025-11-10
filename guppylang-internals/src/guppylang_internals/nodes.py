@@ -281,8 +281,8 @@ class PanicExpr(ast.expr):
     """A `panic(msg, *args)` or `exit(msg, *args)` expression ."""
 
     kind: ExitKind
-    signal: int
-    msg: str
+    signal: ast.expr
+    msg: ast.expr
     values: list[ast.expr]
 
     _fields = ("kind", "signal", "msg", "values")

@@ -63,3 +63,12 @@ def test_comptime_exit(validate):
         exit("foo", 1)
 
     validate(main.compile_function())
+
+
+def test_dynamic(validate):
+    @compile_guppy
+    def main(b: bool, s: str, i: int) -> None:
+        panic("foo" if b else "bar", b)
+        exit(s, i + 1)
+
+    validate(main)
