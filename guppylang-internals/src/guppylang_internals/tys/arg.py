@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypeAlias
 
 from hugr import tys as ht
@@ -18,7 +18,7 @@ from guppylang_internals.tys.const import (
     ConstValue,
     ExistentialConstVar,
 )
-from guppylang_internals.tys.var import ExistentialVar
+from guppylang_internals.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
     from guppylang_internals.tys.ty import Type
@@ -45,18 +45,28 @@ class ArgumentBase(ToHugr[ht.TypeArg], Transformable["Argument"], ABC):
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this argument."""
 
+    @property
+    @abstractmethod
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this argument."""
+
 
 @dataclass(frozen=True)
 class TypeArg(ArgumentBase):
     """Argument that can be instantiated for a `TypeParameter`."""
 
     # The type to instantiate
-    ty: "Type"
+    ty: "Type" = field(hash=False)  # Types are not hashable
 
     @property
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this argument."""
         return self.ty.unsolved_vars
+
+    @property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this type."""
+        return self.ty.bound_vars
 
     def to_hugr(self, ctx: ToHugrContext) -> ht.TypeTypeArg:
         """Computes the Hugr representation of the argument."""
@@ -83,6 +93,11 @@ class ConstArg(ArgumentBase):
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential const variables contained in this argument."""
         return self.const.unsolved_vars
+
+    @property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this argument."""
+        return self.const.bound_vars
 
     def to_hugr(self, ctx: ToHugrContext) -> ht.TypeArg:
         """Computes the Hugr representation of this argument."""

@@ -1,6 +1,5 @@
 import itertools
 from abc import ABC
-from collections import defaultdict
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -16,6 +15,7 @@ from hugr.hugr.base import OpVarCov
 from hugr.hugr.node_port import ToNode
 from hugr.std import PRELUDE
 from hugr.std.collections.array import EXTENSION as ARRAY_EXTENSION
+from hugr.std.collections.borrow_array import EXTENSION as BORROW_ARRAY_EXTENSION
 from typing_extensions import assert_never
 
 from guppylang_internals.checker.core import (
@@ -43,8 +43,8 @@ from guppylang_internals.tys.arg import ConstArg, TypeArg
 from guppylang_internals.tys.builtin import nat_type
 from guppylang_internals.tys.common import ToHugrContext
 from guppylang_internals.tys.const import BoundConstVar, ConstValue
-from guppylang_internals.tys.param import ConstParam, Parameter, TypeParam
-from guppylang_internals.tys.subst import Inst
+from guppylang_internals.tys.param import ConstParam, Parameter
+from guppylang_internals.tys.subst import Inst, Instantiator
 from guppylang_internals.tys.ty import (
     BoundTypeVar,
     NumericType,
@@ -221,10 +221,10 @@ class CompilerContext(ToHugrContext):
         match ENGINE.get_checked(defn.id):
             case MonomorphizableDef(params=params) as defn:
                 # Entry point is not allowed to require monomorphization
-                for param in params:
-                    if requires_monomorphization(param):
-                        err = EntryMonomorphizeError(defn.defined_at, defn.name, param)
-                        raise GuppyError(err)
+                if mono_params := require_monomorphization(params):
+                    mono_param = mono_params.pop()
+                    err = EntryMonomorphizeError(defn.defined_at, defn.name, mono_param)
+                    raise GuppyError(err)
                 # Thus, the partial monomorphization for the entry point is always empty
                 entry_mono_args = tuple(None for _ in params)
                 entry_compiled = defn.monomorphize(self.module, entry_mono_args, self)
@@ -247,7 +247,7 @@ class CompilerContext(ToHugrContext):
 
         # Insert explicit drops for affine types
         # TODO: This is a quick workaround until we can properly insert these drops
-        #   during linearity checking. See https://github.com/CQCL/guppylang/issues/1082
+        # during linearity checking. See https://github.com/CQCL/guppylang/issues/1082
         insert_drops(self.module.hugr)
 
         return entry_compiled
@@ -467,19 +467,27 @@ def is_return_var(x: str) -> bool:
     return x.startswith("%ret")
 
 
-def requires_monomorphization(param: Parameter) -> bool:
-    """Checks if a type parameter must be monomorphized before compiling to Hugr.
+def require_monomorphization(params: Sequence[Parameter]) -> set[Parameter]:
+    """Returns the subset of type parameters that must be monomorphized before compiling
+    to Hugr.
 
     This is required for some Guppy language features that cannot be encoded in Hugr
-    yet. Currently, this only applies to non-nat const parameters.
+    yet. Currently, this applies to:
+    * non-nat const parameters
+    * parameters that occur in the type of const parameters
     """
-    match param:
-        case TypeParam():
-            return False
-        case ConstParam(ty=ty):
-            return ty != NumericType(NumericType.Kind.Nat)
-        case x:
-            return assert_never(x)
+    mono_params: set[Parameter] = set()
+    for param in params:
+        match param:
+            case ConstParam(ty=ty) if ty != NumericType(NumericType.Kind.Nat):
+                mono_params.add(param)
+                # If the constant type refers to any bound variables, then those will
+                # need to be monomorphized as well
+                for var in ty.bound_vars:
+                    mono_params.add(params[var.idx])
+            case _:
+                pass
+    return mono_params
 
 
 def partially_monomorphize_args(
@@ -493,27 +501,36 @@ def partially_monomorphize_args(
 
     Also takes care of normalising bound variables w.r.t. the current monomorphization.
     """
-    mono_args: list[Argument | None] = []
-    rem_args = []
+    # Normalise args w.r.t. the current outer monomorphisation
+    if ctx.current_mono_args is not None:
+        instantiator = Instantiator(ctx.current_mono_args, allow_partial=True)
+        args = [arg.transform(instantiator) for arg in args]
+
+    # Filter args depending on whether they need monomorphization or not. For this, we
+    # can't purely rely on the `require_monomorphization` function above since the
+    # instantiation also needs to be taken into account. For example, consider
+    # a function `def foo[T, x: T](...)`. Normally, both parameters would need to be
+    # monomorphized. However, if we instantiate `T := nat`, suddenly `x` no longer needs
+    # be monomorphized since we can use bounded nats in Hugr. Thus, we have to replicate
+    # the behaviour of `require_monomorphization` while taking `args` into account.
+    mono_args: list[Argument | None] = [None] * len(args)
     for param, arg in zip(params, args, strict=True):
-        if requires_monomorphization(param):
-            # The constant could still refer to a bound variable, so we need to
-            # instantiate it w.r.t. to the current monomorphization
-            match arg:
-                case ConstArg(const=BoundConstVar(idx=idx)):
-                    assert ctx.current_mono_args is not None
-                    inst = ctx.current_mono_args[idx]
-                    assert inst is not None
-                    mono_args.append(inst)
-                case TypeArg():
-                    # TODO: Once we also have type args that require monomorphization,
-                    #  we'll need to downshift de Bruijn indices here as well
-                    raise NotImplementedError
-                case arg:
-                    mono_args.append(arg)
-        else:
-            mono_args.append(None)
-            rem_args.append(arg)
+        match param, param.instantiate_bounds(args):
+            case ConstParam(ty=original_ty), ConstParam(ty=inst_ty):
+                # If the original const type is not `nat`, then all variables occurring
+                # in the type need to be monomorphised
+                if original_ty != nat_type():
+                    for var in original_ty.bound_vars:
+                        mono_args[var.idx] = args[var.idx]
+                # If the const type is still not `nat` after normalisation, then the
+                # const arg itself also needs to be monomorphized
+                if inst_ty != nat_type():
+                    mono_args[param.idx] = arg
+
+    # Mono-arguments should not refer to any bound variables
+    assert all(mono_arg is None or not mono_arg.bound_vars for mono_arg in mono_args)
+
+    rem_args = [arg for i, arg in enumerate(args) if mono_args[i] is None]
     return tuple(mono_args), rem_args
 
 
@@ -565,6 +582,9 @@ def may_have_side_effect(op: ops.Op) -> bool:
             # precise answer
             return True
         case _:
+            # There is no need to handle TailLoop (in case of non-termination) since
+            # TailLoops are only generated for array comprehensions which must have
+            # statically-guaranteed (finite) size. TODO revisit this for lists.
             return False
 
 
@@ -578,9 +598,7 @@ def track_hugr_side_effects() -> Iterator[None]:
     # Remember original `Hugr.add_node` method that is monkey-patched below.
     hugr_add_node = Hugr.add_node
     # Last node with potential side effects for each dataflow parent
-    prev_node_with_side_effect: defaultdict[Node, Node | None] = defaultdict(
-        lambda: None
-    )
+    prev_node_with_side_effect: dict[Node, tuple[Node, Hugr[Any]]] = {}
 
     def hugr_add_node_with_order(
         self: Hugr[OpVarCov],
@@ -601,22 +619,40 @@ def track_hugr_side_effects() -> Iterator[None]:
         """Performs the actual order-edge insertion, assuming that `node` has a side-
         effect."""
         parent = hugr[node].parent
-        if parent is not None:
-            if prev := prev_node_with_side_effect[parent]:
-                hugr.add_order_link(prev, node)
-            else:
-                # If this is the first side-effectful op in this DFG, make a recursive
-                # call with the parent since the parent is also considered side-
-                # effectful now. We shouldn't walk up through function definitions
-                # or basic blocks though
-                if not isinstance(hugr[parent].op, ops.FuncDefn | ops.DataflowBlock):
-                    handle_side_effect(parent, hugr)
-            prev_node_with_side_effect[parent] = node
+        assert parent is not None
+
+        if prev := prev_node_with_side_effect.get(parent):
+            prev_node = prev[0]
+        else:
+            # This is the first side-effectful op in this DFG. Recurse on the parent
+            # since the parent is also considered side-effectful now. We shouldn't walk
+            # up through function definitions (only the Module is above)
+            if not isinstance(hugr[parent].op, ops.FuncDefn):
+                handle_side_effect(parent, hugr)
+                # For DataflowBlocks and Cases, recurse to mark their containing CFG
+                # or Conditional as side-effectful as well, but there is nothing to do
+                # locally: we cannot add order edges, but Conditional/CFG semantics
+                # ensure execution if appropriate.
+                if isinstance(hugr[parent].op, ops.Conditional | ops.CFG):
+                    return
+            prev_node = hugr.children(parent)[0]
+            assert isinstance(hugr[prev_node].op, ops.Input)
+
+        # Add edge, but avoid self-loops for containers when recursing up the hierarchy.
+        if prev_node != node:
+            hugr.add_order_link(prev_node, node)
+            prev_node_with_side_effect[parent] = (node, hugr)
 
     # Monkey-patch the `add_node` method
     Hugr.add_node = hugr_add_node_with_order  # type: ignore[method-assign]
     try:
         yield
+        for parent, (last, hugr) in prev_node_with_side_effect.items():
+            # Connect the last side-effecting node to Output
+            outp = hugr.children(parent)[1]
+            assert isinstance(hugr[outp].op, ops.Output)
+            assert last != outp
+            hugr.add_order_link(last, outp)
     finally:
         Hugr.add_node = hugr_add_node  # type: ignore[method-assign]
 
@@ -634,6 +670,7 @@ def qualified_name(type_def: he.TypeDef) -> str:
 #: insertion of an explicit drop operation.
 AFFINE_EXTENSION_TYS: list[str] = [
     qualified_name(ARRAY_EXTENSION.get_type("array")),
+    qualified_name(BORROW_ARRAY_EXTENSION.get_type("borrow_array")),
 ]
 
 
@@ -681,7 +718,7 @@ def insert_drops(hugr: Hugr[OpVarCov]) -> None:
         # Iterating over `node.outputs()` doesn't work reliably since it sometimes
         # raises an `IncompleteOp` exception. Instead, we query the number of out ports
         # and look them up by index. However, this method is *also* broken when
-        # isnpecting `FuncDefn` nodes due to https://github.com/CQCL/hugr/issues/2438.
+        # inspecting `FuncDefn` nodes due to https://github.com/CQCL/hugr/issues/2438.
         if isinstance(data.op, ops.FuncDefn):
             continue
         for i in range(hugr.num_out_ports(node)):

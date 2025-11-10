@@ -4,6 +4,7 @@ import pathlib
 import re
 import sys
 
+from guppylang_internals.decorator import custom_type
 import pytest
 import sys
 from hugr import tys
@@ -22,7 +23,7 @@ def run_error_test(file, capsys, snapshot):
     file = pathlib.Path(file)
 
     with pytest.raises(Exception) as exc_info:
-        importlib.import_module(f"tests.error.{file.parent.name}.{file.name}")
+        importlib.import_module(f"tests.error.{file.parent.name}.{file.stem}")
 
     # Remove the importlib frames from the traceback by skipping beginning frames until
     # we end up in the executed file
@@ -49,7 +50,7 @@ def run_error_test(file, capsys, snapshot):
     snapshot.assert_match(err, file.with_suffix(".err").name)
 
 
-@decorator.guppy.type(
+@custom_type(
     tys.Opaque(extension="", id="", args=[], bound=TypeBound.Copyable)
 )
 class NonBool:

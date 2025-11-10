@@ -1,8 +1,0 @@
-Error: Variable not defined (at $FILE:6:35)
-  | 
-4 | 
-5 | @guppy.struct
-6 | class MyStruct[T: (Copy, Drop), x: T]:
-  |                                    ^ `T` is not defined
-
-Guppy compilation failed due to 1 previous error

@@ -23,6 +23,7 @@ can be used to infer a type for an expression.
 import ast
 import sys
 import traceback
+from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import replace
 from types import ModuleType
@@ -74,6 +75,7 @@ from guppylang_internals.checker.errors.type_errors import (
     ModuleMemberNotFoundError,
     NonLinearInstantiateError,
     NotCallableError,
+    ParameterInferenceError,
     TupleIndexOutOfBoundsError,
     TypeApplyNotGenericError,
     TypeInferenceError,
@@ -130,7 +132,7 @@ from guppylang_internals.tys.builtin import (
     string_type,
 )
 from guppylang_internals.tys.const import Const, ConstValue
-from guppylang_internals.tys.param import ConstParam, TypeParam
+from guppylang_internals.tys.param import ConstParam, TypeParam, check_all_args
 from guppylang_internals.tys.parsing import arg_from_ast
 from guppylang_internals.tys.subst import Inst, Subst
 from guppylang_internals.tys.ty import (
@@ -149,6 +151,7 @@ from guppylang_internals.tys.ty import (
     parse_function_tensor,
     unify,
 )
+from guppylang_internals.tys.var import ExistentialVar
 
 if TYPE_CHECKING:
     from guppylang_internals.diagnostic import SubDiagnostic
@@ -462,8 +465,15 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         # A `value.attr` attribute access. Unfortunately, the `attr` is just a string,
         # not an AST node, so we have to compute its span by hand. This is fine since
         # linebreaks are not allowed in the identifier following the `.`
+        # The only exception are attributes accesses that are generated during
+        # desugaring (for example for iterators in `for` loops). Since those just
+        # inherit the span of the sugared code, we could have line breaks there.
+        # See https://github.com/CQCL/guppylang/issues/1301
         span = to_span(node)
-        attr_span = Span(span.end.shift_left(len(node.attr)), span.end)
+        if span.start.line == span.end.line:
+            attr_span = Span(span.end.shift_left(len(node.attr)), span.end)
+        else:
+            attr_span = span
         if module := self._is_python_module(node.value):
             if node.attr in module.__dict__:
                 val = module.__dict__[node.attr]
@@ -928,10 +938,9 @@ def check_type_apply(ty: FunctionType, node: ast.Subscript, ctx: Context) -> Ins
         err.add_sub_diagnostic(WrongNumberOfArgsError.SignatureHint(None, ty))
         raise GuppyError(err)
 
-    return [
-        param.check_arg(arg_from_ast(arg_expr, ctx.parsing_ctx), arg_expr)
-        for arg_expr, param in zip(arg_exprs, ty.params, strict=True)
-    ]
+    inst = [arg_from_ast(node, ctx.parsing_ctx) for node in arg_exprs]
+    check_all_args(ty.params, inst, "", node, arg_exprs)
+    return inst
 
 
 def check_num_args(
@@ -975,15 +984,17 @@ def type_check_args(
     comptime_args = iter(func_ty.comptime_args)
     for inp, func_inp in zip(inputs, func_ty.inputs, strict=True):
         a, s = ExprChecker(ctx).check(inp, func_inp.ty.substitute(subst), "argument")
+        subst |= s
         if InputFlags.Inout in func_inp.flags and isinstance(a, PlaceNode):
             a.place = check_place_assignable(
                 a.place, ctx, a, "able to borrow subscripted elements"
             )
         if InputFlags.Comptime in func_inp.flags:
             comptime_arg = next(comptime_args)
-            s = check_comptime_arg(a, comptime_arg.const, func_inp.ty, s)
+            const = comptime_arg.const.substitute(subst)
+            s = check_comptime_arg(a, const, func_inp.ty.substitute(subst), subst)
+            subst |= s
         new_args.append(a)
-        subst |= s
     assert next(comptime_args, None) is None
 
     # If the argument check succeeded, this means that we must have found instantiations
@@ -1103,7 +1114,7 @@ def synthesize_call(
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
-    inst = [subst[v].to_arg() for v in free_vars]
+    inst = check_all_solved(subst, free_vars, func_ty, node)
 
     # Finally, check that the instantiation respects the linearity requirements
     check_inst(func_ty, inst, node)
@@ -1182,7 +1193,7 @@ def check_call(
 
     # Success implies that the substitution is closed
     assert all(not t.unsolved_vars for t in subst.values())
-    inst = [subst[v].to_arg() for v in free_vars]
+    inst = check_all_solved(subst, free_vars, func_ty, node)
     subst = {v: t for v, t in subst.items() if v in ty.unsolved_vars}
 
     # Finally, check that the instantiation respects the linearity requirements
@@ -1191,12 +1202,37 @@ def check_call(
     return inputs, subst, inst
 
 
+def check_all_solved(
+    subst: Subst,
+    free_vars: Sequence[ExistentialVar],
+    func_ty: FunctionType,
+    loc: AstNode,
+) -> Inst:
+    """Checks that a substitution solves all parameters of a function.
+
+    Using 3.12 generic syntax, users can declare parameters that don't occur in the
+    signature. Those will remain unsolved, even after unifying all function arguments,
+    so we have to perform this extra check.
+
+    Returns an instantiation of all free variables, or emits a user error if some are
+    not solved.
+    """
+    for v in free_vars:
+        if v not in subst:
+            err = ParameterInferenceError(loc, v.display_name)
+            err.add_sub_diagnostic(ParameterInferenceError.SignatureHint(None, func_ty))
+            raise GuppyTypeInferenceError(err)
+    return [subst[v].to_arg() for v in free_vars]
+
+
 def check_inst(func_ty: FunctionType, inst: Inst, node: AstNode) -> None:
     """Checks if an instantiation is valid.
 
     Makes sure that the linearity requirements are satisfied.
     """
     for param, arg in zip(func_ty.params, inst, strict=True):
+        param = param.instantiate_bounds(inst)
+
         # Give a more informative error message for linearity issues
         if isinstance(param, TypeParam) and isinstance(arg, TypeArg):
             if param.must_be_copyable and not arg.ty.copyable:

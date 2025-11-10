@@ -96,6 +96,20 @@ class TypeInferenceError(Error):
 
 
 @dataclass(frozen=True)
+class ParameterInferenceError(Error):
+    title: ClassVar[str] = "Cannot infer generic parameter"
+    span_label: ClassVar[str] = (
+        "Cannot infer generic parameter `{param}` of this function"
+    )
+    param: str
+
+    @dataclass(frozen=True)
+    class SignatureHint(Note):
+        message: ClassVar[str] = "Function signature is `{sig}`"
+        sig: FunctionType
+
+
+@dataclass(frozen=True)
 class IllegalConstant(Error):
     title: ClassVar[str] = "Unsupported constant"
     span_label: ClassVar[str] = "Type `{python_ty.__name__}` is not supported"

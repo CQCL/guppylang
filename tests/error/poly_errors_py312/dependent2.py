@@ -3,8 +3,13 @@ from guppylang.std.lang import Copy, Drop
 
 
 @guppy
-def main[T: (Copy, Drop), x: T]() -> None:
-    ...
+def foo[T: (Copy, Drop), x: T]() -> None:
+    pass
+
+
+@guppy
+def main() -> None:
+    foo[int, 1.5]()
 
 
 main.compile()

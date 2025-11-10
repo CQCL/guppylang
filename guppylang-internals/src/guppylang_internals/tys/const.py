@@ -8,6 +8,7 @@ from guppylang_internals.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
     from guppylang_internals.tys.arg import ConstArg
+    from guppylang_internals.tys.subst import Subst
     from guppylang_internals.tys.ty import Type
 
 
@@ -39,6 +40,11 @@ class ConstBase(Transformable["Const"], ABC):
         """The existential type variables contained in this constant."""
         return set()
 
+    @property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this constant."""
+        return self.ty.bound_vars
+
     def __str__(self) -> str:
         from guppylang_internals.tys.printing import TypePrinter
 
@@ -48,15 +54,17 @@ class ConstBase(Transformable["Const"], ABC):
         """Accepts a visitor on this constant."""
         visitor.visit(self)
 
-    def transform(self, transformer: Transformer, /) -> "Const":
-        """Accepts a transformer on this constant."""
-        return transformer.transform(self) or self.cast()
-
     def to_arg(self) -> "ConstArg":
         """Wraps this constant into a type argument."""
         from guppylang_internals.tys.arg import ConstArg
 
         return ConstArg(self.cast())
+
+    def substitute(self, subst: "Subst") -> "Const":
+        """Substitutes existential variables in this constant."""
+        from guppylang_internals.tys.subst import Substituter
+
+        return self.transform(Substituter(subst))
 
 
 @dataclass(frozen=True)
@@ -74,6 +82,10 @@ class ConstValue(ConstBase):
         """Casts an implementor of `ConstBase` into a `Const`."""
         return self
 
+    def transform(self, transformer: Transformer, /) -> "Const":
+        """Accepts a transformer on this constant."""
+        return transformer.transform(self) or self
+
 
 @dataclass(frozen=True)
 class BoundConstVar(BoundVar, ConstBase):
@@ -84,9 +96,20 @@ class BoundConstVar(BoundVar, ConstBase):
     `BoundConstVar(idx=0)`.
     """
 
+    @property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this constant."""
+        return {self} | self.ty.bound_vars
+
     def cast(self) -> "Const":
         """Casts an implementor of `ConstBase` into a `Const`."""
         return self
+
+    def transform(self, transformer: Transformer, /) -> "Const":
+        """Accepts a transformer on this constant."""
+        return transformer.transform(self) or BoundConstVar(
+            transformer.transform(self.ty) or self.ty, self.display_name, self.idx
+        )
 
 
 @dataclass(frozen=True)
@@ -109,6 +132,12 @@ class ExistentialConstVar(ExistentialVar, ConstBase):
     def cast(self) -> "Const":
         """Casts an implementor of `ConstBase` into a `Const`."""
         return self
+
+    def transform(self, transformer: Transformer, /) -> "Const":
+        """Accepts a transformer on this constant."""
+        return transformer.transform(self) or ExistentialConstVar(
+            transformer.transform(self.ty) or self.ty, self.display_name, self.id
+        )
 
 
 Const: TypeAlias = ConstValue | BoundConstVar | ExistentialConstVar

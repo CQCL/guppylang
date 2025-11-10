@@ -52,6 +52,7 @@ from guppylang_internals.error import GuppyError, GuppyTypeError
 from guppylang_internals.nodes import (
     AnyCall,
     BarrierExpr,
+    CheckedModifiedBlock,
     CheckedNestedFunctionDef,
     DesugaredArrayComp,
     DesugaredGenerator,
@@ -621,6 +622,70 @@ class BBLinearityChecker(ast.NodeVisitor):
             elif not place.ty.copyable:
                 raise GuppyTypeError(ComprAlreadyUsedError(use.node, place, use.kind))
 
+    def visit_CheckedModifiedBlock(self, node: CheckedModifiedBlock) -> None:
+        # Linear usage of variables in a with statement
+        # ```
+        # with control(c1, c2, ...):
+        #   body(q1, q2, ...) # captured variables
+        # ````
+        # is the same as to assume that this is a function call
+        # `WithCtrl(q1, q2, ..., c1, c2, ...)`
+        # where `WithCtrl` is a function that takes the control as mutable references.
+        # Therefore, we apply the same linearity rules as for function arguments.
+        # ```
+        # def WithCtrl(q1, q2, ..., c1, c2, ...):
+        #   body(q1, q2, ...)
+        # ```
+
+        # check control
+        for ctrl in node.control:
+            for arg in ctrl.ctrl:
+                if isinstance(arg, PlaceNode):
+                    self.visit_PlaceNode(arg, use_kind=UseKind.BORROW, is_call_arg=None)
+                else:
+                    ty = get_type(arg)
+                    unnamed_err = UnnamedExprNotUsedError(arg, ty)
+                    unnamed_err.add_sub_diagnostic(UnnamedExprNotUsedError.Fix(None))
+                    raise GuppyTypeError(unnamed_err)
+
+        # check power
+        for power in node.power:
+            if isinstance(power.iter, PlaceNode):
+                self.visit_PlaceNode(
+                    power.iter, use_kind=UseKind.CONSUME, is_call_arg=None
+                )
+            else:
+                self.visit(power.iter)
+
+        # check captured variables
+        for var, use in node.captured.values():
+            for place in leaf_places(var):
+                use_kind = (
+                    UseKind.BORROW if InputFlags.Inout in var.flags else UseKind.CONSUME
+                )
+
+                x = place.id
+                if (prev_use := self.scope.used(x)) and not place.ty.copyable:
+                    used_err = AlreadyUsedError(use, place, use_kind)
+                    used_err.add_sub_diagnostic(
+                        AlreadyUsedError.PrevUse(prev_use.node, prev_use.kind)
+                    )
+                    if has_explicit_copy(place.ty):
+                        used_err.add_sub_diagnostic(AlreadyUsedError.MakeCopy(None))
+                    raise GuppyError(used_err)
+                self.scope.use(x, node, use_kind)
+
+        # reassign controls
+        for ctrl in node.control:
+            for arg in ctrl.ctrl:
+                assert isinstance(arg, PlaceNode)  # Checked above
+                self._reassign_single_inout_arg(arg.place, arg.place.defined_at or arg)
+
+        # reassign captured variables
+        for var, use in node.captured.values():
+            if InputFlags.Inout in var.flags:
+                self._reassign_single_inout_arg(var, var.defined_at or use)
+
 
 def leaf_places(place: Place) -> Iterator[Place]:
     """Returns all leaf descendant projections of a place."""
@@ -815,6 +880,7 @@ def check_cfg_linearity(
     result_cfg.maybe_ass_before = {
         checked[bb]: cfg.maybe_ass_before[bb] for bb in cfg.bbs
     }
+    result_cfg.unitary_flags = cfg.unitary_flags
     for bb in cfg.bbs:
         checked[bb].predecessors = [checked[pred] for pred in bb.predecessors]
         checked[bb].successors = [checked[succ] for succ in bb.successors]

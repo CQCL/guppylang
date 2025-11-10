@@ -20,7 +20,7 @@ def export_test_cases_dir(request):
     return r
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def validate(request, export_test_cases_dir: Path):
     def validate_impl(package: Package | PackagePointer | Hugr, name=None):
         if isinstance(package, PackagePointer):
@@ -31,7 +31,11 @@ def validate(request, export_test_cases_dir: Path):
         package_bytes = package.to_bytes()
 
         if export_test_cases_dir:
-            file_name = f"{request.node.name}{f'_{name}' if name else ''}.hugr"
+            module_name = request.module.__name__
+            function_name = request.node.originalname
+            file_name = (
+                f"{module_name}-{function_name}{f'_{name}' if name else ''}.hugr"
+            )
             export_file = export_test_cases_dir / file_name
             export_file.write_bytes(package_bytes)
 
