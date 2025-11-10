@@ -7,7 +7,7 @@ T = guppy.type_var("T")
 
 
 @guppy.declare
-def generic_func[T](x: T) -> T: ...
+def generic_func(x: T) -> T: ...
 
 
 @guppy.comptime
