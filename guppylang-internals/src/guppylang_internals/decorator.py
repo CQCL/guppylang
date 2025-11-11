@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, ParamSpec, TypeVar, overload
 from hugr import ops
 from hugr import tys as ht
 
+from guppylang.defs import GuppyDefinition, GuppyFunctionDefinition
 from guppylang_internals.compiler.core import (
     CompilerContext,
     GlobalConstId,
@@ -24,6 +25,7 @@ from guppylang_internals.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang_internals.definition.wasm import RawWasmFunctionDef
 from guppylang_internals.dummy_decorator import _dummy_custom_decorator, sphinx_running
 from guppylang_internals.engine import DEF_STORE
+from guppylang_internals.error import GuppyError, InternalGuppyError
 from guppylang_internals.std._internal.checker import WasmCallChecker
 from guppylang_internals.std._internal.compiler.wasm import (
     WasmModuleCallCompiler,
@@ -41,6 +43,12 @@ from guppylang_internals.tys.ty import (
     NumericType,
     UnitaryFlags,
 )
+from guppylang_internals.wasm_util import (
+    ConcreteWasmModule,
+    WasmError,
+    WasmFunctionNotInFile,
+    decode_wasm_functions,
+)
 
 if TYPE_CHECKING:
     import ast
@@ -48,7 +56,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from types import FrameType
 
-    from guppylang.defs import GuppyDefinition, GuppyFunctionDefinition
     from guppylang_internals.tys.arg import Argument
     from guppylang_internals.tys.param import Parameter
     from guppylang_internals.tys.subst import Inst
@@ -201,6 +208,16 @@ def custom_type(
 def wasm_module(
     filename: str,
 ) -> Callable[[builtins.type[T]], GuppyDefinition]:
+    from pathlib import Path
+
+    wasm_file = Path(filename)
+    if wasm_file.is_file():
+        with Path.open(wasm_file, "rb") as f:
+            wasm_bytes = f.read()
+            wasm_sigs = decode_wasm_functions(filename, wasm_bytes)
+    else:
+        raise WasmError(f"Wasm file {filename} not found")
+
     def type_def_wrapper(
         id: DefId,
         name: str,
@@ -211,10 +228,22 @@ def wasm_module(
         assert config is None
         return WasmModuleTypeDef(id, name, defined_at, wasm_file)
 
-    f = ext_module_decorator(
-        type_def_wrapper, WasmModuleInitCompiler(), WasmModuleDiscardCompiler(), True
+    decorator = ext_module_decorator(
+        type_def_wrapper,
+        WasmModuleInitCompiler(),
+        WasmModuleDiscardCompiler(),
+        True,
+        wasm_sigs,
     )
-    return f(filename, None)
+
+    def inner_fun(ty: builtins.type[T]) -> GuppyDefinition:
+        decorator_inner = decorator(filename, None)
+        guppy_def = decorator_inner(ty)
+        # def_id = guppy_def.wrapped.id
+        # DEF_STORE.register_wasm_module(def_id, wasm_sigs)
+        return guppy_def
+
+    return inner_fun
 
 
 def ext_module_decorator(
@@ -222,9 +251,9 @@ def ext_module_decorator(
     init_compiler: CustomInoutCallCompiler,
     discard_compiler: CustomInoutCallCompiler,
     init_arg: bool,  # Whether the init function should take a nat argument
+    wasm_sigs: ConcreteWasmModule
+    | None = None,  # Breaking this breaks gpuppy, but like this it's not breaking?
 ) -> Callable[[str, str | None], Callable[[builtins.type[T]], GuppyDefinition]]:
-    from guppylang.defs import GuppyDefinition
-
     def fun(
         filename: str, module: str | None
     ) -> Callable[[builtins.type[T]], GuppyDefinition]:
@@ -244,6 +273,39 @@ def ext_module_decorator(
             for val in cls.__dict__.values():
                 if isinstance(val, GuppyDefinition):
                     DEF_STORE.register_impl(ext_module.id, val.wrapped.name, val.id)
+                    wasm_def: RawWasmFunctionDef
+                    if isinstance(val, RawWasmFunctionDef):
+                        wasm_def = val
+                    elif isinstance(val, GuppyFunctionDefinition) and isinstance(
+                        val.wrapped, RawWasmFunctionDef
+                    ):
+                        wasm_def = val.wrapped
+                    else:
+                        continue
+                    assert wasm_sigs
+                    if wasm_sigs:
+                        if wasm_def.wasm_index is not None:
+                            name = wasm_sigs.functions[wasm_def.wasm_index]
+                            assert name in wasm_sigs.function_sigs
+                            wasm_sig_or_err = wasm_sigs.function_sigs[name]
+                        else:
+                            if wasm_def.name in wasm_sigs.function_sigs:
+                                wasm_sig_or_err = wasm_sigs.function_sigs[wasm_def.name]
+                            else:
+                                raise GuppyError(
+                                    WasmFunctionNotInFile(
+                                        wasm_def.defined_at,
+                                        wasm_def.name,
+                                        wasm_sigs.filename,
+                                    )
+                                )
+                        if isinstance(wasm_sig_or_err, FunctionType):
+                            DEF_STORE.register_wasm_function(
+                                wasm_def.id, wasm_sig_or_err
+                            )
+                        elif isinstance(wasm_sig_or_err, str):
+                            raise InternalGuppyError(wasm_sig_or_err)
+
             # Add a constructor to the class
             if init_arg:
                 init_fn_ty = FunctionType(
@@ -328,6 +390,7 @@ def wasm_helper(fn_id: int | None, f: Callable[P, T]) -> GuppyFunctionDefinition
         WasmModuleCallCompiler(f.__name__, fn_id),
         True,
         signature=None,
+        wasm_index=fn_id,
     )
     DEF_STORE.register_def(func, get_calling_frame())
     return GuppyFunctionDefinition(func)

@@ -5,7 +5,7 @@ from guppylang.module import GuppyModule
 @wasm_module("arith.wasm")
 class Foo:
     @wasm
-    def add(self: "Foo", x: int, y: int) -> bool: ...
+    def add(self: "Foo", x: int, y: int, z: int) -> int: ...
 
 @guppy
 def main() -> bool:

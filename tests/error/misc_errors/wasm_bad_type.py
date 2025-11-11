@@ -3,15 +3,15 @@ from guppylang_internals.decorator import wasm, wasm_module
 from guppylang.std.quantum import qubit
 
 
-@wasm_module("")
+@wasm_module("arith.wasm")
 class Foo:
     @wasm
-    def foo(self: "Foo", x: qubit) -> qubit: ...
+    def two(self: "Foo", x: qubit) -> qubit: ...
 
 @guppy
 def main() -> qubit:
     mod = Foo(0)
-    q = mod.foo(qubit())
+    q = mod.two(qubit())
     mod.discard
     return q
 

@@ -1,0 +1,13 @@
+Error: Wasm signature mismatch (at $FILE:13:11)
+   | 
+11 | def main() -> bool:
+12 |     f = Foo(0)
+13 |     return f.add(1, 2)
+   |            ^^^^^^^^^^^ Signature of wasm function didn't match that in provided
+   |                        file
+
+Note: Declared signature: (int, int, int) -> int
+
+Note: Signature in wasm:  (int, int) -> int
+
+Guppy compilation failed due to 1 previous error

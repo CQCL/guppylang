@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from guppylang_internals.ast_util import AstNode
@@ -26,7 +27,10 @@ if TYPE_CHECKING:
     from guppylang_internals.checker.core import Globals
 
 
+@dataclass(frozen=True)
 class RawWasmFunctionDef(RawCustomFunctionDef):
+    wasm_index: int | None = field(default=None)
+
     def sanitise_type(self, loc: AstNode | None, fun_ty: FunctionType) -> None:
         # Place to highlight in error messages
         match fun_ty.inputs[0]:

@@ -2,17 +2,16 @@ from guppylang import guppy
 from guppylang_internals.decorator import wasm, wasm_module
 
 @wasm_module("arith.wasm")
-class Foo:
-    pass
+class MyWasm:
+    @wasm
+    def foo(self: "MyWasm") -> None: ...
 
-@wasm
-def foo(x: int) -> None: ...
 
 @guppy
 def main() -> None:
-    mod = Foo(0)
-    foo(mod)
+    mod = MyWasm(0)
+    mod.foo()
     mod.discard()
-    return
+
 
 main.compile()
