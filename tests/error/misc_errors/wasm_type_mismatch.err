@@ -1,8 +1,8 @@
-Error: Wasm signature mismatch (at $FILE:13:11)
+Error: Wasm signature mismatch (at $FILE:15:11)
    | 
-11 | def main() -> bool:
-12 |     f = Foo(0)
-13 |     return f.add(1, 2)
+13 | def main() -> bool:
+14 |     f = Foo(0)
+15 |     return f.add(1, 2)
    |            ^^^^^^^^^^^ Signature of wasm function didn't match that in provided
    |                        file
 

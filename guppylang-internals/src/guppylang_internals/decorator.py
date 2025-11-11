@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import pathlib
 from typing import TYPE_CHECKING, ParamSpec, TypeVar, overload
 
 from hugr import ops
@@ -208,11 +209,9 @@ def custom_type(
 def wasm_module(
     filename: str,
 ) -> Callable[[builtins.type[T]], GuppyDefinition]:
-    from pathlib import Path
-
-    wasm_file = Path(filename)
+    wasm_file = pathlib.Path(filename)
     if wasm_file.is_file():
-        with Path.open(wasm_file, "rb") as f:
+        with pathlib.Path.open(wasm_file, "rb") as f:
             wasm_bytes = f.read()
             wasm_sigs = decode_wasm_functions(filename, wasm_bytes)
     else:
@@ -296,7 +295,7 @@ def ext_module_decorator(
                                     WasmFunctionNotInFile(
                                         wasm_def.defined_at,
                                         wasm_def.name,
-                                        wasm_sigs.filename,
+                                        pathlib.Path(wasm_sigs.filename).name,
                                     )
                                 )
                         if isinstance(wasm_sig_or_err, FunctionType):
