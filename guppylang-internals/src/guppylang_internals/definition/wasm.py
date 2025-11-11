@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class RawWasmFunctionDef(RawCustomFunctionDef):
+    # If a function is specified in the @wasm decorator by its index in the wasm
+    # file, record what the index was.
     wasm_index: int | None = field(default=None)
 
     def sanitise_type(self, loc: AstNode | None, fun_ty: FunctionType) -> None:

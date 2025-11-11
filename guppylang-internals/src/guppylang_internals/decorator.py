@@ -237,10 +237,7 @@ def wasm_module(
 
     def inner_fun(ty: builtins.type[T]) -> GuppyDefinition:
         decorator_inner = decorator(filename, None)
-        guppy_def = decorator_inner(ty)
-        # def_id = guppy_def.wrapped.id
-        # DEF_STORE.register_wasm_module(def_id, wasm_sigs)
-        return guppy_def
+        return decorator_inner(ty)
 
     return inner_fun
 
@@ -251,7 +248,7 @@ def ext_module_decorator(
     discard_compiler: CustomInoutCallCompiler,
     init_arg: bool,  # Whether the init function should take a nat argument
     wasm_sigs: ConcreteWasmModule
-    | None = None,  # Breaking this breaks gpuppy, but like this it's not breaking?
+    | None = None,  # For @wasm_module, we must be passed a parsed wasm file
 ) -> Callable[[str, str | None], Callable[[builtins.type[T]], GuppyDefinition]]:
     def fun(
         filename: str, module: str | None
@@ -281,29 +278,26 @@ def ext_module_decorator(
                         wasm_def = val.wrapped
                     else:
                         continue
-                    assert wasm_sigs
-                    if wasm_sigs:
-                        if wasm_def.wasm_index is not None:
-                            name = wasm_sigs.functions[wasm_def.wasm_index]
-                            assert name in wasm_sigs.function_sigs
-                            wasm_sig_or_err = wasm_sigs.function_sigs[name]
+                    assert wasm_sigs is not None
+                    if wasm_def.wasm_index is not None:
+                        name = wasm_sigs.functions[wasm_def.wasm_index]
+                        assert name in wasm_sigs.function_sigs
+                        wasm_sig_or_err = wasm_sigs.function_sigs[name]
+                    else:
+                        if wasm_def.name in wasm_sigs.function_sigs:
+                            wasm_sig_or_err = wasm_sigs.function_sigs[wasm_def.name]
                         else:
-                            if wasm_def.name in wasm_sigs.function_sigs:
-                                wasm_sig_or_err = wasm_sigs.function_sigs[wasm_def.name]
-                            else:
-                                raise GuppyError(
-                                    WasmFunctionNotInFile(
-                                        wasm_def.defined_at,
-                                        wasm_def.name,
-                                        pathlib.Path(wasm_sigs.filename).name,
-                                    )
+                            raise GuppyError(
+                                WasmFunctionNotInFile(
+                                    wasm_def.defined_at,
+                                    wasm_def.name,
+                                    pathlib.Path(wasm_sigs.filename).name,
                                 )
-                        if isinstance(wasm_sig_or_err, FunctionType):
-                            DEF_STORE.register_wasm_function(
-                                wasm_def.id, wasm_sig_or_err
                             )
-                        elif isinstance(wasm_sig_or_err, str):
-                            raise InternalGuppyError(wasm_sig_or_err)
+                    if isinstance(wasm_sig_or_err, FunctionType):
+                        DEF_STORE.register_wasm_function(wasm_def.id, wasm_sig_or_err)
+                    elif isinstance(wasm_sig_or_err, str):
+                        raise InternalGuppyError(wasm_sig_or_err)
 
             # Add a constructor to the class
             if init_arg:
