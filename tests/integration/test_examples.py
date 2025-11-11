@@ -7,14 +7,11 @@ notebook_files = list(
     (Path(__file__).parent.parent.parent / "examples").glob("*.ipynb")
 )
 
-print(notebook_files)
-
 # Remove long running QAOA notebook from C.I. tests
 # Hopefully we can add it back in when we can speed it up.
-notebook_files.remove(Path("/home/runner/work/guppylang/guppylang/examples/qaoa_maxcut_example.ipynb"))
-
-
-print(notebook_files)
+notebook_files.remove(
+    Path("/home/runner/work/guppylang/guppylang/examples/qaoa_maxcut_example.ipynb")
+)
 
 
 @pytest.mark.parametrize("notebook", notebook_files)
