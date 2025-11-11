@@ -1,6 +1,3 @@
-Traceback (most recent call last):
-  File "$FILE", line 4, in <module>
-    @wasm_module("not_there.wasm")
-  File "/Users/craig.roy/work/guppy/guppylang-internals/src/guppylang_internals/decorator.py", line 219, in wasm_module
-    raise WasmError(f"Wasm file {filename} not found")
-guppylang_internals.wasm_util.WasmError: Wasm file not_there.wasm not found
+Error: Wasm file not_there.wasm not found
+
+Guppy compilation failed due to 1 previous error

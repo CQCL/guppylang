@@ -35,27 +35,10 @@ class ConcreteWasmModule:
     function_sigs: dict[str, FunctionType | str]
 
 
-# Errors
-class WasmError(Exception):
-    """Wrapper for errors that occur when handing wasm annotations. At this
-    point, we don't have an ast, so we derive `Exception` rather than `Error`.
-    """
-
-
 @dataclass(frozen=True)
 class WasmFileNotFound(Error):
-    title: ClassVar[str] = "Wasm file {file} not found"
+    title: ClassVar[str] = "Wasm file `{file}` not found"
     file: str
-
-
-@dataclass(frozen=True)
-class WasmSignatureMismatch(Error):
-    # TODO: Say which function?
-    title: ClassVar[str] = (
-        "Signature {guppy_sig} doesn't match wasm signature {wasm_sig}"
-    )
-    guppy_sig: str
-    wasm_sig: str
 
 
 @dataclass(frozen=True)

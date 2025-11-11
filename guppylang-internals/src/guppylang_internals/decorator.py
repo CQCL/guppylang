@@ -45,7 +45,7 @@ from guppylang_internals.tys.ty import (
 )
 from guppylang_internals.wasm_util import (
     ConcreteWasmModule,
-    WasmError,
+    WasmFileNotFound,
     WasmFunctionNotInFile,
     decode_wasm_functions,
 )
@@ -216,7 +216,7 @@ def wasm_module(
             wasm_bytes = f.read()
             wasm_sigs = decode_wasm_functions(filename, wasm_bytes)
     else:
-        raise WasmError(f"Wasm file {filename} not found")
+        raise GuppyError(WasmFileNotFound(None, filename))
 
     def type_def_wrapper(
         id: DefId,
