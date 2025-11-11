@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Protocol
+from typing import TYPE_CHECKING, ClassVar
 
 from wasm_tob import (
     LANG_TYPE_F64,
@@ -17,7 +17,7 @@ from guppylang_internals.tys.ty import (
     InputFlags,
     NoneType,
     NumericType,
-    TypeBase,
+    Type,
 )
 
 if TYPE_CHECKING:
@@ -85,67 +85,30 @@ class WasmSigMismatchError(Error):
         actual: str
 
 
-class WasmType(Protocol):
-    def guppify(self) -> TypeBase: ...
-
-
-class F64(WasmType):
-    def guppify(self) -> NumericType:
-        return NumericType(NumericType.Kind.Float)
-
-
-class I64(WasmType):
-    def guppify(self) -> NumericType:
-        return NumericType(NumericType.Kind.Int)
-
-
-class MyNoneType(WasmType):
-    def guppify(self) -> TypeBase:
-        return NoneType()
-
-
-@dataclass
-class MyFuncType:
-    inputs: list[WasmType]
-    output: WasmType
-
-    # def __repr__(self):
-    #    return f"{self.inputs} -> {self.output}"
-
-    def guppify(self) -> FunctionType:
-        return FunctionType(
-            [
-                FuncInput(ty.guppify().cast(), flags=InputFlags.NoFlags)
-                for ty in self.inputs
-            ],
-            self.output.guppify().cast(),
-        )
-
-
-def decode_type(tag: int) -> WasmType | None:
+def decode_type(tag: int) -> Type | None:
     if tag == LANG_TYPE_I64:
-        return I64()
+        return NumericType(NumericType.Kind.Int)
     elif tag == LANG_TYPE_F64:
-        return F64()
+        return NumericType(NumericType.Kind.Float)
     else:
         return None
 
 
 def decode_sig(params: list[int], output: int | None) -> FunctionType | str:
     # Function args in wasm are called "params"
-    my_params = []
+    my_params: list[FuncInput] = []
     for p in params:
         if ty := decode_type(p):
-            my_params.append(ty)
+            my_params.append(FuncInput(ty, flags=InputFlags.NoFlags))
         else:
             return f"Invalid param: {p}"
     if output:
         if ty := decode_type(output):
-            return MyFuncType(my_params, ty).guppify()
+            return FunctionType(my_params, ty)
         else:
             return f"Invalid output: {output}"
     else:
-        return MyFuncType(my_params, MyNoneType()).guppify()
+        return FunctionType(my_params, NoneType())
 
 
 def decode_wasm_functions(filename: str, wasm_bytes: bytes) -> ConcreteWasmModule:
