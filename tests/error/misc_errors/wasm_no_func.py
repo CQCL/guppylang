@@ -1,7 +1,9 @@
 from guppylang import guppy
 from guppylang_internals.decorator import wasm, wasm_module
 
-@wasm_module("arith.wasm")
+from tests.util import get_wasm_file
+
+@wasm_module(get_wasm_file())
 class MyWasm:
     @wasm
     def foo(self: "MyWasm") -> None: ...
