@@ -71,25 +71,6 @@ def test_wasm_methods(validate, wasm_file):
     validate(mod)
 
 
-# def test_wasm_types(validate, wasm_file):
-#     n = guppy.nat_var("n")
-#
-#     @wasm_module(wasm_file)
-#     class MyWasm:
-#         @wasm(42)
-#         def foo(self: "MyWasm", x: tuple[int, tuple[nat, float]], y: int) -> None: ...
-#
-#     @guppy
-#     def main() -> None:
-#         mod = MyWasm(1)
-#         mod.foo((0, (1, 2.0)), 3)
-#         mod.discard()
-#         return
-#
-#     mod = main.compile_function()
-#     validate(mod)
-
-
 def test_lookup_by_id(validate, wasm_file):
     from hugr.ops import AsExtOp
 
