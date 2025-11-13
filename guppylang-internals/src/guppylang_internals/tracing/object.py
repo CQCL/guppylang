@@ -547,8 +547,7 @@ class TracingDefMixin(DunderMixin):
         #  See https://github.com/CQCL/guppylang/issues/1336
         if isinstance(defn, CallableDef) and defn.ty.parametrized:
             raise GuppyComptimeError(
-                f"Using the generic function `{defn.name}` as higher-order values is "
-                "not supported"
+                f"Cannot infer type parameters of generic function `{defn.name}`"
             )
         defn, [] = state.ctx.build_compiled_def(self.id, type_args=[])
         if isinstance(defn, CompiledValueDef):
