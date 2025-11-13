@@ -11,7 +11,6 @@ from guppylang_internals.tys.ty import (
     NumericType,
     OpaqueType,
     StructType,
-    SumType,
     TupleType,
     Type,
 )
@@ -121,11 +120,6 @@ class TypePrinter:
     def _visit_TupleType(self, ty: TupleType, inside_row: bool) -> str:
         args = ", ".join(self._visit(arg, True) for arg in ty.args)
         return f"({args})"
-
-    @_visit.register
-    def _visit_SumType(self, ty: SumType, inside_row: bool) -> str:
-        args = ", ".join(self._visit(arg, True) for arg in ty.args)
-        return f"Sum[{args}]"
 
     @_visit.register
     def _visit_NoneType(self, ty: NoneType, inside_row: bool) -> str:
