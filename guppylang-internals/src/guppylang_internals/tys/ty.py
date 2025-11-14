@@ -624,53 +624,6 @@ class TupleType(ParametrizedTypeBase):
         )
 
 
-@dataclass(frozen=True, init=False)
-class SumType(ParametrizedTypeBase):
-    """Type of sums.
-
-    Note that this type is only used internally when constructing the Hugr. Users cannot
-    write down this type.
-    """
-
-    element_types: Sequence["Type"]
-
-    def __init__(self, element_types: Sequence["Type"]) -> None:
-        # We need a custom __init__ to set the args
-        args = [TypeArg(ty) for ty in element_types]
-        object.__setattr__(self, "args", args)
-        object.__setattr__(self, "element_types", element_types)
-
-    @property
-    def intrinsically_copyable(self) -> bool:
-        """Whether objects of this type can be implicitly copied."""
-        return True
-
-    @property
-    def intrinsically_droppable(self) -> bool:
-        """Whether objects of this type can be dropped."""
-        return True
-
-    def cast(self) -> "Type":
-        """Casts an implementor of `TypeBase` into a `Type`."""
-        return self
-
-    def to_hugr(self, ctx: ToHugrContext) -> ht.Sum:
-        """Computes the Hugr representation of the type."""
-        rows = [type_to_row(ty) for ty in self.element_types]
-        if all(len(row) == 0 for row in rows):
-            return ht.UnitSum(size=len(rows))
-        elif len(rows) == 1:
-            return ht.Tuple(*row_to_hugr(rows[0], ctx))
-        else:
-            return ht.Sum(variant_rows=rows_to_hugr(rows, ctx))
-
-    def transform(self, transformer: Transformer) -> "Type":
-        """Accepts a transformer on this type."""
-        return transformer.transform(self) or SumType(
-            [ty.transform(transformer) for ty in self.element_types]
-        )
-
-
 @dataclass(frozen=True)
 class OpaqueType(ParametrizedTypeBase):
     """Type that is directly backed by a Hugr opaque type.
@@ -759,9 +712,8 @@ class StructType(ParametrizedTypeBase):
 
 
 #: The type of parametrized Guppy types.
-ParametrizedType: TypeAlias = (
-    FunctionType | TupleType | SumType | OpaqueType | StructType
-)
+ParametrizedType: TypeAlias = FunctionType | TupleType | OpaqueType | StructType
+
 
 #: The type of Guppy types.
 #:
@@ -842,8 +794,6 @@ def unify(s: Type | Const, t: Type | Const, subst: "Subst | None") -> "Subst | N
                     return None
             return _unify_args(s, t, subst)
         case TupleType() as s, TupleType() as t:
-            return _unify_args(s, t, subst)
-        case SumType() as s, SumType() as t:
             return _unify_args(s, t, subst)
         case OpaqueType() as s, OpaqueType() as t if s.defn == t.defn:
             return _unify_args(s, t, subst)
