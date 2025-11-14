@@ -1,0 +1,3 @@
+Error: Declared wasm function `foo` isn't exported by wasm file arith.wasm
+
+Guppy compilation failed due to 1 previous error
