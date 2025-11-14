@@ -3,6 +3,30 @@
 First release of `guppylang_internals` package containing refactored out internal components
 from `guppylang`.
 
+## [0.26.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.25.0...guppylang-internals-v0.26.0) (2025-11-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* `guppylang_internals.tys.ty.SumType` has been removed
+* 
+* `modifier_checker.check_modified_block_signature` now requires the `ModifiedBlock` as first argument
+
+### Features
+
+* Allow dynamic tag and signal in `panic`/`exit` ([#1327](https://github.com/CQCL/guppylang/issues/1327)) ([bae0da1](https://github.com/CQCL/guppylang/commit/bae0da1d42eea88d34c5c7bdd3d7f8a2504f1501))
+* Unitarity annotations for functions ([#1292](https://github.com/CQCL/guppylang/issues/1292)) ([54dc200](https://github.com/CQCL/guppylang/commit/54dc200de881d065d3ee92bdc9a8ca076990d412))
+
+
+### Bug Fixes
+
+* Fix internal compiler error when returning generic functions as values in comptime ([#1337](https://github.com/CQCL/guppylang/issues/1337)) ([8e2eba7](https://github.com/CQCL/guppylang/commit/8e2eba7e75e965405a903308b237344b83a3b168)), closes [#1335](https://github.com/CQCL/guppylang/issues/1335)
+
+
+### Miscellaneous Chores
+
+* Remove `SumType` ([#1345](https://github.com/CQCL/guppylang/issues/1345)) ([b914dfe](https://github.com/CQCL/guppylang/commit/b914dfe374a6d7c2a4fe9f95d4f6e8f2ac0675e7))
+
 ## [0.25.0](https://github.com/CQCL/guppylang/compare/guppylang-internals-v0.24.0...guppylang-internals-v0.25.0) (2025-10-28)
 
 
