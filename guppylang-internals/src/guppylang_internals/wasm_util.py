@@ -1,14 +1,7 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
-from wasm_tob import (
-    LANG_TYPE_F64,
-    LANG_TYPE_I64,
-    SEC_EXPORT,
-    SEC_FUNCTION,
-    SEC_TYPE,
-    decode_module,
-)
+import wasmtime as wt
 
 from guppylang_internals.diagnostic import Error, Note
 from guppylang_internals.tys.ty import (
@@ -19,11 +12,6 @@ from guppylang_internals.tys.ty import (
     NumericType,
     Type,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
-    from wasm_tob.decode import ModuleFragment
 
 
 # The thing to be imported elsewhere
@@ -68,16 +56,18 @@ class WasmSigMismatchError(Error):
         actual: str
 
 
-def decode_type(tag: int) -> Type | None:
-    if tag == LANG_TYPE_I64:
+def decode_type(ty: wt.ValType) -> Type | None:
+    if ty == wt.ValType.i64():
         return NumericType(NumericType.Kind.Int)
-    elif tag == LANG_TYPE_F64:
+    elif ty == wt.ValType.f64():
         return NumericType(NumericType.Kind.Float)
     else:
         return None
 
 
-def decode_sig(params: list[int], output: int | None) -> FunctionType | str:
+def decode_sig(
+    params: list[wt.ValType], output: wt.ValType | None
+) -> FunctionType | str:
     # Function args in wasm are called "params"
     my_params: list[FuncInput] = []
     for p in params:
@@ -94,50 +84,27 @@ def decode_sig(params: list[int], output: int | None) -> FunctionType | str:
         return FunctionType(my_params, NoneType())
 
 
-def decode_wasm_functions(filename: str, wasm_bytes: bytes) -> ConcreteWasmModule:
-    """Top level function which reads in wasm bytes and returns a map of
-    function names to either a guppy signatures or an error message.
-    It is allowable for a file to have signatures unrepresentable in guppy as
-    long as they're don't have interface stubs written in guppy, so we only fail
-    when such a type is written with a @wasm decorator.
-    """
-    wasm_module: Iterator[ModuleFragment] = iter(decode_module(wasm_bytes))
-    next(wasm_module)  # Skip module header (always first)
-    funcs: dict[str, FunctionType | str] = {}
-    fun_tys: list[FunctionType | str] = []
-    fun_ptrs: list[int] = []
-    ordered_func_names: dict[int, str] = {}
-    for _, frag_data in wasm_module:
-        # If we find a type section, add each type to our ordered list of types
-        # in `fun_tys`
-        if frag_data.id == SEC_TYPE:
-            for ty in frag_data.payload.entries:
-                # TODO: Do we need to worry about the form?
-                if ty.return_count > 1:
-                    fun_tys.append(
-                        "!!!! Illegal function with more than one return type !!!!"
-                    )
-                else:
-                    fun_tys.append(
-                        decode_sig(
-                            ty.param_types,
-                            ty.return_type if ty.return_count == 1 else None,
-                        )
-                    )
-        # Function section gives us a list of functions, which each are just indices
-        # into the types list
-        elif frag_data.id == SEC_FUNCTION:
-            fun_ptrs = list(frag_data.payload.types)
-        # The export section says which symbols are available to us! With types
-        # which index into the function types list
-        elif frag_data.id == SEC_EXPORT:
-            for export in frag_data.payload.entries:
-                name = bytearray(export.field_str[: export.field_len]).decode("utf8")
-                # It's a function!
-                if export.kind == 0:
-                    funcs[name] = fun_tys[fun_ptrs[export.index]]
-                    ordered_func_names[export.index] = name
-        else:
-            # Ignore other sections, like function bodies
-            pass
-    return ConcreteWasmModule(filename, ordered_func_names, funcs)
+def decode_wasm_functions(filename: str) -> ConcreteWasmModule:
+    engine = wt.Engine()
+    mod = wt.Module.from_file(engine, filename)
+
+    # functions = [ x.name for x in enumerate(mod.exports) ]
+    # TODO: Delete the functions bit, because the sigs are ordered
+    functions: dict[int, str] = {}
+    function_sigs: dict[str, FunctionType | str] = {}
+    for ix, fn in enumerate(mod.exports):
+        functions[ix] = fn.name
+        match fn.type:
+            case wt.FuncType() as fun_ty:
+                match fun_ty.results:
+                    case []:
+                        data = decode_sig(fun_ty.params, None)
+                    case [output]:
+                        data = decode_sig(fun_ty.params, output)
+                    case _multi:
+                        data = f"Invalid: Multiple output types in function {fn.name}"
+            case _:
+                data = f"Non-function: {fn.name}"
+        function_sigs[fn.name] = data
+
+    return ConcreteWasmModule(filename, functions, function_sigs)

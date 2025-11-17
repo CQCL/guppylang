@@ -211,9 +211,7 @@ def wasm_module(
 ) -> Callable[[builtins.type[T]], GuppyDefinition]:
     wasm_file = pathlib.Path(filename)
     if wasm_file.is_file():
-        with pathlib.Path.open(wasm_file, "rb") as f:
-            wasm_bytes = f.read()
-            wasm_sigs = decode_wasm_functions(filename, wasm_bytes)
+        wasm_sigs = decode_wasm_functions(filename)
     else:
         raise GuppyError(WasmFileNotFound(None, filename))
 
