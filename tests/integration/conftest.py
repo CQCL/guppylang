@@ -23,7 +23,7 @@ def export_test_cases_dir(request):
 @pytest.fixture
 def wasm_file(request) -> str:
     test_dir = Path(request.fspath).parents[1]
-    return test_dir / Path("resources/arith.wasm")
+    return test_dir / Path("resources/test.wasm")
 
 
 @pytest.fixture

@@ -12,13 +12,25 @@ def test_wasm_functions(validate, wasm_file):
         @wasm
         def add(self: "MyWasm", x: int, y: int) -> int: ...
 
+        @wasm
+        def fid(self: "MyWasm", x: float) -> float: ...
+
+        @wasm
+        def consume_float(self: "MyWasm", x: float) -> None: ...
+
+        @wasm
+        def nothing(self: "MyWasm") -> None: ...
+
     @guppy
     def main() -> int:
         [mod1, mod2] = spawn_wasm_contexts(2, MyWasm)
         two1 = mod1.two()
         two2 = mod2.two()
         four = mod2.add(two1, two2)
+        f = mod1.fid(42.0)
+        mod1.consume_float(f)
         mod1.discard()
+        mod2.nothing()
         mod2.discard()
         return four + two2
 
@@ -35,12 +47,20 @@ def test_wasm_function_indices(validate, wasm_file):
         @wasm(0)
         def bar(self: "MyWasm", x: int, y: int) -> int: ...
 
+        @wasm(3)
+        def baz(self: "MyWasm", x: float) -> None: ...
+
+        @wasm(4)
+        def side_effect(self: "MyWasm") -> None: ...
+
     @guppy
     def main() -> int:
         [mod1, mod2] = spawn_wasm_contexts(2, MyWasm)
         two1 = mod1.foo()
         two2 = mod2.foo()
         four = mod2.bar(two1, two2)
+        mod1.baz(42.0)
+        mod2.side_effect()
         mod1.discard()
         mod2.discard()
         return four + two2
