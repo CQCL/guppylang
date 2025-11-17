@@ -45,14 +45,6 @@ allow_redefinition = true
 [[tool.mypy.overrides]]
 module = ["miette_py"]
 
-[[tool.mypy.overrides]]
-module = ["wasm_tob"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["wasm_tob.decode"]
-ignore_missing_imports = true
-
 [tool.coverage.report]
 exclude_also = [
     # Don't complain about missing coverage on typing imports
