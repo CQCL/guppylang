@@ -268,9 +268,7 @@ def ext_module_decorator(
                 if isinstance(val, GuppyDefinition):
                     DEF_STORE.register_impl(ext_module.id, val.wrapped.name, val.id)
                     wasm_def: RawWasmFunctionDef
-                    if isinstance(val, RawWasmFunctionDef):
-                        wasm_def = val
-                    elif isinstance(val, GuppyFunctionDefinition) and isinstance(
+                    if isinstance(val, GuppyFunctionDefinition) and isinstance(
                         val.wrapped, RawWasmFunctionDef
                     ):
                         wasm_def = val.wrapped
