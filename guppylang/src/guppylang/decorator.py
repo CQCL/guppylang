@@ -203,11 +203,8 @@ class _Guppy:
         for val in cls.__dict__.values():
             if isinstance(val, GuppyDefinition):
                 DEF_STORE.register_impl(defn.id, val.wrapped.name, val.id)
-        # Prior to Python 3.13, the `__firstlineno__` attribute on classes is not set.
-        # However, we need this information to precisely look up the source for the
-        # class later. If it's not there, we can set it from the calling frame:
-        if not hasattr(cls, "__firstlineno__"):
-            cls.__firstlineno__ = frame.f_lineno  # type: ignore[attr-defined]
+        # We need the the `__firstlineno__` attribute to look up the source later.
+        cls = _set_firstlineno(cls, frame)
         # We're pretending to return the class unchanged, but in fact we return
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
@@ -231,11 +228,8 @@ class _Guppy:
         for val in cls.__dict__.values():
             if isinstance(val, GuppyDefinition):
                 DEF_STORE.register_impl(defn.id, val.wrapped.name, val.id)
-        # Prior to Python 3.13, the `__firstlineno__` attribute on classes is not set.
-        # However, we need this information to precisely look up the source for the
-        # class later. If it's not there, we can set it from the calling frame:
-        if not hasattr(cls, "__firstlineno__"):
-            cls.__firstlineno__ = frame.f_lineno  # type: ignore[attr-defined]
+        # We need the the `__firstlineno__` attribute to look up the source later.
+        cls = _set_firstlineno(cls, frame)
         # We're pretending to return the class unchanged, but in fact we return
         # a `GuppyDefinition` that handles the comptime logic
         return GuppyDefinition(defn)  # type: ignore[return-value]
@@ -551,6 +545,19 @@ class _Guppy:
         )
         DEF_STORE.register_def(defn, get_calling_frame())
         return GuppyFunctionDefinition(defn)
+
+
+def _set_firstlineno(cls: builtins.type[T], frame: FrameType) -> builtins.type[T]:
+    """Helper function to set the `__firstlineno__` attribute on a class if it is not
+    already there.
+
+    Prior to Python 3.13, the `__firstlineno__` attribute on classes is not set.
+    However, we need this information to precisely look up the source for the
+    class later. If it's not there, we can set it from the calling frame.
+    """
+    if not hasattr(cls, "__firstlineno__"):
+        cls.__firstlineno__ = frame.f_lineno  # type: ignore[attr-defined]
+    return cls
 
 
 def _parse_expr_string(ty_str: str, parse_err: str, sources: SourceMap) -> ast.expr:

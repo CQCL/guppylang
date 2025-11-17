@@ -151,7 +151,7 @@ class RawStructDef(TypeDef, ParsableDef):
         match cls_def.bases:
             case []:
                 pass
-            case [base] if elems := try_parse_generic_base(base):
+            case [base] if elems := try_parse_generic_base(base, "Generic"):
                 # Complain if we already have Python 3.12 generic params
                 if params_span is not None:
                     err: Error = RedundantParamsError(base, self.name)
@@ -346,13 +346,13 @@ def parse_py_class(
     return cls_ast
 
 
-def try_parse_generic_base(node: ast.expr) -> list[ast.expr] | None:
-    """Checks if an AST node corresponds to a `Generic[T1, ..., Tn]` base class.
+def try_parse_generic_base(node: ast.expr, base_name: str) -> list[ast.expr] | None:
+    """Checks if an AST node corresponds to a `name[T1, ..., Tn]` base class.
 
     Returns the generic parameters or `None` if the AST has a different shape
     """
     match node:
-        case ast.Subscript(value=ast.Name(id="Generic"), slice=elem):
+        case ast.Subscript(value=ast.Name(id=name), slice=elem) if base_name == name:
             return elem.elts if isinstance(elem, ast.Tuple) else [elem]
         case _:
             return None

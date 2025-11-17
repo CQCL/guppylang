@@ -75,16 +75,22 @@ class RawProtocolDef(ProtocolDef, ParsableDef):
             if cls_def.type_params:
                 first, last = cls_def.type_params[0], cls_def.type_params[-1]
                 params_span = Span(to_span(first).start, to_span(last).end)
-                params = [
-                    parse_parameter(node, idx, globals)
-                    for idx, node in enumerate(cls_def.type_params)
-                ]
+                param_vars_mapping: dict[str, Parameter] = {}
+                for idx, param_node in enumerate(cls_def.type_params):
+                    param = parse_parameter(
+                        param_node, idx, globals, param_vars_mapping
+                    )
+                    param_vars_mapping[param.name] = param
+                    params.append(param)
 
         match cls_def.bases:
             case []:
                 pass
-            # We allow `Generic[...]` to specify  parameters with the legacy syntax.
-            case [base] if elems := try_parse_generic_base(base):
+            # We allow `Generic[...]` or `Protocol[...]` to specify  parameters with the
+            # legacy syntax.
+            case [base] if elems := try_parse_generic_base(
+                base, "Generic"
+            ) or try_parse_generic_base(base, "Protocol"):
                 # Complain if we already have Python 3.12 generic params
                 if params_span is not None:
                     err: Error = RedundantParamsError(base, self.name)
@@ -123,7 +129,7 @@ class RawProtocolDef(ProtocolDef, ParsableDef):
                 # Fields are not allowed in protocols.
                 case _, ast.AnnAssign(target=ast.Name(_)) as node:
                     err = UnsupportedError(
-                        node, "fields", unsupported_in="a protocol definition"
+                        node, "Fields", unsupported_in="a protocol definition"
                     )
                     raise GuppyError(err)
                 case _, node:
