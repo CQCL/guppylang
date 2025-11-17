@@ -19,7 +19,7 @@ from guppylang_internals.tys.ty import (
 class ConcreteWasmModule:
     filename: str
     # Function names in order for looking up by index
-    functions: dict[int, str]
+    functions: list[str]
     function_sigs: dict[str, FunctionType | str]
 
 
@@ -90,10 +90,10 @@ def decode_wasm_functions(filename: str) -> ConcreteWasmModule:
 
     # functions = [ x.name for x in enumerate(mod.exports) ]
     # TODO: Delete the functions bit, because the sigs are ordered
-    functions: dict[int, str] = {}
+    functions: list[str] = []
     function_sigs: dict[str, FunctionType | str] = {}
-    for ix, fn in enumerate(mod.exports):
-        functions[ix] = fn.name
+    for fn in mod.exports:
+        functions.append(fn.name)
         match fn.type:
             case wt.FuncType() as fun_ty:
                 match fun_ty.results:
