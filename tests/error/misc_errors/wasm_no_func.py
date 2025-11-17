@@ -1,17 +1,19 @@
 from guppylang import guppy
 from guppylang_internals.decorator import wasm, wasm_module
-from guppylang.module import GuppyModule
 
 from tests.util import get_wasm_file
 
 @wasm_module(get_wasm_file())
-class Foo:
+class MyWasm:
     @wasm
-    def add(self: "Foo", x: int, y: int) -> bool: ...
+    def foo(self: "MyWasm") -> None: ...
+
 
 @guppy
-def main() -> bool:
-    f = Foo(0)
-    return f.add(1, 2)
+def main() -> None:
+    mod = MyWasm(0)
+    mod.foo()
+    mod.discard()
+
 
 main.compile()

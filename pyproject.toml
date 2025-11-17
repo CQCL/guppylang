@@ -45,7 +45,6 @@ allow_redefinition = true
 [[tool.mypy.overrides]]
 module = ["miette_py"]
 
-
 [tool.coverage.report]
 exclude_also = [
     # Don't complain about missing coverage on typing imports

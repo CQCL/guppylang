@@ -24,6 +24,7 @@ from guppylang_internals.definition.custom import (
     CustomCallChecker,
 )
 from guppylang_internals.diagnostic import Error, Note
+from guppylang_internals.engine import DEF_STORE
 from guppylang_internals.error import GuppyError, GuppyTypeError, InternalGuppyError
 from guppylang_internals.nodes import (
     BarrierExpr,
@@ -62,6 +63,7 @@ from guppylang_internals.tys.ty import (
     Type,
     unify,
 )
+from guppylang_internals.wasm_util import ConcreteWasmModule, WasmSigMismatchError
 
 
 class ReversingChecker(CustomCallChecker):
@@ -502,7 +504,28 @@ class BarrierChecker(CustomCallChecker):
 
 
 class WasmCallChecker(CustomCallChecker):
+    wasm_sigs: ConcreteWasmModule
+
+    def setup(self, wasm_sigs: ConcreteWasmModule) -> None:
+        self.wasm_sigs = wasm_sigs
+
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
+        type_in_wasm: FunctionType = DEF_STORE.wasm_functions[self.func.id]
+
+        # Drop the first arg because it should be "self"
+        expected_type = FunctionType(self.func.ty.inputs[1:], self.func.ty.output)
+
+        if expected_type != type_in_wasm:
+            raise GuppyTypeError(
+                WasmSigMismatchError(self.node)
+                .add_sub_diagnostic(
+                    WasmSigMismatchError.Declaration(None, declared=str(expected_type))
+                )
+                .add_sub_diagnostic(
+                    WasmSigMismatchError.Actual(None, actual=str(type_in_wasm))
+                )
+            )
+
         # Use default implementation from the expression checker
         args, subst, inst = check_call(self.func.ty, args, ty, self.node, self.ctx)
 
