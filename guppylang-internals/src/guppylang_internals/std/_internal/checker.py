@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from typing_extensions import assert_never
 
-from guppylang_internals.ast_util import get_type, with_loc
+from guppylang_internals.ast_util import get_type, with_loc, with_type
 from guppylang_internals.checker.core import ComptimeVariable, Context
 from guppylang_internals.checker.errors.generic import ExpectedError, UnsupportedError
 from guppylang_internals.checker.errors.type_errors import (
@@ -395,18 +395,16 @@ class PanicChecker(CustomCallChecker):
                 err.add_sub_diagnostic(PanicChecker.NoMessageError.Suggestion(None))
                 raise GuppyTypeError(err)
             case [msg, *rest]:
+                # Check type of message and synthesize types for additional values.
                 msg, _ = ExprChecker(self.ctx).check(msg, string_type())
-                match msg:
-                    case ast.Constant(value=str(v)):
-                        msg_value = v
-                    case PlaceNode(place=ComptimeVariable(static_value=str(v))):
-                        msg_value = v
-                    case _:
-                        raise GuppyTypeError(ExpectedError(msg, "a string literal"))
                 vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
                 # TODO variable signals once default arguments are available
+                # TODO this will also allow us to remove this manual AST node hack
+                signal_expr = with_type(
+                    int_type(), with_loc(self.node, ast.Constant(value=1))
+                )
                 node = PanicExpr(
-                    kind=ExitKind.Panic, msg=msg_value, values=vals, signal=1
+                    kind=ExitKind.Panic, msg=msg, values=vals, signal=signal_expr
                 )
                 return with_loc(self.node, node), NoneType()
             case args:
@@ -454,31 +452,16 @@ class ExitChecker(CustomCallChecker):
                 )
                 raise GuppyTypeError(signal_err)
             case [msg, signal, *rest]:
+                # Check types for message and signal and synthesize types for additional
+                # values.
                 msg, _ = ExprChecker(self.ctx).check(msg, string_type())
-                match msg:
-                    case ast.Constant(value=str(v)):
-                        msg_value = v
-                    case PlaceNode(place=ComptimeVariable(static_value=str(v))):
-                        msg_value = v
-                    case _:
-                        raise GuppyTypeError(ExpectedError(msg, "a string literal"))
-                # TODO allow variable signals after https://github.com/CQCL/hugr/issues/1863
                 signal, _ = ExprChecker(self.ctx).check(signal, int_type())
-                match signal:
-                    case ast.Constant(value=int(s)):
-                        signal_value = s
-                    case PlaceNode(place=ComptimeVariable(static_value=int(s))):
-                        signal_value = s
-                    case _:
-                        raise GuppyTypeError(
-                            ExpectedError(signal, "an integer literal")
-                        )
                 vals = [ExprSynthesizer(self.ctx).synthesize(val)[0] for val in rest]
                 node = PanicExpr(
                     kind=ExitKind.ExitShot,
-                    msg=msg_value,
+                    msg=msg,
                     values=vals,
-                    signal=signal_value,
+                    signal=signal,
                 )
                 return with_loc(self.node, node), NoneType()
             case args:

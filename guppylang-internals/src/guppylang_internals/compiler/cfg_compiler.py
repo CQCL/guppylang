@@ -24,7 +24,7 @@ from guppylang_internals.compiler.core import (
 from guppylang_internals.compiler.expr_compiler import ExprCompiler
 from guppylang_internals.compiler.stmt_compiler import StmtCompiler
 from guppylang_internals.std._internal.compiler.tket_bool import OpaqueBool, read_bool
-from guppylang_internals.tys.ty import SumType, row_to_type, type_to_row
+from guppylang_internals.tys.ty import type_to_row
 
 
 def compile_cfg(
@@ -194,8 +194,9 @@ def choose_vars_for_tuple_sum(
     constructs a TupleSum value of type `Sum(#s1, #s2, ...)`.
     """
     assert all(v.ty.droppable for var_row in output_vars for v in var_row)
-    tys = [[v.ty for v in var_row] for var_row in output_vars]
-    sum_type = SumType([row_to_type(row) for row in tys]).to_hugr(dfg.ctx)
+    sum_type = ht.Sum(
+        [[v.ty.to_hugr(dfg.ctx) for v in var_row] for var_row in output_vars]
+    )
 
     # We pass all values into the conditional instead of relying on non-local edges.
     # This is because we can't handle them in lower parts of the stack yet :/
