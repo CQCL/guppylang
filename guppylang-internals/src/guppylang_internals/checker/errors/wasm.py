@@ -13,7 +13,7 @@ class WasmError(Error):
 @dataclass(frozen=True)
 class FirstArgNotModule(WasmError):
     span_label: ClassVar[str] = (
-        "First argument to WASM function should be a reference to a WASM module."
+        "First argument to WASM function should be a WASM module."
     )
 
     @dataclass(frozen=True)
