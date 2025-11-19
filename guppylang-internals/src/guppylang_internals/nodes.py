@@ -263,9 +263,10 @@ class ResultExpr(ast.expr):
     base_ty: Type
     #: Array length in case this is an array result, otherwise `None`
     array_len: Const | None
-    tag: str
+    tag_value: Const
+    tag_expr: ast.expr
 
-    _fields = ("value", "base_ty", "array_len", "tag")
+    _fields = ("value", "base_ty", "array_len", "tag_value", "tag_expr")
 
     @property
     def args(self) -> list[ast.expr]:
@@ -299,12 +300,13 @@ class BarrierExpr(ast.expr):
 class StateResultExpr(ast.expr):
     """A `state_result(tag, *args)` expression."""
 
-    tag: str
+    tag_value: Const
+    tag_expr: ast.expr
     args: list[ast.expr]
     func_ty: FunctionType
     #: Array length in case this is an array result, otherwise `None`
     array_len: Const | None
-    _fields = ("tag", "args", "func_ty", "has_array_input")
+    _fields = ("tag_value", "tag_expr", "args", "func_ty", "has_array_input")
 
 
 AnyCall = (

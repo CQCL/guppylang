@@ -30,6 +30,7 @@ from guppylang_internals.nodes import (
     DesugaredArrayComp,
     DesugaredGeneratorExpr,
     ExitKind,
+    GenericParamValue,
     GlobalCall,
     MakeIter,
     PanicExpr,
@@ -315,6 +316,12 @@ class TooLongError(Error):
     class Hint(Note):
         message: ClassVar[str] = f"Result tags are limited to {TAG_MAX_LEN} bytes"
 
+    @dataclass(frozen=True)
+    class GenericHint(Note):
+        message: ClassVar[str] = "Parameter `{param}` was instantiated to `{value}`"
+        param: str
+        value: str
+
 
 class ResultChecker(CustomCallChecker):
     """Call checker for the `result` function."""
@@ -335,17 +342,16 @@ class ResultChecker(CustomCallChecker):
         check_num_args(2, len(args), self.node)
         [tag, value] = args
         tag, _ = ExprChecker(self.ctx).check(tag, string_type())
+        tag_value: Const
         match tag:
             case ast.Constant(value=str(v)):
-                tag_value = v
+                tag_value = ConstValue(string_type(), v)
             case PlaceNode(place=ComptimeVariable(static_value=str(v))):
-                tag_value = v
+                tag_value = ConstValue(string_type(), v)
+            case GenericParamValue() as param_value:
+                tag_value = param_value.param.to_bound().const
             case _:
                 raise GuppyTypeError(ExpectedError(tag, "a string literal"))
-        if len(tag_value.encode("utf-8")) > TAG_MAX_LEN:
-            err: Error = TooLongError(tag)
-            err.add_sub_diagnostic(TooLongError.Hint(None))
-            raise GuppyTypeError(err)
         value, ty = ExprSynthesizer(self.ctx).synthesize(value)
         # We only allow numeric values or vectors of numeric values
         err = ResultChecker.InvalidError(value, ty)
@@ -363,7 +369,7 @@ class ResultChecker(CustomCallChecker):
             array_len = len_arg.const
         else:
             raise GuppyError(err)
-        node = ResultExpr(value, base_ty, array_len, tag_value)
+        node = ResultExpr(value, base_ty, array_len, tag_value, tag)
         return with_loc(self.node, node), NoneType()
 
     def check(self, args: list[ast.expr], ty: Type) -> tuple[ast.expr, Subst]:
