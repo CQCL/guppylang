@@ -60,6 +60,7 @@ from guppylang_internals.nodes import (
     TupleAccessAndDrop,
     TypeApply,
 )
+from guppylang_internals.std._internal.checker import TAG_MAX_LEN, TooLongError
 from guppylang_internals.std._internal.compiler.arithmetic import (
     UnsignedIntVal,
     convert_ifromusize,
@@ -100,7 +101,7 @@ from guppylang_internals.tys.builtin import (
     is_bool_type,
     is_frozenarray_type,
 )
-from guppylang_internals.tys.const import ConstValue
+from guppylang_internals.tys.const import BoundConstVar, Const, ConstValue
 from guppylang_internals.tys.subst import Inst
 from guppylang_internals.tys.ty import (
     BoundTypeVar,
@@ -536,6 +537,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._unpack_tuple(tuple_port, node.tuple_ty.element_types)[node.index]
 
     def visit_ResultExpr(self, node: ResultExpr) -> Wire:
+        tag_value = self._visit_result_tag(node.tag_value, node.tag_expr)
         value_wire = self.visit(node.value)
         base_ty = node.base_ty.to_hugr(self.ctx)
         extra_args: list[ht.TypeArg] = []
@@ -595,11 +597,44 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             hugr_ty = base_ty
 
         sig = ht.FunctionType(input=[hugr_ty], output=[])
-        args = [ht.StringArg(node.tag), *extra_args]
+        args = [ht.StringArg(tag_value), *extra_args]
         op = ops.ExtOp(RESULT_EXTENSION.get_op(op_name), signature=sig, args=args)
 
         self.builder.add_op(op, value_wire)
         return self._pack_returns([], NoneType())
+
+    def _visit_result_tag(self, tag: Const, loc: ast.expr) -> str:
+        """Helper method to resolve the tag string in `result` and `state_result`
+        expressions.
+
+        Also takes care of checking that the tag fits into the maximum tag length.
+        Once we go ahead with https://github.com/CQCL/guppylang/discussions/1299, this
+        can be moved into type checking.
+        """
+        is_generic: BoundConstVar | None = None
+        match tag:
+            case ConstValue(value=str(v)):
+                tag_value = v
+            case BoundConstVar(idx=idx) as var:
+                assert self.ctx.current_mono_args is not None
+                match self.ctx.current_mono_args[idx]:
+                    case ConstArg(const=ConstValue(value=str(v))):
+                        tag_value = v
+                        is_generic = var
+                    case _:
+                        raise InternalGuppyError("Unexpected tag monomorphization")
+            case _:
+                raise InternalGuppyError("Unexpected tag value")
+
+        if len(tag_value.encode("utf-8")) > TAG_MAX_LEN:
+            err = TooLongError(loc)
+            err.add_sub_diagnostic(TooLongError.Hint(None))
+            if is_generic:
+                err.add_sub_diagnostic(
+                    TooLongError.GenericHint(None, is_generic.display_name, tag_value)
+                )
+            raise GuppyError(err)
+        return tag_value
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
         signal = self.visit(node.signal)
@@ -630,12 +665,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._pack_returns([], NoneType())
 
     def visit_StateResultExpr(self, node: StateResultExpr) -> Wire:
+        tag_value = self._visit_result_tag(node.tag_value, node.tag_expr)
         num_qubits_arg = (
             node.array_len.to_arg().to_hugr(self.ctx)
             if node.array_len
             else ht.BoundedNatArg(len(node.args) - 1)
         )
-        args = [ht.StringArg(node.tag), num_qubits_arg]
+        args = [ht.StringArg(tag_value), num_qubits_arg]
         sig = ht.FunctionType(
             [standard_array_type(ht.Qubit, num_qubits_arg)],
             [standard_array_type(ht.Qubit, num_qubits_arg)],
