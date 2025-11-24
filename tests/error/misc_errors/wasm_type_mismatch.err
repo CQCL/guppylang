@@ -1,10 +1,10 @@
-Error: Wasm signature mismatch (at $FILE:15:11)
+Error: Wasm signature mismatch (at $FILE:10:4)
    | 
-13 | def main() -> bool:
-14 |     f = Foo(0)
-15 |     return f.add(1, 2)
-   |            ^^^^^^^^^^^ Signature of wasm function didn't match that in provided
-   |                        file
+ 8 | class Foo:
+ 9 |     @wasm
+10 |     def add(self: "Foo", x: int, y: int, z: int) -> int: ...
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Signature of wasm function didn't match that in provided
+   |                                                              file
 
 Note: Declared signature: (int, int, int) -> int
 

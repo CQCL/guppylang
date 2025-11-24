@@ -274,6 +274,9 @@ def ext_module_decorator(
                         wasm_def = val.wrapped
                     else:
                         continue
+                    # wasm_sigs should only have not been provided if we have
+                    # defined @wasm functions in a class which didn't use the
+                    # @wasm_module decorator.
                     assert wasm_sigs is not None
                     if wasm_def.wasm_index is not None:
                         name = wasm_sigs.functions[wasm_def.wasm_index]

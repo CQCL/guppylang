@@ -1,6 +1,6 @@
 Traceback (most recent call last):
   File "$FILE", line 4, in <module>
     @wasm_module("not_there.wasm")
-  File "/Users/craig.roy/work/guppy/guppylang-internals/src/guppylang_internals/decorator.py", line 217, in wasm_module
+  File "/Users/craig.roy/work/guppy/guppylang-internals/src/guppylang_internals/decorator.py", line 216, in wasm_module
     raise WasmFileNotFound(f"Wasm file not found: `{filename}`")
 guppylang_internals.wasm_util.WasmFileNotFound: Wasm file not found: `not_there.wasm`
