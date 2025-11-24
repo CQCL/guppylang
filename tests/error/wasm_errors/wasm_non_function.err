@@ -1,4 +1,4 @@
-Error: Wasm file `/Users/craig.roy/work/guppy/tests/resources/test.wasm`
+Error: Wasm file `$WASM_MODULE`
 contains invalid signature for @wasm function `non_fn`
 
 Note: `non_fn` is not exported as a function
