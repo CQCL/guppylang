@@ -88,8 +88,6 @@ def decode_wasm_functions(filename: str) -> ConcreteWasmModule:
     engine = wt.Engine()
     mod = wt.Module.from_file(engine, filename)
 
-    # functions = [ x.name for x in enumerate(mod.exports) ]
-    # TODO: Delete the functions bit, because the sigs are ordered
     functions: list[str] = []
     function_sigs: dict[str, FunctionType | str] = {}
     for fn in mod.exports:
