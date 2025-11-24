@@ -5,8 +5,9 @@ import pytest
 def test_def():
     @guppy.protocol
     class MyProto[T]:
-        @guppy.declare
         def foo(self: "MyProto", x: T) -> str: ...
+
+        def bar(self: "MyProto") -> "MyProto": ...
 
     MyProto.compile()
 

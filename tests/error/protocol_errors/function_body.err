@@ -1,7 +1,6 @@
 Error: Unexpected function body (at $FILE:7:4)
   | 
 5 | class MyProto:
-6 |     @guppy.declare
 7 |     def foo(self: "MyProto", x: int) -> str:
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 8 |         return "abcdef"

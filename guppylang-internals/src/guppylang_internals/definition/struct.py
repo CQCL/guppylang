@@ -347,7 +347,7 @@ def parse_py_class(
 
 
 def try_parse_generic_base(node: ast.expr, base_name: str) -> list[ast.expr] | None:
-    """Checks if an AST node corresponds to a `name[T1, ..., Tn]` base class.
+    """Checks if an AST node corresponds to a `base_name[T1, ..., Tn]` base class.
 
     Returns the generic parameters or `None` if the AST has a different shape
     """

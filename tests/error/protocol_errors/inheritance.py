@@ -5,7 +5,6 @@ class OtherClass:
 
 @guppy.protocol
 class MyProto(OtherClass):
-    @guppy.declare
     def foo(self: "MyProto", x: int) -> str: ...
 
 

@@ -2,7 +2,7 @@ import ast
 import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from guppylang_internals.ast_util import AstNode, has_empty_body
 from guppylang_internals.checker.core import Globals
@@ -10,14 +10,15 @@ from guppylang_internals.checker.errors.generic import (
     UnexpectedError,
     UnsupportedError,
 )
+from guppylang_internals.checker.func_checker import check_signature
 from guppylang_internals.definition.common import (
+    CheckableDef,
     CompiledDef,
-    DefId,
     Definition,
     ParsableDef,
 )
+from guppylang_internals.definition.function import PyFunc, parse_py_func
 from guppylang_internals.definition.struct import (
-    NonGuppyMethodError,
     RedundantParamsError,
     params_from_ast,
     parse_py_class,
@@ -30,6 +31,7 @@ from guppylang_internals.span import SourceMap, Span, to_span
 from guppylang_internals.tys.arg import Argument
 from guppylang_internals.tys.param import Parameter, check_all_args
 from guppylang_internals.tys.protocol import ProtocolInst
+from guppylang_internals.tys.ty import FunctionType
 
 if TYPE_CHECKING:
     from guppylang_internals.diagnostic import Error
@@ -46,10 +48,9 @@ class ProtocolDef(Definition):
 
 
 @dataclass(frozen=True)
-class DeclarationHint(Help):
+class EmptyBodyHint(Help):
     message: ClassVar[str] = (
-        "Add a `@guppy.declare` annotation and leave the body empty to turn this into "
-        "a declaration"
+        "Leave the body empty to turn this into a protocol function definition"
     )
 
 
@@ -59,7 +60,7 @@ class RawProtocolDef(ProtocolDef, ParsableDef):
 
     python_class: type
 
-    def parse(self, globals: Globals, sources: SourceMap) -> "CheckedProtocolDef":
+    def parse(self, globals: Globals, sources: SourceMap) -> "ParsedProtocolDef":
         """Parses the raw class object into an AST and checks that it is well-formed."""
         # Mostly copied from RawStructDef.parse, but only allowing function declarations
         # in the body and allowing `Protocol` as a base class.
@@ -104,28 +105,24 @@ class RawProtocolDef(ProtocolDef, ParsableDef):
                 err = UnsupportedError(bases[0], "Protocol inheritance", singular=True)
                 raise GuppyError(err)
 
-        func_defs: dict[str, DefId] = {}
+        func_defs = {}
         for i, node in enumerate(cls_def.body):
             match i, node:
                 # Docstrings are fine if they occur at the start.
                 case 0, ast.Expr(value=ast.Constant(value=v)) if isinstance(v, str):
                     pass
-                # Ensure that all function definitions are Guppy declarations.
+                # Parse the function definitions into types.
                 case _, ast.FunctionDef(name=name) as node:
-                    from guppylang.defs import GuppyDefinition
-
-                    v = getattr(self.python_class, name)
-                    if not isinstance(v, GuppyDefinition):
-                        raise GuppyError(NonGuppyMethodError(node, self.name, name))
-                    if not has_empty_body(node):
+                    py_func = getattr(self.python_class, name, None)
+                    py_func = cast(PyFunc, py_func)
+                    func_ast, _ = parse_py_func(py_func, sources)
+                    if not has_empty_body(func_ast):
                         err = UnexpectedError(
                             node, "function body", unexpected_in="protocol definition"
                         )
-                        err.add_sub_diagnostic(DeclarationHint(None))
+                        err.add_sub_diagnostic(EmptyBodyHint(None))
                         raise GuppyError(err)
-                    # Store the definition ID and then get the type through the engine
-                    # during protocol checking, avoiding re-parsing the signature here.
-                    func_defs[name] = v.wrapped.id
+                    func_defs[name] = func_ast
                 # Fields are not allowed in protocols.
                 case _, ast.AnnAssign(target=ast.Name(_)) as node:
                     err = UnsupportedError(
@@ -138,14 +135,35 @@ class RawProtocolDef(ProtocolDef, ParsableDef):
                     )
                     raise GuppyError(err)
 
-        return CheckedProtocolDef(self.id, self.name, cls_def, params, func_defs)
+        return ParsedProtocolDef(self.id, self.name, cls_def, params, func_defs)
+
+
+@dataclass(frozen=True)
+class ParsedProtocolDef(ProtocolDef, CheckableDef):
+    """A protocol definition where members have been parsed but not checked yet."""
+
+    defined_at: ast.ClassDef
+    params: Sequence[Parameter]
+    members: Mapping[str, ast.FunctionDef]
+
+    def check(self, globals: Globals) -> "CheckedProtocolDef":
+        """Checks the member function types and returns a checked definition."""
+        checked_members = {}
+        for member_name, func_def in self.members.items():
+            ty = check_signature(func_def, globals, self.id)
+            checked_members[member_name] = ty
+        return CheckedProtocolDef(
+            self.id, self.name, self.defined_at, self.params, checked_members
+        )
 
 
 @dataclass(frozen=True)
 class CheckedProtocolDef(ProtocolDef, CompiledDef):
+    """A fully checked protocol definition."""
+
     defined_at: ast.ClassDef
     params: Sequence[Parameter]
-    members: Mapping[str, DefId]
+    members: Mapping[str, FunctionType]
 
     def check_instantiate(
         self, args: Sequence[Argument], loc: AstNode | None = None
