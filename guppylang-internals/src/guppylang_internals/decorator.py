@@ -213,7 +213,7 @@ def wasm_module(
     if wasm_file.is_file():
         wasm_sigs = decode_wasm_functions(filename)
     else:
-        raise WasmFileNotFound(f"Wasm file not found: `{filename}`")
+        raise GuppyError(WasmFileNotFound(None, filename))
 
     def type_def_wrapper(
         id: DefId,

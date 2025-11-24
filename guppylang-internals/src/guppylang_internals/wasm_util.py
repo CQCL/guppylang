@@ -24,18 +24,18 @@ class ConcreteWasmModule:
 
 
 @dataclass(frozen=True)
+class WasmFileNotFound(Error):
+    title: ClassVar[str] = "Wasm file `{file}` not found"
+    file: str
+
+
+@dataclass(frozen=True)
 class WasmFunctionNotInFile(Error):
     title: ClassVar[str] = (
         "Declared wasm function `{function}` isn't exported by wasm file {file}"
     )
     function: str
     file: str
-
-
-@dataclass(frozen=True)
-class WasmFileNotFound(Exception):
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
 
 
 @dataclass(frozen=True)
