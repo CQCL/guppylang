@@ -1,0 +1,6 @@
+Error: Wasm file `/Users/craig.roy/work/guppy/tests/resources/test.wasm`
+contains invalid signature for @wasm function `bad_output_type`
+
+Note: Invalid output: f32
+
+Guppy compilation failed due to 1 previous error

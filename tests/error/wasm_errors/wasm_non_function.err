@@ -1,0 +1,6 @@
+Error: Wasm file `/Users/craig.roy/work/guppy/tests/resources/test.wasm`
+contains invalid signature for @wasm function `non_fn`
+
+Note: `non_fn` is not exported as a function
+
+Guppy compilation failed due to 1 previous error

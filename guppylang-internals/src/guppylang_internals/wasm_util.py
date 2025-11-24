@@ -24,6 +24,21 @@ class ConcreteWasmModule:
 
 
 @dataclass(frozen=True)
+class WasmSignatureError(Error):
+    title: ClassVar[str] = (
+        "Wasm file `{filename}` contains invalid signature for @wasm function "
+        "`{fn_name}`"
+    )
+    fn_name: str
+    filename: str
+
+    @dataclass(frozen=True)
+    class Message(Note):
+        message = "{msg}"
+        msg: str
+
+
+@dataclass(frozen=True)
 class WasmFileNotFound(Error):
     title: ClassVar[str] = "Wasm file `{file}` not found"
     file: str
@@ -100,9 +115,9 @@ def decode_wasm_functions(filename: str) -> ConcreteWasmModule:
                     case [output]:
                         data = decode_sig(fun_ty.params, output)
                     case _multi:
-                        data = f"Invalid: Multiple output types in function {fn.name}"
+                        data = f"Multiple output types in function `{fn.name}`"
             case _:
-                data = f"Non-function: {fn.name}"
+                data = f"`{fn.name}` is not exported as a function"
         function_sigs[fn.name] = data
 
     return ConcreteWasmModule(filename, functions, function_sigs)

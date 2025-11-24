@@ -26,7 +26,7 @@ from guppylang_internals.definition.ty import OpaqueTypeDef, TypeDef
 from guppylang_internals.definition.wasm import RawWasmFunctionDef
 from guppylang_internals.dummy_decorator import _dummy_custom_decorator, sphinx_running
 from guppylang_internals.engine import DEF_STORE
-from guppylang_internals.error import GuppyError, InternalGuppyError
+from guppylang_internals.error import GuppyError
 from guppylang_internals.std._internal.checker import WasmCallChecker
 from guppylang_internals.std._internal.compiler.wasm import (
     WasmModuleCallCompiler,
@@ -48,6 +48,7 @@ from guppylang_internals.wasm_util import (
     ConcreteWasmModule,
     WasmFileNotFound,
     WasmFunctionNotInFile,
+    WasmSignatureError,
     decode_wasm_functions,
 )
 
@@ -296,7 +297,13 @@ def ext_module_decorator(
                     if isinstance(wasm_sig_or_err, FunctionType):
                         DEF_STORE.register_wasm_function(wasm_def.id, wasm_sig_or_err)
                     elif isinstance(wasm_sig_or_err, str):
-                        raise InternalGuppyError(wasm_sig_or_err)
+                        raise GuppyError(
+                            WasmSignatureError(
+                                None, wasm_def.name, filename
+                            ).add_sub_diagnostic(
+                                WasmSignatureError.Message(None, wasm_sig_or_err)
+                            )
+                        )
 
             # Add a constructor to the class
             if init_arg:
