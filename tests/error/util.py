@@ -37,7 +37,7 @@ def run_error_test(file, capsys, snapshot):
 
     err = capsys.readouterr().err
     wasm_module = get_wasm_file()
-    err = err.replace(str(file), "$FILE").replace(wasm_module, "$WASM_MODULE")
+    err = err.replace(str(file), "$FILE").replace(wasm_module, "$WASM")
 
     # If we're comparing tracebacks, strip the highlights that are only present for
     # Python 3.11+

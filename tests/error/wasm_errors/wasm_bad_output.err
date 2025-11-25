@@ -1,4 +1,4 @@
-Error: Wasm file `$WASM_MODULE`
+Error: Wasm file `$WASM`
 contains invalid signature for @wasm function `bad_output_type`
 
 Note: Invalid output: f32
