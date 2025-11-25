@@ -1,5 +1,5 @@
-Error: Wasm file `$WASM`
-contains invalid signature for @wasm function `bad_input_type`
+Error: Invalid signature for @wasm function `bad_input_type`
+in wasm file: `$WASM`
 
 Note: Invalid param: i32
 

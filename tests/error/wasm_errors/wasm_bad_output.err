@@ -1,5 +1,5 @@
-Error: Wasm file `$WASM`
-contains invalid signature for @wasm function `bad_output_type`
+Error: Invalid signature for @wasm function `bad_output_type`
+in wasm file: `$WASM`
 
 Note: Invalid output: f32
 
