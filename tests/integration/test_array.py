@@ -4,6 +4,7 @@ from hugr import ops
 
 from guppylang.decorator import guppy
 from guppylang.std.builtins import array, owned, mem_swap
+from guppylang.std.num import nat
 from tests.util import compile_guppy
 
 from guppylang.std.quantum import qubit, discard
@@ -155,6 +156,19 @@ def test_multi_subscripts(validate):
         foo(qs[0], qs[1])
         foo(qs[0], qs[0])  # Will panic at runtime
         return qs
+
+    validate(main.compile_function())
+
+
+def test_inout_subscript_coerce(validate):
+    """See https://github.com/CQCL/guppylang/issues/1356"""
+
+    @guppy.declare
+    def foo(q: qubit) -> None: ...
+
+    @guppy
+    def main(qs: array[qubit, 42], i: nat) -> None:
+        foo(qs[i])
 
     validate(main.compile_function())
 
