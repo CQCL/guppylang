@@ -43,6 +43,7 @@ from guppylang_internals.ast_util import (
 )
 from guppylang_internals.cfg.builder import is_tmp_var, tmp_vars
 from guppylang_internals.checker.core import (
+    ComptimeVariable,
     Context,
     DummyEvalDict,
     FieldAccess,
@@ -1071,6 +1072,8 @@ def check_comptime_arg(
     const: Const
     match arg:
         case ast.Constant(value=v):
+            const = ConstValue(ty, v)
+        case PlaceNode(place=ComptimeVariable(ty=ty, static_value=v)):
             const = ConstValue(ty, v)
         case GenericParamValue(param=const_param):
             const = const_param.to_bound().const
