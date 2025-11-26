@@ -21,7 +21,6 @@ from guppylang_internals.std._internal.util import (
 from guppylang_internals.tys.builtin import float_type_def, int_type_def, nat_type_def
 
 from guppylang import guppy
-from guppylang.std.platform import panic
 
 
 @extend_type(nat_type_def)
@@ -483,3 +482,8 @@ def pow(x, y): ...
 
 @custom_function(checker=DunderChecker("__round__"), higher_order_value=False)
 def round(x): ...
+
+
+# Delayed import to avoid cyclic import since `platform.result` overloads depend on
+# types in `num`.
+from guppylang.std.platform import panic  # noqa: E402

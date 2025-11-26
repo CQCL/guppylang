@@ -256,23 +256,6 @@ class ComptimeExpr(ast.expr):
     _fields = ("value",)
 
 
-class ResultExpr(ast.expr):
-    """A `result(tag, value)` expression."""
-
-    value: ast.expr
-    base_ty: Type
-    #: Array length in case this is an array result, otherwise `None`
-    array_len: Const | None
-    tag_value: Const
-    tag_expr: ast.expr
-
-    _fields = ("value", "base_ty", "array_len", "tag_value", "tag_expr")
-
-    @property
-    def args(self) -> list[ast.expr]:
-        return [self.value]
-
-
 class ExitKind(Enum):
     ExitShot = 0  # Exit the current shot
     Panic = 1  # Panic the program ending all shots
@@ -309,9 +292,7 @@ class StateResultExpr(ast.expr):
     _fields = ("tag_value", "tag_expr", "args", "func_ty", "has_array_input")
 
 
-AnyCall = (
-    LocalCall | GlobalCall | TensorCall | BarrierExpr | ResultExpr | StateResultExpr
-)
+AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr | StateResultExpr
 
 
 class InoutReturnSentinel(ast.expr):
