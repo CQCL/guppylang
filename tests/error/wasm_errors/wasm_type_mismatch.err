@@ -4,7 +4,7 @@ Error: Wasm signature mismatch (at $FILE:10:4)
  9 |     @wasm
 10 |     def add(self: "Foo", x: int, y: int, z: int) -> int: ...
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Signature of wasm function didn't match that in provided
-   |                                                              file
+   |                                                              wasm file
 
 Note: Declared signature: (int, int, int) -> int
 

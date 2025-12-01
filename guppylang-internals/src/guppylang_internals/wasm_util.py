@@ -47,7 +47,7 @@ class WasmFileNotFound(Error):
 @dataclass(frozen=True)
 class WasmFunctionNotInFile(Error):
     title: ClassVar[str] = (
-        "Declared wasm function `{function}` isn't exported by wasm file {file}"
+        "Declared wasm function `{function}` isn't exported by wasm file `{file}`"
     )
     function: str
     file: str
@@ -57,7 +57,7 @@ class WasmFunctionNotInFile(Error):
 class WasmSigMismatchError(Error):
     title: ClassVar[str] = "Wasm signature mismatch"
     span_label: ClassVar[str] = (
-        "Signature of wasm function didn't match that in provided file"
+        "Signature of wasm function didn't match that in provided wasm file"
     )
 
     @dataclass(frozen=True)
@@ -89,12 +89,12 @@ def decode_sig(
         if ty := decode_type(p):
             my_params.append(FuncInput(ty, flags=InputFlags.NoFlags))
         else:
-            return f"Invalid param: {p}"
+            return f"Unsupported input type: {p}"
     if output:
         if ty := decode_type(output):
             return FunctionType(my_params, ty)
         else:
-            return f"Invalid output: {output}"
+            return f"Unsupported output type: {output}"
     else:
         return FunctionType(my_params, NoneType())
 
