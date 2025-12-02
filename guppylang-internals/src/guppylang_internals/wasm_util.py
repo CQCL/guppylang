@@ -47,10 +47,14 @@ class WasmFileNotFound(Error):
 @dataclass(frozen=True)
 class WasmFunctionNotInFile(Error):
     title: ClassVar[str] = (
-        "Declared wasm function `{function}` isn't exported by wasm file `{file}`"
+        "Declared wasm function `{function}` isn't exported by wasm file"
     )
     function: str
-    file: str
+
+    @dataclass(frozen=True)
+    class WasmFileNote(Note):
+        message: ClassVar[str] = "Wasm file: {filename}"
+        filename: str
 
 
 @dataclass(frozen=True)
@@ -115,7 +119,9 @@ def decode_wasm_functions(filename: str) -> ConcreteWasmModule:
                     case [output]:
                         data = decode_sig(fun_ty.params, output)
                     case _multi:
-                        data = f"Multiple output types in function `{fn.name}`"
+                        data = (
+                            f"Multiple output types unsupported in function `{fn.name}`"
+                        )
             case _:
                 data = f"`{fn.name}` is not exported as a function"
         function_sigs[fn.name] = data

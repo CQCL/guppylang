@@ -291,7 +291,11 @@ def ext_module_decorator(
                                 WasmFunctionNotInFile(
                                     wasm_def.defined_at,
                                     wasm_def.name,
-                                    pathlib.Path(wasm_sigs.filename).name,
+                                ).add_sub_diagnostic(
+                                    WasmFunctionNotInFile.WasmFileNote(
+                                        None,
+                                        wasm_sigs.filename,
+                                    )
                                 )
                             )
                     if isinstance(wasm_sig_or_err, FunctionType):
