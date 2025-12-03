@@ -46,6 +46,7 @@ from guppylang_internals.tys.builtin import (
     string_type_def,
     tuple_type_def,
 )
+from guppylang_internals.tys.ty import FunctionType
 
 if TYPE_CHECKING:
     from guppylang_internals.compiler.core import MonoDefId
@@ -87,6 +88,7 @@ class DefinitionStore:
     raw_defs: dict[DefId, RawDef]
     impls: defaultdict[DefId, dict[str, DefId]]
     impl_parents: dict[DefId, DefId]
+    wasm_functions: dict[DefId, FunctionType]
     frames: dict[DefId, FrameType]
     sources: SourceMap
 
@@ -96,6 +98,7 @@ class DefinitionStore:
         self.impl_parents = {}
         self.frames = {}
         self.sources = SourceMap()
+        self.wasm_functions = {}
 
     def register_def(self, defn: RawDef, frame: FrameType | None) -> None:
         self.raw_defs[defn.id] = defn
@@ -122,6 +125,9 @@ class DefinitionStore:
                     frame = frame.f_back
                     assert frame is not None
                     self.frames[impl_id] = frame
+
+    def register_wasm_function(self, fn_id: DefId, sig: FunctionType) -> None:
+        self.wasm_functions[fn_id] = sig
 
 
 DEF_STORE: DefinitionStore = DefinitionStore()

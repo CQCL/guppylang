@@ -1,17 +1,17 @@
 from guppylang import guppy
 from guppylang_internals.decorator import wasm, wasm_module
-from guppylang.std.quantum import qubit
 
+from tests.util import get_wasm_file
 
-@wasm_module("")
+@wasm_module(get_wasm_file())
 class Foo:
     @wasm
-    def foo(self: "Foo", x: qubit) -> qubit: ...
+    def bad_input_type(self: "Foo", x: int) -> None: ...
 
 @guppy
 def main() -> qubit:
     mod = Foo(0)
-    q = mod.foo(qubit())
+    mod.bad_input_type(42)
     mod.discard
     return q
 
