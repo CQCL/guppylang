@@ -608,7 +608,7 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         expressions.
 
         Also takes care of checking that the tag fits into the maximum tag length.
-        Once we go ahead with https://github.com/CQCL/guppylang/discussions/1299, this
+        Once we go ahead with https://github.com/quantinuum/guppylang/discussions/1299, this
         can be moved into type checking.
         """
         is_generic: BoundConstVar | None = None

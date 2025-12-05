@@ -270,7 +270,7 @@ class CompilationEngine:
             and not isinstance(graph.hugr[compiled_def.hugr_node].op, ops.FuncDecl)
         ):
             # if compiling a region set it as the HUGR entrypoint
-            # can be loosened after https://github.com/CQCL/hugr/issues/2501 is fixed
+            # can be loosened after https://github.com/quantinuum/hugr/issues/2501 is fixed
             graph.hugr.entrypoint = compiled_def.hugr_node
 
         # TODO: Currently the list of extensions is manually managed by the user.
@@ -284,7 +284,7 @@ class CompilationEngine:
             guppylang_internals.compiler.hugr_extension.EXTENSION,
             *self.additional_extensions,
         ]
-        # TODO replace with computed extensions after https://github.com/CQCL/guppylang/issues/550
+        # TODO replace with computed extensions after https://github.com/quantinuum/guppylang/issues/550
         all_used_extensions = [
             *extensions,
             hugr.std.prelude.PRELUDE_EXTENSION,

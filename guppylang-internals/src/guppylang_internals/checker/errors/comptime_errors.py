@@ -102,5 +102,5 @@ class ComptimeUnknownError(Error):
         message: ClassVar[str] = (
             "We are currently investigating ways to make Guppy's compile-time "
             "reasoning smarter. Please leave your feedback at "
-            "https://github.com/CQCL/guppylang/discussions/987"
+            "https://github.com/quantinuum/guppylang/discussions/987"
         )

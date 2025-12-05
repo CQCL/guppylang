@@ -92,7 +92,7 @@ class RNG:
             i = SHUFFLE_N - 1 - k
             j = self.random_int_bounded(i + 1)
             # TODO use array swap once lowering implemented
-            # https://github.com/CQCL/guppylang/issues/924
+            # https://github.com/quantinuum/guppylang/issues/924
             if i != j:
                 mem_swap(array[i], array[j])
 

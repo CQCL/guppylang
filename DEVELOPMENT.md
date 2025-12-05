@@ -2,7 +2,7 @@
 
 This guide is intended to help you get started with developing guppylang.
 
-If you find any errors or omissions in this document, please [open an issue](https://github.com/CQCL/guppylang/issues/new)!
+If you find any errors or omissions in this document, please [open an issue](https://github.com/quantinuum/guppylang/issues/new)!
 
 ## #️⃣ Setting up the development environment
 
@@ -113,7 +113,7 @@ just fix
 
 We run coverage checks on the CI. Once you submit a PR, you can review the
 line-by-line coverage report on
-[codecov](https://app.codecov.io/gh/CQCL/guppylang/commits?branch=All%20branches).
+[codecov](https://app.codecov.io/gh/quantinuum/guppylang/commits?branch=All%20branches).
 
 To generate the coverage info locally, simply run:
 
@@ -126,7 +126,7 @@ and open it with your favourite coverage viewer. In VSCode, you can use
 
 ## 🌐 Contributing to Guppy
 
-We welcome contributions to Guppy! Please open [an issue](https://github.com/CQCL/guppylang/issues/new) or [pull request](https://github.com/CQCL/guppylang/compare) if you have any questions or suggestions.
+We welcome contributions to Guppy! Please open [an issue](https://github.com/quantinuum/guppylang/issues/new) or [pull request](https://github.com/quantinuum/guppylang/compare) if you have any questions or suggestions.
 
 PRs should be made against the `main` branch, and should pass all CI checks before being merged. This includes using the [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) format for the PR title.
 
@@ -183,7 +183,7 @@ the existing release PRs for examples on how to do this. Once the branch is
 ready, create a draft PR so that the release team can review it.
 
 The wheel building process and publication to PyPI is handled by the CI. Just
-create a [github release](https://github.com/CQCL/guppylang/releases/new) from
+create a [github release](https://github.com/quantinuum/guppylang/releases/new) from
 the **unmerged** branch, and the CI will take care of the rest. The release tag
 should follow the format used in the previous releases, e.g. `v0.1.1`.
 
