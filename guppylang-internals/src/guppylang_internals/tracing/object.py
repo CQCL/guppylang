@@ -544,7 +544,7 @@ class TracingDefMixin(DunderMixin):
         #  parameters. Maybe we should pass them to `to_guppy_object`? Either way, this
         #  will require some more plumbing of type inference information through the
         #  comptime logic. For now, let's just bail on generic functions.
-        #  See https://github.com/CQCL/guppylang/issues/1336
+        #  See https://github.com/quantinuum/guppylang/issues/1336
         if isinstance(defn, CallableDef) and defn.ty.parametrized:
             raise GuppyComptimeError(
                 f"Cannot infer type parameters of generic function `{defn.name}`"

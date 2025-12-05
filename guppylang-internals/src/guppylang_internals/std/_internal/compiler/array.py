@@ -261,7 +261,7 @@ class NewArrayCompiler(ArrayCompiler):
 
     def build_classical_array(self, elems: list[Wire]) -> Wire:
         """Lowers a call to `array.__new__` for classical arrays."""
-        # See https://github.com/CQCL/guppylang/issues/629
+        # See https://github.com/quantinuum/guppylang/issues/629
         return self.build_linear_array(elems)
 
     def build_linear_array(self, elems: list[Wire]) -> Wire:

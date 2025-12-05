@@ -35,7 +35,7 @@ jobs:
       - name: Install Guppy
         run: uv sync --frozen
 
-      - uses: CQCL/hugrverse-actions/py-semver-checks@main
+      - uses: quantinuum/hugrverse-actions/py-semver-checks@main
         with:
           packages: guppylang/src/guppylang guppylang-internals/src/guppylang_internals
           token: ${{ secrets.HUGRBOT_PAT }}

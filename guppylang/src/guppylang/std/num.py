@@ -67,7 +67,7 @@ class nat:
     def __gt__(self: nat, other: nat) -> bool: ...
 
     # TODO: Use "iu_to_s" once we have lowering:
-    #  https://github.com/CQCL/hugr/issues/1806
+    #  https://github.com/quantinuum/hugr/issues/1806
     @custom_function(NoopCompiler())
     def __int__(self: nat) -> int: ...
 

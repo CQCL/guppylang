@@ -185,7 +185,7 @@ class CompilerContext(ToHugrContext):
         #  make the call to `ENGINE.get_checked` below fail. For now, let's just short-
         #  cut if the function doesn't take any generic params (as is the case for all
         #  nested functions).
-        #  See https://github.com/CQCL/guppylang/issues/1032
+        #  See https://github.com/quantinuum/guppylang/issues/1032
         if (def_id, ()) in self.compiled:
             assert type_args == []
             return self.compiled[def_id, ()], type_args
@@ -247,7 +247,7 @@ class CompilerContext(ToHugrContext):
 
         # Insert explicit drops for affine types
         # TODO: This is a quick workaround until we can properly insert these drops
-        # during linearity checking. See https://github.com/CQCL/guppylang/issues/1082
+        # during linearity checking. See https://github.com/quantinuum/guppylang/issues/1082
         insert_drops(self.module.hugr)
 
         return entry_compiled
@@ -659,7 +659,7 @@ def track_hugr_side_effects() -> Iterator[None]:
 
 def qualified_name(type_def: he.TypeDef) -> str:
     """Returns the qualified name of a Hugr extension type.
-    TODO: Remove once upstreamed, see https://github.com/CQCL/hugr/issues/2426
+    TODO: Remove once upstreamed, see https://github.com/quantinuum/hugr/issues/2426
     """
     if type_def._extension is not None:
         return f"{type_def._extension.name}.{type_def.name}"
@@ -711,14 +711,14 @@ def drop_op(ty: ht.Type) -> ops.ExtOp:
 def insert_drops(hugr: Hugr[OpVarCov]) -> None:
     """Inserts explicit drop ops for unconnected ports into the Hugr.
     TODO: This is a quick workaround until we can properly insert these drops during
-      linearity checking. See https://github.com/CQCL/guppylang/issues/1082
+      linearity checking. See https://github.com/quantinuum/guppylang/issues/1082
     """
     for node in hugr:
         data = hugr[node]
         # Iterating over `node.outputs()` doesn't work reliably since it sometimes
         # raises an `IncompleteOp` exception. Instead, we query the number of out ports
         # and look them up by index. However, this method is *also* broken when
-        # inspecting `FuncDefn` nodes due to https://github.com/CQCL/hugr/issues/2438.
+        # inspecting `FuncDefn` nodes due to https://github.com/quantinuum/hugr/issues/2438.
         if isinstance(data.op, ops.FuncDefn):
             continue
         for i in range(hugr.num_out_ports(node)):

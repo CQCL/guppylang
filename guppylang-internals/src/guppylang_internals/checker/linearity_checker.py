@@ -582,7 +582,7 @@ class BBLinearityChecker(ast.NodeVisitor):
             # can feed them through the loop. Note that we could also use non-local
             # edges, but we can't handle them in lower parts of the stack yet :/
             # TODO: Reinstate use of non-local edges.
-            #  See https://github.com/CQCL/guppylang/issues/963
+            #  See https://github.com/quantinuum/guppylang/issues/963
             gen.used_outer_places = []
             for x, use in inner_scope.used_parent.items():
                 place = inner_scope[x]

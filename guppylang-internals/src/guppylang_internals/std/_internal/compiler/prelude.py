@@ -105,7 +105,7 @@ def build_static_error(builder: DfBase[P], signal: int, msg: str) -> Wire:
 
 
 # TODO: Common up build_unwrap_right and build_unwrap_left below once
-#  https://github.com/CQCL/hugr/issues/1596 is fixed
+#  https://github.com/quantinuum/hugr/issues/1596 is fixed
 
 
 def build_unwrap_right(
