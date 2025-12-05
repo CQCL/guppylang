@@ -269,8 +269,8 @@ class CompilationEngine:
             and isinstance(compiled_def, CompiledCallableDef)
             and not isinstance(graph.hugr[compiled_def.hugr_node].op, ops.FuncDecl)
         ):
-            # if compiling a region set it as the HUGR entrypoint
-            # can be loosened after https://github.com/quantinuum/hugr/issues/2501 is fixed
+            # if compiling a region set it as the HUGR entrypoint can be
+            # loosened after https://github.com/quantinuum/hugr/issues/2501 is fixed
             graph.hugr.entrypoint = compiled_def.hugr_node
 
         # TODO: Currently the list of extensions is manually managed by the user.

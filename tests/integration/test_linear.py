@@ -27,7 +27,7 @@ def test_assign(validate):
 
 
 def test_linear_return_order(validate):
-    # See https://github.com/quantinuum-DEV/guppy/issues/35
+    # See https://github.com/quantinuum-dev/guppy/issues/35
 
     @guppy
     def test(q: qubit @ owned) -> tuple[qubit, bool]:
