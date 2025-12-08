@@ -22,7 +22,7 @@ jobs:
     name: Check for breaking changes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install rust toolchain
@@ -35,7 +35,7 @@ jobs:
       - name: Install Guppy
         run: uv sync --frozen
 
-      - uses: CQCL/hugrverse-actions/py-semver-checks@main
+      - uses: quantinuum/hugrverse-actions/py-semver-checks@main
         with:
           packages: guppylang/src/guppylang guppylang-internals/src/guppylang_internals
           token: ${{ secrets.HUGRBOT_PAT }}

@@ -50,7 +50,7 @@ class bool:
     def __nat__(self: bool) -> nat:
         # TODO: Type information doesn't flow through the `if` expression, so we
         #  have to insert the `nat` coercions by hand.
-        #  See https://github.com/CQCL/guppylang/issues/707
+        #  See https://github.com/quantinuum/guppylang/issues/707
         return nat(1) if self else nat(0)
 
     @custom_function(checker=DunderChecker("__bool__"), higher_order_value=False)

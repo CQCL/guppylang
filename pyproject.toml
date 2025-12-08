@@ -30,7 +30,7 @@ guppylang = { workspace = true }
 guppylang-internals = { workspace = true }
 miette-py = { workspace = true }
 # Uncomment these to test the latest dependency version during development
-# hugr = { git = "https://github.com/cqcl/hugr", subdirectory = "hugr-py", rev = "35b5b7b" }
+# hugr = { git = "https://github.com/quantinuum/hugr", subdirectory = "hugr-py", rev = "35b5b7b" }
 
 
 [build-system]
@@ -44,7 +44,6 @@ allow_redefinition = true
 
 [[tool.mypy.overrides]]
 module = ["miette_py"]
-
 
 [tool.coverage.report]
 exclude_also = [

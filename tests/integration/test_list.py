@@ -52,7 +52,7 @@ def test_push_pop(validate):
     validate(test)
 
 
-@pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/528")
+@pytest.mark.skip("See https://github.com/quantinuum/guppylang/issues/528")
 def test_arith(validate):
     @compile_guppy
     def test(xs: list[int]) -> list[int]:
@@ -63,7 +63,7 @@ def test_arith(validate):
     validate(test)
 
 
-@pytest.mark.skip("See https://github.com/CQCL/guppylang/issues/528")
+@pytest.mark.skip("See https://github.com/quantinuum/guppylang/issues/528")
 def test_arith_linear(validate):
     @guppy
     def test(

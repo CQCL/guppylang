@@ -468,7 +468,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
         # The only exception are attributes accesses that are generated during
         # desugaring (for example for iterators in `for` loops). Since those just
         # inherit the span of the sugared code, we could have line breaks there.
-        # See https://github.com/CQCL/guppylang/issues/1301
+        # See https://github.com/quantinuum/guppylang/issues/1301
         span = to_span(node)
         if span.start.line == span.end.line:
             attr_span = Span(span.end.shift_left(len(node.attr)), span.end)

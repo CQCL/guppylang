@@ -111,7 +111,7 @@ def arg_from_ast(node: AstNode, ctx: TypeParsingCtx) -> Argument:
                 return ConstArg(ConstValue(bool_type(), v))
             # Integer literals are turned into nat args.
             # TODO: To support int args, we need proper inference logic here
-            #   See https://github.com/CQCL/guppylang/issues/1030
+            #   See https://github.com/quantinuum/guppylang/issues/1030
             case int(v) if v >= 0:
                 nat_ty = NumericType(NumericType.Kind.Nat)
                 return ConstArg(ConstValue(nat_ty, v))
@@ -121,7 +121,7 @@ def arg_from_ast(node: AstNode, ctx: TypeParsingCtx) -> Argument:
             # String literals are ignored for now since they could also be stringified
             # types.
             # TODO: To support string args, we need proper inference logic here
-            #   See https://github.com/CQCL/guppylang/issues/1030
+            #   See https://github.com/quantinuum/guppylang/issues/1030
             case str(_):
                 pass
 

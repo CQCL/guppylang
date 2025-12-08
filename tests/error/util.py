@@ -12,6 +12,7 @@ from hugr.tys import TypeBound
 
 import guppylang.decorator as decorator
 
+from tests.util import get_wasm_file
 
 # Regular expression to match the `~~~~~^^^~~~` highlights that are printed in
 # tracebacks from Python 3.11 onwards. We strip those out so we can use the same golden
@@ -35,7 +36,8 @@ def run_error_test(file, capsys, snapshot):
     sys.excepthook(exc_info.type, exc_info.value.with_traceback(tb), tb)
 
     err = capsys.readouterr().err
-    err = err.replace(str(file), "$FILE")
+    wasm_module = get_wasm_file()
+    err = err.replace(str(file), "$FILE").replace(wasm_module, "$WASM")
 
     # If we're comparing tracebacks, strip the highlights that are only present for
     # Python 3.11+
