@@ -132,7 +132,7 @@ def test_strings(validate):
 
 
 def test_comprehension(validate):
-    """See https://github.com/CQCL/guppylang/issues/1207"""
+    """See https://github.com/quantinuum/guppylang/issues/1207"""
     py_lst = [x for x in range(10)]
 
     @guppy

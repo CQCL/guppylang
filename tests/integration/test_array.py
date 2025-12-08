@@ -612,7 +612,7 @@ def test_assign_dataflow(validate):
     """Test that dataflow analysis considers subscript assignments as uses and correctly
     wires up the Hugr.
 
-    See https://github.com/CQCL/guppylang/issues/844
+    See https://github.com/quantinuum/guppylang/issues/844
     """
 
     @guppy
