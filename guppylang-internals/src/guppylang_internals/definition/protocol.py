@@ -10,7 +10,6 @@ from guppylang_internals.checker.errors.generic import (
     UnexpectedError,
     UnsupportedError,
 )
-from guppylang_internals.checker.func_checker import check_signature
 from guppylang_internals.definition.common import (
     CheckableDef,
     CompiledDef,
@@ -49,9 +48,12 @@ class ProtocolDef(Definition):
 
 @dataclass(frozen=True)
 class EmptyBodyHint(Help):
-    message: ClassVar[str] = (
-        "Leave the body empty to turn this into a protocol function definition"
-    )
+    message: ClassVar[str] = "The body of protocol function definitions must be empty"
+
+
+@dataclass(frozen=True)
+class NoAnnotationHint(Help):
+    message: ClassVar[str] = "Protocol function definitions don't need to be annotated"
 
 
 @dataclass(frozen=True)
@@ -113,7 +115,16 @@ class RawProtocolDef(ProtocolDef, ParsableDef):
                     pass
                 # Parse the function definitions into types.
                 case _, ast.FunctionDef(name=name) as node:
+                    from guppylang.defs import GuppyDefinition
+
                     py_func = getattr(self.python_class, name, None)
+
+                    if isinstance(py_func, GuppyDefinition):
+                        err = UnexpectedError(
+                            node, "Guppy function", unexpected_in="protocol definition"
+                        )
+                        err.add_sub_diagnostic(NoAnnotationHint(None))
+                        raise GuppyError(err)
                     py_func = cast(PyFunc, py_func)
                     func_ast, _ = parse_py_func(py_func, sources)
                     if not has_empty_body(func_ast):
@@ -148,13 +159,24 @@ class ParsedProtocolDef(ProtocolDef, CheckableDef):
 
     def check(self, globals: Globals) -> "CheckedProtocolDef":
         """Checks the member function types and returns a checked definition."""
+        from guppylang_internals.checker.func_checker import check_signature
+
+        param_var_mapping = {p.name: p for p in self.params}
+
         checked_members = {}
         for member_name, func_def in self.members.items():
-            ty = check_signature(func_def, globals, self.id)
+            ty = check_signature(func_def, globals, self.id, param_var_mapping)
             checked_members[member_name] = ty
         return CheckedProtocolDef(
             self.id, self.name, self.defined_at, self.params, checked_members
         )
+
+    def check_instantiate(
+        self, args: Sequence[Argument], loc: AstNode | None = None
+    ) -> ProtocolInst:
+        """Checks if the protocol can be instantiated with the given arguments."""
+        check_all_args(self.params, args, self.name, loc)
+        return ProtocolInst(args, self.id)
 
 
 @dataclass(frozen=True)
