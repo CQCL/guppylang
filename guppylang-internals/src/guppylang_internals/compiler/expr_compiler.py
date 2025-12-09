@@ -15,7 +15,6 @@ from hugr import val as hv
 from hugr.build import function as hf
 from hugr.build.cond_loop import Conditional
 from hugr.build.dfg import DP, DfBase
-from typing_extensions import assert_never
 
 from guppylang_internals.ast_util import AstNode, AstVisitor, get_type
 from guppylang_internals.cfg.builder import tmp_vars
@@ -23,7 +22,6 @@ from guppylang_internals.checker.core import Variable, contains_subscript
 from guppylang_internals.checker.errors.generic import UnsupportedError
 from guppylang_internals.compiler.core import (
     DEBUG_EXTENSION,
-    RESULT_EXTENSION,
     CompilerBase,
     CompilerContext,
     DFContainer,
@@ -53,21 +51,18 @@ from guppylang_internals.nodes import (
     PanicExpr,
     PartialApply,
     PlaceNode,
-    ResultExpr,
     StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
     TupleAccessAndDrop,
     TypeApply,
 )
-from guppylang_internals.std._internal.checker import TAG_MAX_LEN, TooLongError
 from guppylang_internals.std._internal.compiler.arithmetic import (
     UnsignedIntVal,
     convert_ifromusize,
     convert_itousize,
 )
 from guppylang_internals.std._internal.compiler.array import (
-    array_clone,
     array_map,
     array_new,
     array_to_std_array,
@@ -94,11 +89,9 @@ from guppylang_internals.std._internal.compiler.tket_bool import (
 )
 from guppylang_internals.tys.arg import ConstArg
 from guppylang_internals.tys.builtin import (
-    array_type,
     bool_type,
     get_element_type,
     int_type,
-    is_bool_type,
     is_frozenarray_type,
 )
 from guppylang_internals.tys.const import BoundConstVar, Const, ConstValue
@@ -536,81 +529,18 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         tuple_port = self.visit(node.value)
         return self._unpack_tuple(tuple_port, node.tuple_ty.element_types)[node.index]
 
-    def visit_ResultExpr(self, node: ResultExpr) -> Wire:
-        tag_value = self._visit_result_tag(node.tag_value, node.tag_expr)
-        value_wire = self.visit(node.value)
-        base_ty = node.base_ty.to_hugr(self.ctx)
-        extra_args: list[ht.TypeArg] = []
-        if isinstance(node.base_ty, NumericType):
-            match node.base_ty.kind:
-                case NumericType.Kind.Nat:
-                    base_name = "uint"
-                    extra_args = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)]
-                case NumericType.Kind.Int:
-                    base_name = "int"
-                    extra_args = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)]
-                case NumericType.Kind.Float:
-                    base_name = "f64"
-                case kind:
-                    assert_never(kind)
-        else:
-            # The only other valid base type is bool
-            assert is_bool_type(node.base_ty)
-            base_name = "bool"
-        if node.array_len is not None:
-            op_name = f"result_array_{base_name}"
-            size_arg = node.array_len.to_arg().to_hugr(self.ctx)
-            extra_args = [size_arg, *extra_args]
-            # As `borrow_array`s used by Guppy are linear, we need to clone it (knowing
-            # that all elements in it are copyable) to avoid linearity violations when
-            # both passing it to the result operation and returning it (as an inout
-            # argument).
-            value_wire, inout_wire = self.builder.add_op(
-                array_clone(base_ty, size_arg), value_wire
-            )
-            func_ty = FunctionType(
-                [
-                    FuncInput(
-                        array_type(node.base_ty, node.array_len), InputFlags.Inout
-                    ),
-                ],
-                NoneType(),
-            )
-            self._update_inout_ports(node.args, iter([inout_wire]), func_ty)
-            if is_bool_type(node.base_ty):
-                # We need to coerce a read on all the array elements if they are bools.
-                array_read = array_read_bool(self.ctx)
-                array_read = self.builder.load_function(array_read)
-                map_op = array_map(OpaqueBool, size_arg, ht.Bool)
-                value_wire = self.builder.add_op(map_op, value_wire, array_read)
-                base_ty = ht.Bool
-            # Turn `borrow_array` into regular `array`
-            value_wire = self.builder.add_op(
-                array_to_std_array(base_ty, size_arg), value_wire
-            )
-            hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
-        else:
-            if is_bool_type(node.base_ty):
-                base_ty = ht.Bool
-                value_wire = self.builder.add_op(read_bool(), value_wire)
-            op_name = f"result_{base_name}"
-            hugr_ty = base_ty
-
-        sig = ht.FunctionType(input=[hugr_ty], output=[])
-        args = [ht.StringArg(tag_value), *extra_args]
-        op = ops.ExtOp(RESULT_EXTENSION.get_op(op_name), signature=sig, args=args)
-
-        self.builder.add_op(op, value_wire)
-        return self._pack_returns([], NoneType())
-
     def _visit_result_tag(self, tag: Const, loc: ast.expr) -> str:
-        """Helper method to resolve the tag string in `result` and `state_result`
-        expressions.
+        """Helper method to resolve the tag string in `state_result` expressions.
 
         Also takes care of checking that the tag fits into the maximum tag length.
         Once we go ahead with https://github.com/quantinuum/guppylang/discussions/1299,
         this can be moved into type checking.
         """
+        from guppylang_internals.std._internal.compiler.platform import (
+            TAG_MAX_LEN,
+            TooLongError,
+        )
+
         is_generic: BoundConstVar | None = None
         match tag:
             case ConstValue(value=str(v)):

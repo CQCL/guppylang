@@ -4,18 +4,71 @@
 
 from __future__ import annotations
 
-from typing import no_type_check
+from typing import TYPE_CHECKING, no_type_check
 
 from guppylang_internals.decorator import custom_function
 from guppylang_internals.std._internal.checker import (
     BarrierChecker,
     ExitChecker,
     PanicChecker,
-    ResultChecker,
+)
+from guppylang_internals.std._internal.compiler.platform import (
+    ArrayResultCompiler,
+    ResultCompiler,
 )
 
+from guppylang import guppy
 
-@custom_function(checker=ResultChecker(), higher_order_value=False)
+if TYPE_CHECKING:
+    from guppylang.std.array import array
+    from guppylang.std.lang import comptime
+    from guppylang.std.num import nat
+
+n = guppy.nat_var("n")
+
+
+@custom_function(ResultCompiler("result_int", with_int_width=True))
+def _result_int(tag: str @ comptime, value: int) -> None: ...
+
+
+@custom_function(ResultCompiler("result_uint", with_int_width=True))
+def _result_nat(tag: str @ comptime, value: nat) -> None: ...
+
+
+@custom_function(ResultCompiler("result_bool"))
+def _result_bool(tag: str @ comptime, value: bool) -> None: ...
+
+
+@custom_function(ResultCompiler("result_f64"))
+def _result_float(tag: str @ comptime, value: float) -> None: ...
+
+
+@custom_function(ArrayResultCompiler("result_array_int", with_int_width=True))
+def _result_int_array(tag: str @ comptime, value: array[int, n]) -> None: ...
+
+
+@custom_function(ArrayResultCompiler("result_array_uint", with_int_width=True))
+def _result_nat_array(tag: str @ comptime, value: array[nat, n]) -> None: ...
+
+
+@custom_function(ArrayResultCompiler("result_array_bool"))
+def _result_bool_array(tag: str @ comptime, value: array[bool, n]) -> None: ...
+
+
+@custom_function(ArrayResultCompiler("result_array_f64"))
+def _result_float_array(tag: str @ comptime, value: array[float, n]) -> None: ...
+
+
+@guppy.overload(
+    _result_int,
+    _result_nat,
+    _result_bool,
+    _result_float,
+    _result_int_array,
+    _result_nat_array,
+    _result_bool_array,
+    _result_float_array,
+)
 def result(tag: str, value):
     """Report a result with the given tag and value.
 
