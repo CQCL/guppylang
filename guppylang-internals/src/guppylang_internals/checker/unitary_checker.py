@@ -16,7 +16,6 @@ from guppylang_internals.nodes import (
     GlobalCall,
     LocalCall,
     PlaceNode,
-    ResultExpr,
     StateResultExpr,
     TensorCall,
 )
@@ -95,10 +94,6 @@ class BBUnitaryChecker(ast.NodeVisitor):
 
     def visit_BarrierExpr(self, node: BarrierExpr) -> None:
         # Barrier is always allowed
-        pass
-
-    def visit_ResultExpr(self, node: ResultExpr) -> None:
-        # Result is always allowed
         pass
 
     def visit_StateResultExpr(self, node: StateResultExpr) -> None:
