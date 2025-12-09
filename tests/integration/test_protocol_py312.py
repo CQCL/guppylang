@@ -10,7 +10,8 @@ def test_def():
         # TODO: Implement Self support for protocols.
         # def bar(self: Self) -> Self: ...
 
-        def baz[M: MyProto](self: M, y: int) -> int: ...
+        # Internally desugared this is equivalent to `foo`.
+        def baz[M: MyProto](self: M) -> M: ...
 
     MyProto.compile()
 
@@ -65,7 +66,6 @@ def test_use_def_as_type_parameterised():
     baz2.compile()
 
 
-@pytest.mark.skip("TODO: Fix and enable once full implementation is done")
 def test_basic(validate):
     @guppy.protocol
     class MyProto:
@@ -92,10 +92,10 @@ def test_basic(validate):
         bar(mt)
         baz(mt)
 
-    validate(main.compile())
+    # TODO: Turn into compile once compilation is implemented.
+    validate(main.check())
 
 
-@pytest.mark.skip("TODO: Fix and enable once full implementation is done")
 def test_basic_parameterised(validate):
     @guppy.protocol
     class MyProto[T, S]:
@@ -138,4 +138,5 @@ def test_basic_parameterised(validate):
         baz1(mot, 42)
         # baz2(mt) # should fail
 
-    validate(main.compile())
+    # TODO: Turn into compile once compilation is implemented.
+    validate(main.check())

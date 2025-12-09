@@ -21,6 +21,7 @@ from guppylang_internals.tys.common import (
 )
 from guppylang_internals.tys.const import Const, ConstValue, ExistentialConstVar
 from guppylang_internals.tys.param import ConstParam, Parameter
+from guppylang_internals.tys.protocol import ProtocolInst
 from guppylang_internals.tys.var import BoundVar, ExistentialVar
 
 if TYPE_CHECKING:
@@ -190,6 +191,7 @@ class BoundTypeVar(TypeBase, BoundVar):
     A bound type variables can be instantiated with a `TypeArg` argument.
     """
 
+    implements: Sequence[ProtocolInst]
     copyable: bool
     droppable: bool
 
@@ -230,6 +232,7 @@ class ExistentialTypeVar(ExistentialVar, TypeBase):
     them with concrete types.
     """
 
+    implements: Sequence[ProtocolInst]
     copyable: bool
     droppable: bool
 
@@ -813,6 +816,7 @@ def _unify_var(
         return unify(var, subst[t], subst)
     if var in t.unsolved_vars:
         return None
+    # TODO: Check that `t`` implements all protocols required by `var`.
     return {var: t, **subst}
 
 
