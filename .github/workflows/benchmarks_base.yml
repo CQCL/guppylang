@@ -5,7 +5,7 @@ on:
     branches: main
 
 env:
-  UV_VERSION: "0.7.4"
+  UV_VERSION: "0.9.5"
 
 jobs:
   benchmark_base_branch:
@@ -14,7 +14,7 @@ jobs:
       checks: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5

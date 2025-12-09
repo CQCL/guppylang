@@ -131,10 +131,13 @@ class RawStructDef(TypeDef, ParsableDef):
             if cls_def.type_params:
                 first, last = cls_def.type_params[0], cls_def.type_params[-1]
                 params_span = Span(to_span(first).start, to_span(last).end)
-                params = [
-                    parse_parameter(node, idx, globals)
-                    for idx, node in enumerate(cls_def.type_params)
-                ]
+                param_vars_mapping: dict[str, Parameter] = {}
+                for idx, param_node in enumerate(cls_def.type_params):
+                    param = parse_parameter(
+                        param_node, idx, globals, param_vars_mapping
+                    )
+                    param_vars_mapping[param.name] = param
+                    params.append(param)
 
         # The only base we allow is `Generic[...]` to specify generic parameters with
         # the legacy syntax
@@ -314,7 +317,7 @@ def parse_py_class(
         raise GuppyError(UnknownSourceError(None, cls))
 
     # We can't rely on `inspect.getsourcelines` since it doesn't work properly for
-    # classes prior to Python 3.13. See https://github.com/CQCL/guppylang/issues/1107.
+    # classes prior to Python 3.13. See https://github.com/quantinuum/guppylang/issues/1107.
     # Instead, we reproduce the behaviour of Python >= 3.13 using the `__firstlineno__`
     # attribute. See https://github.com/python/cpython/blob/3.13/Lib/inspect.py#L1052.
     # In the decorator, we make sure that `__firstlineno__` is set, even if we're not

@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 
+import tket_exts
 from hugr import val
 from tket_exts import (
     debug,
     futures,
+    global_phase,
     guppy,
-    opaque_bool,
+    modifier,
     qsystem,
     qsystem_random,
     qsystem_utils,
@@ -15,10 +17,11 @@ from tket_exts import (
     wasm,
 )
 
-BOOL_EXTENSION = opaque_bool()
+BOOL_EXTENSION = tket_exts.bool()
 DEBUG_EXTENSION = debug()
 FUTURES_EXTENSION = futures()
 GUPPY_EXTENSION = guppy()
+MODIFIER_EXTENSION = modifier()
 QSYSTEM_EXTENSION = qsystem()
 QSYSTEM_RANDOM_EXTENSION = qsystem_random()
 QSYSTEM_UTILS_EXTENSION = qsystem_utils()
@@ -26,6 +29,8 @@ QUANTUM_EXTENSION = quantum()
 RESULT_EXTENSION = result()
 ROTATION_EXTENSION = rotation()
 WASM_EXTENSION = wasm()
+MODIFIER_EXTENSION = modifier()
+GLOBAL_PHASE_EXTENSION = global_phase()
 
 TKET_EXTENSIONS = [
     BOOL_EXTENSION,
@@ -39,6 +44,8 @@ TKET_EXTENSIONS = [
     RESULT_EXTENSION,
     ROTATION_EXTENSION,
     WASM_EXTENSION,
+    MODIFIER_EXTENSION,
+    GLOBAL_PHASE_EXTENSION,
 ]
 
 

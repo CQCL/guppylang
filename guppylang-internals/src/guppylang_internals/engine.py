@@ -55,7 +55,6 @@ from guppylang_internals.tys.ty import (
     NumericType,
     OpaqueType,
     StructType,
-    SumType,
     TupleType,
     Type,
 )
@@ -100,6 +99,7 @@ class DefinitionStore:
     raw_defs: dict[DefId, RawDef]
     impls: defaultdict[DefId, dict[str, DefId]]
     impl_parents: dict[DefId, DefId]
+    wasm_functions: dict[DefId, FunctionType]
     frames: dict[DefId, FrameType]
     sources: SourceMap
 
@@ -109,6 +109,7 @@ class DefinitionStore:
         self.impl_parents = {}
         self.frames = {}
         self.sources = SourceMap()
+        self.wasm_functions = {}
 
     def register_def(self, defn: RawDef, frame: FrameType | None) -> None:
         self.raw_defs[defn.id] = defn
@@ -135,6 +136,9 @@ class DefinitionStore:
                     frame = frame.f_back
                     assert frame is not None
                     self.frames[impl_id] = frame
+
+    def register_wasm_function(self, fn_id: DefId, sig: FunctionType) -> None:
+        self.wasm_functions[fn_id] = sig
 
 
 DEF_STORE: DefinitionStore = DefinitionStore()
@@ -276,8 +280,8 @@ class CompilationEngine:
             and isinstance(compiled_def, CompiledCallableDef)
             and not isinstance(graph.hugr[compiled_def.hugr_node].op, ops.FuncDecl)
         ):
-            # if compiling a region set it as the HUGR entrypoint
-            # can be loosened after https://github.com/CQCL/hugr/issues/2501 is fixed
+            # if compiling a region set it as the HUGR entrypoint can be
+            # loosened after https://github.com/quantinuum/hugr/issues/2501 is fixed
             graph.hugr.entrypoint = compiled_def.hugr_node
 
         # TODO: Currently the list of extensions is manually managed by the user.
@@ -291,7 +295,7 @@ class CompilationEngine:
             guppylang_internals.compiler.hugr_extension.EXTENSION,
             *self.additional_extensions,
         ]
-        # TODO replace with computed extensions after https://github.com/CQCL/guppylang/issues/550
+        # TODO replace with computed extensions after https://github.com/quantinuum/guppylang/issues/550
         all_used_extensions = [
             *extensions,
             hugr.std.prelude.PRELUDE_EXTENSION,
@@ -325,7 +329,7 @@ class CompilationEngine:
         match ty:
             case TypeDef() as type_defn:
                 pass
-            case BoundTypeVar() | ExistentialTypeVar() | SumType():
+            case BoundTypeVar() | ExistentialTypeVar():
                 return None
             case NumericType(kind):
                 match kind:

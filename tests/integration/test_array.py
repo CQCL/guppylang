@@ -4,6 +4,7 @@ from hugr import ops
 
 from guppylang.decorator import guppy
 from guppylang.std.builtins import array, owned, mem_swap
+from guppylang.std.num import nat
 from tests.util import compile_guppy
 
 from guppylang.std.quantum import qubit, discard
@@ -155,6 +156,19 @@ def test_multi_subscripts(validate):
         foo(qs[0], qs[1])
         foo(qs[0], qs[0])  # Will panic at runtime
         return qs
+
+    validate(main.compile_function())
+
+
+def test_inout_subscript_coerce(validate):
+    """See https://github.com/CQCL/guppylang/issues/1356"""
+
+    @guppy.declare
+    def foo(q: qubit) -> None: ...
+
+    @guppy
+    def main(qs: array[qubit, 42], i: nat) -> None:
+        foo(qs[i])
 
     validate(main.compile_function())
 
@@ -342,6 +356,16 @@ def test_copy_struct(run_int_fn):
     def main() -> int:
         xs = array(S(array(1)), S(array(2)))
         ys = xs[0].a.copy()
+        return ys[0]
+
+    run_int_fn(main, expected=1)
+
+
+def test_copy_inside(run_int_fn):
+    @guppy
+    def main() -> int:
+        xs = array(array(1), array(1))
+        ys = xs[0].copy()
         return ys[0]
 
     run_int_fn(main, expected=1)
@@ -602,7 +626,7 @@ def test_assign_dataflow(validate):
     """Test that dataflow analysis considers subscript assignments as uses and correctly
     wires up the Hugr.
 
-    See https://github.com/CQCL/guppylang/issues/844
+    See https://github.com/quantinuum/guppylang/issues/844
     """
 
     @guppy

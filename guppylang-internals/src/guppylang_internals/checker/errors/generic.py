@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from guppylang_internals.diagnostic import Error
+from guppylang_internals.diagnostic import Error, Note
 
 
 @dataclass(frozen=True)
@@ -43,3 +43,34 @@ class ExpectedError(Error):
     @property
     def extra(self) -> str:
         return f", got {self.got}" if self.got else ""
+
+
+@dataclass(frozen=True)
+class UnknownModifierError(Error):
+    title: ClassVar[str] = "Unknown modifier"
+    span_label: ClassVar[str] = (
+        "Expected one of {{dagger, control(...), or power(...)}}"
+    )
+
+
+@dataclass(frozen=True)
+class UnexpectedInWithBlockError(Error):
+    title: ClassVar[str] = "Unexpected {kind}"
+    span_label: ClassVar[str] = "{things} found in a `With` block"
+    kind: str
+    things: str
+
+    @dataclass(frozen=True)
+    class Modifier(Note):
+        span_label: ClassVar[str] = "modifier is used here"
+
+
+@dataclass(frozen=True)
+class InvalidUnderDagger(Error):
+    title: ClassVar[str] = "Invalid expression in dagger"
+    span_label: ClassVar[str] = "{things} found in a dagger context"
+    things: str
+
+    @dataclass(frozen=True)
+    class Dagger(Note):
+        span_label: ClassVar[str] = "dagger modifier is used here"

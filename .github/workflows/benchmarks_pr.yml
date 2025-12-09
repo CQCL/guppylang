@@ -5,7 +5,7 @@ on:
     types: [opened, reopened, edited, synchronize]
 
 env:
-  UV_VERSION: "0.7.4"
+  UV_VERSION: "0.9.5"
 
 jobs:
   benchmark_pr_branch:
@@ -19,7 +19,7 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -42,5 +42,6 @@ jobs:
               --start-point-hash '${{ github.event.pull_request.base.sha }}' \
               --start-point-clone-thresholds \
               --start-point-reset \
+              --start-point-max-versions 1 \
               --testbed Linux \
               --github-actions '${{ secrets.GITHUB_TOKEN }}'

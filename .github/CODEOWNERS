@@ -1,7 +1,7 @@
 # for syntax see https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
 
 # base rule, guppy team is codeowner for whole repo
-* @CQCL/guppy
+* @quantinuum/guppy
 
 # Add specific rules below.
 # Lower the rule, higher the precedence

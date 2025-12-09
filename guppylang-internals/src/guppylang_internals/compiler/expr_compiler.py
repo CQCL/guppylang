@@ -15,7 +15,6 @@ from hugr import val as hv
 from hugr.build import function as hf
 from hugr.build.cond_loop import Conditional
 from hugr.build.dfg import DP, DfBase
-from typing_extensions import assert_never
 
 from guppylang_internals.ast_util import AstNode, AstVisitor, get_type
 from guppylang_internals.cfg.builder import tmp_vars
@@ -23,7 +22,6 @@ from guppylang_internals.checker.core import Variable, contains_subscript
 from guppylang_internals.checker.errors.generic import UnsupportedError
 from guppylang_internals.compiler.core import (
     DEBUG_EXTENSION,
-    RESULT_EXTENSION,
     CompilerBase,
     CompilerContext,
     DFContainer,
@@ -53,7 +51,6 @@ from guppylang_internals.nodes import (
     PanicExpr,
     PartialApply,
     PlaceNode,
-    ResultExpr,
     StateResultExpr,
     SubscriptAccessAndDrop,
     TensorCall,
@@ -63,23 +60,24 @@ from guppylang_internals.nodes import (
 from guppylang_internals.std._internal.compiler.arithmetic import (
     UnsignedIntVal,
     convert_ifromusize,
+    convert_itousize,
 )
 from guppylang_internals.std._internal.compiler.array import (
-    array_convert_from_std_array,
-    array_convert_to_std_array,
     array_map,
     array_new,
-    array_repeat,
+    array_to_std_array,
+    barray_new_all_borrowed,
+    barray_return,
     standard_array_type,
+    std_array_to_array,
     unpack_array,
 )
 from guppylang_internals.std._internal.compiler.list import (
     list_new,
 )
 from guppylang_internals.std._internal.compiler.prelude import (
-    build_error,
     build_panic,
-    build_unwrap,
+    make_error,
     panic,
 )
 from guppylang_internals.std._internal.compiler.tket_bool import (
@@ -94,10 +92,9 @@ from guppylang_internals.tys.builtin import (
     bool_type,
     get_element_type,
     int_type,
-    is_bool_type,
     is_frozenarray_type,
 )
-from guppylang_internals.tys.const import ConstValue
+from guppylang_internals.tys.const import BoundConstVar, Const, ConstValue
 from guppylang_internals.tys.subst import Inst
 from guppylang_internals.tys.ty import (
     BoundTypeVar,
@@ -279,11 +276,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return defn.load(self.dfg, self.ctx, node)
 
     def visit_GenericParamValue(self, node: GenericParamValue) -> Wire:
-        match node.param.ty:
+        assert self.ctx.current_mono_args is not None
+        param = node.param.instantiate_bounds(self.ctx.current_mono_args)
+        match param.ty:
             case NumericType(NumericType.Kind.Nat):
                 # Generic nat parameters are encoded using Hugr bounded nat parameters,
                 # so they are not monomorphized when compiling to Hugr
-                arg = node.param.to_bound().to_hugr(self.ctx)
+                arg = param.to_bound().to_hugr(self.ctx)
                 load_nat = hugr.std.PRELUDE.get_op("load_nat").instantiate(
                     [arg], ht.FunctionType([], [ht.USize()])
                 )
@@ -291,7 +290,6 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
                 return self.builder.add_op(convert_ifromusize(), usize)
             case ty:
                 # Look up monomorphization
-                assert self.ctx.current_mono_args is not None
                 match self.ctx.current_mono_args[node.param.idx]:
                     case ConstArg(const=ConstValue(value=v)):
                         val = python_value_to_hugr(v, ty, self.ctx)
@@ -531,67 +529,48 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         tuple_port = self.visit(node.value)
         return self._unpack_tuple(tuple_port, node.tuple_ty.element_types)[node.index]
 
-    def visit_ResultExpr(self, node: ResultExpr) -> Wire:
-        value_wire = self.visit(node.value)
-        base_ty = node.base_ty.to_hugr(self.ctx)
-        extra_args: list[ht.TypeArg] = []
-        if isinstance(node.base_ty, NumericType):
-            match node.base_ty.kind:
-                case NumericType.Kind.Nat:
-                    base_name = "uint"
-                    extra_args = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)]
-                case NumericType.Kind.Int:
-                    base_name = "int"
-                    extra_args = [ht.BoundedNatArg(n=NumericType.INT_WIDTH)]
-                case NumericType.Kind.Float:
-                    base_name = "f64"
-                case kind:
-                    assert_never(kind)
-        else:
-            # The only other valid base type is bool
-            assert is_bool_type(node.base_ty)
-            base_name = "bool"
-        if node.array_len is not None:
-            op_name = f"result_array_{base_name}"
-            size_arg = node.array_len.to_arg().to_hugr(self.ctx)
-            extra_args = [size_arg, *extra_args]
-            # Remove the option wrapping in the array
-            unwrap = array_unwrap_elem(self.ctx)
-            unwrap = self.builder.load_function(
-                unwrap,
-                instantiation=ht.FunctionType([ht.Option(base_ty)], [base_ty]),
-                type_args=[ht.TypeTypeArg(base_ty)],
-            )
-            map_op = array_map(ht.Option(base_ty), size_arg, base_ty)
-            value_wire = self.builder.add_op(map_op, value_wire, unwrap)
-            if is_bool_type(node.base_ty):
-                # We need to coerce a read on all the array elements if they are bools.
-                array_read = array_read_bool(self.ctx)
-                array_read = self.builder.load_function(array_read)
-                map_op = array_map(OpaqueBool, size_arg, ht.Bool)
-                value_wire = self.builder.add_op(map_op, value_wire, array_read)
-                base_ty = ht.Bool
-            # Turn `value_array` into regular linear `array`
-            value_wire = self.builder.add_op(
-                array_convert_to_std_array(base_ty, size_arg), value_wire
-            )
-            hugr_ty: ht.Type = hugr.std.collections.array.Array(base_ty, size_arg)
-        else:
-            if is_bool_type(node.base_ty):
-                base_ty = ht.Bool
-                value_wire = self.builder.add_op(read_bool(), value_wire)
-            op_name = f"result_{base_name}"
-            hugr_ty = base_ty
+    def _visit_result_tag(self, tag: Const, loc: ast.expr) -> str:
+        """Helper method to resolve the tag string in `state_result` expressions.
 
-        sig = ht.FunctionType(input=[hugr_ty], output=[])
-        args = [ht.StringArg(node.tag), *extra_args]
-        op = ops.ExtOp(RESULT_EXTENSION.get_op(op_name), signature=sig, args=args)
+        Also takes care of checking that the tag fits into the maximum tag length.
+        Once we go ahead with https://github.com/quantinuum/guppylang/discussions/1299,
+        this can be moved into type checking.
+        """
+        from guppylang_internals.std._internal.compiler.platform import (
+            TAG_MAX_LEN,
+            TooLongError,
+        )
 
-        self.builder.add_op(op, value_wire)
-        return self._pack_returns([], NoneType())
+        is_generic: BoundConstVar | None = None
+        match tag:
+            case ConstValue(value=str(v)):
+                tag_value = v
+            case BoundConstVar(idx=idx) as var:
+                assert self.ctx.current_mono_args is not None
+                match self.ctx.current_mono_args[idx]:
+                    case ConstArg(const=ConstValue(value=str(v))):
+                        tag_value = v
+                        is_generic = var
+                    case _:
+                        raise InternalGuppyError("Unexpected tag monomorphization")
+            case _:
+                raise InternalGuppyError("Unexpected tag value")
+
+        if len(tag_value.encode("utf-8")) > TAG_MAX_LEN:
+            err = TooLongError(loc)
+            err.add_sub_diagnostic(TooLongError.Hint(None))
+            if is_generic:
+                err.add_sub_diagnostic(
+                    TooLongError.GenericHint(None, is_generic.display_name, tag_value)
+                )
+            raise GuppyError(err)
+        return tag_value
 
     def visit_PanicExpr(self, node: PanicExpr) -> Wire:
-        err = build_error(self.builder, node.signal, node.msg)
+        signal = self.visit(node.signal)
+        signal_usize = self.builder.add_op(convert_itousize(), signal)
+        msg = self.visit(node.msg)
+        err = self.builder.add_op(make_error(), signal_usize, msg)
         in_tys = [get_type(e).to_hugr(self.ctx) for e in node.values]
         out_tys = [ty.to_hugr(self.ctx) for ty in type_to_row(get_type(node))]
         args = [self.visit(e) for e in node.values]
@@ -616,12 +595,13 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         return self._pack_returns([], NoneType())
 
     def visit_StateResultExpr(self, node: StateResultExpr) -> Wire:
+        tag_value = self._visit_result_tag(node.tag_value, node.tag_expr)
         num_qubits_arg = (
             node.array_len.to_arg().to_hugr(self.ctx)
             if node.array_len
             else ht.BoundedNatArg(len(node.args) - 1)
         )
-        args = [ht.StringArg(node.tag), num_qubits_arg]
+        args = [ht.StringArg(tag_value), num_qubits_arg]
         sig = ht.FunctionType(
             [standard_array_type(ht.Qubit, num_qubits_arg)],
             [standard_array_type(ht.Qubit, num_qubits_arg)],
@@ -635,20 +615,20 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
             qubit_arr_in = self.builder.add_op(
                 array_new(ht.Qubit, len(node.args) - 1), *qubits_in
             )
-            # Turn into standard array from value array.
+            # Turn into standard array from borrow array.
             qubit_arr_in = self.builder.add_op(
-                array_convert_to_std_array(ht.Qubit, num_qubits_arg), qubit_arr_in
+                array_to_std_array(ht.Qubit, num_qubits_arg), qubit_arr_in
             )
 
             qubit_arr_out = self.builder.add_op(op, qubit_arr_in)
 
             qubit_arr_out = self.builder.add_op(
-                array_convert_from_std_array(ht.Qubit, num_qubits_arg), qubit_arr_out
+                std_array_to_array(ht.Qubit, num_qubits_arg), qubit_arr_out
             )
             qubits_out = unpack_array(self.builder, qubit_arr_out)
         else:
-            # If the input is an array of qubits, we need to unwrap the elements first,
-            # and then convert to a value array and back.
+            # If the input is an array of qubits, we need to convert to a standard
+            # array.
             qubits_in = [self.visit(node.args[1])]
             qubits_out = [
                 apply_array_op_with_conversions(
@@ -680,17 +660,10 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         assert isinstance(array_ty, OpaqueType)
         array_var = Variable(next(tmp_vars), array_ty, node)
         count_var = Variable(next(tmp_vars), int_type(), node)
-        # See https://github.com/CQCL/guppylang/issues/629
-        hugr_elt_ty = ht.Option(node.elt_ty.to_hugr(self.ctx))
-        # Initialise array with `None`s
-        make_none = array_comprehension_init_func(self.ctx)
-        make_none = self.builder.load_function(
-            make_none,
-            instantiation=ht.FunctionType([], [hugr_elt_ty]),
-            type_args=[ht.TypeTypeArg(node.elt_ty.to_hugr(self.ctx))],
-        )
+        hugr_elt_ty = node.elt_ty.to_hugr(self.ctx)
+        # Initialise empty array.
         self.dfg[array_var] = self.builder.add_op(
-            array_repeat(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx)), make_none
+            barray_new_all_borrowed(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx))
         )
         self.dfg[count_var] = self.builder.load(
             hugr.std.int.IntVal(0, width=NumericType.INT_WIDTH)
@@ -698,8 +671,12 @@ class ExprCompiler(CompilerBase, AstVisitor[Wire]):
         with self._build_generators([node.generator], [array_var, count_var]):
             elt = self.visit(node.elt)
             array, count = self.dfg[array_var], self.dfg[count_var]
-            [], [self.dfg[array_var]] = self._build_method_call(
-                array_ty, "__setitem__", node, [array, count, elt], array_ty.args
+            idx = self.builder.add_op(convert_itousize(), count)
+            self.dfg[array_var] = self.builder.add_op(
+                barray_return(hugr_elt_ty, node.length.to_arg().to_hugr(self.ctx)),
+                array,
+                idx,
+                elt,
             )
             # Update `count += 1`
             one = self.builder.load(hugr.std.int.IntVal(1, width=NumericType.INT_WIDTH))
@@ -835,10 +812,6 @@ def python_value_to_hugr(v: Any, exp_ty: Type, ctx: CompilerContext) -> hv.Value
     return None
 
 
-ARRAY_COMPREHENSION_INIT: Final[GlobalConstId] = GlobalConstId.fresh(
-    "array.__comprehension.init"
-)
-
 ARRAY_UNWRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__unwrap_elem")
 ARRAY_WRAP_ELEM: Final[GlobalConstId] = GlobalConstId.fresh("array.__wrap_elem")
 
@@ -846,54 +819,6 @@ ARRAY_READ_BOOL: Final[GlobalConstId] = GlobalConstId.fresh("array.__read_bool")
 ARRAY_MAKE_OPAQUE_BOOL: Final[GlobalConstId] = GlobalConstId.fresh(
     "array.__make_opaque_bool"
 )
-
-
-def array_comprehension_init_func(ctx: CompilerContext) -> hf.Function:
-    """Returns the Hugr function that is used to initialise arrays elements before a
-    comprehension.
-
-    Just returns the `None` variant of the optional element type.
-
-    See https://github.com/CQCL/guppylang/issues/629
-    """
-    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Linear))
-    sig = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
-        body=ht.FunctionType([], [ht.Option(v)]),
-    )
-    func, already_defined = ctx.declare_global_func(ARRAY_COMPREHENSION_INIT, sig)
-    if not already_defined:
-        func.set_outputs(func.add_op(ops.Tag(0, ht.Option(v))))
-    return func
-
-
-def array_unwrap_elem(ctx: CompilerContext) -> hf.Function:
-    """Returns the Hugr function that is used to unwrap the elements in an option array
-    to turn it into a regular array."""
-    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Linear))
-    sig = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
-        body=ht.FunctionType([ht.Option(v)], [v]),
-    )
-    func, already_defined = ctx.declare_global_func(ARRAY_UNWRAP_ELEM, sig)
-    if not already_defined:
-        msg = "Linear array element has already been used"
-        func.set_outputs(build_unwrap(func, func.inputs()[0], msg))
-    return func
-
-
-def array_wrap_elem(ctx: CompilerContext) -> hf.Function:
-    """Returns the Hugr function that is used to wrap the elements in an regular array
-    to turn it into a option array."""
-    v = ht.Variable(0, ht.TypeBound(ht.TypeBound.Linear))
-    sig = ht.PolyFuncType(
-        params=[ht.TypeTypeParam(ht.TypeBound.Linear)],
-        body=ht.FunctionType([v], [ht.Option(v)]),
-    )
-    func, already_defined = ctx.declare_global_func(ARRAY_WRAP_ELEM, sig)
-    if not already_defined:
-        func.set_outputs(func.add_op(ops.Tag(1, ht.Option(v)), func.inputs()[0]))
-    return func
 
 
 def array_read_bool(ctx: CompilerContext) -> hf.Function:
@@ -944,35 +869,21 @@ def apply_array_op_with_conversions(
     output array.
 
     Transformations:
-    1. Unwraps / wraps elements in options.
-    3. (Optional) Converts from / to opaque bool to / from Hugr bool.
-    2. Converts from / to value array to / from standard Hugr array.
+    1. (Optional) Converts from / to opaque bool to / from Hugr bool.
+    2. Converts from / to borrow array to / from standard Hugr array.
     """
-    unwrap = array_unwrap_elem(ctx)
-    unwrap = builder.load_function(
-        unwrap,
-        instantiation=ht.FunctionType([ht.Option(elem_ty)], [elem_ty]),
-        type_args=[ht.TypeTypeArg(elem_ty)],
-    )
-    map_op = array_map(ht.Option(elem_ty), size_arg, elem_ty)
-    unwrapped_array = builder.add_op(map_op, input_array, unwrap)
-
     if convert_bool:
         array_read = array_read_bool(ctx)
         array_read = builder.load_function(array_read)
         map_op = array_map(OpaqueBool, size_arg, ht.Bool)
-        unwrapped_array = builder.add_op(map_op, unwrapped_array, array_read)
+        input_array = builder.add_op(map_op, input_array, array_read)
         elem_ty = ht.Bool
 
-    unwrapped_array = builder.add_op(
-        array_convert_to_std_array(elem_ty, size_arg), unwrapped_array
-    )
+    input_array = builder.add_op(array_to_std_array(elem_ty, size_arg), input_array)
 
-    result_array = builder.add_op(op, unwrapped_array)
+    result_array = builder.add_op(op, input_array)
 
-    result_array = builder.add_op(
-        array_convert_from_std_array(elem_ty, size_arg), result_array
-    )
+    result_array = builder.add_op(std_array_to_array(elem_ty, size_arg), result_array)
 
     if convert_bool:
         array_make_opaque = array_make_opaque_bool(ctx)
@@ -981,11 +892,4 @@ def apply_array_op_with_conversions(
         result_array = builder.add_op(map_op, result_array, array_make_opaque)
         elem_ty = OpaqueBool
 
-    wrap = array_wrap_elem(ctx)
-    wrap = builder.load_function(
-        wrap,
-        instantiation=ht.FunctionType([elem_ty], [ht.Option(elem_ty)]),
-        type_args=[ht.TypeTypeArg(elem_ty)],
-    )
-    map_op = array_map(elem_ty, size_arg, ht.Option(elem_ty))
-    return builder.add_op(map_op, result_array, wrap)
+    return result_array

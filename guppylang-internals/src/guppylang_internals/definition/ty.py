@@ -2,7 +2,7 @@ from abc import abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
-from hugr import tys
+from hugr import tys as ht
 
 from guppylang_internals.ast_util import AstNode
 from guppylang_internals.definition.common import CompiledDef, Definition
@@ -42,8 +42,8 @@ class OpaqueTypeDef(TypeDef, CompiledDef):
     params: Sequence[Parameter]
     never_copyable: bool
     never_droppable: bool
-    to_hugr: Callable[[Sequence[Argument], ToHugrContext], tys.Type]
-    bound: tys.TypeBound | None = None
+    to_hugr: Callable[[Sequence[Argument], ToHugrContext], ht.Type]
+    bound: ht.TypeBound | None = None
 
     def check_instantiate(
         self, args: Sequence[Argument], loc: AstNode | None = None

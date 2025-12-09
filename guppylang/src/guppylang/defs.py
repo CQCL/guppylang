@@ -13,7 +13,7 @@ import guppylang_internals
 from guppylang_internals.definition.value import CompiledCallableDef
 from guppylang_internals.diagnostic import Error, Note
 from guppylang_internals.engine import ENGINE, CoreMetadataKeys
-from guppylang_internals.error import GuppyError
+from guppylang_internals.error import GuppyError, pretty_errors
 from guppylang_internals.span import Span, to_span
 from guppylang_internals.tracing.object import TracingDefMixin
 from guppylang_internals.tracing.util import hide_trace
@@ -126,6 +126,7 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
 
         return self.compile_entrypoint()
 
+    @pretty_errors
     def compile_entrypoint(self) -> Package:
         """
         Compiles an execution entrypoint function definition to a HUGR package

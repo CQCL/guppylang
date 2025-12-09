@@ -57,14 +57,11 @@ class TypeBase(ToHugr[ht.Type], Transformable["Type"], ABC):
         return not self.copyable and self.droppable
 
     @cached_property
-    @abstractmethod
     def hugr_bound(self) -> ht.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`.
-
-        This needs to be specified explicitly, since opaque nonlinear types in a Hugr
-        extension could be either declared as copyable or equatable. If we don't get the
-        bound exactly right during serialisation, the Hugr validator will complain.
-        """
+        """The Hugr bound of this type, i.e. `Any` or `Copyable`."""
+        if self.linear or self.affine:
+            return ht.TypeBound.Linear
+        return ht.TypeBound.Copyable
 
     @abstractmethod
     def cast(self) -> "Type":
@@ -77,6 +74,11 @@ class TypeBase(ToHugr[ht.Type], Transformable["Type"], ABC):
     @cached_property
     def unsolved_vars(self) -> set[ExistentialVar]:
         """The existential type variables contained in this type."""
+        return set()
+
+    @cached_property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this type."""
         return set()
 
     def substitute(self, subst: "Subst") -> "Type":
@@ -159,12 +161,16 @@ class ParametrizedTypeBase(TypeBase, ABC):
         return set().union(*(arg.unsolved_vars for arg in self.args))
 
     @cached_property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this type."""
+        return set().union(*(arg.bound_vars for arg in self.args))
+
+    @cached_property
     def hugr_bound(self) -> ht.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
-        if self.linear:
-            return ht.TypeBound.Linear
+        """The Hugr bound of this type, i.e. `Any` or `Copyable`."""
         return ht.TypeBound.join(
-            *(arg.ty.hugr_bound for arg in self.args if isinstance(arg, TypeArg))
+            super().hugr_bound,
+            *(arg.ty.hugr_bound for arg in self.args if isinstance(arg, TypeArg)),
         )
 
     def visit(self, visitor: Visitor) -> None:
@@ -187,14 +193,10 @@ class BoundTypeVar(TypeBase, BoundVar):
     copyable: bool
     droppable: bool
 
-    @cached_property
-    def hugr_bound(self) -> ht.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
-        if self.linear:
-            return ht.TypeBound.Linear
-        # We're conservative and don't require equatability for non-linear variables.
-        # This is fine since Guppy doesn't use the equatable feature anyways.
-        return ht.TypeBound.Copyable
+    @property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this type."""
+        return {self}
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
@@ -367,6 +369,21 @@ class InputFlags(Flag):
     Comptime = auto()
 
 
+class UnitaryFlags(Flag):
+    """Flags that can be set on functions to indicate their unitary properties.
+
+    The flags indicate under which conditions a function can be used
+    in a unitary context.
+    """
+
+    NoFlags = 0
+    Control = auto()
+    Dagger = auto()
+    Power = auto()
+
+    Unitary = Control | Dagger | Power
+
+
 @dataclass(frozen=True)
 class FuncInput:
     """A single input of a function type."""
@@ -392,6 +409,8 @@ class FunctionType(ParametrizedTypeBase):
     intrinsically_droppable: bool = field(default=True, init=True)
     hugr_bound: ht.TypeBound = field(default=ht.TypeBound.Copyable, init=False)
 
+    unitary_flags: UnitaryFlags = field(default=UnitaryFlags.NoFlags, init=True)
+
     def __init__(
         self,
         inputs: Sequence[FuncInput],
@@ -399,6 +418,7 @@ class FunctionType(ParametrizedTypeBase):
         input_names: Sequence[str] | None = None,
         params: Sequence[Parameter] | None = None,
         comptime_args: Sequence[ConstArg] | None = None,
+        unitary_flags: UnitaryFlags = UnitaryFlags.NoFlags,
     ) -> None:
         # We need a custom __init__ to set the args
         args: list[Argument] = [TypeArg(inp.ty) for inp in inputs]
@@ -420,11 +440,20 @@ class FunctionType(ParametrizedTypeBase):
         object.__setattr__(self, "output", output)
         object.__setattr__(self, "input_names", input_names or [])
         object.__setattr__(self, "params", params)
+        object.__setattr__(self, "unitary_flags", unitary_flags)
 
     @property
     def parametrized(self) -> bool:
         """Whether the function is parametrized."""
         return len(self.params) > 0
+
+    @cached_property
+    def bound_vars(self) -> set[BoundVar]:
+        """The bound type variables contained in this type."""
+        if self.parametrized:
+            # Ensures that we don't look inside quantifiers
+            return set()
+        return super().bound_vars
 
     def cast(self) -> "Type":
         """Casts an implementor of `TypeBase` into a `Type`."""
@@ -506,7 +535,7 @@ class FunctionType(ParametrizedTypeBase):
             # However, we have to down-shift the de Bruijn index.
             if arg is None:
                 param = param.with_idx(len(remaining_params))
-                remaining_params.append(param)
+                remaining_params.append(param.instantiate_bounds(full_inst))
                 arg = param.to_bound()
 
             # Set the `preserve` flag for instantiated tuples and None
@@ -537,6 +566,19 @@ class FunctionType(ParametrizedTypeBase):
         """Instantiates all parameters with existential variables."""
         exs = [param.to_existential() for param in self.params]
         return self.instantiate([arg for arg, _ in exs]), [var for _, var in exs]
+
+    def with_unitary_flags(self, flags: UnitaryFlags) -> "FunctionType":
+        """Returns a copy of this function type with the specified unitary flags."""
+        # N.B. we can't use `dataclasses.replace` here since `FunctionType` has a custom
+        # constructor
+        return FunctionType(
+            self.inputs,
+            self.output,
+            self.input_names,
+            self.params,
+            self.comptime_args,
+            flags,
+        )
 
 
 @dataclass(frozen=True, init=False)
@@ -582,53 +624,6 @@ class TupleType(ParametrizedTypeBase):
         )
 
 
-@dataclass(frozen=True, init=False)
-class SumType(ParametrizedTypeBase):
-    """Type of sums.
-
-    Note that this type is only used internally when constructing the Hugr. Users cannot
-    write down this type.
-    """
-
-    element_types: Sequence["Type"]
-
-    def __init__(self, element_types: Sequence["Type"]) -> None:
-        # We need a custom __init__ to set the args
-        args = [TypeArg(ty) for ty in element_types]
-        object.__setattr__(self, "args", args)
-        object.__setattr__(self, "element_types", element_types)
-
-    @property
-    def intrinsically_copyable(self) -> bool:
-        """Whether objects of this type can be implicitly copied."""
-        return True
-
-    @property
-    def intrinsically_droppable(self) -> bool:
-        """Whether objects of this type can be dropped."""
-        return True
-
-    def cast(self) -> "Type":
-        """Casts an implementor of `TypeBase` into a `Type`."""
-        return self
-
-    def to_hugr(self, ctx: ToHugrContext) -> ht.Sum:
-        """Computes the Hugr representation of the type."""
-        rows = [type_to_row(ty) for ty in self.element_types]
-        if all(len(row) == 0 for row in rows):
-            return ht.UnitSum(size=len(rows))
-        elif len(rows) == 1:
-            return ht.Tuple(*row_to_hugr(rows[0], ctx))
-        else:
-            return ht.Sum(variant_rows=rows_to_hugr(rows, ctx))
-
-    def transform(self, transformer: Transformer) -> "Type":
-        """Accepts a transformer on this type."""
-        return transformer.transform(self) or SumType(
-            [ty.transform(transformer) for ty in self.element_types]
-        )
-
-
 @dataclass(frozen=True)
 class OpaqueType(ParametrizedTypeBase):
     """Type that is directly backed by a Hugr opaque type.
@@ -651,7 +646,7 @@ class OpaqueType(ParametrizedTypeBase):
 
     @property
     def hugr_bound(self) -> ht.TypeBound:
-        """The Hugr bound of this type, i.e. `Any`, `Copyable`, or `Equatable`."""
+        """The Hugr bound of this type, i.e. `Any` or `Copyable`."""
         if self.defn.bound is not None:
             return self.defn.bound
         return super().hugr_bound
@@ -717,9 +712,8 @@ class StructType(ParametrizedTypeBase):
 
 
 #: The type of parametrized Guppy types.
-ParametrizedType: TypeAlias = (
-    FunctionType | TupleType | SumType | OpaqueType | StructType
-)
+ParametrizedType: TypeAlias = FunctionType | TupleType | OpaqueType | StructType
+
 
 #: The type of Guppy types.
 #:
@@ -800,8 +794,6 @@ def unify(s: Type | Const, t: Type | Const, subst: "Subst | None") -> "Subst | N
                     return None
             return _unify_args(s, t, subst)
         case TupleType() as s, TupleType() as t:
-            return _unify_args(s, t, subst)
-        case SumType() as s, SumType() as t:
             return _unify_args(s, t, subst)
         case OpaqueType() as s, OpaqueType() as t if s.defn == t.defn:
             return _unify_args(s, t, subst)

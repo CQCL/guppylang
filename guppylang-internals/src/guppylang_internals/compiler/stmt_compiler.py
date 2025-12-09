@@ -2,7 +2,6 @@ import ast
 import functools
 from collections.abc import Sequence
 
-import hugr.tys as ht
 from hugr import Wire, ops
 from hugr.build.dfg import DfBase
 
@@ -18,6 +17,7 @@ from guppylang_internals.compiler.expr_compiler import ExprCompiler
 from guppylang_internals.error import InternalGuppyError
 from guppylang_internals.nodes import (
     ArrayUnpack,
+    CheckedModifiedBlock,
     CheckedNestedFunctionDef,
     IterableUnpack,
     PlaceNode,
@@ -120,8 +120,9 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
                 ports[len(left) : -len(right)] if right else ports[len(left) :]
             )
             elt = get_element_type(array_ty).to_hugr(self.ctx)
-            opts = [self.builder.add_op(ops.Some(elt), p) for p in starred_ports]
-            array = self.builder.add_op(array_new(ht.Option(elt), len(opts)), *opts)
+            array = self.builder.add_op(
+                array_new(elt, len(starred_ports)), *starred_ports
+            )
             self._assign(starred, array)
 
     @_assign.register
@@ -130,7 +131,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         # Given an assignment pattern `left, *starred, right`, pop from the left and
         # right, leaving us with the starred array in the middle
         length = lhs.length
-        opt_elt_ty = ht.Option(lhs.elt_type.to_hugr(self.ctx))
+        elt_ty = lhs.elt_type.to_hugr(self.ctx)
 
         def pop(
             array: Wire, length: int, pats: list[ast.expr], from_left: bool
@@ -141,10 +142,9 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             elts = []
             for i in range(num_pats):
                 res = self.builder.add_op(
-                    array_pop(opt_elt_ty, length - i, from_left), array
+                    array_pop(elt_ty, length - i, from_left), array
                 )
-                [elt_opt, array] = build_unwrap(self.builder, res, err)
-                [elt] = build_unwrap(self.builder, elt_opt, err)
+                [elt, array] = build_unwrap(self.builder, res, err)
                 elts.append(elt)
             # Assign elements to the given patterns
             for pat, elt in zip(
@@ -164,7 +164,7 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
             self._assign(lhs.pattern.starred, array)
         else:
             assert length == 0
-            self.builder.add_op(array_discard_empty(opt_elt_ty), array)
+            self.builder.add_op(array_discard_empty(elt_ty), array)
 
     @_assign.register
     def _assign_iterable(self, lhs: IterableUnpack, port: Wire) -> None:
@@ -221,3 +221,10 @@ class StmtCompiler(CompilerBase, AstVisitor[None]):
         var = Variable(node.name, node.ty, node)
         loaded_func = compile_local_func_def(node, self.dfg, self.ctx)
         self.dfg[var] = loaded_func
+
+    def visit_CheckedModifiedBlock(self, node: CheckedModifiedBlock) -> None:
+        from guppylang_internals.compiler.modifier_compiler import (
+            compile_modified_block,
+        )
+
+        compile_modified_block(node, self.dfg, self.ctx, self.expr_compiler)

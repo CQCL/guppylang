@@ -6,9 +6,16 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from guppylang_internals.ast_util import AstNode
+from guppylang_internals.span import Span, to_span
 from guppylang_internals.tys.const import Const
 from guppylang_internals.tys.subst import Inst
-from guppylang_internals.tys.ty import FunctionType, StructType, TupleType, Type
+from guppylang_internals.tys.ty import (
+    FunctionType,
+    StructType,
+    TupleType,
+    Type,
+    UnitaryFlags,
+)
 
 if TYPE_CHECKING:
     from guppylang_internals.cfg.cfg import CFG
@@ -249,22 +256,6 @@ class ComptimeExpr(ast.expr):
     _fields = ("value",)
 
 
-class ResultExpr(ast.expr):
-    """A `result(tag, value)` expression."""
-
-    value: ast.expr
-    base_ty: Type
-    #: Array length in case this is an array result, otherwise `None`
-    array_len: Const | None
-    tag: str
-
-    _fields = ("value", "base_ty", "array_len", "tag")
-
-    @property
-    def args(self) -> list[ast.expr]:
-        return [self.value]
-
-
 class ExitKind(Enum):
     ExitShot = 0  # Exit the current shot
     Panic = 1  # Panic the program ending all shots
@@ -274,8 +265,8 @@ class PanicExpr(ast.expr):
     """A `panic(msg, *args)` or `exit(msg, *args)` expression ."""
 
     kind: ExitKind
-    signal: int
-    msg: str
+    signal: ast.expr
+    msg: ast.expr
     values: list[ast.expr]
 
     _fields = ("kind", "signal", "msg", "values")
@@ -292,17 +283,16 @@ class BarrierExpr(ast.expr):
 class StateResultExpr(ast.expr):
     """A `state_result(tag, *args)` expression."""
 
-    tag: str
+    tag_value: Const
+    tag_expr: ast.expr
     args: list[ast.expr]
     func_ty: FunctionType
     #: Array length in case this is an array result, otherwise `None`
     array_len: Const | None
-    _fields = ("tag", "args", "func_ty", "has_array_input")
+    _fields = ("tag_value", "tag_expr", "args", "func_ty", "has_array_input")
 
 
-AnyCall = (
-    LocalCall | GlobalCall | TensorCall | BarrierExpr | ResultExpr | StateResultExpr
-)
+AnyCall = LocalCall | GlobalCall | TensorCall | BarrierExpr | StateResultExpr
 
 
 class InoutReturnSentinel(ast.expr):
@@ -422,3 +412,136 @@ class CheckedNestedFunctionDef(ast.FunctionDef):
         self.cfg = cfg
         self.ty = ty
         self.captured = captured
+
+
+class Dagger(ast.expr):
+    """The dagger modifier"""
+
+    def __init__(self, node: ast.expr) -> None:
+        super().__init__(**node.__dict__)
+
+
+class Control(ast.Call):
+    """The control modifier"""
+
+    ctrl: list[ast.expr]
+    qubit_num: int | Const | None
+
+    _fields = ("ctrl",)
+
+    def __init__(self, node: ast.Call, ctrl: list[ast.expr]) -> None:
+        super().__init__(**node.__dict__)
+        self.ctrl = ctrl
+        self.qubit_num = None
+
+
+class Power(ast.expr):
+    """The power modifier"""
+
+    iter: ast.expr
+
+    _fields = ("iter",)
+
+    def __init__(self, node: ast.expr, iter: ast.expr) -> None:
+        super().__init__(**node.__dict__)
+        self.iter = iter
+
+
+Modifier = Dagger | Control | Power
+
+
+class ModifiedBlock(ast.With):
+    cfg: "CFG"
+    dagger: list[Dagger]
+    control: list[Control]
+    power: list[Power]
+
+    def __init__(self, cfg: "CFG", *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.cfg = cfg
+        self.dagger = []
+        self.control = []
+        self.power = []
+
+    def is_dagger(self) -> bool:
+        return len(self.dagger) % 2 == 1
+
+    def is_control(self) -> bool:
+        return len(self.control) > 0
+
+    def is_power(self) -> bool:
+        return len(self.power) > 0
+
+    def span_ctxt_manager(self) -> Span:
+        return Span(
+            to_span(self.items[0].context_expr).start,
+            to_span(self.items[-1].context_expr).end,
+        )
+
+    def push_modifier(self, modifier: Modifier) -> None:
+        """Pushes a modifier kind onto the modifier."""
+        if isinstance(modifier, Dagger):
+            self.dagger.append(modifier)
+        elif isinstance(modifier, Control):
+            self.control.append(modifier)
+        elif isinstance(modifier, Power):
+            self.power.append(modifier)
+        else:
+            raise TypeError(f"Unknown modifier: {modifier}")
+
+    def flags(self) -> UnitaryFlags:
+        flags = UnitaryFlags.NoFlags
+        if self.is_dagger():
+            flags |= UnitaryFlags.Dagger
+        if self.is_control():
+            flags |= UnitaryFlags.Control
+        if self.is_power():
+            flags |= UnitaryFlags.Power
+        return flags
+
+
+class CheckedModifiedBlock(ast.With):
+    def_id: "DefId"
+    cfg: "CheckedCFG[Place]"
+    dagger: list[Dagger]
+    control: list[Control]
+    power: list[Power]
+
+    #: The type of the body of With block.
+    ty: FunctionType
+    #: Mapping from names to variables captured in the body.
+    captured: Mapping[str, tuple["Variable", AstNode]]
+
+    def __init__(
+        self,
+        def_id: "DefId",
+        cfg: "CheckedCFG[Place]",
+        ty: FunctionType,
+        captured: Mapping[str, tuple["Variable", AstNode]],
+        dagger: list[Dagger],
+        control: list[Control],
+        power: list[Power],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.def_id = def_id
+        self.cfg = cfg
+        self.ty = ty
+        self.captured = captured
+        self.dagger = dagger
+        self.control = control
+        self.power = power
+
+    def __str__(self) -> str:
+        # generate a function name from the def_id
+        return f"__WithBlock__({self.def_id})"
+
+    def has_dagger(self) -> bool:
+        return len(self.dagger) % 2 == 1
+
+    def has_control(self) -> bool:
+        return any(len(c.ctrl) > 0 for c in self.control)
+
+    def has_power(self) -> bool:
+        return len(self.power) > 0

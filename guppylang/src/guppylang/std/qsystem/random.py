@@ -73,6 +73,16 @@ class RNG:
             bound: The upper bound of the range, needs to less than 2^31.
         """
 
+    @hugr_op(external_op("RandomAdvance", [], ext=QSYSTEM_RANDOM_EXTENSION))
+    @no_type_check
+    def random_advance(self: "RNG", delta: int) -> None:
+        """Advance or backtrack the RNG state by a given number of steps.
+
+        Args:
+            delta: Number of steps to move the RNG state forward (if positive)
+            or backward (if negative).
+        """
+
     @guppy
     @no_type_check
     def shuffle(self: "RNG", array: array[SHUFFLE_T, SHUFFLE_N]) -> None:
@@ -82,7 +92,7 @@ class RNG:
             i = SHUFFLE_N - 1 - k
             j = self.random_int_bounded(i + 1)
             # TODO use array swap once lowering implemented
-            # https://github.com/CQCL/guppylang/issues/924
+            # https://github.com/quantinuum/guppylang/issues/924
             if i != j:
                 mem_swap(array[i], array[j])
 
