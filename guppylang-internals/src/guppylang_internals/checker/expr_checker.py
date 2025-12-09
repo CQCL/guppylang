@@ -1035,7 +1035,14 @@ def check_place_assignable(
             exp_sig = FunctionType(
                 [
                     FuncInput(parent.ty, InputFlags.Inout),
-                    FuncInput(item.ty, InputFlags.NoFlags),
+                    FuncInput(
+                        # Due to potential coercions that were applied during the
+                        # `__getitem__` call (e.g. coercing a nat index to int), we're
+                        # not allowed to rely on `item.ty` here.
+                        # See https://github.com/CQCL/guppylang/issues/1356
+                        ExistentialTypeVar.fresh("T", True, True),
+                        InputFlags.NoFlags,
+                    ),
                     FuncInput(ty, InputFlags.Owned),
                 ],
                 NoneType(),
