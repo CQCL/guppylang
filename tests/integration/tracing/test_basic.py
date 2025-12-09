@@ -136,3 +136,15 @@ def mem_swap_array(validate):
         assert isinstance(ys[0], GuppyObject)
 
     validate(main.compile_function())
+
+
+def test_comptime_arg_call(validate):
+    @guppy
+    def foo(x: int @ comptime) -> int:
+        return x
+
+    @guppy.comptime
+    def main() -> None:
+        foo(42)
+
+    validate(main.compile_function())

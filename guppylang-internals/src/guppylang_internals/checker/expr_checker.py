@@ -43,6 +43,7 @@ from guppylang_internals.ast_util import (
 )
 from guppylang_internals.cfg.builder import is_tmp_var, tmp_vars
 from guppylang_internals.checker.core import (
+    ComptimeVariable,
     Context,
     DummyEvalDict,
     FieldAccess,
@@ -1035,7 +1036,14 @@ def check_place_assignable(
             exp_sig = FunctionType(
                 [
                     FuncInput(parent.ty, InputFlags.Inout),
-                    FuncInput(item.ty, InputFlags.NoFlags),
+                    FuncInput(
+                        # Due to potential coercions that were applied during the
+                        # `__getitem__` call (e.g. coercing a nat index to int), we're
+                        # not allowed to rely on `item.ty` here.
+                        # See https://github.com/CQCL/guppylang/issues/1356
+                        ExistentialTypeVar.fresh("T", True, True),
+                        InputFlags.NoFlags,
+                    ),
                     FuncInput(ty, InputFlags.Owned),
                 ],
                 NoneType(),
@@ -1071,6 +1079,8 @@ def check_comptime_arg(
     const: Const
     match arg:
         case ast.Constant(value=v):
+            const = ConstValue(ty, v)
+        case PlaceNode(place=ComptimeVariable(ty=ty, static_value=v)):
             const = ConstValue(ty, v)
         case GenericParamValue(param=const_param):
             const = const_param.to_bound().const
