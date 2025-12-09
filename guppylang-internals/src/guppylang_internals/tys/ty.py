@@ -392,7 +392,7 @@ class FuncInput:
     flags: InputFlags
 
     #: Name of this input, or `None` if it is an unnamed argument (e.g. inside a
-    #: higher-order `Callable` type)
+    #: `Callable`). We use `compare=False` because names are not visible to the caller.
     name: str | None = field(default=None, compare=False)
 
 
