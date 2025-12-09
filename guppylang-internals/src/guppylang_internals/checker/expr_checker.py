@@ -504,12 +504,7 @@ class ExprSynthesizer(AstVisitor[tuple[ast.expr, Type]]):
             )
             # Make a closure by partially applying the `self` argument
             # TODO: Try to infer some type args based on `self`
-            result_ty = FunctionType(
-                func.ty.inputs[1:],
-                func.ty.output,
-                func.ty.input_names[1:] if func.ty.input_names else None,
-                func.ty.params,
-            )
+            result_ty = FunctionType(func.ty.inputs[1:], func.ty.output, func.ty.params)
             return with_loc(node, PartialApply(func=name, args=[node.value])), result_ty
         raise GuppyTypeError(AttributeNotFoundError(attr_span, ty, node.attr))
 
