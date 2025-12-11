@@ -33,6 +33,7 @@ from guppylang_internals.definition.common import (
     ParsableDef,
     UnknownSourceError,
 )
+from guppylang_internals.definition.metadata import Metadata, add_metadata
 from guppylang_internals.definition.value import (
     CallableDef,
     CallReturnWires,
@@ -72,13 +73,22 @@ class RawFunctionDef(ParsableDef):
 
     unitary_flags: UnitaryFlags = field(default=UnitaryFlags.NoFlags, kw_only=True)
 
+    metadata: Metadata | None = field(default=None, kw_only=True)
+
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func, sources)
         ty = check_signature(
             func_ast, globals, self.id, unitary_flags=self.unitary_flags
         )
-        return ParsedFunctionDef(self.id, self.name, func_ast, ty, docstring)
+        return ParsedFunctionDef(
+            self.id,
+            self.name,
+            func_ast,
+            ty,
+            docstring,
+            metadata=self.metadata,
+        )
 
 
 @dataclass(frozen=True)
@@ -103,6 +113,8 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
 
     description: str = field(default="function", init=False)
 
+    metadata: Metadata | None = field(default=None, kw_only=True)
+
     def check(self, globals: Globals) -> "CheckedFunctionDef":
         """Type checks the body of the function."""
         # Add python variable scope to the globals
@@ -114,6 +126,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
             self.ty,
             self.docstring,
             cfg,
+            metadata=self.metadata,
         )
 
     def check_call(
@@ -177,6 +190,7 @@ class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
         func_def = module.module_root_builder().define_function(
             self.name, hugr_ty.body.input, hugr_ty.body.output, hugr_ty.params
         )
+        add_metadata(func_def, self.metadata)
         add_unitarity_metadata(func_def, self.ty.unitary_flags)
         return CompiledFunctionDef(
             self.id,
@@ -187,6 +201,7 @@ class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
             self.docstring,
             self.cfg,
             func_def,
+            metadata=self.metadata,
         )
 
 
@@ -307,6 +322,6 @@ def parse_source(source_lines: list[str], line_offset: int) -> tuple[str, ast.AS
     return source, node, line_offset
 
 
-def add_unitarity_metadata(func: hf.Function, flags: UnitaryFlags) -> None:
+def add_unitarity_metadata(node: ToNode, flags: UnitaryFlags) -> None:
     """Stores unitarity annotations in the metadate of a Hugr function definition."""
-    func.metadata["unitary"] = flags.value
+    add_metadata(node, additional_metadata={"unitary": flags.value})
