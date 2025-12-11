@@ -94,6 +94,52 @@ def test_all_options() -> None:
     assert isinstance(result, EmulatorResult)
 
 
+def test_no_given_qubits() -> None:
+    @guppy()
+    def main() -> None:
+        result("c", measure(qubit()))
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Number of qubits to be used must be specified, either as an argument to "
+            "`emulator` or hinted on the entrypoint function."
+        ),
+    ):
+        main.emulator().run()
+
+
+def test_hinted_qubits() -> None:
+    @guppy(max_qubits=1)
+    def main() -> None:
+        result("c", measure(qubit()))
+
+    main.emulator().run()
+
+
+def test_hinted_qubits_with_given_qubits() -> None:
+    @guppy(max_qubits=1)
+    def main() -> None:
+        result("c", measure(qubit()))
+
+    main.emulator(n_qubits=4).run()
+
+
+def test_hinted_qubits_with_insufficient_given_qubits() -> None:
+    @guppy(max_qubits=3)
+    def main() -> None:
+        result("c", measure(qubit()))
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Number of qubits requested \(1\) is insufficient to cover the maximum "
+            r"number of qubits hinted on the entrypoint \(3\)."
+        ),
+    ):
+        main.emulator(n_qubits=1).run()
+
+
 def test_statevector() -> None:
     @guppy
     def main() -> None:
