@@ -10,8 +10,7 @@ from dataclasses import dataclass
 from typing import Any, ClassVar, Generic, ParamSpec, TypeVar, cast
 
 import guppylang_internals
-from guppylang_internals.definition.declaration import CompiledFunctionDecl
-from guppylang_internals.definition.function import CompiledFunctionDef
+from guppylang_internals.definition.function import RawFunctionDef
 from guppylang_internals.definition.value import CompiledCallableDef
 from guppylang_internals.diagnostic import Error, Note
 from guppylang_internals.engine import ENGINE, CoreMetadataKeys
@@ -112,15 +111,12 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
         mod = self.compile()
 
         builder = builder or EmulatorBuilder()
-        # entrypoint cannot be polymorphic
-        monomorphized_id = (self.id, ())
-        compiled_def = ENGINE.compiled.get(monomorphized_id)
         qubits = n_qubits
         if (
-            isinstance(compiled_def, CompiledFunctionDef | CompiledFunctionDecl)
-            and compiled_def.metadata is not None
+            isinstance(self.wrapped, RawFunctionDef)
+            and self.wrapped.metadata is not None
         ):
-            hinted_qubits = compiled_def.metadata.max_qubits
+            hinted_qubits = self.wrapped.metadata.max_qubits
             if qubits is None:
                 qubits = hinted_qubits
             elif hinted_qubits is not None and qubits < hinted_qubits:
