@@ -20,7 +20,9 @@ from tket_exts import (
 BOOL_EXTENSION = tket_exts.bool()
 DEBUG_EXTENSION = debug()
 FUTURES_EXTENSION = futures()
+GLOBAL_PHASE_EXTENSION = global_phase()
 GUPPY_EXTENSION = guppy()
+MODIFIER_EXTENSION = modifier()
 QSYSTEM_EXTENSION = qsystem()
 QSYSTEM_RANDOM_EXTENSION = qsystem_random()
 QSYSTEM_UTILS_EXTENSION = qsystem_utils()
@@ -28,8 +30,6 @@ QUANTUM_EXTENSION = quantum()
 RESULT_EXTENSION = result()
 ROTATION_EXTENSION = rotation()
 WASM_EXTENSION = wasm()
-MODIFIER_EXTENSION = modifier()
-GLOBAL_PHASE_EXTENSION = global_phase()
 
 TKET_EXTENSIONS = [
     BOOL_EXTENSION,
