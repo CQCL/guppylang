@@ -23,6 +23,10 @@ class MetadataMaxQubits(GuppyMetadataValue[int]):
 class GuppyMetadata:
     max_qubits: MetadataMaxQubits = field(default_factory=MetadataMaxQubits, init=False)
 
+    @classmethod
+    def reserved_keys(cls) -> set[str]:
+        return {f.type.key for f in fields(GuppyMetadata)}
+
 
 @dataclass(frozen=True)
 class MetadataAlreadySetError(Fatal):
@@ -52,13 +56,13 @@ def add_metadata(
     """
     if metadata is not None:
         for f in fields(GuppyMetadata):
-            field_value: GuppyMetadataValue[Any] = getattr(metadata, f.name)
-            if field_value.key in node.metadata:
-                raise GuppyError(MetadataAlreadySetError(None, field_value.key))
-            node.metadata[field_value.key] = field_value.value
+            data: GuppyMetadataValue[Any] = getattr(metadata, f.name)
+            if data.key in node.metadata:
+                raise GuppyError(MetadataAlreadySetError(None, data.key))
+            node.metadata[data.key] = data.value
 
     if additional_metadata is not None:
-        reserved_keys: set[str] = {f.type.key for f in fields(GuppyMetadata)}
+        reserved_keys = GuppyMetadata.reserved_keys()
         used_reserved_keys = reserved_keys.intersection(additional_metadata.keys())
         if len(used_reserved_keys) > 0:
             raise GuppyError(ReservedMetadataKeysError(None, keys=used_reserved_keys))
