@@ -16,7 +16,7 @@ class GuppyMetadataValue(Generic[T]):
 
 
 class MetadataMaxQubits(GuppyMetadataValue[int]):
-    key = "core.max_qubits"
+    key = "tket.hint.max_qubits"
 
 
 @dataclass(frozen=True, init=True, kw_only=True)
