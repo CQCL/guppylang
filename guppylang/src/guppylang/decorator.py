@@ -301,14 +301,9 @@ class _Guppy:
         def dec(
             f: Callable[P, T], kwargs: GuppyKwargs
         ) -> GuppyFunctionDefinition[P, T]:
-            flags, metadata = _parse_kwargs(kwargs)
+            flags, _ = _parse_kwargs(kwargs)
             defn = RawFunctionDecl(
-                DefId.fresh(),
-                f.__name__,
-                None,
-                f,
-                unitary_flags=flags,
-                metadata=metadata,
+                DefId.fresh(), f.__name__, None, f, unitary_flags=flags
             )
             DEF_STORE.register_def(defn, get_calling_frame())
             return GuppyFunctionDefinition(defn)

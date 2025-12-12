@@ -18,12 +18,10 @@ from guppylang_internals.compiler.core import (
 from guppylang_internals.definition.common import CompilableDef, ParsableDef
 from guppylang_internals.definition.function import (
     PyFunc,
-    add_unitarity_metadata,
     compile_call,
     load_with_args,
     parse_py_func,
 )
-from guppylang_internals.definition.metadata import Metadata, add_metadata
 from guppylang_internals.definition.value import (
     CallableDef,
     CallReturnWires,
@@ -69,8 +67,6 @@ class RawFunctionDecl(ParsableDef):
 
     unitary_flags: UnitaryFlags = field(default=UnitaryFlags.NoFlags, kw_only=True)
 
-    metadata: Metadata | None = field(default=None, kw_only=True)
-
     def parse(self, globals: Globals, sources: SourceMap) -> "CheckedFunctionDecl":
         """Parses and checks the user-provided signature of the function."""
         func_ast, docstring = parse_py_func(self.python_func, sources)
@@ -89,7 +85,6 @@ class RawFunctionDecl(ParsableDef):
             ty,
             self.python_func,
             docstring,
-            metadata=self.metadata,
         )
 
 
@@ -131,8 +126,6 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
         module: hf.Module = module
 
         node = module.declare_function(self.name, self.ty.to_hugr_poly(ctx))
-        add_metadata(node, self.metadata)
-        add_unitarity_metadata(node, self.ty.unitary_flags)
         return CompiledFunctionDecl(
             self.id,
             self.name,
@@ -141,7 +134,6 @@ class CheckedFunctionDecl(RawFunctionDecl, CompilableDef, CallableDef):
             self.python_func,
             self.docstring,
             node,
-            metadata=self.metadata,
         )
 
 
