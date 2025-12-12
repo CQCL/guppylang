@@ -1,5 +1,6 @@
 from guppylang.decorator import guppy
 from guppylang.defs import GuppyFunctionDefinition
+from guppylang.emulator.exceptions import EmulatorBuildError
 from guppylang.std.builtins import result, array, comptime, exit, panic
 from guppylang.std.debug import state_result
 from guppylang.std.quantum import (
@@ -92,6 +93,53 @@ def test_all_options() -> None:
 
     result = configured_em.run()
     assert isinstance(result, EmulatorResult)
+
+
+def test_no_given_qubits() -> None:
+    @guppy()
+    def main() -> None:
+        result("c", measure(qubit()))
+
+    with pytest.raises(
+        EmulatorBuildError,
+        match=(
+            r"Number of qubits to be used must be specified, either as an argument to "
+            r"`emulator` or hinted on the entrypoint function using "
+            r"`@guppy\(max_qubits=...\)`."
+        ),
+    ):
+        main.emulator().run()
+
+
+def test_hinted_qubits() -> None:
+    @guppy(max_qubits=1)
+    def main() -> None:
+        result("c", measure(qubit()))
+
+    main.emulator().run()
+
+
+def test_hinted_qubits_with_given_qubits() -> None:
+    @guppy(max_qubits=1)
+    def main() -> None:
+        result("c", measure(qubit()))
+
+    main.emulator(n_qubits=4).run()
+
+
+def test_hinted_qubits_with_insufficient_given_qubits() -> None:
+    @guppy(max_qubits=3)
+    def main() -> None:
+        result("c", measure(qubit()))
+
+    with pytest.raises(
+        EmulatorBuildError,
+        match=(
+            r"Number of qubits requested \(1\) is insufficient to cover the maximum "
+            r"number of qubits hinted on the entrypoint \(3\)."
+        ),
+    ):
+        main.emulator(n_qubits=1).run()
 
 
 def test_statevector() -> None:
