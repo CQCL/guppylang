@@ -33,7 +33,7 @@ from guppylang_internals.definition.common import (
     ParsableDef,
     UnknownSourceError,
 )
-from guppylang_internals.definition.metadata import Metadata, add_metadata
+from guppylang_internals.definition.metadata import GuppyMetadata, add_metadata
 from guppylang_internals.definition.value import (
     CallableDef,
     CallReturnWires,
@@ -73,7 +73,7 @@ class RawFunctionDef(ParsableDef):
 
     unitary_flags: UnitaryFlags = field(default=UnitaryFlags.NoFlags, kw_only=True)
 
-    metadata: Metadata | None = field(default=None, kw_only=True)
+    metadata: GuppyMetadata | None = field(default=None, kw_only=True)
 
     def parse(self, globals: Globals, sources: SourceMap) -> "ParsedFunctionDef":
         """Parses and checks the user-provided signature of the function."""
@@ -113,7 +113,7 @@ class ParsedFunctionDef(CheckableDef, CallableDef):
 
     description: str = field(default="function", init=False)
 
-    metadata: Metadata | None = field(default=None, kw_only=True)
+    metadata: GuppyMetadata | None = field(default=None, kw_only=True)
 
     def check(self, globals: Globals) -> "CheckedFunctionDef":
         """Type checks the body of the function."""
@@ -190,8 +190,11 @@ class CheckedFunctionDef(ParsedFunctionDef, MonomorphizableDef):
         func_def = module.module_root_builder().define_function(
             self.name, hugr_ty.body.input, hugr_ty.body.output, hugr_ty.params
         )
-        add_metadata(func_def, self.metadata)
-        add_unitarity_metadata(func_def, self.ty.unitary_flags)
+        add_metadata(
+            func_def,
+            self.metadata,
+            additional_metadata={"unitary": self.ty.unitary_flags.value},
+        )
         return CompiledFunctionDef(
             self.id,
             self.name,
@@ -320,8 +323,3 @@ def parse_source(source_lines: list[str], line_offset: int) -> tuple[str, ast.AS
     else:
         node = ast.parse(source).body[0]
     return source, node, line_offset
-
-
-def add_unitarity_metadata(node: ToNode, flags: UnitaryFlags) -> None:
-    """Stores unitarity annotations in the metadate of a Hugr function definition."""
-    add_metadata(node, additional_metadata={"unitary": flags.value})

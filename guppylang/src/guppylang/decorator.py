@@ -26,7 +26,7 @@ from guppylang_internals.definition.extern import RawExternDef
 from guppylang_internals.definition.function import (
     RawFunctionDef,
 )
-from guppylang_internals.definition.metadata import Metadata
+from guppylang_internals.definition.metadata import GuppyMetadata
 from guppylang_internals.definition.overloaded import OverloadedFunctionDef
 from guppylang_internals.definition.parameter import (
     ConstVarDef,
@@ -646,7 +646,7 @@ def _with_optional_kwargs(
 
 
 @hide_trace
-def _parse_kwargs(kwargs: GuppyKwargs) -> tuple[UnitaryFlags, Metadata]:
+def _parse_kwargs(kwargs: GuppyKwargs) -> tuple[UnitaryFlags, GuppyMetadata]:
     """Parses the kwargs dict specified in the `@guppy` decorator into `UnitaryFlags`
     and other metadata that will be passed onto the compiled function as is.
     """
@@ -660,7 +660,8 @@ def _parse_kwargs(kwargs: GuppyKwargs) -> tuple[UnitaryFlags, Metadata]:
     if kwargs.pop("power", False):
         flags |= UnitaryFlags.Power
 
-    metadata = Metadata(max_qubits=kwargs.pop("max_qubits", None))
+    metadata = GuppyMetadata()
+    metadata.max_qubits.value = kwargs.pop("max_qubits", None)
 
     if remaining := next(iter(kwargs), None):
         err = f"Unknown keyword argument: `{remaining}`"

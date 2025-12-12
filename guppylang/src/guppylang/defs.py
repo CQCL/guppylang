@@ -23,6 +23,7 @@ from hugr.package import Package
 
 import guppylang
 from guppylang.emulator import EmulatorBuilder, EmulatorInstance
+from guppylang.emulator.exceptions import EmulatorBuildError
 
 __all__ = ("GuppyDefinition", "GuppyFunctionDefinition", "GuppyTypeVarDefinition")
 
@@ -116,20 +117,25 @@ class GuppyFunctionDefinition(GuppyDefinition, Generic[P, Out]):
             isinstance(self.wrapped, RawFunctionDef)
             and self.wrapped.metadata is not None
         ):
-            hinted_qubits = self.wrapped.metadata.max_qubits
+            hinted_qubits = self.wrapped.metadata.max_qubits.value
             if qubits is None:
                 qubits = hinted_qubits
             elif hinted_qubits is not None and qubits < hinted_qubits:
-                raise ValueError(
-                    f"Number of qubits requested ({qubits}) is insufficient to "
-                    "cover the maximum number of qubits hinted on the "
-                    f"entrypoint ({hinted_qubits})."
-                )  # TODO guppy error for too large of a qubit value:
+                raise EmulatorBuildError(
+                    ValueError(
+                        f"Number of qubits requested ({qubits}) is insufficient to "
+                        "cover the maximum number of qubits hinted on the "
+                        f"entrypoint ({hinted_qubits})."
+                    )
+                )
 
         if qubits is None:
-            raise ValueError(
-                "Number of qubits to be used must be specified, either as an argument "
-                f"to `{self.emulator.__name__}` or hinted on the entrypoint function."
+            raise EmulatorBuildError(
+                ValueError(
+                    "Number of qubits to be used must be specified, either as an "
+                    f"argument to `{self.emulator.__name__}` or hinted on the "
+                    "entrypoint function using `@guppy(max_qubits=...)`."
+                )
             )
 
         return builder.build(mod, n_qubits=qubits)
